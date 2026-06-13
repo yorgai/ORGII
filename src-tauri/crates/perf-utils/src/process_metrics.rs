@@ -397,7 +397,9 @@ fn display_process_name(name: &str, category: &str) -> String {
             }
         }
         PROCESS_CATEGORY_GPU if name_lower.contains("webkit") => "WebKit GPU".to_string(),
-        PROCESS_CATEGORY_NETWORK if name_lower.contains("webkit") => "WebKit networking".to_string(),
+        PROCESS_CATEGORY_NETWORK if name_lower.contains("webkit") => {
+            "WebKit networking".to_string()
+        }
         _ => name.to_string(),
     }
 }

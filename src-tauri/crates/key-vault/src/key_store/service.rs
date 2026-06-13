@@ -23,6 +23,9 @@ const CODEX_REFRESH_TOKEN_URL_OVERRIDE_ENV: &str = "CODEX_REFRESH_TOKEN_URL_OVER
 const CODEX_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 const OAUTH_REFRESH_REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
 const OAUTH_REFRESH_FAILURE_DISABLE_THRESHOLD: u32 = 3;
+const OAUTH_TEMPORARY_UNAVAILABLE_SECONDS: i64 = 30 * 60;
+const OAUTH_RATE_LIMIT_FALLBACK_SECONDS: i64 = 5 * 60;
+const OAUTH_REFRESH_FAILURE_COOLDOWN_SECONDS: i64 = 5 * 60;
 const GEMINI_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 const GEMINI_REFRESH_TOKEN_URL_OVERRIDE_ENV: &str = "GEMINI_REFRESH_TOKEN_URL_OVERRIDE";
 const GEMINI_REFRESH_TOKEN_ENV: &str = "GEMINI_REFRESH_TOKEN";
@@ -260,6 +263,54 @@ impl KeyService {
         })
     }
 
+    /// Record behaviorally-observed reasoning capability for `model` on key
+    /// `key_id`. Called by agent-core's side-query layer when a model is
+    /// seen emitting thinking-only responses (or rejecting
+    /// `thinking: disabled` with a 400) so future capability resolution
+    /// skips the failed first attempt.
+    ///
+    /// Idempotent: when the variant already carries the same reasoning
+    /// value, nothing is written to disk (avoids write amplification —
+    /// side queries run on every turn).
+    pub fn record_observed_reasoning(
+        &self,
+        key_id: &str,
+        model: &str,
+        reasoning: &str,
+    ) -> Result<(), String> {
+        // Read-only fast path: skip the store write lock entirely when the
+        // value is already recorded.
+        if let Some(key) = self.get_key_by_id(key_id) {
+            if key
+                .model_variants
+                .iter()
+                .any(|v| v.model == model && v.reasoning.as_deref() == Some(reasoning))
+            {
+                return Ok(());
+            }
+        } else {
+            return Err(format!("Key '{}' not found", key_id));
+        }
+
+        self.update_store(|store| {
+            let Some(entry) = store.keys.get_mut(key_id) else {
+                return Err(format!("Key '{}' not found", key_id));
+            };
+            if let Some(variant) = entry.model_variants.iter_mut().find(|v| v.model == model) {
+                variant.reasoning = Some(reasoning.to_string());
+            } else {
+                entry.model_variants.push(crate::key_store::ModelVariant {
+                    model: model.to_string(),
+                    base_model: model.to_string(),
+                    reasoning: Some(reasoning.to_string()),
+                    fast: false,
+                });
+            }
+            entry.updated_at = chrono::Utc::now();
+            Ok(())
+        })?
+    }
+
     pub fn sync_cli_oauth_tokens_if_current(
         &self,
         key_id: &str,
@@ -361,8 +412,13 @@ impl KeyService {
             entry.last_oauth_refresh_failed_at = Some(Utc::now());
             entry.last_validation_error = Some(error_message.to_string());
             entry.last_validated_at = Some(Utc::now());
+            entry.temporary_unavailable_until =
+                Some(Utc::now() + ChronoDuration::seconds(OAUTH_REFRESH_FAILURE_COOLDOWN_SECONDS));
+            entry.temporary_unavailable_reason = Some("oauth_refresh_failed".to_string());
+            entry.last_upstream_error_type = Some("oauth_refresh_failed".to_string());
             if is_permanent_oauth_refresh_failure(error_message)
-                || count >= OAUTH_REFRESH_FAILURE_DISABLE_THRESHOLD
+                || (entry.model_type != ModelType::ClaudeCode
+                    && count >= OAUTH_REFRESH_FAILURE_DISABLE_THRESHOLD)
             {
                 entry.enabled = false;
                 entry.health_status = HealthStatus::Invalid;
@@ -375,10 +431,125 @@ impl KeyService {
         })
     }
 
+    pub fn mark_claude_oauth_upstream_health(
+        &self,
+        key_id: &str,
+        status: u16,
+        error_type: &str,
+        message: Option<&str>,
+        retry_after_secs: Option<u64>,
+    ) -> Result<Option<ModelKey>, String> {
+        self.update_store(|store| {
+            let entry = store.keys.get_mut(key_id)?;
+            if entry.model_type != ModelType::ClaudeCode || entry.auth_method != AuthMethod::Oauth {
+                return Some(entry.clone());
+            }
+
+            entry.last_upstream_status = Some(status);
+            entry.last_upstream_error_type = Some(error_type.to_string());
+            entry.last_validation_error = message.map(ToString::to_string);
+            entry.last_validated_at = Some(Utc::now());
+
+            let cooldown_secs = retry_after_secs
+                .and_then(|secs| i64::try_from(secs).ok())
+                .filter(|secs| *secs > 0)
+                .unwrap_or_else(|| match status {
+                    429 => OAUTH_RATE_LIMIT_FALLBACK_SECONDS,
+                    529 => OAUTH_RATE_LIMIT_FALLBACK_SECONDS * 2,
+                    401 | 403 => OAUTH_TEMPORARY_UNAVAILABLE_SECONDS,
+                    500..=599 => OAUTH_RATE_LIMIT_FALLBACK_SECONDS,
+                    _ => OAUTH_RATE_LIMIT_FALLBACK_SECONDS,
+                });
+            let unavailable_until = Utc::now() + ChronoDuration::seconds(cooldown_secs);
+            entry.temporary_unavailable_until = Some(unavailable_until);
+            entry.temporary_unavailable_reason = Some(error_type.to_string());
+            if status == 429 {
+                entry.rate_limit_reset_at = Some(unavailable_until);
+            }
+            if entry.health_status != HealthStatus::Invalid {
+                entry.health_status = HealthStatus::Degraded;
+            }
+            entry.updated_at = Utc::now();
+            store.updated_at = Utc::now();
+            tracing::warn!(
+                "[key-vault] Claude OAuth key {} marked temporarily unavailable: status={} type={} until={}",
+                key_id,
+                status,
+                error_type,
+                unavailable_until.to_rfc3339()
+            );
+            Some(entry.clone())
+        })
+    }
+
+    pub fn clear_claude_oauth_upstream_health(
+        &self,
+        key_id: &str,
+    ) -> Result<Option<ModelKey>, String> {
+        // Fast path: most requests succeed with nothing to clear. Skip the
+        // store rewrite entirely so the per-request happy path stays read-only.
+        if let Some(existing) = self.get_key_by_id(key_id) {
+            let nothing_to_clear = existing.temporary_unavailable_until.is_none()
+                && existing.temporary_unavailable_reason.is_none()
+                && existing.last_upstream_status.is_none()
+                && existing.last_upstream_error_type.is_none()
+                && existing.rate_limit_reset_at.is_none();
+            if nothing_to_clear {
+                return Ok(Some(existing));
+            }
+        }
+        self.update_store(|store| {
+            let entry = store.keys.get_mut(key_id)?;
+            if entry.model_type != ModelType::ClaudeCode || entry.auth_method != AuthMethod::Oauth {
+                return Some(entry.clone());
+            }
+            entry.temporary_unavailable_until = None;
+            entry.temporary_unavailable_reason = None;
+            entry.last_upstream_status = None;
+            entry.last_upstream_error_type = None;
+            entry.rate_limit_reset_at = None;
+            if entry.health_status == HealthStatus::Degraded
+                && entry.oauth_refresh_failure_count == 0
+            {
+                entry.health_status = HealthStatus::Valid;
+            }
+            entry.updated_at = Utc::now();
+            store.updated_at = Utc::now();
+            Some(entry.clone())
+        })
+    }
+
+    pub fn is_key_temporarily_unavailable(&self, key: &ModelKey) -> bool {
+        key.temporary_unavailable_until
+            .is_some_and(|until| until > Utc::now())
+    }
+
+    pub fn temporary_unavailable_message(&self, key: &ModelKey) -> Option<String> {
+        let until = key.temporary_unavailable_until?;
+        if until <= Utc::now() {
+            return None;
+        }
+        let reason = key
+            .temporary_unavailable_reason
+            .as_deref()
+            .unwrap_or("temporary_unavailable");
+        Some(format!(
+            "Claude Code OAuth account '{}' is temporarily unavailable ({}) until {}",
+            key.name.as_deref().unwrap_or(&key.id),
+            reason,
+            until.to_rfc3339()
+        ))
+    }
+
     fn reset_oauth_refresh_failure_state(entry: &mut ModelKey) {
         entry.oauth_refresh_failure_count = 0;
         entry.last_oauth_refresh_failed_at = None;
         entry.last_validation_error = None;
+        entry.temporary_unavailable_until = None;
+        entry.temporary_unavailable_reason = None;
+        entry.last_upstream_status = None;
+        entry.last_upstream_error_type = None;
+        entry.rate_limit_reset_at = None;
         if entry.health_status == HealthStatus::Invalid {
             entry.health_status = HealthStatus::Unknown;
         }
@@ -398,7 +569,11 @@ impl KeyService {
             .clone())
     }
 
-    fn claude_code_oauth_key_needs_refresh(key: &ModelKey) -> bool {
+    pub fn claude_code_oauth_key_needs_refresh(&self, key: &ModelKey) -> bool {
+        Self::claude_code_oauth_key_needs_refresh_inner(key)
+    }
+
+    fn claude_code_oauth_key_needs_refresh_inner(key: &ModelKey) -> bool {
         if key.model_type != ModelType::ClaudeCode || key.auth_method != AuthMethod::Oauth {
             return false;
         }
@@ -432,7 +607,7 @@ impl KeyService {
             .get_key_by_id(key_id)
             .ok_or_else(|| format!("Key not found: {}", key_id))?;
 
-        if !Self::claude_code_oauth_key_needs_refresh(&key) {
+        if !Self::claude_code_oauth_key_needs_refresh_inner(&key) {
             return Ok(key);
         }
 

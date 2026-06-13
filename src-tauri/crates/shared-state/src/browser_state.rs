@@ -882,10 +882,7 @@ fn vendored_agent_browser_paths() -> Vec<PathBuf> {
     let mut paths = Vec::new();
 
     // Runtime-downloaded binary (post-notarized download): ~/.orgii/bin/agent-browser-*
-    paths.push(
-        app_paths::sidecar_bin_dir()
-            .join(VENDORED_AGENT_BROWSER_BINARY),
-    );
+    paths.push(app_paths::sidecar_bin_dir().join(VENDORED_AGENT_BROWSER_BINARY));
 
     if let Ok(current_exe) = std::env::current_exe() {
         if let Some(macos_dir) = current_exe.parent() {

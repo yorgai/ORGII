@@ -105,11 +105,18 @@ const CursorModePillView: React.FC<CursorModePillViewProps> = ({
     defaultValue: "Switch mode",
   });
 
+  const toneClassName =
+    effectiveMode === "plan"
+      ? "mode-pill-tone-plan"
+      : effectiveMode === "chat"
+        ? "mode-pill-tone-ask"
+        : "";
+
   const iconNode = effectiveMode ? (
     React.createElement(getModeIcon(effectiveMode), {
       size: iconSize,
       strokeWidth: 1.75,
-      className: "text-text-1",
+      className: toneClassName || "text-text-1",
     })
   ) : (
     <Grip size={iconSize} strokeWidth={1.75} className="text-text-1" />
@@ -146,7 +153,7 @@ const CursorModePillView: React.FC<CursorModePillViewProps> = ({
       <PillGroup
         segments={segments}
         className="text-[13px]"
-        segmentClassName="h-[28px]"
+        segmentClassName={`h-[28px] ${toneClassName}`}
         variant="default"
       />
 

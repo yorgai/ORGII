@@ -66,6 +66,10 @@ pub fn global_app_handle() -> Option<&'static tauri::AppHandle> {
 /// "pending" state — regardless of which surface triggered it — must go
 /// through [`resolve_pending`] so the DB row, the in-memory slot, the
 /// transcript card event, and the FE broadcast can never diverge.
+///
+/// A pending plan is session-level state, decoupled from the exec mode:
+/// switching the ModePill, chatting in Build mode, Stop, and app restarts
+/// all leave it pending. Only the resolutions below terminate it.
 #[derive(Debug)]
 pub enum PlanResolution {
     /// User clicked Build. `edited` carries the user-modified plan body
@@ -76,11 +80,8 @@ pub enum PlanResolution {
     /// A newer plan revision replaced this one (`mark_ready` on a session
     /// that already had a pending plan).
     Superseded,
-    /// The user bypassed the Build button: started a Build-mode turn or
-    /// switched the exec mode away from Plan while the plan was pending.
-    Abandoned,
-    /// Housekeeping: plan file missing, session deleted, or session no
-    /// longer in plan mode (startup GC / rehydrate validation).
+    /// Housekeeping: plan file missing or session deleted (startup GC /
+    /// rehydrate validation).
     Orphaned,
 }
 
@@ -89,7 +90,7 @@ impl PlanResolution {
         match self {
             Self::Approved { .. } => PlanApprovalCardStatus::Approved,
             Self::Rejected => PlanApprovalCardStatus::Cancelled,
-            Self::Superseded | Self::Abandoned | Self::Orphaned => PlanApprovalCardStatus::Archived,
+            Self::Superseded | Self::Orphaned => PlanApprovalCardStatus::Archived,
         }
     }
 
@@ -98,13 +99,12 @@ impl PlanResolution {
             Self::Approved { .. } => "approval",
             Self::Rejected => "rejection",
             Self::Superseded => "archive",
-            Self::Abandoned => "abandon",
             Self::Orphaned => "orphan",
         }
     }
 
     fn broadcasts_archived(&self) -> bool {
-        matches!(self, Self::Superseded | Self::Abandoned | Self::Orphaned)
+        matches!(self, Self::Superseded | Self::Orphaned)
     }
 }
 
@@ -120,7 +120,7 @@ impl PlanResolution {
 ///   4. Pushes the terminal `plan_approval` transcript event (approved /
 ///      cancelled / archived) through the event pipeline.
 ///   5. Broadcasts `agent:plan_approval_archived` for Superseded /
-///      Abandoned / Orphaned so a live FE un-pins immediately.
+///      Orphaned so a live FE un-pins immediately.
 ///
 /// Returns the resolved snapshot, or `None` when nothing was pending.
 /// Idempotent: concurrent callers race on the DB delete; only the caller
@@ -189,6 +189,16 @@ pub async fn resolve_pending(
         );
         event.recompute_extracted();
         crate::bus::event_pipeline_bridge::push_events(&handle, &snapshot.session_id, vec![event]);
+        // Backend-authoritative finalize of the persisted `awaiting_user`
+        // events tied to this revision (pending card + create_plan tool
+        // call). The FE `handlePlanApprovalArchived` patch becomes a
+        // redundant fast-path - a missed broadcast can no longer strand
+        // the events and wedge the planning indicator.
+        crate::bus::event_pipeline_bridge::finalize_plan_revision_events(
+            &handle,
+            &snapshot.session_id,
+            &snapshot.plan_revision_id,
+        );
     }
 
     if resolution.broadcasts_archived() {
@@ -330,6 +340,15 @@ impl PlanApprovalManager {
             let sid = prev.session_id.clone();
             persist_blocking(move || PlanApprovalStore::delete_by_session(&sid)).await;
             self.push_plan_approval_event(&prev, "archive", PlanApprovalCardStatus::Archived);
+            // Backend-authoritative finalize of the superseded revision's
+            // awaiting_user events (same contract as `resolve_pending`).
+            if let Some(handle) = self.app_handle.lock().ok().and_then(|guard| guard.clone()) {
+                crate::bus::event_pipeline_bridge::finalize_plan_revision_events(
+                    &handle,
+                    &prev.session_id,
+                    &prev.plan_revision_id,
+                );
+            }
             let archived = serde_json::json!({
                 "sessionId": &prev.session_id,
                 "planPath": &prev.plan_path,
@@ -363,6 +382,15 @@ impl PlanApprovalManager {
 
         self.push_plan_approval_event(&snapshot, "create_plan", PlanApprovalCardStatus::Pending);
 
+        // Presence policy: initial auto-approve deadline (if any) rides on
+        // the broadcast so the FE can render a countdown on the Build card.
+        let auto_approve_at_ms = match super::presence_state::global_policy().plan_auto_approve {
+            super::presence_policy::AutoResolve::Off => None,
+            super::presence_policy::AutoResolve::After(window) => {
+                Some(created_at_ms + window.as_millis() as i64)
+            }
+        };
+
         let payload = serde_json::json!({
             "sessionId": &snapshot.session_id,
             "planPath": &snapshot.plan_path,
@@ -373,8 +401,15 @@ impl PlanApprovalManager {
             "planRevisionId": &snapshot.plan_revision_id,
             "originToolCallId": &snapshot.origin_tool_call_id,
             "planEventSource": "create_plan",
+            "autoApproveAt": auto_approve_at_ms,
         });
         crate::bus::broadcast_event("agent:plan_ready_for_approval", payload);
+
+        spawn_auto_approve_watcher(
+            snapshot.session_id.clone(),
+            snapshot.plan_revision_id.clone(),
+            created_at_ms,
+        );
 
         info!(
             "[plan_approval] Plan ready (session={}, path={})",
@@ -418,15 +453,14 @@ impl PlanApprovalManager {
         self.pending.try_lock().ok().and_then(|guard| guard.clone())
     }
 
-    /// Silently discard the pending entry — called on session cancel /
-    /// session drop. Does NOT emit a lifecycle event because a runtime cancel
-    /// is not the same user action as explicitly skipping the plan.
+    /// Drop the in-memory pending entry — called on session cancel /
+    /// session drop. The DB row is deliberately KEPT: a Stop or eviction is
+    /// not a decision about the plan, and the next mount / rehydrate must
+    /// restore the pending Build card from the persisted row.
     pub async fn clear_silently(&self) {
         let mut guard = self.pending.lock().await;
-        if let Some(snap) = guard.take() {
-            let sid = snap.session_id.clone();
-            persist_blocking(move || PlanApprovalStore::delete_by_session(&sid)).await;
-            info!("[plan_approval] Pending plan cleared silently (session cancel)");
+        if guard.take().is_some() {
+            info!("[plan_approval] Pending plan cleared from memory (session cancel); DB row kept");
         }
     }
 
@@ -470,14 +504,9 @@ impl PlanApprovalManager {
             return Ok(());
         }
 
-        // Defense in depth: a pending plan is only meaningful while the
-        // session is still in Plan mode. If the user switched modes (and a
-        // chokepoint failed to resolve the row), archive instead of
-        // resurrecting a ghost Build card.
-        if session_in_plan_mode(session_id) == Some(false) {
-            resolve_pending(session_id, PlanResolution::Orphaned, None).await;
-            return Ok(());
-        }
+        // A pending plan survives mode switches: no exec-mode gate here.
+        // Only a missing plan file (above) or a deleted session (GC) can
+        // orphan the row.
 
         let snapshot = PendingPlanApproval::from_row(row);
 
@@ -616,6 +645,99 @@ impl Default for PlanApprovalManager {
     }
 }
 
+/// Presence-policy auto-approve deadline watcher for a pending plan.
+///
+/// Mirrors the question watcher: sleeps until the active policy's
+/// `plan_auto_approve` deadline (relative to plan creation) and then
+/// drives the SAME approve path as the user clicking Build (via
+/// `auto_approve_pending_plan` → `resolve_pending`). Re-arms on every
+/// presence change; exits when the plan is resolved or superseded.
+/// Resolution is idempotent — a racing manual click wins and the watcher
+/// becomes a no-op.
+fn spawn_auto_approve_watcher(session_id: String, plan_revision_id: String, created_at_ms: i64) {
+    use super::presence_policy::AutoResolve;
+    use super::presence_state;
+    use tauri::Manager;
+
+    tokio::spawn(async move {
+        let mut presence_rx = presence_state::subscribe();
+
+        loop {
+            // Exit when this revision is no longer the pending plan.
+            let sid = session_id.clone();
+            let still_pending =
+                tokio::task::spawn_blocking(move || PlanApprovalStore::load_by_session(&sid))
+                    .await
+                    .ok()
+                    .and_then(Result::ok)
+                    .flatten()
+                    .is_some_and(|row| {
+                        row.plan_revision_id == plan_revision_id
+                            || row.tool_call_id.as_deref() == Some(plan_revision_id.as_str())
+                    });
+            if !still_pending {
+                return;
+            }
+
+            let policy = presence_state::global_policy();
+            let deadline_ms = match policy.plan_auto_approve {
+                AutoResolve::Off => None,
+                AutoResolve::After(window) => Some(created_at_ms + window.as_millis() as i64),
+            };
+
+            match deadline_ms {
+                None => {
+                    if presence_rx.recv().await.is_err() {
+                        return;
+                    }
+                }
+                Some(deadline_ms) => {
+                    let now_ms = chrono::Utc::now().timestamp_millis();
+                    let remaining = (deadline_ms - now_ms).max(0) as u64;
+                    tokio::select! {
+                        _ = tokio::time::sleep(std::time::Duration::from_millis(remaining)) => {
+                            let mode_label = presence_state::global_presence()
+                                .map(|presence| presence.display_label().to_string())
+                                .unwrap_or_else(|| "away".to_string());
+                            let Some(handle) = GLOBAL_APP_HANDLE.get() else {
+                                warn!("[plan_approval] auto-approve: no app handle");
+                                return;
+                            };
+                            let Some(state) =
+                                handle.try_state::<crate::state::AgentAppState>()
+                            else {
+                                warn!("[plan_approval] auto-approve: AgentAppState missing");
+                                return;
+                            };
+                            info!(
+                                "[plan_approval] auto-approving pending plan (session={}, mode={})",
+                                session_id, mode_label
+                            );
+                            if let Err(err) =
+                                crate::state::commands::session::auto_approve_pending_plan(
+                                    &state,
+                                    session_id.clone(),
+                                    mode_label,
+                                )
+                                .await
+                            {
+                                warn!("[plan_approval] auto-approve failed: {err}");
+                            }
+                            return;
+                        }
+                        changed = presence_rx.recv() => {
+                            if changed.is_err() {
+                                return;
+                            }
+                            // Re-loop: re-read policy and re-arm.
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 /// Run a blocking `rusqlite` call on the blocking pool, logging failures
 /// instead of propagating them. Persistence errors must never block the
 /// plan-approval flow — the in-memory slot is still authoritative for the
@@ -669,43 +791,11 @@ pub async fn load_snapshot_for_session(
         return Ok(None);
     }
 
-    // Same defense-in-depth gate as `rehydrate_from_db`: a pending plan is
-    // only actionable while the session is still in Plan mode.
-    if session_in_plan_mode(session_id) == Some(false) {
-        resolve_pending(session_id, PlanResolution::Orphaned, None).await;
-        return Ok(None);
-    }
+    // A pending plan survives mode switches — no exec-mode gate. The row
+    // stays actionable from any mode until Build / Skip / supersede /
+    // file-or-session deletion.
 
     Ok(Some(PendingPlanApproval::from_row(row)))
-}
-
-/// Best-effort check whether `session_id` is currently in Plan exec mode.
-///
-/// Returns `Some(true)` / `Some(false)` when the session row was found in
-/// either the Rust-agent (`agent_sessions`) or CLI (`code_sessions`) store,
-/// and `None` when the session cannot be located or the lookup failed —
-/// callers must treat `None` as "unknown, do not GC" so a transient DB
-/// error can never destroy a legitimate pending plan.
-fn session_in_plan_mode(session_id: &str) -> Option<bool> {
-    match crate::session::persistence::get_session(session_id) {
-        Ok(Some(record)) => {
-            return Some(record.agent_exec_mode.as_deref() == Some("plan"));
-        }
-        Ok(None) => {}
-        Err(err) => {
-            warn!("[plan_approval] exec-mode lookup failed for {session_id}: {err}");
-            return None;
-        }
-    }
-
-    match crate::foundation::session_bridge::get_cli_tools_snapshot(session_id) {
-        Ok(Some(snapshot)) => Some(snapshot.agent_exec_mode == "plan"),
-        Ok(None) => None,
-        Err(err) => {
-            warn!("[plan_approval] CLI exec-mode lookup failed for {session_id}: {err}");
-            None
-        }
-    }
 }
 
 /// Startup garbage collection for orphaned pending-plan rows.
@@ -713,11 +803,11 @@ fn session_in_plan_mode(session_id: &str) -> Option<bool> {
 /// Scans the whole `pending_plan_approvals` table once and resolves as
 /// `Orphaned` every row whose:
 ///   * plan file no longer exists on disk, OR
-///   * session row no longer exists in either session store, OR
-///   * session is no longer in Plan exec mode.
+///   * session row no longer exists in either session store.
 ///
-/// Rows for sessions whose exec mode cannot be determined (`None` from
-/// [`session_in_plan_mode`] with the session row present) are left alone.
+/// A session having left Plan mode is NOT an orphan condition: pending
+/// plans are session-level state decoupled from the exec mode and must
+/// survive mode switches and restarts.
 /// Called once from app setup after the DB and bridges are initialized.
 pub async fn gc_orphaned_pending_plans() {
     let rows = match tokio::task::spawn_blocking(PlanApprovalStore::list_all).await {
@@ -736,9 +826,8 @@ pub async fn gc_orphaned_pending_plans() {
     for row in rows {
         let file_missing = !std::path::Path::new(&row.plan_path).exists();
         let session_exists = session_row_exists(&row.session_id);
-        let left_plan_mode = session_in_plan_mode(&row.session_id) == Some(false);
 
-        if file_missing || !session_exists || left_plan_mode {
+        if file_missing || !session_exists {
             resolve_pending(&row.session_id, PlanResolution::Orphaned, None).await;
             collected += 1;
         }
@@ -749,6 +838,16 @@ pub async fn gc_orphaned_pending_plans() {
     }
 }
 
+/// List every live pending plan's revision id. Used by the startup repair
+/// scan to distinguish legitimately-awaiting `create_plan` events from
+/// historical strands whose row is gone.
+pub fn pending_revision_ids() -> Result<Vec<String>, String> {
+    PlanApprovalStore::list_all()
+        .map(|rows| rows.into_iter().map(|row| row.plan_revision_id).collect())
+        .map_err(|err| err.to_string())
+}
+
+/// Best-effort check whether a session row exists in either store.
 fn session_row_exists(session_id: &str) -> bool {
     if matches!(
         crate::session::persistence::get_session(session_id),
@@ -913,7 +1012,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn clear_silently_deletes_row_so_rehydrate_is_empty() {
+    async fn clear_silently_keeps_row_so_rehydrate_restores_pending() {
         let _lock = lock_and_prepare();
         let plan_path = temp_home().join("clear_rehydrate.plan.md");
         std::fs::write(&plan_path, "body").unwrap();
@@ -923,10 +1022,16 @@ mod tests {
         mgr.mark_ready(session_id, plan_path.to_str().unwrap(), "T", "body", None)
             .await;
         mgr.clear_silently().await;
+        assert!(!mgr.is_pending().await, "memory slot must be dropped");
 
+        // Stop / eviction is not a decision about the plan: the DB row
+        // survives and the next rehydrate restores the Build card.
         let fresh = PlanApprovalManager::new();
         fresh.rehydrate_from_db(session_id).await.unwrap();
-        assert!(!fresh.is_pending().await);
+        assert!(
+            fresh.is_pending().await,
+            "DB row must survive clear_silently"
+        );
     }
 
     #[tokio::test]
@@ -1069,7 +1174,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn resolve_pending_abandoned_deletes_row_without_manager() {
+    async fn resolve_pending_orphaned_deletes_row_without_manager() {
         let _lock = lock_and_prepare();
         let plan_path = temp_home().join("abandon.plan.md");
         std::fs::write(&plan_path, "body").unwrap();
@@ -1079,13 +1184,13 @@ mod tests {
         mgr.mark_ready(session_id, plan_path.to_str().unwrap(), "T", "body", None)
             .await;
 
-        let snap = resolve_pending(session_id, PlanResolution::Abandoned, None)
+        let snap = resolve_pending(session_id, PlanResolution::Orphaned, None)
             .await
             .expect("pending resolved");
         assert_eq!(snap.session_id, session_id);
 
         // Row gone — second resolve is a no-op, rehydrate finds nothing.
-        assert!(resolve_pending(session_id, PlanResolution::Abandoned, None)
+        assert!(resolve_pending(session_id, PlanResolution::Orphaned, None)
             .await
             .is_none());
         assert!(super::load_snapshot_for_session(session_id)
@@ -1126,7 +1231,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn rehydrate_archives_row_when_session_left_plan_mode() {
+    async fn rehydrate_keeps_row_when_session_left_plan_mode() {
         let _lock = lock_and_prepare();
         let plan_path = temp_home().join("left_plan_mode.plan.md");
         std::fs::write(&plan_path, "body").unwrap();
@@ -1137,16 +1242,18 @@ mod tests {
         mgr.mark_ready(session_id, plan_path.to_str().unwrap(), "T", "body", None)
             .await;
 
+        // Pending plans are session-level state decoupled from the exec
+        // mode: a session that switched to Build keeps its Build card.
         let fresh = PlanApprovalManager::new();
         fresh.rehydrate_from_db(session_id).await.unwrap();
         assert!(
-            !fresh.is_pending().await,
-            "session in build mode must not resurrect a pending plan"
+            fresh.is_pending().await,
+            "pending plan must survive the session leaving plan mode"
         );
         assert!(super::load_snapshot_for_session(session_id)
             .await
             .unwrap()
-            .is_none());
+            .is_some());
     }
 
     #[tokio::test]
@@ -1167,7 +1274,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn gc_collects_orphans_and_keeps_live_plan_mode_rows() {
+    async fn gc_collects_orphans_and_keeps_rows_regardless_of_mode() {
         let _lock = lock_and_prepare();
 
         // Live: session in plan mode, file exists → must survive GC.
@@ -1189,13 +1296,14 @@ mod tests {
             .await;
         std::fs::remove_file(&gone_path).unwrap();
 
-        // Orphan B: session left plan mode.
+        // NOT an orphan: session left plan mode but still exists — the
+        // pending plan must survive GC (mode-decoupled lifecycle).
         let stale_path = temp_home().join("gc_stale.plan.md");
         std::fs::write(&stale_path, "body").unwrap();
-        seed_session_row("s_gc_stale", "build");
+        seed_session_row("s_gc_left_mode", "build");
         PlanApprovalManager::new()
             .mark_ready(
-                "s_gc_stale",
+                "s_gc_left_mode",
                 stale_path.to_str().unwrap(),
                 "T",
                 "body",
@@ -1219,10 +1327,11 @@ mod tests {
         gc_orphaned_pending_plans().await;
 
         let remaining = PlanApprovalStore::list_all().unwrap();
-        let remaining_ids: Vec<&str> = remaining
+        let mut remaining_ids: Vec<&str> = remaining
             .iter()
             .map(|row| row.session_id.as_str())
             .collect();
-        assert_eq!(remaining_ids, vec!["s_gc_live"]);
+        remaining_ids.sort_unstable();
+        assert_eq!(remaining_ids, vec!["s_gc_left_mode", "s_gc_live"]);
     }
 }

@@ -20,6 +20,7 @@ members = [
     "crates/bin-telegram-smoke",
     "crates/browser",
     "crates/container",
+    "crates/code-map",
     "crates/ui-indexer",
     "crates/cursor-bridge",
     "crates/cursor-bridge-app",
@@ -250,6 +251,7 @@ browser = { path = "crates/browser" }
 # Local Docker container inspection and lifecycle commands for Launchpad.
 # Pure leaf — `app` re-registers its Tauri commands in `commands/handler_list.inc`.
 container = { path = "crates/container" }
+code_map = { path = "crates/code-map" }
 
 # Tauri commands for reading / writing the on-disk config files of
 # external CLI agents (Cursor, Claude Code, Codex). The `app` crate just

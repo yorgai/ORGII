@@ -34,9 +34,9 @@ pub fn conn() -> Result<Connection, String> {
 }
 
 pub use read::{
-    count_by_status, last_error_for_project, list_bound_projects, list_for_project,
-    list_problems, load_by_id, read_adapter_binding, read_last_webhook_at, read_sync_cursor,
-    AdapterBinding, ProjectBinding, SyncCursor,
+    count_by_status, last_error_for_project, list_bound_projects, list_for_project, list_problems,
+    load_by_id, read_adapter_binding, read_last_webhook_at, read_sync_cursor, AdapterBinding,
+    ProjectBinding, SyncCursor,
 };
 pub use write::{
     append, attach_adapter, claim_next_merge_external, claim_next_pending, detach_adapter,

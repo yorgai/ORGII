@@ -14,11 +14,9 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         simulator_app: AppCode,
         app_subtool: FileRead,
         chat_block: CbReadFile,
+        display_behavior: DisplayInstant,
         human_tool_key: Some(HtCode),
-        action_icons: &[
-            ("read_image", "image"),
-            ("read_pdf", "file-box"),
-        ],
+        action_icons: &[("read_image", "image"), ("read_pdf", "file-box")],
         label_running: "tools.readFileRunning",
         label_done: "tools.readFileDone",
         label_failed: "tools.readFileFailed",
@@ -56,6 +54,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         simulator_app: AppCode,
         app_subtool: Shell,
         chat_block: CbShell,
+        display_behavior: DisplayStream,
         human_tool_key: Some(Terminal),
         label_running: "tools.runShellRunning",
         label_done: "tools.runShellDone",
@@ -90,6 +89,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         simulator_app: AppCode,
         app_subtool: Shell,
         chat_block: CbFallback,
+        display_behavior: DisplayStream,
         human_tool_key: Some(Terminal),
         label_running: "tools.inspectTerminalsRunning",
         label_done: "tools.inspectTerminalsDone",
@@ -119,10 +119,8 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         icon_id: "timer",
         simulator_app: AppCode,
         app_subtool: Shell,
-        action_icons: &[
-            ("monitor", "focus"),
-            ("list", "list-tree"),
-        ],
+        display_behavior: DisplayStream,
+        action_icons: &[("monitor", "focus"), ("list", "list-tree")],
         // Tool-level default: each subcommand action overrides chat_block below.
         // `wait_for` / `monitor` render as TitleOnly rows (icon + title + subtitle,
         // no body); `list` renders via the Explore/ToolCallBlock stack list to
@@ -148,6 +146,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
                 "Block until a regex pattern matches, the job completes, or the timeout elapses",
                 Shell,
                 chat: CbTitleOnly,
+                display: DisplayStream,
                 labels: "tools.awaitOutputWaitForRunning", "tools.awaitOutputWaitForDone", "tools.awaitOutputWaitForFailed"
             ),
             action_sub!(
@@ -155,6 +154,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
                 "Non-blocking snapshot of a background job (current status + last N lines)",
                 Shell,
                 chat: CbTitleOnly,
+                display: DisplayStream,
                 labels: "tools.awaitOutputMonitorRunning", "tools.awaitOutputMonitorDone", "tools.awaitOutputMonitorFailed"
             ),
             action_sub!(
@@ -162,6 +162,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
                 "List all background jobs for this session",
                 Explore,
                 chat: CbFallback,
+                display: DisplayWaitForResult,
                 labels: "tools.awaitOutputListRunning", "tools.awaitOutputListDone", "tools.awaitOutputListFailed"
             ),
         ],
@@ -191,6 +192,68 @@ pub(super) static TOOLS: &[ToolEntry] = &[
             action_sub!("symbols", "Search for code symbols (functions, classes, types)", SubSearch, labels: "tools.searchSymbolsRunning", "tools.searchSymbolsDone", "tools.searchSymbolsFailed"),
             action_sub!("check_status", "Check search status for a repository", OtherTool, chat: CbFallback, labels: "tools.searchCheckStatusRunning", "tools.searchCheckStatusDone", "tools.searchCheckStatusFailed"),
         ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::USE_CODE_MAP,
+        description: "Use the persistent Code Map symbol graph.",
+        description_detail: "Read-only code intelligence backed by the Rust-native Code Map SQLite index. Use it for symbol search, source-aware node inspection, callers/callees, impact analysis, and relationship-oriented exploration after a workspace has been indexed. Use `manage_code_map` first when the index is missing, stale, failed, or needs a rebuild.",
+        category: tool_categories::CODING,
+        icon_id: "map",
+        simulator_app: AppCode,
+        app_subtool: SubSearch,
+        chat_block: CbSearch,
+        human_tool_key: Some(HtCode),
+        action_icons: &[
+            ("status", "activity"),
+            ("node", "braces"),
+            ("callers", "arrow-left-to-line"),
+            ("callees", "arrow-right-from-line"),
+            ("impact", "radar"),
+            ("explore", "network"),
+        ],
+        label_running: "tools.codeMapSearchRunning",
+        label_done: "tools.codeMapSearchDone",
+        label_failed: "tools.codeMapSearchFailed",
+        actions: &[
+            action_sub!("status", "Show Code Map index status and counts", OtherTool, chat: CbFallback, labels: "tools.codeMapStatusRunning", "tools.codeMapStatusDone", "tools.codeMapStatusFailed"),
+            action_sub!("search", "Search indexed symbols by name or qualified name", SubSearch, labels: "tools.codeMapSearchRunning", "tools.codeMapSearchDone", "tools.codeMapSearchFailed"),
+            action_sub!("node", "Inspect a symbol or file node with source and relationships", Explore, labels: "tools.codeMapNodeRunning", "tools.codeMapNodeDone", "tools.codeMapNodeFailed"),
+            action_sub!("callers", "List incoming callers and references for a node", Explore, labels: "tools.codeMapCallersRunning", "tools.codeMapCallersDone", "tools.codeMapCallersFailed"),
+            action_sub!("callees", "List outgoing callees and references for a node", Explore, labels: "tools.codeMapCalleesRunning", "tools.codeMapCalleesDone", "tools.codeMapCalleesFailed"),
+            action_sub!("impact", "Run bounded reverse traversal for impact analysis", Explore, labels: "tools.codeMapImpactRunning", "tools.codeMapImpactDone", "tools.codeMapImpactFailed"),
+            action_sub!("explore", "Explore related indexed symbols and relationship trails", Explore, labels: "tools.codeMapExploreRunning", "tools.codeMapExploreDone", "tools.codeMapExploreFailed"),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::MANAGE_CODE_MAP,
+        description: "Manage the Code Map index lifecycle.",
+        description_detail: "Companion management tool for the Rust-native Code Map index. Use it to inspect status and freshness, run incremental indexing, force a full rebuild, cancel an active index task, or clear the local index. It prepares the persistent symbol graph consumed by the read-only `use_code_map` tool.",
+        category: tool_categories::CODING,
+        icon_id: "map",
+        simulator_app: AppCode,
+        app_subtool: OtherTool,
+        chat_block: CbFallback,
+        human_tool_key: Some(HtCode),
+        action_icons: &[
+            ("status", "activity"),
+            ("index", "play"),
+            ("reindex", "refresh-cw"),
+            ("cancel", "circle-stop"),
+            ("clear", "trash-2"),
+        ],
+        label_running: "tools.manageCodeMapRunning",
+        label_done: "tools.manageCodeMapDone",
+        label_failed: "tools.manageCodeMapFailed",
+        actions: &[
+            action_sub!("status", "Inspect Code Map index state, progress, freshness, counts, and size", OtherTool, chat: CbFallback, labels: "tools.manageCodeMapStatusRunning", "tools.manageCodeMapStatusDone", "tools.manageCodeMapStatusFailed"),
+            action_sub!("index", "Run an incremental Code Map index for new or stale files", OtherTool, chat: CbFallback, labels: "tools.manageCodeMapIndexRunning", "tools.manageCodeMapIndexDone", "tools.manageCodeMapIndexFailed"),
+            action_sub!("reindex", "Force a full Code Map rebuild", OtherTool, chat: CbFallback, labels: "tools.manageCodeMapReindexRunning", "tools.manageCodeMapReindexDone", "tools.manageCodeMapReindexFailed"),
+            action_sub!("cancel", "Request cancellation for an active Code Map index task", OtherTool, chat: CbFallback, labels: "tools.manageCodeMapCancelRunning", "tools.manageCodeMapCancelDone", "tools.manageCodeMapCancelFailed"),
+            action_sub!("clear", "Delete the local Code Map index for a workspace", OtherTool, chat: CbFallback, labels: "tools.manageCodeMapClearRunning", "tools.manageCodeMapClearDone", "tools.manageCodeMapClearFailed"),
+        ],
+        required_capability: CapCoding,
         ..DEFAULT_TOOL_ENTRY
     },
     ToolEntry {

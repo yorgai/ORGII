@@ -5,9 +5,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::coordination::agent_org_tasks::{
-    self, AgentOrgTaskStore, CreateTaskParams, TaskStatus,
-};
+use crate::coordination::agent_org_tasks::{self, AgentOrgTaskStore, CreateTaskParams, TaskStatus};
 use crate::tools::names as tool_names;
 use crate::tools::traits::{params_schema, parse_params, CallContext, Tool, ToolError};
 
@@ -99,7 +97,11 @@ impl Tool for TaskCreateTool {
         params_schema::<TaskCreateParams>()
     }
 
-    async fn execute_text(&self, params_value: Value, _ctx: &CallContext) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params_value: Value,
+        _ctx: &CallContext,
+    ) -> Result<String, ToolError> {
         let params: TaskCreateParams = parse_params(params_value)?;
         if params.subject.trim().is_empty() {
             return Err(ToolError::InvalidParams(

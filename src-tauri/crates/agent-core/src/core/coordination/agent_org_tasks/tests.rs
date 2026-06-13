@@ -252,8 +252,7 @@ fn requeue_in_progress_for_owner_keeps_owner_and_releases_status() {
     let _sandbox = task_store_sandbox();
     let run_id = format!("run-{}", uuid::Uuid::new_v4());
     AgentOrgTaskStore::create(make_params(&run_id, "t-1", "claim me")).unwrap();
-    AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default())
-        .unwrap();
+    AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default()).unwrap();
 
     let requeued = AgentOrgTaskStore::requeue_in_progress_for_owner(&run_id, "member-alpha")
         .expect("requeue in-progress work");
@@ -271,8 +270,7 @@ fn task_history_records_create_claim_update_and_release() {
     let _sandbox = task_store_sandbox();
     let run_id = format!("run-{}", uuid::Uuid::new_v4());
     AgentOrgTaskStore::create(make_params(&run_id, "t-1", "history")).unwrap();
-    AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default())
-        .unwrap();
+    AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default()).unwrap();
     AgentOrgTaskStore::update(
         &run_id,
         "t-1",
@@ -324,13 +322,9 @@ fn task_history_records_create_claim_update_and_release() {
 fn try_claim_returns_task_not_found() {
     let _sandbox = task_store_sandbox();
     let run_id = format!("run-{}", uuid::Uuid::new_v4());
-    let err = AgentOrgTaskStore::try_claim(
-        &run_id,
-        "missing",
-        "member-alpha",
-        ClaimOptions::default(),
-    )
-    .unwrap_err();
+    let err =
+        AgentOrgTaskStore::try_claim(&run_id, "missing", "member-alpha", ClaimOptions::default())
+            .unwrap_err();
     assert_eq!(err, ClaimError::TaskNotFound);
 }
 
@@ -339,12 +333,10 @@ fn try_claim_already_claimed_by_other_member() {
     let _sandbox = task_store_sandbox();
     let run_id = format!("run-{}", uuid::Uuid::new_v4());
     AgentOrgTaskStore::create(make_params(&run_id, "t-1", "claim me")).unwrap();
-    AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default())
-        .unwrap();
+    AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default()).unwrap();
 
-    let err =
-        AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-beta", ClaimOptions::default())
-            .unwrap_err();
+    let err = AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-beta", ClaimOptions::default())
+        .unwrap_err();
     match err {
         ClaimError::AlreadyClaimed { current_owner } => {
             assert_eq!(current_owner, "member-alpha");
@@ -358,8 +350,7 @@ fn try_claim_idempotent_for_current_owner() {
     let _sandbox = task_store_sandbox();
     let run_id = format!("run-{}", uuid::Uuid::new_v4());
     AgentOrgTaskStore::create(make_params(&run_id, "t-1", "claim me")).unwrap();
-    AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default())
-        .unwrap();
+    AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default()).unwrap();
     let again =
         AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default())
             .unwrap();
@@ -376,9 +367,8 @@ fn try_claim_already_resolved_takes_priority_over_ownership() {
     params.status = TaskStatus::Completed;
     AgentOrgTaskStore::create(params).unwrap();
 
-    let err =
-        AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default())
-            .unwrap_err();
+    let err = AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default())
+        .unwrap_err();
     match err {
         ClaimError::AlreadyResolved { status } => {
             assert_eq!(status, TaskStatus::Completed);
@@ -399,9 +389,8 @@ fn try_claim_blocked_lists_unresolved_blockers() {
     dependent.blocked_by = vec!["blocker-1".into(), "blocker-2".into()];
     AgentOrgTaskStore::create(dependent).unwrap();
 
-    let err =
-        AgentOrgTaskStore::try_claim(&run_id, "dep", "member-alpha", ClaimOptions::default())
-            .unwrap_err();
+    let err = AgentOrgTaskStore::try_claim(&run_id, "dep", "member-alpha", ClaimOptions::default())
+        .unwrap_err();
     match err {
         ClaimError::Blocked { by_task_ids } => {
             assert_eq!(by_task_ids, vec!["blocker-1".to_string()]);
@@ -417,13 +406,11 @@ fn try_claim_member_busy_only_when_option_enabled() {
     AgentOrgTaskStore::create(make_params(&run_id, "t-1", "first")).unwrap();
     AgentOrgTaskStore::create(make_params(&run_id, "t-2", "second")).unwrap();
 
-    AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default())
-        .unwrap();
+    AgentOrgTaskStore::try_claim(&run_id, "t-1", "member-alpha", ClaimOptions::default()).unwrap();
 
     // With default options the second claim succeeds.
-    let _ok =
-        AgentOrgTaskStore::try_claim(&run_id, "t-2", "member-alpha", ClaimOptions::default())
-            .unwrap();
+    let _ok = AgentOrgTaskStore::try_claim(&run_id, "t-2", "member-alpha", ClaimOptions::default())
+        .unwrap();
 
     // Reset t-2 (unassign + pending) so we can rerun with the strict flag.
     AgentOrgTaskStore::update(
@@ -482,13 +469,9 @@ fn find_available_skips_owned_blocked_and_resolved() {
     assert_eq!(picked.id, "blocker");
 
     // Claim blocker, complete it, and then `free` must surface.
-    let _ = AgentOrgTaskStore::try_claim(
-        &run_id,
-        "blocker",
-        "member-alpha",
-        ClaimOptions::default(),
-    )
-    .unwrap();
+    let _ =
+        AgentOrgTaskStore::try_claim(&run_id, "blocker", "member-alpha", ClaimOptions::default())
+            .unwrap();
     AgentOrgTaskStore::update(
         &run_id,
         "blocker",

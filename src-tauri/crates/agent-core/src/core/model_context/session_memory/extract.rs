@@ -12,7 +12,7 @@ use super::config::SessionMemoryConfig;
 use super::sections::{analyze_section_sizes, generate_section_reminders};
 use super::state::SessionMemoryState;
 use crate::core::model_context::tokenizer;
-use crate::core::side_query::{self, SideQueryConfig};
+use crate::core::side_query::{self, SideQueryConfig, StructuredOutput};
 use crate::providers::traits::LLMProvider;
 
 /// SM extraction system prompt — 9-section template.
@@ -186,6 +186,20 @@ pub async fn extract_session_memory(
         max_tokens: config.extraction_max_tokens,
         temperature: 0.0,
         system_prompt: Some(SM_EXTRACTION_SYSTEM_PROMPT.to_string()),
+        structured: Some(StructuredOutput {
+            tool_name: "emit_session_memory".to_string(),
+            schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "content": {
+                        "type": "string",
+                        "description": "The structured session memory document"
+                    }
+                },
+                "required": ["content"]
+            }),
+        }),
+        ..Default::default()
     };
 
     let user_messages = vec![serde_json::json!({
@@ -199,7 +213,17 @@ pub async fn extract_session_memory(
 
     match result {
         Ok(sq_result) => {
-            let sm_content = sq_result.content;
+            // Extract from structured output (forced tool call) if available,
+            // fall back to text content for providers that don't support tool_choice.
+            let sm_content = if let Some(structured) = sq_result.structured {
+                structured
+                    .get("content")
+                    .and_then(|s| s.as_str())
+                    .unwrap_or("")
+                    .to_string()
+            } else {
+                sq_result.content
+            };
             state.content = Some(sm_content.clone());
             state.tokens_at_last_extraction = tokenizer::count_messages_tokens(messages);
             state.tool_calls_since_extraction = 0;

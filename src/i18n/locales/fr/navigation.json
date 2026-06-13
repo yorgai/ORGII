@@ -137,7 +137,7 @@
       "joinSharedSession": "Rejoindre une session partagée…"
     },
     "search": {
-      "folders": "Rechercher dans les dossiers...",
+      "folders": "Rechercher dans l’espace de travail...",
       "sessions": "Rechercher des sessions...",
       "projects": "Rechercher des projets..."
     },
@@ -149,7 +149,8 @@
     },
     "bottomBar": {
       "settings": "Paramètres",
-      "clockLabel": "Heure actuelle"
+      "clockLabel": "Heure actuelle",
+      "updateAvailable": "Télécharger la mise à jour v{{version}}"
     },
     "settingsMenu": {
       "appearance": "Apparence",
@@ -326,9 +327,9 @@
       "startSession": "Démarrer la session",
       "openDetails": "Afficher les détails",
       "locateInFinder": "Afficher dans le Finder",
-      "remove": "Supprimer",
-      "removeSuccess": "Espace de travail supprimé",
-      "removeFailed": "Échec de la suppression de l'espace de travail"
+      "remove": "Remove from ORGII",
+      "removeSuccess": "Linkage to ORGII removed",
+      "removeFailed": "Failed to remove linkage to ORGII"
     },
     "addWorkspace": "Ajouter un espace de travail"
   },

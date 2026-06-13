@@ -8,13 +8,13 @@
 use tracing::info;
 
 use super::super::client::{ClientError, RunStream};
+use super::super::proto::agent_v1 as pb;
+use super::super::tools::{mcp_args_to_tool_call, CURSOR_MCP_PROVIDER_IDENTIFIER};
+use super::super::CursorNativeWorkspaceContext;
 use super::helpers::{
     build_request_context, cursor_mcp_tool_name_from_args, describe_workspace_context,
     exec_message_variant_name,
 };
-use super::super::proto::agent_v1 as pb;
-use super::super::tools::{mcp_args_to_tool_call, CURSOR_MCP_PROVIDER_IDENTIFIER};
-use super::super::CursorNativeWorkspaceContext;
 use crate::providers::traits::ToolCallRequest;
 use crate::tools::names as tool_names;
 
@@ -490,9 +490,7 @@ pub(super) fn handle_exec_server_message(
 /// [`crate::providers::traits::ProviderError`] variants the retry layer understands.
 ///
 /// Code mapping informed by Cursor's Connect trailers observed in practice.
-pub(super) fn map_client_error(
-    err: ClientError,
-) -> crate::providers::traits::ProviderError {
+pub(super) fn map_client_error(err: ClientError) -> crate::providers::traits::ProviderError {
     use crate::providers::traits::ProviderError;
     match err {
         ClientError::Http(e) => ProviderError::RequestFailed(format!("Cursor HTTP: {}", e)),

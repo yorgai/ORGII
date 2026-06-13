@@ -52,8 +52,13 @@ import {
   derivedSnapshotAtom,
   eventStoreVersionAtom,
 } from "@src/engines/SessionCore/core/atoms/events";
+import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
 import { isInteractiveTool } from "@src/engines/SessionCore/core/interactiveTools";
-import { isLiveRuntimeResourceEvent } from "@src/engines/SessionCore/core/runningEventGate";
+import { hasLiveRuntimeResourceInLatestTurn } from "@src/engines/SessionCore/core/runningEventGate";
+import {
+  noopSessionScopedPlanningMetaAtom,
+  sessionScopedPlanningMetaAtomFamily,
+} from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
 import {
   isPendingCancelAtom,
   isSessionActiveAtom,
@@ -126,20 +131,69 @@ export interface PlanningIndicatorState {
   variantIndex: number;
 }
 
-export function usePlanningIndicator(): PlanningIndicatorState {
-  const isSessionActive = useAtomValue(isSessionActiveAtom);
-  const isPendingCancel = useAtomValue(isPendingCancelAtom);
-  const runtimeStatus = useAtomValue(sessionRuntimeStatusAtom);
+/**
+ * Session-scoped mode for `usePlanningIndicator`.
+ *
+ * The default (no scope) reads the GLOBAL active-session atoms
+ * (`isSessionActiveAtom`, `sessionRuntimeStatusAtom`, `derivedSnapshotAtom`,
+ * `eventStoreVersionAtom`) — correct for the primary ChatPanel only. A
+ * session-scoped ChatHistory instance (subagent monitor cell) must pass a
+ * scope so the footer is driven by ITS session's snapshot channel instead
+ * of the parent's.
+ *
+ * `isLive` is supplied by the surface because subagent sessions are not in
+ * the global sidebar session map — the monitor strip already holds the
+ * backend-authoritative status (`es_get_child_sessions` → endedAt). The
+ * caller should also fold replay state into it (a scrubbed cell shows a
+ * historical slice; a footer there would lie).
+ */
+export interface PlanningIndicatorScope {
+  sessionId: string;
+  isLive: boolean;
+}
+
+export function usePlanningIndicator(
+  scope?: PlanningIndicatorScope | null
+): PlanningIndicatorState {
+  const scoped = Boolean(scope);
+  const globalIsSessionActive = useAtomValue(isSessionActiveAtom);
+  const globalIsPendingCancel = useAtomValue(isPendingCancelAtom);
+  const globalRuntimeStatus = useAtomValue(sessionRuntimeStatusAtom);
   const snapshot = useAtomValue(derivedSnapshotAtom);
-  const version = useAtomValue(eventStoreVersionAtom);
+  const globalVersion = useAtomValue(eventStoreVersionAtom);
+  const sessionId = useAtomValue(sessionIdAtom);
   const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
+  const scopedMeta = useAtomValue(
+    scope
+      ? sessionScopedPlanningMetaAtomFamily(scope.sessionId)
+      : noopSessionScopedPlanningMetaAtom
+  );
 
-  const anyRunning = useMemo(() => {
+  const isSessionActive = scoped
+    ? Boolean(scope?.isLive)
+    : globalIsSessionActive;
+  const isPendingCancel = scoped ? false : globalIsPendingCancel;
+  // Scoped surfaces have no runtime-status mirror of their own; liveness is
+  // already folded into `isLive`, so map it onto the status gate directly.
+  const runtimeStatus = scoped
+    ? scope?.isLive
+      ? "running"
+      : "idle"
+    : globalRuntimeStatus;
+  const version = scoped ? scopedMeta.version : globalVersion;
+
+  const globalAnyRunning = useMemo(() => {
+    if (scoped) return false;
     if (!snapshot || !("chatEvents" in snapshot)) return false;
-    return snapshot.chatEvents.some(isLiveRuntimeResourceEvent);
-  }, [snapshot]);
+    // Latest-turn scan: zombie running events from old turns (dropped
+    // terminal merges, frozen shellProcessStatus) must not suppress the
+    // footer for the rest of the session.
+    return hasLiveRuntimeResourceInLatestTurn(snapshot.chatEvents);
+  }, [scoped, snapshot]);
+  const anyRunning = scoped ? scopedMeta.anyRunning : globalAnyRunning;
 
-  const hasAwaitingUserInteraction = useMemo(() => {
+  const globalHasAwaitingUserInteraction = useMemo(() => {
+    if (scoped) return false;
     if (!snapshot || !("events" in snapshot)) return false;
     return snapshot.events.some(
       (event) =>
@@ -147,14 +201,17 @@ export function usePlanningIndicator(): PlanningIndicatorState {
         event.activityStatus !== "processed" &&
         isInteractiveTool(event.functionName)
     );
-  }, [snapshot]);
+  }, [scoped, snapshot]);
+  const hasAwaitingUserInteraction = scoped
+    ? scopedMeta.hasAwaitingUserInteraction
+    : globalHasAwaitingUserInteraction;
 
   // True when the most recent chat-visible event is a non-streaming
   // assistant message that has already settled. In this state the user
   // has seen the final reply, so showing a planning footer is misleading
   // even if the backend terminal event is still winding down.
   const lastIsSettledAssistantMessage = useMemo(() => {
-    if (!snapshot) return false;
+    if (scoped || !snapshot) return false;
     const chat =
       "chatEvents" in snapshot && Array.isArray(snapshot.chatEvents)
         ? snapshot.chatEvents
@@ -166,7 +223,7 @@ export function usePlanningIndicator(): PlanningIndicatorState {
       last.displayStatus === "completed" &&
       !last.isDelta
     );
-  }, [snapshot]);
+  }, [scoped, snapshot]);
 
   const [idleAfterVersion, setIdleAfterVersion] = useState<number | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -286,20 +343,28 @@ export function usePlanningIndicator(): PlanningIndicatorState {
   // mid-turn (queued follow-ups were auto-sent into a still-running turn).
   // If Rust genuinely dropped agent:complete, the queue's backend status
   // gate re-checks and drains once the session row reads terminal.
+  //
+  // Scoped instances skip the watchdog entirely: they don't own the global
+  // runtime-status mirror, and their liveness comes from the monitor
+  // strip's backend-authoritative status, which self-corrects.
   useEffect(() => {
-    if (!visible) return;
+    if (scoped || !visible || !sessionId) return;
     const timerId = window.setTimeout(() => {
       console.warn(
         `[usePlanningIndicator] watchdog: planning indicator stuck for ${PLANNING_WATCHDOG_MS}ms — ` +
           "forcing session status to 'completed'. This usually means Rust dropped agent:complete " +
           "or the idle agent:queue_status frame."
       );
-      setSessionRuntimeStatus({ status: "completed", source: "planning" });
+      setSessionRuntimeStatus({
+        sessionId,
+        status: "completed",
+        source: "planning",
+      });
     }, PLANNING_WATCHDOG_MS);
     return () => {
       window.clearTimeout(timerId);
     };
-  }, [visible, setSessionRuntimeStatus]);
+  }, [scoped, visible, sessionId, setSessionRuntimeStatus]);
 
   // Re-roll the variant index on every hidden → visible transition.
   // Using a large random integer and letting the consumer mod by the

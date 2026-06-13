@@ -157,8 +157,7 @@ impl Tool for WriteEnvFileTool {
 
         let allowed_dir = self.allowed_dir();
         let static_dirs: Vec<PathBuf> = self.scratchpad_dir.iter().cloned().collect();
-        let extras: Vec<PathBuf> =
-            allowed_roots(&static_dirs, self.workspace_state.as_ref());
+        let extras: Vec<PathBuf> = allowed_roots(&static_dirs, self.workspace_state.as_ref());
         let resolved = resolve_path_with_extras(path_str, allowed_dir.as_deref(), &extras)
             .map_err(ToolError::PermissionDenied)?;
 

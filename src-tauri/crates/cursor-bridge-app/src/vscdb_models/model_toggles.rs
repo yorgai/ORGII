@@ -7,7 +7,7 @@ use rusqlite::{Connection, OpenFlags};
 use serde::Deserialize;
 use tracing::{debug, info};
 
-use super::db_path::{APPLICATION_USER_KEY, PROBE_DB_PATH, real_user_db};
+use super::db_path::{real_user_db, APPLICATION_USER_KEY, PROBE_DB_PATH};
 use super::model_catalog::has_raw_model_catalog;
 
 /// Drop entries the user has hidden in Cursor's settings UI. Mutates

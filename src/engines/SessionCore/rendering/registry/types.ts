@@ -136,6 +136,14 @@ export const APP_SUBTOOL = {
   OTHER_TOOL: "other_tool",
 } as const satisfies Record<string, AppSubtool>;
 
+export type ToolDisplayBehavior = "instant" | "stream" | "wait_for_result";
+
+export const TOOL_DISPLAY_BEHAVIOR = {
+  INSTANT: "instant",
+  STREAM: "stream",
+  WAIT_FOR_RESULT: "wait_for_result",
+} as const satisfies Record<string, ToolDisplayBehavior>;
+
 /**
  * ChatBlock values (matches Rust `ChatBlock` enum).
  *

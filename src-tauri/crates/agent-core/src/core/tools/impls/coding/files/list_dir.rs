@@ -136,5 +136,4 @@ impl Tool for ListDirTool {
 
         Ok(formatted.join("\n"))
     }
-
 }

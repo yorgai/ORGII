@@ -12,7 +12,7 @@ import type { CodeSearchResult } from "@src/api/tauri/search/types";
 // Types
 // ============================================
 
-export type SearchMode = "regex" | "semantic" | "hybrid" | "tantivy";
+export type SearchMode = "regex" | "semantic" | "hybrid";
 
 export interface CachedSearch {
   /** Search query */

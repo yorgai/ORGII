@@ -76,7 +76,10 @@ pub(crate) fn build_review_prompt(
     body: &str,
 ) -> String {
     let mut parts = Vec::new();
-    parts.push(format!("Review the code changes for work item: {}", short_id));
+    parts.push(format!(
+        "Review the code changes for work item: {}",
+        short_id
+    ));
     parts.push(format!("\n## Work Item Title\n{}", frontmatter.title));
     if !body.is_empty() {
         parts.push(format!("\n## Work Item Description\n{}", body));
@@ -505,9 +508,8 @@ pub async fn start_work_item_with_reason(
     let slug = project_slug.to_string();
     let sid = short_id.to_string();
 
-    let ctx =
-        resolve_launch_context(project_slug, short_id, session_account_id, session_model_id)
-            .await?;
+    let ctx = resolve_launch_context(project_slug, short_id, session_account_id, session_model_id)
+        .await?;
 
     let (agent_role, mut prompt) = if let Some(ref definition) = ctx.agent_def {
         let prompt = build_agent_prompt(&sid, &ctx.data.frontmatter, &ctx.data.body);

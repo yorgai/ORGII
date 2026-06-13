@@ -36,8 +36,8 @@ import { useSelectionExtension } from "../Editor/hooks/useSelectionExtension";
 import type { TextSelectionInfo } from "../Editor/types";
 import type { CallbackRefs } from "../Editor/types";
 import {
+  CODEMIRROR_BASE_LAYOUT_THEME,
   codeMirrorCspNonceExtension,
-  createCodeMirrorTheme,
   customFoldGutter,
   editorHistoryKeymapExtension,
   findReplaceExtension,
@@ -248,6 +248,7 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
     const exts: Extension[] = [codeMirrorCspNonceExtension];
 
     exts.push(getCodeMirrorTheme());
+    exts.push(CODEMIRROR_BASE_LAYOUT_THEME);
 
     if (appearanceSettings.lineNumbers === "on") {
       exts.push(lineNumbers({ formatNumber: formatAbsoluteLineNumber }));
@@ -356,7 +357,6 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
 
     try {
       const baseExts = buildBaseExtensions(newStartLine);
-      const themeExt = createCodeMirrorTheme();
 
       const deletionColorOverride = EditorView.theme({
         "& .cm-changedLine, & .cm-insertedLine": {
@@ -374,7 +374,6 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
         doc: unifiedDocumentValue,
         extensions: [
           ...baseExts,
-          themeExt,
           MERGE_THEME_OVERRIDE,
           ...(autoHeight ? [AUTO_HEIGHT_THEME] : []),
           ...(isFullDeletion ? [deletionColorOverride] : []),
@@ -503,16 +502,13 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
     container.innerHTML = "";
 
     try {
-      const themeExt = createCodeMirrorTheme();
       const oldPaneExts = [
         ...buildBaseExtensions(oldStartLine),
-        themeExt,
         MERGE_THEME_OVERRIDE,
         ...(autoHeight ? [AUTO_HEIGHT_THEME] : []),
       ];
       const newPaneExts = [
         ...buildBaseExtensions(newStartLine),
-        themeExt,
         MERGE_THEME_OVERRIDE,
         ...(autoHeight ? [AUTO_HEIGHT_THEME] : []),
       ];

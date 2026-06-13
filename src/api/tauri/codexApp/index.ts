@@ -24,6 +24,13 @@ export interface CodexAppSessionPage {
   hasMore: boolean;
 }
 
+export interface CodexAppRecentPath {
+  path: string;
+  name?: string;
+  lastUsedAt: string;
+  sessionCount: number;
+}
+
 export async function codexAppListSessions(args?: {
   limit?: number;
   offset?: number;
@@ -31,6 +38,14 @@ export async function codexAppListSessions(args?: {
   return invoke<CodexAppSessionPage>("codex_app_list_sessions", {
     limit: args?.limit,
     offset: args?.offset,
+  });
+}
+
+export async function codexAppRecentPaths(args?: {
+  limit?: number;
+}): Promise<CodexAppRecentPath[]> {
+  return invoke<CodexAppRecentPath[]>("codex_app_recent_paths", {
+    limit: args?.limit,
   });
 }
 

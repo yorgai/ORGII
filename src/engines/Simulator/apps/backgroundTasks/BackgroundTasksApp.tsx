@@ -59,6 +59,7 @@ const BackgroundTasksApp: React.FC<BackgroundTasksAppProps> = ({
       description: sub.description,
       sessionType: sub.sessionType,
       events: subagentEventsMap.get(sub.sessionId) ?? [],
+      isSessionLive: sub.endedAtMs === null,
     }));
   }, [activeSessions, subagentEventsMap]);
 
@@ -109,6 +110,7 @@ const BackgroundTasksApp: React.FC<BackgroundTasksAppProps> = ({
               threadId={entry.sessionId}
               independentReplay
               externalCursorMs={mainCursorMs}
+              isSessionLive={entry.isSessionLive}
             />
           ))}
         </div>

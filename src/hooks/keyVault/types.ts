@@ -72,6 +72,11 @@ export interface KeyVaultAccount {
   healthStatus?: "valid" | "degraded" | "invalid";
   failureCount?: number;
   lastFailureMessage?: string;
+  temporaryUnavailableUntil?: string;
+  temporaryUnavailableReason?: string;
+  lastUpstreamStatus?: number;
+  lastUpstreamErrorType?: string;
+  rateLimitResetAt?: string;
   modelFailures?: Record<
     string,
     { count: number; last_error?: string; last_at?: string }

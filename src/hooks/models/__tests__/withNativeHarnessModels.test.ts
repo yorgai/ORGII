@@ -82,11 +82,11 @@ describe("withCodexOAuthModels — model list population", () => {
       enabledModels: ["gpt-5.5"],
     });
     const enriched = withCodexOAuthModels(account);
-    const gpt55Count = enriched.availableModels.filter(
+    const gpt55Count = (enriched.availableModels ?? []).filter(
       (m) => m === "gpt-5.5"
     ).length;
     expect(gpt55Count).toBe(1);
-    expect(enriched.availableModels).toContain("custom-codex-model");
+    expect(enriched.availableModels ?? []).toContain("custom-codex-model");
   });
 
   it("sets status to ready", () => {
@@ -125,7 +125,7 @@ describe("withNativeHarnessModels — dispatch category guard", () => {
       enabledModels: [],
     });
     const result = withNativeHarnessModels([account], "rust_agent");
-    expect(result[0].availableModels.length).toBeGreaterThan(0);
+    expect(result[0]?.availableModels?.length).toBeGreaterThan(0);
   });
 
   it("enriches Claude Code OAuth accounts when dispatchCategory is rust_agent", () => {

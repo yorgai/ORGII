@@ -124,6 +124,15 @@ pub struct ToolAction {
     #[serde(default, skip_serializing_if = "Option::is_none", rename = "chatBlock")]
     pub chat_block: Option<super::ui_metadata::ChatBlock>,
 
+    /// Per-action display behavior override. When absent, the frontend uses
+    /// the tool-level `ToolInfo.display_behavior`.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "displayBehavior"
+    )]
+    pub display_behavior: Option<super::ui_metadata::ToolDisplayBehavior>,
+
     #[serde(
         default,
         skip_serializing_if = "String::is_empty",

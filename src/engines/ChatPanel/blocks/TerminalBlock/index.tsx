@@ -10,7 +10,6 @@ import React, {
   memo,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -29,15 +28,16 @@ import {
   EVENT_LOADING_SHIMMER_TEXT_CLASSES,
   EventBlockHeader,
   EventBlockHeaderIcon,
+  EventBlockHeaderTitle,
   getEventBlockContainerClasses,
 } from "../primitives";
 import { useBlockHeader } from "../useBlockLocate";
 import { formatCommandForDisplay, getCommandSymbolList } from "./commandParser";
 
-const TERMINAL_COMMAND_PREVIEW_MAX_HEIGHT = 79;
+const TERMINAL_COMMAND_PREVIEW_MAX_HEIGHT = 72;
 const TERMINAL_OUTPUT_PREVIEW_MAX_HEIGHT = 72;
 const TERMINAL_EXPANDED_MAX_HEIGHT = "min(320px, 30vh)";
-const TERMINAL_COMMAND_EXPAND_LINE_THRESHOLD = 3;
+const TERMINAL_OUTPUT_EXPAND_LINE_THRESHOLD = 3;
 
 export interface TerminalBlockProps {
   command?: string;
@@ -47,6 +47,9 @@ export interface TerminalBlockProps {
   isError?: boolean;
   defaultCollapsed?: boolean;
   title?: string;
+  headerIcon?: React.ReactNode;
+  runningStatusText?: string;
+  runningStatusIcon?: React.ReactNode;
   /** Optional event ID for simulator replay */
   eventId?: string;
   sessionId?: string;
@@ -76,6 +79,9 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     isError = false,
     defaultCollapsed,
     title,
+    headerIcon,
+    runningStatusText,
+    runningStatusIcon,
     eventId,
     sessionId,
     payloadRef,
@@ -137,58 +143,8 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
       () => (command ? formatCommandForDisplay(command) : ""),
       [command]
     );
-    // Always clamp the command region to TERMINAL_COMMAND_PREVIEW_MAX_HEIGHT
-    // and measure the viewport's own scrollHeight vs clientHeight to decide
-    // whether to surface the fade + Show more pill. Doing the measurement on
-    // the always-clamped viewport (instead of a separate content wrapper
-    // whose scrollHeight depends on async Shiki / ResizeObserver timing)
-    // means `commandOverflows` is accurate the moment layout settles —
-    // whether or not Shiki has finished highlighting, and even after
-    // collapse/expand remounts the inner DOM.
     const commandViewportRef = useRef<HTMLDivElement | null>(null);
-    const commandContentRef = useRef<HTMLDivElement | null>(null);
-    const [commandOverflows, setCommandOverflows] = useState(false);
     const [isCommandExpanded, setIsCommandExpanded] = useState(false);
-
-    useLayoutEffect(() => {
-      const viewportElement = commandViewportRef.current;
-      const contentElement = commandContentRef.current;
-      if (!viewportElement || !contentElement) return;
-      const measure = () => {
-        const computedStyle = window.getComputedStyle(contentElement);
-        const lineHeight = Number.parseFloat(computedStyle.lineHeight) || 20;
-        const fontSize = Number.parseFloat(computedStyle.fontSize) || 13;
-        const contentHeight = contentElement.scrollHeight;
-        const visibleLineCount = Math.ceil(contentHeight / lineHeight);
-        const averageCharacterWidth = fontSize * 0.62;
-        const estimatedCharactersPerLine = Math.max(
-          1,
-          Math.floor(viewportElement.clientWidth / averageCharacterWidth)
-        );
-        const estimatedWrappedLineCount = formattedCommand
-          .split("\n")
-          .reduce(
-            (total, line) =>
-              total +
-              Math.max(1, Math.ceil(line.length / estimatedCharactersPerLine)),
-            0
-          );
-        setCommandOverflows(
-          contentHeight > viewportElement.clientHeight + 1 ||
-            visibleLineCount > TERMINAL_COMMAND_EXPAND_LINE_THRESHOLD ||
-            estimatedWrappedLineCount > TERMINAL_COMMAND_EXPAND_LINE_THRESHOLD
-        );
-      };
-      measure();
-      const frame = window.requestAnimationFrame(measure);
-      const observer = new ResizeObserver(measure);
-      observer.observe(viewportElement);
-      observer.observe(contentElement);
-      return () => {
-        window.cancelAnimationFrame(frame);
-        observer.disconnect();
-      };
-    }, [formattedCommand, isCommandExpanded]);
 
     // Stop button state — reset when process finishes.
     //
@@ -257,77 +213,93 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
         </div>
       ) : undefined;
 
-    return (
-      <div className={getEventBlockContainerClasses(true)}>
-        <EventBlockHeader
-          isCollapsed={isCollapsed}
-          withHover
-          className={
-            isCollapsed
-              ? "border-b border-solid border-transparent"
-              : "border-b border-solid border-border-1"
-          }
-          onClick={handleLocate}
-          onNavigate={handleLocate}
-          onMouseEnter={handleHeaderMouseEnter}
-          onMouseLeave={handleHeaderMouseLeave}
-          rightContent={headerRight}
-        >
-          <EventBlockHeaderIcon
-            icon={getToolIcon("run_shell", {
-              size: 14,
-              className: "text-text-2",
-            })}
-            isCollapsed={isCollapsed}
-            isHeaderHovered={isHeaderHovered}
-            onToggle={handleHeaderClick}
-            hasContent={hasContent}
-            revealChevronOnIconHoverOnly={Boolean(eventId)}
-            isLoading={isStillRunning}
-            isFailed={isError}
-          />
-          <span
-            className={`min-w-0 shrink truncate ${isStillRunning ? `font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}` : isError ? "font-medium text-text-3" : "font-medium text-text-1"}`}
-            title={displayTitle}
-          >
-            {displayTitle}
-          </span>
-          {commandSymbols.length > 0 ? (
-            <span
-              className={`shrink-0 ${isStillRunning ? `font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}` : "text-text-1"}`}
-              title={commandSymbols.join(", ")}
-            >
-              {commandSymbols.length <= 2
-                ? commandSymbols.join(", ")
-                : `${commandSymbols.slice(0, 2).join(", ")}, +${commandSymbols.length - 2}`}
+    const runningStatusRow =
+      isLoading && runningStatusText ? (
+        <div className="mt-1 flex items-center gap-2 px-2 py-1 text-sm text-text-3">
+          {runningStatusIcon && (
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center text-text-3">
+              {runningStatusIcon}
             </span>
-          ) : null}
-          {!isStillRunning && exitCode !== undefined && exitCode !== 0 && (
-            <span className="shrink-0 text-danger-6">exit {exitCode}</span>
           )}
-        </EventBlockHeader>
+          <span
+            className={`truncate font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}`}
+          >
+            {runningStatusText}
+          </span>
+        </div>
+      ) : null;
 
-        {!isCollapsed && (
-          <div className="min-w-0">
-            {command && (
-              <div
-                ref={commandViewportRef}
-                className="group/expand relative scrollbar-hide"
-                style={
-                  isCommandExpanded
-                    ? {
-                        maxHeight: TERMINAL_EXPANDED_MAX_HEIGHT,
-                        overflowY: "auto",
-                        overflowX: "auto",
-                      }
-                    : {
-                        maxHeight: TERMINAL_COMMAND_PREVIEW_MAX_HEIGHT,
-                        overflowY: "hidden",
-                        overflowX: "auto",
-                      }
-                }
+    return (
+      <>
+        <div className={getEventBlockContainerClasses(true)}>
+          <EventBlockHeader
+            isCollapsed={isCollapsed}
+            withHover
+            className={
+              isCollapsed
+                ? "border-b border-solid border-transparent"
+                : "border-b border-solid border-border-1"
+            }
+            onClick={handleLocate}
+            onNavigate={handleLocate}
+            onMouseEnter={handleHeaderMouseEnter}
+            onMouseLeave={handleHeaderMouseLeave}
+            rightContent={headerRight}
+          >
+            <EventBlockHeaderIcon
+              icon={
+                headerIcon ??
+                getToolIcon("run_shell", {
+                  size: 14,
+                  className: "text-text-2",
+                })
+              }
+              isCollapsed={isCollapsed}
+              isHeaderHovered={isHeaderHovered}
+              onToggle={handleHeaderClick}
+              hasContent={hasContent}
+              revealChevronOnIconHoverOnly={Boolean(eventId)}
+              isLoading={isStillRunning}
+              isFailed={isError}
+            />
+            <EventBlockHeaderTitle isLoading={isStillRunning}>
+              {displayTitle}
+            </EventBlockHeaderTitle>
+            {commandSymbols.length > 0 ? (
+              <span
+                className={`shrink-0 ${isStillRunning ? `font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}` : "text-text-1"}`}
+                title={commandSymbols.join(", ")}
               >
-                <div ref={commandContentRef}>
+                {commandSymbols.length <= 2
+                  ? commandSymbols.join(", ")
+                  : `${commandSymbols.slice(0, 2).join(", ")}, +${commandSymbols.length - 2}`}
+              </span>
+            ) : null}
+            {!isStillRunning && exitCode !== undefined && exitCode !== 0 && (
+              <span className="shrink-0 text-danger-6">exit {exitCode}</span>
+            )}
+          </EventBlockHeader>
+
+          {!isCollapsed && (
+            <div className="min-w-0">
+              {command && (
+                <div
+                  ref={commandViewportRef}
+                  className="group/expand relative scrollbar-hide"
+                  style={
+                    isCommandExpanded
+                      ? {
+                          maxHeight: TERMINAL_EXPANDED_MAX_HEIGHT,
+                          overflowY: "auto",
+                          overflowX: "auto",
+                        }
+                      : {
+                          maxHeight: TERMINAL_COMMAND_PREVIEW_MAX_HEIGHT,
+                          overflowY: "hidden",
+                          overflowX: "auto",
+                        }
+                  }
+                >
                   <TerminalCommand
                     command={formattedCommand}
                     prefix="$"
@@ -337,8 +309,6 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
                       fontSize: "var(--chat-code-font-size, 13px)",
                     }}
                   />
-                </div>
-                {(commandOverflows || isCommandExpanded) && (
                   <ExpandOverlay
                     isExpanded={isCommandExpanded}
                     onToggle={(event) => {
@@ -350,41 +320,44 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
                     }}
                     fadeFrom={EVENT_BLOCK_FADE_FROM}
                   />
-                )}
-              </div>
-            )}
+                </div>
+              )}
 
-            {command && hasOutput && (
-              <div className="px-2">
-                <div className="border-t border-solid border-border-2" />
-              </div>
-            )}
+              {command && hasOutput && (
+                <div className="px-2">
+                  <div className="border-t border-solid border-border-2" />
+                </div>
+              )}
 
-            {hasOutput && (
-              <BlockOutput
-                output={displayOutput!}
-                isError={!isLoading && exitCode !== undefined && exitCode !== 0}
-                status={
-                  isLoading || exitCode === undefined
-                    ? "default"
-                    : exitCode === 0
-                      ? "success"
-                      : "error"
-                }
-                highlightLang="log"
-                shikiTheme={shikiTheme}
-                withBorder={false}
-                sessionId={sessionId}
-                eventId={eventId}
-                payloadRef={payloadRef}
-                collapsedMaxHeight={TERMINAL_OUTPUT_PREVIEW_MAX_HEIGHT}
-                defaultScrollToBottom
-                expandLineThreshold={TERMINAL_COMMAND_EXPAND_LINE_THRESHOLD}
-              />
-            )}
-          </div>
-        )}
-      </div>
+              {hasOutput && (
+                <BlockOutput
+                  output={displayOutput!}
+                  isError={
+                    !isLoading && exitCode !== undefined && exitCode !== 0
+                  }
+                  status={
+                    isLoading || exitCode === undefined
+                      ? "default"
+                      : exitCode === 0
+                        ? "success"
+                        : "error"
+                  }
+                  highlightLang="log"
+                  shikiTheme={shikiTheme}
+                  withBorder={false}
+                  sessionId={sessionId}
+                  eventId={eventId}
+                  payloadRef={payloadRef}
+                  collapsedMaxHeight={TERMINAL_OUTPUT_PREVIEW_MAX_HEIGHT}
+                  defaultScrollToBottom
+                  expandLineThreshold={TERMINAL_OUTPUT_EXPAND_LINE_THRESHOLD}
+                />
+              )}
+            </div>
+          )}
+        </div>
+        {runningStatusRow}
+      </>
     );
   }
 );

@@ -197,6 +197,33 @@ impl LLMResponse {
         !self.tool_calls.is_empty()
     }
 
+    /// Best-effort primary text: `content` when non-empty, otherwise
+    /// `reasoning_content` (thinking-only responses — some models put the
+    /// entire answer in the reasoning channel; falling back is strictly
+    /// better than treating the response as empty). Returns `None` only
+    /// when both are empty.
+    ///
+    /// Callers that need clean prose (summarization, extraction) should
+    /// prefer structured output (forced tool call) and use this as the
+    /// last-resort fallback; the reasoning channel is draft-quality text.
+    pub fn primary_text(&self) -> Option<&str> {
+        if let Some(ref text) = self.content {
+            if !text.trim().is_empty() {
+                return Some(text);
+            }
+        }
+        if let Some(ref reasoning) = self.reasoning_content {
+            if !reasoning.trim().is_empty() {
+                tracing::warn!(
+                    "[llm-response] No text content; falling back to reasoning_content ({} chars)",
+                    reasoning.len()
+                );
+                return Some(reasoning);
+            }
+        }
+        None
+    }
+
     /// Iterate assistant output blocks in the order the model produced them.
     ///
     /// When the provider populated [`LLMResponse::blocks`] (Anthropic / OpenAI

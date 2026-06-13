@@ -6,17 +6,19 @@ import type { RepoItem } from "../../types";
 
 export type AddMenuKind = "add" | null;
 
-export const REPO_PALETTE_SECTION_KEY = {
+export const WORKSPACE_PALETTE_SECTION_KEY = {
   CURRENT: "current",
   SYSTEM_PATH: "systemPath",
+  EXTERNAL_RECENT: "externalRecent",
   REPO: "repo",
+  FOLDER_WORKSPACE: "folderWorkspace",
   MULTI_REPO_WORKSPACE: "multiRepoWorkspace",
 } as const;
 
-export type RepoPaletteSectionKey =
-  (typeof REPO_PALETTE_SECTION_KEY)[keyof typeof REPO_PALETTE_SECTION_KEY];
+export type WorkspacePaletteSectionKey =
+  (typeof WORKSPACE_PALETTE_SECTION_KEY)[keyof typeof WORKSPACE_PALETTE_SECTION_KEY];
 
-export interface RepoPaletteProps extends BasePaletteProps {
+export interface WorkspacePaletteProps extends BasePaletteProps {
   onSelect: (repoId: string, repo: RepoItem) => void;
   currentRepoId?: string;
   initialAddStage?: AddWorkspaceModalStage;
@@ -29,7 +31,7 @@ export interface RepoPaletteProps extends BasePaletteProps {
   leadingRepos?: readonly RepoItem[];
 }
 
-export interface RepoPaletteText {
+export interface WorkspacePaletteText {
   switchPathLabel: string;
   switchPathTemplate: string;
   switchPlaceholder: string;
@@ -43,6 +45,8 @@ export interface RepoPaletteText {
   addFolderLabel: string;
   sectionCurrentLabel: string;
   sectionSystemPathsLabel: string;
+  sectionExternalRecentLabel: string;
   sectionRepoLabel: string;
+  sectionFolderWorkspaceLabel: string;
   sectionMultiRepoWorkspaceLabel: string;
 }

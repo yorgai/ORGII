@@ -184,9 +184,12 @@ fn scan_claude_skills_dir(
         if !skill_md.is_file() {
             continue;
         }
-        if let Some(item) =
-            build_claude_skill_item(&skill_md, &scope, target_repo_path, /* dir_layout */ true)
-        {
+        if let Some(item) = build_claude_skill_item(
+            &skill_md,
+            &scope,
+            target_repo_path,
+            /* dir_layout */ true,
+        ) {
             out.push(item);
         }
     }

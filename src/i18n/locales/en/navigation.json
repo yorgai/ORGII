@@ -165,8 +165,8 @@
       "joinSharedSession": "Join Shared Session…"
     },
     "search": {
-      "folders": "Search folders...",
-      "sessions": "Search sessions...",
+      "folders": "Search Workspace...",
+      "sessions": "Search Sessions...",
       "projects": "Search projects..."
     },
     "folderCounts": {
@@ -177,7 +177,8 @@
     },
     "bottomBar": {
       "settings": "Settings",
-      "clockLabel": "Current time"
+      "clockLabel": "Current time",
+      "updateAvailable": "Download update v{{version}}"
     },
     "settingsMenu": {
       "appearance": "Appearance",
@@ -354,9 +355,9 @@
       "startSession": "Start session",
       "openDetails": "Show details",
       "locateInFinder": "Locate in Finder",
-      "remove": "Remove",
-      "removeSuccess": "Workspace removed",
-      "removeFailed": "Failed to remove workspace"
+      "remove": "Remove from ORGII",
+      "removeSuccess": "Linkage to ORGII removed",
+      "removeFailed": "Failed to remove linkage to ORGII"
     },
     "addWorkspace": "Add workspace"
   },

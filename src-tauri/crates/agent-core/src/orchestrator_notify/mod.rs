@@ -599,7 +599,10 @@ fn notify_inbox_awaiting_user(work_item_id: &str) {
             work_item_id,
             chrono::Utc::now().timestamp()
         ),
-        title: format!("[Action Needed] Work item {} awaits your review", work_item_id),
+        title: format!(
+            "[Action Needed] Work item {} awaits your review",
+            work_item_id
+        ),
         preview: "Orchestration paused: review outcome needs a human decision".to_string(),
         content: format!(
             "Work item {} reached the **awaiting user** state.\n\n\

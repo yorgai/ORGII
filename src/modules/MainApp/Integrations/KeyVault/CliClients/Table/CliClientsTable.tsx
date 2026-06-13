@@ -3,7 +3,6 @@ import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ModelType } from "@src/api/types/keys";
-import { isApiKeyProvider } from "@src/assets/providers";
 import Button from "@src/components/Button";
 import ModelIcon from "@src/components/ModelIcon";
 import type { SelectOption } from "@src/components/Select";
@@ -16,13 +15,8 @@ import SettingsTable, {
 import StatusDot from "@src/components/StatusDot";
 import type { AvailableAgent } from "@src/config/cliAgents";
 import type { KeyVaultAccount } from "@src/hooks/keyVault";
-import {
-  getCliCompatibleAccounts,
-  useAgentCompatibility,
-} from "@src/hooks/models/useAgentCompatibility";
 import { useRefreshSpin } from "@src/hooks/ui";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { openAgentConfigInWorkStation } from "@src/util/ui/openAgentConfigInWorkStation";
 
 import CliClientInlineExpandedCard, {
   CLI_CLIENT_INLINE_TAB,
@@ -40,7 +34,7 @@ type InstallFilter = (typeof INSTALL_FILTER)[keyof typeof INSTALL_FILTER];
 const READY_FILTER = {
   ALL: "all",
   READY: "ready",
-  NO_KEYS: "no_keys",
+  NO_SUBSCRIPTIONS: "no_subscriptions",
 } as const;
 
 type ReadyFilter = (typeof READY_FILTER)[keyof typeof READY_FILTER];
@@ -82,35 +76,23 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
     INSTALL_FILTER.ALL
   );
   const [readyFilter, setReadyFilter] = useState<ReadyFilter>(READY_FILTER.ALL);
-  const { registry } = useAgentCompatibility();
   const { spinClass, handleClick: handleRefreshClick } = useRefreshSpin(
     fetchAgents ?? (() => undefined),
     loading
   );
 
-  const credentialsByAgent = useMemo(() => {
-    const planMap = new Map<string, number>();
-    const keyMap = new Map<string, number>();
+  const subscriptionsByAgent = useMemo(() => {
+    const subscriptionMap = new Map<string, number>();
     for (const agent of agents) {
-      const readyAccounts = getCliCompatibleAccounts(
-        registry,
-        agent.name,
-        accounts
-      );
-      let planCount = 0;
-      let keyCount = 0;
-      for (const acc of readyAccounts) {
-        if (isApiKeyProvider(acc.modelType)) {
-          keyCount += 1;
-        } else {
-          planCount += 1;
-        }
+      const subscriptionCount = accounts.filter(
+        (account) => account.modelType === agent.name
+      ).length;
+      if (subscriptionCount > 0) {
+        subscriptionMap.set(agent.name, subscriptionCount);
       }
-      if (planCount > 0) planMap.set(agent.name, planCount);
-      if (keyCount > 0) keyMap.set(agent.name, keyCount);
     }
-    return { planMap, keyMap };
-  }, [agents, accounts, registry]);
+    return subscriptionMap;
+  }, [agents, accounts]);
 
   const installFilterOptions = useMemo<SelectOption[]>(
     () => [
@@ -141,8 +123,8 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
         label: tIntegrations("cliTable.filterReady"),
       },
       {
-        value: READY_FILTER.NO_KEYS,
-        label: tIntegrations("cliTable.filterNoKeys"),
+        value: READY_FILTER.NO_SUBSCRIPTIONS,
+        label: tIntegrations("cliTable.filterNoSubscriptions"),
       },
     ],
     [tIntegrations]
@@ -155,12 +137,8 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
   }, []);
 
   const handleViewAgent = useCallback((agent: AvailableAgent) => {
-    openAgentConfigInWorkStation({
-      variant: "cli",
-      entityId: agent.name,
-      displayName: agent.displayName,
-      cliAgentType: agent.name,
-    });
+    setExpandedAgentKeys([agent.name]);
+    setActiveInlineTab(CLI_CLIENT_INLINE_TAB.STATUS);
   }, []);
 
   const cliSelectFilters = useMemo<SettingsTableSelectFilter[]>(
@@ -224,24 +202,16 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
         ),
       },
       {
-        key: "compatibleKeys",
-        label: tIntegrations("cliPreview.compatibleKeys"),
+        key: "subscriptions",
+        label: tIntegrations("cliPreview.subscriptions"),
         width: "130px",
-        sorter: (agentA, agentB) => {
-          const totalA =
-            (credentialsByAgent.keyMap.get(agentA.name) ?? 0) +
-            (credentialsByAgent.planMap.get(agentA.name) ?? 0);
-          const totalB =
-            (credentialsByAgent.keyMap.get(agentB.name) ?? 0) +
-            (credentialsByAgent.planMap.get(agentB.name) ?? 0);
-          return totalB - totalA;
-        },
+        sorter: (agentA, agentB) =>
+          (subscriptionsByAgent.get(agentB.name) ?? 0) -
+          (subscriptionsByAgent.get(agentA.name) ?? 0),
         renderCell: (agent) => {
-          const keyCount = credentialsByAgent.keyMap.get(agent.name) ?? 0;
-          const planCount = credentialsByAgent.planMap.get(agent.name) ?? 0;
-          const total = keyCount + planCount;
+          const subscriptionCount = subscriptionsByAgent.get(agent.name) ?? 0;
 
-          if (total === 0) {
+          if (subscriptionCount === 0) {
             return (
               <StatusDot
                 color="bg-fill-3"
@@ -257,8 +227,8 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
               color="bg-success-6"
               size="inline"
               labelClassName="text-[12px] text-text-2"
-              label={t("cliConfig.keysAdded")}
-              count={total}
+              label={tIntegrations("cliPreview.subscriptions")}
+              count={subscriptionCount}
             />
           );
         },
@@ -287,7 +257,7 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
         ),
       },
     ],
-    [t, tIntegrations, credentialsByAgent, handleViewAgent]
+    [t, tIntegrations, subscriptionsByAgent, handleViewAgent]
   );
 
   const renderExpandedAgentCard = useCallback(
@@ -328,15 +298,13 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
 
     if (readyFilter === READY_FILTER.READY) {
       rows = rows.filter((agent) => {
-        const plans = credentialsByAgent.planMap.get(agent.name) ?? 0;
-        const keys = credentialsByAgent.keyMap.get(agent.name) ?? 0;
-        return plans + keys > 0;
+        const subscriptions = subscriptionsByAgent.get(agent.name) ?? 0;
+        return subscriptions > 0;
       });
-    } else if (readyFilter === READY_FILTER.NO_KEYS) {
+    } else if (readyFilter === READY_FILTER.NO_SUBSCRIPTIONS) {
       rows = rows.filter((agent) => {
-        const plans = credentialsByAgent.planMap.get(agent.name) ?? 0;
-        const keys = credentialsByAgent.keyMap.get(agent.name) ?? 0;
-        return plans + keys === 0;
+        const subscriptions = subscriptionsByAgent.get(agent.name) ?? 0;
+        return subscriptions === 0;
       });
     }
 
@@ -348,7 +316,7 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
     }
 
     return rows;
-  }, [agents, searchQuery, installFilter, readyFilter, credentialsByAgent]);
+  }, [agents, searchQuery, installFilter, readyFilter, subscriptionsByAgent]);
 
   const addButtonLabel = tIntegrations("common:actions.add", {
     defaultValue: "Add",

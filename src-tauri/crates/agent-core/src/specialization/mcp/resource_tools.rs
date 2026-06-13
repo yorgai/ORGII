@@ -435,7 +435,13 @@ mod tests {
     async fn list_tool_returns_empty_marker_when_no_servers_have_resources() {
         let manager = Arc::new(McpManager::new());
         let tool = McpListResourcesTool::new(Arc::clone(&manager), HashSet::new());
-        let result = tool.execute_text(json!({}), &crate::tools::call_context::CallContext::default()).await.expect("execute ok");
+        let result = tool
+            .execute_text(
+                json!({}),
+                &crate::tools::call_context::CallContext::default(),
+            )
+            .await
+            .expect("execute ok");
         // No connected servers → returns an empty JSON array with a
         // note. LLMs can still parse "[]" out of it.
         assert!(
@@ -453,7 +459,10 @@ mod tests {
         let manager = Arc::new(McpManager::new());
         let tool = McpListResourcesTool::new(Arc::clone(&manager), HashSet::new());
         let result = tool
-            .execute_text(json!({ "server": "does-not-exist" }), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                json!({ "server": "does-not-exist" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect("execute ok");
         assert!(
@@ -471,7 +480,10 @@ mod tests {
         let manager = Arc::new(McpManager::new());
         let tool = McpReadResourceTool::new(Arc::clone(&manager), HashSet::new());
         let err = tool
-            .execute_text(json!({ "uri": "res://x" }), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                json!({ "uri": "res://x" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect_err("should reject missing server");
         match err {
@@ -485,7 +497,10 @@ mod tests {
         let manager = Arc::new(McpManager::new());
         let tool = McpReadResourceTool::new(Arc::clone(&manager), HashSet::new());
         let err = tool
-            .execute_text(json!({ "server": "s" }), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                json!({ "server": "s" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect_err("should reject missing uri");
         match err {

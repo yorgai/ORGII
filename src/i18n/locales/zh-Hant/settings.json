@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "我的目前狀態",
+    "tabs": {
+      "presence": "線上狀態",
+      "profile": "我的資料"
+    },
+    "presence": {
+      "instructionForAgent": "Agent 行為指引"
+    },
     "profile": {
-      "title": "關於我",
+      "title": "我的資料",
       "techSavvy": "技術熟練程度",
       "techSavvyDescription": "幫助 Agent 校準解釋的詳細程度以及可以預設的前提",
       "techSavvyPlaceholder": "選擇熟悉程度…",
@@ -597,8 +604,8 @@
     "modelsTitle": "模型",
     "compactionTitle": "壓縮",
     "autoTimeoutTitle": "自動超時",
-    "questionAutoSkipTimeoutByStatus": "{{status}} 提問自動跳過",
-    "questionAutoSkipTimeoutByStatusDesc": "此狀態下超時後自動跳過 Agent 提問 (0 = 禁用)",
+    "questionAutoSkipTimeoutByStatus": "自動跳過提問",
+    "questionAutoSkipTimeoutByStatusDesc": "超過此時間後自動跳過 Agent 提問 (0 = 禁用)",
     "resourceTabs": {
       "tools": "工具",
       "mcp": "MCP",
@@ -989,7 +996,6 @@
     "storagePath": "存儲路徑",
     "storageUsage": "存儲用量",
     "storageUsageTotal": "合計：{{size}}",
-    "searchIndex": "Search Index",
     "embeddingIndex": "Embedding Index",
     "files": "文件",
     "chunks": "塊",
@@ -1006,10 +1012,8 @@
     "embedded": "Embedded",
     "index": "Index",
     "embed": "Embed",
-    "indexNow": "立即 Index",
     "reindex": "重新 Index",
     "reembed": "重新 Embed",
-    "deleteIndex": "刪除 Index",
     "deleteEmbedding": "刪除 Embedding",
     "abort": "取消",
     "removeAllIndexes": "移除所有 index",
@@ -1024,7 +1028,6 @@
     "embeddingFailed": "Embedding 失敗",
     "embeddingCancelledAt": "Embedding 已取消於 {{current}}/{{total}} 個文件",
     "embeddingFiles": "Embedding {{current}}/{{total}} 個文件 ({{chunks}} 個塊)",
-    "filesIndexed": "{{count}} 個文件已 index",
     "chunksEmbedded": "{{count}} 個塊已 Embedding",
     "errors": "{{count}} 個錯誤",
     "modelNotInstalled": "模型未安裝",

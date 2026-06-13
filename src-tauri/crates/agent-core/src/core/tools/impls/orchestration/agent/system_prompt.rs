@@ -40,6 +40,20 @@ impl AgentTool {
             extra_sections.push(scratchpad_section(scratch));
         }
 
+        // Presence stance (compact form): subagents can't ask the user
+        // anything anyway, but the stance sets the decision-making
+        // expectation ("decide yourself, list decisions in the report")
+        // when the user is away/invisible — including custom modes.
+        if let Some(presence) = crate::interaction::presence_state::global_presence() {
+            if let Some(section) =
+                crate::core::session::prompt::section_builders::format_user_presence_compact(
+                    &presence,
+                )
+            {
+                extra_sections.push(section);
+            }
+        }
+
         // Teach the model about its Agent Org participants.
         //
         // The worker's tool registry already carries `org_send_message`

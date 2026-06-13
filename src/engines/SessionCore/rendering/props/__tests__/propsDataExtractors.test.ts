@@ -1723,4 +1723,129 @@ describe("extractTodoData", () => {
       expect(data.todos[0].content).toBe("from observation");
     });
   });
+
+  describe("native ORGII content-text snapshot (regression: simulator '0 items')", () => {
+    const nativeContent = [
+      "Updated todo #1 — 2 todos (1 remaining)",
+      JSON.stringify(
+        [
+          {
+            activeForm: "Fixing bug",
+            content: "Fix bug",
+            index: 0,
+            priority: "high",
+            status: "completed",
+          },
+          {
+            activeForm: null,
+            blockedBy: [0],
+            content: "Write tests",
+            index: 1,
+            priority: "medium",
+            status: "in_progress",
+          },
+        ],
+        null,
+        2
+      ),
+      "",
+      "Ensure that you continue to use the todo list to track your progress.",
+    ].join("\n");
+
+    it("parses todos from result.content text for update events (no args.todos)", () => {
+      const props = makeUniversalProps({
+        args: { action: "update", index: 1, status: "in_progress" },
+        result: { content: nativeContent },
+      });
+      const data = extractTodoData(props);
+      expect(data.todos).toHaveLength(2);
+      expect(data.todos[0].id).toBe("0");
+      expect(data.todos[0].content).toBe("Fix bug");
+      expect(data.todos[0].activeForm).toBe("Fixing bug");
+      expect(data.todos[1].status).toBe("in_progress");
+      expect(data.todos[1].blockedBy).toEqual([0]);
+      expect(data.todos[1].activeForm).toBeUndefined();
+    });
+
+    it("returns empty for 'No todos for this session.' text", () => {
+      const props = makeUniversalProps({
+        args: { action: "read" },
+        result: { content: "No todos for this session." },
+      });
+      expect(extractTodoData(props).todos).toEqual([]);
+    });
+  });
+
+  describe("structured uiMetadata (dual-track response)", () => {
+    it("prefers uiMetadata.data.todos over text parsing", () => {
+      const props = makeUniversalProps({
+        args: { action: "update", index: 0 },
+        result: {
+          content: "garbled text without parseable snapshot",
+          uiMetadata: {
+            display_type: "todo_list",
+            data: {
+              todos: [
+                {
+                  index: 0,
+                  content: "Ship feature",
+                  status: "in_progress",
+                  activeForm: "Shipping feature",
+                },
+              ],
+            },
+            summary: "Updated todo #0 — 1 todos (1 remaining)",
+          },
+        },
+      });
+      const data = extractTodoData(props);
+      expect(data.todos).toHaveLength(1);
+      expect(data.todos[0].id).toBe("0");
+      expect(data.todos[0].content).toBe("Ship feature");
+      expect(data.todos[0].activeForm).toBe("Shipping feature");
+    });
+
+    it("ignores uiMetadata with a different display_type", () => {
+      const props = makeUniversalProps({
+        result: {
+          uiMetadata: { display_type: "search_results", data: { todos: [] } },
+          todos: [{ id: "r1", content: "Result task", status: "pending" }],
+        },
+      });
+      const data = extractTodoData(props);
+      expect(data.todos).toHaveLength(1);
+      expect(data.todos[0].id).toBe("r1");
+    });
+  });
+
+  describe("rustExtracted short-circuit", () => {
+    it("uses non-empty rustExtracted todos directly", () => {
+      const props = makeUniversalProps({
+        result: { content: "ignored" },
+        rustExtracted: {
+          kind: "todo",
+          todos: [{ id: "rx-1", content: "Rust row", status: "pending" }],
+          wasMerge: true,
+        },
+      });
+      const data = extractTodoData(props);
+      expect(data.todos).toHaveLength(1);
+      expect(data.todos[0].id).toBe("rx-1");
+      expect(data.wasMerge).toBe(true);
+    });
+
+    it("EMPTY rustExtracted does NOT short-circuit — falls through to content text", () => {
+      const props = makeUniversalProps({
+        args: { action: "update", index: 0 },
+        result: {
+          content:
+            'Updated todo #0 — 1 todos (1 remaining)\n[\n  {\n    "content": "Recovered row",\n    "index": 0,\n    "status": "pending"\n  }\n]',
+        },
+        rustExtracted: { kind: "todo", todos: [], wasMerge: false },
+      });
+      const data = extractTodoData(props);
+      expect(data.todos).toHaveLength(1);
+      expect(data.todos[0].content).toBe("Recovered row");
+    });
+  });
 });

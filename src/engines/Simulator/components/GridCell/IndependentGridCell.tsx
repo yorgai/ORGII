@@ -50,6 +50,7 @@ const IndependentGridCellComponent: React.FC<GridCellProps> = ({
   isHighlighted: _isHighlighted = false,
   isExpanded = false,
   onExpand,
+  isSessionLive = false,
 }) => {
   const { t } = useTranslation("sessions");
   const focusedCellId = useAtomValue(focusedSubagentCellAtom);
@@ -242,6 +243,7 @@ const IndependentGridCellComponent: React.FC<GridCellProps> = ({
               <SubagentChatPane
                 sessionId={threadId}
                 cursorMs={cursorMsForPane}
+                isSessionLive={isSessionLive}
               />
             ) : null}
           </div>
@@ -328,6 +330,7 @@ const areGridCellPropsEqual = (
   if (prev.isHighlighted !== next.isHighlighted) return false;
   if (prev.isExpanded !== next.isExpanded) return false;
   if (prev.onExpand !== next.onExpand) return false;
+  if (prev.isSessionLive !== next.isSessionLive) return false;
   if (prev.events !== next.events) return false;
   return true;
 };

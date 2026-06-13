@@ -18,7 +18,7 @@ import {
 
 export type { CodeSearchResult } from "@src/api/tauri/search";
 
-export type CodeSearchMode = "regex" | "semantic" | "hybrid" | "tantivy";
+export type CodeSearchMode = "regex" | "semantic" | "hybrid";
 
 export interface UseCodeSearchOptions {
   /** Auto-execute search on query change */
@@ -95,7 +95,6 @@ export function useCodeSearch(
     setSearchMode((currentMode) => {
       if (currentMode === "regex") return "semantic";
       if (currentMode === "semantic") return "hybrid";
-      if (currentMode === "hybrid") return "tantivy";
       return "regex";
     });
     setResults([]);

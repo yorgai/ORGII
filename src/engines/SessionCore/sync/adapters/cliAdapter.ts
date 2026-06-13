@@ -22,10 +22,7 @@ import {
   markTurnTerminal,
   toTurnTerminalStatus,
 } from "@src/engines/SessionCore/control/turnLifecycle";
-import {
-  loadSessionAtom,
-  sessionIdAtom,
-} from "@src/engines/SessionCore/core/atoms";
+import { loadSessionAtom } from "@src/engines/SessionCore/core/atoms";
 import { isTurnBlockingRuntimeEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
@@ -45,7 +42,6 @@ import {
   upsertPendingPlanApproval,
 } from "@src/store/session/planApprovalAtom";
 import { upsertSession } from "@src/store/session/sessionAtom/mutations";
-import { activeSessionIdAtom } from "@src/store/session/viewAtom";
 import type {
   ActivityChunk,
   CliSessionStatus,
@@ -218,11 +214,11 @@ function markCliRuntimeRunning(sessionId: string): void {
   confirmTurnRunning(sessionId);
   if (!isStoreInitialized()) return;
   const store = getInstrumentedStore();
-  const isVisibleSession =
-    store.get(sessionIdAtom) === sessionId ||
-    store.get(activeSessionIdAtom) === sessionId;
-  if (!isVisibleSession) return;
-  store.set(setSessionRuntimeStatusAtom, { status: "running", source: "sync" });
+  store.set(setSessionRuntimeStatusAtom, {
+    sessionId,
+    status: "running",
+    source: "sync",
+  });
 }
 
 function isProtectedCliTurnTerminal(
@@ -241,11 +237,7 @@ function markObservedCliTerminalStatus(
   if (!isCliTerminalStatus(status) || !isStoreInitialized()) return;
   if (isProtectedCliTurnTerminal(sessionId, status)) return;
   const store = getInstrumentedStore();
-  const isVisibleSession =
-    store.get(sessionIdAtom) === sessionId ||
-    store.get(activeSessionIdAtom) === sessionId;
-  if (!isVisibleSession) return;
-  store.set(setSessionRuntimeStatusAtom, { status, source: "sync" });
+  store.set(setSessionRuntimeStatusAtom, { sessionId, status, source: "sync" });
   void closeObservedCliTerminalEvents(sessionId, status).catch((error) => {
     console.warn("[cliAdapter] failed to close terminal CLI events:", error);
   });

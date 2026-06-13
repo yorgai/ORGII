@@ -1543,6 +1543,59 @@ async function runForceSendScenario(config) {
   await typeAndClickSend(chatInputSelector, followupPrompt);
   await waitForQueuedOrForceSentFollowup(marker);
   await clickSendNowForQueuedMarker(marker);
+  // Force-send stuck-UI regression pin (2026-06-12): during the interrupt
+  // window the panel must visibly acknowledge the click — the planning
+  // footer stays/becomes visible (status mirror keeps `running`), the
+  // promoted "now" message renders with its "sending now…" state, or the
+  // dispatch already consumed the message and the follow-up user turn is
+  // rendered in the transcript (fast providers can clear the interrupt
+  // window between polls). Before the fix beginTimelineBoundary wrote
+  // `idle` AND ChatView hid "now" messages, so the user saw none of these.
+  await browser.waitUntil(
+    async () => {
+      // JSON-string the result — tauri-wd nulls plain object returns.
+      const activityJson = await browser.execute((markerText) => {
+        const isVisible = (node) => {
+          const style = window.getComputedStyle(node);
+          const rect = node.getBoundingClientRect();
+          return (
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            rect.width > 0 &&
+            rect.height > 0
+          );
+        };
+        const footerVisible = Array.from(
+          document.querySelectorAll('[data-testid="planning-footer"]')
+        ).some(isVisible);
+        const sendingNowVisible = Array.from(
+          document.querySelectorAll("[data-queued-message-sending]")
+        ).some(isVisible);
+        const transcript = document.querySelector(
+          '[data-testid="chat-message-list"]'
+        );
+        const followupInTranscript = Boolean(
+          transcript && (transcript.textContent || "").includes(markerText)
+        );
+        return JSON.stringify({
+          footerVisible,
+          sendingNowVisible,
+          followupInTranscript,
+        });
+      }, marker);
+      const activity = JSON.parse(activityJson || "{}");
+      return (
+        activity.footerVisible === true ||
+        activity.sendingNowVisible === true ||
+        activity.followupInTranscript === true
+      );
+    },
+    {
+      timeout: 4_000,
+      interval: 200,
+      timeoutMsg: `${config.label} Send Now produced no visible acknowledgement within 4s (no planning footer, no "sending now" queued card, follow-up not yet in transcript) — force-send window reads as frozen (regression).`,
+    }
+  );
   await waitForMarkerReply(marker, config.label);
   await waitForIdleSendButton(config.label);
 

@@ -19,11 +19,10 @@ impl AgentExecMode {
     /// planning activities. Each read-only mode calls this and optionally
     /// appends mode-specific extras on top.
     fn read_only_deny_base() -> Vec<String> {
-        let mut deny: Vec<String> =
-            crate::foundation::security::policy::READ_ONLY_DENY_TOOLS
-                .iter()
-                .map(|s| (*s).to_string())
-                .collect();
+        let mut deny: Vec<String> = crate::foundation::security::policy::READ_ONLY_DENY_TOOLS
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect();
         // Prevent mode escalation inside a read-only session.
         deny.push(tool_names::SUGGEST_MODE_SWITCH.to_string());
         // create_plan writes a plan file and surfaces a Build button — not
@@ -70,10 +69,15 @@ impl AgentExecMode {
                 allow: None,
                 deny: Self::read_only_deny_base(),
             }),
-            Self::Review => Some(ToolPolicyLayer {
-                allow: None,
-                deny: Self::read_only_deny_base(),
-            }),
+            Self::Review => {
+                let mut deny = Self::read_only_deny_base();
+                // Review's prompt mandates `git diff` via run_shell and
+                // "run analysis commands" — a prompt must never reference a
+                // tool its own policy denies. Shell access stays; file-write
+                // tools remain denied.
+                deny.retain(|t| t != tool_names::RUN_SHELL && t != tool_names::AWAIT_OUTPUT);
+                Some(ToolPolicyLayer { allow: None, deny })
+            }
         }
     }
 
@@ -88,6 +92,7 @@ impl AgentExecMode {
                 "- If the user gives an exact file path/name and exact content for a low-risk filesystem change, use the file editing tool immediately. Do not keep thinking, do not describe the change first, and do not wait for another prompt.\n",
                 "- Use `todo` ONLY for genuinely complex multi-phase work (5+ distinct steps across many files). ",
                 "For simple or moderate tasks (commit, fix a bug, add a feature), just do it.\n",
+                "- For repository-scale symbol/dependency/impact questions, check Code Map readiness with `manage_code_map` and use `use_code_map` once the index is ready. Use `index` for missing/stale indexes and `reindex` for failed or suspicious indexes.\n",
                 "- NEVER write `.plan.md` files or structured plan documents in build mode.\n\n",
                 "## Mode Switching to Plan\n",
                 "Call `suggest_mode_switch` with target_mode=\"plan\" in THREE situations:\n",
@@ -127,9 +132,9 @@ impl AgentExecMode {
                 "### Constraints\n",
                 "- You CANNOT edit, write, or create files.\n",
                 "- You CANNOT execute shell commands.\n",
-                "- You CAN read files, search code, list directories, query the LSP, and browse the web.\n\n",
+                "- You CAN read files, search code, list directories, query the LSP, query a ready Code Map, and browse the web.\n\n",
                 "### Behavior\n",
-                "- Be thorough: check multiple locations, naming conventions, and patterns.\n",
+                "- Be thorough: check multiple locations, naming conventions, and patterns. Use `use_code_map` for repository-scale symbol, caller/callee, dependency, or impact questions when an index is already ready; if the index is missing or stale, say that indexing requires a non-read-only mode.\n",
                 "- Cite findings with specific file paths and line numbers.\n",
                 "- Summarize concisely with actionable context — do NOT speculate beyond evidence.\n",
                 "- If the task clearly requires implementation, say so in plain text; do not try to edit.\n\n",
@@ -146,16 +151,16 @@ impl AgentExecMode {
                 "- You CANNOT edit source files, apply patches, run shell commands, or delete anything.\n",
                 "- You CAN write only the current session plan markdown file under `.orgii/plans/`.\n",
                 "- Use `create_plan` when creating/submitting a plan and when revising an existing pending plan from user feedback. The backend keeps the same approval slot and emits a new revision card.\n",
-                "- You CAN read files, search code, query the LSP, and browse the web to research.\n\n",
+                "- You CAN read files, search code, query the LSP, query a ready Code Map, and browse the web to research.\n\n",
                 "### Mode switching\n",
                 "You cannot switch modes from within Plan mode. ",
                 "If the user wants to switch to a different mode (Build, Ask, Debug, etc.), ",
                 "tell them to use the mode selector in the UI or click the **Build** button on an approved plan. ",
                 "Do NOT attempt to call any switch tool.\n\n",
                 "### Workflow — follow this exactly\n",
-                "1. **Research for new plans** — read the relevant files, search the codebase, clarify unknowns. ",
+                "1. **Research for new plans** — read the relevant files, search the codebase, use `use_code_map` for ready indexed symbol/dependency context when useful, and clarify unknowns. ",
                 "**HARD LIMIT: at most 5 tool calls that read or search (`read_file`, `list_dir`, `code_search`, ",
-                "`glob_file_search`, `web_search`, `web_fetch`, `query_lsp`) before you must call `create_plan`.** ",
+                "`web_search`, `web_fetch`, `query_lsp`) before you must call `create_plan`.** ",
                 "If you still feel uncertain after 5 such calls, proceed anyway — write the plan with the best information ",
                 "you have and note open questions in the `## Risks & Open Questions` section. ",
                 "Do NOT keep researching indefinitely. ",
@@ -204,7 +209,7 @@ impl AgentExecMode {
             Self::Debug => concat!(
                 "\n\n## Mode: Debug\n",
                 "You are in DEBUG mode — focus on diagnostics, reproduction steps, and root-cause analysis.\n",
-                "- Prefer read-only inspection; use execution tools only when needed to reproduce or verify.\n",
+                "- Prefer read-only inspection; use execution tools only when needed to reproduce or verify. Use `use_code_map` for ready indexed caller/callee, dependency, and impact context; if the index is missing or stale, say that indexing requires a non-read-only mode.\n",
                 "- Narrow hypotheses with evidence (logs, stack traces, failing tests) before suggesting fixes.\n",
                 "- Produce a clear root-cause summary and recommended fix; do NOT apply the fix yourself.\n\n",
                 "### Mode switching\n",
@@ -238,7 +243,7 @@ impl AgentExecMode {
                 "`app`, `open`, `dock`, `menubar`, and `space` as needed. Use `list windows --app ... --json` or `window list --app ... --json` when you need window IDs.\n",
                 "- Add `--json` to inspection/listing/status commands when possible (`see`, `list apps`, `list windows`, ",
                 "`permissions status`) so you can target exact UI elements and diagnose permission blockers.\n",
-                "- Use `read_file`, `list_dir`, `code_search` for code context; use `edit_file` only if available and explicitly requested.\n",
+                "- Use `read_file`, `list_dir`, `code_search` for code context; for repository-scale symbol/dependency/impact questions, check Code Map readiness with `manage_code_map` and use `use_code_map` once ready. Use `edit_file` only if available and explicitly requested.\n",
                 "- Use `run_shell`/`await_output` for terminal commands ONLY — never for screen interaction ",
                 "(no osascript, no AppleScript, no screencapture; use control_desktop_with_peekaboo instead).\n",
                 "- Use `agent` to delegate complex multi-step work to a subagent.\n",
@@ -258,8 +263,8 @@ impl AgentExecMode {
                 "- You are READ-ONLY: inspect code, run analysis commands, produce a verdict\n\n",
                 "### Review process\n",
                 "1. Run `git diff <base_branch>..HEAD` via `run_shell` to get the full diff (the base branch is provided in the task)\n",
-                "2. Read changed files for full context around the diff hunks\n",
-                "3. Use the `work_item` tool to read the linked work item for requirements and acceptance criteria\n",
+                "2. Read changed files for full context around the diff hunks; use `use_code_map` for ready indexed caller/callee, dependency, or impact context when the diff crosses symbol boundaries\n",
+                "3. Use the `manage_work_item` tool (action `read_item`) to read the linked work item for requirements and acceptance criteria\n",
                 "4. Evaluate: correctness, edge cases, error handling, security, performance, test coverage, code style\n",
                 "5. Produce your verdict in the EXACT structured format below\n\n",
                 "### Output format (MANDATORY)\n",

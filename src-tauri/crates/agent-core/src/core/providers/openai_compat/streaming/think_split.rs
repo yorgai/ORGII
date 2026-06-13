@@ -310,10 +310,7 @@ mod tests {
     #[test]
     fn multiple_think_blocks() {
         let mut s = ThinkTagSplitter::new();
-        let out = run_chunks(
-            &mut s,
-            &["<think>one</think>mid<think>two</think>tail"],
-        );
+        let out = run_chunks(&mut s, &["<think>one</think>mid<think>two</think>tail"]);
         assert_eq!(out.content, "midtail");
         assert_eq!(out.reasoning, "onetwo");
     }
@@ -356,7 +353,10 @@ mod tests {
         let mut s = ThinkTagSplitter::new();
         let out = run_chunks(
             &mut s,
-            &["a", "<", "t", "h", "i", "n", "k", ">", "b", "<", "/", "t", "h", "i", "n", "k", ">", "c"],
+            &[
+                "a", "<", "t", "h", "i", "n", "k", ">", "b", "<", "/", "t", "h", "i", "n", "k",
+                ">", "c",
+            ],
         );
         assert_eq!(out.content, "ac");
         assert_eq!(out.reasoning, "b");

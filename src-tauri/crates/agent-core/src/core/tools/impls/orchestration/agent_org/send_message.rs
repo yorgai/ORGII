@@ -970,7 +970,10 @@ mod tests {
         );
 
         let result = tool
-            .execute_text(params("builder"), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                params("builder"),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect("send should succeed");
         let value: serde_json::Value = serde_json::from_str(&result).expect("json result");
@@ -1003,12 +1006,15 @@ mod tests {
             abort.clone(),
         );
 
-        tool.execute_text(json!({
-            "recipient_member_id": "coordinator",
-            "kind": "shutdown_response",
-            "request_id": "req-1",
-            "accepted": true
-        }), &crate::tools::call_context::CallContext::default())
+        tool.execute_text(
+            json!({
+                "recipient_member_id": "coordinator",
+                "kind": "shutdown_response",
+                "request_id": "req-1",
+                "accepted": true
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .expect("shutdown response should send");
 
@@ -1030,12 +1036,15 @@ mod tests {
         );
 
         let error = tool
-            .execute_text(json!({
-                "recipient_member_id": "builder",
-                "kind": "shutdown_response",
-                "request_id": "req-2",
-                "accepted": true
-            }), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                json!({
+                    "recipient_member_id": "builder",
+                    "kind": "shutdown_response",
+                    "request_id": "req-2",
+                    "accepted": true
+                }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect_err("shutdown response to non-coordinator should fail")
             .to_string();

@@ -5,7 +5,7 @@ use std::collections::{BTreeSet, HashSet};
 use super::builtin_tools::{builtin_tool_entries, BUILTIN_TOOLS};
 use super::names;
 use super::policy::TOOL_GROUPS;
-use super::ui_metadata::{AppSubtool, ChatBlock, SimulatorApp};
+use super::ui_metadata::{AppSubtool, ChatBlock, SimulatorApp, ToolDisplayBehavior};
 
 fn invokable_canonical_tool_names() -> BTreeSet<&'static str> {
     BTreeSet::from([
@@ -14,6 +14,8 @@ fn invokable_canonical_tool_names() -> BTreeSet<&'static str> {
         names::RUN_SHELL,
         names::AWAIT_OUTPUT,
         names::CODE_SEARCH,
+        names::USE_CODE_MAP,
+        names::MANAGE_CODE_MAP,
         names::MANAGE_WORKSPACE,
         names::EDIT_FILE,
         names::DELETE_FILE,
@@ -155,6 +157,7 @@ fn every_visible_or_invokable_builtin_tool_has_status_labels() {
 fn every_renderable_tool_has_non_default_chat_block() {
     let exempt_fallback_tools = HashSet::from([
         names::MANAGE_WORKSPACE,
+        names::MANAGE_CODE_MAP,
         names::MANAGE_LSP,
         names::MANAGE_FILE_HISTORY,
         names::SETUP_REPO,
@@ -256,5 +259,23 @@ fn internal_tool_calls_route_to_code_editor_other_tool_usage() {
 
         assert_eq!(tool.simulator_app, SimulatorApp::CodeEditor, "{tool_name}");
         assert_eq!(tool.app_subtool, AppSubtool::OtherTool, "{tool_name}");
+    }
+}
+
+#[test]
+fn coding_tool_display_behaviors_are_serialized() {
+    let tools = builtin_tool_entries("builtin".into());
+
+    for (tool_name, expected_behavior) in [
+        (names::READ_FILE, ToolDisplayBehavior::Instant),
+        (names::RUN_SHELL, ToolDisplayBehavior::Stream),
+        (names::CODE_SEARCH, ToolDisplayBehavior::WaitForResult),
+        (names::LIST_DIR, ToolDisplayBehavior::WaitForResult),
+    ] {
+        let tool = tools
+            .iter()
+            .find(|entry| entry.name == tool_name)
+            .unwrap_or_else(|| panic!("missing metadata for {tool_name}"));
+        assert_eq!(tool.display_behavior, expected_behavior, "{tool_name}");
     }
 }

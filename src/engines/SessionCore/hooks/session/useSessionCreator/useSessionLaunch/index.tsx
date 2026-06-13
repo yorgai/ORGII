@@ -392,7 +392,6 @@ export function useSessionLaunch(
           workItemContext: resolvedWorkItemContext ?? undefined,
         });
       } else {
-        setSessionRuntimeStatus({ status: "running", source: "launch" });
         if (
           dispatchCategory === DISPATCH_CATEGORY.CLI_AGENT &&
           !sessionUsesHostedKey
@@ -404,6 +403,14 @@ export function useSessionLaunch(
           );
         }
         navigateToLaunchedSession(result.sessionId, sessionUsesHostedKey);
+        // After navigation: the pipeline atom now points at the launched
+        // session, so the session-gated status write is accepted and the
+        // planning indicator covers the gap until Rust's first status event.
+        setSessionRuntimeStatus({
+          sessionId: result.sessionId,
+          status: "running",
+          source: "launch",
+        });
       }
 
       setSessionSource(null);

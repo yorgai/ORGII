@@ -157,7 +157,10 @@ const AgentsTable: React.FC<AgentsTableProps> = ({
         label: t("common:labels.description", { defaultValue: "Description" }),
         width: SETTINGS_TABLE_COL.fill,
         renderCell: (row) => (
-          <span className={SETTINGS_TABLE_CELL.muted}>
+          <span
+            className={`${SETTINGS_TABLE_CELL.muted} block max-w-[min(48vw,640px)] truncate`}
+            title={row.description ?? undefined}
+          >
             {row.description ?? ""}
           </span>
         ),

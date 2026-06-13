@@ -137,8 +137,8 @@
       "joinSharedSession": "Tham gia phiên chia sẻ…"
     },
     "search": {
-      "folders": "Tìm kiếm thư mục...",
-      "sessions": "Tìm kiếm Session...",
+      "folders": "Tìm kiếm Workspace...",
+      "sessions": "Tìm kiếm phiên...",
       "projects": "Tìm kiếm dự án..."
     },
     "folderCounts": {
@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "Cài đặt",
-      "clockLabel": "Thời gian hiện tại"
+      "clockLabel": "Thời gian hiện tại",
+      "updateAvailable": "Tải bản cập nhật v{{version}}"
     },
     "settingsMenu": {
       "appearance": "Giao diện",
@@ -324,9 +325,9 @@
       "startSession": "Bắt đầu phiên",
       "openDetails": "Hiển thị chi tiết",
       "locateInFinder": "Hiện trong Finder",
-      "remove": "Xóa",
-      "removeSuccess": "Đã xóa workspace",
-      "removeFailed": "Không thể xóa workspace"
+      "remove": "Remove from ORGII",
+      "removeSuccess": "Linkage to ORGII removed",
+      "removeFailed": "Failed to remove linkage to ORGII"
     },
     "addWorkspace": "Thêm Workspace"
   },

@@ -18,6 +18,7 @@ import {
 import React, { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
+import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import Tooltip from "@src/components/Tooltip";
 import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
 import { REPLAY_CONFIG } from "@src/config/workspace/replayConfig";
@@ -136,9 +137,14 @@ export const SimulatorStatusBar: React.FC<SimulatorStatusBarProps> = memo(
               </span>
               <div className="ml-1 h-4 w-px shrink-0 bg-white/25" />
               <Tooltip
-                content={t("simulator.replay.freeBrowse")}
+                content={
+                  <KeyboardShortcutTooltipContent
+                    label={t("simulator.replay.freeBrowse")}
+                  />
+                }
                 position="top"
                 mouseEnterDelay={200}
+                framedPanel
               >
                 <button
                   onClick={handleToggleToReplay}

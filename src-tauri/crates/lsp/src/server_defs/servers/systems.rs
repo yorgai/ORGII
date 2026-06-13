@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 use crate::install_pipeline::InstallMethod;
 use crate::root_detection::{
-    find_nearest_root, find_workspace_root, CPP_PATTERN, GO_PATTERN, GO_WORKSPACE_MARKERS,
-    RUST_PATTERN, ZIG_PATTERN, RootPattern,
+    find_nearest_root, find_workspace_root, RootPattern, CPP_PATTERN, GO_PATTERN,
+    GO_WORKSPACE_MARKERS, RUST_PATTERN, ZIG_PATTERN,
 };
 use crate::server_defs::ServerDef;
 

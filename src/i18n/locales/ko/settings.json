@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "내 현재 상태",
+    "tabs": {
+      "presence": "상태",
+      "profile": "내 프로필"
+    },
+    "presence": {
+      "instructionForAgent": "Agent 지침"
+    },
     "profile": {
-      "title": "나에 대하여",
+      "title": "내 프로필",
       "techSavvy": "기술 숙련도",
       "techSavvyDescription": "Agent 가 설명의 깊이와 전제를 조정하는 데 도움이 됩니다",
       "techSavvyPlaceholder": "수준 선택…",
@@ -597,8 +604,8 @@
     "modelsTitle": "모델",
     "compactionTitle": "압축",
     "autoTimeoutTitle": "자동 타임아웃",
-    "questionAutoSkipTimeoutByStatus": "{{status}} 질문 자동 건너뛰기",
-    "questionAutoSkipTimeoutByStatusDesc": "이 상태에서 타임아웃 후 Agent 질문 자동 건너뛰기 (0 = 비활성)",
+    "questionAutoSkipTimeoutByStatus": "질문 자동 건너뛰기",
+    "questionAutoSkipTimeoutByStatusDesc": "이 타임아웃 후 Agent 질문 자동 건너뛰기 (0 = 비활성)",
     "resourceTabs": {
       "tools": "도구",
       "mcp": "MCP",
@@ -989,7 +996,6 @@
     "storagePath": "저장 경로",
     "storageUsage": "저장 사용량",
     "storageUsageTotal": "합계: {{size}}",
-    "searchIndex": "Search Index",
     "embeddingIndex": "Embedding Index",
     "files": "파일",
     "chunks": "청크",
@@ -1006,10 +1012,8 @@
     "embedded": "Embedded",
     "index": "Index",
     "embed": "Embed",
-    "indexNow": "지금 Index",
     "reindex": "재 Index",
     "reembed": "재 Embed",
-    "deleteIndex": "Index 삭제",
     "deleteEmbedding": "Embedding 삭제",
     "abort": "중단",
     "removeAllIndexes": "모든 index 제거",
@@ -1024,7 +1028,6 @@
     "embeddingFailed": "Embedding 실패",
     "embeddingCancelledAt": "Embedding 취소됨 {{current}}/{{total}}개 파일",
     "embeddingFiles": "Embedding {{current}}/{{total}}개 파일 ({{chunks}}개 청크)",
-    "filesIndexed": "{{count}}개 파일 index 됨",
     "chunksEmbedded": "{{count}}개 청크 Embedding 됨",
     "errors": "{{count}}건 오류",
     "modelNotInstalled": "모델 미설치",

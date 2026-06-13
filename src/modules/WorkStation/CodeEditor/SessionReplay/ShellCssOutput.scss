@@ -8,6 +8,15 @@
   --simulator-shell-letter-spacing: normal;
   --simulator-shell-line-height: 1.45;
 
+  background: var(--cm-editor-background, var(--color-bg-1));
+
+  &,
+  * {
+    &::selection {
+      background: var(--terminal-selection, var(--color-fill-2));
+    }
+  }
+
   .terminal-command {
     font-family: var(--simulator-shell-font-family) !important;
     font-size: var(--simulator-shell-font-size) !important;
@@ -46,4 +55,36 @@
     letter-spacing: var(--simulator-shell-letter-spacing) !important;
     line-height: var(--simulator-shell-line-height) !important;
   }
+}
+
+.simulator-shell-surface::selection,
+.simulator-shell-surface *::selection,
+.simulator-shell-surface pre::selection,
+.simulator-shell-surface code::selection,
+.simulator-shell-surface span::selection,
+.simulator-shell-surface .terminal-command__text pre[class*="shiki"]::selection,
+.simulator-shell-surface
+  .terminal-command__text
+  pre[class*="shiki"]
+  code::selection,
+.simulator-shell-surface
+  .terminal-command__text
+  pre[class*="shiki"]
+  code
+  span::selection,
+.simulator-shell-surface
+  .simulator-shell-shiki-output
+  pre[class*="shiki"]::selection,
+.simulator-shell-surface
+  .simulator-shell-shiki-output
+  pre[class*="shiki"]
+  code::selection,
+.simulator-shell-surface
+  .simulator-shell-shiki-output
+  pre[class*="shiki"]
+  code
+  span::selection,
+.simulator-shell-surface .simulator-shell-plain-pre::selection {
+  background: var(--terminal-selection, var(--color-fill-2)) !important;
+  background-color: var(--terminal-selection, var(--color-fill-2)) !important;
 }

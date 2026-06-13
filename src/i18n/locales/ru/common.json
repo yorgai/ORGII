@@ -371,10 +371,8 @@
     "foundByKeyword": "Найдено по поиску по ключевым словам",
     "semanticSecondary": "meaning match",
     "hybridSecondary": "semantic + full-text",
-    "tantivySecondary": "indexed full-text",
     "semanticDescription": "Embedding-based meaning search",
-    "hybridDescription": "Combined semantic and full-text search",
-    "tantivyDescription": "Indexed full-text search"
+    "hybridDescription": "Combined semantic and full-text search"
   },
   "tabs": {
     "terminal": "Терминал",
@@ -471,12 +469,12 @@
     "delete": "Вы уверены, что хотите удалить это?",
     "unsavedChanges": "У вас есть несохранённые изменения. Вы уверены, что хотите выйти?",
     "discard": "Отменить изменения?",
-    "removeTitle": "Удалить \"{{name}}\" из ORGII workspace?",
-    "removeMessage": "Папка с кодом не будет удалена с вашего устройства — она только убирается из ORGII workspace. Вы можете добавить её обратно в любое время.",
+    "removeTitle": "Удалить \"{{name}}\" из ORGII?",
+    "removeMessage": "Это только удалит связь с ORGII. Ничего не будет удалено с диска.",
     "deleteWorkspaceTitle": "Удалить Workspace \"{{name}}\"?",
     "deleteWorkspaceMessage": "Удаляется только пресет Workspace. На входящие в него Repo и папки это не влияет.",
-    "deleteSelectedTitle": "Удалить {{count}} выбранных элементов?",
-    "deleteSelectedMessage": "Будут удалены выбранные Workspaces, а связь с выбранными Repos будет удалена. Файлы Repo на диске не удаляются.",
+    "deleteSelectedTitle": "Удалить {{count}} выбранных элементов из ORGII?",
+    "deleteSelectedMessage": "Это только удалит их связь с ORGII. Ничего не будет удалено с диска.",
     "disconnectTitle": "Отключить \"{{name}}\"?",
     "disconnectMessage": "Это удалит доступ ко всем репо этого аккаунта.",
     "dropStashTitle": "Drop stash?",
@@ -1134,7 +1132,7 @@
     "repo": {
       "workspaceFolders": "Папки Workspace",
       "addRepo": "Добавить workspace",
-      "addEntry": "Больше параметров workspace",
+      "addEntry": "Больше вариантов импорта",
       "addRepoDescription": "Открыть, создать или клонировать workspace",
       "sections": {
         "coding": "Workspace",
@@ -1143,6 +1141,7 @@
         "current": "Текущий",
         "repo": "Репозитории",
         "systemPaths": "Системные пути",
+        "usedElsewhere": "Used elsewhere",
         "workspace": "Workspace"
       },
       "tabs": {
@@ -1462,12 +1461,12 @@
         }
       },
       "toast": {
-        "repoRemoved": "Репозиторий успешно удалён",
-        "repoRemoveFailed": "Не удалось удалить репозиторий",
-        "workspaceRemoved": "Workspace удалён",
-        "workspaceRemoveFailed": "Не удалось удалить Workspace",
-        "bulkDeleted": "Удалено {{count}} элементов",
-        "bulkDeleteFailed": "Не удалось удалить {{count}} элементов"
+        "repoRemoved": "Linkage to ORGII removed",
+        "repoRemoveFailed": "Failed to remove linkage to ORGII",
+        "workspaceRemoved": "Linkage to ORGII removed",
+        "workspaceRemoveFailed": "Failed to remove linkage to ORGII",
+        "bulkDeleted": "{{count}} linkages to ORGII removed",
+        "bulkDeleteFailed": "{{count}} linkages failed to remove"
       }
     }
   },
@@ -1478,7 +1477,7 @@
     "locateInFinder": "Найти в Finder",
     "copyLocalPath": "Копировать локальный путь",
     "copyEventsJson": "Копировать Events JSON",
-    "removeRepo": "Удалить репо",
+    "removeRepo": "Remove from ORGII",
     "addRepo": "Добавить репо...",
     "simulatorView": "Вид симулятора",
     "addWorkspace": "Добавить workspace..."
@@ -2081,10 +2080,9 @@
     "selectWorkspaceToStart": "Выберите Workspace, чтобы начать",
     "selectRepoToStart": "Выберите Repo, чтобы начать"
   },
-  "quitConfirmation": {
-    "title": "Выйти из ORGII?",
-    "message": "Активные сеансы и фоновые задачи будут остановлены.",
-    "okLabel": "Выйти"
+  "holdToQuit": {
+    "title": "Удерживайте {{shortcut}} 1 секунду, чтобы выйти",
+    "subtitle": "Отпустите, чтобы отменить"
   },
   "projects": {
     "title": "Тепловая карта",

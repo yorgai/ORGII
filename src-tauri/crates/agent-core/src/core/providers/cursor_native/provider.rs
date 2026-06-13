@@ -57,11 +57,11 @@ use crate::providers::traits::{
 use exec_bridge::{handle_exec_server_message, map_client_error, ExecToolPause, ToolResultKind};
 
 #[cfg(test)]
+use super::tools::CURSOR_MCP_PROVIDER_IDENTIFIER;
+#[cfg(test)]
 use exec_bridge::{
     cursor_exec_to_tool_call, mcp_native_fallback_result, MCP_NATIVE_FALLBACK_REJECTION,
 };
-#[cfg(test)]
-use super::tools::CURSOR_MCP_PROVIDER_IDENTIFIER;
 use helpers::{
     build_request_context, continuation_policy_for_tool, current_user_request_from_messages,
     describe_workspace_context, find_tool_result, interaction_update_variant_name,
@@ -69,9 +69,7 @@ use helpers::{
     should_expose_as_cursor_native_mcp_tool, stable_conversation_id,
 };
 use interaction::{handle_interaction_update, reply_to_kv};
-use tool_stream::{
-    complete_tool_call_argument_deltas, InteractionToolStreamState,
-};
+use tool_stream::{complete_tool_call_argument_deltas, InteractionToolStreamState};
 
 /// Cursor's agent-mode auto-router model. Matches the `default` entry in
 /// `agent.v1.AgentService/GetUsableModels`; the server picks an appropriate
@@ -766,8 +764,8 @@ async fn drive_run(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::client::ClientError;
+    use super::*;
     use crate::tools::names as tool_names;
 
     #[test]
@@ -956,4 +954,3 @@ mod tests {
         }
     }
 }
-

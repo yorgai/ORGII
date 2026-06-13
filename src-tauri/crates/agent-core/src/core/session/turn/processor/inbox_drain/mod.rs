@@ -7,9 +7,9 @@
 pub mod hooks;
 pub(super) mod render;
 
+pub(super) mod drain;
 mod guard;
 mod routing;
-pub(super) mod drain;
 
 #[cfg(test)]
 pub use hooks::MemberShutdownHookGuard;
@@ -30,26 +30,24 @@ pub use drain::drain_and_render;
 // These imports are not used in mod.rs itself — they are brought in solely
 // so the `mod tests` child module can access them via `use super::*`.
 #[cfg(test)]
-use crate::coordination::agent_inbox::{AgentInboxStore, AgentMessage, SYSTEM_SENDER_ID, USER_SENDER_ID};
-#[cfg(test)]
-use crate::coordination::agent_org_runs::{
-    AgentOrgRunStatus, AgentOrgRunStore, COORDINATOR_MEMBER_ID,
+use crate::coordination::agent_inbox::{
+    AgentInboxStore, AgentMessage, SYSTEM_SENDER_ID, USER_SENDER_ID,
 };
 #[cfg(test)]
-use crate::coordination::agent_org_tasks::AgentOrgTaskStore;
-#[cfg(test)]
-use crate::state::AgentSession;
+use crate::coordination::agent_org_runs::COORDINATOR_MEMBER_ID;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::coordination::agent_inbox::{InsertInboxParams, MemberIdleReason, MemberTerminationReason, RequestId};
-    use serde_json::Value;
+    use crate::coordination::agent_inbox::{
+        InsertInboxParams, MemberIdleReason, MemberTerminationReason, RequestId,
+    };
     use crate::coordination::agent_member_interventions::{
         AgentMemberInterventionStore, EnterMemberInterventionParams,
     };
     use crate::coordination::agent_org_runs::AgentOrgRunContext;
     use render::{render_payload, xml_escape};
+    use serde_json::Value;
     use std::sync::Arc;
 
     fn ensure_inbox_schema() {

@@ -2,15 +2,17 @@ use rusqlite::{params, OptionalExtension};
 
 use database::db::{get_connection, with_sessions_writer};
 
-use super::{
-    ClaimError, ClaimOptions, CreateTaskParams, Task, TaskHistoryEvent, TaskStatus, UpdateTaskPatch,
-    TASK_EVENT_CLAIMED, TASK_EVENT_CREATED, TASK_EVENT_RELEASED, TASK_EVENT_UPDATED,
+use super::graph::{
+    blockers_resolved, find_busy_task, unresolved_blockers, validate_dependency_graph_after_upsert,
 };
-use super::graph::{blockers_resolved, find_busy_task, unresolved_blockers,
-    validate_dependency_graph_after_upsert};
 use super::helpers::{
     encode_json_array, encode_metadata, insert_task_history_event, list_tasks_with_conn,
     now_rfc3339, row_to_task, row_to_task_history_event, SELECT_COLUMNS,
+};
+use super::{
+    ClaimError, ClaimOptions, CreateTaskParams, Task, TaskHistoryEvent, TaskStatus,
+    UpdateTaskPatch, TASK_EVENT_CLAIMED, TASK_EVENT_CREATED, TASK_EVENT_RELEASED,
+    TASK_EVENT_UPDATED,
 };
 
 pub struct AgentOrgTaskStore;
@@ -143,11 +145,7 @@ impl AgentOrgTaskStore {
     /// Apply a partial update. The full updated row is returned. `Err` on
     /// missing row so callers can surface a clear "task_not_found" without
     /// a separate get round-trip.
-    pub fn update(
-        org_run_id: &str,
-        task_id: &str,
-        patch: UpdateTaskPatch,
-    ) -> Result<Task, String> {
+    pub fn update(org_run_id: &str, task_id: &str, patch: UpdateTaskPatch) -> Result<Task, String> {
         with_sessions_writer(|| Self::update_inner(org_run_id, task_id, patch))
     }
 

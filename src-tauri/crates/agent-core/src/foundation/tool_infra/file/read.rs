@@ -68,6 +68,26 @@ fn modified_millis(metadata: &std::fs::Metadata) -> u128 {
         .unwrap_or(0)
 }
 
+/// Cheap streaming line count for the oversized-file error message, so the
+/// model knows the file's shape before retrying with offset/limit. Bounded
+/// by `FILE_IO_TIMEOUT` at the call site; `None` on any I/O error.
+async fn count_lines(path: &Path) -> Option<usize> {
+    use tokio::io::AsyncBufReadExt;
+    let file = tokio::fs::File::open(path).await.ok()?;
+    let mut reader = tokio::io::BufReader::new(file);
+    let mut count = 0usize;
+    let mut buf = Vec::with_capacity(8192);
+    loop {
+        buf.clear();
+        match reader.read_until(b'\n', &mut buf).await {
+            Ok(0) => break,
+            Ok(_) => count += 1,
+            Err(_) => return None,
+        }
+    }
+    Some(count)
+}
+
 /// Resolve and stat a file without reading its content.
 pub async fn stat_file_with_extras(
     path: &str,
@@ -256,11 +276,18 @@ pub async fn read_file_in_range_with_extras(
         // ── Standard text file ──
         // Reject oversized files when no range is specified
         if offset.is_none() && limit.is_none() && file_size > MAX_FILE_SIZE_BYTES {
+            let total_lines = count_lines(&resolved).await;
+            let line_hint = match total_lines {
+                Some(count) => format!(" ({} lines total)", count),
+                None => String::new(),
+            };
             return Err(format!(
-                "File content ({:.1} KB) exceeds maximum allowed size ({} KB). \
-                 Use offset and limit parameters to read specific portions of the file, \
-                 or use search_files/grep to find specific content instead of reading the whole file.",
+                "File is {:.1} KB{} — too large to read at once (limit {} KB without a range). \
+                 Read it in chunks with `offset` and `limit` (e.g. offset=1, limit=2000), \
+                 or filter it with `code_search` (action: grep) or `run_shell` with grep \
+                 instead of reading the whole file.",
                 file_size as f64 / 1024.0,
+                line_hint,
                 MAX_FILE_SIZE_BYTES / 1024,
             ));
         }

@@ -66,18 +66,43 @@ impl TurnEventHandler for UnifiedSubagentHandler {
 
     fn on_tool_result(
         &self,
+        session_id: &str,
+        tool_call_id: &str,
+        tool_name: &str,
+        display_name: &str,
+        result: &str,
+    ) {
+        self.on_tool_result_with_metadata(
+            session_id,
+            tool_call_id,
+            tool_name,
+            display_name,
+            result,
+            None,
+        );
+    }
+
+    fn on_tool_result_with_metadata(
+        &self,
         _session_id: &str,
         tool_call_id: &str,
         tool_name: &str,
         display_name: &str,
         result: &str,
+        ui_metadata: Option<&crate::tools::traits::ToolUIMetadata>,
     ) {
         // 1. Persist to database.
         self.persist_tool_result(tool_call_id, tool_name, result);
 
         // 2. Push tool_result event — EventStore's merge_events will fold it
         //    into the matching tool_call via call_id.
-        let event = self.build_tool_result_event(tool_call_id, tool_name, display_name, result);
+        let event = self.build_tool_result_event(
+            tool_call_id,
+            tool_name,
+            display_name,
+            result,
+            ui_metadata,
+        );
         self.push_to_store(event);
     }
 

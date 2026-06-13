@@ -42,6 +42,8 @@ pub use project::{
     delete_work_item,
     // search
     find_across_workspaces,
+    // execution
+    launch_phase_session,
     list_projects,
     list_work_items,
     read_project,
@@ -49,8 +51,6 @@ pub use project::{
     // helpers
     resolve_slug,
     slugify,
-    // execution
-    launch_phase_session,
     start_work_item,
     start_work_item_with_reason,
     update_project,

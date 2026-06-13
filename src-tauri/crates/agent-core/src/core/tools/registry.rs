@@ -193,43 +193,80 @@ impl ToolRegistry {
             .collect()
     }
 
-    /// Search deferred (`OnDemand`) tools by keyword in name or description.
+    /// Search a query against all ready tools (local + fallback chain).
     ///
-    /// Returns `(name, description)` pairs for tools whose name or description
-    /// contains the query (case-insensitive). Used by `ToolSearchTool`.
-    pub fn search_deferred(&self, query: &str) -> Vec<(String, String)> {
-        let lower_query = query.to_lowercase();
-        let mut results: Vec<(String, String)> = Vec::new();
+    /// Tokenized scoring, not whole-phrase substring: the query is split
+    /// on whitespace and lowercased; each token scores 3 for a name hit,
+    /// 2 for a `search_hint()` hit, 1 for a description hit. Any token
+    /// hit makes the tool a candidate; results are sorted by total score
+    /// (descending), then name, and capped at `limit`.
+    ///
+    /// Returns `(name, description, deferred)` tuples — `deferred == false`
+    /// means the tool is already in the prompt (`Always` priority); `true`
+    /// means it loads on first call. Searching ALL tools (not just the
+    /// OnDemand pool) lets the caller tell the model "already loaded"
+    /// instead of returning a false negative.
+    pub fn search_tools(&self, query: &str, limit: usize) -> Vec<(String, String, bool)> {
+        let tokens: Vec<String> = query
+            .split_whitespace()
+            .map(|t| t.to_lowercase())
+            .filter(|t| !t.is_empty())
+            .collect();
+        if tokens.is_empty() {
+            return Vec::new();
+        }
+
+        let mut scored: Vec<(u32, String, String, bool)> = Vec::new();
         let mut seen = std::collections::HashSet::new();
 
-        let check = |tool: &dyn Tool,
-                     results: &mut Vec<(String, String)>,
-                     seen: &mut std::collections::HashSet<String>| {
-            if tool.priority() != ToolPriority::OnDemand || !tool.is_ready() {
+        let mut score_tool = |tool: &dyn Tool| {
+            if !tool.is_ready() {
                 return;
             }
             let name = tool.name().to_string();
             if !seen.insert(name.clone()) {
                 return;
             }
-            let desc = tool.description().to_string();
-            if name.to_lowercase().contains(&lower_query)
-                || desc.to_lowercase().contains(&lower_query)
-            {
-                results.push((name, desc));
+            let name_lower = name.to_lowercase();
+            let hint_lower = tool.search_hint().to_lowercase();
+            let desc_lower = tool.description().to_lowercase();
+            let mut score = 0u32;
+            for token in &tokens {
+                if name_lower.contains(token.as_str()) {
+                    score += 3;
+                } else if hint_lower.contains(token.as_str()) {
+                    score += 2;
+                } else if desc_lower.contains(token.as_str()) {
+                    score += 1;
+                }
+            }
+            if score > 0 {
+                scored.push((
+                    score,
+                    name,
+                    tool.description().to_string(),
+                    tool.priority() == ToolPriority::OnDemand,
+                ));
             }
         };
 
         for tool in self.tools.values() {
-            check(tool.as_ref(), &mut results, &mut seen);
+            score_tool(tool.as_ref());
         }
-        if let Some(ref fb) = self.fallback {
+        let mut fb_chain = self.fallback.as_deref();
+        while let Some(fb) = fb_chain {
             for tool in fb.tools.values() {
-                check(tool.as_ref(), &mut results, &mut seen);
+                score_tool(tool.as_ref());
             }
+            fb_chain = fb.fallback.as_deref();
         }
-        results.sort_by(|entry_a, entry_b| entry_a.0.cmp(&entry_b.0));
-        results
+
+        scored.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+        scored
+            .into_iter()
+            .take(limit)
+            .map(|(_, name, desc, deferred)| (name, desc, deferred))
+            .collect()
     }
 
     /// List all deferred (`OnDemand`) tool names.

@@ -33,13 +33,13 @@ export const SidebarTabButton: React.FC<{
       className={cn(
         "group relative flex flex-1 select-none items-center justify-center",
         cursorReset || isActive ? "cursor-default" : "cursor-pointer",
-        "overflow-hidden rounded-[100px] border-none",
+        "rounded-[100px] border-none",
         "h-[28px] px-[10px]",
         isActive
-          ? "bg-bg-2 text-text-1"
+          ? "bg-fill-3/45 text-text-1 shadow-[0_1px_4px_rgba(0,0,0,0.10)]"
           : "bg-transparent text-text-2 hover:bg-fill-2 hover:text-text-1",
         tab.disabled && "cursor-not-allowed opacity-50",
-        "transition-colors duration-150"
+        "transition-[background-color,color,box-shadow] duration-150"
       )}
       title={iconOnly ? tab.label : undefined}
     >
@@ -47,7 +47,7 @@ export const SidebarTabButton: React.FC<{
         {iconOnly && tab.icon && (
           <div
             className={cn(
-              "flex flex-shrink-0 items-center justify-center",
+              "flex flex-shrink-0 items-center justify-center transition-colors duration-150 group-hover:text-text-1",
               isActive ? "text-text-1" : "text-text-2"
             )}
           >
@@ -56,7 +56,10 @@ export const SidebarTabButton: React.FC<{
         )}
         {!iconOnly && (
           <span
-            className={cn("text-xs", isActive ? "text-text-1" : "text-text-2")}
+            className={cn(
+              "text-xs transition-colors duration-150 group-hover:text-text-1",
+              isActive ? "text-text-1" : "text-text-2"
+            )}
           >
             <BoldStableLabel label={tab.label} isBold={isActive} />
           </span>

@@ -889,10 +889,11 @@
     "installedVia": "安裝方式",
     "cliAccounts": "兼容的訂閱方案",
     "apiKeys": "兼容的 API Key",
-    "noCliAccounts": "此 CLI 尚未添加 Key",
+    "noSubscriptions": "此 CLI 尚未添加訂閱",
     "noApiKeys": "此 CLI 不支持自帶 API Key",
     "noApiKeysAdded": "尚未添加兼容的 API Key",
     "notSupported": "不支持",
+    "subscriptions": "訂閱",
     "cliKeys": "Subscription",
     "compatibleApis": "Supported Keys",
     "docs": "文檔",
@@ -905,7 +906,7 @@
     "filterAllInstall": "所有安裝狀態",
     "filterAllReady": "所有就緒狀態",
     "filterReady": "已就緒",
-    "filterNoKeys": "無密鑰"
+    "filterNoSubscriptions": "無訂閱"
   },
   "lspPreview": {
     "enable": "啓用",

@@ -137,8 +137,8 @@
       "joinSharedSession": "共有セッションに参加…"
     },
     "search": {
-      "folders": "フォルダーを検索...",
-      "sessions": "Session を検索...",
+      "folders": "ワークスペースを検索...",
+      "sessions": "セッションを検索...",
       "projects": "プロジェクトを検索..."
     },
     "folderCounts": {
@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "設定",
-      "clockLabel": "現在時刻"
+      "clockLabel": "現在時刻",
+      "updateAvailable": "アップデート v{{version}} をダウンロード"
     },
     "settingsMenu": {
       "appearance": "外観",
@@ -324,9 +325,9 @@
       "startSession": "セッションを開始",
       "openDetails": "詳細を表示",
       "locateInFinder": "Finder で表示",
-      "remove": "削除",
-      "removeSuccess": "ワークスペースを削除しました",
-      "removeFailed": "ワークスペースの削除に失敗しました"
+      "remove": "Remove from ORGII",
+      "removeSuccess": "Linkage to ORGII removed",
+      "removeFailed": "Failed to remove linkage to ORGII"
     },
     "addWorkspace": "Workspace を追加"
   },

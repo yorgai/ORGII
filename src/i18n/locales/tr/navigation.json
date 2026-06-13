@@ -137,8 +137,8 @@
       "joinSharedSession": "Paylaşılan oturuma katıl…"
     },
     "search": {
-      "folders": "Klasörlerde ara...",
-      "sessions": "Session ara...",
+      "folders": "Çalışma alanında ara...",
+      "sessions": "Oturum ara...",
       "projects": "Projelerde ara..."
     },
     "folderCounts": {
@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "Ayarlar",
-      "clockLabel": "Şu anki saat"
+      "clockLabel": "Şu anki saat",
+      "updateAvailable": "Güncelleme v{{version}} indir"
     },
     "settingsMenu": {
       "appearance": "Görünüm",
@@ -324,9 +325,9 @@
       "startSession": "Oturum başlat",
       "openDetails": "Detayları göster",
       "locateInFinder": "Finder'da göster",
-      "remove": "Kaldır",
-      "removeSuccess": "Çalışma alanı kaldırıldı",
-      "removeFailed": "Çalışma alanı kaldırılamadı"
+      "remove": "Remove from ORGII",
+      "removeSuccess": "Linkage to ORGII removed",
+      "removeFailed": "Failed to remove linkage to ORGII"
     },
     "addWorkspace": "Workspace ekle"
   },

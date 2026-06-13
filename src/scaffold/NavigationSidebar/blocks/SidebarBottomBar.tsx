@@ -45,6 +45,7 @@ import {
 } from "@src/types/userPresence";
 
 import SidebarSettingsMenuButton from "./SidebarSettingsMenuButton";
+import SidebarUpdateButton from "./SidebarUpdateButton";
 import { resolveCustomRoleIcon } from "./customRoleIcons";
 
 interface SidebarBottomBarProps {
@@ -377,6 +378,7 @@ const SidebarBottomBar: React.FC<SidebarBottomBarProps> = React.memo(
         <div className="flex items-center gap-1">
           {rightActions}
           {!hideSettings && <SidebarSettingsMenuButton />}
+          <SidebarUpdateButton />
         </div>
       </div>
     );

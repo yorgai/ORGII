@@ -53,9 +53,9 @@ pub use connection::get_connection;
 pub use schema::init_session_tables;
 
 pub use crud::{
-    clear_old_sessions, delete_session, get_all_sessions, get_cache_stats, get_event,
-    get_session_metadata, load_events, load_session, save_events, save_session,
-    search_all_sessions, search_events, update_session_specs,
+    clear_old_sessions, delete_session, find_awaiting_user_events_by_function, get_all_sessions,
+    get_cache_stats, get_event, get_session_metadata, load_events, load_session, save_events,
+    save_session, search_all_sessions, search_events, update_session_specs,
 };
 pub use editing::{clear_session_history, delete_event, truncate_after_event, update_event};
 pub use file_changes::{aggregate_file_change, get_file_changes};

@@ -27,6 +27,8 @@ interface ShortcutRegistrationOptions {
   handleZoomReset: () => boolean;
   // Window
   confirmAndQuit: () => Promise<void>;
+  startHoldToQuit: () => void;
+  cancelHoldToQuit: () => void;
   handleHideWindow: () => Promise<void>;
   // Tabs & navigation
   spotlightOpenRef: MutableRefObject<boolean>;
@@ -72,6 +74,8 @@ export function useShortcutRegistration(options: ShortcutRegistrationOptions) {
     handleZoomOut,
     handleZoomReset,
     confirmAndQuit,
+    startHoldToQuit,
+    cancelHoldToQuit,
     handleHideWindow,
     spotlightOpenRef,
     handleCreateNewSession,
@@ -107,6 +111,8 @@ export function useShortcutRegistration(options: ShortcutRegistrationOptions) {
     handleInspectToggleLabels,
     handleInspectHideLabels,
     handleZoomReset,
+    startHoldToQuit,
+    cancelHoldToQuit,
     spotlightOpenRef,
     handleOpenWorkStationFilePalette,
     handleOpenWorkStationSymbolPalette,
@@ -121,7 +127,6 @@ export function useShortcutRegistration(options: ShortcutRegistrationOptions) {
     handleCloseCurrentTab,
     handleToggleWorkStationChatFocus,
     handleToggleStationMode,
-    confirmAndQuit,
   });
 
   // ── ShortcutRegistry subscriptions ──

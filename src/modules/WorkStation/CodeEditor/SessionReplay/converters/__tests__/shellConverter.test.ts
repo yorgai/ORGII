@@ -106,7 +106,7 @@ describe("convertToShellOperation", () => {
     expect(operation?.isLoading).toBe(true);
   });
 
-  it("keeps background run_shell stream output visible", () => {
+  it("renders completed background run_shell output without loading state", () => {
     const event = minimalSessionEvent({
       functionName: "run_shell",
       uiCanonical: "run_shell",
@@ -123,7 +123,8 @@ describe("convertToShellOperation", () => {
 
     expect(operation).not.toBeNull();
     expect(operation?.command).toBe("pnpm dev");
-    expect(operation?.streamOutput).toBe("dev server ready");
-    expect(operation?.isLoading).toBe(true);
+    expect(operation?.output).toBe("dev server ready");
+    expect(operation?.streamOutput).toBeUndefined();
+    expect(operation?.isLoading).toBe(false);
   });
 });

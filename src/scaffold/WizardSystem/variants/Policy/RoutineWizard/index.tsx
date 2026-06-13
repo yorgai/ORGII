@@ -41,8 +41,8 @@ import {
 import type { AgentSelection } from "@src/scaffold/GlobalSpotlight/palettes";
 import {
   DispatchCategoryPalette,
-  RepoPalette,
   UnifiedModelPalette,
+  WorkspacePalette,
 } from "@src/scaffold/GlobalSpotlight/palettes";
 import type { RepoItem } from "@src/scaffold/GlobalSpotlight/types";
 import {
@@ -1124,7 +1124,7 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
         currentAgentOrgId={currentAgentOrgId}
       />
 
-      <RepoPalette
+      <WorkspacePalette
         isOpen={isWorkspacePaletteOpen}
         onClose={() => setIsWorkspacePaletteOpen(false)}
         onSelect={handleWorkspaceSelect}

@@ -169,8 +169,14 @@ async fn read_in_range_rejects_oversized_file_without_range() {
     let result = read_file_in_range(path.to_str().unwrap(), None, None, None).await;
     assert!(result.is_err());
     let err = result.unwrap_err();
-    assert!(err.contains("exceeds maximum allowed size"));
-    assert!(err.contains("offset and limit"));
+    // The rejection must be a signpost, not a dead end: file shape (size +
+    // line count) plus concrete next steps (offset/limit, grep tools).
+    assert!(err.contains("too large to read at once"), "err was: {err}");
+    assert!(err.contains("lines total"), "err was: {err}");
+    assert!(err.contains("offset"), "err was: {err}");
+    assert!(err.contains("limit"), "err was: {err}");
+    assert!(err.contains("code_search"), "err was: {err}");
+    assert!(err.contains("run_shell"), "err was: {err}");
 }
 
 #[tokio::test]

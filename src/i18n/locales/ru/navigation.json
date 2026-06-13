@@ -137,8 +137,8 @@
       "joinSharedSession": "Присоединиться к общему сеансу…"
     },
     "search": {
-      "folders": "Искать папки...",
-      "sessions": "Искать Session...",
+      "folders": "Искать в рабочей области...",
+      "sessions": "Искать сессии...",
       "projects": "Искать проекты..."
     },
     "folderCounts": {
@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "Настройки",
-      "clockLabel": "Текущее время"
+      "clockLabel": "Текущее время",
+      "updateAvailable": "Скачать обновление v{{version}}"
     },
     "settingsMenu": {
       "appearance": "Внешний вид",
@@ -324,9 +325,9 @@
       "startSession": "Запустить сессию",
       "openDetails": "Показать детали",
       "locateInFinder": "Показать в Finder",
-      "remove": "Удалить",
-      "removeSuccess": "Рабочая область удалена",
-      "removeFailed": "Не удалось удалить рабочую область"
+      "remove": "Remove from ORGII",
+      "removeSuccess": "Linkage to ORGII removed",
+      "removeFailed": "Failed to remove linkage to ORGII"
     },
     "addWorkspace": "Добавить workspace"
   },

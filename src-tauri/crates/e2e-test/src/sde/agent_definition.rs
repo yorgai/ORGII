@@ -5,8 +5,8 @@
 //! same policy-filtered tool surface used when building the prompt, so it is
 //! the single source of truth for runtime tool availability.
 
-use agent_core::definitions::{OS_AGENT_ID, SDE_AGENT_ID};
 use agent_core::definitions::builtin::ADE_MANAGER_ID;
+use agent_core::definitions::{OS_AGENT_ID, SDE_AGENT_ID};
 use agent_core::tools::names::{
     ASK_USER_QUESTIONS, CONTROL_BROWSER_WITH_PLAYWRIGHT, CONTROL_DESKTOP_WITH_PEEKABOO,
     CONTROL_ORGII, EDIT_FILE, MANAGE_AGENT_DEF, MANAGE_PROJECT, MANAGE_SESSION, MANAGE_WORK_ITEM,

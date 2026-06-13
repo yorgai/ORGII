@@ -11,36 +11,43 @@ use terminal::pty_commands::pty::{PtyInfo, PtySession};
 
 use crate::tools::names as tool_names;
 use crate::tools::registration::PtySessions;
-use crate::tools::traits::{params_schema, parse_params, Tool, ToolError};
+use crate::tools::traits::{params_schema, parse_params_described, Tool, ToolError};
 
 const DEFAULT_READ_CHARS: usize = 20_000;
 const MAX_READ_CHARS: usize = 80_000;
 
+/// Flat params: tagged-enum schemas (top-level `oneOf`) get flattened to an
+/// empty schema by LLM providers, so the model never sees the fields. Keep
+/// this a plain object with scalar properties; per-action requiredness is
+/// enforced in `execute_text` with self-correcting error messages.
 #[derive(Debug, Deserialize, JsonSchema)]
-#[serde(tag = "action", rename_all = "snake_case")]
-pub enum InspectTerminalsParams {
-    /// List all live ORGII-managed PTY sessions.
-    List,
-    /// Read a bounded, redacted snapshot of recent output from one terminal.
-    ReadOutput {
-        /// Terminal session ID returned by `list`.
-        session_id: String,
-        /// Maximum number of trailing characters to return. Defaults to 20,000 and is capped at 80,000.
-        #[serde(default)]
-        max_chars: Option<usize>,
-    },
-    /// Write raw input into a terminal session.
-    WriteInput {
-        /// Terminal session ID returned by `list`.
-        session_id: String,
-        /// Text or control characters to write to the PTY. Use `\r` to press Enter.
-        input: String,
-    },
-    /// Close a terminal session by dropping its PTY.
-    Close {
-        /// Terminal session ID returned by `list`.
-        session_id: String,
-    },
+#[serde(deny_unknown_fields)]
+pub struct InspectTerminalsParams {
+    /// Operation to perform. One of: `list` (enumerate live terminal
+    /// sessions), `read_output` (read a bounded snapshot of recent output),
+    /// `write_input` (write raw input into a terminal), `close` (drop the
+    /// PTY).
+    pub action: String,
+    /// Terminal session ID returned by `list`. Required for `read_output`,
+    /// `write_input`, and `close`.
+    #[serde(default)]
+    pub session_id: Option<String>,
+    /// `read_output` only: maximum number of trailing characters to return.
+    /// Defaults to 20,000 and is capped at 80,000.
+    #[serde(default)]
+    pub max_chars: Option<usize>,
+    /// `write_input` only: text or control characters to write to the PTY.
+    /// Use `\r` to press Enter.
+    #[serde(default)]
+    pub input: Option<String>,
+}
+
+fn require_session_id(params: &InspectTerminalsParams, action: &str) -> Result<String, ToolError> {
+    params.session_id.clone().ok_or_else(|| {
+        ToolError::InvalidParams(format!(
+            "`{action}` requires `session_id`; call `{{\"action\": \"list\"}}` first to get session IDs"
+        ))
+    })
 }
 
 #[derive(Debug, Serialize)]
@@ -76,11 +83,10 @@ impl InspectTerminalsTool {
             cwd: session.cwd.clone(),
             name: session.name.clone(),
             created_at: session.created_at,
-            last_output_at: session
+            last_output_at: *session
                 .last_output_at
                 .lock()
-                .expect("last_output_at mutex poisoned")
-                .clone(),
+                .expect("last_output_at mutex poisoned"),
             has_output_tap: session.output_tap.is_some(),
             unacked_bytes: session
                 .unacked_bytes
@@ -110,7 +116,7 @@ impl Tool for InspectTerminalsTool {
     }
 
     fn description(&self) -> &str {
-        "Inspect and control live ORGII-managed terminal sessions. Every call must include an `action` field: `list`, `read_output`, `write_input`, or `close`."
+        "Inspect and control live ORGII-managed terminal sessions: list sessions, read recent output, write input, or close a session."
     }
 
     fn category(&self) -> &str {
@@ -126,10 +132,10 @@ impl Tool for InspectTerminalsTool {
         params: Value,
         _ctx: &crate::tools::traits::CallContext,
     ) -> Result<String, ToolError> {
-        let params: InspectTerminalsParams = parse_params(params)?;
+        let params: InspectTerminalsParams = parse_params_described(params)?;
 
-        match params {
-            InspectTerminalsParams::List => {
+        match params.action.as_str() {
+            "list" => {
                 let sessions = self.sessions.lock().await;
                 let mut terminal_infos = sessions
                     .iter()
@@ -141,11 +147,12 @@ impl Tool for InspectTerminalsTool {
                     ToolError::ExecutionFailed(format!("Failed to serialize terminals: {err}"))
                 })
             }
-            InspectTerminalsParams::ReadOutput {
-                session_id,
-                max_chars,
-            } => {
-                let max_chars = max_chars.unwrap_or(DEFAULT_READ_CHARS).min(MAX_READ_CHARS);
+            "read_output" => {
+                let session_id = require_session_id(&params, "read_output")?;
+                let max_chars = params
+                    .max_chars
+                    .unwrap_or(DEFAULT_READ_CHARS)
+                    .min(MAX_READ_CHARS);
                 let sessions = self.sessions.lock().await;
                 let session = sessions.get(&session_id).ok_or_else(|| {
                     ToolError::ExecutionFailed(format!("Terminal session not found: {session_id}"))
@@ -172,7 +179,14 @@ impl Tool for InspectTerminalsTool {
                     ))
                 })
             }
-            InspectTerminalsParams::WriteInput { session_id, input } => {
+            "write_input" => {
+                let session_id = require_session_id(&params, "write_input")?;
+                let input = params.input.clone().ok_or_else(|| {
+                    ToolError::InvalidParams(
+                        "`write_input` requires `input` — the text to write to the PTY"
+                            .to_string(),
+                    )
+                })?;
                 write_to_session(&session_id, &input, self.sessions.clone())
                     .await
                     .map_err(ToolError::ExecutionFailed)?;
@@ -184,7 +198,8 @@ impl Tool for InspectTerminalsTool {
                     ToolError::ExecutionFailed(format!("Failed to serialize write result: {err}"))
                 })
             }
-            InspectTerminalsParams::Close { session_id } => {
+            "close" => {
+                let session_id = require_session_id(&params, "close")?;
                 close_session(&session_id, self.sessions.clone())
                     .await
                     .map_err(ToolError::ExecutionFailed)?;
@@ -196,6 +211,9 @@ impl Tool for InspectTerminalsTool {
                     ToolError::ExecutionFailed(format!("Failed to serialize close result: {err}"))
                 })
             }
+            other => Err(ToolError::InvalidParams(format!(
+                "unknown action \"{other}\"; valid actions: `list`, `read_output`, `write_input`, `close`"
+            ))),
         }
     }
 }

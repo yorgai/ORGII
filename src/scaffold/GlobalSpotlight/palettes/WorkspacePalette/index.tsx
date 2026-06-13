@@ -1,5 +1,5 @@
 /**
- * RepoPalette Component
+ * WorkspacePalette Component
  *
  * Flat palette listing repos, folders, and workspaces as peers.
  * A workspace (multi-repo preset) renders as a single row showing
@@ -30,10 +30,12 @@ import {
 import { ICONS } from "../../config";
 import {
   type AddWorkspaceModalStage,
+  EXTERNAL_RECENT_PATH_WORKSPACE_THRESHOLD,
   useAddWorkspaceFlow,
-  usePathSegment,
+  useExternalRecentPaths,
   useSharedRepoList,
 } from "../../hooks";
+import { usePathSegment } from "../../hooks/usePathSegment";
 import { PaletteBody, SpotlightShell } from "../../shell";
 import type { RepoItem, SpotlightItem } from "../../types";
 import { AddWorkspaceModalShell } from "../AddWorkspaceModalShell";
@@ -41,18 +43,18 @@ import { REPO_PALETTE_CONFIG } from "../config";
 import { useSelectorKernel } from "../core";
 import { buildOpenPathItem } from "./pathActionItem";
 import { importWorkspacePath } from "./pathImport";
-import { buildPinnedRepoActions } from "./pinnedActions";
+import { buildPinnedWorkspaceActions } from "./pinnedActions";
+import type { AddMenuKind, WorkspacePaletteProps } from "./types";
+import { useWorkspacePaletteNavigation } from "./useWorkspacePaletteNavigation";
+import { useWorkspacePaletteWorkspace } from "./useWorkspacePaletteWorkspace";
 import {
   buildSectionedAddItems,
-  buildSectionedRepoItems,
-} from "./repoPaletteItems";
-import type { AddMenuKind, RepoPaletteProps } from "./types";
-import { useRepoPaletteNavigation } from "./useRepoPaletteNavigation";
-import { useRepoPaletteWorkspace } from "./useRepoPaletteWorkspace";
+  buildSectionedWorkspaceItems,
+} from "./workspacePaletteItems";
 
 // ============ COMPONENT ============
 
-export const RepoPalette: React.FC<RepoPaletteProps> = ({
+export const WorkspacePalette: React.FC<WorkspacePaletteProps> = ({
   isOpen,
   onClose,
   onSelect,
@@ -110,7 +112,9 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
       addFolderLabel: t("selectors.repo.pathImport.addLabel"),
       sectionCurrentLabel: t("selectors.repo.sections.current"),
       sectionSystemPathsLabel: t("selectors.repo.sections.systemPaths"),
+      sectionExternalRecentLabel: t("selectors.repo.sections.usedElsewhere"),
       sectionRepoLabel: t("selectors.repo.sections.repo"),
+      sectionFolderWorkspaceLabel: t("selectors.repo.sections.workspace"),
       sectionMultiRepoWorkspaceLabel: t(
         "workspaceForm.multiRepoWorkspace",
         "Multi-Repo Workspace"
@@ -185,6 +189,20 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
       searchQuery,
     });
 
+  const existingRepoPaths = useMemo(
+    () => repos.map((repo) => repo.fs_uri ?? "").filter(Boolean),
+    [repos]
+  );
+
+  const { recentPathRepos: externalRecentRepos } = useExternalRecentPaths({
+    enabled:
+      isOpen &&
+      !isManageMode &&
+      repos.length <= EXTERNAL_RECENT_PATH_WORKSPACE_THRESHOLD,
+    existingRepoPaths,
+    searchQuery,
+  });
+
   // ============ MULTI-ROOT WORKSPACE ============
   const isMultiRoot = useAtomValue(isMultiRootWorkspaceAtom);
   const dispatchSetFolders = useSetAtom(setWorkspaceFoldersAtom);
@@ -227,6 +245,24 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
     },
   });
 
+  const handleExternalRecentSelect = useCallback(
+    async (repo: RepoItem) => {
+      const path = repo.fs_uri;
+      if (!path) return;
+      if (isMultiRoot) {
+        dispatchSetFolders([], null);
+      }
+      await addWorkspaceFlow.localWorkspaceForm.handleImportWorkspace(path);
+      await refreshReposForce();
+    },
+    [
+      addWorkspaceFlow.localWorkspaceForm,
+      dispatchSetFolders,
+      isMultiRoot,
+      refreshReposForce,
+    ]
+  );
+
   // ============ ITEMS ============
   const sectionedAddItems = useMemo(
     (): SpotlightItem[] =>
@@ -262,7 +298,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   // ============ WORKSPACE MANAGEMENT ============
-  const { workspaceItems, handleBulkDelete } = useRepoPaletteWorkspace({
+  const { workspaceItems, handleBulkDelete } = useWorkspacePaletteWorkspace({
     repos,
     isManageMode,
     selectedIds,
@@ -313,10 +349,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
           return next;
         });
         Message.success(
-          t(
-            "selectors.spotlight.toast.repoRemoved",
-            "Repo removed successfully"
-          )
+          t("selectors.spotlight.toast.repoRemoved", "Linkage to ORGII removed")
         );
       } catch (error) {
         Message.error(
@@ -324,7 +357,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
             ? error.message
             : t(
                 "selectors.spotlight.toast.repoRemoveFailed",
-                "Failed to remove repo"
+                "Failed to remove linkage to ORGII"
               )
         );
       }
@@ -358,7 +391,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
 
   const pinnedActionItems = useMemo(
     (): SpotlightItem[] =>
-      buildPinnedRepoActions({
+      buildPinnedWorkspaceActions({
         isManageMode,
         selectedCount,
         paletteText,
@@ -400,12 +433,13 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
 
   const mainItems = useMemo(
     (): SpotlightItem[] =>
-      buildSectionedRepoItems({
+      buildSectionedWorkspaceItems({
         addMenuActive: !!addMenuKind,
         sectionedAddItems,
         workspaceItems,
         openPathItem,
         filteredRepos,
+        externalRecentRepos,
         currentRepoId,
         isMultiRoot,
         isManageMode,
@@ -420,15 +454,22 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
             handleRepoSelectWithWorkspaceExit(repo.id, repo);
           }
         },
-        onLeadingRepoAction: (repo) =>
-          handleRepoSelectWithWorkspaceExit(repo.id, repo),
+        onLeadingRepoAction: (repo) => {
+          if (repo.id.startsWith("external-recent:")) {
+            void handleExternalRecentSelect(repo);
+          } else {
+            handleRepoSelectWithWorkspaceExit(repo.id, repo);
+          }
+        },
         toggleSelection,
         renderRepoTrashAction,
       }),
     [
       addMenuKind,
       currentRepoId,
+      externalRecentRepos,
       filteredRepos,
+      handleExternalRecentSelect,
       handleRepoSelectWithWorkspaceExit,
       isManageMode,
       isMultiRoot,
@@ -493,21 +534,23 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
     ]
   );
 
-  const { handleGoBack, handleExternalKeyDown } = useRepoPaletteNavigation({
-    modalStage,
-    addMenuKind,
-    asBody,
-    effectiveInitialStage,
-    initialAddMenu,
-    onClose,
-    onGoBackToParent,
-    setModalStage,
-    setAddMenuKind,
-    setSearchQuery,
-    addWorkspaceFlow,
-    searchQuery,
-    paletteText,
-  });
+  const { handleGoBack, handleExternalKeyDown } = useWorkspacePaletteNavigation(
+    {
+      modalStage,
+      addMenuKind,
+      asBody,
+      effectiveInitialStage,
+      initialAddMenu,
+      onClose,
+      onGoBackToParent,
+      setModalStage,
+      setAddMenuKind,
+      setSearchQuery,
+      addWorkspaceFlow,
+      searchQuery,
+      paletteText,
+    }
+  );
 
   const kernel = useSelectorKernel({
     isOpen,
@@ -608,3 +651,5 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
     </SpotlightShell>
   );
 };
+
+WorkspacePalette.displayName = "WorkspacePalette";

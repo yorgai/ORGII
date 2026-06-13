@@ -11,10 +11,12 @@ import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import {
+  currentEventAtom,
   currentSimulatorEventIndexAtom,
   navigateNextSimulatorEventAtom,
   simulatorEventCountAtom,
 } from "@src/engines/SessionCore";
+import { getToolDisplayBehavior } from "@src/engines/SessionCore/rendering/registry/initToolRegistry";
 import { chatVisibleAtom } from "@src/store/ui/chatPanelAtom";
 import {
   type SimulatorPlaybackSpeed,
@@ -22,8 +24,13 @@ import {
   simulatorPlaybackSpeedAtom,
   simulatorSessionPlaybackPlayingAtom,
 } from "@src/store/ui/simulatorAtom";
+import { deriveToolAction } from "@src/util/ui/rendering/toolAction";
 
 import SimulatorStatusBar from "../SimulatorStatusBar";
+import {
+  getFinalResultHoldRemainingMs,
+  shouldHoldFinalToolResult,
+} from "./autoplayBehavior";
 
 const AUTOPLAY_BASE_INTERVAL_MS = 2000;
 
@@ -40,6 +47,7 @@ const FloatingReplayContainer: React.FC = memo(() => {
     simulatorSessionPlaybackPlayingAtom
   );
   const navigateNext = useSetAtom(navigateNextSimulatorEventAtom);
+  const currentEvent = useAtomValue(currentEventAtom);
   const currentIndex = useAtomValue(currentSimulatorEventIndexAtom);
   const eventCount = useAtomValue(simulatorEventCountAtom);
   const chatVisible = useAtomValue(chatVisibleAtom);
@@ -62,8 +70,15 @@ const FloatingReplayContainer: React.FC = memo(() => {
   );
 
   // Keep refs in sync so the interval callback always sees the latest values
+  const currentEventRef = useRef(currentEvent);
   const currentIndexRef = useRef(currentIndex);
   const eventCountRef = useRef(eventCount);
+  const finalSeenAtRef = useRef<{ eventId: string; seenAtMs: number } | null>(
+    null
+  );
+  useEffect(() => {
+    currentEventRef.current = currentEvent;
+  }, [currentEvent]);
   useEffect(() => {
     currentIndexRef.current = currentIndex;
   }, [currentIndex]);
@@ -85,16 +100,53 @@ const FloatingReplayContainer: React.FC = memo(() => {
       return () => clearTimeout(timerId);
     }
 
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout> | null = null;
     const interval = AUTOPLAY_BASE_INTERVAL_MS / playbackSpeed;
-    const timerId = setInterval(() => {
-      if (currentIndexRef.current >= eventCountRef.current - 1) {
-        setIsReplaying(false);
-        return;
-      }
-      navigateNext();
-    }, interval);
 
-    return () => clearInterval(timerId);
+    const scheduleNextStep = (delayMs: number) => {
+      timerId = setTimeout(() => {
+        if (cancelled) return;
+
+        if (currentIndexRef.current >= eventCountRef.current - 1) {
+          setIsReplaying(false);
+          return;
+        }
+
+        const event = currentEventRef.current;
+        const action = deriveToolAction(event?.functionName ?? "", event?.args);
+        const behavior = getToolDisplayBehavior(
+          event?.functionName ?? "",
+          action
+        );
+
+        if (shouldHoldFinalToolResult(event, behavior)) {
+          const nowMs = Date.now();
+          const seenAtMs =
+            event && finalSeenAtRef.current?.eventId === event.id
+              ? finalSeenAtRef.current.seenAtMs
+              : undefined;
+          const remainingMs = getFinalResultHoldRemainingMs(nowMs, seenAtMs);
+          if (event && seenAtMs === undefined) {
+            finalSeenAtRef.current = { eventId: event.id, seenAtMs: nowMs };
+          }
+          if (remainingMs > 0) {
+            scheduleNextStep(remainingMs);
+            return;
+          }
+        }
+
+        navigateNext();
+        scheduleNextStep(interval);
+      }, delayMs);
+    };
+
+    scheduleNextStep(interval);
+
+    return () => {
+      cancelled = true;
+      if (timerId) clearTimeout(timerId);
+    };
   }, [isReplaying, playbackSpeed, eventCount, navigateNext, setIsReplaying]);
 
   // Ensure autoplay halts when the container unmounts (e.g. session switch).

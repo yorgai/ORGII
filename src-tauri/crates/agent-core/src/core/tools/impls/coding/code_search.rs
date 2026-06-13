@@ -24,6 +24,11 @@ pub struct SearchTool {
     /// Active IDE repo path — overrides default_repo when set.
     active_repo: TokioMutex<Option<PathBuf>>,
     workspace_state: Option<Arc<parking_lot::RwLock<SessionWorkspace>>>,
+    /// When true (`policy.workspace_only`), explicit `repo_path` params are
+    /// confined to the session workspace. When false (the default policy),
+    /// this read-only tool may search any path — the workspace is a focus,
+    /// not a sandbox.
+    restrict_to_workspace: bool,
     /// Optional router for Workstation mode.
     router: Option<ActionRouter>,
 }
@@ -34,12 +39,18 @@ impl SearchTool {
             default_repo,
             active_repo: TokioMutex::new(None),
             workspace_state: None,
+            restrict_to_workspace: false,
             router: None,
         }
     }
 
     pub fn with_router(mut self, router: ActionRouter) -> Self {
         self.router = Some(router);
+        self
+    }
+
+    pub fn with_restrict_to_workspace(mut self, restricted: bool) -> Self {
+        self.restrict_to_workspace = restricted;
         self
     }
 
@@ -54,25 +65,22 @@ impl SearchTool {
     /// Resolve the repo path: explicit param > active IDE repo > current workspace.
     ///
     /// An explicit `repo_path` is validated against the live session
-    /// workspace (single path-authorization source) — plus the active
-    /// IDE repo — when `workspace_state` is attached. Without a
-    /// workspace handle (tests, standalone construction) the explicit
-    /// path is used as-is, matching the other workspace-less tools.
+    /// workspace only when the agent policy sets `workspace_only`
+    /// (threaded via [`Self::with_restrict_to_workspace`]). Search is
+    /// read-only; under the default-open policy any local path is fair
+    /// game, same as `read_file`.
     async fn resolve_repo(&self, params: &Value) -> Result<PathBuf, ToolError> {
         if let Some(explicit) = optional_string(params, "repo_path") {
             let path = PathBuf::from(explicit);
-            if let Some(ref workspace) = self.workspace_state {
-                let extra: Vec<PathBuf> = self
-                    .active_repo
-                    .lock()
-                    .await
-                    .clone()
-                    .into_iter()
-                    .collect();
-                workspace
-                    .read()
-                    .is_path_allowed(&path, &extra)
-                    .map_err(ToolError::PermissionDenied)?;
+            if self.restrict_to_workspace {
+                if let Some(ref workspace) = self.workspace_state {
+                    let extra: Vec<PathBuf> =
+                        self.active_repo.lock().await.clone().into_iter().collect();
+                    workspace
+                        .read()
+                        .is_path_allowed(&path, &extra)
+                        .map_err(ToolError::PermissionDenied)?;
+                }
             }
             return Ok(path);
         }

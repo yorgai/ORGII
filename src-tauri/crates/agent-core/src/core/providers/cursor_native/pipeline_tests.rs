@@ -4,8 +4,8 @@
 
 use super::*;
 use crate::providers::cursor_native::client::{ClientError, ServerMessageStream};
-use crate::tools::names as tool_names;
 use crate::providers::cursor_native::request::BlobStore;
+use crate::tools::names as tool_names;
 use async_stream::try_stream;
 use prost::Message;
 use std::sync::{Arc, Mutex};
@@ -142,10 +142,7 @@ fn partial_tool_call(
     }
 }
 
-fn tool_call_completed(
-    cursor_call_id: &str,
-    tool_call: pb::ToolCall,
-) -> pb::AgentServerMessage {
+fn tool_call_completed(cursor_call_id: &str, tool_call: pb::ToolCall) -> pb::AgentServerMessage {
     pb::AgentServerMessage {
         message: Some(pb::agent_server_message::Message::InteractionUpdate(
             pb::InteractionUpdate {
@@ -216,15 +213,15 @@ async fn drive_run_streams_partial_interaction_tool_args_before_completion() {
     let mut args_map = std::collections::HashMap::new();
     args_map.insert(
         "title".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("Plan title"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "Plan title"
+        )),
     );
     args_map.insert(
         "content".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("Plan body"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "Plan body"
+        )),
     );
     let completed_tool_call = mcp_tool_call("orgii-call-1", "create_plan", args_map);
     let started_tool_call = completed_tool_call.clone();
@@ -273,8 +270,7 @@ async fn drive_run_streams_partial_interaction_tool_args_before_completion() {
         .collect::<Vec<_>>();
     assert_eq!(tool_arg_deltas.len(), 2);
     assert!(tool_arg_deltas.iter().all(|delta| {
-        delta.id.as_deref() == Some("orgii-call-1")
-            && delta.name.as_deref() == Some("create_plan")
+        delta.id.as_deref() == Some("orgii-call-1") && delta.name.as_deref() == Some("create_plan")
     }));
     assert_eq!(
         tool_arg_deltas
@@ -290,15 +286,15 @@ async fn drive_run_splits_complete_only_create_plan_into_title_and_content_delta
     let mut args_map = std::collections::HashMap::new();
     args_map.insert(
         "title".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("Plan title"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "Plan title"
+        )),
     );
     args_map.insert(
         "content".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("Plan body"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "Plan body"
+        )),
     );
     let completed_tool_call = mcp_tool_call("orgii-call-1", "create_plan", args_map);
     let responses = canned_responses(vec![tool_call_completed(
@@ -348,15 +344,15 @@ async fn drive_run_splits_exec_mcp_create_plan_into_title_and_content_deltas() {
     let mut args_map = std::collections::HashMap::new();
     args_map.insert(
         "title".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("Plan title"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "Plan title"
+        )),
     );
     args_map.insert(
         "content".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("Plan body"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "Plan body"
+        )),
     );
     let exec = pb::AgentServerMessage {
         message: Some(pb::agent_server_message::Message::ExecServerMessage(
@@ -422,9 +418,9 @@ async fn drive_run_short_circuits_on_mcp_args() {
     let mut args_map = std::collections::HashMap::new();
     args_map.insert(
         "query".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("rust"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "rust"
+        )),
     );
     let exec = pb::AgentServerMessage {
         message: Some(pb::agent_server_message::Message::ExecServerMessage(
@@ -531,21 +527,21 @@ fn mcp_exec_args_require_same_stream_result() {
     let mut args_map = HashMap::new();
     args_map.insert(
         "recipient_member_id".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("planner"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "planner"
+        )),
     );
     args_map.insert(
         "kind".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("plain"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "plain"
+        )),
     );
     args_map.insert(
         "text".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("Begin research"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "Begin research"
+        )),
     );
     let message = pb::exec_server_message::Message::McpArgs(pb::McpArgs {
         name: "mcp__orgii__org_send_message".to_string(),
@@ -567,9 +563,9 @@ async fn paused_mcp_tool_result_is_sent_as_mcp_result_on_same_exec_stream() {
     let mut args_map = HashMap::new();
     args_map.insert(
         "pattern".to_string(),
-        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(
-            &serde_json::json!("Nebula"),
-        ),
+        crate::providers::cursor_native::tools::encode_json_as_pb_value_bytes(&serde_json::json!(
+            "Nebula"
+        )),
     );
     let exec = pb::AgentServerMessage {
         message: Some(pb::agent_server_message::Message::ExecServerMessage(
@@ -842,8 +838,7 @@ fn mcp_tools_trigger_native_cursor_tool_rejection() {
     let pb::exec_client_message::Message::GrepResult(result) = result else {
         panic!("expected grep result");
     };
-    let pb::grep_result::Result::Error(error) = result.result.expect("grep result payload")
-    else {
+    let pb::grep_result::Result::Error(error) = result.result.expect("grep result payload") else {
         panic!("expected grep error");
     };
     assert_eq!(error.error, MCP_NATIVE_FALLBACK_REJECTION);
@@ -858,8 +853,7 @@ fn mcp_tools_trigger_native_cursor_tool_rejection() {
     let pb::exec_client_message::Message::ShellResult(result) = result else {
         panic!("expected shell result");
     };
-    let pb::shell_result::Result::Rejected(rejected) =
-        result.result.expect("shell result payload")
+    let pb::shell_result::Result::Rejected(rejected) = result.result.expect("shell result payload")
     else {
         panic!("expected shell rejection payload");
     };

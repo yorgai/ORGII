@@ -7,9 +7,7 @@ use rusqlite::{Connection, OpenFlags};
 use serde::Deserialize;
 use tracing::{debug, info, warn};
 
-use super::db_path::{
-    APPLICATION_USER_KEY, DEFAULT_MODEL_NAME, PROBE_DB_PATH, real_user_db,
-};
+use super::db_path::{real_user_db, APPLICATION_USER_KEY, DEFAULT_MODEL_NAME, PROBE_DB_PATH};
 
 /// Read Cursor's available-model list straight from `state.vscdb`.
 ///

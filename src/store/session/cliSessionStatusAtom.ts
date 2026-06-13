@@ -7,7 +7,7 @@
  * paths may set optimistic `running`/`idle` values before the first event so the
  * composer, Stop button, and queue UX react immediately.
  */
-import { atom } from "jotai";
+import { type Atom, atom } from "jotai";
 
 import type { CliSessionStatus } from "@src/types/session/session";
 
@@ -34,13 +34,55 @@ export type SessionRuntimeStatusSource =
   | "session-reset"
   | "e2e";
 
+/**
+ * Session-scope gate for runtime-status writes.
+ *
+ * `sessionRuntimeStatusAtom` is a single global value that mirrors the
+ * status of the session the user is currently looking at. Historically any
+ * writer could overwrite it regardless of which session it was acting on,
+ * which caused cross-session bleed (e.g. a force-send boundary on a
+ * background session wiping the foreground session's planning footer —
+ * `useQuestionBatches` documents the same bleed class).
+ *
+ * The gate atoms identify "the visible session": a write is applied only
+ * when its `sessionId` matches at least one of them. They are registered by
+ * `viewAtom.ts` at module load (activeSessionIdAtom + the SessionCore
+ * pipeline sessionIdAtom) instead of being imported here, because importing
+ * viewAtom from this module would create an import cycle
+ * (viewAtom → SessionCore actions → actionsUtils → this file).
+ *
+ * Before registration (tests, very early startup) the gate fails open so
+ * behavior degrades to the historical global write.
+ */
+let runtimeStatusGateSessionAtoms: ReadonlyArray<Atom<string | null>> = [];
+
+export function registerRuntimeStatusGateSessionAtoms(
+  atoms: ReadonlyArray<Atom<string | null>>
+): void {
+  runtimeStatusGateSessionAtoms = atoms;
+}
+
 export const setSessionRuntimeStatusAtom = atom(
   null,
   (
-    _get,
+    get,
     set,
-    update: { status: CliSessionStatus; source: SessionRuntimeStatusSource }
+    update: {
+      sessionId: string;
+      status: CliSessionStatus;
+      source: SessionRuntimeStatusSource;
+    }
   ) => {
+    if (
+      runtimeStatusGateSessionAtoms.length > 0 &&
+      !runtimeStatusGateSessionAtoms.some(
+        (sessionAtom) => get(sessionAtom) === update.sessionId
+      )
+    ) {
+      // Write targets a session that is not visible — dropping it keeps the
+      // global mirror owned by the visible session (no cross-session bleed).
+      return;
+    }
     set(sessionRuntimeStatusAtom, update.status);
   }
 );
@@ -185,6 +227,8 @@ userInitiatedCancelAtom.debugLabel = "userInitiatedCancel";
  * follow-up without another atom.
  */
 export interface RestoreToInputPayload {
+  /** Session the payload belongs to — composer must not consume cross-session. */
+  sessionId: string;
   displayContent: string;
   imageDataUrls?: string[];
 }
@@ -198,6 +242,10 @@ restoreToInputAtom.debugLabel = "restoreToInput";
  * having to scan the event store.
  */
 export interface LastUserMessagePayload {
+  /** Session the message was dispatched into. Stop-restore must ignore
+   * payloads captured by a different session (two sessions working in
+   * parallel used to leak session B's prompt into session A's composer). */
+  sessionId: string;
   displayContent: string;
   imageDataUrls?: string[];
 }

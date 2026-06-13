@@ -24,10 +24,7 @@ const POLL_INTERVAL_SECS: u64 = 30;
 /// Spawn the routine scheduler background task. Polls every 30 seconds.
 pub fn spawn(app_handle: tauri::AppHandle) {
     tauri::async_runtime::spawn(async move {
-        info!(
-            "[routine-scheduler] started (poll={}s)",
-            POLL_INTERVAL_SECS
-        );
+        info!("[routine-scheduler] started (poll={}s)", POLL_INTERVAL_SECS);
         loop {
             tokio::time::sleep(std::time::Duration::from_secs(POLL_INTERVAL_SECS)).await;
             if let Err(err) = tick(&app_handle, Utc::now()).await {

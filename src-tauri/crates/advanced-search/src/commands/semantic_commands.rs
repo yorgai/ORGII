@@ -1,6 +1,6 @@
 //! Semantic search commands — embedding, indexing, search, model management.
 
-use super::types::EmbeddingModelStatus;
+use super::types::{EmbeddingModelStatus, IncrementalResult};
 use crate::semantic::{is_semantic_available, SemanticHit};
 
 #[cfg(feature = "semantic-search")]
@@ -19,7 +19,6 @@ use super::helpers::{collect_files, read_file_content, CUSTOM_MODEL_DIR};
 #[cfg(feature = "semantic-search")]
 use super::types::SearchFilters;
 use crate::commands::helpers::is_supported_extension;
-use crate::tantivy_index::IncrementalResult;
 
 // ── Semantic Index Singleton ────────────────────────────────────────────
 

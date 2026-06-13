@@ -1,12 +1,12 @@
 /**
- * Workspace management logic for RepoPalette.
+ * Workspace management logic for WorkspacePalette.
  *
  * Handles:
  *   - Saved workspaces atom reads/writes
  *   - Workspace selection, edit, delete, and bulk-delete handlers
  *   - Derivation of workspace SpotlightItems (including manage-mode JSX)
  *
- * Extracted to keep RepoPalette/index.tsx under the UI component line limit.
+ * Extracted to keep WorkspacePalette/index.tsx under the UI component line limit.
  */
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Code } from "lucide-react";
@@ -38,7 +38,7 @@ import type { RepoItem, SpotlightItem } from "../../types";
 // Types
 // ============================================================================
 
-export interface UseRepoPaletteWorkspaceOptions {
+export interface UseWorkspacePaletteWorkspaceOptions {
   repos: RepoItem[];
   isManageMode: boolean;
   selectedIds: Set<string>;
@@ -53,7 +53,7 @@ export interface UseRepoPaletteWorkspaceOptions {
   setEditingWorkspace: (ws: WorkspaceRecord) => void;
 }
 
-export interface UseRepoPaletteWorkspaceReturn {
+export interface UseWorkspacePaletteWorkspaceReturn {
   workspaceItems: SpotlightItem[];
   handleBulkDelete: () => Promise<void>;
 }
@@ -94,7 +94,7 @@ function buildWorkspaceRepoNameResolver(repos: RepoItem[]) {
 // Hook
 // ============================================================================
 
-export function useRepoPaletteWorkspace({
+export function useWorkspacePaletteWorkspace({
   repos,
   isManageMode,
   selectedIds,
@@ -105,7 +105,7 @@ export function useRepoPaletteWorkspace({
   refreshReposForce,
   searchQuery,
   setEditingWorkspace,
-}: UseRepoPaletteWorkspaceOptions): UseRepoPaletteWorkspaceReturn {
+}: UseWorkspacePaletteWorkspaceOptions): UseWorkspacePaletteWorkspaceReturn {
   const { t } = useTranslation();
   const [savedWorkspaces, setSavedWorkspaces] = useAtom(savedWorkspacesAtom);
   const activeWorkspaceId = useAtomValue(activeWorkspaceIdAtom);
@@ -206,9 +206,9 @@ export function useRepoPaletteWorkspace({
       }),
       message: t(
         "confirmation.deleteSelectedMessage",
-        "This removes the selected workspaces and unlinks the selected repos. Repo files on disk are not deleted."
+        "This only removes their linkage to ORGII. Nothing will be removed from disk."
       ),
-      okLabel: t("actions.delete"),
+      okLabel: t("actions.removeFromOrgii"),
       cancelLabel: t("actions.cancel"),
     });
     if (!confirmed) return;

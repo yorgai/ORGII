@@ -22,6 +22,10 @@ hasGlobalErrorAtom.debugLabel = "hasGlobalErrorAtom";
 export const isAppQuittingAtom = atom<boolean>(false);
 isAppQuittingAtom.debugLabel = "isAppQuittingAtom";
 
+// Track when Cmd+Q is being held long enough to quit.
+export const holdToQuitOverlayOpenAtom = atom<boolean>(false);
+holdToQuitOverlayOpenAtom.debugLabel = "holdToQuitOverlayOpenAtom";
+
 // Track when Component Issue modal is open (Cmd+9) - to hide native webviews
 export const componentIssueModalOpenAtom = atom<boolean>(false);
 componentIssueModalOpenAtom.debugLabel = "componentIssueModalOpenAtom";

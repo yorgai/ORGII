@@ -154,19 +154,18 @@ export const repoRemove = defineZodAction(
   {
     id: ACTION_ID.REPO_REMOVE,
     category: "repo",
-    description:
-      "Remove a workspace from the tracked list. Files on disk are not touched",
+    description: "Remove linkage to ORGII. Nothing is removed from disk.",
     layer: "action",
     params: z.object({
       repoId: z.string().min(1).describe("Repo identifier (canonical path)"),
     }),
-    examples: ["remove repo", "untrack workspace", "delete from list"],
+    examples: ["remove from ORGII", "delink from ORGII", "untrack workspace"],
   },
   async ({ repoId }) => {
     await repoApi.deleteRepo(repoId);
     return {
       success: true,
-      message: "Removed workspace",
+      message: "Removed linkage to ORGII",
     };
   }
 );

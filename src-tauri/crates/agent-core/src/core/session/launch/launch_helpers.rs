@@ -225,8 +225,8 @@ pub(super) fn provenance_fields(
 pub(super) fn provenance_lock_reason(
     provenance: &super::LaunchProvenance,
 ) -> project_management::projects::types::WorkItemExecutionLockReason {
-    use project_management::projects::types::WorkItemExecutionLockReason;
     use super::LaunchProvenance;
+    use project_management::projects::types::WorkItemExecutionLockReason;
     match provenance {
         LaunchProvenance::WorkItem { lock_reason, .. } => lock_reason.clone(),
         _ => WorkItemExecutionLockReason::ManualStart,

@@ -33,6 +33,21 @@
   pointer-events: none;
 }
 
+.browser-webview-frame-anchor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  visibility: hidden;
+
+  &.debug-visible {
+    z-index: 1000;
+    visibility: visible;
+    border: 2px dashed var(--color-danger-6);
+    background: color-mix(in srgb, var(--color-danger-6) 10%, transparent);
+  }
+}
+
 .browser-webview-container {
   position: absolute;
   top: 0;

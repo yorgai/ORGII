@@ -16,8 +16,8 @@ use serde_json::Value;
 use std::time::Duration;
 use tracing::{error, info, warn};
 
-use super::client::AnthropicClient;
-use super::errors::parse_error;
+use super::client::{AnthropicClient, ClaudeOAuthRefreshEligibility};
+use super::errors::{classify_error, parse_error};
 use super::request::{apply_headers, prepare_request};
 use super::stream_parser::{finalize_blocks, handle_event, EventOutcome, StreamState};
 use super::types::{ContentBlock, MessagesResponse, StreamEvent};
@@ -61,6 +61,7 @@ impl LLMProvider for AnthropicClient {
 
             let status = response.status().as_u16();
             let retry_after = extract_retry_after_secs(&response);
+            let headers = response.headers().clone();
             let body = response
                 .text()
                 .await
@@ -69,23 +70,35 @@ impl LLMProvider for AnthropicClient {
             if status == 401
                 && self.auth_mode == super::client::AnthropicAuthMode::ClaudeOauth
                 && !auth_retry_used
+                && self.claude_oauth_refresh_eligibility().await?
+                    == ClaudeOAuthRefreshEligibility::Eligible
             {
-                warn!("[anthropic] Claude OAuth access token rejected before response; refreshing and retrying once");
-                self.refresh_auth_after_unauthorized().await?;
+                warn!("[anthropic] Claude OAuth access token crossed local expiry boundary; refreshing and retrying once");
+                self.refresh_auth_after_local_expiry().await?;
                 auth_retry_used = true;
                 continue;
             }
 
             if status != 200 {
+                let classification = classify_error(status, &body, Some(&headers), retry_after);
+                if classification.mark_temporary_unavailable {
+                    self.mark_claude_oauth_upstream_health(
+                        status,
+                        &classification.error_type,
+                        Some(&classification.message),
+                        classification.retry_after_secs,
+                    );
+                }
                 error!(
                     "Anthropic error: HTTP {} from {} | body: {}",
                     status,
                     prepared.url,
                     safe_truncate_utf8(&body, 500)
                 );
-                return Err(parse_error(status, &body, retry_after));
+                return Err(parse_error(status, &body, classification.retry_after_secs));
             }
 
+            self.clear_claude_oauth_upstream_health();
             break body;
         };
 
@@ -151,20 +164,32 @@ impl LLMProvider for AnthropicClient {
             if status == 401
                 && self.auth_mode == super::client::AnthropicAuthMode::ClaudeOauth
                 && !auth_retry_used
+                && self.claude_oauth_refresh_eligibility().await?
+                    == ClaudeOAuthRefreshEligibility::Eligible
             {
                 let body = crate::utils::response_text_or_read_error(response).await;
                 warn!(
-                    "[anthropic] Claude OAuth access token rejected before stream; refreshing and retrying once: {}",
+                    "[anthropic] Claude OAuth access token crossed local expiry boundary before stream; refreshing and retrying once: {}",
                     safe_truncate_utf8(&body, 500)
                 );
-                self.refresh_auth_after_unauthorized().await?;
+                self.refresh_auth_after_local_expiry().await?;
                 auth_retry_used = true;
                 continue;
             }
 
             if status != 200 {
                 let retry_after = extract_retry_after_secs(&response);
+                let headers = response.headers().clone();
                 let body = crate::utils::response_text_or_read_error(response).await;
+                let classification = classify_error(status, &body, Some(&headers), retry_after);
+                if classification.mark_temporary_unavailable {
+                    self.mark_claude_oauth_upstream_health(
+                        status,
+                        &classification.error_type,
+                        Some(&classification.message),
+                        classification.retry_after_secs,
+                    );
+                }
                 error!(
                     "Anthropic streaming error: HTTP {} from {} | model={} | body: {}",
                     status,
@@ -172,9 +197,10 @@ impl LLMProvider for AnthropicClient {
                     prepared.resolved_model,
                     safe_truncate_utf8(&body, 1000)
                 );
-                return Err(parse_error(status, &body, retry_after));
+                return Err(parse_error(status, &body, classification.retry_after_secs));
             }
 
+            self.clear_claude_oauth_upstream_health();
             break response;
         };
 

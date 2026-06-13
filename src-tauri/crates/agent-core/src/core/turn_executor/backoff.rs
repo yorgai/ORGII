@@ -13,6 +13,13 @@ pub(super) const MAX_REPEAT_STREAK: u32 = 3;
 /// Maximum consecutive tool errors before breaking the loop.
 pub(super) const MAX_CONSECUTIVE_ERRORS: u32 = 8;
 
+/// Maximum in-turn rescue attempts when the provider rejects the prompt
+/// with `ContextTooLong`. Each attempt first force-clears old tool results
+/// (microcompact) and, when that frees nothing, hard-truncates the history
+/// head-preservingly. Bounded so a pathologically oversized single message
+/// can't loop forever.
+pub(super) const MAX_CONTEXT_RESCUE_ATTEMPTS: u32 = 3;
+
 /// Maximum characters in a tool result before truncation.
 pub(crate) const MAX_TOOL_OUTPUT_CHARS: usize = 100_000;
 

@@ -179,8 +179,8 @@ impl Tool for QuestionTool {
         )
         .await;
 
-        let answers = match outcome {
-            InteractionOutcome::Responded(a) | InteractionOutcome::AutoResponded(a) => a,
+        let resolution = match outcome {
+            InteractionOutcome::Responded(r) | InteractionOutcome::AutoResponded(r) => r,
             InteractionOutcome::Cancelled => {
                 self.context
                     .manager
@@ -202,6 +202,17 @@ impl Tool for QuestionTool {
             InteractionOutcome::Dropped => {
                 return Err(ToolError::ExecutionFailed(
                     "Question request was cancelled".into(),
+                ));
+            }
+        };
+
+        let answers = match resolution {
+            crate::interaction::question::QuestionResolution::Answered(answers) => answers,
+            crate::interaction::question::QuestionResolution::AutoSkipped { mode_label } => {
+                // Presence-policy auto-skip: tell the LLM to proceed on its
+                // own best judgment. Same content as the finalized event.
+                return Ok(crate::interaction::question::auto_skip_content_for_llm(
+                    &mode_label,
                 ));
             }
         };

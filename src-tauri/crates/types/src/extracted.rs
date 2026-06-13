@@ -144,6 +144,10 @@ pub struct TodoItem {
     pub id: String,
     pub content: String,
     pub status: String,
+    /// Present-continuous label preferred by renderers while the todo is
+    /// `in_progress` (e.g. "Running tests"). Serialized as `activeForm`.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub active_form: Option<String>,
     /// Indices of tasks that must complete before this task can start.
     /// Serialized as `blockedBy` (camelCase) to match the frontend `TodoItem`.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]

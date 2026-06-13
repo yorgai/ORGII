@@ -25,8 +25,8 @@
  *   - task_create / task_update / task_list / task_get →
  *       OrgTaskEventBubble → chat-panel `OrgTaskAdapter`
  *
- * The `manage_todo` tool keeps using `TodoBubble` (TodoView) because the
- * simulator's todo view aggregates state across many events.
+ * The `manage_todo` tool keeps using `TodoBubble` (chat-panel `TodoBlock`)
+ * because the simulator's todo view aggregates state across many events.
  */
 import React, { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";

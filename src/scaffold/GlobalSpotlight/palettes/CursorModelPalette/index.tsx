@@ -37,7 +37,7 @@ import {
   SPOTLIGHT_FOOTER_ACTIVE_CHIP,
   SpotlightPinnedActionSection,
 } from "../../components";
-import { usePathSegment } from "../../hooks";
+import { usePathSegment } from "../../hooks/usePathSegment";
 import type { BasePaletteProps } from "../../shared";
 import { PaletteBody, SpotlightShell } from "../../shell";
 import type { SpotlightItem } from "../../types";

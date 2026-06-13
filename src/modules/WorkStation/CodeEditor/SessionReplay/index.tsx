@@ -34,6 +34,7 @@ import {
 import { CodePanel } from "./CodePanel";
 import { FileSidebar } from "./FileSidebar";
 import { isGenericIDEFallbackToolEvent } from "./config";
+import { isExplorePanelTool } from "./converters/exploreTypeResolver";
 import {
   CODE_PANEL_MODE,
   FILE_OPERATION_TYPE,
@@ -57,11 +58,12 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
     typeof isGenericIDEFallbackToolEvent
   >[0];
   const functionName = sessionEvent?.functionName || "";
-  const currentEventType =
-    currentEventTypeProp ||
-    (isGenericIDEFallbackToolEvent(sessionEvent)
-      ? IDE_EVENT_TYPE.TOOL
-      : getIDEEventType(functionName));
+  const currentEventType = isExplorePanelTool(functionName)
+    ? IDE_EVENT_TYPE.EXPLORE
+    : currentEventTypeProp ||
+      (isGenericIDEFallbackToolEvent(sessionEvent)
+        ? IDE_EVENT_TYPE.TOOL
+        : getIDEEventType(functionName));
   const primarySidebarCollapsed = useAtomValue(
     simulatorPrimarySidebarCollapsedAtom
   );
@@ -197,8 +199,9 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
   );
 
   const exploreSelection =
-    userExploreChoice ??
-    (currentEventType === IDE_EVENT_TYPE.EXPLORE ? "search" : "file");
+    currentEventType === IDE_EVENT_TYPE.EXPLORE
+      ? "search"
+      : (userExploreChoice ?? "file");
 
   // When user explicitly clicks a tool in the terminal tab's "Other Tools" section,
   // override the code panel to show the tool. Auto-navigation to a non-tool event

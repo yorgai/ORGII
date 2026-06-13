@@ -393,6 +393,13 @@ impl AgentAppState {
     ///
     /// Delegates to `AgentSession::cancel_active_turn` which cancels the
     /// in-flight `DialogTurn` (if any) via the shared `cancel_flag`.
+    ///
+    /// Subagent sessions are never registered in the live session map —
+    /// their turn loop runs inside the parent's `agent` tool call and is
+    /// tracked by the background job registry instead (keyed by the
+    /// subagent session id). Fall back to `kill_subagent` so the chat
+    /// card's Stop button (which cancels by subagent session id) actually
+    /// reaches the worker.
     pub async fn cancel_session(
         &self,
         session_id: &str,
@@ -402,6 +409,13 @@ impl AgentAppState {
             session.cancel_active_turn(reason).await;
             info!(
                 "[agent-state] Cancelled active turn for session: {} (reason={})",
+                session_id,
+                reason.as_str()
+            );
+            true
+        } else if crate::tools::impls::coding::exec::registry::kill_subagent(session_id).is_ok() {
+            info!(
+                "[agent-state] Cancelled subagent worker via job registry: {} (reason={})",
                 session_id,
                 reason.as_str()
             );

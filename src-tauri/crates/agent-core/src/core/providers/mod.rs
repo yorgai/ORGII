@@ -16,6 +16,7 @@ pub mod cursor_native;
 pub mod e2e_fake;
 pub mod factory;
 pub mod gemini_native;
+pub mod model_capabilities;
 pub mod model_hints;
 pub mod openai_adaptive;
 pub mod openai_compat;

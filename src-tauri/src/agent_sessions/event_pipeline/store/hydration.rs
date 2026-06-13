@@ -162,6 +162,28 @@ impl EventStore {
                                     }
                                 }
                                 target_args.remove("streamOutput");
+
+                                // A completed tool_call must not carry an
+                                // active shellProcessStatus. The status was
+                                // patched in-memory by
+                                // update_last_shell_process (broadcast path)
+                                // but tool_result merge preserves existing
+                                // args keys — so a race (or missed broadcast)
+                                // leaves "running"/"background" frozen
+                                // forever. Normalise to "exited" on merge so
+                                // no zombie survives.
+                                if let Some(sps) = target_args.get("shellProcessStatus") {
+                                    let is_active = matches!(
+                                        sps.as_str(),
+                                        Some("running") | Some("background")
+                                    );
+                                    if is_active {
+                                        target_args.insert(
+                                            "shellProcessStatus".to_string(),
+                                            serde_json::Value::String("exited".to_string()),
+                                        );
+                                    }
+                                }
                             }
 
                             // Propagate file_path and command from tool_result if missing on target

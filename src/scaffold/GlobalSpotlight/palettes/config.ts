@@ -9,10 +9,10 @@
  * - Palette mode configurations
  */
 import {
-  ArrowLeftRight,
   Command,
   File,
   FolderPlus,
+  FolderTree,
   GitBranch,
   GitBranchMinus,
   GitBranchPlus,
@@ -124,11 +124,11 @@ export const REPO_PALETTE_CONFIG: SelectorConfig = {
       id: "switch",
       label: "Switch",
       title: "Switch to repo (use Tab to navigate tabs)",
-      icon: ArrowLeftRight,
+      icon: FolderTree,
       path: {
         id: "switch-repo",
         label: "Switch to",
-        icon: ArrowLeftRight,
+        icon: FolderTree,
         template: "Switch to {workspace}",
         requiredParams: ["workspace"],
         i18nLabel: "selectors.repo.path.switchTo",
@@ -157,13 +157,13 @@ export const REPO_PALETTE_CONFIG: SelectorConfig = {
     {
       id: "remove",
       label: "Remove",
-      title: "Remove repo from workspace",
+      title: "Remove linkage to ORGII",
       icon: Trash2,
       path: {
         id: "remove-repo",
         label: "Remove",
         icon: Trash2,
-        template: "Remove {repo} from orgii workspace",
+        template: "Remove {repo} linkage to ORGII",
         requiredParams: ["repo"],
       },
       placeholder: "repo",

@@ -160,6 +160,7 @@ async fn select_relevant_headers(
         max_tokens: SELECTION_MAX_TOKENS,
         temperature: 0.0,
         system_prompt: Some(SELECT_MEMORIES_SYSTEM_PROMPT.to_string()),
+        ..Default::default()
     };
 
     let result = side_query::side_query(provider, &[user_msg], &config, model).await?;

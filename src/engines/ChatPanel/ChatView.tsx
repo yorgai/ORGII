@@ -324,16 +324,17 @@ const ChatView: React.FC<ChatViewProps> = memo(
 
     // Message queue — keep this aligned with InputArea.sessionId so queued
     // follow-ups written by the composer are visible on the same surface.
-    // Promoted "now" messages are hidden: from the user's perspective Send
-    // Now dispatched them; the dispatcher delivers the moment the FSM allows.
+    // Promoted "now" messages stay VISIBLE with a "sending now…" state: the
+    // force-send interrupt window can last seconds (provider cancelled-
+    // terminal latency), and hiding the message made Send Now look like it
+    // silently swallowed the input.
     const messageQueue = useAtomValue(messageQueueAtom);
     const sessionMessageQueue = useMemo(
       () =>
         messageQueue.filter(
           (message) =>
-            (message.sessionId === queueSessionId ||
-              message.sessionId === pipelineSessionId) &&
-            message.priority !== "now"
+            message.sessionId === queueSessionId ||
+            message.sessionId === pipelineSessionId
         ),
       [messageQueue, pipelineSessionId, queueSessionId]
     );

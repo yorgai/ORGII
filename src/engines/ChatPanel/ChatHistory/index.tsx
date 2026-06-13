@@ -171,6 +171,15 @@ interface ChatHistoryProps {
   groupChatViewActive?: boolean;
   /** Toggle handler for the group chat view entry. */
   onGroupChatViewToggle?: (active: boolean) => void;
+  /**
+   * Drive the "Planning next step…" footer from a specific session's
+   * snapshot channel instead of the global active-session atoms. REQUIRED
+   * for session-scoped instances (subagent monitor cells): without it the
+   * footer reads the parent session's state and is structurally dead or
+   * wrong. `isLive` should be false while the surface shows a replay
+   * slice (scrubbed cursor) so the footer never animates over history.
+   */
+  planningIndicatorScope?: { sessionId: string; isLive: boolean } | null;
 }
 
 const ChatHistory: React.FC<ChatHistoryProps> = ({
@@ -194,6 +203,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   groupChatViewAvailable = false,
   groupChatViewActive = false,
   onGroupChatViewToggle,
+  planningIndicatorScope = null,
 }) => {
   const { t } = useTranslation();
 
@@ -323,7 +333,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     count: planningIndicatorCount,
     showSlowHint: planningShowSlowHint,
     variantIndex: planningVariantIndex,
-  } = usePlanningIndicator();
+  } = usePlanningIndicator(planningIndicatorScope);
 
   // --- Grouping for GroupedVirtuoso ---
   //

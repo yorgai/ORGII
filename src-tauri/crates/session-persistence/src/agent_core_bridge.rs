@@ -10,9 +10,7 @@
 
 use agent_core::foundation::{db_bridge, session_bridge};
 
-use super::turn_intents::{
-    self, TurnIntentSource as PsSource, TurnIntentStatus as PsStatus,
-};
+use super::turn_intents::{self, TurnIntentSource as PsSource, TurnIntentStatus as PsStatus};
 
 /// Adapter that maps a `TokenUsageRow` projection into the live
 /// `insert_token_usage_record` call.

@@ -271,7 +271,10 @@ mod tests {
         let manager = Arc::new(McpManager::new());
         let tool = McpAuthTool::new("legacy".to_string(), stdio_config(), manager);
         let result = tool
-            .execute(json!({}), &crate::tools::call_context::CallContext::default())
+            .execute(
+                json!({}),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect("stdio path returns Ok");
         assert!(result.contains("does not support OAuth"));

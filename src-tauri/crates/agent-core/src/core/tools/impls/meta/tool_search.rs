@@ -1,8 +1,10 @@
-//! `tool_search` — discover deferred (OnDemand) tools by keyword.
+//! `tool_search` — discover tools by keyword.
 //!
 //! When the agent needs a capability that isn't in its current tool set,
-//! it calls `tool_search` with a query. The tool searches through all
-//! deferred tools' names and descriptions and returns matches.
+//! it calls `tool_search` with a query. The search covers ALL registered
+//! tools (not just the deferred pool) with tokenized scoring, and each
+//! result is labeled `[loaded]`, `[deferred]`, or `[unavailable]` so the
+//! model always gets an actionable answer instead of a dead end.
 
 use std::sync::Arc;
 
@@ -11,28 +13,104 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registry::ToolRegistry;
 use crate::tools::traits::{params_schema, parse_params, Tool, ToolError, ToolPriority};
 
+const MAX_RESULTS: usize = 10;
+
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ToolSearchParams {
-    /// Search query — matches against tool names and descriptions.
-    /// Use descriptive terms like "database", "image", "browser", etc.
+    /// Search query — whitespace-separated keywords matched against tool
+    /// names, hints, and descriptions (e.g. "shell grep", "browser").
+    /// Use `select:<tool_name>` to look up one tool by exact name.
+    /// An empty query lists all deferred tools.
     pub query: String,
 }
 
-/// Meta-tool that searches deferred (OnDemand) tools by keyword.
+/// Meta-tool that searches registered tools by keyword.
 ///
-/// This enables a two-tier tool loading strategy: core tools are always
-/// available, while specialized tools are deferred until the agent
-/// explicitly discovers them via this search.
+/// Core (`Always`) tools are already in the prompt; `OnDemand` tools are
+/// deferred until discovered here. Tools denied by the session tool policy
+/// are reported as unavailable with a reason, never silently hidden —
+/// a model that can see *why* something is missing can route around it.
 pub struct ToolSearchTool {
     registry: Arc<ToolRegistry>,
+    policy: Option<Arc<ResolvedToolPolicy>>,
 }
 
 impl ToolSearchTool {
     pub fn new(registry: Arc<ToolRegistry>) -> Self {
-        Self { registry }
+        Self {
+            registry,
+            policy: None,
+        }
+    }
+
+    /// Attach the session tool policy so results can be labeled
+    /// `[unavailable]` when a tool exists but is policy-denied.
+    pub fn with_policy(registry: Arc<ToolRegistry>, policy: Arc<ResolvedToolPolicy>) -> Self {
+        Self {
+            registry,
+            policy: Some(policy),
+        }
+    }
+
+    fn availability_label(&self, name: &str, deferred: bool) -> &'static str {
+        if let Some(ref policy) = self.policy {
+            if !policy.is_allowed(name) {
+                return "[unavailable: denied by the current tool policy/mode — \
+                        it may become available in a different mode (e.g. Build)]";
+            }
+        }
+        if deferred {
+            "[deferred — call it by name as usual; it will be loaded automatically]"
+        } else {
+            "[loaded — already in your tool list, call it directly]"
+        }
+    }
+
+    fn format_matches(&self, query: &str, matches: &[(String, String, bool)]) -> String {
+        let mut output = format!("Found {} tool(s) matching '{}':\n\n", matches.len(), query);
+        for (name, description, deferred) in matches {
+            let label = self.availability_label(name, *deferred);
+            let summary: String = description.chars().take(300).collect();
+            output.push_str(&format!("**{}** {}\n{}\n\n", name, label, summary));
+        }
+        output
+    }
+
+    /// Bounded catalogue of everything discoverable, used when a query
+    /// misses. Replaces the old "Try a broader query" dead end.
+    fn fallback_catalogue(&self) -> String {
+        let deferred = self.registry.deferred_tool_names();
+        if deferred.is_empty() {
+            return "No deferred tools are registered in this session.".to_string();
+        }
+        format!(
+            "Available deferred tools ({}):\n{}\n\nCall any of them by name, or use `select:<name>` for details.",
+            deferred.len(),
+            deferred
+                .iter()
+                .map(|name| format!("  - {}", name))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
+    }
+
+    fn exact_select(&self, name: &str) -> String {
+        match self.registry.get(name) {
+            Some(tool) => {
+                let deferred = tool.priority() == ToolPriority::OnDemand;
+                let label = self.availability_label(tool.name(), deferred);
+                format!("**{}** {}\n{}", tool.name(), label, tool.description())
+            }
+            None => format!(
+                "No tool named '{}' is registered.\n\n{}",
+                name,
+                self.fallback_catalogue()
+            ),
+        }
     }
 }
 
@@ -43,7 +121,7 @@ impl Tool for ToolSearchTool {
     }
 
     fn description(&self) -> &str {
-        "Search for additional tools not currently loaded. Returns matching tool names and descriptions."
+        "Search for additional tools not currently loaded. Returns matching tool names, descriptions, and availability. Supports `select:<tool_name>` for exact lookup."
     }
 
     fn category(&self) -> &str {
@@ -71,37 +149,23 @@ impl Tool for ToolSearchTool {
         let query = params.query.trim();
 
         if query.is_empty() {
-            let all_deferred = self.registry.deferred_tool_names();
-            if all_deferred.is_empty() {
-                return Ok("No deferred tools available.".to_string());
-            }
-            return Ok(format!(
-                "All deferred tools ({}):\n{}",
-                all_deferred.len(),
-                all_deferred
-                    .iter()
-                    .map(|name| format!("  - {}", name))
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            ));
+            return Ok(self.fallback_catalogue());
         }
 
-        let matches = self.registry.search_deferred(query);
+        if let Some(name) = query.strip_prefix("select:") {
+            return Ok(self.exact_select(name.trim()));
+        }
+
+        let matches = self.registry.search_tools(query, MAX_RESULTS);
 
         if matches.is_empty() {
             Ok(format!(
-                "No tools found matching '{}'. Try a broader query.",
-                query
+                "No tools found matching '{}'.\n\n{}",
+                query,
+                self.fallback_catalogue()
             ))
         } else {
-            let mut output = format!("Found {} tool(s) matching '{}':\n\n", matches.len(), query);
-            for (name, description) in &matches {
-                output.push_str(&format!("**{}**: {}\n", name, description));
-            }
-            output.push_str(
-                "\nTo use a deferred tool, call it by name as usual — it will be loaded automatically.",
-            );
-            Ok(output)
+            Ok(self.format_matches(query, &matches))
         }
     }
 }

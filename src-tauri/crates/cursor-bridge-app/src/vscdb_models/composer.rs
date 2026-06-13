@@ -6,7 +6,7 @@ use rusqlite::{Connection, OpenFlags};
 use serde::Deserialize;
 use tracing::{debug, info};
 
-use super::db_path::{COMPOSER_DATA_KEY_PREFIX, PROBE_DB_PATH, real_user_db};
+use super::db_path::{real_user_db, COMPOSER_DATA_KEY_PREFIX, PROBE_DB_PATH};
 
 /// Read the model name a specific composer was last using.
 ///

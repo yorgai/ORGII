@@ -18,6 +18,10 @@ import { isHostedKey } from "@src/api/tauri/session";
 import Message from "@src/components/Message";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import {
+  beginOptimisticTurn,
+  failOptimisticTurn,
+} from "@src/engines/SessionCore/control/optimisticTurnStatus";
+import {
   beginTurnDispatch,
   forceTurnIdle,
   getTurnPhase,
@@ -28,7 +32,6 @@ import { mintTurnIntentId } from "@src/engines/SessionCore/sync/adapters/shared/
 import {
   isSessionActiveAtom,
   lastUserMessageAtom,
-  setSessionRuntimeStatusAtom,
   userInitiatedCancelAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultExecModeAtom } from "@src/store/session/creatorDefaultExecModeAtom";
@@ -125,7 +128,6 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
   // Atoms
   // ============================================
   const isWpGeneWorking = useAtomValue(isSessionActiveAtom);
-  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
   const setUserInitiatedCancel = useSetAtom(userInitiatedCancelAtom);
   const setLastUserMessage = useSetAtom(lastUserMessageAtom);
   // SessionCore engine-level session ID — always tracks the currently
@@ -356,6 +358,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       // optimistic EventStore append finishes, so cancel-restore needs this
       // synchronous source of truth for text and images.
       setLastUserMessage({
+        sessionId,
         displayContent: finalInput,
         imageDataUrls: restoreImageDataUrls,
       });
@@ -365,14 +368,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       // as busy, so nothing can race a second direct dispatch.
       beginTurnDispatch(sessionId);
 
-      // Mark running BEFORE appending the user message event.
-      // usePlanningIndicator's cold-start path records `activationVersion`
-      // synchronously on the same render where isSessionActive flips true.
-      // If we append first, the Rust EventStore round-trip bumps `version`
-      // before `activationVersion` is captured, breaking the cold-start
-      // condition (`activationVersion === version`) and forcing the indicator
-      // to wait the full 1-second warm-path delay instead of appearing instantly.
-      setSessionRuntimeStatus({ status: "running", source: "dispatch" });
+      beginOptimisticTurn(sessionId);
       setSessChatInput("");
       setLoading(true);
       _sharedSubmitGuard.current = true;
@@ -404,7 +400,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         Message.error(t("errors.failedToSendMessage"));
         _sharedSubmitGuard.current = false;
         _sharedSubmitPayload.current = null;
-        setSessionRuntimeStatus({ status: "idle", source: "dispatch" });
+        failOptimisticTurn(sessionId);
         // Close the turn reserved above. If the failure happened inside
         // dispatchMessageBySessionType it already marked its own generation
         // terminal, in which case this is a no-op generation bump.
@@ -429,7 +425,6 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       setQueueFlushRequest,
       setUserInitiatedCancel,
       store,
-      setSessionRuntimeStatus,
       t,
     ]
   );

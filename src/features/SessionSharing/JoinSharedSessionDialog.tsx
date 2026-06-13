@@ -91,6 +91,7 @@ export const JoinSharedSessionDialog: React.FC<
           <Textarea
             value={offerCode}
             onChange={setOfferCode}
+            placeholder={t("sharing.offerCodePlaceholder")}
             resize="none"
             rows={4}
             autoFocus
@@ -99,7 +100,12 @@ export const JoinSharedSessionDialog: React.FC<
 
         <label className="block space-y-1.5 text-sm text-text-1">
           <span>{t("sharing.pinLabel")}</span>
-          <Input value={pin} onChange={setPin} inputMode="numeric" />
+          <Input
+            value={pin}
+            onChange={setPin}
+            placeholder={t("sharing.pinPlaceholder")}
+            inputMode="numeric"
+          />
         </label>
 
         {connection && (

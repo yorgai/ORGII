@@ -19,7 +19,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::tools::names as tool_names;
-use crate::tools::traits::{params_schema, parse_params, Tool, ToolError};
+use crate::tools::traits::{params_schema, parse_params_described, Tool, ToolError};
 use git::repos::repo_db::RepoRecord;
 use git::repos::repo_service;
 
@@ -27,43 +27,41 @@ use git::repos::repo_service;
 // Params
 // ============================================
 
+/// Flat params: tagged-enum schemas (top-level `oneOf`) get flattened to an
+/// empty schema by LLM providers, so the model never sees the fields. Keep
+/// this a plain object with scalar properties; per-action requiredness is
+/// enforced in `execute_text` with self-correcting error messages.
 #[derive(Debug, Deserialize, JsonSchema)]
-#[serde(tag = "action", rename_all = "snake_case")]
-pub enum ManageWorkspaceParams {
-    /// List all workspaces (git repos and work folders) currently tracked.
-    List,
-    /// Register an existing local directory as a workspace. The kind
-    /// (git / folder) is inferred from whether a `.git` directory is present.
-    Add {
-        /// Absolute path to the directory to register.
-        path: String,
-        /// Optional display name (defaults to the directory basename).
-        #[serde(default)]
-        name: Option<String>,
-    },
-    /// Create a brand-new empty workspace at `path`.
-    Create {
-        /// Absolute path where the new workspace should live. The parent
-        /// directory must already exist; the final component will be created.
-        path: String,
-        /// Optional display name (defaults to the final path component).
-        #[serde(default)]
-        name: Option<String>,
-        /// When true (default) the new workspace is initialised as a git
-        /// repo. Set to false for a plain work folder.
-        #[serde(default = "app_utils::default_true")]
-        git: bool,
-    },
-    /// Remove a workspace from the tracked list. Files on disk are not deleted.
-    Remove {
-        /// Absolute path of the workspace to remove. Either `path` or
-        /// `repo_id` must be provided; `path` is preferred for readability.
-        #[serde(default)]
-        path: Option<String>,
-        /// Repo identifier (usually the canonical path). Alternative to `path`.
-        #[serde(default)]
-        repo_id: Option<String>,
-    },
+#[serde(deny_unknown_fields)]
+pub struct ManageWorkspaceParams {
+    /// Operation to perform. One of: `list` (enumerate tracked workspaces),
+    /// `add` (register an existing directory), `create` (create a new empty
+    /// workspace), `remove` (unregister; files on disk are untouched).
+    pub action: String,
+    /// Absolute path to the workspace directory. Required for `add` and
+    /// `create`; for `remove` provide either `path` or `repo_id`.
+    #[serde(default)]
+    pub path: Option<String>,
+    /// `add`/`create` only: optional display name (defaults to the directory
+    /// basename).
+    #[serde(default)]
+    pub name: Option<String>,
+    /// `create` only: when true (default) the new workspace is initialised
+    /// as a git repo. Set to false for a plain work folder.
+    #[serde(default)]
+    pub git: Option<bool>,
+    /// `remove` only: repo identifier (usually the canonical path).
+    /// Alternative to `path`.
+    #[serde(default)]
+    pub repo_id: Option<String>,
+}
+
+fn require_path(params: &ManageWorkspaceParams, action: &str) -> Result<String, ToolError> {
+    params.path.clone().ok_or_else(|| {
+        ToolError::InvalidParams(format!(
+            "`{action}` requires `path` — the absolute directory path"
+        ))
+    })
 }
 
 // ============================================
@@ -90,10 +88,12 @@ impl Tool for ManageWorkspaceTool {
         crate::tools::categories::CODING
     }
 
+    fn search_hint(&self) -> &str {
+        "workspace folder directory repo add register create remove track project"
+    }
+
     fn description(&self) -> &str {
         "Manage orgii workspaces (git repositories and work folders) tracked by the IDE.\n\n\
-         ## Required: `action` field\n\
-         Every call MUST include an `action` field as the first key of the arguments object. There is no default. Calling without `action` fails with `missing field 'action'`.\n\n\
          ## Actions\n\
          - **list**   — List all currently tracked workspaces with names, absolute paths, and kinds (git/folder). Use this FIRST when the user mentions a project by name — it's instant and avoids slow filesystem searches.\n\
          - **add**    — Register an existing local directory as a workspace. Kind (git / folder) is auto-detected from the presence of `.git`.\n\
@@ -117,14 +117,21 @@ impl Tool for ManageWorkspaceTool {
         params: Value,
         _ctx: &crate::tools::traits::CallContext,
     ) -> Result<String, ToolError> {
-        let params: ManageWorkspaceParams = parse_params(params)?;
-        match params {
-            ManageWorkspaceParams::List => exec_list().await,
-            ManageWorkspaceParams::Add { path, name } => exec_add(path, name).await,
-            ManageWorkspaceParams::Create { path, name, git } => exec_create(path, name, git).await,
-            ManageWorkspaceParams::Remove { path, repo_id } => {
-                exec_remove(path.as_deref(), repo_id.as_deref()).await
+        let params: ManageWorkspaceParams = parse_params_described(params)?;
+        match params.action.as_str() {
+            "list" => exec_list().await,
+            "add" => {
+                let path = require_path(&params, "add")?;
+                exec_add(path, params.name.clone()).await
             }
+            "create" => {
+                let path = require_path(&params, "create")?;
+                exec_create(path, params.name.clone(), params.git.unwrap_or(true)).await
+            }
+            "remove" => exec_remove(params.path.as_deref(), params.repo_id.as_deref()).await,
+            other => Err(ToolError::InvalidParams(format!(
+                "unknown action \"{other}\"; valid actions: `list`, `add`, `create`, `remove`"
+            ))),
         }
     }
 }

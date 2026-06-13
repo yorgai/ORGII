@@ -1,8 +1,8 @@
 use super::helpers::load_by_id;
 use super::*;
-use rusqlite::params;
 use crate::core::session::persistence::{upsert_session, UnifiedSessionRecord};
 use crate::definitions::orgs::{AgentOrgsStore, HierarchyMode, OrgDefinition, OrgMember};
+use rusqlite::params;
 
 #[test]
 fn enum_values_round_trip() {
@@ -230,10 +230,9 @@ fn context_for_session_preserves_org_hierarchy_mode() {
         let _run = create_run_for_root(&org, &root_session_id);
         upsert_session_row(&root_session_id, None);
 
-        let ctx =
-            AgentOrgRunStore::context_for_session_with_parent_walk(&root_session_id, &store)
-                .expect("walk ok")
-                .expect("context resolved");
+        let ctx = AgentOrgRunStore::context_for_session_with_parent_walk(&root_session_id, &store)
+            .expect("walk ok")
+            .expect("context resolved");
         assert_eq!(ctx.hierarchy_mode, hierarchy_mode);
     }
 }
@@ -247,10 +246,9 @@ fn context_for_session_with_parent_walk_one_hop_subagent() {
     upsert_session_row("root-session-2", None);
     upsert_session_row("worker-session-2", Some("root-session-2"));
 
-    let ctx =
-        AgentOrgRunStore::context_for_session_with_parent_walk("worker-session-2", &store)
-            .expect("walk ok")
-            .expect("context resolved via parent walk");
+    let ctx = AgentOrgRunStore::context_for_session_with_parent_walk("worker-session-2", &store)
+        .expect("walk ok")
+        .expect("context resolved via parent walk");
     assert_eq!(ctx.run_id, _run.id);
     assert_eq!(ctx.coordinator_agent_id, "agent-coord");
 }
@@ -270,12 +268,10 @@ fn context_for_session_with_parent_walk_cli_member_session() {
         "running",
     );
 
-    let ctx = AgentOrgRunStore::context_for_session_with_parent_walk(
-        "cli-worker-session-walk",
-        &store,
-    )
-    .expect("walk ok")
-    .expect("context resolved via CLI parent walk");
+    let ctx =
+        AgentOrgRunStore::context_for_session_with_parent_walk("cli-worker-session-walk", &store)
+            .expect("walk ok")
+            .expect("context resolved via CLI parent walk");
     assert_eq!(ctx.run_id, _run.id);
     assert_eq!(ctx.coordinator_agent_id, "agent-coord");
 }
@@ -386,11 +382,9 @@ fn find_worker_session_by_member_id_returns_cli_member_session() {
         "running",
     );
 
-    let sessions = AgentOrgRunStore::list_worker_sessions_by_member_ids(
-        &run.id,
-        &["member-w1".to_string()],
-    )
-    .expect("query ok");
+    let sessions =
+        AgentOrgRunStore::list_worker_sessions_by_member_ids(&run.id, &["member-w1".to_string()])
+            .expect("query ok");
     assert_eq!(sessions.len(), 1);
     assert_eq!(sessions[0].session_id, "cli-worker-active");
     assert_eq!(sessions[0].agent_definition_id, None);
@@ -446,8 +440,8 @@ fn find_worker_session_by_member_id_returns_none_when_materialized_session_missi
     let _store = store_with_org(org.clone());
     let run = create_run_for_root(&org, "coord-root-no-active");
     upsert_session_row_full("coord-root-no-active", None, Some("agent-coord"), "running");
-    let info = AgentOrgRunStore::find_worker_session_by_member_id(&run.id, "member-w1")
-        .expect("query ok");
+    let info =
+        AgentOrgRunStore::find_worker_session_by_member_id(&run.id, "member-w1").expect("query ok");
     assert!(info.is_none());
 }
 
@@ -462,9 +456,7 @@ fn find_worker_session_by_member_id_returns_none_for_unknown_run() {
 
 #[test]
 fn reconcile_if_terminal_completes_run_when_all_tasks_completed() {
-    use crate::coordination::agent_org_tasks::{
-        AgentOrgTaskStore, CreateTaskParams, TaskStatus,
-    };
+    use crate::coordination::agent_org_tasks::{AgentOrgTaskStore, CreateTaskParams, TaskStatus};
 
     let _sandbox = test_helpers::test_env::sandbox();
     let org = sample_org();
@@ -513,9 +505,7 @@ fn reconcile_if_terminal_completes_run_when_all_tasks_completed() {
 
 #[test]
 fn reconcile_if_terminal_abandons_run_with_open_work_after_all_sessions_terminal() {
-    use crate::coordination::agent_org_tasks::{
-        AgentOrgTaskStore, CreateTaskParams, TaskStatus,
-    };
+    use crate::coordination::agent_org_tasks::{AgentOrgTaskStore, CreateTaskParams, TaskStatus};
 
     let _sandbox = test_helpers::test_env::sandbox();
     let org = sample_org();
@@ -584,9 +574,7 @@ fn reconcile_if_terminal_abandons_run_with_open_work_after_all_sessions_terminal
 
 #[test]
 fn release_tasks_for_stale_workers_releases_only_open_stale_owner_tasks() {
-    use crate::coordination::agent_org_tasks::{
-        AgentOrgTaskStore, CreateTaskParams, TaskStatus,
-    };
+    use crate::coordination::agent_org_tasks::{AgentOrgTaskStore, CreateTaskParams, TaskStatus};
 
     let _sandbox = test_helpers::test_env::sandbox();
     let org = sample_org();
@@ -702,9 +690,7 @@ fn release_tasks_for_stale_workers_releases_only_open_stale_owner_tasks() {
 
 #[test]
 fn stale_worker_release_excludes_current_member_not_same_agent_siblings() {
-    use crate::coordination::agent_org_tasks::{
-        AgentOrgTaskStore, CreateTaskParams, TaskStatus,
-    };
+    use crate::coordination::agent_org_tasks::{AgentOrgTaskStore, CreateTaskParams, TaskStatus};
 
     let _sandbox = test_helpers::test_env::sandbox();
     let mut org = sample_org();
@@ -745,8 +731,7 @@ fn stale_worker_release_excludes_current_member_not_same_agent_siblings() {
             status: crate::core::session::SessionStatus::Running
                 .as_str()
                 .to_string(),
-            session_type: crate::core::session::persistence::session_type::ORG_MEMBER
-                .to_string(),
+            session_type: crate::core::session::persistence::session_type::ORG_MEMBER.to_string(),
             parent_session_id: Some("coord-root-same-agent-stale-release".to_string()),
             agent_definition_id: Some("shared-agent".to_string()),
             org_member_id: Some(member_id.to_string()),

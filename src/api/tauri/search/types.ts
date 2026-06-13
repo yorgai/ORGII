@@ -80,36 +80,6 @@ export interface IncrementalIndexResult {
   files_failed: number;
   failed_paths: string[];
 }
-
-export interface TantivyMatchingLine {
-  line_number: number;
-  content: string;
-  column_start?: number;
-  column_end?: number;
-}
-
-export interface TantivySearchHit {
-  repo_id: string;
-  repo_path: string;
-  relative_path: string;
-  language: string;
-  line_count: number;
-  score: number;
-  matching_lines: TantivyMatchingLine[];
-}
-
-export interface TantivyIndexStats {
-  files_indexed: number;
-  total_bytes: number;
-  duration_ms: number;
-}
-
-export interface TantivyIndexInfo {
-  num_documents: number;
-  num_segments: number;
-  index_size_bytes: number;
-}
-
 export interface SemanticHit {
   repo_id: string;
   repo_path: string;

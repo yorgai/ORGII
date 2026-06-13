@@ -30,10 +30,6 @@ function resolveEventStatus(event: SessionEvent): EventStatus {
   return status as EventStatus;
 }
 
-function isLiveShellProcess(status: unknown): boolean {
-  return status === "running" || status === "background";
-}
-
 /**
  * Convert a SessionEvent to a ShellOperationEntry.
  * Returns null if the event is not a shell operation.
@@ -64,10 +60,7 @@ export function convertToShellOperation(
 
     if (!command) return null;
 
-    const isLoading =
-      statusString === "running" ||
-      statusString === "pending" ||
-      isLiveShellProcess(data.shellProcessStatus);
+    const isLoading = statusString === "running" || statusString === "pending";
     const rawStreamOutput = data.streamOutput;
 
     return {

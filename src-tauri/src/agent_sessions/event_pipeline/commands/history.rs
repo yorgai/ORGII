@@ -194,8 +194,11 @@ mod tests {
     #[test]
     fn running_row_keeps_clip_open() {
         for status in ["running", "pending", "idle", "waiting_for_user", "paused"] {
-            let (is_terminal, ended_at) =
-                clip_fields(status, Some("2026-06-12T10:00:00Z".into()), "2026-06-12T11:30:00Z");
+            let (is_terminal, ended_at) = clip_fields(
+                status,
+                Some("2026-06-12T10:00:00Z".into()),
+                "2026-06-12T11:30:00Z",
+            );
             assert!(!is_terminal, "{status} must not be terminal");
             assert!(ended_at.is_none(), "{status} clip must stay open");
         }

@@ -68,7 +68,11 @@ impl Tool for TaskListTool {
         params_schema::<TaskListParams>()
     }
 
-    async fn execute_text(&self, params_value: Value, _ctx: &CallContext) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params_value: Value,
+        _ctx: &CallContext,
+    ) -> Result<String, ToolError> {
         let params: TaskListParams = parse_params(params_value)?;
         let status_filter = match params.status.as_deref() {
             None => None,
@@ -160,7 +164,11 @@ impl Tool for TaskGetTool {
         params_schema::<TaskGetParams>()
     }
 
-    async fn execute_text(&self, params_value: Value, _ctx: &CallContext) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params_value: Value,
+        _ctx: &CallContext,
+    ) -> Result<String, ToolError> {
         let params: TaskGetParams = parse_params(params_value)?;
         let task_id = params.id.trim().to_string();
         if task_id.is_empty() {

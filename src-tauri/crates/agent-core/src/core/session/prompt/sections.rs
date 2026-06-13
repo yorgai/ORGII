@@ -833,8 +833,6 @@ impl PromptSection for UserProfileSection {
     }
 }
 
-
-
 // ---------------------------------------------------------------------
 // 195. User presence — QQ-style availability the user controls in the sidebar
 // ---------------------------------------------------------------------

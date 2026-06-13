@@ -15,6 +15,7 @@ import { RouterProvider } from "react-router-dom";
 
 import ErrorBoundary from "@src/components/ErrorBoundary";
 import GlobalShortcuts from "@src/components/GlobalShortcuts";
+import HoldToQuitOverlay from "@src/components/HoldToQuitOverlay";
 import { RepoLoader } from "@src/components/System";
 import {
   DeferredGitStatusProvider,
@@ -80,6 +81,7 @@ export const AppBootstrap: FC = () => {
             future={{ v7_startTransition: true }}
           />
           <RepoLoader />
+          <HoldToQuitOverlay />
           <AppDeferredServices ready={deferredComponentsReady} />
         </ErrorBoundary>
       </MultiRepoGitStatusProvider>

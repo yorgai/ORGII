@@ -794,8 +794,7 @@ mod tests {
             .expect("anchor u2")
             .expect("u2 exists")
             .sequence;
-        append_compact_boundary(session_id, "first summary", first_cutoff)
-            .expect("first boundary");
+        append_compact_boundary(session_id, "first summary", first_cutoff).expect("first boundary");
 
         let u3 = save_user_msg(session_id, "u3", None).expect("save u3");
         let second_cutoff = message_anchor(session_id, &u3)

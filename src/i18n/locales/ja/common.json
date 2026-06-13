@@ -371,10 +371,8 @@
     "foundByKeyword": "キーワード検索で検出",
     "semanticSecondary": "meaning match",
     "hybridSecondary": "semantic + full-text",
-    "tantivySecondary": "indexed full-text",
     "semanticDescription": "Embedding-based meaning search",
-    "hybridDescription": "Combined semantic and full-text search",
-    "tantivyDescription": "Indexed full-text search"
+    "hybridDescription": "Combined semantic and full-text search"
   },
   "tabs": {
     "terminal": "Terminal",
@@ -471,12 +469,12 @@
     "delete": "本当に削除しますか？",
     "unsavedChanges": "保存されていない変更があります。離れてもよろしいですか？",
     "discard": "変更を破棄しますか？",
-    "removeTitle": "「{{name}}」を ORGII workspace から削除しますか？",
-    "removeMessage": "デバイスからコードフォルダが削除されることはありません。ORGII workspace から削除されるだけです。いつでも再追加できます。",
+    "removeTitle": "「{{name}}」を ORGII から削除しますか？",
+    "removeMessage": "ORGII との関連付けのみを削除します。ディスクからは何も削除されません。",
     "deleteWorkspaceTitle": "Workspace「{{name}}」を削除しますか？",
     "deleteWorkspaceMessage": "Workspace プリセットのみが削除されます。メンバーの Repo やフォルダには影響しません。",
-    "deleteSelectedTitle": "選択した {{count}} 件を削除しますか？",
-    "deleteSelectedMessage": "選択した Workspace を削除し、選択した Repo の関連付けを解除します。ディスク上の Repo ファイルは削除されません。",
+    "deleteSelectedTitle": "選択した {{count}} 件を ORGII から削除しますか？",
+    "deleteSelectedMessage": "ORGII との関連付けのみを削除します。ディスクからは何も削除されません。",
     "disconnectTitle": "「{{name}}」を切断しますか？",
     "disconnectMessage": "このアカウントのすべてのリポジトリへのアクセスが削除されます。",
     "dropStashTitle": "Drop stash？",
@@ -1135,7 +1133,7 @@
     "repo": {
       "workspaceFolders": "Workspace フォルダ",
       "addRepo": "Workspace を追加",
-      "addEntry": "その他の Workspace オプション",
+      "addEntry": "その他のインポートオプション",
       "addRepoDescription": "Workspace を開く、作成、またはクローン",
       "sections": {
         "coding": "Workspace",
@@ -1144,6 +1142,7 @@
         "current": "現在",
         "repo": "リポジトリ",
         "systemPaths": "システムパス",
+        "usedElsewhere": "Used elsewhere",
         "workspace": "Workspace"
       },
       "tabs": {
@@ -1463,12 +1462,12 @@
         }
       },
       "toast": {
-        "repoRemoved": "リポジトリを削除しました",
-        "repoRemoveFailed": "リポジトリの削除に失敗しました",
-        "workspaceRemoved": "Workspace を削除しました",
-        "workspaceRemoveFailed": "Workspace の削除に失敗しました",
-        "bulkDeleted": "{{count}} 件を削除しました",
-        "bulkDeleteFailed": "{{count}} 件の削除に失敗しました"
+        "repoRemoved": "Linkage to ORGII removed",
+        "repoRemoveFailed": "Failed to remove linkage to ORGII",
+        "workspaceRemoved": "Linkage to ORGII removed",
+        "workspaceRemoveFailed": "Failed to remove linkage to ORGII",
+        "bulkDeleted": "{{count}} linkages to ORGII removed",
+        "bulkDeleteFailed": "{{count}} linkages failed to remove"
       }
     }
   },
@@ -1479,7 +1478,7 @@
     "locateInFinder": "Finder で表示",
     "copyLocalPath": "ローカルパスをコピー",
     "copyEventsJson": "Events JSON をコピー",
-    "removeRepo": "リポジトリを削除",
+    "removeRepo": "Remove from ORGII",
     "addRepo": "リポジトリを追加...",
     "simulatorView": "シミュレータービュー",
     "addWorkspace": "Workspace を追加..."
@@ -2087,10 +2086,9 @@
     "selectWorkspaceToStart": "Workspace を選択して開始",
     "selectRepoToStart": "Repo を選択して開始"
   },
-  "quitConfirmation": {
-    "title": "ORGII を終了しますか？",
-    "message": "アクティブなセッションとバックグラウンドタスクは停止します。",
-    "okLabel": "終了"
+  "holdToQuit": {
+    "title": "終了するには {{shortcut}} を 1 秒間押し続けます",
+    "subtitle": "離すとキャンセルします"
   },
   "projects": {
     "title": "ヒートマップ",

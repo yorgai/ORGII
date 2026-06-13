@@ -3,7 +3,7 @@
 use serde_json::Value;
 
 use super::compaction::ContextCompactor;
-use crate::core::side_query::{self, SideQueryConfig};
+use crate::core::side_query::{self, SideQueryConfig, StructuredOutput};
 
 /// Truncate text for inclusion in the summary prompt.
 pub(crate) fn truncate_for_summary(text: &str, max_chars: usize) -> String {
@@ -205,11 +205,35 @@ pub(crate) async fn summarize_messages(
         max_tokens: config.summary_max_tokens,
         temperature: 0.0,
         system_prompt: Some(prompt),
+        structured: Some(StructuredOutput {
+            tool_name: "emit_summary".to_string(),
+            schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "summary": {
+                        "type": "string",
+                        "description": "The concise summary of the conversation"
+                    }
+                },
+                "required": ["summary"]
+            }),
+        }),
+        ..Default::default()
     };
 
     let result = side_query::side_query(provider, &user_message, &sq_config, model).await?;
 
-    let mut summary = result.content;
+    // Extract from structured output (forced tool call) if available,
+    // fall back to text content for providers that don't support tool_choice.
+    let mut summary = if let Some(structured) = result.structured {
+        structured
+            .get("summary")
+            .and_then(|s| s.as_str())
+            .unwrap_or("")
+            .to_string()
+    } else {
+        result.content
+    };
 
     if !oversized_notes.is_empty() {
         summary.push_str("\n\n");

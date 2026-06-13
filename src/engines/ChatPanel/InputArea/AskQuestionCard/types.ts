@@ -23,6 +23,12 @@ export interface QuestionBatch {
   questionId: string;
   questions: SingleQuestion[];
   blocking: boolean;
+  /**
+   * Backend-authoritative auto-skip deadline (epoch ms) from the user's
+   * presence policy. The card renders a countdown from this value only —
+   * the backend resolves the batch even when no UI is mounted.
+   */
+  autoResolveAt?: number | null;
 }
 
 export interface AskQuestionCardProps {

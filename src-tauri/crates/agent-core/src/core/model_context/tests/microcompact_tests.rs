@@ -45,6 +45,23 @@ fn short_gap_config() -> MicrocompactConfig {
 // ===== Time-based trigger tests =====
 
 #[test]
+fn force_pass_clears_even_when_gap_under_threshold() {
+    // The forced variant (ContextTooLong rescue) must ignore the
+    // time-based trigger entirely — that's its whole point.
+    let cfg = short_gap_config();
+    let mut msgs = vec![
+        assistant_at(five_secs_ago()),
+        tool_result_at("read_file", &big_content(1000), five_secs_ago()),
+        tool_result_at("run_shell", &big_content(1000), five_secs_ago()),
+    ];
+    assert_eq!(microcompact_messages(&mut msgs, &cfg).trimmed_count, 0);
+    let stats = force_microcompact_messages(&mut msgs, &cfg);
+    // keep_recent = 1, so the older of the two tool results is cleared.
+    assert_eq!(stats.trimmed_count, 1);
+    assert!(stats.chars_saved >= 1000);
+}
+
+#[test]
 fn no_op_when_no_assistant_message() {
     let cfg = short_gap_config();
     let mut msgs = vec![tool_result_at(

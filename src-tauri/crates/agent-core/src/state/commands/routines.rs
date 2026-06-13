@@ -299,11 +299,7 @@ async fn create_work_item_from_routine(
                     let fire_id = pending_fire.id.clone();
                     let short_id_for_mark = short_id.clone();
                     let fire = tokio::task::spawn_blocking(move || {
-                        io::mark_routine_fire_work_item_started(
-                            &fire_id,
-                            &short_id_for_mark,
-                            None,
-                        )
+                        io::mark_routine_fire_work_item_started(&fire_id, &short_id_for_mark, None)
                     })
                     .await
                     .map_err(|err| format!("Task join error: {}", err))??;

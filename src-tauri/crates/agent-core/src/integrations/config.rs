@@ -107,7 +107,11 @@ pub struct IntegrationsConfig {
     ///
     /// On-disk JSON key remains `"disabled_skills"` to keep existing
     /// `~/.orgii/integrations.json` files readable without migration.
-    #[serde(default, skip_serializing_if = "Vec::is_empty", rename = "disabled_skills")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        rename = "disabled_skills"
+    )]
     pub excluded_skills: Vec<String>,
 }
 

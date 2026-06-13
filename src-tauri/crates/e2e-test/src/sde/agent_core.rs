@@ -1356,6 +1356,138 @@ pub async fn ask_question_schema(cfg: &Config) -> bool {
     }
 }
 
+/// Tool-schema LLM-compatibility pin: tagged-enum params must stay flattened.
+///
+/// Regression context: `inspect_terminals`, `manage_workspace`, and
+/// `worktree` used `#[serde(tag = "action")]` enums whose top-level `oneOf`
+/// schemas were flattened to `properties: {}` by LLM providers — the model
+/// never saw any field and every call failed with `missing field 'action'`.
+/// The params are now plain structs; this scenario pins the WIRE-LEVEL
+/// contract by fetching live session tool schemas and asserting each tool
+/// exposes `action` (plus a known per-tool field) under `properties`.
+///
+/// Also pins the `tool_search` availability contract introduced in the same
+/// change: the tool must be registered and its description must mention the
+/// `select:` exact-lookup syntax.
+///
+/// Deterministic: uses fetch_tool_schemas, no LLM call needed.
+pub async fn tool_schema_flat_params(cfg: &Config) -> bool {
+    let session_id = format!("{}-flat-params", cfg.session_prefix);
+    let workspace = super::tmp_workspace_path("flat-params");
+
+    println!("  [step 1] Starting session to get live tool schemas...");
+    let init = harness::send_sde_message(
+        cfg,
+        "Say hello briefly.",
+        &session_id,
+        "build",
+        &workspace,
+        None,
+        true,
+    )
+    .await;
+
+    if let Err(err) = &init {
+        return harness::print_error("Tool Schema Flat Params", err);
+    }
+
+    println!("  [step 2] Fetching tool schemas...");
+    let schemas_result = harness::fetch_tool_schemas(cfg, &session_id).await;
+    let _ = harness::cleanup_sde_session(cfg, &session_id).await;
+
+    match schemas_result {
+        Err(err) => harness::print_error("Tool Schema Flat Params", &err),
+        Ok(schemas) => {
+            // Helper: get a tool's parameters JSON by name.
+            let get_params = |name: &str| -> Option<serde_json::Value> {
+                schemas.tools.iter().find_map(|tool| {
+                    let func = tool.get("function")?;
+                    if func.get("name")?.as_str()? == name {
+                        func.get("parameters").cloned()
+                    } else {
+                        None
+                    }
+                })
+            };
+            // Helper: does the tool's schema expose `field` under properties?
+            let has_prop = |params: &Option<serde_json::Value>, field: &str| -> bool {
+                params
+                    .as_ref()
+                    .and_then(|p| p.get("properties"))
+                    .and_then(|props| props.get(field))
+                    .is_some()
+            };
+            // Helper: top-level oneOf must be absent (the flattening killer).
+            let no_one_of = |params: &Option<serde_json::Value>| -> bool {
+                params.as_ref().is_some_and(|p| p.get("oneOf").is_none())
+            };
+
+            let manage_workspace = get_params("manage_workspace");
+            let worktree = get_params("worktree");
+            // inspect_terminals only registers when PTY resources exist;
+            // skip its checks gracefully if the session has none.
+            let inspect_terminals = get_params("inspect_terminals");
+            let inspect_ok = match &inspect_terminals {
+                Some(_) => {
+                    has_prop(&inspect_terminals, "action")
+                        && has_prop(&inspect_terminals, "session_id")
+                        && no_one_of(&inspect_terminals)
+                }
+                None => true,
+            };
+
+            let tool_search_desc = schemas.tools.iter().find_map(|tool| {
+                let func = tool.get("function")?;
+                if func.get("name")?.as_str()? == "tool_search" {
+                    func.get("description")?.as_str().map(String::from)
+                } else {
+                    None
+                }
+            });
+
+            harness::print_result(
+                "Tool Schema Flat Params",
+                &format!("{} tools in session schema", schemas.tool_count),
+                &[
+                    (
+                        "manage_workspace schema present",
+                        manage_workspace.is_some(),
+                    ),
+                    (
+                        "manage_workspace exposes `action` property",
+                        has_prop(&manage_workspace, "action"),
+                    ),
+                    (
+                        "manage_workspace exposes `path` property",
+                        has_prop(&manage_workspace, "path"),
+                    ),
+                    (
+                        "manage_workspace has NO top-level oneOf",
+                        no_one_of(&manage_workspace),
+                    ),
+                    ("worktree schema present", worktree.is_some()),
+                    (
+                        "worktree exposes `action` property",
+                        has_prop(&worktree, "action"),
+                    ),
+                    (
+                        "worktree exposes `branch` property",
+                        has_prop(&worktree, "branch"),
+                    ),
+                    ("worktree has NO top-level oneOf", no_one_of(&worktree)),
+                    ("inspect_terminals flat (or not registered)", inspect_ok),
+                    (
+                        "tool_search registered with select: lookup documented",
+                        tool_search_desc
+                            .as_deref()
+                            .is_some_and(|d| d.contains("select:")),
+                    ),
+                ],
+            )
+        }
+    }
+}
+
 /// ask_user_questions option-level schema:
 ///   - option.description is in the required array (forces the LLM
 ///     to provide trade-off context for every choice)

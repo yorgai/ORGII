@@ -371,10 +371,8 @@
     "foundByKeyword": "Tìm thấy bằng tìm kiếm từ khóa",
     "semanticSecondary": "meaning match",
     "hybridSecondary": "semantic + full-text",
-    "tantivySecondary": "indexed full-text",
     "semanticDescription": "Embedding-based meaning search",
-    "hybridDescription": "Combined semantic and full-text search",
-    "tantivyDescription": "Indexed full-text search"
+    "hybridDescription": "Combined semantic and full-text search"
   },
   "tabs": {
     "terminal": "Terminal",
@@ -471,12 +469,12 @@
     "delete": "Bạn có chắc muốn xóa không?",
     "unsavedChanges": "Bạn có thay đổi chưa lưu. Bạn có chắc muốn rời đi?",
     "discard": "Bỏ thay đổi?",
-    "removeTitle": "Xóa \"{{name}}\" khỏi ORGII workspace?",
-    "removeMessage": "Thao tác này không xóa thư mục mã nguồn khỏi thiết bị của bạn — chỉ xóa khỏi ORGII workspace. Bạn có thể thêm lại bất cứ lúc nào.",
+    "removeTitle": "Xóa \"{{name}}\" khỏi ORGII?",
+    "removeMessage": "Thao tác này chỉ xóa liên kết của mục này với ORGII. Không có nội dung nào bị xóa khỏi đĩa.",
     "deleteWorkspaceTitle": "Xóa Workspace \"{{name}}\"?",
     "deleteWorkspaceMessage": "Chỉ xóa cấu hình Workspace. Các Repo và thư mục thành viên không bị ảnh hưởng.",
-    "deleteSelectedTitle": "Xóa {{count}} mục đã chọn?",
-    "deleteSelectedMessage": "Hành động này xóa các Workspace đã chọn và bỏ liên kết các Repo đã chọn. Tệp Repo trên đĩa không bị xóa.",
+    "deleteSelectedTitle": "Xóa {{count}} mục đã chọn khỏi ORGII?",
+    "deleteSelectedMessage": "Thao tác này chỉ xóa liên kết của các mục này với ORGII. Không có nội dung nào bị xóa khỏi đĩa.",
     "disconnectTitle": "Ngắt kết nối \"{{name}}\"?",
     "disconnectMessage": "Điều này sẽ xóa quyền truy cập vào tất cả các kho lưu trữ từ tài khoản này.",
     "dropStashTitle": "Drop stash?",
@@ -1135,7 +1133,7 @@
     "repo": {
       "workspaceFolders": "Thư mục Workspace",
       "addRepo": "Thêm Workspace",
-      "addEntry": "Tùy chọn Workspace khác",
+      "addEntry": "Tùy chọn import khác",
       "addRepoDescription": "Mở, tạo hoặc clone Workspace",
       "sections": {
         "coding": "Workspace",
@@ -1144,6 +1142,7 @@
         "current": "Hiện tại",
         "repo": "Kho lưu trữ",
         "systemPaths": "Đường dẫn hệ thống",
+        "usedElsewhere": "Used elsewhere",
         "workspace": "Workspace"
       },
       "tabs": {
@@ -1463,12 +1462,12 @@
         }
       },
       "toast": {
-        "repoRemoved": "Đã xoá repo thành công",
-        "repoRemoveFailed": "Xoá repo thất bại",
-        "workspaceRemoved": "Đã xoá Workspace",
-        "workspaceRemoveFailed": "Xoá Workspace thất bại",
-        "bulkDeleted": "Đã xoá {{count}} mục",
-        "bulkDeleteFailed": "Xoá {{count}} mục thất bại"
+        "repoRemoved": "Linkage to ORGII removed",
+        "repoRemoveFailed": "Failed to remove linkage to ORGII",
+        "workspaceRemoved": "Linkage to ORGII removed",
+        "workspaceRemoveFailed": "Failed to remove linkage to ORGII",
+        "bulkDeleted": "{{count}} linkages to ORGII removed",
+        "bulkDeleteFailed": "{{count}} linkages failed to remove"
       }
     }
   },
@@ -1479,7 +1478,7 @@
     "locateInFinder": "Tìm trong Finder",
     "copyLocalPath": "Sao chép đường dẫn cục bộ",
     "copyEventsJson": "Sao chép Events JSON",
-    "removeRepo": "Xóa kho lưu trữ",
+    "removeRepo": "Remove from ORGII",
     "addRepo": "Thêm kho lưu trữ...",
     "simulatorView": "Chế độ xem trình mô phỏng",
     "addWorkspace": "Thêm Workspace..."
@@ -2082,10 +2081,9 @@
     "selectWorkspaceToStart": "Chọn một Workspace để bắt đầu",
     "selectRepoToStart": "Chọn một Repo để bắt đầu"
   },
-  "quitConfirmation": {
-    "title": "Thoát ORGII?",
-    "message": "Các phiên đang hoạt động và tác vụ nền sẽ dừng.",
-    "okLabel": "Thoát"
+  "holdToQuit": {
+    "title": "Giữ {{shortcut}} trong 1 giây để thoát",
+    "subtitle": "Thả ra để hủy"
   },
   "projects": {
     "title": "Bản đồ nhiệt",

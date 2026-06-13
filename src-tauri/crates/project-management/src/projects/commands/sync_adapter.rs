@@ -8,8 +8,7 @@ use tokio::task;
 use crate::sync::{
     self,
     adapter::{AdapterDescriptor, SyncStatusReport},
-    adapters,
-    connection_store, connection_token_store,
+    adapters, connection_store, connection_token_store,
     events::SyncEventTrigger,
     import as sync_import,
     types::OutboxStatus,

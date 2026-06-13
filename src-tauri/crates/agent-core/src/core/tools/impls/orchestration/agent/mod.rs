@@ -38,9 +38,7 @@ use core_types::providers::NativeHarnessType;
 
 use crate::definitions::builtin::{EXPLORE_AGENT_ID, GENERAL_AGENT_ID};
 use crate::definitions::schema::SubAgentIsolation;
-use crate::definitions::{
-    resolve_definition_by_id, AgentDefinition, DelegationConfig,
-};
+use crate::definitions::{resolve_definition_by_id, AgentDefinition, DelegationConfig};
 use crate::providers::traits::LLMProvider;
 use crate::session::workspace::SessionWorkspace;
 use crate::tools::impls::coding::exec::registry as job_registry;
@@ -53,6 +51,13 @@ use crate::tools::registration::{self, ToolDeps};
 use crate::tools::registry::ToolRegistry;
 use crate::tools::traits::{Tool, ToolError};
 use crate::turn_executor::TurnConfig;
+
+/// Default per-turn iteration budget for subagents whose definition does
+/// not carry a `session_model`. Generous enough for long research /
+/// implementation tasks, but bounded so a runaway loop can't burn tokens
+/// for hours. Hitting the budget ends the turn normally with all progress
+/// returned to the parent (not an error).
+const DEFAULT_SUBAGENT_MAX_ITERATIONS: u32 = 100;
 
 struct DisabledOrgSendMessageTool;
 
@@ -819,14 +824,19 @@ impl Tool for AgentTool {
             .build_initial_messages(&full_system_prompt, prompt, init_mode)
             .await?;
 
-        // 8. Build turn config — subagents run unlimited by default.
-        // The turn loop is still guarded by repeat detection, error-
-        // loop breaker, and cancellation. Per-agent iteration caps
-        // belong on `session_model.max_iterations`, which the turn
-        // processor consumes.
+        // 8. Build turn config — subagents get a default iteration budget.
+        // Hitting the budget is NOT a failure: `execute_turn` exits the
+        // loop normally and the parent still receives everything produced
+        // so far (claude_code `max_turns_reached` semantics). Per-agent
+        // overrides come from the definition's `session_model.max_iterations`.
+        let max_iterations = agent
+            .session_model
+            .as_ref()
+            .map(|sm| sm.max_iterations)
+            .unwrap_or(DEFAULT_SUBAGENT_MAX_ITERATIONS);
         let turn_config = TurnConfig {
             model: model.clone(),
-            max_iterations: None,
+            max_iterations: Some(max_iterations),
             max_tokens: agent.max_tokens.unwrap_or(self.config.max_tokens as u64) as u32,
             temperature: agent.temperature.unwrap_or(self.config.temperature as f64) as f32,
             max_tool_use_concurrency: agent
@@ -1097,6 +1107,8 @@ impl Tool for AgentTool {
                 effective_policy,
                 workspace: run_workspace.as_path(),
                 subagent_session_id,
+                parent_session_id,
+                subagent_type_label: subagent_type_wire,
                 handler,
                 instance_number,
                 model,

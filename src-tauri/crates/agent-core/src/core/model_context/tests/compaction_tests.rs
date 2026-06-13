@@ -374,8 +374,47 @@ fn simple_truncate_removes_older_messages() {
     let result = ContextCompactor::simple_truncate(&history, budget);
     assert!(result.len() < 10);
     assert!(!result.is_empty());
+    // Head (first user message = task statement) is always preserved,
+    // followed by the truncation marker.
     let first_role = result[0].get("role").and_then(|v| v.as_str()).unwrap();
-    assert_eq!(first_role, "system", "should have truncation marker");
+    assert_eq!(first_role, "user", "task statement must survive truncation");
+    let second_role = result[1].get("role").and_then(|v| v.as_str()).unwrap();
+    assert_eq!(second_role, "system", "should have truncation marker");
+    assert!(result[1]
+        .get("content")
+        .and_then(|v| v.as_str())
+        .unwrap()
+        .contains("truncated"));
+}
+
+#[test]
+fn simple_truncate_preserves_system_prompt_and_task() {
+    let big = "x".repeat(4000);
+    let mut history = vec![
+        json!({"role": "system", "content": "SYSTEM PROMPT"}),
+        user_msg("THE TASK GOAL"),
+    ];
+    history.extend((0..10).map(|_| assistant_msg(&big)));
+    let total = ContextCompactor::estimate_messages_tokens(&history);
+    let result = ContextCompactor::simple_truncate(&history, total / 3);
+
+    assert_eq!(
+        result[0].get("content").and_then(|v| v.as_str()),
+        Some("SYSTEM PROMPT")
+    );
+    assert_eq!(
+        result[1].get("content").and_then(|v| v.as_str()),
+        Some("THE TASK GOAL")
+    );
+    assert!(result.len() < history.len());
+    // Tail (most recent messages) survives too.
+    let last_role = result
+        .last()
+        .unwrap()
+        .get("role")
+        .and_then(|v| v.as_str())
+        .unwrap();
+    assert_eq!(last_role, "assistant");
 }
 
 // -- truncate_for_summary --

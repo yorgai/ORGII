@@ -229,6 +229,10 @@ impl Tool for ExecTool {
         30_000
     }
 
+    fn search_hint(&self) -> &str {
+        "bash shell terminal command execute exec grep awk sed process cli run script"
+    }
+
     fn description(&self) -> &str {
         "Execute a shell command or kill a backgrounded process.\n\
         Execute: runs as a fast subprocess with clean stdout/stderr capture. \
@@ -432,13 +436,8 @@ impl Tool for ExecTool {
                 .is_some_and(|policy| policy.workspace_only);
             if self.restrict_to_workspace || workspace_only {
                 if let Some(ref workspace) = self.workspace_state {
-                    let extra: Vec<PathBuf> = self
-                        .active_repo
-                        .lock()
-                        .await
-                        .clone()
-                        .into_iter()
-                        .collect();
+                    let extra: Vec<PathBuf> =
+                        self.active_repo.lock().await.clone().into_iter().collect();
                     workspace
                         .read()
                         .is_path_allowed(&path, &extra)
@@ -573,7 +572,10 @@ mod tests {
         assert!(!stale_repo.exists());
 
         let result = tool
-            .execute_text(json!({"command": "/bin/echo hello"}), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                json!({"command": "/bin/echo hello"}),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect("run_shell should succeed after fallback");
 
@@ -590,10 +592,13 @@ mod tests {
         let bogus = workspace.path().join("does-not-exist");
 
         let result = tool
-            .execute_text(json!({
-                "command": "/bin/echo nope",
-                "working_dir": bogus.to_string_lossy(),
-            }), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                json!({
+                    "command": "/bin/echo nope",
+                    "working_dir": bogus.to_string_lossy(),
+                }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await;
 
         match result {
@@ -613,10 +618,13 @@ mod tests {
         let tool = fresh_tool(workspace.path());
 
         let result = tool
-            .execute_text(json!({
-                "command": "/bin/echo hello",
-                "working_dir": "",
-            }), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                json!({
+                    "command": "/bin/echo hello",
+                    "working_dir": "",
+                }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect("empty working_dir should fall back to default workspace");
 
@@ -629,10 +637,13 @@ mod tests {
         let tool = fresh_tool(workspace.path());
 
         let result = tool
-            .execute_text(json!({
-                "command": "/bin/echo hello",
-                "kill_handle": "",
-            }), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                json!({
+                    "command": "/bin/echo hello",
+                    "kill_handle": "",
+                }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect("empty kill_handle should not take the kill path");
 
@@ -645,10 +656,13 @@ mod tests {
         let tool = fresh_tool(workspace.path());
 
         let result = tool
-            .execute_text(json!({
-                "command": "/bin/echo hello",
-                "kill_handle": "/dev/null",
-            }), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                json!({
+                    "command": "/bin/echo hello",
+                    "kill_handle": "/dev/null",
+                }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect("path-like kill_handle should not take the kill path when command is present");
 
@@ -661,9 +675,12 @@ mod tests {
         let tool = fresh_tool(workspace.path());
 
         let result = tool
-            .execute_text(json!({
-                "kill_handle": "/dev/null",
-            }), &crate::tools::call_context::CallContext::default())
+            .execute_text(
+                json!({
+                    "kill_handle": "/dev/null",
+                }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await;
 
         match result {
@@ -686,10 +703,13 @@ mod tests {
 
         let started = std::time::Instant::now();
         let ctx = crate::tools::call_context::CallContext::default();
-        let run = tool.execute_text(json!({
-            "command": "sleep 5",
-            "wait": 10,
-        }), &ctx);
+        let run = tool.execute_text(
+            json!({
+                "command": "sleep 5",
+                "wait": 10,
+            }),
+            &ctx,
+        );
         tokio::pin!(run);
 
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;

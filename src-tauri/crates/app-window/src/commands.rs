@@ -22,26 +22,14 @@ use objc2::runtime::{AnyClass, AnyObject};
 
 use super::{create_window, CreateWindowOptions};
 
-/// Set the native zoom factor for the main WebView and inline child WebViews.
+/// Set the native zoom factor for the main application WebView.
 #[tauri::command]
 pub async fn set_main_webview_zoom(app: AppHandle, scale_factor: f64) -> Result<(), String> {
-    let window = app
-        .get_webview_window("main")
-        .ok_or("Main window not found")?;
+    let webview = app.get_webview("main").ok_or("Main WebView not found")?;
 
-    window
+    webview
         .set_zoom(scale_factor)
         .map_err(|err| format!("Failed to set main WebView zoom: {}", err))?;
-
-    let webviews = window.webviews();
-    for (label, webview) in webviews {
-        if let Err(err) = webview.set_zoom(scale_factor) {
-            println!(
-                "[Window] Failed to set inline WebView zoom for '{}': {}",
-                label, err
-            );
-        }
-    }
 
     Ok(())
 }

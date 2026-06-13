@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "Mevcut durumum",
+    "tabs": {
+      "presence": "Durum",
+      "profile": "Profillerim"
+    },
+    "presence": {
+      "instructionForAgent": "Agent için talimat"
+    },
     "profile": {
-      "title": "Hakkımda",
+      "title": "Profillerim",
       "techSavvy": "Teknik düzey",
       "techSavvyDescription": "Agent'ın ne kadar açıkladığını ve neyi varsaydığını ayarlamasına yardımcı olur",
       "techSavvyPlaceholder": "Seviye seç…",
@@ -597,8 +604,8 @@
     "modelsTitle": "Modeller",
     "compactionTitle": "Sıkıştırma",
     "autoTimeoutTitle": "Otomatik zaman aşımı",
-    "questionAutoSkipTimeoutByStatus": "{{status}} sorularını otomatik atla",
-    "questionAutoSkipTimeoutByStatusDesc": "Bu durumda zaman aşımı sonrasında Agent sorularını otomatik atla (0 = devre dışı)",
+    "questionAutoSkipTimeoutByStatus": "Soruları otomatik atla",
+    "questionAutoSkipTimeoutByStatusDesc": "Bu zaman aşımından sonra Agent sorularını otomatik atla (0 = devre dışı)",
     "resourceTabs": {
       "tools": "Araçlar",
       "mcp": "MCP",
@@ -989,7 +996,6 @@
     "storagePath": "Depolama yolu",
     "storageUsage": "Depolama kullanımı",
     "storageUsageTotal": "Toplam: {{size}}",
-    "searchIndex": "Arama İndeksi",
     "embeddingIndex": "Embedding İndeksi",
     "files": "dosya",
     "chunks": "parça",
@@ -1006,10 +1012,8 @@
     "embedded": "Embedded",
     "index": "Index",
     "embed": "Embed",
-    "indexNow": "Şimdi indexle",
     "reindex": "Reindex",
     "reembed": "Re-embed",
-    "deleteIndex": "Index'i Sil",
     "deleteEmbedding": "Embedding'i Sil",
     "abort": "İptal",
     "removeAllIndexes": "Tüm indeksleri kaldır",
@@ -1024,7 +1028,6 @@
     "embeddingFailed": "Embedding başarısız",
     "embeddingCancelledAt": "Embedding {{current}}/{{total}} dosyada iptal edildi",
     "embeddingFiles": "{{current}}/{{total}} dosya embed ediliyor ({{chunks}} parça)",
-    "filesIndexed": "{{count}} dosya indekslendi",
     "chunksEmbedded": "{{count}} parça embed edildi",
     "errors": "{{count}} hata",
     "modelNotInstalled": "Model Yüklenmedi",

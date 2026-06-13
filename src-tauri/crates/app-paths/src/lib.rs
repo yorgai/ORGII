@@ -180,10 +180,11 @@ pub fn merkle_root() -> PathBuf {
     orgii_root().join("merkle")
 }
 
-/// Tantivy full-text search index: `~/.orgii/code_index/`.
-pub fn tantivy_index_dir() -> PathBuf {
-    orgii_root().join("code_index")
+/// Code Map workspace graph indexes: `~/.orgii/code-map/`.
+pub fn code_map_root() -> PathBuf {
+    orgii_root().join("code-map")
 }
+
 
 /// Semantic-search USearch index: `~/.orgii/semantic_index/`.
 pub fn semantic_index_dir() -> PathBuf {

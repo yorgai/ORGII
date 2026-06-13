@@ -16,6 +16,10 @@ import Markdown from "@src/components/MarkDown";
 import Message from "@src/components/Message";
 import { getToolIcon } from "@src/config/toolIcons";
 import {
+  beginOptimisticTurn,
+  failOptimisticTurn,
+} from "@src/engines/SessionCore/control/optimisticTurnStatus";
+import {
   type PlanApprovalStatus,
   type PlanSurface,
   type PlanSurfaceState,
@@ -23,10 +27,7 @@ import {
 } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { useMountedCleanup } from "@src/hooks/lifecycle/useMounted";
 import { currentRepoAtom } from "@src/store/repo";
-import {
-  sessionRuntimeStatusAtom,
-  setSessionRuntimeStatusAtom,
-} from "@src/store/session/cliSessionStatusAtom";
+import { sessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultModelSelectionAtom } from "@src/store/session/creatorDefaultModelAtom";
 import {
   clearPendingPlanApproval,
@@ -46,6 +47,9 @@ import {
 import { useBlockHeader } from "../useBlockLocate";
 
 const PLAN_ICON_SIZE = 14;
+// Generous bound: approval does plan-file IO + may register a session before
+// returning; normal completion is <1s, the timeout only guards a wedged IPC.
+const PLAN_APPROVAL_RPC_TIMEOUT_MS = 30_000;
 
 function deriveDisplayTitle(title: string, content: string): string {
   const trimmedTitle = title.trim();
@@ -123,7 +127,6 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
     const sessionId = sessionIdProp ?? activeSessionId;
     const approvalMap = useAtomValue(pendingPlanApprovalsAtom);
     const setPendingPlanApprovals = useSetAtom(pendingPlanApprovalsAtom);
-    const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
     const runtimeStatus = useAtomValue(sessionRuntimeStatusAtom);
     // Read the plan's *own* session row for model+key — approving a
     // plan should not silently use whatever model the user happens to
@@ -233,20 +236,39 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
             currentRepo?.path ??
             currentRepo?.fs_uri ??
             undefined;
-          await respondPlanApproval(sessionId, choice, edited, {
-            model,
-            accountId,
-            workspacePath,
-          });
+          // Build kicks off a synthetic turn on the backend without going
+          // through useMessageDispatch — optimistically flip to running
+          // BEFORE the RPC await so the planning indicator appears
+          // immediately (P3), not one round-trip later. Skip stays idle.
+          // The setter's session gate drops the write for background plans.
+          if (choice !== "reject") {
+            beginOptimisticTurn(sessionId);
+          }
+          try {
+            // Timeout fallback: if the approval RPC hangs (backend wedged,
+            // IPC drop), roll back the optimistic running state instead of
+            // leaving the session stuck in a running state with no terminal
+            // event ever arriving.
+            await Promise.race([
+              respondPlanApproval(sessionId, choice, edited, {
+                model,
+                accountId,
+                workspacePath,
+              }),
+              new Promise<never>((_, reject) => {
+                window.setTimeout(
+                  () => reject(new Error(t("planDoc.buildFailed"))),
+                  PLAN_APPROVAL_RPC_TIMEOUT_MS
+                );
+              }),
+            ]);
+          } catch (rpcError) {
+            if (choice !== "reject") failOptimisticTurn(sessionId);
+            throw rpcError;
+          }
           setPendingPlanApprovals((prev) =>
             clearPendingPlanApproval(prev, sessionId, cardRevisionId)
           );
-          // Build kicks off a synthetic turn on the backend without going
-          // through useMessageDispatch — optimistically flip to running so
-          // the planning indicator appears immediately (P3). Skip stays idle.
-          if (choice !== "reject" && sessionId === activeSessionId) {
-            setSessionRuntimeStatus({ status: "running", source: "dispatch" });
-          }
           if (mountedRef.current) setIsEditing(false);
         } catch (err) {
           Message.error(
@@ -264,8 +286,6 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
         creatorDefaultSelection,
         currentRepo,
         setPendingPlanApprovals,
-        setSessionRuntimeStatus,
-        activeSessionId,
         cardRevisionId,
         t,
         mountedRef,

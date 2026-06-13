@@ -55,7 +55,7 @@ export function createSessionSeederHelpers(store: E2EStore) {
         | "waiting_for_user"
         | "waiting_for_funds";
       stationMode?: "my-station" | "agent-station";
-      selectedApp?: "CODE_EDITOR";
+      selectedApp?: "CODE_EDITOR" | "CHANNELS";
     }
   ): Promise<Result<{ eventCount: number; chatEventCount: number }>> => {
     try {
@@ -84,6 +84,9 @@ export function createSessionSeederHelpers(store: E2EStore) {
       if (options?.selectedApp === "CODE_EDITOR") {
         store.set(simulatorSelectedAppAtom, AppType.CODE_EDITOR);
         store.set(simulatorFollowAppLockAtom, AppType.CODE_EDITOR);
+      } else if (options?.selectedApp === "CHANNELS") {
+        store.set(simulatorSelectedAppAtom, AppType.CHANNELS);
+        store.set(simulatorFollowAppLockAtom, AppType.CHANNELS);
       } else {
         store.set(simulatorSelectedAppAtom, null);
         store.set(simulatorFollowAppLockAtom, null);
@@ -424,6 +427,17 @@ export function createSessionSeederHelpers(store: E2EStore) {
     }
   };
 
+  const listRunningSubagentJobsWire = async (): Promise<
+    Result<{ jobs: Json[] }>
+  > => {
+    try {
+      const jobs = await invoke<Json[]>("agent_list_running_subagent_jobs");
+      return { ok: true, jobs };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   /**
    * Wire-path variant for the subagent MONITOR (clip model): seeds a child
    * `agent_sessions` row via the debug-only Tauri command
@@ -474,6 +488,38 @@ export function createSessionSeederHelpers(store: E2EStore) {
     }
   };
 
+  /**
+   * Wire-path pending-plan seeder for the plan-lifecycle specs: drives the
+   * debug-only Tauri command `debug_seed_pending_plan`, which calls the
+   * PRODUCTION `PlanApprovalManager::mark_ready` — DB row, transcript event
+   * and `agent:plan_ready_for_approval` broadcast are all live-shaped.
+   */
+  const debugSeedPendingPlanWire = async (input: {
+    sessionId: string;
+    planPath: string;
+    planTitle: string;
+    planContent: string;
+  }): Promise<Result<{ sessionId: string }>> => {
+    try {
+      if (!input.sessionId || !input.planPath) {
+        return {
+          ok: false,
+          error:
+            "debugSeedPendingPlanWire: `sessionId` and `planPath` required",
+        };
+      }
+      await invoke("debug_seed_pending_plan", {
+        sessionId: input.sessionId,
+        planPath: input.planPath,
+        planTitle: input.planTitle,
+        planContent: input.planContent,
+      });
+      return { ok: true, sessionId: input.sessionId };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   return {
     seedChatEvents,
     seedSidebarSession,
@@ -483,7 +529,9 @@ export function createSessionSeederHelpers(store: E2EStore) {
     seedSubagentJob,
     debugSeedSubagentJobWire,
     killSubagentJobWire,
+    listRunningSubagentJobsWire,
     debugSeedChildSessionWire,
+    debugSeedPendingPlanWire,
     deleteSessionWire,
   };
 }

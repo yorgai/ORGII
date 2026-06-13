@@ -138,9 +138,15 @@ export function useRepoSetup(): UseRepoSetupReturn {
         const syntheticEvent = createSyntheticUserEvent(sessionId, prompt);
         setPendingSyntheticEvent(syntheticEvent);
         dispatchLoadSession({ sessionId, events: [syntheticEvent] });
-        setSessionRuntimeStatus({ status: "running", source: "repo-setup" });
 
         openSession(sessionId, sessionName, context.repoPath);
+        // After openSession: the session is now the visible one, so the
+        // session-gated status write is accepted.
+        setSessionRuntimeStatus({
+          sessionId,
+          status: "running",
+          source: "repo-setup",
+        });
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         logger.error(`Failed to launch setup for ${context.repoName}: ${msg}`);

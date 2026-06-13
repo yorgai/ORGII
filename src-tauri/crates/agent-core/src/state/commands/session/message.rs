@@ -126,6 +126,18 @@ pub(crate) async fn send_message_impl(
     // ── 1. Resolve session identity (unified — single code path) ─────────
     let identity = resolve_session_identity(state, &session_id, overrides).await?;
 
+    // Goal loop: a real user submission becomes (or replaces) the
+    // session's standing goal and resets the continuation counter.
+    // `Queue`-sourced messages (goal continuations, queued flushes) and
+    // resumes never reset it — otherwise the loop would feed itself.
+    if matches!(
+        source,
+        TurnIntentBridgeSource::UserSubmit | TurnIntentBridgeSource::ForceSend
+    ) && !is_resume
+    {
+        crate::session::goal_loop::on_user_message(&session_id, &content);
+    }
+
     let effective_model = identity.model;
     let effective_account_id = identity.account_id;
     let effective_workspace_root = identity.workspace_root;
@@ -289,30 +301,6 @@ pub(crate) async fn send_message_impl(
             session
                 .last_non_plan_mode_cache
                 .set(&session_id, current_mode);
-        }
-    }
-
-    // Chokepoint A: a user-initiated Build-mode turn while a plan is still
-    // pending means the user bypassed the Build button ("just do it" typed
-    // into the composer). Resolve the pending plan as Abandoned so the DB
-    // row, transcript card, and FE pin all converge before the turn runs.
-    //
-    // The plan-approval Build turn cannot trip this: `agent_plan_approval_response`
-    // awaits `resolve_pending(Approved)` BEFORE re-entering `send_message_impl`,
-    // so by the time the synthetic message arrives nothing is pending.
-    // Resume/wake turns (`is_resume` or empty content) are excluded — they are
-    // not a user decision about the plan.
-    if matches!(agent_mode, crate::session::AgentExecMode::Build)
-        && !is_resume
-        && !content.trim().is_empty()
-    {
-        if let Some(ref manager) = session_handle.plan_approval_manager {
-            crate::interaction::plan_approval::resolve_pending(
-                &session_id,
-                crate::interaction::plan_approval::PlanResolution::Abandoned,
-                Some(manager),
-            )
-            .await;
         }
     }
 

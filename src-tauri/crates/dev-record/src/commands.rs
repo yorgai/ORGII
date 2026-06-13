@@ -25,6 +25,13 @@ use super::types::{
 };
 use super::windsurf::history as windsurf_history;
 
+fn imported_recent_paths() -> Result<Vec<super::imported_history::ImportedHistoryRecentPath>, String>
+{
+    let mut paths = codex_app::list_codex_app_recent_paths(0)?;
+    paths.extend(claude_code_history::list_claude_code_recent_paths(0)?);
+    Ok(super::imported_history::recent_paths_from_paths(&paths))
+}
+
 #[tauri::command]
 pub async fn dev_record_get_summary(
     start_date: String,
@@ -204,6 +211,36 @@ pub async fn codex_app_list_sessions(
 }
 
 #[tauri::command]
+pub async fn codex_app_recent_paths(
+    limit: Option<usize>,
+) -> Result<Vec<codex_app::CodexAppRecentPath>, String> {
+    let limit = limit.unwrap_or(20);
+    tokio::task::spawn_blocking(move || codex_app::list_codex_app_recent_paths(limit))
+        .await
+        .map_err(|err| format!("Task join error: {}", err))?
+}
+
+#[tauri::command]
+pub async fn external_history_auto_import_recent_paths(
+    limit: Option<usize>,
+) -> Result<Vec<git::repos::repo_db::RepoRecord>, String> {
+    let limit = super::imported_history::effective_limit(limit.unwrap_or(20));
+    let paths = tokio::task::spawn_blocking(imported_recent_paths)
+        .await
+        .map_err(|err| format!("Task join error: {}", err))??;
+
+    let mut imported = Vec::new();
+    for recent_path in paths.into_iter().take(limit) {
+        if !Path::new(&recent_path.path).is_dir() {
+            continue;
+        }
+        imported.push(git::repos::repo_service::import_auto(recent_path.path, None).await?);
+    }
+
+    Ok(imported)
+}
+
+#[tauri::command]
 pub async fn claude_code_history_chunks(
     session_id: String,
 ) -> Result<Vec<core_types::activity::ActivityChunk>, String> {
@@ -226,6 +263,16 @@ pub async fn claude_code_history_list_sessions(
     })
     .await
     .map_err(|err| format!("Task join error: {}", err))?
+}
+
+#[tauri::command]
+pub async fn claude_code_recent_paths(
+    limit: Option<usize>,
+) -> Result<Vec<claude_code_history::ClaudeCodeRecentPath>, String> {
+    let limit = limit.unwrap_or(20);
+    tokio::task::spawn_blocking(move || claude_code_history::list_claude_code_recent_paths(limit))
+        .await
+        .map_err(|err| format!("Task join error: {}", err))?
 }
 
 #[tauri::command]

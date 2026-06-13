@@ -87,7 +87,7 @@ function convertToToolOperation(
   event: SessionEvent,
   isCurrent: boolean
 ): ToolOperationEntry {
-  const status = getEventStatus(event);
+  const status = getEventStatus(event) || event.displayStatus;
 
   return {
     toolName: event.functionName,

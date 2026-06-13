@@ -202,7 +202,8 @@ export function convertToExploreOperation(
   const args = asRecord(event.args) ?? {};
   const result = asRecord(event.result) ?? {};
 
-  const statusString = getEventStatus(event) as EventStatus;
+  const statusString = getEventStatus(event) as EventStatus | undefined;
+  const effectiveStatus = statusString || event.displayStatus;
   const action =
     firstStringFromSources(nestedArgSources(args, result), ["action"]) ||
     undefined;
@@ -269,8 +270,8 @@ export function convertToExploreOperation(
     event: toSlimExploreEvent(event),
     eventId: event.id,
     isCurrent,
-    isLoading: statusString === "running" || statusString === "pending",
-    isFailed: statusString === "failed",
+    isLoading: effectiveStatus === "running" || effectiveStatus === "pending",
+    isFailed: effectiveStatus === "failed",
     ...(exploreType === "list_dir"
       ? {
           listDirDisplayTruncated,

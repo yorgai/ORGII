@@ -577,6 +577,24 @@ describe("processChatItems", () => {
 
       expect(items.length).toBe(1);
     });
+
+    it("keeps running shell commands before result arrives", () => {
+      const runningShellEvent = makeSessionEvent({
+        action_type: "tool_call",
+        function: "run_shell",
+        args: { command: "npm run dev" },
+        result: undefined,
+        displayStatus: "running",
+      });
+
+      const { items } = processChatItems([runningShellEvent], {
+        preFilterEmptyActivities: true,
+        groupActionSummaries: false,
+      });
+
+      expect(items.length).toBe(1);
+      expect(items[0].event?.functionName).toBe("run_shell");
+    });
   });
 
   describe("stats tracking", () => {

@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "Mon statut actuel",
+    "tabs": {
+      "presence": "Présence",
+      "profile": "Mes profils"
+    },
+    "presence": {
+      "instructionForAgent": "Instruction pour l'Agent"
+    },
     "profile": {
-      "title": "À propos de moi",
+      "title": "Mes profils",
       "techSavvy": "Niveau technique",
       "techSavvyDescription": "Aide l'agent à calibrer ses explications et ses hypothèses",
       "techSavvyPlaceholder": "Sélectionner un niveau…",
@@ -597,8 +604,8 @@
     "modelsTitle": "Modèles",
     "compactionTitle": "Compaction",
     "autoTimeoutTitle": "Délai d'attente automatique",
-    "questionAutoSkipTimeoutByStatus": "Passer automatiquement les questions — {{status}}",
-    "questionAutoSkipTimeoutByStatusDesc": "Passer automatiquement les questions de l'Agent après le délai pour ce statut (0 = désactivé)",
+    "questionAutoSkipTimeoutByStatus": "Passer automatiquement les questions",
+    "questionAutoSkipTimeoutByStatusDesc": "Passer automatiquement les questions de l'Agent après ce délai (0 = désactivé)",
     "resourceTabs": {
       "tools": "Outils",
       "mcp": "MCP",
@@ -989,7 +996,6 @@
     "storagePath": "Chemin du stockage",
     "storageUsage": "Utilisation du stockage",
     "storageUsageTotal": "Total : {{size}}",
-    "searchIndex": "Index de recherche",
     "embeddingIndex": "Index d'embedding",
     "files": "fichiers",
     "chunks": "fragments",
@@ -1006,10 +1012,8 @@
     "embedded": "Embedded",
     "index": "Index",
     "embed": "Embed",
-    "indexNow": "Indexer maintenant",
     "reindex": "Reindex",
     "reembed": "Re-embed",
-    "deleteIndex": "Supprimer l'Index",
     "deleteEmbedding": "Supprimer l'Embedding",
     "abort": "Annuler",
     "removeAllIndexes": "Supprimer tous les index",
@@ -1024,7 +1028,6 @@
     "embeddingFailed": "Embedding échoué",
     "embeddingCancelledAt": "Embedding annulé à {{current}}/{{total}} fichiers",
     "embeddingFiles": "Embedding {{current}}/{{total}} fichiers ({{chunks}} chunks)",
-    "filesIndexed": "{{count}} fichiers indexés",
     "chunksEmbedded": "{{count}} chunks embeddés",
     "errors": "{{count}} erreurs",
     "modelNotInstalled": "Modèle non installé",

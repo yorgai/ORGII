@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import Input from "@src/components/Input";
+import NumberInput from "@src/components/NumberInput";
 import Select from "@src/components/Select";
 import Textarea from "@src/components/Textarea";
 import {
@@ -42,8 +43,12 @@ import {
   userCustomRolesAtom,
 } from "@src/store/user/userRolesAtom";
 import {
+  BUILT_IN_PRESENCE_POLICY,
+  type BuiltInPresenceMode,
   type CustomRoleDefinition,
   type CustomRoleIconId,
+  PRESENCE_STANCE,
+  type PresenceStance,
   USER_PRESENCE_MODE,
   buildCustomRoleMode,
 } from "@src/types/userPresence";
@@ -172,6 +177,182 @@ const MyRolePage: React.FC = () => {
     []
   );
 
+  const stanceOptions = useMemo(
+    () => [
+      {
+        value: PRESENCE_STANCE.INTERACTIVE,
+        label: t("myRole.stanceInteractive", {
+          defaultValue: "Interactive — ask me freely",
+        }),
+      },
+      {
+        value: PRESENCE_STANCE.DEFER_AND_BATCH,
+        label: t("myRole.stanceDeferAndBatch", {
+          defaultValue: "Defer & batch — work first, ask later",
+        }),
+      },
+      {
+        value: PRESENCE_STANCE.AUTONOMOUS,
+        label: t("myRole.stanceAutonomous", {
+          defaultValue: "Autonomous — never wait for me",
+        }),
+      },
+    ],
+    [t]
+  );
+
+  // Per-mode behavior policy editor shared by every role row: stance
+  // selector + three 0=disabled numbers. The agent both reads the
+  // guidance (prompt) and enforces the numbers (runtime).
+  const renderPolicyEditor = useCallback(
+    (
+      values: {
+        stance: PresenceStance;
+        questionAutoResolveSecs: number;
+        planAutoApproveSecs: number;
+        goalMaxTurns: number;
+      },
+      onChange: (patch: {
+        stance?: PresenceStance;
+        questionAutoResolveSecs?: number;
+        planAutoApproveSecs?: number;
+        goalMaxTurns?: number;
+      }) => void,
+      options?: { lockStance?: boolean }
+    ) => (
+      <>
+        <SectionRow
+          label={t("myRole.stanceLabel", { defaultValue: "Behavior stance" })}
+          description={t("myRole.stanceDesc", {
+            defaultValue:
+              "How the agent treats blocking decisions while this role is active.",
+          })}
+        >
+          <Select
+            value={values.stance}
+            onChange={(value) =>
+              onChange({ stance: String(value) as PresenceStance })
+            }
+            options={stanceOptions}
+            style={SECTION_CONTROL_STYLE}
+            disabled={options?.lockStance}
+          />
+        </SectionRow>
+        <SectionRow
+          label={t("myRole.questionAutoSkipLabel", {
+            defaultValue: "Question auto-skip",
+          })}
+          description={t("myRole.questionAutoSkipDesc", {
+            defaultValue:
+              "Auto-skip pending agent questions after N seconds (0 = wait for me).",
+          })}
+        >
+          <NumberInput
+            value={values.questionAutoResolveSecs}
+            onChange={(value) =>
+              value !== undefined &&
+              onChange({ questionAutoResolveSecs: value })
+            }
+            min={0}
+            max={300}
+            step={5}
+            controlsPosition="sides"
+            style={SECTION_CONTROL_STYLE}
+          />
+        </SectionRow>
+        <SectionRow
+          label={t("myRole.planAutoApproveLabel", {
+            defaultValue: "Plan auto-approve",
+          })}
+          description={t("myRole.planAutoApproveDesc", {
+            defaultValue:
+              "Auto-approve pending plans after N seconds (0 = wait for me).",
+          })}
+        >
+          <NumberInput
+            value={values.planAutoApproveSecs}
+            onChange={(value) =>
+              value !== undefined && onChange({ planAutoApproveSecs: value })
+            }
+            min={0}
+            max={3600}
+            step={10}
+            controlsPosition="sides"
+            style={SECTION_CONTROL_STYLE}
+          />
+        </SectionRow>
+        <SectionRow
+          label={t("myRole.goalMaxTurnsLabel", {
+            defaultValue: "Goal continuation budget",
+          })}
+          description={t("myRole.goalMaxTurnsDesc", {
+            defaultValue:
+              "Keep working toward my last request for up to N extra turns after the agent would normally stop (0 = off).",
+          })}
+        >
+          <NumberInput
+            value={values.goalMaxTurns}
+            onChange={(value) =>
+              value !== undefined && onChange({ goalMaxTurns: value })
+            }
+            min={0}
+            max={100}
+            step={1}
+            controlsPosition="sides"
+            style={SECTION_CONTROL_STYLE}
+          />
+        </SectionRow>
+      </>
+    ),
+    [t, stanceOptions]
+  );
+
+  const questionByPresence = settings[
+    "agent.sde.questionAutoSkipTimeoutByPresence"
+  ] as Record<BuiltInPresenceMode, number>;
+  const planByPresence = settings[
+    "agent.sde.planAutoApproveTimeoutByPresence"
+  ] as Record<BuiltInPresenceMode, number>;
+  const goalByPresence = settings["agent.sde.goalMaxTurnsByPresence"] as Record<
+    BuiltInPresenceMode,
+    number
+  >;
+
+  const handleBuiltInPolicyChange = useCallback(
+    (mode: BuiltInPresenceMode) =>
+      (patch: {
+        stance?: PresenceStance;
+        questionAutoResolveSecs?: number;
+        planAutoApproveSecs?: number;
+        goalMaxTurns?: number;
+      }) => {
+        // Built-in stances are fixed (they define the mode); only the
+        // numbers are editable.
+        if (patch.questionAutoResolveSecs !== undefined) {
+          updateSetting({
+            key: "agent.sde.questionAutoSkipTimeoutByPresence",
+            value: {
+              ...questionByPresence,
+              [mode]: patch.questionAutoResolveSecs,
+            },
+          });
+        }
+        if (patch.planAutoApproveSecs !== undefined) {
+          updateSetting({
+            key: "agent.sde.planAutoApproveTimeoutByPresence",
+            value: { ...planByPresence, [mode]: patch.planAutoApproveSecs },
+          });
+        }
+        if (patch.goalMaxTurns !== undefined) {
+          updateSetting({
+            key: "agent.sde.goalMaxTurnsByPresence",
+            value: { ...goalByPresence, [mode]: patch.goalMaxTurns },
+          });
+        }
+      },
+    [updateSetting, questionByPresence, planByPresence, goalByPresence]
+  );
+
   return (
     <div className="settings-page absolute inset-0 overflow-hidden rounded-page">
       <div className="custom-scrollbar h-full overflow-y-auto px-6 pb-8 pt-2">
@@ -194,28 +375,48 @@ const MyRolePage: React.FC = () => {
                 (settings[role.settingsKey] as string | undefined) ?? "";
               const isActive = role.mode === activeMode;
               return (
-                <SectionRow
-                  key={role.mode}
-                  layout="vertical"
-                  label={
-                    <span className="inline-flex items-center gap-2">
-                      <RoleIcon size={14} className={role.colorClass} />
-                      <span>{t(role.labelKey)}</span>
-                      {isActive && (
-                        <span className="rounded-full bg-primary-1 px-2 py-[1px] text-[10px] font-medium text-primary-6">
-                          {t("myRole.activeBadge", { defaultValue: "Active" })}
-                        </span>
-                      )}
-                    </span>
-                  }
-                >
-                  <Textarea
-                    value={value}
-                    onChange={handleBuiltInChange(role.settingsKey)}
-                    rows={3}
-                    placeholder={guidancePlaceholder}
-                  />
-                </SectionRow>
+                <React.Fragment key={role.mode}>
+                  <SectionRow
+                    layout="vertical"
+                    label={
+                      <span className="inline-flex items-center gap-2">
+                        <RoleIcon size={14} className={role.colorClass} />
+                        <span>{t(role.labelKey)}</span>
+                        {isActive && (
+                          <span className="rounded-full bg-primary-1 px-2 py-[1px] text-[10px] font-medium text-primary-6">
+                            {t("myRole.activeBadge", {
+                              defaultValue: "Active",
+                            })}
+                          </span>
+                        )}
+                      </span>
+                    }
+                  >
+                    <Textarea
+                      value={value}
+                      onChange={handleBuiltInChange(role.settingsKey)}
+                      rows={3}
+                      placeholder={guidancePlaceholder}
+                    />
+                  </SectionRow>
+                  {renderPolicyEditor(
+                    {
+                      stance: BUILT_IN_PRESENCE_POLICY[role.mode].stance,
+                      questionAutoResolveSecs:
+                        questionByPresence[role.mode] ??
+                        BUILT_IN_PRESENCE_POLICY[role.mode]
+                          .questionAutoResolveSecs,
+                      planAutoApproveSecs:
+                        planByPresence[role.mode] ??
+                        BUILT_IN_PRESENCE_POLICY[role.mode].planAutoApproveSecs,
+                      goalMaxTurns:
+                        goalByPresence[role.mode] ??
+                        BUILT_IN_PRESENCE_POLICY[role.mode].goalMaxTurns,
+                    },
+                    handleBuiltInPolicyChange(role.mode),
+                    { lockStance: true }
+                  )}
+                </React.Fragment>
               );
             })}
           </SectionContainer>
@@ -310,6 +511,16 @@ const MyRolePage: React.FC = () => {
                         placeholder={guidancePlaceholder}
                       />
                     </SectionRow>
+                    {renderPolicyEditor(
+                      {
+                        stance: role.stance ?? PRESENCE_STANCE.INTERACTIVE,
+                        questionAutoResolveSecs:
+                          role.questionAutoResolveSecs ?? 0,
+                        planAutoApproveSecs: role.planAutoApproveSecs ?? 0,
+                        goalMaxTurns: role.goalMaxTurns ?? 0,
+                      },
+                      (patch) => handleRoleChange(role.id, patch)
+                    )}
                   </div>
                 );
               })

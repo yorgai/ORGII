@@ -164,20 +164,20 @@ const RepoActionButtons: React.FC<RepoActionButtonsProps> = ({
     const confirmed = await confirmDestructiveAction({
       title: t("common:confirmation.removeTitle", { name: repoLabel }),
       message: t("common:confirmation.removeMessage"),
-      okLabel: t("common:actions.remove"),
+      okLabel: t("common:actions.removeFromOrgii"),
       cancelLabel: t("common:actions.cancel"),
     });
     if (!confirmed) return;
     try {
       const response = await repoApi.deleteRepo(repo.id);
       if (response?.status !== 0) {
-        throw new Error("Failed to remove repo");
+        throw new Error("Failed to remove linkage to ORGII");
       }
       onClear?.();
       await forceRefreshRepos();
       Message.success(
         t("navigation:launchpad.actions.removeSuccess", {
-          defaultValue: "Workspace removed",
+          defaultValue: "Linkage to ORGII removed",
         })
       );
     } catch (error) {
@@ -186,7 +186,7 @@ const RepoActionButtons: React.FC<RepoActionButtonsProps> = ({
         error instanceof Error
           ? error.message
           : t("navigation:launchpad.actions.removeFailed", {
-              defaultValue: "Failed to remove workspace",
+              defaultValue: "Failed to remove linkage to ORGII",
             })
       );
     }
@@ -292,7 +292,7 @@ const RepoActionButtons: React.FC<RepoActionButtonsProps> = ({
           icon={<Trash2 size={14} />}
           onClick={handleRemove}
           title={t("navigation:launchpad.actions.remove", {
-            defaultValue: "Remove",
+            defaultValue: "Remove from ORGII",
           })}
         />
       ) : null}

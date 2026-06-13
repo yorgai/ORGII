@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "現在のステータス",
+    "tabs": {
+      "presence": "プレゼンス",
+      "profile": "マイプロフィール"
+    },
+    "presence": {
+      "instructionForAgent": "Agent への指示"
+    },
     "profile": {
-      "title": "自己紹介",
+      "title": "マイプロフィール",
       "techSavvy": "技術習熟度",
       "techSavvyDescription": "Agent が説明の詳しさや前提の置き方を調整する手がかりになります",
       "techSavvyPlaceholder": "レベルを選択…",
@@ -597,8 +604,8 @@
     "modelsTitle": "モデル",
     "compactionTitle": "圧縮",
     "autoTimeoutTitle": "自動タイムアウト",
-    "questionAutoSkipTimeoutByStatus": "{{status}} の質問自動スキップ",
-    "questionAutoSkipTimeoutByStatusDesc": "このステータスでタイムアウト後に Agent の質問を自動スキップ (0 = 無効)",
+    "questionAutoSkipTimeoutByStatus": "質問を自動スキップ",
+    "questionAutoSkipTimeoutByStatusDesc": "このタイムアウト後に Agent の質問を自動スキップ (0 = 無効)",
     "resourceTabs": {
       "tools": "ツール",
       "mcp": "MCP",
@@ -989,7 +996,6 @@
     "storagePath": "ストレージパス",
     "storageUsage": "ストレージ使用量",
     "storageUsageTotal": "合計: {{size}}",
-    "searchIndex": "Search Index",
     "embeddingIndex": "Embedding Index",
     "files": "ファイル",
     "chunks": "チャンク",
@@ -1006,10 +1012,8 @@
     "embedded": "Embedded",
     "index": "Index",
     "embed": "Embed",
-    "indexNow": "今すぐ Index",
     "reindex": "再 Index",
     "reembed": "再 Embed",
-    "deleteIndex": "Index を削除",
     "deleteEmbedding": "Embedding を削除",
     "abort": "キャンセル",
     "removeAllIndexes": "すべての index を削除",
@@ -1024,7 +1028,6 @@
     "embeddingFailed": "Embedding 失敗",
     "embeddingCancelledAt": "Embedding キャンセル {{current}}/{{total}} 個のファイル",
     "embeddingFiles": "Embedding {{current}}/{{total}} 個のファイル ({{chunks}} 個のチャンク)",
-    "filesIndexed": "{{count}} 個のファイル index 済み",
     "chunksEmbedded": "{{count}} 個のチャンク Embedding 済み",
     "errors": "{{count}} 件のエラー",
     "modelNotInstalled": "モデル未インストール",

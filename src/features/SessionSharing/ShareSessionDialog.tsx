@@ -110,6 +110,7 @@ export const ShareSessionDialog: React.FC<ShareSessionDialogProps> = ({
           <Input
             value={pin}
             onChange={setPin}
+            placeholder={t("sharing.pinPlaceholder")}
             inputMode="numeric"
             autoFocus
             disabled={Boolean(publisher)}
@@ -134,6 +135,7 @@ export const ShareSessionDialog: React.FC<ShareSessionDialogProps> = ({
                 rows={3}
                 value={answerCode}
                 onChange={setAnswerCode}
+                placeholder={t("sharing.answerCodePlaceholder")}
               />
             </label>
           </div>

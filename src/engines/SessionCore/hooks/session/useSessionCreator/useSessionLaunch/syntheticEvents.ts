@@ -11,6 +11,7 @@ export interface InjectSyntheticUserEventOptions {
   isContentEmpty: boolean;
   sessionId: string;
   setLastUserMessage: (message: {
+    sessionId: string;
     displayContent: string;
     imageDataUrls: string[] | undefined;
   }) => void;
@@ -43,6 +44,7 @@ export function injectSyntheticUserEventIfNeeded(
   setPendingSyntheticEvent(syntheticEvent);
   dispatchLoadSession({ sessionId, events: [syntheticEvent] });
   setLastUserMessage({
+    sessionId,
     displayContent: userInput,
     imageDataUrls: hasImages ? imageDataUrls : undefined,
   });

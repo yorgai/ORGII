@@ -330,14 +330,28 @@ async fn execute_runs_registered_tool() {
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(MockTool::new("my_tool")));
 
-    let result = registry.execute("my_tool", json!({}), &crate::tools::call_context::CallContext::default()).await.unwrap();
+    let result = registry
+        .execute(
+            "my_tool",
+            json!({}),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await
+        .unwrap();
     assert_eq!(result.text, "executed:my_tool");
 }
 
 #[tokio::test]
 async fn execute_returns_error_for_missing_tool() {
     let registry = ToolRegistry::new();
-    let err = registry.execute("missing", json!({}), &crate::tools::call_context::CallContext::default()).await.unwrap_err();
+    let err = registry
+        .execute(
+            "missing",
+            json!({}),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await
+        .unwrap_err();
     assert!(err.contains("not found"));
 }
 
@@ -348,7 +362,14 @@ async fn execute_fallback_tool() {
     let inner_arc = Arc::new(inner);
 
     let outer = ToolRegistry::with_fallback(inner_arc);
-    let result = outer.execute("fb_tool", json!({}), &crate::tools::call_context::CallContext::default()).await.unwrap();
+    let result = outer
+        .execute(
+            "fb_tool",
+            json!({}),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await
+        .unwrap();
     assert_eq!(result.text, "executed:fb_tool");
 }
 
@@ -495,11 +516,11 @@ fn get_definitions_shadows_by_name_across_fallback_chain() {
 }
 
 // ============================================
-// Deferred Tool Search
+// Tool Search (tokenized, all tools)
 // ============================================
 
 #[test]
-fn search_deferred_by_name() {
+fn search_tools_by_name() {
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(MockTool::new("read_file")));
     registry.register(Box::new(MockTool::on_demand(
@@ -508,14 +529,15 @@ fn search_deferred_by_name() {
     )));
     registry.register(Box::new(MockTool::on_demand("db_run", "Run SQL queries")));
 
-    let results = registry.search_deferred("db");
+    let results = registry.search_tools("db", 10);
     assert_eq!(results.len(), 2);
     assert_eq!(results[0].0, "db_explore");
     assert_eq!(results[1].0, "db_run");
+    assert!(results[0].2, "on-demand tool must be flagged deferred");
 }
 
 #[test]
-fn search_deferred_by_description() {
+fn search_tools_by_description() {
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(MockTool::on_demand(
         "canvas_draw",
@@ -526,25 +548,25 @@ fn search_deferred_by_description() {
         "Scrape web page content",
     )));
 
-    let results = registry.search_deferred("canvas");
+    let results = registry.search_tools("canvas", 10);
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].0, "canvas_draw");
 }
 
 #[test]
-fn search_deferred_case_insensitive() {
+fn search_tools_case_insensitive() {
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(MockTool::on_demand(
         "DataViz",
         "Visualize data charts",
     )));
 
-    let results = registry.search_deferred("dataviz");
+    let results = registry.search_tools("dataviz", 10);
     assert_eq!(results.len(), 1);
 }
 
 #[test]
-fn search_deferred_ignores_always_tools() {
+fn search_tools_includes_always_tools_marked_loaded() {
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(MockTool::new("read_file")));
     registry.register(Box::new(MockTool::on_demand(
@@ -552,21 +574,76 @@ fn search_deferred_ignores_always_tools() {
         "Show file statistics",
     )));
 
-    let results = registry.search_deferred("file");
-    assert_eq!(results.len(), 1);
-    assert_eq!(results[0].0, "file_stats");
+    let results = registry.search_tools("file", 10);
+    assert_eq!(results.len(), 2, "always tools must appear too");
+    let read_file = results.iter().find(|r| r.0 == "read_file").unwrap();
+    assert!(!read_file.2, "always tool must NOT be flagged deferred");
+    let file_stats = results.iter().find(|r| r.0 == "file_stats").unwrap();
+    assert!(file_stats.2);
 }
 
 #[test]
-fn search_deferred_no_matches() {
+fn search_tools_multiword_natural_language_query() {
+    // The regression that motivated the rewrite: whole-phrase substring
+    // matching returned zero results for natural queries like
+    // "shell command execute grep".
+    let mut registry = ToolRegistry::new();
+    registry.register(Box::new(MockTool::on_demand(
+        "run_shell",
+        "Execute a shell command or kill a backgrounded process.",
+    )));
+    registry.register(Box::new(MockTool::on_demand(
+        "web_scrape",
+        "Scrape web page content",
+    )));
+
+    let results = registry.search_tools("shell command execute grep", 10);
+    assert!(
+        results.iter().any(|r| r.0 == "run_shell"),
+        "tokenized matching must find run_shell for a multiword query"
+    );
+}
+
+#[test]
+fn search_tools_ranks_name_hits_above_description_hits() {
+    let mut registry = ToolRegistry::new();
+    registry.register(Box::new(MockTool::on_demand(
+        "other_tool",
+        "A tool about shell things",
+    )));
+    registry.register(Box::new(MockTool::on_demand("run_shell", "Run programs")));
+
+    let results = registry.search_tools("shell", 10);
+    assert_eq!(
+        results[0].0, "run_shell",
+        "name hit must outrank description hit"
+    );
+}
+
+#[test]
+fn search_tools_no_matches() {
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(MockTool::on_demand(
         "db_explore",
         "Database explorer",
     )));
 
-    let results = registry.search_deferred("nonexistent");
+    let results = registry.search_tools("nonexistent", 10);
     assert!(results.is_empty());
+}
+
+#[test]
+fn search_tools_respects_limit() {
+    let mut registry = ToolRegistry::new();
+    for i in 0..20 {
+        registry.register(Box::new(MockTool::on_demand(
+            &format!("db_tool_{i}"),
+            "Database tool",
+        )));
+    }
+
+    let results = registry.search_tools("db", 5);
+    assert_eq!(results.len(), 5);
 }
 
 #[test]
@@ -620,7 +697,10 @@ async fn tool_search_finds_deferred_tools() {
 
     let search_tool = crate::tools::impls::meta::tool_search::ToolSearchTool::new(registry_arc);
     let result = search_tool
-        .execute(json!({"query": "database"}), &crate::tools::call_context::CallContext::default())
+        .execute(
+            json!({"query": "database"}),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -637,26 +717,37 @@ async fn tool_search_empty_query_lists_all() {
     let registry_arc = Arc::new(registry);
 
     let search_tool = crate::tools::impls::meta::tool_search::ToolSearchTool::new(registry_arc);
-    let result = search_tool.execute(json!({"query": ""}), &crate::tools::call_context::CallContext::default()).await.unwrap();
+    let result = search_tool
+        .execute(
+            json!({"query": ""}),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await
+        .unwrap();
 
-    assert!(result.contains("All deferred tools (2)"));
+    assert!(result.contains("Available deferred tools (2)"));
     assert!(result.contains("tool_a"));
     assert!(result.contains("tool_b"));
 }
 
 #[tokio::test]
-async fn tool_search_no_matches() {
+async fn tool_search_no_matches_returns_catalogue() {
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(MockTool::on_demand("db_tool", "Database tool")));
     let registry_arc = Arc::new(registry);
 
     let search_tool = crate::tools::impls::meta::tool_search::ToolSearchTool::new(registry_arc);
     let result = search_tool
-        .execute(json!({"query": "nonexistent"}), &crate::tools::call_context::CallContext::default())
+        .execute(
+            json!({"query": "nonexistent"}),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
     assert!(result.contains("No tools found"));
+    // Zero hits must NOT be a dead end: the full deferred catalogue follows.
+    assert!(result.contains("db_tool"));
 }
 
 #[tokio::test]
@@ -666,7 +757,127 @@ async fn tool_search_no_deferred_tools() {
     let registry_arc = Arc::new(registry);
 
     let search_tool = crate::tools::impls::meta::tool_search::ToolSearchTool::new(registry_arc);
-    let result = search_tool.execute(json!({"query": ""}), &crate::tools::call_context::CallContext::default()).await.unwrap();
+    let result = search_tool
+        .execute(
+            json!({"query": ""}),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await
+        .unwrap();
 
-    assert!(result.contains("No deferred tools available"));
+    assert!(result.contains("No deferred tools are registered"));
+}
+
+#[tokio::test]
+async fn tool_search_select_exact_name() {
+    let mut registry = ToolRegistry::new();
+    registry.register(Box::new(MockTool::on_demand("db_tool", "Database tool")));
+    let registry_arc = Arc::new(registry);
+
+    let search_tool = crate::tools::impls::meta::tool_search::ToolSearchTool::new(registry_arc);
+    let result = search_tool
+        .execute(
+            json!({"query": "select:db_tool"}),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await
+        .unwrap();
+
+    assert!(result.contains("db_tool"));
+    assert!(result.contains("deferred"));
+}
+
+#[tokio::test]
+async fn tool_search_marks_policy_denied_as_unavailable() {
+    let mut registry = ToolRegistry::new();
+    registry.register(Box::new(MockTool::new("run_shell")));
+    let registry_arc = Arc::new(registry);
+
+    let mut policy = ResolvedToolPolicy::permissive();
+    policy = policy.with_extra_layer(ToolPolicyLayer {
+        allow: None,
+        deny: vec!["run_shell".to_string()],
+    });
+
+    let search_tool = crate::tools::impls::meta::tool_search::ToolSearchTool::with_policy(
+        registry_arc,
+        Arc::new(policy),
+    );
+    let result = search_tool
+        .execute(
+            json!({"query": "shell"}),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await
+        .unwrap();
+
+    assert!(result.contains("run_shell"));
+    assert!(
+        result.contains("unavailable"),
+        "policy-denied tool must be reported as unavailable, not hidden: {result}"
+    );
+}
+
+// ============================================
+// LLM Schema Compatibility Contract
+// ============================================
+
+#[test]
+fn all_registered_tool_schemas_are_llm_compatible() {
+    // Registry-level invariant: every schema a tool exposes must survive
+    // the least-common-denominator function-calling dialect. A top-level
+    // tagged-enum (`oneOf`) schema gets flattened to `properties: {}` by
+    // providers and every call then fails with "missing field". This test
+    // exercises the concrete params types that previously violated it.
+    use crate::tools::traits::assert_llm_compatible_schema;
+
+    let schemas: Vec<(&str, Value)> = vec![
+        (
+            "inspect_terminals",
+            crate::tools::traits::params_schema::<
+                crate::tools::impls::coding::inspect_terminals::InspectTerminalsParams,
+            >(),
+        ),
+        (
+            "manage_workspace",
+            crate::tools::traits::params_schema::<
+                crate::tools::impls::coding::manage_workspace::ManageWorkspaceParams,
+            >(),
+        ),
+        (
+            "worktree",
+            crate::tools::traits::params_schema::<
+                crate::tools::impls::coding::worktree::WorktreeParams,
+            >(),
+        ),
+    ];
+    for (name, schema) in schemas {
+        assert_llm_compatible_schema(&schema)
+            .unwrap_or_else(|err| panic!("{name} schema violates LLM contract: {err}"));
+        let props = schema["properties"].as_object().unwrap();
+        assert!(
+            props.contains_key("action"),
+            "{name} schema must expose the `action` field to the model"
+        );
+    }
+}
+
+#[test]
+fn llm_contract_rejects_tagged_enum_schema() {
+    use crate::tools::traits::assert_llm_compatible_schema;
+    use schemars::JsonSchema;
+
+    #[derive(JsonSchema)]
+    #[serde(tag = "action", rename_all = "snake_case")]
+    #[allow(dead_code)]
+    enum BadParams {
+        Foo { x: String },
+        Bar,
+    }
+
+    let schema = crate::tools::traits::params_schema::<BadParams>();
+    assert!(
+        assert_llm_compatible_schema(&schema).is_err(),
+        "top-level tagged-enum schemas must be rejected by the contract"
+    );
 }

@@ -418,6 +418,7 @@ async function initI18n(): Promise<void> {
     fallbackLng: "en",
     defaultNS: "common",
     ns: NAMESPACES,
+    showSupportNotice: false,
 
     interpolation: {
       // React already escapes values, no need for i18next to do it again

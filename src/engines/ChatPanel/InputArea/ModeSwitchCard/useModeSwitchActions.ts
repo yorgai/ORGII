@@ -11,10 +11,13 @@ import { respondModeSwitch } from "@src/api/tauri/agent";
 import { cursorBridgeSetMode } from "@src/api/tauri/cursorBridge";
 import { rpc } from "@src/api/tauri/rpc";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
+import {
+  beginOptimisticTurn,
+  failOptimisticTurn,
+} from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import { eventsAtom } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
-import { setSessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultModelSelectionAtom } from "@src/store/session/creatorDefaultModelAtom";
 import { cursorModeOverrideAtomFamily } from "@src/store/session/cursorModeOverrideAtom";
 import { sessionByIdAtom, upsertSession } from "@src/store/session/sessionAtom";
@@ -150,6 +153,10 @@ async function switchCursorIdeMode(
   // last message was itself a mode-switch command to avoid an infinite loop.
   if (!lastUserText || isModeSwitchCommand(lastUserText)) return;
 
+  // No beginOptimisticTurn here: Cursor IDE sessions have no turn lifecycle
+  // (the CDP stream emits no terminal event), so an optimistic `running`
+  // would never be cleared — the same reason useMessageDispatch closes the
+  // turn immediately after a successful cursor handoff.
   await SessionService.sendMessage({
     sessionId,
     content: lastUserText,
@@ -214,14 +221,9 @@ async function switchAgentMode(
     : fallback;
   const { model, accountId } = resolveModelForMessage(lastModelSelection);
 
-  // Optimistically mark running BEFORE the resend, mirroring
-  // useMessageDispatch. Mode-switch resends bypass that hook, and without
-  // this the planning indicator stays hidden until Rust's first
-  // status_changed lands — the user just sees a frozen panel (P3).
-  store.set(setSessionRuntimeStatusAtom, {
-    status: "running",
-    source: "dispatch",
-  });
+  // Mode-switch resends bypass useMessageDispatch, so set the optimistic
+  // running status here (P3).
+  beginOptimisticTurn(sessionId);
 
   try {
     await SessionService.sendMessage({
@@ -232,10 +234,7 @@ async function switchAgentMode(
       mode: targetMode,
     });
   } catch (error) {
-    store.set(setSessionRuntimeStatusAtom, {
-      status: "idle",
-      source: "dispatch",
-    });
+    failOptimisticTurn(sessionId);
     throw error;
   }
 }

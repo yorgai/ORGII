@@ -138,7 +138,8 @@ export function convertToFileOperation(
       ? FILE_OPERATION_TYPE.READ
       : FILE_OPERATION_TYPE.WRITE;
 
-  const statusString = getEventStatus(event) as EventStatus;
+  const statusString = (getEventStatus(event) ||
+    event.displayStatus) as EventStatus;
 
   const propsForExtraction = {
     eventId: event.id,

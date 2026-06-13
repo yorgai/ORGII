@@ -68,7 +68,7 @@ export interface UseSelectorOptions {
    * `kernel.setSearchQuery` forwards to this setter instead of writing to
    * the kernel's internal state, and additionally resets `selectedIndex`
    * to the first selectable item. Use this when the palette owns its own
-   * `useState` for the query (e.g. RepoPalette, DatabasePalette) so they
+   * `useState` for the query (e.g. WorkspacePalette, DatabasePalette) so they
    * don't need to wrap the kernel in a `useMemo` shim.
    *
    * Typically paired with `externalSearchQuery` so the kernel's Backspace

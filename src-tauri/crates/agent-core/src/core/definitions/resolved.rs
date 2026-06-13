@@ -600,8 +600,7 @@ mod tests {
     #[test]
     fn workspace_session_override_wins() {
         let def = with_pinned_model(get_builtin_agent("builtin:os").expect("os builtin exists"));
-        let overrides =
-            SessionOverrides::new(Some(PathBuf::from("/tmp/session-override")), None);
+        let overrides = SessionOverrides::new(Some(PathBuf::from("/tmp/session-override")), None);
         let resolved = ResolvedAgent::resolve(&def, None, &overrides).expect("resolves");
         assert_eq!(
             resolved.workspace(),

@@ -3,9 +3,9 @@ import { useCallback } from "react";
 
 import type { AddWorkspaceModalStage, useAddWorkspaceFlow } from "../../hooks";
 import { importWorkspacePath, looksLikeWorkspacePath } from "./pathImport";
-import type { AddMenuKind, RepoPaletteText } from "./types";
+import type { AddMenuKind, WorkspacePaletteText } from "./types";
 
-interface UseRepoPaletteNavigationArgs {
+interface UseWorkspacePaletteNavigationArgs {
   modalStage: AddWorkspaceModalStage;
   addMenuKind: AddMenuKind;
   asBody: boolean;
@@ -18,10 +18,10 @@ interface UseRepoPaletteNavigationArgs {
   setSearchQuery: (query: string) => void;
   addWorkspaceFlow: ReturnType<typeof useAddWorkspaceFlow>;
   searchQuery: string;
-  paletteText: RepoPaletteText;
+  paletteText: WorkspacePaletteText;
 }
 
-export function useRepoPaletteNavigation({
+export function useWorkspacePaletteNavigation({
   modalStage,
   addMenuKind,
   asBody,
@@ -35,7 +35,7 @@ export function useRepoPaletteNavigation({
   addWorkspaceFlow,
   searchQuery,
   paletteText,
-}: UseRepoPaletteNavigationArgs) {
+}: UseWorkspacePaletteNavigationArgs) {
   const shouldReturnInitialStageToParent =
     !!onGoBackToParent && !!effectiveInitialStage;
   const shouldReturnInitialAddMenuToParent =

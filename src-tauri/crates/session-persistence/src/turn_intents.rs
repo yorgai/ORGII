@@ -284,9 +284,8 @@ pub fn update_status(
     new_status: TurnIntentStatus,
 ) -> Result<TurnIntentRow, IntentError> {
     let conn = get_connection()?;
-    let existing = get_intent(&conn, session_id, turn_intent_id)?.ok_or_else(|| {
-        IntentError::NotFound(turn_intent_id.to_string(), session_id.to_string())
-    })?;
+    let existing = get_intent(&conn, session_id, turn_intent_id)?
+        .ok_or_else(|| IntentError::NotFound(turn_intent_id.to_string(), session_id.to_string()))?;
     if !transition_allowed(existing.status, new_status) {
         return Err(IntentError::IllegalTransition {
             from: existing.status,
@@ -376,18 +375,15 @@ mod tests {
             Err(poisoned) => poisoned.into_inner(),
         };
         let previous = std::env::var("ORGII_HOME").ok();
-        let root = std::env::temp_dir().join(format!(
-            "orgii-turn-intents-test-{}",
-            std::process::id()
-        ));
+        let root =
+            std::env::temp_dir().join(format!("orgii-turn-intents-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).expect("create temp ORGII_HOME");
         std::env::set_var("ORGII_HOME", &root);
         // Initialize the session schema so `session_turn_intents` exists.
         {
             let conn = get_connection().expect("open sessions DB");
-            super::super::schema::init_session_tables(&conn)
-                .expect("init session schema for test");
+            super::super::schema::init_session_tables(&conn).expect("init session schema for test");
         }
         let result = run();
         match previous {

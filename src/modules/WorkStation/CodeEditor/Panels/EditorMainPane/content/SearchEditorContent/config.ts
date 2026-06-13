@@ -3,7 +3,7 @@
  *
  * Constants and configuration for the search editor tab
  */
-import { Blend, Brain, Database, type LucideIcon, Search } from "lucide-react";
+import { Blend, Brain, type LucideIcon, Search } from "lucide-react";
 
 import type { SearchMode } from "./types";
 
@@ -43,14 +43,6 @@ export const SEARCH_MODES: SearchModeConfig[] = [
     shortLabel: "Hybrid",
     icon: Blend,
     description: "Combined semantic and full-text search",
-    color: "text-text-3",
-  },
-  {
-    id: "tantivy",
-    label: "Tantivy Search",
-    shortLabel: "Tantivy",
-    icon: Database,
-    description: "Indexed full-text search",
     color: "text-text-3",
   },
 ];

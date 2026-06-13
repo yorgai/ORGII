@@ -77,6 +77,14 @@ pub type UnpinSessionFn = fn(handle: &AppHandle, session_id: &str);
 /// vector when the session has no live store.
 pub type ReadSessionEventsFn = fn(handle: &AppHandle, session_id: &str) -> Vec<SessionEvent>;
 
+/// Backend-authoritative finalize for a plan revision's interactive events.
+/// Flips the persisted `awaiting_user` plan events (`{revision}` pending
+/// card + `tool-call-{revision}` create_plan tool call) to `completed` in
+/// both the in-memory store and SQLite, so a missed FE broadcast can never
+/// strand them.
+pub type FinalizePlanRevisionEventsFn =
+    fn(handle: &AppHandle, session_id: &str, plan_revision_id: &str);
+
 /// Persist a batch of `SessionEvent`s synchronously with retry. The wire
 /// side converts each to its on-disk `CachedEvent` representation. `label`
 /// is used in retry log lines.
@@ -132,6 +140,7 @@ static REPLACE_STREAMING_EVENT: OnceLock<ReplaceStreamingEventFn> = OnceLock::ne
 static PIN_SESSION: OnceLock<PinSessionFn> = OnceLock::new();
 static UNPIN_SESSION: OnceLock<UnpinSessionFn> = OnceLock::new();
 static READ_SESSION_EVENTS: OnceLock<ReadSessionEventsFn> = OnceLock::new();
+static FINALIZE_PLAN_REVISION_EVENTS: OnceLock<FinalizePlanRevisionEventsFn> = OnceLock::new();
 static PERSIST_EVENTS: OnceLock<PersistEventsFn> = OnceLock::new();
 static PERSIST_EVENTS_ASYNC: OnceLock<PersistEventsAsyncFn> = OnceLock::new();
 static PERSIST_USER_MESSAGE_EVENT: OnceLock<PersistUserMessageEventFn> = OnceLock::new();
@@ -155,6 +164,7 @@ pub fn register(
     pin_session: PinSessionFn,
     unpin_session: UnpinSessionFn,
     read_session_events: ReadSessionEventsFn,
+    finalize_plan_revision_events: FinalizePlanRevisionEventsFn,
     persist_events: PersistEventsFn,
     persist_events_async: PersistEventsAsyncFn,
     persist_user_message_event: PersistUserMessageEventFn,
@@ -169,6 +179,7 @@ pub fn register(
     let _ = PIN_SESSION.set(pin_session);
     let _ = UNPIN_SESSION.set(unpin_session);
     let _ = READ_SESSION_EVENTS.set(read_session_events);
+    let _ = FINALIZE_PLAN_REVISION_EVENTS.set(finalize_plan_revision_events);
     let _ = PERSIST_EVENTS.set(persist_events);
     let _ = PERSIST_EVENTS_ASYNC.set(persist_events_async);
     let _ = PERSIST_USER_MESSAGE_EVENT.set(persist_user_message_event);
@@ -312,6 +323,17 @@ pub fn read_session_events(handle: &AppHandle, session_id: &str) -> Vec<SessionE
             );
             Vec::new()
         }
+    }
+}
+
+pub fn finalize_plan_revision_events(handle: &AppHandle, session_id: &str, plan_revision_id: &str) {
+    if let Some(f) = FINALIZE_PLAN_REVISION_EVENTS.get() {
+        f(handle, session_id, plan_revision_id);
+    } else {
+        tracing::warn!(
+            "[event-pipeline-bridge] finalize_plan_revision_events called before register for {}",
+            session_id
+        );
     }
 }
 

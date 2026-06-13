@@ -124,6 +124,10 @@ export function extractQuestionBatch(
       questionId,
       questions,
       blocking: true,
+      autoResolveAt:
+        typeof result?.autoResolveAt === "number"
+          ? (result.autoResolveAt as number)
+          : null,
     };
   }
 

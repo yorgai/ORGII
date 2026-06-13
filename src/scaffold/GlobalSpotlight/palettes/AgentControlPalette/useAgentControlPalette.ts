@@ -14,6 +14,10 @@ import { useTranslation } from "react-i18next";
 import { sessionLaunch } from "@src/api/tauri/agent/session";
 import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
 import Message from "@src/components/Message";
+import {
+  beginOptimisticTurn,
+  failOptimisticTurn,
+} from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
 import type { PendingSessionProposal } from "@src/engines/SessionCore/hooks/useAgentADEActions";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
@@ -175,15 +179,24 @@ export function useAgentControlPalette({
       try {
         const existingSessionId = controlSessionIdRef.current;
         if (existingSessionId) {
-          await invokeTauri("agent_send_message", {
-            sessionId: existingSessionId,
-            content: prompt,
-            ...(modelConfig.model ? { model: modelConfig.model } : {}),
-            ...(modelConfig.accountId
-              ? { accountId: modelConfig.accountId }
-              : {}),
-            ideContext,
-          });
+          // Raw invoke bypasses useMessageDispatch — if the control session
+          // is also open in the chat panel, the optimistic running keeps its
+          // planning indicator alive (#17). Gated no-op otherwise.
+          beginOptimisticTurn(existingSessionId);
+          try {
+            await invokeTauri("agent_send_message", {
+              sessionId: existingSessionId,
+              content: prompt,
+              ...(modelConfig.model ? { model: modelConfig.model } : {}),
+              ...(modelConfig.accountId
+                ? { accountId: modelConfig.accountId }
+                : {}),
+              ideContext,
+            });
+          } catch (sendError) {
+            failOptimisticTurn(existingSessionId);
+            throw sendError;
+          }
         } else {
           const result = await sessionLaunch({
             category: DISPATCH_CATEGORY.RUST_AGENT,

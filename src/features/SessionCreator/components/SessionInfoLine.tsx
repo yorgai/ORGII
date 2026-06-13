@@ -37,8 +37,8 @@ import {
 import { useDropdownEngine } from "@src/hooks/dropdown";
 import { BranchPalette } from "@src/scaffold/GlobalSpotlight/palettes/BranchPalette";
 import { BranchDropdown } from "@src/scaffold/GlobalSpotlight/palettes/BranchPalette/BranchDropdown";
-import { RepoPalette } from "@src/scaffold/GlobalSpotlight/palettes/RepoPalette";
-import { RepoDropdown } from "@src/scaffold/GlobalSpotlight/palettes/RepoPalette/RepoDropdown";
+import { WorkspacePalette } from "@src/scaffold/GlobalSpotlight/palettes/WorkspacePalette";
+import { WorkspaceDropdown } from "@src/scaffold/GlobalSpotlight/palettes/WorkspacePalette/WorkspaceDropdown";
 import { REPO_KIND, type RepoKind } from "@src/store/repo/types";
 import { modelPickerStyleAtom } from "@src/store/ui/chatPanelAtom";
 import {
@@ -414,7 +414,7 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
 
       {/* Repo Selector */}
       {useDropdownPicker ? (
-        <RepoDropdown
+        <WorkspaceDropdown
           isOpen={isRepoSelectorOpen}
           onClose={() => setIsRepoSelectorOpen(false)}
           onSelect={handleRepoSelected}
@@ -423,7 +423,7 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
           leadingRepos={systemPathSourceItems}
         />
       ) : (
-        <RepoPalette
+        <WorkspacePalette
           isOpen={isRepoSelectorOpen}
           onClose={() => setIsRepoSelectorOpen(false)}
           onSelect={handleRepoSelected}

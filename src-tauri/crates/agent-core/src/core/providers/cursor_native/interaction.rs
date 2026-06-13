@@ -7,15 +7,15 @@ use std::collections::HashSet;
 
 use tracing::info;
 
-use super::super::proto::agent_v1 as pb;
-use super::tool_stream::InteractionToolStreamState;
 use super::super::client::{ClientError, RunStream};
+use super::super::proto::agent_v1 as pb;
 use super::super::request::BlobStore;
 use super::super::tools::mcp_args_to_tool_call;
+use super::exec_bridge::cursor_tool_call_id;
+use super::tool_stream::InteractionToolStreamState;
 use crate::definitions::builtin::{EXPLORE_AGENT_ID, GENERAL_AGENT_ID};
 use crate::providers::traits::{finish_reason, StreamDelta, ToolCallDelta, ToolCallRequest};
 use crate::tools::names as tool_names;
-use super::exec_bridge::cursor_tool_call_id;
 
 /// Dispatch a single `InteractionUpdate` into the accumulators + on_delta.
 ///
@@ -223,7 +223,10 @@ pub(super) fn interaction_tool_call_to_orgii_request(
     }
 }
 
-pub(super) fn cursor_task_to_agent_tool_call(call_id: &str, args: &pb::TaskArgs) -> ToolCallRequest {
+pub(super) fn cursor_task_to_agent_tool_call(
+    call_id: &str,
+    args: &pb::TaskArgs,
+) -> ToolCallRequest {
     let agent_id = cursor_subagent_type_to_agent_id(args.subagent_type.as_ref());
     let mut arguments = serde_json::json!({
         "command": "launch",

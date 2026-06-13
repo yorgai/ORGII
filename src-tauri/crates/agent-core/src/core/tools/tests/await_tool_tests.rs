@@ -64,7 +64,12 @@ fn test_is_read_only() {
 #[tokio::test]
 async fn test_missing_handles_returns_error() {
     let tool = AwaitTool::new();
-    let result = tool.execute(serde_json::json!({}), &crate::tools::call_context::CallContext::default()).await;
+    let result = tool
+        .execute(
+            serde_json::json!({}),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await;
     assert!(result.is_err());
     let err_msg = format!("{}", result.unwrap_err());
     assert!(
@@ -77,9 +82,12 @@ async fn test_missing_handles_returns_error() {
 async fn test_legacy_singular_handle_rejected() {
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handle": "something"
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handle": "something"
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
     let err_msg = format!("{}", result.unwrap_err());
@@ -93,9 +101,12 @@ async fn test_legacy_singular_handle_rejected() {
 async fn test_not_found_handle() {
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": ["nonexistent-99999"]
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": ["nonexistent-99999"]
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
     let err_msg = format!("{}", result.unwrap_err());
@@ -109,9 +120,12 @@ async fn test_not_found_handle() {
 async fn test_empty_handles_array_rejected() {
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": []
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": []
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
 }
@@ -137,12 +151,15 @@ async fn test_pattern_with_multiple_handles_rejected() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "command": "wait_for",
-            "handles": [ha.clone(), hb.clone()],
-            "pattern": "done",
-            "block_until_ms": 0,
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "command": "wait_for",
+                "handles": [ha.clone(), hb.clone()],
+                "pattern": "done",
+                "block_until_ms": 0,
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
 
@@ -163,10 +180,13 @@ async fn test_shell_running_has_metadata() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": [handle.clone()],
-            "block_until_ms": 0
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": [handle.clone()],
+                "block_until_ms": 0
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -201,10 +221,13 @@ async fn test_shell_exited_zero_is_succeeded() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": [handle.clone()],
-            "block_until_ms": 0
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": [handle.clone()],
+                "block_until_ms": 0
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -232,10 +255,13 @@ async fn test_shell_exited_nonzero_is_failed() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": [handle.clone()],
-            "block_until_ms": 0
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": [handle.clone()],
+                "block_until_ms": 0
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -262,10 +288,13 @@ async fn test_shell_killed_is_failed_with_killed_flag() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": [handle.clone()],
-            "block_until_ms": 0
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": [handle.clone()],
+                "block_until_ms": 0
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -292,10 +321,13 @@ async fn test_subagent_completed_has_succeeded_metadata() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": [handle.clone()],
-            "block_until_ms": 0
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": [handle.clone()],
+                "block_until_ms": 0
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -329,10 +361,13 @@ async fn test_subagent_failed_has_failed_metadata() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": [handle.clone()],
-            "block_until_ms": 0
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": [handle.clone()],
+                "block_until_ms": 0
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -359,10 +394,13 @@ async fn test_subagent_running_has_running_metadata() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": [handle.clone()],
-            "block_until_ms": 0
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": [handle.clone()],
+                "block_until_ms": 0
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -393,10 +431,13 @@ async fn test_monitor_command_returns_immediately() {
     let tool = AwaitTool::new();
     let start = std::time::Instant::now();
     let result = tool
-        .execute(serde_json::json!({
-            "command": "monitor",
-            "handles": [handle.clone()],
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "command": "monitor",
+                "handles": [handle.clone()],
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
     let elapsed = start.elapsed();
@@ -427,11 +468,14 @@ async fn test_monitor_tail_lines_honored() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "command": "monitor",
-            "handles": [handle.clone()],
-            "tail_lines": 10
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "command": "monitor",
+                "handles": [handle.clone()],
+                "tail_lines": 10
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -457,10 +501,13 @@ async fn test_monitor_subagent_reads_recent_buffer() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "command": "monitor",
-            "handles": [handle.clone()],
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "command": "monitor",
+                "handles": [handle.clone()],
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -499,9 +546,12 @@ async fn test_list_returns_session_jobs() {
     tool.set_session_key("test-session-list").await;
 
     let result = tool
-        .execute(serde_json::json!({
-            "command": "list",
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "command": "list",
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -537,9 +587,12 @@ async fn test_list_empty_session() {
     tool.set_session_key("nonexistent-session-xyz").await;
 
     let result = tool
-        .execute(serde_json::json!({
-            "command": "list",
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "command": "list",
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -566,10 +619,13 @@ async fn test_list_global_scope() {
     tool.set_session_key("my-session").await;
 
     let result = tool
-        .execute(serde_json::json!({
-            "command": "list",
-            "scope": "global",
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "command": "list",
+                "scope": "global",
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -591,10 +647,13 @@ async fn test_list_global_scope() {
 async fn test_unknown_command_returns_error() {
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "command": "destroy",
-            "handle": "12345"
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "command": "destroy",
+                "handle": "12345"
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
 
     assert!(result.is_err());
@@ -621,10 +680,13 @@ async fn test_default_command_is_monitor() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": [handle.clone()],
-            "block_until_ms": 0
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": [handle.clone()],
+                "block_until_ms": 0
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -642,11 +704,14 @@ async fn test_default_command_is_monitor() {
 async fn test_missing_command_with_wait_mode_rejected() {
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": ["12345"],
-            "wait_mode": "all",
-            "block_until_ms": 30000,
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": ["12345"],
+                "wait_mode": "all",
+                "block_until_ms": 30000,
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
     let err_msg = format!("{}", result.unwrap_err());
@@ -662,10 +727,13 @@ async fn test_missing_command_with_wait_mode_rejected() {
 async fn test_missing_command_with_pattern_rejected() {
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": ["12345"],
-            "pattern": "done",
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": ["12345"],
+                "pattern": "done",
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
     let err_msg = format!("{}", result.unwrap_err());
@@ -685,11 +753,14 @@ async fn test_missing_command_with_pattern_rejected() {
 async fn test_null_pattern_is_treated_as_unset() {
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "handles": ["doesnotexist-99999"],
-            "pattern": serde_json::Value::Null,
-            "wait_mode": serde_json::Value::Null,
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "handles": ["doesnotexist-99999"],
+                "pattern": serde_json::Value::Null,
+                "wait_mode": serde_json::Value::Null,
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
     let err_msg = format!("{}", result.unwrap_err());
@@ -724,10 +795,13 @@ async fn test_monitor_multiple_handles_returns_items_array() {
 
     let tool = AwaitTool::new();
     let result = tool
-        .execute(serde_json::json!({
-            "command": "monitor",
-            "handles": [ha.clone(), hb.clone()],
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "command": "monitor",
+                "handles": [ha.clone(), hb.clone()],
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
 
@@ -774,12 +848,15 @@ async fn test_wait_for_all_mode_waits_for_every_handle() {
     let tool = AwaitTool::new();
     let start = std::time::Instant::now();
     let result = tool
-        .execute(serde_json::json!({
-            "command": "wait_for",
-            "handles": [h_done.clone(), h_running.clone()],
-            "wait_mode": "all",
-            "block_until_ms": 400,
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "command": "wait_for",
+                "handles": [h_done.clone(), h_running.clone()],
+                "wait_mode": "all",
+                "block_until_ms": 400,
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .unwrap();
     let elapsed = start.elapsed();

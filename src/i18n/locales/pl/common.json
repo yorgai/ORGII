@@ -371,10 +371,8 @@
     "foundByKeyword": "Znalezione przez wyszukiwanie słów kluczowych",
     "semanticSecondary": "dopasowanie znaczeniowe",
     "hybridSecondary": "semantyczne + pełnotekstowe",
-    "tantivySecondary": "indeksowane pełnotekstowe",
     "semanticDescription": "Wyszukiwanie semantyczne oparte na Embeddingach",
-    "hybridDescription": "Wyszukiwanie semantyczne i pełnotekstowe",
-    "tantivyDescription": "Indeksowane wyszukiwanie pełnotekstowe"
+    "hybridDescription": "Wyszukiwanie semantyczne i pełnotekstowe"
   },
   "tabs": {
     "terminal": "Terminal",
@@ -471,12 +469,12 @@
     "delete": "Czy na pewno chcesz to usunąć?",
     "unsavedChanges": "Masz niezapisane zmiany. Czy na pewno chcesz wyjść?",
     "discard": "Odrzucić zmiany?",
-    "removeTitle": "Usunąć „{{name}}” z Workspace ORGII?",
-    "removeMessage": "To nie usunie folderu z kodem z urządzenia — tylko z Workspace ORGII. Możesz dodać go ponownie w dowolnej chwili.",
+    "removeTitle": "Usunąć „{{name}}” z ORGII?",
+    "removeMessage": "Usuwa to tylko powiązanie z ORGII. Nic nie zostanie usunięte z dysku.",
     "deleteWorkspaceTitle": "Usunąć Workspace „{{name}}”?",
     "deleteWorkspaceMessage": "Usuwa to wyłącznie ustawienie Workspace. Powiązane Repo i foldery nie zostaną zmienione.",
-    "deleteSelectedTitle": "Usunąć {{count}} zaznaczonych elementów?",
-    "deleteSelectedMessage": "Spowoduje to usunięcie wybranych Workspace i odłączenie wybranych Repo. Pliki Repo na dysku nie zostaną usunięte.",
+    "deleteSelectedTitle": "Usunąć {{count}} zaznaczonych elementów z ORGII?",
+    "deleteSelectedMessage": "Usuwa to tylko ich powiązanie z ORGII. Nic nie zostanie usunięte z dysku.",
     "disconnectTitle": "Rozłączyć „{{name}}”?",
     "disconnectMessage": "Spowoduje to usunięcie dostępu do wszystkich Repo z tego konta.",
     "dropStashTitle": "Usunąć stash?",
@@ -1134,7 +1132,7 @@
     "repo": {
       "workspaceFolders": "Foldery Workspace",
       "addRepo": "Dodaj workspace",
-      "addEntry": "Więcej opcji workspace",
+      "addEntry": "Więcej opcji importu",
       "addRepoDescription": "Otwórz, utwórz lub sklonuj workspace",
       "sections": {
         "coding": "Workspace",
@@ -1143,6 +1141,7 @@
         "current": "Bieżące",
         "repo": "Repozytoria",
         "systemPaths": "Ścieżki systemowe",
+        "usedElsewhere": "Used elsewhere",
         "workspace": "Workspace"
       },
       "tabs": {
@@ -1462,12 +1461,12 @@
         }
       },
       "toast": {
-        "repoRemoved": "Repo usunięte pomyślnie",
-        "repoRemoveFailed": "Nie udało się usunąć Repo",
-        "workspaceRemoved": "Workspace usunięty",
-        "workspaceRemoveFailed": "Nie udało się usunąć Workspace",
-        "bulkDeleted": "Usunięto {{count}} elementów",
-        "bulkDeleteFailed": "Nie udało się usunąć {{count}} elementów"
+        "repoRemoved": "Linkage to ORGII removed",
+        "repoRemoveFailed": "Failed to remove linkage to ORGII",
+        "workspaceRemoved": "Linkage to ORGII removed",
+        "workspaceRemoveFailed": "Failed to remove linkage to ORGII",
+        "bulkDeleted": "{{count}} linkages to ORGII removed",
+        "bulkDeleteFailed": "{{count}} linkages failed to remove"
       }
     }
   },
@@ -1478,7 +1477,7 @@
     "locateInFinder": "Znajdź w Finderze",
     "copyLocalPath": "Kopiuj ścieżkę lokalną",
     "copyEventsJson": "Kopiuj JSON zdarzeń",
-    "removeRepo": "Usuń Repo",
+    "removeRepo": "Remove from ORGII",
     "addRepo": "Dodaj Repo...",
     "simulatorView": "Widok symulatora",
     "addWorkspace": "Dodaj workspace..."
@@ -2081,10 +2080,9 @@
     "selectWorkspaceToStart": "Wybierz Workspace, aby rozpocząć",
     "selectRepoToStart": "Wybierz Repo, aby rozpocząć"
   },
-  "quitConfirmation": {
-    "title": "Zamknąć ORGII?",
-    "message": "Aktywne sesje i zadania w tle zostaną zatrzymane.",
-    "okLabel": "Zamknij"
+  "holdToQuit": {
+    "title": "Przytrzymaj {{shortcut}} przez 1 sekundę, aby zamknąć",
+    "subtitle": "Puść, aby anulować"
   },
   "projects": {
     "title": "Heatmapa",

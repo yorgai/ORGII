@@ -67,8 +67,33 @@ impl TurnEventHandler for BroadcastingHandler {
         display_name: &str,
         result: &str,
     ) {
-        self.inner
-            .on_tool_result(session_id, tool_call_id, tool_name, display_name, result);
+        self.on_tool_result_with_metadata(
+            session_id,
+            tool_call_id,
+            tool_name,
+            display_name,
+            result,
+            None,
+        );
+    }
+
+    fn on_tool_result_with_metadata(
+        &self,
+        session_id: &str,
+        tool_call_id: &str,
+        tool_name: &str,
+        display_name: &str,
+        result: &str,
+        ui_metadata: Option<&crate::tools::traits::ToolUIMetadata>,
+    ) {
+        self.inner.on_tool_result_with_metadata(
+            session_id,
+            tool_call_id,
+            tool_name,
+            display_name,
+            result,
+            ui_metadata,
+        );
         let preview: String = result.chars().take(200).collect();
         self.send_line(format!("[tool_result] {} → {}\n", display_name, preview));
     }

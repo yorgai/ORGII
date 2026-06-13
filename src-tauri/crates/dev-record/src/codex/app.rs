@@ -15,8 +15,8 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::imported_history::{
-    self, ImportedHistoryRowInput, ImportedHistorySessionPage, ImportedHistorySessionRow,
-    ImportedToolCall,
+    self, ImportedHistoryRecentPath, ImportedHistoryRowInput, ImportedHistorySessionPage,
+    ImportedHistorySessionRow, ImportedToolCall,
 };
 
 const CODEX_APP_SESSION_PREFIX: &str = "codexapp-";
@@ -24,6 +24,7 @@ const CODEX_PROVIDER_SLUG: &str = "codex";
 
 pub type CodexAppSessionRow = ImportedHistorySessionRow;
 pub type CodexAppSessionPage = ImportedHistorySessionPage;
+pub type CodexAppRecentPath = ImportedHistoryRecentPath;
 
 #[derive(Debug, Clone)]
 struct CodexAppSessionMeta {
@@ -60,6 +61,18 @@ pub fn list_codex_app_sessions_paginated(
     let sessions = scan_codex_app_sessions()?;
     let rows = sessions.into_iter().map(session_meta_to_row).collect();
     Ok(imported_history::page_from_rows(rows, limit, offset))
+}
+
+pub fn list_codex_app_recent_paths(limit: usize) -> Result<Vec<CodexAppRecentPath>, String> {
+    let sessions = scan_codex_app_sessions()?;
+    let rows = sessions
+        .into_iter()
+        .map(session_meta_to_row)
+        .collect::<Vec<_>>();
+    Ok(imported_history::recent_paths_from_rows(&rows)
+        .into_iter()
+        .take(imported_history::effective_limit(limit))
+        .collect())
 }
 
 pub fn load_codex_app_for_session(session_id: &str) -> Result<Vec<ActivityChunk>, String> {

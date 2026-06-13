@@ -75,7 +75,12 @@ fn llm_description_contains_repo_path() {
 #[tokio::test]
 async fn missing_action_returns_error() {
     let tool = make_tool("/tmp/repo");
-    let result = tool.execute(serde_json::json!({}), &crate::tools::call_context::CallContext::default()).await;
+    let result = tool
+        .execute(
+            serde_json::json!({}),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await;
     assert!(result.is_err());
     let err = format!("{}", result.unwrap_err());
     assert!(
@@ -89,10 +94,13 @@ async fn unknown_action_returns_error() {
     // Use /tmp which exists so we get past the path check and hit the action router
     let tool = make_tool("/tmp");
     let result = tool
-        .execute(serde_json::json!({
-            "action": "nonsense",
-            "pattern": "foo"
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "action": "nonsense",
+                "pattern": "foo"
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
     let err = format!("{}", result.unwrap_err());
@@ -105,7 +113,12 @@ async fn unknown_action_returns_error() {
 #[tokio::test]
 async fn grep_action_missing_pattern_returns_error() {
     let tool = make_tool("/tmp/repo");
-    let result = tool.execute(serde_json::json!({ "action": "grep" }), &crate::tools::call_context::CallContext::default()).await;
+    let result = tool
+        .execute(
+            serde_json::json!({ "action": "grep" }),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await;
     assert!(result.is_err());
     let err = format!("{}", result.unwrap_err());
     assert!(
@@ -118,7 +131,10 @@ async fn grep_action_missing_pattern_returns_error() {
 async fn find_files_action_missing_pattern_returns_error() {
     let tool = make_tool("/tmp/repo");
     let result = tool
-        .execute(serde_json::json!({ "action": "find_files" }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({ "action": "find_files" }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
 }
@@ -127,10 +143,13 @@ async fn find_files_action_missing_pattern_returns_error() {
 async fn nonexistent_repo_returns_error() {
     let tool = make_tool("/definitely/does/not/exist/xyz");
     let result = tool
-        .execute(serde_json::json!({
-            "action": "grep",
-            "pattern": "fn main"
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "action": "grep",
+                "pattern": "fn main"
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
     let err = format!("{}", result.unwrap_err());
@@ -147,11 +166,14 @@ async fn explicit_repo_path_overrides_default() {
     let tool = make_tool("/default/path");
     // "grep" with an explicit repo_path that doesn't exist → error mentions the explicit path
     let result = tool
-        .execute(serde_json::json!({
-            "action": "grep",
-            "pattern": "test",
-            "repo_path": "/explicit/override/path"
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "action": "grep",
+                "pattern": "test",
+                "repo_path": "/explicit/override/path"
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     assert!(result.is_err());
     let err = format!("{}", result.unwrap_err());
@@ -167,10 +189,13 @@ async fn set_active_repo_overrides_default() {
     tool.set_active_repo("/active/repo/path").await;
     // Active repo doesn't exist → error should mention active path, not default
     let result = tool
-        .execute(serde_json::json!({
-            "action": "grep",
-            "pattern": "test"
-        }), &crate::tools::call_context::CallContext::default())
+        .execute(
+            serde_json::json!({
+                "action": "grep",
+                "pattern": "test"
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await;
     // set_active_repo only sets if path exists, so it falls back to default
     // which also doesn't exist

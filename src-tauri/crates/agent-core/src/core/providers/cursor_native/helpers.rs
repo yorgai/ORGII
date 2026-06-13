@@ -9,7 +9,9 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 use super::super::proto::agent_v1 as pb;
-use super::super::tools::{encode_exec_tool_result_message, encode_mcp_exec_tool_result_message, HistoricToolCall};
+use super::super::tools::{
+    encode_exec_tool_result_message, encode_mcp_exec_tool_result_message, HistoricToolCall,
+};
 use super::super::CursorNativeWorkspaceContext;
 use crate::providers::traits::ProviderError;
 

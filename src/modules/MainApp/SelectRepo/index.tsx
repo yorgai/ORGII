@@ -5,7 +5,14 @@
  * Users select a repository before proceeding to the main app.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { Code, Folder, FolderTree, Plus, Search, Settings } from "lucide-react";
+import {
+  Code,
+  Folder,
+  FolderTree,
+  Search,
+  Settings,
+  SquareArrowRight,
+} from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +28,7 @@ import {
 } from "@src/modules/shared/layouts";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import type { AddWorkspaceModalStage } from "@src/scaffold/GlobalSpotlight/hooks";
-import { RepoPalette } from "@src/scaffold/GlobalSpotlight/palettes";
+import { WorkspacePalette } from "@src/scaffold/GlobalSpotlight/palettes";
 import type { RepoItem } from "@src/scaffold/GlobalSpotlight/types";
 import {
   REPO_KIND,
@@ -70,16 +77,16 @@ function workspaceMatchesQuery(
 }
 
 // ============================================
-// Left column — vertical action list (same spotlight entry points as RepoPalette)
+// Left column — vertical action list (same spotlight entry points as WorkspacePalette)
 // ============================================
-interface SelectRepoPaletteLaunch {
+interface SelectWorkspacePaletteLaunch {
   initialAddStage?: AddWorkspaceModalStage;
   initialAddMenu?: boolean;
   initialManageMode?: boolean;
 }
 
 interface SelectRepoActionsListProps {
-  onOpenPalette: (launch: SelectRepoPaletteLaunch) => void;
+  onOpenPalette: (launch: SelectWorkspacePaletteLaunch) => void;
 }
 
 const SelectRepoActionsList: React.FC<SelectRepoActionsListProps> = ({
@@ -96,7 +103,7 @@ const SelectRepoActionsList: React.FC<SelectRepoActionsListProps> = ({
         onClick={() => onOpenPalette({ initialAddMenu: true })}
       >
         <div className="flex w-full items-center gap-3">
-          <Plus
+          <SquareArrowRight
             size={16}
             strokeWidth={1.5}
             className="h-4 w-4 flex-shrink-0 text-text-2"
@@ -146,7 +153,7 @@ const SelectRepoActionsList: React.FC<SelectRepoActionsListProps> = ({
 // Left Column Content
 // ============================================
 interface LeftColumnContentProps {
-  onOpenPalette: (launch: SelectRepoPaletteLaunch) => void;
+  onOpenPalette: (launch: SelectWorkspacePaletteLaunch) => void;
 }
 
 const LeftColumnContent: React.FC<LeftColumnContentProps> = ({
@@ -314,7 +321,7 @@ const SelectRepoPage: React.FC = () => {
   // Local state for RepoSelector
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [paletteLaunch, setPaletteLaunch] =
-    useState<SelectRepoPaletteLaunch | null>(null);
+    useState<SelectWorkspacePaletteLaunch | null>(null);
 
   // Listen for toolbar click to open selector
   useEffect(() => {
@@ -435,8 +442,8 @@ const SelectRepoPage: React.FC = () => {
     [selectRepo, navigate]
   );
 
-  const handleOpenRepoPalette = useCallback(
-    (launch: SelectRepoPaletteLaunch) => {
+  const handleOpenWorkspacePalette = useCallback(
+    (launch: SelectWorkspacePaletteLaunch) => {
       setPaletteLaunch(launch);
       setIsSelectorOpen(true);
     },
@@ -481,7 +488,7 @@ const SelectRepoPage: React.FC = () => {
         variant="contained"
         bodyClass={SELECT_REPO_BODY_CLASS}
         leftContent={
-          <LeftColumnContent onOpenPalette={handleOpenRepoPalette} />
+          <LeftColumnContent onOpenPalette={handleOpenWorkspacePalette} />
         }
         rightContent={
           <RepoListContent
@@ -496,8 +503,8 @@ const SelectRepoPage: React.FC = () => {
         }
       />
 
-      {/* RepoPalette - rendered directly for add actions */}
-      <RepoPalette
+      {/* WorkspacePalette - rendered directly for add actions */}
+      <WorkspacePalette
         isOpen={isSelectorOpen}
         onClose={() => {
           setIsSelectorOpen(false);

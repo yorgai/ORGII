@@ -62,7 +62,6 @@ function createSelectionExtension(
         const fromLine = doc.lineAt(selection.from).number;
         const toLine = doc.lineAt(selection.to).number;
 
-        // Capture event coordinates for delayed callback
         const uiScale = getUiScaleFromCssVar();
         const posX = event.clientX / uiScale;
         const posY = event.clientY / uiScale;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  hasLiveRuntimeResourceInLatestTurn,
   isLiveRuntimeResourceEvent,
   sessionHasComposerStopBlockingWork,
 } from "../runningEventGate";
@@ -83,5 +84,75 @@ describe("runningEventGate", () => {
 
     expect(events.some(isLiveRuntimeResourceEvent)).toBe(true);
     expect(sessionHasComposerStopBlockingWork(events, "session-1")).toBe(false);
+  });
+});
+
+function userEvent(id: string): SessionEvent {
+  return {
+    id,
+    sessionId: "session-1",
+    source: "user",
+    createdAt: new Date().toISOString(),
+    actionType: "raw",
+    functionName: "user_message",
+    displayStatus: "completed",
+    displayVariant: "message",
+  } as unknown as SessionEvent;
+}
+
+function settledToolEvent(id: string): SessionEvent {
+  return {
+    id,
+    sessionId: "session-1",
+    source: "assistant",
+    createdAt: new Date().toISOString(),
+    actionType: "tool_call",
+    functionName: "code_search",
+    displayStatus: "completed",
+    displayVariant: "tool_call",
+    args: {},
+  } as unknown as SessionEvent;
+}
+
+describe("hasLiveRuntimeResourceInLatestTurn", () => {
+  it("detects a running event in the latest turn", () => {
+    const events = [
+      userEvent("u1"),
+      settledToolEvent("t1"),
+      shellEvent("running"),
+    ];
+    expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(true);
+  });
+
+  it("returns false when the latest turn is fully settled", () => {
+    const events = [userEvent("u1"), settledToolEvent("t1")];
+    expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(false);
+  });
+
+  it("ignores zombie running events from earlier turns", () => {
+    // The regression: a frozen shellProcessStatus="running" event in an
+    // old turn must not suppress the footer for the current turn.
+    const events = [
+      userEvent("u1"),
+      shellEvent("running"),
+      userEvent("u2"),
+      settledToolEvent("t2"),
+    ];
+    expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(false);
+  });
+
+  it("ignores old-turn background shells (pinned dev servers)", () => {
+    const events = [
+      userEvent("u1"),
+      shellEvent("background"),
+      userEvent("u2"),
+      settledToolEvent("t2"),
+    ];
+    expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(false);
+  });
+
+  it("scans the whole array when no user message exists", () => {
+    const events = [settledToolEvent("t1"), shellEvent("running")];
+    expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(true);
   });
 });

@@ -3,7 +3,7 @@
  *
  * A trigger that visually mimics the `Select` component but, instead of
  * opening an inline dropdown, fires `onClick` so the caller can open a
- * GlobalSpotlight palette (UnifiedModelPalette, RepoPalette, or a custom
+ * GlobalSpotlight palette (UnifiedModelPalette, WorkspacePalette, or a custom
  * routine-scoped palette).
  *
  * Why not reuse `Select` directly? `Select` owns its own dropdown engine

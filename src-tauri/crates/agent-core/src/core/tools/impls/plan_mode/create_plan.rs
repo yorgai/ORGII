@@ -492,7 +492,10 @@ mod tests {
         let tool = tool_without_manager();
         tool.set_session_key("s1").await;
         let err = tool
-            .execute(serde_json::json!({ "content": "body" }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "content": "body" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect_err("missing title must fail");
         assert!(matches!(err, ToolError::InvalidParams(_)));
@@ -503,7 +506,10 @@ mod tests {
         let tool = tool_without_manager();
         tool.set_session_key("s1").await;
         let err = tool
-            .execute(serde_json::json!({ "title": "   ", "content": "body" }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "title": "   ", "content": "body" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect_err("blank title must fail");
         assert!(matches!(err, ToolError::InvalidParams(_)));
@@ -514,7 +520,10 @@ mod tests {
         let tool = tool_without_manager();
         tool.set_session_key("s1").await;
         let err = tool
-            .execute(serde_json::json!({ "title": "Plan A" }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "title": "Plan A" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect_err("missing content must fail");
         assert!(matches!(err, ToolError::InvalidParams(_)));
@@ -524,7 +533,10 @@ mod tests {
     async fn rejects_when_session_key_unset() {
         let tool = tool_without_manager();
         let err = tool
-            .execute(serde_json::json!({ "title": "Plan A", "content": "x" }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "title": "Plan A", "content": "x" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .expect_err("unset session key must fail");
         assert!(matches!(err, ToolError::ExecutionFailed(_)));

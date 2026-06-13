@@ -6,6 +6,7 @@
 import type { MutableRefObject } from "react";
 
 import { reorderActiveRef } from "@src/engines/ChatPanel/InputArea/components/QueuedMessages";
+import { getNativeFrameScale } from "@src/util/platform/tauri/nativeFrame";
 
 /** Global window type for internal drag tracking */
 export interface GlobalDragWindow {
@@ -100,23 +101,76 @@ export function isInternalDrag(
 }
 
 const CHAT_DROP_TARGET_SELECTOR = "[data-chat-drop-target]";
-const CHAT_DROP_TARGET_HIT_SLOP_PX = 48;
+const CHAT_DROP_TARGET_HIT_SLOP_PX = 240;
+
+function getExpandedChatDropTarget(
+  coordinateX: number,
+  coordinateY: number
+): HTMLElement | null {
+  const dropTargets = document.querySelectorAll<HTMLElement>(
+    CHAT_DROP_TARGET_SELECTOR
+  );
+  let nearestTarget: HTMLElement | null = null;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  Array.from(dropTargets).forEach((dropTarget) => {
+    const rect = dropTarget.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    if (
+      coordinateX < rect.left - CHAT_DROP_TARGET_HIT_SLOP_PX ||
+      coordinateX > rect.right + CHAT_DROP_TARGET_HIT_SLOP_PX ||
+      coordinateY < rect.top - CHAT_DROP_TARGET_HIT_SLOP_PX ||
+      coordinateY > rect.bottom + CHAT_DROP_TARGET_HIT_SLOP_PX
+    ) {
+      return;
+    }
+
+    const nearestX = Math.max(rect.left, Math.min(coordinateX, rect.right));
+    const nearestY = Math.max(rect.top, Math.min(coordinateY, rect.bottom));
+    const deltaX = coordinateX - nearestX;
+    const deltaY = coordinateY - nearestY;
+    const distance = deltaX * deltaX + deltaY * deltaY;
+
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestTarget = dropTarget;
+    }
+  });
+
+  return nearestTarget;
+}
 
 function isPointInsideChatDropTarget(
   coordinateX: number,
   coordinateY: number
 ): boolean {
-  const dropTargets = document.querySelectorAll(CHAT_DROP_TARGET_SELECTOR);
-  return Array.from(dropTargets).some((dropTarget) => {
-    const rect = dropTarget.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return false;
-    return (
-      coordinateX >= rect.left - CHAT_DROP_TARGET_HIT_SLOP_PX &&
-      coordinateX <= rect.right + CHAT_DROP_TARGET_HIT_SLOP_PX &&
-      coordinateY >= rect.top - CHAT_DROP_TARGET_HIT_SLOP_PX &&
-      coordinateY <= rect.bottom + CHAT_DROP_TARGET_HIT_SLOP_PX
-    );
-  });
+  return getExpandedChatDropTarget(coordinateX, coordinateY) !== null;
+}
+
+function getNativeDragPositionScales(): number[] {
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const nativeFrameScale = getNativeFrameScale();
+  return Array.from(
+    new Set([
+      devicePixelRatio * nativeFrameScale,
+      nativeFrameScale,
+      devicePixelRatio,
+      1,
+    ])
+  ).filter((scale) => Number.isFinite(scale) && scale > 0);
+}
+
+function getDomViewportPositionCandidates(position: {
+  x: number;
+  y: number;
+}): Array<{
+  x: number;
+  y: number;
+}> {
+  return getNativeDragPositionScales().map((scale) => ({
+    x: position.x / scale,
+    y: position.y / scale,
+  }));
 }
 
 function getDropTargetElement(
@@ -127,14 +181,15 @@ function getDropTargetElement(
     return target instanceof Element ? target : null;
   }
 
-  const scale = window.devicePixelRatio || 1;
-  const scaledElement = document.elementFromPoint(
-    eventOrPosition.x / scale,
-    eventOrPosition.y / scale
-  );
-  if (scaledElement) return scaledElement;
+  for (const domPosition of getDomViewportPositionCandidates(eventOrPosition)) {
+    const scaledElement = document.elementFromPoint(
+      domPosition.x,
+      domPosition.y
+    );
+    if (scaledElement) return scaledElement;
+  }
 
-  return document.elementFromPoint(eventOrPosition.x, eventOrPosition.y);
+  return null;
 }
 
 export function getChatDropTargetId(
@@ -144,6 +199,25 @@ export function getChatDropTargetId(
   const directTarget = targetElement?.closest(CHAT_DROP_TARGET_SELECTOR);
   if (directTarget instanceof HTMLElement) {
     return directTarget.dataset.chatDropTargetId;
+  }
+
+  if (eventOrPosition instanceof DragEvent) {
+    return getExpandedChatDropTarget(
+      eventOrPosition.clientX,
+      eventOrPosition.clientY
+    )?.dataset.chatDropTargetId;
+  }
+
+  if (!(eventOrPosition instanceof Event)) {
+    for (const domPosition of getDomViewportPositionCandidates(
+      eventOrPosition
+    )) {
+      const expandedTarget = getExpandedChatDropTarget(
+        domPosition.x,
+        domPosition.y
+      );
+      if (expandedTarget) return expandedTarget.dataset.chatDropTargetId;
+    }
   }
 
   return undefined;
@@ -163,12 +237,8 @@ export function isDropInsideChatDropTarget(
   }
 
   if (!(eventOrPosition instanceof Event)) {
-    const scale = window.devicePixelRatio || 1;
-    return (
-      isPointInsideChatDropTarget(
-        eventOrPosition.x / scale,
-        eventOrPosition.y / scale
-      ) || isPointInsideChatDropTarget(eventOrPosition.x, eventOrPosition.y)
+    return getDomViewportPositionCandidates(eventOrPosition).some(
+      (domPosition) => isPointInsideChatDropTarget(domPosition.x, domPosition.y)
     );
   }
 

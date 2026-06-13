@@ -36,6 +36,9 @@ export function useTerminalAppearance({
     if (terminalRef.current && isReady) {
       const terminal = terminalRef.current;
       terminal.options.theme = getXTermTheme(terminalTheme);
+      terminal.options.cursorStyle = "bar";
+      terminal.options.cursorBlink = true;
+      terminal.options.cursorInactiveStyle = "outline";
       terminal.clearTextureAtlas();
       terminal.refresh(0, terminal.rows - 1);
       requestAnimationFrame(() => {

@@ -13,9 +13,23 @@ macro_rules! action_sub {
             summary: $summary,
             app_subtool: Some($subtool),
             chat_block: None,
+            display_behavior: None,
             label_running: None,
             label_done: None,
             label_failed: None,
+            status_labels: &[],
+        }
+    };
+    ($name:expr, $summary:expr, $subtool:expr, display: $display_behavior:expr, labels: $lr:expr, $ld:expr, $lf:expr) => {
+        $crate::core::tools::builtin_tools::types::ActionEntry {
+            name: $name,
+            summary: $summary,
+            app_subtool: Some($subtool),
+            chat_block: None,
+            display_behavior: Some($display_behavior),
+            label_running: Some($lr),
+            label_done: Some($ld),
+            label_failed: Some($lf),
             status_labels: &[],
         }
     };
@@ -25,6 +39,27 @@ macro_rules! action_sub {
             summary: $summary,
             app_subtool: Some($subtool),
             chat_block: None,
+            display_behavior: None,
+            label_running: Some($lr),
+            label_done: Some($ld),
+            label_failed: Some($lf),
+            status_labels: &[],
+        }
+    };
+    (
+        $name:expr,
+        $summary:expr,
+        $subtool:expr,
+        chat: $cb:expr,
+        display: $display_behavior:expr,
+        labels: $lr:expr, $ld:expr, $lf:expr
+    ) => {
+        $crate::core::tools::builtin_tools::types::ActionEntry {
+            name: $name,
+            summary: $summary,
+            app_subtool: Some($subtool),
+            chat_block: Some($cb),
+            display_behavior: Some($display_behavior),
             label_running: Some($lr),
             label_done: Some($ld),
             label_failed: Some($lf),
@@ -43,6 +78,7 @@ macro_rules! action_sub {
             summary: $summary,
             app_subtool: Some($subtool),
             chat_block: Some($cb),
+            display_behavior: None,
             label_running: Some($lr),
             label_done: Some($ld),
             label_failed: Some($lf),

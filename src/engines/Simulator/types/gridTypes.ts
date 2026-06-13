@@ -75,6 +75,14 @@ export interface GridCellProps {
   isExpanded?: boolean;
   /** Called when the user clicks the expand / collapse button. */
   onExpand?: () => void;
+  /**
+   * Backend-authoritative liveness of the cell's session (clip still
+   * open — `endedAtMs === null`). Drives the session-scoped planning
+   * footer inside the cell's chat pane so the last block never sits
+   * static while the subagent is still working. Defaults to false
+   * (no footer) when unknown.
+   */
+  isSessionLive?: boolean;
 }
 
 // ============================================

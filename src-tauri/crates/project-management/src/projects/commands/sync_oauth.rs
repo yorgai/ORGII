@@ -16,7 +16,7 @@ use crate::sync::{
     oauth::{self, OAuthFlowStart},
 };
 
-use super::{PendingFlow, PendingFlowScope, PENDING_FLOWS, connection_pending_key};
+use super::{connection_pending_key, PendingFlow, PendingFlowScope, PENDING_FLOWS};
 
 // ============================================================================
 // Public wire types

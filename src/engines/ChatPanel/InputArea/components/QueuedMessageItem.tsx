@@ -8,7 +8,7 @@
  */
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowUp, Clock, Pencil, Trash2 } from "lucide-react";
+import { ArrowUp, Clock, Loader2, Pencil, Trash2 } from "lucide-react";
 import React, { memo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -44,8 +44,15 @@ const QueuedMessageItem: React.FC<QueuedMessageItemProps> = memo(
     onCancel,
   }) => {
     const { t } = useTranslation();
+    // "now" priority = Send Now clicked; the dispatcher delivers the moment
+    // the interrupted turn's terminal lands. Render as "sending now…" so the
+    // user sees their click took effect during the interrupt window.
+    const isSendingNow = msg.priority === "now";
     const { attributes, listeners, setNodeRef, transform, transition } =
-      useSortable({ id: msg.id, disabled: isEditing || !draggable });
+      useSortable({
+        id: msg.id,
+        disabled: isEditing || isSendingNow || !draggable,
+      });
 
     const style: React.CSSProperties = {
       transform: CSS.Transform.toString(transform),
@@ -64,26 +71,38 @@ const QueuedMessageItem: React.FC<QueuedMessageItemProps> = memo(
         style={style}
         className={`${COMPOSER_STACK_ROW_BASE} ${
           isEditing ? "bg-primary-1" : COMPOSER_STACK_ROW_HOVER
-        } ${draggable && !isEditing ? "cursor-grab active:cursor-grabbing" : ""}`}
+        } ${draggable && !isEditing && !isSendingNow ? "cursor-grab active:cursor-grabbing" : ""}`}
         data-testid="queued-message-item"
         data-queued-message-id={msg.id}
         data-queued-message-content={msg.displayContent}
+        data-queued-message-sending={isSendingNow || undefined}
         title={msg.displayContent}
         aria-label={msg.displayContent}
-        {...(draggable && !isEditing ? { ...attributes, ...listeners } : {})}
+        {...(draggable && !isEditing && !isSendingNow
+          ? { ...attributes, ...listeners }
+          : {})}
       >
         <div className="flex h-[14px] w-[14px] shrink-0 items-center justify-center">
-          <Clock
-            size={14}
-            className={isEditing ? "text-primary-6" : "text-text-2"}
-          />
+          {isSendingNow ? (
+            <Loader2 size={14} className="animate-spin text-primary-6" />
+          ) : (
+            <Clock
+              size={14}
+              className={isEditing ? "text-primary-6" : "text-text-2"}
+            />
+          )}
         </div>
         <span
           className={`${COMPOSER_STACK_ROW_LABEL} ${isEditing ? "!text-primary-6" : ""}`}
         >
           {preview}
         </span>
-        {!isEditing && (
+        {isSendingNow && (
+          <span className="shrink-0 text-[10px] text-primary-6">
+            {t("common:labels.sendingNow")}
+          </span>
+        )}
+        {!isEditing && !isSendingNow && (
           <span className={COMPOSER_STACK_ROW_ACTIONS}>
             <Button
               htmlType="button"

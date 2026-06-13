@@ -31,6 +31,10 @@ import {
 } from "@src/api/tauri/agent";
 import { Message } from "@src/components/Message";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
+import {
+  beginOptimisticTurn,
+  failOptimisticTurn,
+} from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import {
   beginTurnDispatch,
@@ -230,14 +234,13 @@ export function useQueueDispatch(): void {
       }
 
       // Capture the payload for Stop-restore before the async append.
-      store.set(lastUserMessageAtom, { displayContent, imageDataUrls });
-
-      // Optimistic running status (UI mirror only) so the planning indicator
-      // starts immediately; adapters overwrite it with authoritative status.
-      store.set(setSessionRuntimeStatusAtom, {
-        status: "running",
-        source: "queue",
+      store.set(lastUserMessageAtom, {
+        sessionId,
+        displayContent,
+        imageDataUrls,
       });
+
+      beginOptimisticTurn(sessionId, "queue");
 
       void (async () => {
         try {
@@ -283,6 +286,7 @@ export function useQueueDispatch(): void {
             // Cursor IDE sessions have no turn lifecycle (no terminal event
             // stream) — close the turn right after a successful handoff.
             store.set(setSessionRuntimeStatusAtom, {
+              sessionId,
               status: "idle",
               source: "queue",
             });
@@ -295,10 +299,7 @@ export function useQueueDispatch(): void {
           // IPC failed before the backend received the message: close the
           // reserved turn and park the message so it does not retry in a
           // tight loop — the user can fix the issue and press Send Now.
-          store.set(setSessionRuntimeStatusAtom, {
-            status: "idle",
-            source: "queue",
-          });
+          failOptimisticTurn(sessionId, "queue");
           markTurnTerminal(sessionId, "failed", {
             generation: dispatchGeneration,
           });

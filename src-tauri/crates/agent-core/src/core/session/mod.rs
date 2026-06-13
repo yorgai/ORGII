@@ -16,6 +16,7 @@ pub mod compaction;
 pub mod exec_modes;
 pub(crate) mod file_registry;
 pub mod gateway_pipeline;
+pub mod goal_loop;
 pub mod launch;
 pub mod overrides;
 pub mod persistence;
@@ -53,7 +54,7 @@ pub use project_init::init_workspace_session;
 pub use scheduler::{DialogScheduler, ScheduledMessage};
 pub use turn::{process_message, TurnInput};
 pub use types::{
-    AgentExecMode, DialogTurn, DialogTurnState, IdeContext, SessionListFilter, SessionStatus,
-    SystemPromptConfig, TurnStats, UserPresence, UserPresenceMode, UserProfile,
+    presence_mode_ids, AgentExecMode, DialogTurn, DialogTurnState, IdeContext, PresenceStance,
+    SessionListFilter, SessionStatus, SystemPromptConfig, TurnStats, UserPresence, UserProfile,
 };
 pub use workspace::SessionWorkspace;

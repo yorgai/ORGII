@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 
 import {
   type EmbeddingModelStatus,
-  type TantivyIndexInfo,
   type USearchIndexInfo,
   checkAdvancedSearchEnabled,
   checkEmbeddingModelStatus,
@@ -12,11 +11,8 @@ import {
   downloadEmbeddingModel,
   getModelDirPath,
   getSemanticIndexInfo,
-  getTantivyIndexInfo,
   indexRepositorySemantic,
-  indexRepositoryTantivy,
   removeRepositorySemantic,
-  removeRepositoryTantivy,
 } from "@src/api/tauri/search";
 import Button from "@src/components/Button";
 import Message from "@src/components/Message";
@@ -104,7 +100,6 @@ const AdvancedIndexingControls: React.FC = () => {
   const selectedRepoId = useAtomValue(selectedRepoIdAtom);
   const [loading, setLoading] = useState(false);
   const [modelLoading, setModelLoading] = useState(false);
-  const [tantivyInfo, setTantivyInfo] = useState<TantivyIndexInfo | null>(null);
   const [semanticInfo, setSemanticInfo] = useState<USearchIndexInfo | null>(
     null
   );
@@ -119,14 +114,9 @@ const AdvancedIndexingControls: React.FC = () => {
   );
 
   const refresh = useCallback(async () => {
-    const [nextTantivyInfo, nextSemanticInfo, nextModelStatus, nextModelDir] =
-      await Promise.all([
-        getTantivyIndexInfo(),
-        getSemanticIndexInfo(),
-        checkEmbeddingModelStatus(),
-        getModelDirPath(),
-      ]);
-    setTantivyInfo(nextTantivyInfo);
+    const [nextSemanticInfo, nextModelStatus, nextModelDir] = await Promise.all(
+      [getSemanticIndexInfo(), checkEmbeddingModelStatus(), getModelDirPath()]
+    );
     setSemanticInfo(nextSemanticInfo);
     setModelStatus(nextModelStatus);
     setModelDir(nextModelDir);
@@ -256,16 +246,6 @@ const AdvancedIndexingControls: React.FC = () => {
 
       <SectionContainer title={t("indexing.indexStorageSection")}>
         <SectionRow
-          label={t("indexing.searchIndex")}
-          description={t("indexing.filesIndexed", {
-            count: tantivyInfo?.num_documents ?? 0,
-          })}
-        >
-          <span className={SECTION_VALUE_SMALL_MUTED_CLASSES}>
-            {formatBytes(tantivyInfo?.index_size_bytes)}
-          </span>
-        </SectionRow>
-        <SectionRow
           label={t("indexing.embeddingIndex")}
           description={t("indexing.chunksEmbedded", {
             count: semanticInfo?.vector_count ?? 0,
@@ -284,29 +264,11 @@ const AdvancedIndexingControls: React.FC = () => {
         >
           <div className={SECTION_ACTION_GAP_CLASSES}>
             <Button
-              onClick={() => runRepoOperation(indexRepositoryTantivy)}
-              loading={loading}
-              disabled={loading || !selectedRepoPath}
-            >
-              {t("indexing.indexNow")}
-            </Button>
-            <Button
               onClick={() => runRepoOperation(indexRepositorySemantic)}
               loading={loading}
               disabled={loading || !selectedRepoPath || !modelStatus?.installed}
             >
               {t("indexing.embed")}
-            </Button>
-            <Button
-              onClick={() =>
-                runRepoOperation(async (repoId) =>
-                  removeRepositoryTantivy(repoId)
-                )
-              }
-              loading={loading}
-              disabled={loading || !selectedRepoId}
-            >
-              {t("indexing.deleteIndex")}
             </Button>
             <Button
               onClick={() =>

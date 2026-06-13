@@ -135,7 +135,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   // ============================================
   {
     id: "quit_app",
-    description: "Confirm before quitting application",
+    description: "Hold to quit application",
     key: "q",
     modifiers: ["cmd"],
     accelerator: "CmdOrCtrl+Q",

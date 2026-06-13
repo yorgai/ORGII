@@ -55,6 +55,7 @@ pub const READ_ONLY_DENY_TOOLS: &[&str] = &[
     crate::tools::names::DELETE_FILE,
     crate::tools::names::APPLY_PATCH,
     crate::tools::names::WORKTREE,
+    crate::tools::names::MANAGE_CODE_MAP,
     crate::tools::names::MANAGE_LSP,
     crate::tools::names::SETUP_REPO,
 ];

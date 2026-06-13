@@ -18,6 +18,11 @@ import type { TabPillItem, TabPillProps } from "./types";
 
 export type { TabPillItem, TabPillProps } from "./types";
 
+const SIDEBAR_PILL_BACKGROUND_STYLE: React.CSSProperties = {
+  backgroundColor:
+    "color-mix(in srgb, var(--sidebar-bg, var(--color-fill-1)) 72%, transparent)",
+};
+
 const TabPill: React.FC<TabPillProps> = ({
   tabs,
   activeTab: controlledActiveTab,
@@ -225,8 +230,11 @@ const TabPill: React.FC<TabPillProps> = ({
   if (variant === "sidebar") {
     return (
       <div className={cn("flex w-full items-center", className)}>
-        <div className="flex flex-1 items-center gap-0.5 rounded-full bg-fill-1 p-0.5">
-          <div className="flex flex-1 items-stretch gap-1">
+        <div
+          className="flex flex-1 items-center gap-0.5 rounded-full p-1"
+          style={SIDEBAR_PILL_BACKGROUND_STYLE}
+        >
+          <div className="flex flex-1 items-center gap-1">
             {normalizedTabs.map((tab) => (
               <SidebarTabButton
                 key={tab.key}

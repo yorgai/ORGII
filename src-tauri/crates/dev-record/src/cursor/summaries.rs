@@ -9,9 +9,7 @@ use rusqlite::params;
 use database::db::get_connection;
 
 use super::helpers::{duration_between_iso_ms, normalize_created_at, preview_text};
-use super::models::{
-    CursorIdeTurnSummary, OrderedBubble, RawComposerHeader, StableFingerprint,
-};
+use super::models::{CursorIdeTurnSummary, OrderedBubble, RawComposerHeader, StableFingerprint};
 
 const CURSOR_BUBBLE_TYPE_USER: i64 = 1;
 

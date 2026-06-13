@@ -86,6 +86,10 @@ impl Tool for AwaitTool {
         true
     }
 
+    fn search_hint(&self) -> &str {
+        "await wait monitor background job process subagent handle poll output"
+    }
+
     fn description(&self) -> &str {
         "Monitor background jobs (shell processes and subagents).\n\n\
         Subcommands (set via `command` param, default: \"monitor\"):\n\

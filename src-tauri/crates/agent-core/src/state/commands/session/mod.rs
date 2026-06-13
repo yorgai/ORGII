@@ -185,9 +185,13 @@ pub async fn agent_send_message(
     let source = turnIntentSource
         .as_deref()
         .and_then(|s| match s {
-            "user_submit" => Some(crate::foundation::session_bridge::TurnIntentBridgeSource::UserSubmit),
+            "user_submit" => {
+                Some(crate::foundation::session_bridge::TurnIntentBridgeSource::UserSubmit)
+            }
             "queue" => Some(crate::foundation::session_bridge::TurnIntentBridgeSource::Queue),
-            "force_send" => Some(crate::foundation::session_bridge::TurnIntentBridgeSource::ForceSend),
+            "force_send" => {
+                Some(crate::foundation::session_bridge::TurnIntentBridgeSource::ForceSend)
+            }
             "resume" => Some(crate::foundation::session_bridge::TurnIntentBridgeSource::Resume),
             _ => None,
         })

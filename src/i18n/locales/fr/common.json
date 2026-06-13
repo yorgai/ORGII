@@ -371,10 +371,8 @@
     "foundByKeyword": "Trouvé par recherche par mot-clé",
     "semanticSecondary": "meaning match",
     "hybridSecondary": "semantic + full-text",
-    "tantivySecondary": "indexed full-text",
     "semanticDescription": "Embedding-based meaning search",
-    "hybridDescription": "Combined semantic and full-text search",
-    "tantivyDescription": "Indexed full-text search"
+    "hybridDescription": "Combined semantic and full-text search"
   },
   "tabs": {
     "terminal": "Terminal",
@@ -471,12 +469,12 @@
     "delete": "Êtes-vous sûr de vouloir supprimer ?",
     "unsavedChanges": "Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir quitter ?",
     "discard": "Abandonner les modifications ?",
-    "removeTitle": "Retirer \"{{name}}\" du ORGII workspace ?",
-    "removeMessage": "Cela ne supprimera pas le dossier de code de votre appareil — cela le retire uniquement du ORGII workspace. Vous pouvez le rajouter à tout moment.",
+    "removeTitle": "Retirer \"{{name}}\" d’ORGII ?",
+    "removeMessage": "Cela supprime uniquement son lien avec ORGII. Rien ne sera supprimé du disque.",
     "deleteWorkspaceTitle": "Supprimer le Workspace \"{{name}}\" ?",
     "deleteWorkspaceMessage": "Cela supprime uniquement le préréglage Workspace. Les Repos et dossiers membres ne sont pas affectés.",
-    "deleteSelectedTitle": "Supprimer les {{count}} éléments sélectionnés ?",
-    "deleteSelectedMessage": "Cela supprime les Workspaces sélectionnés et dissocie les Repos sélectionnés. Les fichiers Repo sur le disque ne sont pas supprimés.",
+    "deleteSelectedTitle": "Retirer les {{count}} éléments sélectionnés d’ORGII ?",
+    "deleteSelectedMessage": "Cela supprime uniquement leur lien avec ORGII. Rien ne sera supprimé du disque.",
     "disconnectTitle": "Déconnecter \"{{name}}\" ?",
     "disconnectMessage": "Cela supprimera l'accès à tous les dépôts de ce compte.",
     "dropStashTitle": "Drop stash ?",
@@ -1134,7 +1132,7 @@
     "repo": {
       "workspaceFolders": "Dossiers du Workspace",
       "addRepo": "Ajouter un espace de travail",
-      "addEntry": "Plus d’options d’espace de travail",
+      "addEntry": "Plus d’options d’importation",
       "addRepoDescription": "Ouvrir, créer ou cloner un espace de travail",
       "sections": {
         "coding": "Espace de travail",
@@ -1143,6 +1141,7 @@
         "current": "Actuel",
         "repo": "Dépôts",
         "systemPaths": "Chemins système",
+        "usedElsewhere": "Used elsewhere",
         "workspace": "Espace de travail"
       },
       "tabs": {
@@ -1462,12 +1461,12 @@
         }
       },
       "toast": {
-        "repoRemoved": "Dépôt supprimé avec succès",
-        "repoRemoveFailed": "Échec de la suppression du dépôt",
-        "workspaceRemoved": "Workspace supprimé",
-        "workspaceRemoveFailed": "Échec de la suppression du Workspace",
-        "bulkDeleted": "{{count}} éléments supprimés",
-        "bulkDeleteFailed": "Échec de la suppression de {{count}} éléments"
+        "repoRemoved": "Linkage to ORGII removed",
+        "repoRemoveFailed": "Failed to remove linkage to ORGII",
+        "workspaceRemoved": "Linkage to ORGII removed",
+        "workspaceRemoveFailed": "Failed to remove linkage to ORGII",
+        "bulkDeleted": "{{count}} linkages to ORGII removed",
+        "bulkDeleteFailed": "{{count}} linkages failed to remove"
       }
     }
   },
@@ -1478,7 +1477,7 @@
     "locateInFinder": "Localiser dans le Finder",
     "copyLocalPath": "Copier le chemin local",
     "copyEventsJson": "Copier Events JSON",
-    "removeRepo": "Supprimer le dépôt",
+    "removeRepo": "Remove from ORGII",
     "addRepo": "Ajouter un dépôt...",
     "simulatorView": "Vue du simulateur",
     "addWorkspace": "Ajouter un espace de travail..."
@@ -2084,10 +2083,9 @@
     "selectWorkspaceToStart": "Sélectionnez un Workspace pour commencer",
     "selectRepoToStart": "Sélectionnez un Repo pour commencer"
   },
-  "quitConfirmation": {
-    "title": "Quitter ORGII ?",
-    "message": "Les sessions actives et les tâches en arrière-plan seront arrêtées.",
-    "okLabel": "Quitter"
+  "holdToQuit": {
+    "title": "Maintenez {{shortcut}} pendant 1 seconde pour quitter",
+    "subtitle": "Relâchez pour annuler"
   },
   "projects": {
     "title": "Carte thermique",

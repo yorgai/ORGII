@@ -55,6 +55,33 @@ export function isLiveRuntimeResourceEvent(event: SessionEvent): boolean {
   );
 }
 
+/**
+ * Planning-footer variant of the live-resource scan: only the LATEST turn
+ * (events after the last user-source message) counts.
+ *
+ * Why not the whole session: zombie running events — tool calls whose
+ * terminal status merge was dropped, or shell events whose
+ * `shellProcessStatus` froze at "running" after the process exited — are
+ * permanent once persisted. Scanning the full history lets one zombie from
+ * an old turn suppress the "Planning next step…" footer for every later
+ * turn in the session. Old-turn background shells (dev servers) are also
+ * deliberately excluded: a pinned background process is not a reason to
+ * hide "the agent is thinking".
+ *
+ * Within the current turn the gate keeps its meaning: a genuinely running
+ * row paints its own shimmer, so the footer stays hidden.
+ */
+export function hasLiveRuntimeResourceInLatestTurn(
+  events: readonly SessionEvent[]
+): boolean {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.source === "user") return false;
+    if (isLiveRuntimeResourceEvent(event)) return true;
+  }
+  return false;
+}
+
 export function isTurnBlockingRuntimeEvent(event: SessionEvent): boolean {
   const shellProcessStatus = shellProcessStatusFromArgs(event.args);
   if (shellProcessStatus) {

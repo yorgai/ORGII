@@ -56,8 +56,7 @@ where
 use super::capabilities::CapabilitySet;
 use super::schema::{
     AgentDefinition, AgentLearningsConfig, AgentPolicy, AgentSkillsConfig, AgentTier,
-    AgentToolSelection, CompactionConfig, DelegationConfig, SessionMode, SessionModel,
-    SubAgentRef,
+    AgentToolSelection, CompactionConfig, DelegationConfig, SessionMode, SessionModel, SubAgentRef,
 };
 use crate::core::config::ReliabilityConfig;
 use crate::foundation::security::policy::AutonomyLevel;

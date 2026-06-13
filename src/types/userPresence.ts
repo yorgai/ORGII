@@ -59,16 +59,125 @@ export function parseCustomRoleId(mode: UserPresenceMode): string | null {
     : null;
 }
 
+// ────────────────────────────────────────────────────────────────────
+// Presence mode spec — mode as a full data record
+// ────────────────────────────────────────────────────────────────────
+//
+// Every mode — built-in or user-created — is a complete record carrying
+// both its prompt identity (label + guidance) and its runtime behavior
+// policy (stance + auto-resolve timers + goal budget). Built-in modes
+// are three non-deletable preset records; custom modes are ordinary
+// rows. New modes need zero backend code: the frontend resolves the
+// spec and ships the full result on the wire.
+
+/**
+ * Behavior stance — the closed set of runtime semantics a mode maps to.
+ * Behavior is code; prompt copy is data. A mode's "personality" lives
+ * in its guidance text, while its runtime behavior is one of these.
+ */
+export const PRESENCE_STANCE = {
+  /** User at keyboard: ask freely, confirm destructive actions, block forever. */
+  INTERACTIVE: "interactive",
+  /** User stepped away: work first, batch questions, hold irreversibles. */
+  DEFER_AND_BATCH: "defer_and_batch",
+  /** Goal mode: never ask, auto-resolve blockers, keep going until done. */
+  AUTONOMOUS: "autonomous",
+} as const;
+
+export type PresenceStance =
+  (typeof PRESENCE_STANCE)[keyof typeof PRESENCE_STANCE];
+
+export const PRESENCE_STANCES: PresenceStance[] = [
+  PRESENCE_STANCE.INTERACTIVE,
+  PRESENCE_STANCE.DEFER_AND_BATCH,
+  PRESENCE_STANCE.AUTONOMOUS,
+];
+
+export function isPresenceStance(value: string): value is PresenceStance {
+  return (PRESENCE_STANCES as readonly string[]).includes(value);
+}
+
+/** Full per-mode record: prompt identity + runtime behavior policy. */
+export interface PresenceModeSpec {
+  /** "online" | "invisible" | "away" | "role:<slug>" */
+  id: UserPresenceMode;
+  /** Display name shown in the pill, dropdown, and prompt. */
+  label: string;
+  /** Icon id (custom roles only; built-ins have fixed icons). */
+  iconId?: CustomRoleIconId;
+  /** The mode's prompt addendum (user-editable textarea). */
+  guidance: string;
+  /** Runtime behavior class. */
+  stance: PresenceStance;
+  /** Seconds until a pending ask_user_questions batch auto-skips. 0 = off. */
+  questionAutoResolveSecs: number;
+  /** Seconds until a pending plan approval auto-approves. 0 = off. */
+  planAutoApproveSecs: number;
+  /** Goal-loop continuation budget (Ralph loop). 0 = loop disabled. */
+  goalMaxTurns: number;
+  /** Built-in modes cannot be deleted and keep fixed ids/icons. */
+  builtIn: boolean;
+}
+
+/**
+ * Behavior-policy defaults per built-in mode. These are also the
+ * fallback the Rust side derives when an old wire payload arrives
+ * without explicit policy fields.
+ */
+export const BUILT_IN_PRESENCE_POLICY: Record<
+  BuiltInPresenceMode,
+  Pick<
+    PresenceModeSpec,
+    | "stance"
+    | "questionAutoResolveSecs"
+    | "planAutoApproveSecs"
+    | "goalMaxTurns"
+  >
+> = {
+  [USER_PRESENCE_MODE.ONLINE]: {
+    stance: PRESENCE_STANCE.INTERACTIVE,
+    questionAutoResolveSecs: 0,
+    planAutoApproveSecs: 0,
+    goalMaxTurns: 0,
+  },
+  [USER_PRESENCE_MODE.AWAY]: {
+    stance: PRESENCE_STANCE.DEFER_AND_BATCH,
+    questionAutoResolveSecs: 180,
+    planAutoApproveSecs: 0,
+    goalMaxTurns: 0,
+  },
+  [USER_PRESENCE_MODE.INVISIBLE]: {
+    stance: PRESENCE_STANCE.AUTONOMOUS,
+    questionAutoResolveSecs: 30,
+    planAutoApproveSecs: 120,
+    goalMaxTurns: 20,
+  },
+};
+
 /**
  * Wire shape sent to the Rust runtime. Matches `UserPresence` in
  * `src-tauri/crates/agent-core/src/core/session/types/context.rs`.
+ *
+ * Carries the fully-resolved mode spec so the backend never needs to
+ * know about settings or custom-role storage — any custom mode gets
+ * full runtime behavior with zero backend changes.
  */
 export interface UserPresenceWire {
   mode: UserPresenceMode;
+  /** Display label of the mode ("Online", "Angry", …). */
+  label?: string;
   /** ISO-8601 timestamp the user expects to be back (Away only). */
   backAt?: string;
-  /** Per-mode prompt addendum configured in Settings → General. */
+  /** Per-mode prompt addendum configured in Settings → My Role. */
   guidance?: string;
+  /** Runtime behavior class. */
+  stance?: PresenceStance;
+  /** Seconds until pending questions auto-skip. 0 = off. */
+  questionAutoResolveSecs?: number;
+  /** Seconds until pending plan approvals auto-approve. 0 = off. */
+  planAutoApproveSecs?: number;
+  /** Goal-loop continuation budget. 0 = off. */
+  goalMaxTurns?: number;
 }
 
 /**
@@ -168,4 +277,13 @@ export interface CustomRoleDefinition {
   guidance: string;
   /** Epoch ms — `Date.now()` at creation; used to keep the list stable. */
   createdAtMs: number;
+  /**
+   * Behavior policy. Optional for backward compatibility with roles
+   * created before the spec redesign — absent fields resolve to the
+   * conservative interactive/0/0/0 defaults (same behavior as before).
+   */
+  stance?: PresenceStance;
+  questionAutoResolveSecs?: number;
+  planAutoApproveSecs?: number;
+  goalMaxTurns?: number;
 }

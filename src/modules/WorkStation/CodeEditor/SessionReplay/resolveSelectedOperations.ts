@@ -7,6 +7,7 @@
  * Extracted from useCodeEditorReplay.ts to keep that hook under 600 lines.
  */
 import { resolveFileOperationPayload } from "./resolveFilePayload";
+import { FILE_OPERATION_TYPE } from "./types";
 import type {
   ExploreOperationEntry,
   FileOperationEntry,
@@ -55,6 +56,12 @@ export function resolveSelectedFileOperation(
   userSelectedFileEventId: string | null,
   currentEventId: string | undefined
 ): FileOperationEntry | null {
+  const runningReadOperation = allFileOperations.find(
+    (operation) =>
+      operation.type === FILE_OPERATION_TYPE.READ && operation.isLoading
+  );
+  if (runningReadOperation) return runningReadOperation;
+
   if (userSelectedFileEventId) {
     const found = allFileOperations.find(
       (op) =>

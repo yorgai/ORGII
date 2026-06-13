@@ -71,7 +71,7 @@ const ControlButtons: React.FC<ControlButtonsProps> = memo(
     );
 
     return (
-      <div className="flex min-w-0 items-center gap-0">
+      <div className="flex min-w-0 items-center gap-px">
         {!hideModePill && usesOrgiiExecMode && (
           <ModePill
             forceVisible

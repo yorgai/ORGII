@@ -9,8 +9,8 @@ mod filter;
 mod turn;
 
 pub use context::{
-    IdeContext, ProcessingContext, ProcessingResult, SystemPromptConfig, ToolSummary, UserPresence,
-    UserPresenceMode, UserProfile,
+    presence_mode_ids, IdeContext, PresenceStance, ProcessingContext, ProcessingResult,
+    SystemPromptConfig, ToolSummary, UserPresence, UserProfile,
 };
 pub use enums::{AgentExecMode, SessionStatus};
 pub use filter::SessionListFilter;

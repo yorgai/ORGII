@@ -64,6 +64,10 @@ pub(crate) fn register_database_schemas() {
         // restart, instead of being silently lost.
         agent_core::interaction::plan_approval::persistence::init_schema(conn)?;
 
+        // Goal-loop state (standing goal + continuation counter per session)
+        // so an Invisible-mode goal survives an app restart.
+        agent_core::session::goal_loop::init_schema(conn)?;
+
         Ok(())
     }
 

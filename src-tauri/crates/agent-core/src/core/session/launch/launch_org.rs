@@ -7,7 +7,9 @@ use core_types::key_source::KeySource;
 
 use crate::coordination::agent_org_runs::AgentOrgRunStore;
 use crate::definitions::orgs::{parse_cli_agent_org_reference, OrgDefinition};
-use crate::session::persistence::{self as session_persistence, session_type, UnifiedSessionRecord};
+use crate::session::persistence::{
+    self as session_persistence, session_type, UnifiedSessionRecord,
+};
 use crate::session::IdeContext;
 use crate::state::AgentAppState;
 
@@ -293,6 +295,7 @@ pub(super) async fn send_initial_turn(
     ide_context: Option<IdeContext>,
     agent_definition_id: Option<String>,
     sub_agent_ids: Vec<String>,
+    source: crate::foundation::session_bridge::TurnIntentBridgeSource,
 ) -> Result<(), String> {
     if sub_agent_ids.is_empty() {
         crate::state::commands::session::message::send_message_impl(
@@ -313,7 +316,7 @@ pub(super) async fn send_initial_turn(
             false,
             None,
             None,
-            crate::foundation::session_bridge::TurnIntentBridgeSource::AgentOrg,
+            source,
         )
         .await?;
         return Ok(());

@@ -305,6 +305,11 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
     const showMcpProgress = Boolean(
       isLoading && callId && sessionId && !isCollapsed
     );
+    const hasExpandedShell =
+      !isCollapsed &&
+      (hasContent ||
+        showMcpProgress ||
+        (isLoading && (argsText || streamOutput || styledOutput)));
 
     return (
       <div
@@ -339,86 +344,68 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
           )}
         </EventBlockHeader>
 
-        {!isCollapsed &&
-          (hasContent ||
-            showMcpProgress ||
-            (isLoading && (argsText || streamOutput || styledOutput))) && (
-            <div
-              className={`${EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES} animate-fade-in`}
-            >
-              {showMcpProgress && callId && sessionId && (
-                <McpProgressRow sessionId={sessionId} toolCallId={callId} />
-              )}
-              {argsText.length > 0 && (
-                <BlockSection label={t("tools.inputSection")}>
-                  <BlockOutput
-                    output={argsText}
-                    visibleLines={DEFAULT_VISIBLE_LINES}
-                    withBorder={false}
-                    sessionId={sessionId}
-                    eventId={eventId}
-                    payloadRef={argsPayloadRef}
-                  />
-                </BlockSection>
-              )}
+        {hasExpandedShell && (
+          <div
+            className={`${EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES} animate-fade-in`}
+          >
+            {showMcpProgress && callId && sessionId && (
+              <McpProgressRow sessionId={sessionId} toolCallId={callId} />
+            )}
+            {argsText.length > 0 && (
+              <BlockSection label={t("tools.inputSection")}>
+                <BlockOutput
+                  output={argsText}
+                  visibleLines={DEFAULT_VISIBLE_LINES}
+                  withBorder={false}
+                  sessionId={sessionId}
+                  eventId={eventId}
+                  payloadRef={argsPayloadRef}
+                />
+              </BlockSection>
+            )}
 
-              {isLoading && styledOutput && (
-                <BlockSection
-                  label={t("tools.outputSection")}
-                  borderTop={argsText.length > 0}
-                >
-                  <OutputContent
-                    styledOutput={styledOutput}
-                    isBrowserSnapshot={false}
-                    resultContent=""
-                    hasOutput={false}
-                    outputText=""
-                    isError={false}
-                    hasResult={false}
-                    completedLabel={completedLabel}
-                    sessionId={sessionId}
-                    eventId={eventId}
-                    payloadRef={outputPayloadRef}
-                  />
-                </BlockSection>
-              )}
+            {isLoading && styledOutput && (
+              <BlockSection
+                label={t("tools.outputSection")}
+                borderTop={argsText.length > 0}
+              >
+                <OutputContent
+                  styledOutput={styledOutput}
+                  isBrowserSnapshot={false}
+                  resultContent=""
+                  hasOutput={false}
+                  outputText=""
+                  isError={false}
+                  hasResult={false}
+                  completedLabel={completedLabel}
+                  sessionId={sessionId}
+                  eventId={eventId}
+                  payloadRef={outputPayloadRef}
+                />
+              </BlockSection>
+            )}
 
-              {isLoading && streamOutput && (
-                <BlockSection
-                  label={t("tools.outputSection")}
-                  borderTop={argsText.length > 0 || Boolean(styledOutput)}
-                >
-                  <BlockOutput
-                    output={streamOutput}
-                    visibleLines={DEFAULT_VISIBLE_LINES}
-                    withBorder={false}
-                  />
-                </BlockSection>
-              )}
+            {isLoading && streamOutput && (
+              <BlockSection
+                label={t("tools.outputSection")}
+                borderTop={argsText.length > 0 || Boolean(styledOutput)}
+              >
+                <BlockOutput
+                  output={streamOutput}
+                  visibleLines={DEFAULT_VISIBLE_LINES}
+                  withBorder={false}
+                />
+              </BlockSection>
+            )}
 
-              {!isLoading && (
-                <>
-                  {argsText.length > 0 || resultActions ? (
-                    <BlockSection
-                      label={t("tools.outputSection")}
-                      borderTop={argsText.length > 0}
-                      headerAction={resultActions}
-                    >
-                      <OutputContent
-                        styledOutput={styledOutput}
-                        isBrowserSnapshot={isBrowserSnapshot}
-                        resultContent={resultContent}
-                        hasOutput={hasOutput}
-                        outputText={outputText}
-                        isError={isError}
-                        hasResult={hasResult}
-                        completedLabel={completedLabel}
-                        sessionId={sessionId}
-                        eventId={eventId}
-                        payloadRef={outputPayloadRef}
-                      />
-                    </BlockSection>
-                  ) : (
+            {!isLoading && (
+              <>
+                {argsText.length > 0 || resultActions ? (
+                  <BlockSection
+                    label={t("tools.outputSection")}
+                    borderTop={argsText.length > 0}
+                    headerAction={resultActions}
+                  >
                     <OutputContent
                       styledOutput={styledOutput}
                       isBrowserSnapshot={isBrowserSnapshot}
@@ -432,11 +419,26 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
                       eventId={eventId}
                       payloadRef={outputPayloadRef}
                     />
-                  )}
-                </>
-              )}
-            </div>
-          )}
+                  </BlockSection>
+                ) : (
+                  <OutputContent
+                    styledOutput={styledOutput}
+                    isBrowserSnapshot={isBrowserSnapshot}
+                    resultContent={resultContent}
+                    hasOutput={hasOutput}
+                    outputText={outputText}
+                    isError={isError}
+                    hasResult={hasResult}
+                    completedLabel={completedLabel}
+                    sessionId={sessionId}
+                    eventId={eventId}
+                    payloadRef={outputPayloadRef}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     );
   }

@@ -484,8 +484,9 @@ pub async fn finalize_session(
                 load_workspace_resources,
             );
             if executor.has_hooks_for(crate::specialization::hooks::HookEvent::SessionStop) {
-                let ctx = crate::specialization::hooks::events::HookContext::for_session(session_id)
-                    .with_var("ORGII_SESSION_STATUS", final_status.as_ref());
+                let ctx =
+                    crate::specialization::hooks::events::HookContext::for_session(session_id)
+                        .with_var("ORGII_SESSION_STATUS", final_status.as_ref());
                 let sid = session_id.to_string();
                 tokio::spawn(async move {
                     executor

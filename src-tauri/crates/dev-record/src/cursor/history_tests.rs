@@ -6,10 +6,10 @@
 
 use super::*;
 
-const FIXTURE_COMPOSER: &str = include_str!("fixtures/composer.json");
-const FIXTURE_BUBBLE_USER: &str = include_str!("fixtures/bubble_user.json");
-const FIXTURE_BUBBLE_ASSISTANT_TEXT: &str = include_str!("fixtures/bubble_assistant_text.json");
-const FIXTURE_BUBBLE_ASSISTANT_TOOL: &str = include_str!("fixtures/bubble_assistant_tool.json");
+const FIXTURE_COMPOSER: &str = include_str!("../fixtures/composer.json");
+const FIXTURE_BUBBLE_USER: &str = include_str!("../fixtures/bubble_user.json");
+const FIXTURE_BUBBLE_ASSISTANT_TEXT: &str = include_str!("../fixtures/bubble_assistant_text.json");
+const FIXTURE_BUBBLE_ASSISTANT_TOOL: &str = include_str!("../fixtures/bubble_assistant_tool.json");
 
 const TEST_SESSION_ID: &str = "cursoride-test-session-uuid";
 

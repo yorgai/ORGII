@@ -126,12 +126,12 @@ export function useFoldersSidebarContextMenu({
   const removeRepo = useCallback(
     async (repo: Repo) => {
       const confirmed = await confirmDestructiveAction({
-        title: tCommon("ellipsisMenu.removeRepo", "Remove repo"),
+        title: tCommon("ellipsisMenu.removeRepo", "Remove from ORGII"),
         message: tCommon(
           "confirmation.deleteSelectedMessage",
-          "This unlinks the repo. Files on disk are not deleted."
+          "This only removes their linkage to ORGII. Nothing will be removed from disk."
         ),
-        okLabel: tCommon("actions.delete"),
+        okLabel: tCommon("actions.removeFromOrgii"),
         cancelLabel: tCommon("actions.cancel"),
       });
       if (!confirmed) return;
@@ -139,16 +139,19 @@ export function useFoldersSidebarContextMenu({
         await repoApi.deleteRepo(repo.id);
         await forceRefreshRepos();
         Message.success(
-          tCommon("selectors.spotlight.toast.repoRemoved", "Repo removed")
+          tCommon(
+            "selectors.spotlight.toast.repoRemoved",
+            "Linkage to ORGII removed"
+          )
         );
       } catch (error) {
-        logger.error("Failed to remove repo", error);
+        logger.error("Failed to remove linkage to ORGII", error);
         Message.error(
           error instanceof Error
             ? error.message
             : tCommon(
                 "selectors.spotlight.toast.repoRemoveFailed",
-                "Failed to remove repo"
+                "Failed to remove linkage to ORGII"
               )
         );
       }
@@ -213,7 +216,7 @@ export function useFoldersSidebarContextMenu({
           },
         });
         const removeItem = await MenuItem.new({
-          text: tCommon("ellipsisMenu.removeRepo", "Remove repo"),
+          text: tCommon("ellipsisMenu.removeRepo", "Remove from ORGII"),
           action: () => {
             void removeRepo(repo);
           },

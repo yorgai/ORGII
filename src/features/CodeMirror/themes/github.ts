@@ -21,8 +21,8 @@ export function createGithubTheme(): ReturnType<typeof createTheme> {
   const settings = {
     background: cssVar("--cm-editor-background", "#fff"),
     foreground: cssVar("--cm-editor-foreground", "#24292e"),
-    selection: cssVar("--cm-editor-selection", "#BBDFFF"),
-    selectionMatch: cssVar("--cm-editor-selection", "#BBDFFF"),
+    selection: cssVar("--cm-editor-selection", "var(--color-fill-2)"),
+    selectionMatch: cssVar("--cm-editor-selection", "var(--color-fill-2)"),
     gutterBackground: cssVar("--cm-editor-gutter-bg", "#fff"),
     gutterForeground: cssVar("--cm-editor-gutter-fg", "#6e7781"),
     lineHighlight: cssVar("--cm-editor-line-highlight", "transparent"),

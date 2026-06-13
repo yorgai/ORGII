@@ -16,6 +16,8 @@ fn tool_name_constants_are_stable_wire_strings() {
     assert_eq!(RUN_SHELL, "run_shell");
     assert_eq!(AWAIT_OUTPUT, "await_output");
     assert_eq!(CODE_SEARCH, "code_search");
+    assert_eq!(USE_CODE_MAP, "use_code_map");
+    assert_eq!(MANAGE_CODE_MAP, "manage_code_map");
     assert_eq!(EDIT_FILE, "edit_file");
     assert_eq!(DELETE_FILE, "delete_file");
     assert_eq!(APPLY_PATCH, "apply_patch");

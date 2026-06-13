@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
-use super::super::intelligence::ALL_LANGUAGES;
 use super::types::SearchFilters;
 
 // ── Global State ────────────────────────────────────────────────────────
@@ -138,19 +137,24 @@ pub(super) fn collect_files(root: &Path, filters: &SearchFilters) -> Vec<PathBuf
                 return ignore::WalkState::Continue;
             }
 
-            if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                let should_include = extensions
-                    .as_ref()
-                    .map(|exts| exts.iter().any(|e| e == ext || e == &format!(".{}", ext)))
-                    .unwrap_or_else(|| {
-                        ALL_LANGUAGES
-                            .iter()
-                            .any(|l| l.file_extensions.contains(&ext))
-                    });
-
-                if should_include {
-                    files.lock().unwrap().push(path.to_path_buf());
+            // Explicit extension filter: exact match only.
+            // No filter: include EVERY file except known-binary extensions.
+            // The old default ("extension must belong to a known programming
+            // language") silently dropped logs, configs, and extension-less
+            // files — a grep over ~/.orgii/logs returned 0 matches with no
+            // error. Content-level binary detection is the searcher's job.
+            let ext = path.extension().and_then(|e| e.to_str());
+            let should_include = match (extensions.as_ref(), ext) {
+                (Some(exts), Some(ext)) => {
+                    exts.iter().any(|e| e == ext || e == &format!(".{}", ext))
                 }
+                (Some(_), None) => false,
+                (None, Some(ext)) => !BINARY_EXTENSIONS.contains(&ext.to_lowercase().as_str()),
+                (None, None) => true,
+            };
+
+            if should_include {
+                files.lock().unwrap().push(path.to_path_buf());
             }
 
             ignore::WalkState::Continue
@@ -159,3 +163,12 @@ pub(super) fn collect_files(root: &Path, filters: &SearchFilters) -> Vec<PathBuf
 
     files.into_inner().unwrap()
 }
+
+/// File extensions that are always binary — excluded from the no-filter
+/// default so the regex searcher doesn't waste time on them.
+const BINARY_EXTENSIONS: &[&str] = &[
+    "png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "icns", "pdf", "zip", "gz", "tar", "bz2",
+    "xz", "7z", "rar", "dmg", "iso", "exe", "dll", "so", "dylib", "a", "o", "rlib", "class", "jar",
+    "war", "pyc", "pyo", "wasm", "woff", "woff2", "ttf", "otf", "eot", "mp3", "mp4", "mov", "avi",
+    "mkv", "wav", "flac", "ogg", "sqlite", "db", "bin", "dat", "pack", "idx",
+];

@@ -1,7 +1,7 @@
 /**
  * AddWorkspaceModalShell Component
  *
- * Shared modal shell for the add workspace flow used by RepoPalette.
+ * Shared modal shell for the add workspace flow used by WorkspacePalette.
  */
 import React from "react";
 

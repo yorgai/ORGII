@@ -44,56 +44,92 @@ pub struct ProcessingContext {
     pub turn_intent_id: String,
 }
 
-/// User presence mode — QQ-style availability signal the user sets in the
-/// sidebar. Surfaced to the agent in the system prompt so it can behave
-/// differently depending on whether the user is actively watching, hidden,
-/// or away.
+/// Behavior stance — the closed set of runtime semantics a presence mode
+/// maps to. The mode itself (id + label + guidance) is open-ended data
+/// authored by the user; the stance is one of three code-defined behavior
+/// classes. New custom modes pick a stance; new stances require code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum UserPresenceMode {
-    /// User is online and watching — bias toward asking clarifying
-    /// questions and confirming destructive actions.
-    Online,
-    /// User is online but appearing offline — they are around but want
-    /// minimal interruption; default to autonomous execution.
-    Invisible,
-    /// User is away (lunch, meeting, end-of-day). Optionally bounded by a
-    /// `back_at` ISO-8601 timestamp.
-    Away,
+pub enum PresenceStance {
+    /// User at the keyboard — ask freely, confirm destructive actions,
+    /// blocking interactions wait indefinitely.
+    Interactive,
+    /// User stepped away — work first, batch questions, hold
+    /// irreversible actions until they're back.
+    DeferAndBatch,
+    /// Goal mode — never ask, auto-resolve blockers, keep working until
+    /// the goal is met.
+    Autonomous,
 }
 
-impl Default for UserPresenceMode {
+impl Default for PresenceStance {
     fn default() -> Self {
-        UserPresenceMode::Online
+        PresenceStance::Interactive
     }
 }
 
-impl UserPresenceMode {
+impl PresenceStance {
     pub fn as_str(&self) -> &'static str {
         match self {
-            UserPresenceMode::Online => "online",
-            UserPresenceMode::Invisible => "invisible",
-            UserPresenceMode::Away => "away",
+            PresenceStance::Interactive => "interactive",
+            PresenceStance::DeferAndBatch => "defer_and_batch",
+            PresenceStance::Autonomous => "autonomous",
         }
     }
 }
 
+/// Well-known built-in mode ids. Custom modes use `role:<slug>`.
+pub mod presence_mode_ids {
+    pub const ONLINE: &str = "online";
+    pub const INVISIBLE: &str = "invisible";
+    pub const AWAY: &str = "away";
+}
+
 /// Snapshot of the user's current presence — set in the sidebar, shipped
 /// with every turn so the agent knows whether the human is watching.
+///
+/// The frontend resolves the active mode's full spec (label + guidance +
+/// stance + policy numbers) before sending, so the backend never needs to
+/// know about settings or custom-role storage. Old wire payloads that
+/// carry only `mode` still deserialize — [`crate::interaction::presence_policy::PresencePolicy::resolve`]
+/// derives built-in defaults for the missing fields.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct UserPresence {
-    pub mode: UserPresenceMode,
+    /// Mode id: `online` / `invisible` / `away` / `role:<slug>`.
+    pub mode: String,
+    /// Display label of the mode ("Online", "Angry", …).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
     /// ISO-8601 timestamp the user expects to be back (only meaningful for
     /// `away`). Omitted when there is no scheduled return.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub back_at: Option<String>,
     /// Optional per-mode prompt addendum the user configured in Settings →
-    /// General. When present, the agent should treat this as authoritative
-    /// guidance for the current presence mode (e.g. "feel free to ask me
-    /// at any time" / "wait for me until I am back").
+    /// My Role. When present, the agent should treat this as authoritative
+    /// guidance for the current presence mode.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub guidance: Option<String>,
+    /// Runtime behavior class. `None` on old wire payloads — resolved from
+    /// the mode id's built-in defaults.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stance: Option<PresenceStance>,
+    /// Seconds until pending `ask_user_questions` batches auto-skip. 0 = off.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub question_auto_resolve_secs: Option<u32>,
+    /// Seconds until pending plan approvals auto-approve. 0 = off.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub plan_auto_approve_secs: Option<u32>,
+    /// Goal continuation loop budget (Ralph loop). 0 = disabled.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub goal_max_turns: Option<u32>,
+}
+
+impl UserPresence {
+    /// Display label with fallback to the raw mode id.
+    pub fn display_label(&self) -> &str {
+        self.label.as_deref().unwrap_or(self.mode.as_str())
+    }
 }
 
 /// Snapshot of the user's self-described profile from Settings → My Role.

@@ -278,7 +278,9 @@ fn backfill_missing_user_events(conn: &Connection, session_id: &str) -> SqliteRe
         if existing_ids.contains(&event_id) {
             continue;
         }
-        if let Some(count) = existing_content_counts.get_mut(&user_content_dedup_key(&message.content)) {
+        if let Some(count) =
+            existing_content_counts.get_mut(&user_content_dedup_key(&message.content))
+        {
             if *count > 0 {
                 *count -= 1;
                 continue;
@@ -386,14 +388,11 @@ fn build_turn_drafts(rows: &[IndexEventRow], stale_intent_ids: &StaleIntentIds) 
             // first; the durable backend row arrives later with the same
             // id). Adds the new event id so user_event_ids tracks both,
             // but does not open a new round.
-            if let (Some(intent_id), Some(turn)) =
-                (row_intent_id.as_ref(), current.as_mut())
-            {
+            if let (Some(intent_id), Some(turn)) = (row_intent_id.as_ref(), current.as_mut()) {
                 if turn.turn_intent_id.as_ref() == Some(intent_id) {
                     turn.user_event_ids.push(row.id.clone());
                     turn.event_count += 1;
-                    turn.ended_at =
-                        Some(max_timestamp(&turn.started_at, &row.created_at));
+                    turn.ended_at = Some(max_timestamp(&turn.started_at, &row.created_at));
                     continue;
                 }
             }

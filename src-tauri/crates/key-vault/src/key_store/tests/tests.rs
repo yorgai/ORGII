@@ -883,7 +883,7 @@ async fn test_gemini_concurrent_ensure_refreshes_once_without_deadlock() {
 }
 
 #[test]
-fn test_oauth_refresh_failures_disable_key_after_threshold() {
+fn test_claude_oauth_refresh_failures_cool_down_without_disabling_key() {
     let temp_dir = tempdir().unwrap();
     let service = KeyService::new(Some(temp_dir.path().to_path_buf()));
 
@@ -899,7 +899,36 @@ fn test_oauth_refresh_failures_disable_key_after_threshold() {
     assert_eq!(first.oauth_refresh_failure_count, 1);
     assert_eq!(first.health_status, HealthStatus::Degraded);
     assert!(first.enabled);
+    assert!(first.temporary_unavailable_until.is_some());
 
+    service
+        .record_oauth_refresh_failure(&key_id, "temporary network timeout")
+        .unwrap();
+    let third = service
+        .record_oauth_refresh_failure(&key_id, "temporary network timeout")
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(third.oauth_refresh_failure_count, 3);
+    assert_eq!(third.health_status, HealthStatus::Degraded);
+    assert!(third.enabled);
+    assert!(third.last_oauth_refresh_failed_at.is_some());
+    assert!(service.is_key_temporarily_unavailable(&third));
+}
+
+#[test]
+fn test_non_claude_oauth_refresh_failures_disable_key_after_threshold() {
+    let temp_dir = tempdir().unwrap();
+    let service = KeyService::new(Some(temp_dir.path().to_path_buf()));
+
+    let mut key = ModelKey::new(ModelType::Codex);
+    key.auth_method = AuthMethod::Oauth;
+    let key_id = key.id.clone();
+    service.save_key(key).unwrap();
+
+    service
+        .record_oauth_refresh_failure(&key_id, "temporary network timeout")
+        .unwrap();
     service
         .record_oauth_refresh_failure(&key_id, "temporary network timeout")
         .unwrap();
@@ -912,6 +941,45 @@ fn test_oauth_refresh_failures_disable_key_after_threshold() {
     assert_eq!(third.health_status, HealthStatus::Invalid);
     assert!(!third.enabled);
     assert!(third.last_oauth_refresh_failed_at.is_some());
+}
+
+#[test]
+fn test_claude_oauth_upstream_401_marks_temporary_unavailable() {
+    let temp_dir = tempdir().unwrap();
+    let service = KeyService::new(Some(temp_dir.path().to_path_buf()));
+
+    let mut key = ModelKey::new(ModelType::ClaudeCode);
+    key.auth_method = AuthMethod::Oauth;
+    let key_id = key.id.clone();
+    service.save_key(key).unwrap();
+
+    let marked = service
+        .mark_claude_oauth_upstream_health(
+            &key_id,
+            401,
+            "auth_error",
+            Some("Invalid authentication credentials"),
+            None,
+        )
+        .unwrap()
+        .unwrap();
+
+    assert!(marked.enabled);
+    assert_eq!(marked.health_status, HealthStatus::Degraded);
+    assert_eq!(marked.last_upstream_status, Some(401));
+    assert_eq!(
+        marked.last_upstream_error_type.as_deref(),
+        Some("auth_error")
+    );
+    assert!(service.is_key_temporarily_unavailable(&marked));
+
+    let cleared = service
+        .clear_claude_oauth_upstream_health(&key_id)
+        .unwrap()
+        .unwrap();
+    assert_eq!(cleared.temporary_unavailable_until, None);
+    assert_eq!(cleared.temporary_unavailable_reason, None);
+    assert_eq!(cleared.rate_limit_reset_at, None);
 }
 
 #[test]

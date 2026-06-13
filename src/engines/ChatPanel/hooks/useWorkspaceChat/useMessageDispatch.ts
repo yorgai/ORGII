@@ -11,6 +11,10 @@ import { useCallback } from "react";
 
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import {
+  beginOptimisticTurn,
+  failOptimisticTurn,
+} from "@src/engines/SessionCore/control/optimisticTurnStatus";
+import {
   beginTurnDispatch,
   confirmTurnRunning,
   markTurnTerminal,
@@ -64,7 +68,11 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
       // Capture the exact text/images the user sent so the cancel-restore
       // path (Scenario A: cancel before any assistant output) can put it
       // back into the input box.
-      setLastUserMessage({ displayContent: content, imageDataUrls });
+      setLastUserMessage({
+        sessionId,
+        displayContent: content,
+        imageDataUrls,
+      });
     },
     [getSessionId, setLastUserMessage]
   );
@@ -106,14 +114,7 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
       // submit therefore queues instead of double-dispatching.
       const dispatchGeneration = beginTurnDispatch(sessionId);
 
-      // Optimistically mark the session as running so the planning indicator
-      // (usePlanningIndicator) starts immediately on the cold-start path too.
-      // Mirrors the queued-dispatch path in useQueueDispatch; without this the
-      // very first message on a fresh session has no "Planning next step..."
-      // line because isSessionActive stays false until Rust's first
-      // status_changed event arrives. Rust will overwrite this the moment a
-      // real status event lands; failures below reset it back to "idle".
-      setSessionRuntimeStatus({ status: "running", source: "dispatch" });
+      beginOptimisticTurn(sessionId);
 
       try {
         await SessionService.sendMessage({
@@ -139,7 +140,11 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
         if (isCursorIdeSession(sessionId)) {
           // Cursor IDE sessions have no turn lifecycle (the CDP stream has no
           // terminal event) — close the turn right after a successful handoff.
-          setSessionRuntimeStatus({ status: "idle", source: "dispatch" });
+          setSessionRuntimeStatus({
+            sessionId,
+            status: "idle",
+            source: "dispatch",
+          });
           markTurnTerminal(sessionId, "completed", {
             generation: dispatchGeneration,
           });
@@ -147,7 +152,7 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
       } catch (err) {
         // IPC failed before Rust even received the message — reset so the UI
         // does not stay stuck in the optimistic "running" state.
-        setSessionRuntimeStatus({ status: "idle", source: "dispatch" });
+        failOptimisticTurn(sessionId);
         markTurnTerminal(sessionId, "failed", {
           generation: dispatchGeneration,
         });

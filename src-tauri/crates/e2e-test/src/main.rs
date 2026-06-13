@@ -214,6 +214,13 @@ fn all_scenarios() -> Vec<ScenarioDef> {
             "tier1-escalation-already-at-ceiling",
             sde::tier1_escalation_already_at_ceiling
         ),
+        // Tool-schema LLM-compatibility pin: tagged-enum params stay flattened
+        // (deterministic — no LLM interaction needed)
+        scenario!(
+            "sde",
+            "tool-schema-flat-params",
+            sde::tool_schema_flat_params
+        ),
         // ask_user_questions schema validation (deterministic — no LLM interaction needed)
         scenario!("sde", "ask-question-schema", sde::ask_question_schema),
         scenario!(

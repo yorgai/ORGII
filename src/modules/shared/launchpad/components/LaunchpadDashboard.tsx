@@ -4,11 +4,13 @@ import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { RUST_AGENT_TYPE } from "@src/api/tauri/agent/types";
+import type { CodeMapWorkspaceSummary } from "@src/api/tauri/codeMap";
 import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
 import Button from "@src/components/Button";
 import ModelIcon from "@src/components/ModelIcon";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
+import { useCodeMapManyWorkspaceStatuses } from "@src/hooks/codeMap";
 import { useKeyVault } from "@src/hooks/keyVault";
 import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 import {
@@ -30,6 +32,7 @@ import {
   rustBuiltInVariantsFromDefinitions,
   useLaunchpadAgentCatalog,
 } from "../hooks/useLaunchpadAgentCatalog";
+import { CodeMapStatusDot } from "./CodeMapWorkspaceStatus";
 import ContainerEnginesSection from "./ContainerEnginesSection";
 import ContainersSection from "./ContainersSection";
 import LaunchpadActionStrip from "./LaunchpadActionStrip";
@@ -183,11 +186,12 @@ LaunchpadAddTile.displayName = "LaunchpadAddTile";
 interface LaunchpadWorkspaceCardProps {
   repo: Repo;
   selected: boolean;
+  codeMapStatus?: CodeMapWorkspaceSummary;
   onSelect: (repo: Repo) => void;
 }
 
 const LaunchpadWorkspaceCard: React.FC<LaunchpadWorkspaceCardProps> = memo(
-  ({ repo, selected, onSelect }) => {
+  ({ repo, selected, codeMapStatus, onSelect }) => {
     const label = repo.name || repo.path?.split("/").pop() || "Repo";
     const initial = label.charAt(0).toUpperCase();
     const handleClick = () => onSelect(repo);
@@ -213,6 +217,9 @@ const LaunchpadWorkspaceCard: React.FC<LaunchpadWorkspaceCardProps> = memo(
             size={36}
             className="shrink-0"
           />
+          <span className="absolute right-1.5 top-1.5">
+            <CodeMapStatusDot status={codeMapStatus} compact />
+          </span>
         </div>
         <span
           className={
@@ -317,6 +324,18 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
       error: enginesError,
       refresh: refreshEngines,
     } = useContainerEngines();
+
+    const codeMapWorkspacePaths = useMemo(
+      () =>
+        repos
+          .map((repo) => repo.path)
+          .filter((path): path is string => Boolean(path)),
+      [repos]
+    );
+    const { statusMap: codeMapStatusMap } = useCodeMapManyWorkspaceStatuses({
+      workspacePaths: codeMapWorkspacePaths,
+      enabled: !loading,
+    });
 
     const rankedAgents = useMemo<LaunchpadAgentAction[]>(() => {
       const cliRows = installedCliAgents
@@ -503,6 +522,9 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
                         key={repo.id}
                         repo={repo}
                         selected={repo.id === selectedDashboardRepoId}
+                        codeMapStatus={
+                          repo.path ? codeMapStatusMap[repo.path] : undefined
+                        }
                         onSelect={handleSelectWorkspace}
                       />
                     ))}

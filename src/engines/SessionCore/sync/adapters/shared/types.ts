@@ -104,6 +104,12 @@ export interface AgentWSEvent {
   details?: StreamingErrorDetails;
   requestId?: string;
   questions?: unknown[];
+  /**
+   * Backend-authoritative auto-resolve deadline (epoch ms) for a pending
+   * question batch, from the user's presence policy. Null/absent = no
+   * auto-skip under the current presence.
+   */
+  autoResolveAt?: number | null;
   model?: string;
   /** True when agent:complete is only closing a terminal provider-error turn. */
   isStreamError?: boolean;

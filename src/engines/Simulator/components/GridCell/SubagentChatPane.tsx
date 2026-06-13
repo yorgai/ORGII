@@ -87,11 +87,16 @@ interface SubagentChatPaneProps {
    *  sliced to only include events with `createdAt <= cursorMs`. When
    *  `null`, no slicing is applied (live tail). */
   cursorMs?: number | null;
+  /** Backend-authoritative liveness (clip still open). Combined with the
+   *  live-tail check to scope the planning footer: a finished subagent or
+   *  a scrubbed historical view must never animate "Planning next step…". */
+  isSessionLive?: boolean;
 }
 
 const SubagentChatPaneComponent: React.FC<SubagentChatPaneProps> = ({
   sessionId,
   cursorMs = null,
+  isSessionLive = false,
 }) => {
   const { t } = useTranslation("sessions");
   // Subscribe at this layer so we can slice before passing into ChatHistory.
@@ -180,6 +185,15 @@ const SubagentChatPaneComponent: React.FC<SubagentChatPaneProps> = ({
     defaultValue: "New event",
   });
 
+  // Footer scope: live only while the session is actually running AND the
+  // pane is at the live tail (no replay slice). `slicedEvents !== undefined`
+  // means a historical cursor is active — the footer would animate over a
+  // frozen frame and lie.
+  const planningIndicatorScope = {
+    sessionId,
+    isLive: isSessionLive && slicedEvents === undefined,
+  };
+
   return (
     <ChatSessionContext.Provider value={sessionId}>
       <ChatHistoryOverrideContext.Provider value={slicedEvents}>
@@ -194,6 +208,7 @@ const SubagentChatPaneComponent: React.FC<SubagentChatPaneProps> = ({
                 hideGroupUserMessage
                 paginationTrailingSlot={paginationTrailingSlot}
                 newEventDividerLabel={newEventDividerLabel}
+                planningIndicatorScope={planningIndicatorScope}
               />
             </div>
           </div>

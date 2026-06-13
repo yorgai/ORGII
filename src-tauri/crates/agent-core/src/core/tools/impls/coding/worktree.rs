@@ -18,7 +18,7 @@ use tracing::{info, warn};
 use crate::session::workspace::SessionWorkspace;
 
 use crate::tools::names;
-use crate::tools::traits::{params_schema, parse_params, Tool, ToolError};
+use crate::tools::traits::{params_schema, parse_params_described, Tool, ToolError};
 
 // ============================================
 // Structured Responses
@@ -61,25 +61,28 @@ struct ListResult {
 // Params
 // ============================================
 
+/// Flat params: tagged-enum schemas (top-level `oneOf`) get flattened to an
+/// empty schema by LLM providers, so the model never sees the fields. Keep
+/// this a plain object with scalar properties; per-action requiredness is
+/// enforced in `execute_text` with self-correcting error messages.
 #[derive(Debug, Deserialize, JsonSchema)]
-#[serde(tag = "action", rename_all = "snake_case")]
-pub enum WorktreeParams {
-    /// Create a new worktree and switch context to it.
-    Add {
-        /// Branch name to create or check out in the worktree.
-        branch: String,
-        /// Optional base ref to branch from (default: HEAD).
-        #[serde(default)]
-        base_ref: Option<String>,
-    },
-    /// Leave the current worktree and return to the original workspace.
-    Leave {
-        /// Remove the worktree directory after leaving (default: false).
-        #[serde(default)]
-        remove: bool,
-    },
-    /// List all worktrees in the repository.
-    List,
+#[serde(deny_unknown_fields)]
+pub struct WorktreeParams {
+    /// Operation to perform. One of: `add` (create a worktree and switch
+    /// context to it), `leave` (return to the original workspace), `list`
+    /// (list all worktrees).
+    pub action: String,
+    /// `add` only (required): branch name to create or check out in the
+    /// worktree.
+    #[serde(default)]
+    pub branch: Option<String>,
+    /// `add` only: optional base ref to branch from (default: HEAD).
+    #[serde(default)]
+    pub base_ref: Option<String>,
+    /// `leave` only: remove the worktree directory after leaving
+    /// (default: false).
+    #[serde(default)]
+    pub remove: Option<bool>,
 }
 
 // ============================================
@@ -139,13 +142,22 @@ impl Tool for WorktreeTool {
         params: Value,
         _ctx: &crate::tools::traits::CallContext,
     ) -> Result<String, ToolError> {
-        let params: WorktreeParams = parse_params(params)?;
-        match params {
-            WorktreeParams::Add { branch, base_ref } => {
-                self.add_worktree(&branch, base_ref.as_deref()).await
+        let params: WorktreeParams = parse_params_described(params)?;
+        match params.action.as_str() {
+            "add" => {
+                let branch = params.branch.as_deref().ok_or_else(|| {
+                    ToolError::InvalidParams(
+                        "`add` requires `branch` — the branch name for the new worktree"
+                            .to_string(),
+                    )
+                })?;
+                self.add_worktree(branch, params.base_ref.as_deref()).await
             }
-            WorktreeParams::Leave { remove } => self.leave_worktree(remove).await,
-            WorktreeParams::List => self.list_worktrees().await,
+            "leave" => self.leave_worktree(params.remove.unwrap_or(false)).await,
+            "list" => self.list_worktrees().await,
+            other => Err(ToolError::InvalidParams(format!(
+                "unknown action \"{other}\"; valid actions: `add`, `leave`, `list`"
+            ))),
         }
     }
 }
@@ -478,9 +490,10 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn params_schema_is_valid_json() {
+    fn params_schema_is_llm_compatible() {
         let schema = params_schema::<WorktreeParams>();
-        assert!(schema.is_object());
+        crate::tools::traits::assert_llm_compatible_schema(&schema)
+            .expect("worktree schema must be flat and portable");
     }
 
     #[test]
@@ -489,14 +502,10 @@ mod tests {
             "action": "add",
             "branch": "feature/test"
         });
-        let parsed: WorktreeParams = parse_params(params).unwrap();
-        match parsed {
-            WorktreeParams::Add { branch, base_ref } => {
-                assert_eq!(branch, "feature/test");
-                assert!(base_ref.is_none());
-            }
-            _ => panic!("expected Add variant"),
-        }
+        let parsed: WorktreeParams = parse_params_described(params).unwrap();
+        assert_eq!(parsed.action, "add");
+        assert_eq!(parsed.branch.as_deref(), Some("feature/test"));
+        assert!(parsed.base_ref.is_none());
     }
 
     #[test]
@@ -506,41 +515,61 @@ mod tests {
             "branch": "fix/bug",
             "base_ref": "main"
         });
-        let parsed: WorktreeParams = parse_params(params).unwrap();
-        match parsed {
-            WorktreeParams::Add { branch, base_ref } => {
-                assert_eq!(branch, "fix/bug");
-                assert_eq!(base_ref.as_deref(), Some("main"));
-            }
-            _ => panic!("expected Add variant"),
-        }
+        let parsed: WorktreeParams = parse_params_described(params).unwrap();
+        assert_eq!(parsed.branch.as_deref(), Some("fix/bug"));
+        assert_eq!(parsed.base_ref.as_deref(), Some("main"));
     }
 
     #[test]
     fn parse_leave_params() {
         let params = json!({ "action": "leave", "remove": true });
-        let parsed: WorktreeParams = parse_params(params).unwrap();
-        match parsed {
-            WorktreeParams::Leave { remove } => assert!(remove),
-            _ => panic!("expected Leave variant"),
-        }
+        let parsed: WorktreeParams = parse_params_described(params).unwrap();
+        assert_eq!(parsed.action, "leave");
+        assert_eq!(parsed.remove, Some(true));
     }
 
     #[test]
     fn parse_leave_default_no_remove() {
         let params = json!({ "action": "leave" });
-        let parsed: WorktreeParams = parse_params(params).unwrap();
-        match parsed {
-            WorktreeParams::Leave { remove } => assert!(!remove),
-            _ => panic!("expected Leave variant"),
-        }
+        let parsed: WorktreeParams = parse_params_described(params).unwrap();
+        assert_eq!(parsed.action, "leave");
+        assert!(parsed.remove.is_none());
     }
 
     #[test]
     fn parse_list_params() {
         let params = json!({ "action": "list" });
-        let parsed: WorktreeParams = parse_params(params).unwrap();
-        assert!(matches!(parsed, WorktreeParams::List));
+        let parsed: WorktreeParams = parse_params_described(params).unwrap();
+        assert_eq!(parsed.action, "list");
+    }
+
+    #[tokio::test]
+    async fn add_without_branch_fails_with_guidance() {
+        let tool = test_tool();
+        let result = tool
+            .execute(
+                json!({ "action": "add" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
+            .await;
+        let err = format!("{:?}", result.unwrap_err());
+        assert!(
+            err.contains("branch"),
+            "error must name the missing field: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn unknown_action_lists_valid_actions() {
+        let tool = test_tool();
+        let result = tool
+            .execute(
+                json!({ "action": "bogus" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
+            .await;
+        let err = format!("{:?}", result.unwrap_err());
+        assert!(err.contains("`add`") && err.contains("`leave`") && err.contains("`list`"));
     }
 
     fn test_tool() -> WorktreeTool {
@@ -562,7 +591,12 @@ mod tests {
     #[tokio::test]
     async fn leave_without_add_fails() {
         let tool = test_tool();
-        let result = tool.execute(json!({ "action": "leave" }), &crate::tools::call_context::CallContext::default()).await;
+        let result = tool
+            .execute(
+                json!({ "action": "leave" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
+            .await;
         assert!(result.is_err());
     }
 }

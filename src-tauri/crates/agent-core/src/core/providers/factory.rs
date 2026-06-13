@@ -506,6 +506,27 @@ fn resolve_credentials(
     let agent_type = cred.model_type.as_str();
     let provider_name = spec.name;
 
+    if cred.auth_method == AuthMethod::Oauth
+        && cred.model_type == ModelType::ClaudeCode
+        && KEY_SERVICE.is_key_temporarily_unavailable(&cred)
+    {
+        let message = KEY_SERVICE
+            .temporary_unavailable_message(&cred)
+            .unwrap_or_else(|| {
+                format!(
+                    "Claude Code OAuth account '{}' is temporarily unavailable",
+                    acct_id
+                )
+            });
+        return Err(ProviderError::RateLimited {
+            message,
+            retry_after_secs: cred.temporary_unavailable_until.and_then(|until| {
+                let seconds = (until - chrono::Utc::now()).num_seconds();
+                (seconds > 0).then_some(seconds as u64)
+            }),
+        });
+    }
+
     let is_codex_oauth = is_codex_oauth_key(&cred);
     let is_claude_oauth = is_claude_oauth_key(&cred);
     let is_gemini_oauth = is_gemini_oauth_key(&cred);

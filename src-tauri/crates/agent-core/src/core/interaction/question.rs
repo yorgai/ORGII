@@ -9,6 +9,19 @@
 //! event via [`super::finalize`] so the UI flips from "waiting" to
 //! "answered" immediately — without waiting for the tool's `execute()` to
 //! return and the LLM round-trip that follows.
+//!
+//! ## Presence-driven auto-resolve
+//!
+//! When the user's presence policy sets `question_auto_resolve`, `ask`
+//! spawns a backend-authoritative deadline task: at the deadline the
+//! pending batch resolves through the same path as a manual Skip, with a
+//! note telling the LLM to continue on its own best judgment. The task
+//! also listens for `user-presence-changed` broadcasts and re-arms the
+//! deadline (relative to the batch's creation time) when the user
+//! switches mode mid-wait — switching to Online cancels the deadline,
+//! switching to Invisible arms a short one. The frontend countdown is a
+//! pure display of the `autoResolveAt` timestamp carried in the request
+//! event; the backend resolves even when no UI is mounted.
 
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
@@ -19,15 +32,27 @@ use tracing::{info, warn};
 use crate::tools::names as tool_names;
 
 use super::finalize::{finalize_interaction_event, FinalizedStatus};
+use super::presence_policy::AutoResolve;
+use super::presence_state;
 
 /// A single answer: list of selected option labels (or custom text).
 pub type QuestionAnswer = Vec<String>;
+
+/// How a pending question batch was resolved.
+#[derive(Debug)]
+pub enum QuestionResolution {
+    /// User answered via the frontend.
+    Answered(Vec<QuestionAnswer>),
+    /// Backend auto-skipped (presence policy deadline). Carries the mode
+    /// label for the LLM-facing note.
+    AutoSkipped { mode_label: String },
+}
 
 /// Pending-request bookkeeping so `respond`/`reject` can emit a structured
 /// finalized event without requiring the caller to re-plumb the session id
 /// or tool_call_id.
 struct PendingQuestion {
-    sender: oneshot::Sender<Vec<QuestionAnswer>>,
+    sender: oneshot::Sender<QuestionResolution>,
     session_id: String,
     tool_call_id: Option<String>,
     /// Original `questions` payload — kept so the finalized event can carry
@@ -89,15 +114,17 @@ impl QuestionManager {
     ///
     /// Broadcasts `agent:question_request` (delivered to the frontend over
     /// the per-session Tauri IPC Channel) and returns a receiver that
-    /// resolves when the frontend calls `agent_answer_questions`.
+    /// resolves when the frontend calls `agent_answer_questions` — or when
+    /// the presence policy's auto-resolve deadline fires.
     pub async fn ask(
         &self,
         session_id: &str,
         request_id: &str,
         questions: &serde_json::Value,
         tool_call_id: Option<&str>,
-    ) -> oneshot::Receiver<Vec<QuestionAnswer>> {
+    ) -> oneshot::Receiver<QuestionResolution> {
         let (sender, receiver) = oneshot::channel();
+        let created_at_ms = chrono::Utc::now().timestamp_millis();
 
         self.pending.lock().await.insert(
             request_id.to_string(),
@@ -109,11 +136,21 @@ impl QuestionManager {
             },
         );
 
+        // Presence policy: compute the initial auto-resolve deadline (if
+        // any) so the request event can carry `autoResolveAt` for the FE
+        // countdown, then arm the backend deadline watcher.
+        let initial_policy = presence_state::global_policy();
+        let auto_resolve_at_ms = match initial_policy.question_auto_resolve {
+            AutoResolve::Off => None,
+            AutoResolve::After(window) => Some(created_at_ms + window.as_millis() as i64),
+        };
+
         let payload = serde_json::json!({
             "requestId": request_id,
             "sessionId": session_id,
             "questions": questions,
             "toolCallId": tool_call_id,
+            "autoResolveAt": auto_resolve_at_ms,
         });
 
         self.metadata
@@ -123,13 +160,80 @@ impl QuestionManager {
 
         crate::bus::broadcast_event("agent:question_request", payload);
 
+        self.spawn_auto_resolve_watcher(request_id.to_string(), created_at_ms);
+
         info!(
-            "[question] Asked {} question(s) (request={})",
+            "[question] Asked {} question(s) (request={}, autoResolveAt={:?})",
             questions.as_array().map(|a| a.len()).unwrap_or(0),
-            request_id
+            request_id,
+            auto_resolve_at_ms
         );
 
         receiver
+    }
+
+    /// Backend-authoritative auto-resolve deadline watcher.
+    ///
+    /// Sleeps until the policy deadline (relative to batch creation) and
+    /// resolves the batch as auto-skipped. Re-arms on every
+    /// presence change so a mid-wait mode switch takes effect immediately:
+    ///   * switch to a mode with auto-resolve Off → keeps waiting forever,
+    ///   * switch to a shorter window that already elapsed → resolves now.
+    /// Exits silently when the pending entry disappears (user answered,
+    /// cancel, reject) — `take_pending` makes resolution idempotent.
+    fn spawn_auto_resolve_watcher(&self, request_id: String, created_at_ms: i64) {
+        let pending = Arc::clone(&self.pending);
+        let metadata = Arc::clone(&self.metadata);
+
+        tokio::spawn(async move {
+            let mut presence_rx = presence_state::subscribe();
+
+            loop {
+                // Exit when the request is no longer pending.
+                if !pending.lock().await.contains_key(&request_id) {
+                    return;
+                }
+
+                let policy = presence_state::global_policy();
+                let deadline_ms = match policy.question_auto_resolve {
+                    AutoResolve::Off => None,
+                    AutoResolve::After(window) => Some(created_at_ms + window.as_millis() as i64),
+                };
+
+                // Keep the FE countdown in sync with the active deadline.
+                update_auto_resolve_metadata(&metadata, &request_id, deadline_ms).await;
+
+                match deadline_ms {
+                    None => {
+                        // No deadline under the current presence — wait for
+                        // the next presence change and re-evaluate.
+                        if presence_rx.recv().await.is_err() {
+                            return;
+                        }
+                    }
+                    Some(deadline_ms) => {
+                        let now_ms = chrono::Utc::now().timestamp_millis();
+                        let remaining = (deadline_ms - now_ms).max(0) as u64;
+                        tokio::select! {
+                            _ = tokio::time::sleep(std::time::Duration::from_millis(remaining)) => {
+                                let mode_label = presence_state::global_presence()
+                                    .map(|presence| presence.display_label().to_string())
+                                    .unwrap_or_else(|| "away".to_string());
+                                auto_resolve_pending(&pending, &metadata, &request_id, mode_label)
+                                    .await;
+                                return;
+                            }
+                            changed = presence_rx.recv() => {
+                                if changed.is_err() {
+                                    return;
+                                }
+                                // Loop re-reads the policy and re-arms.
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 
     /// Remove a pending entry by `request_id`. If not found, fall back to
@@ -190,7 +294,11 @@ impl QuestionManager {
             }),
         );
 
-        if entry.sender.send(answers).is_err() {
+        if entry
+            .sender
+            .send(QuestionResolution::Answered(answers))
+            .is_err()
+        {
             warn!(
                 "[question] Request {} was dropped before answers arrived",
                 resolved_id
@@ -215,7 +323,11 @@ impl QuestionManager {
             serde_json::json!({ "answers": Vec::<Vec<String>>::new() }),
         );
 
-        if entry.sender.send(Vec::new()).is_err() {
+        if entry
+            .sender
+            .send(QuestionResolution::Answered(Vec::new()))
+            .is_err()
+        {
             warn!(
                 "[question] Request {} was dropped before rejection arrived",
                 resolved_id
@@ -262,6 +374,101 @@ impl QuestionManager {
             request_id, status
         );
     }
+}
+
+// ============================================================================
+// Presence auto-resolve helpers
+// ============================================================================
+
+/// Keep the broadcast metadata's `autoResolveAt` in sync with the active
+/// deadline so a re-mounted FE (via `get_pending_metadata`) renders the
+/// correct countdown after a mid-wait presence switch. Re-broadcasts the
+/// updated request payload for live listeners.
+async fn update_auto_resolve_metadata(
+    metadata: &Arc<Mutex<HashMap<String, serde_json::Value>>>,
+    request_id: &str,
+    deadline_ms: Option<i64>,
+) {
+    let mut meta = metadata.lock().await;
+    let Some(payload) = meta.get_mut(request_id) else {
+        return;
+    };
+    let current = payload.get("autoResolveAt").cloned();
+    let next = match deadline_ms {
+        Some(ms) => serde_json::json!(ms),
+        None => serde_json::Value::Null,
+    };
+    if current.as_ref() == Some(&next) {
+        return;
+    }
+    if let serde_json::Value::Object(ref mut map) = payload {
+        map.insert("autoResolveAt".to_string(), next);
+        let updated = payload.clone();
+        drop(meta);
+        crate::bus::broadcast_event("agent:question_request", updated);
+    }
+}
+
+/// Resolve a pending batch as auto-skipped (presence deadline). Same
+/// chokepoint semantics as `respond`: removes the entry (idempotent
+/// against a racing manual answer) and emits the finalized event.
+async fn auto_resolve_pending(
+    pending: &Arc<Mutex<HashMap<String, PendingQuestion>>>,
+    metadata: &Arc<Mutex<HashMap<String, serde_json::Value>>>,
+    request_id: &str,
+    mode_label: String,
+) {
+    let entry = {
+        let mut guard = pending.lock().await;
+        let entry = guard.remove(request_id);
+        if entry.is_some() {
+            metadata.lock().await.remove(request_id);
+        }
+        entry
+    };
+    let Some(entry) = entry else {
+        // User answered first — the manual path already finalized.
+        return;
+    };
+
+    let content = auto_skip_content_for_llm(&mode_label);
+
+    finalize_interaction_event(
+        &entry.session_id,
+        entry.tool_call_id.as_deref(),
+        tool_names::ASK_USER_QUESTIONS,
+        FinalizedStatus::Answered,
+        &content,
+        serde_json::json!({
+            "answers": Vec::<Vec<String>>::new(),
+            "autoResolved": true,
+            "autoResolvedMode": mode_label,
+        }),
+    );
+
+    if entry
+        .sender
+        .send(QuestionResolution::AutoSkipped { mode_label })
+        .is_err()
+    {
+        warn!(
+            "[question] Request {} was dropped before auto-resolve arrived",
+            request_id
+        );
+    } else {
+        info!("[question] Auto-resolved request {} (presence)", request_id);
+    }
+}
+
+/// LLM-facing note for an auto-skipped batch. Shared with the tool's
+/// return value so UI content matches what the model sees.
+pub fn auto_skip_content_for_llm(mode_label: &str) -> String {
+    format!(
+        "The user's presence is currently \"{mode_label}\" and did not answer within the \
+         auto-skip window. The questions were skipped automatically. Proceed using your \
+         best judgment, pick the recommended/safest option for each question, and list \
+         the decisions you made in your final summary."
+    )
 }
 
 // ============================================================================

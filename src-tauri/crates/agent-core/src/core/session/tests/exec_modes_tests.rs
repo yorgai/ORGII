@@ -371,3 +371,97 @@ fn ask_serde_round_trip() {
 // execute.rs (processor tests). The constants used there are:
 //   Plan / Ask / Review => 30
 //   Build / Debug / Wingman     => no mode cap (session model governs alone)
+
+// -- prompt/tool cross-reference lint --
+//
+// A mode prompt that tells the model to use a tool which that mode's own
+// policy layer denies is a ghost reference: the model burns turns calling
+// (or tool_search-ing for) something it can never reach. Every backtick-
+// quoted token in a mode's prompt suffix that names a *known* tool must be
+// allowed by that mode's policy layer.
+
+#[test]
+fn mode_prompts_never_reference_tools_their_policy_denies() {
+    use crate::tools::policy::ResolvedToolPolicy;
+
+    let known_tools: Vec<&str> = vec![
+        crate::tools::names::READ_FILE,
+        crate::tools::names::LIST_DIR,
+        crate::tools::names::RUN_SHELL,
+        crate::tools::names::AWAIT_OUTPUT,
+        crate::tools::names::INSPECT_TERMINALS,
+        crate::tools::names::CODE_SEARCH,
+        crate::tools::names::USE_CODE_MAP,
+        crate::tools::names::MANAGE_CODE_MAP,
+        crate::tools::names::EDIT_FILE,
+        crate::tools::names::DELETE_FILE,
+        crate::tools::names::APPLY_PATCH,
+        crate::tools::names::MANAGE_WORKSPACE,
+        crate::tools::names::QUERY_LSP,
+        crate::tools::names::MANAGE_LSP,
+        crate::tools::names::MANAGE_TODO,
+        crate::tools::names::SETUP_REPO,
+        crate::tools::names::ASK_USER_QUESTIONS,
+        crate::tools::names::WEB_SEARCH,
+        crate::tools::names::WEB_FETCH,
+        crate::tools::names::WORKTREE,
+        crate::tools::names::AGENT,
+        crate::tools::names::TOOL_SEARCH,
+        crate::tools::names::CREATE_PLAN,
+        crate::tools::names::SUGGEST_MODE_SWITCH,
+        crate::tools::names::SUGGEST_NEXT_STEPS,
+        crate::tools::names::MANAGE_WORK_ITEM,
+        crate::tools::names::MANAGE_PROJECT,
+        crate::tools::names::MANAGE_AGENT_DEF,
+        crate::tools::names::SEND_TO_INBOX,
+        crate::tools::names::CONTROL_DESKTOP_WITH_PEEKABOO,
+    ];
+
+    let modes = [
+        AgentExecMode::Build,
+        AgentExecMode::Ask,
+        AgentExecMode::Plan,
+        AgentExecMode::Debug,
+        AgentExecMode::Review,
+        AgentExecMode::Wingman,
+    ];
+
+    for mode in modes {
+        let suffix = mode.system_prompt_suffix();
+        let policy = match mode.policy_layer() {
+            Some(layer) => ResolvedToolPolicy::permissive().with_extra_layer(layer),
+            None => continue,
+        };
+
+        // Extract backtick-quoted tokens and check each one that names a
+        // known tool. Negative-context lines ("Do NOT attempt to call",
+        // "CANNOT") legitimately mention denied tools; only flag references
+        // that instruct usage. We approximate by skipping tokens on lines
+        // containing obvious negations.
+        for line in suffix.lines() {
+            let lower = line.to_lowercase();
+            if lower.contains("cannot")
+                || lower.contains("do not")
+                || lower.contains("don't")
+                || lower.contains("never")
+                || lower.contains("denied")
+                || lower.contains("only if available")
+            {
+                continue;
+            }
+            let mut rest = line;
+            while let Some(start) = rest.find('`') {
+                let after = &rest[start + 1..];
+                let Some(end) = after.find('`') else { break };
+                let token = &after[..end];
+                if known_tools.contains(&token) {
+                    assert!(
+                        policy.is_allowed(token),
+                        "{mode:?} prompt instructs using `{token}` but the mode's policy denies it:\n  line: {line}"
+                    );
+                }
+                rest = &after[end + 1..];
+            }
+        }
+    }
+}

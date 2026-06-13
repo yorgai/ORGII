@@ -245,10 +245,7 @@ pub fn migrate_cron_schedules() -> Result<usize, String> {
             let routine = RoutineDefinition {
                 id: String::new(),
                 name: format!("Recurring: {}", fm.title),
-                description: format!(
-                    "Migrated from work item {} recurring schedule",
-                    fm.short_id
-                ),
+                description: format!("Migrated from work item {} recurring schedule", fm.short_id),
                 enabled: true,
                 trigger: RoutineTrigger::Cron { cron },
                 run_template: RoutineRunTemplate {

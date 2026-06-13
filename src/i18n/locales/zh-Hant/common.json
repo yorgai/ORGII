@@ -383,10 +383,8 @@
     "foundByKeyword": "由關鍵詞搜索命中",
     "semanticSecondary": "meaning match",
     "hybridSecondary": "semantic + full-text",
-    "tantivySecondary": "indexed full-text",
     "semanticDescription": "Embedding-based meaning search",
-    "hybridDescription": "Combined semantic and full-text search",
-    "tantivyDescription": "Indexed full-text search"
+    "hybridDescription": "Combined semantic and full-text search"
   },
   "tabs": {
     "terminal": "終端",
@@ -483,12 +481,12 @@
     "delete": "確定要刪除嗎？",
     "unsavedChanges": "您有未保存的更改。確定要離開嗎？",
     "discard": "放棄更改？",
-    "removeTitle": "從 ORGII 工作區中移除「{{name}}」？",
-    "removeMessage": "這不會從你的設備上刪除代碼文件夾——只是將其從 ORGII 工作區中移除。你可以隨時重新添加。",
+    "removeTitle": "從 ORGII 中移除「{{name}}」？",
+    "removeMessage": "這只會移除它與 ORGII 的關聯，不會從磁盤中移除任何內容。",
     "deleteWorkspaceTitle": "刪除工作區「{{name}}」？",
     "deleteWorkspaceMessage": "僅刪除工作區預設。其中包含的 Repo 和文件夾不會受到影響。",
-    "deleteSelectedTitle": "刪除選中的 {{count}} 項？",
-    "deleteSelectedMessage": "將刪除選中的工作區並取消關聯選中的 Repos。磁盤上的 Repo 文件不會被刪除。",
+    "deleteSelectedTitle": "從 ORGII 中移除選中的 {{count}} 項？",
+    "deleteSelectedMessage": "這只會移除它們與 ORGII 的關聯，不會從磁盤中移除任何內容。",
     "disconnectTitle": "斷開「{{name}}」？",
     "disconnectMessage": "這將移除該賬戶對所有倉庫的訪問權限。",
     "dropStashTitle": "Drop stash？",
@@ -1147,7 +1145,7 @@
     "repo": {
       "workspaceFolders": "工作區文件夾",
       "addRepo": "新增工作區",
-      "addEntry": "更多工作區選項",
+      "addEntry": "更多匯入選項",
       "addRepoDescription": "開啟、建立或複製工作區",
       "sections": {
         "coding": "工作區",
@@ -1156,6 +1154,7 @@
         "current": "當前",
         "repo": "倉庫",
         "systemPaths": "系統路徑",
+        "usedElsewhere": "Used elsewhere",
         "workspace": "工作區"
       },
       "tabs": {
@@ -1475,12 +1474,12 @@
         }
       },
       "toast": {
-        "repoRemoved": "倉庫已移除",
-        "repoRemoveFailed": "移除倉庫失敗",
-        "workspaceRemoved": "已刪除工作區",
-        "workspaceRemoveFailed": "刪除工作區失敗",
-        "bulkDeleted": "已刪除 {{count}} 項",
-        "bulkDeleteFailed": "{{count}} 項刪除失敗"
+        "repoRemoved": "Linkage to ORGII removed",
+        "repoRemoveFailed": "Failed to remove linkage to ORGII",
+        "workspaceRemoved": "Linkage to ORGII removed",
+        "workspaceRemoveFailed": "Failed to remove linkage to ORGII",
+        "bulkDeleted": "{{count}} linkages to ORGII removed",
+        "bulkDeleteFailed": "{{count}} linkages failed to remove"
       }
     }
   },
@@ -1491,7 +1490,7 @@
     "locateInFinder": "在 Finder 中定位",
     "copyLocalPath": "複製本地路徑",
     "copyEventsJson": "複製 Events JSON",
-    "removeRepo": "移除倉庫",
+    "removeRepo": "Remove from ORGII",
     "addRepo": "添加倉庫...",
     "simulatorView": "模擬器視圖",
     "addWorkspace": "新增工作區..."
@@ -2099,10 +2098,9 @@
     "selectWorkspaceToStart": "選擇一個工作區開始",
     "selectRepoToStart": "選擇一個 Repo 開始"
   },
-  "quitConfirmation": {
-    "title": "結束 ORGII？",
-    "message": "作用中的會話與背景任務將會停止。",
-    "okLabel": "結束"
+  "holdToQuit": {
+    "title": "按住 {{shortcut}} 1 秒以結束",
+    "subtitle": "放開以取消"
   },
   "projects": {
     "title": "熱力圖",

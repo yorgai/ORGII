@@ -1,7 +1,7 @@
 //! Native/platform language server definitions: Swift, C#.
 
 use crate::install_pipeline::InstallMethod;
-use crate::root_detection::{CSHARP_PATTERN, SWIFT_PATTERN, RootPattern};
+use crate::root_detection::{RootPattern, CSHARP_PATTERN, SWIFT_PATTERN};
 use crate::server_defs::ServerDef;
 
 pub struct SwiftServer;

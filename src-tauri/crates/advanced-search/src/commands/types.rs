@@ -12,6 +12,13 @@ pub struct SearchFilters {
     pub max_results: Option<usize>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IncrementalResult {
+    pub files_updated: usize,
+    pub files_failed: usize,
+    pub failed_paths: Vec<String>,
+}
+
 #[derive(Serialize, Clone)]
 pub struct EmbeddingModelStatus {
     pub installed: bool,

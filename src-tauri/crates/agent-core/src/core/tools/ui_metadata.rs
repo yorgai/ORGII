@@ -59,7 +59,7 @@ pub enum HumanToolKey {
 // them without depending back on `agent_core`. Re-exported here so every
 // existing `super::ui_metadata::{AppSubtool, ChatBlock}` import in
 // `agent_core` keeps working unchanged.
-pub use core_types::ui_metadata::{AppSubtool, ChatBlock};
+pub use core_types::ui_metadata::{AppSubtool, ChatBlock, ToolDisplayBehavior};
 
 impl HumanToolKey {
     pub fn as_str(&self) -> &'static str {
@@ -121,6 +121,9 @@ pub struct ToolInfo {
     /// panel has its own small taxonomy (one variant per block component).
     #[serde(default, rename = "chatBlock")]
     pub chat_block: ChatBlock,
+    /// Agent Station live display behavior for this tool.
+    #[serde(default, rename = "displayBehavior")]
+    pub display_behavior: ToolDisplayBehavior,
     /// Workstation panel key (codeEditor, terminal, browser, etc.). None for tools without a
     /// corresponding Workstation panel.
     #[serde(

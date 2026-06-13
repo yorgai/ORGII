@@ -28,6 +28,194 @@
     display: none;
   }
 
+  .chat-font-size-wrapper,
+  .chat-font-size-wrapper > *,
+  [class*="bg-event-block"],
+  [class*="bg-event-block"] > *,
+  .chat-block-header,
+  .chat-block-header *,
+  .chat-block-icon,
+  .chat-block-icon *,
+  .event-block-content,
+  .event-block-content > *,
+  .event-block-shell,
+  .event-block-shell > * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+
+  .chat-font-size-wrapper::selection,
+  .chat-font-size-wrapper *::selection,
+  [class*="bg-event-block"]::selection,
+  [class*="bg-event-block"] *::selection,
+  .chat-block-header::selection,
+  .chat-block-header *::selection,
+  .chat-block-icon::selection,
+  .chat-block-icon *::selection,
+  .event-block-content::selection,
+  .event-block-content *::selection,
+  .event-block-shell::selection,
+  .event-block-shell *::selection {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  .chat-markdown-body
+    :is(
+      p,
+      span,
+      strong,
+      em,
+      b,
+      i,
+      a,
+      li,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      blockquote,
+      td,
+      th
+    ),
+  .markdown-container
+    :is(
+      p,
+      span,
+      strong,
+      em,
+      b,
+      i,
+      a,
+      li,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      blockquote,
+      td,
+      th
+    ),
+  .resultBgc
+    :is(
+      p,
+      span,
+      strong,
+      em,
+      b,
+      i,
+      a,
+      li,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      blockquote,
+      td,
+      th
+    ),
+  .question-text,
+  .question-text :is(span, strong, em, b, i, a),
+  .terminal-output__pre,
+  .terminal-output__pre span,
+  .terminal-output__error,
+  .terminal-output__error span,
+  .simulator-shell-plain-pre,
+  .simulator-shell-plain-pre span,
+  .simulator-shell-shiki-output pre,
+  .simulator-shell-shiki-output pre span,
+  pre,
+  pre span,
+  code,
+  code span {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+
+  .chat-markdown-body
+    :is(
+      p,
+      span,
+      strong,
+      em,
+      b,
+      i,
+      a,
+      li,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      blockquote,
+      td,
+      th
+    )::selection,
+  .markdown-container
+    :is(
+      p,
+      span,
+      strong,
+      em,
+      b,
+      i,
+      a,
+      li,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      blockquote,
+      td,
+      th
+    )::selection,
+  .resultBgc
+    :is(
+      p,
+      span,
+      strong,
+      em,
+      b,
+      i,
+      a,
+      li,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      blockquote,
+      td,
+      th
+    )::selection,
+  .question-text::selection,
+  .question-text :is(span, strong, em, b, i, a)::selection,
+  .terminal-output__pre::selection,
+  .terminal-output__pre span::selection,
+  .terminal-output__error::selection,
+  .terminal-output__error span::selection,
+  .simulator-shell-plain-pre::selection,
+  .simulator-shell-plain-pre span::selection,
+  .simulator-shell-shiki-output pre::selection,
+  .simulator-shell-shiki-output pre span::selection,
+  pre::selection,
+  pre span::selection,
+  code::selection,
+  code span::selection {
+    background: var(--color-primary-1) !important;
+    background-color: var(--color-primary-1) !important;
+  }
+
   .chat-markdown-body {
     max-width: 100%;
     width: 100%;
@@ -61,9 +249,8 @@
     // Note: vertical spacing is handled by CHAT_ITEM_GAP token in ChatItemWrap.
     // Do NOT add padding-bottom here — it conflicts with the Tailwind gap classes.
 
-    // Text selection is enabled via the `allow-select-deep` class
-    // (defined in src/index.scss) applied to .chat-font-size-wrapper.
-    // No per-component !important overrides needed.
+    // Selection paint is restricted above so drag-selecting across cards
+    // does not highlight block chrome/background shapes.
 
     // Main message content areas
     .resultBgc,

@@ -1,6 +1,5 @@
 import {
   ArrowLeft,
-  ArrowLeftRight,
   ArrowRight,
   ArrowUp,
   Check,
@@ -10,6 +9,7 @@ import {
   Code,
   Focus,
   Folder,
+  FolderOpen,
   FolderPlus,
   FolderSearch,
   FolderSymlink,
@@ -27,12 +27,12 @@ import {
   Lock,
   MessageSquare,
   Pencil,
-  Plus,
   Rocket,
   Search,
   Settings,
   Sparkles,
   SquareArrowOutUpRight,
+  SquareArrowRight,
   Trash2,
   X,
 } from "lucide-react";
@@ -53,7 +53,7 @@ export type {
 
 export const ICONS = {
   // Actions
-  addWorkspace: Plus,
+  addWorkspace: SquareArrowRight,
 
   // Shared UI
   repo: Code,
@@ -79,6 +79,7 @@ export const ICONS = {
   workspace: FolderTree,
   workspaceLayout: Layout,
   folder: Folder,
+  folderOpen: FolderOpen,
   folderPlus: FolderPlus,
 
   // Tab types
@@ -101,7 +102,7 @@ export const ICONS = {
   aiSpark: Sparkles,
 
   // Selector-specific icons
-  switchRepo: ArrowLeftRight,
+  switchRepo: FolderTree,
   removeRepo: Trash2,
   removeBranch: Trash2,
   editRepo: Pencil,
@@ -165,7 +166,7 @@ export const ACTIONS: ActionDefinition[] = [
 
   // Note: The legacy add-workspace action + sub-actions were removed. The
   // add workspace flow (Create / Clone URL / Clone GitHub / Import) now lives
-  // entirely inside `RepoPalette` via `useAddWorkspaceFlow`, so GlobalSpotlight
+  // entirely inside `WorkspacePalette` via `useAddWorkspaceFlow`, so GlobalSpotlight
   // doesn't need a top-level action entry for it.
 ];
 

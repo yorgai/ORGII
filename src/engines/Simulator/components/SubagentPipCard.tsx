@@ -553,6 +553,7 @@ const SubagentPipCard: React.FC<SubagentPipCardProps> = ({
                       isHighlighted={isHighlighted}
                       isExpanded={isExpanded}
                       onExpand={entry.onExpand}
+                      isSessionLive={entry.endedAtMs === null}
                     />
                   </div>
                 </React.Fragment>

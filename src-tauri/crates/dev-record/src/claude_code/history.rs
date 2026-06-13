@@ -14,8 +14,8 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::imported_history::{
-    self, ImportedHistoryRowInput, ImportedHistorySessionPage, ImportedHistorySessionRow,
-    ImportedToolCall,
+    self, ImportedHistoryRecentPath, ImportedHistoryRowInput, ImportedHistorySessionPage,
+    ImportedHistorySessionRow, ImportedToolCall,
 };
 
 const CLAUDE_CODE_SESSION_PREFIX: &str = "claudecodeapp-";
@@ -23,6 +23,7 @@ const CLAUDE_CODE_PROVIDER_SLUG: &str = "claudecode";
 
 pub type ClaudeCodeHistorySessionRow = ImportedHistorySessionRow;
 pub type ClaudeCodeHistorySessionPage = ImportedHistorySessionPage;
+pub type ClaudeCodeRecentPath = ImportedHistoryRecentPath;
 
 #[derive(Debug, Clone)]
 struct ClaudeCodeHistoryMeta {
@@ -87,6 +88,18 @@ pub fn list_claude_code_history_sessions_paginated(
     let sessions = scan_claude_code_history_sessions()?;
     let rows = sessions.into_iter().map(session_meta_to_row).collect();
     Ok(imported_history::page_from_rows(rows, limit, offset))
+}
+
+pub fn list_claude_code_recent_paths(limit: usize) -> Result<Vec<ClaudeCodeRecentPath>, String> {
+    let sessions = scan_claude_code_history_sessions()?;
+    let rows = sessions
+        .into_iter()
+        .map(session_meta_to_row)
+        .collect::<Vec<_>>();
+    Ok(imported_history::recent_paths_from_rows(&rows)
+        .into_iter()
+        .take(imported_history::effective_limit(limit))
+        .collect())
 }
 
 pub fn load_claude_code_history_for_session(

@@ -104,7 +104,10 @@ pub(super) fn assemble_overlay(
     }
 
     if !ctx.disabled_set.contains(names::TOOL_SEARCH) {
-        overlay.register(Box::new(ToolSearchTool::new(Arc::clone(&base_registry))));
+        overlay.register(Box::new(ToolSearchTool::with_policy(
+            Arc::clone(&base_registry),
+            Arc::clone(&ctx.policy_arc),
+        )));
     }
 
     if let Some(ref msm) = ctx.session.mode_switch_manager {

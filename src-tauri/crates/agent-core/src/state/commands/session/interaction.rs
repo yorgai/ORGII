@@ -30,6 +30,21 @@ pub async fn agent_question_response(
     ))
 }
 
+/// Push the user's current presence (mode + resolved behavior spec) into
+/// the process-wide snapshot.
+///
+/// Called by the frontend on every presence-mode switch, on edits to the
+/// active mode's spec, and once on startup. The global snapshot drives:
+///   * re-arming auto-resolve deadlines on already-pending interactions,
+///   * starting/stopping the goal continuation loop,
+/// while the per-message `IdeContext.user_presence` snapshot continues to
+/// feed prompt building.
+#[tauri::command]
+pub async fn set_user_presence(presence: crate::session::UserPresence) -> Result<(), String> {
+    crate::interaction::presence_state::set_global_presence(presence);
+    Ok(())
+}
+
 /// Reject a question from the agent.
 #[tauri::command]
 pub async fn agent_question_reject(
@@ -284,6 +299,54 @@ pub async fn agent_plan_approval_response(
     account_id: Option<String>,
     workspace_path: Option<String>,
 ) -> Result<(), String> {
+    plan_approval_response_impl(
+        &state,
+        session_id,
+        choice,
+        edited_content,
+        model,
+        account_id,
+        workspace_path,
+        None,
+    )
+    .await
+}
+
+/// Auto-approve entry point for the presence-policy deadline watcher.
+///
+/// Same flow as the user clicking Build, plus an `agent:plan_auto_approved`
+/// broadcast so the card can render the "auto-approved (<mode>)" marker.
+/// Idempotent: when the user already resolved the plan, `resolve_pending`
+/// returns `None` and this becomes a logged no-op.
+pub async fn auto_approve_pending_plan(
+    state: &AgentAppState,
+    session_id: String,
+    mode_label: String,
+) -> Result<(), String> {
+    plan_approval_response_impl(
+        state,
+        session_id,
+        "approve".to_string(),
+        None,
+        None,
+        None,
+        None,
+        Some(mode_label),
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn plan_approval_response_impl(
+    state: &AgentAppState,
+    session_id: String,
+    choice: String,
+    edited_content: Option<String>,
+    model: Option<String>,
+    account_id: Option<String>,
+    workspace_path: Option<String>,
+    auto_approved_by: Option<String>,
+) -> Result<(), String> {
     let session = state.get_session(&session_id).await;
 
     if session_bridge::get_cli_tools_snapshot(&session_id)?.is_some() {
@@ -310,7 +373,7 @@ pub async fn agent_plan_approval_response(
     // that was persisted by the previous run rehydrates into
     // `PlanApprovalManager` before we `take_pending()` below.
     if session.is_none() {
-        crate::init::register_session_with_rehydrate(&state, &session_id).await?;
+        crate::init::register_session_with_rehydrate(state, &session_id).await?;
     }
 
     let session = state
@@ -342,16 +405,34 @@ pub async fn agent_plan_approval_response(
             .await
             .ok_or_else(|| format!("No pending plan approval for session {}", session_id))?;
 
-    let restore_mode = session
-        .pre_plan_mode_cache
-        .take(&session_id)
-        .unwrap_or(AgentExecMode::Plan);
+    // Cross-mode approval: the pending plan survives mode switches, so the
+    // user may click Build/Skip from any exec mode. Only restore the
+    // pre-plan mode when the session is still IN plan mode — if the user
+    // already switched (e.g. to Build), keep their current mode instead of
+    // overwriting it with a stale snapshot.
+    let current_mode = session_persistence::get_session(&session_id)
+        .ok()
+        .flatten()
+        .and_then(|record| record.agent_exec_mode)
+        .and_then(|mode| AgentExecMode::parse(&mode));
+    let still_in_plan_mode = matches!(current_mode, Some(AgentExecMode::Plan) | None);
+    let restore_mode = if still_in_plan_mode {
+        session
+            .pre_plan_mode_cache
+            .take(&session_id)
+            .unwrap_or(AgentExecMode::Build)
+    } else {
+        let _ = session.pre_plan_mode_cache.take(&session_id);
+        current_mode.unwrap_or(AgentExecMode::Build)
+    };
     let build_turn_mode = AgentExecMode::Build;
 
     session.plan_slot_cache.clear(&session_id);
 
-    session_persistence::update_agent_exec_mode(&session_id, restore_mode.as_str())
-        .map_err(|err| format!("Failed to persist restored agent exec mode: {err}"))?;
+    if still_in_plan_mode {
+        session_persistence::update_agent_exec_mode(&session_id, restore_mode.as_str())
+            .map_err(|err| format!("Failed to persist restored agent exec mode: {err}"))?;
+    }
 
     crate::bus::broadcast_event(
         "agent:exit_plan_mode",
@@ -368,6 +449,18 @@ pub async fn agent_plan_approval_response(
             "rejected": rejected,
         }),
     );
+
+    if let Some(ref mode_label) = auto_approved_by {
+        crate::bus::broadcast_event(
+            "agent:plan_auto_approved",
+            serde_json::json!({
+                "sessionId": &session_id,
+                "planId": &snapshot.plan_id,
+                "planRevisionId": &snapshot.plan_revision_id,
+                "modeLabel": mode_label,
+            }),
+        );
+    }
 
     if rejected {
         return Ok(());
@@ -407,7 +500,7 @@ pub async fn agent_plan_approval_response(
         native_harness_type: None,
     };
     message::send_message_impl(
-        &state,
+        state,
         session_id.clone(),
         synthetic_content,
         None,
@@ -424,4 +517,70 @@ pub async fn agent_plan_approval_response(
     .await
     .map(|_| ())
     .map_err(|err| format!("Failed to kick off Build turn after plan approval: {}", err))
+}
+
+/// Debug-only: seed a pending plan approval row for WDIO plan-lifecycle
+/// specs. Ensures an `agent_sessions` row exists (production
+/// `upsert_session`), then drives the production `mark_ready` path so the
+/// DB row + broadcast are shaped exactly like a live `create_plan`.
+#[tauri::command]
+pub async fn debug_seed_pending_plan(
+    state: tauri::State<'_, AgentAppState>,
+    session_id: String,
+    plan_path: String,
+    plan_title: String,
+    plan_content: String,
+) -> Result<(), String> {
+    if !cfg!(debug_assertions) {
+        return Err("debug_seed_pending_plan is only available in debug builds".into());
+    }
+    std::fs::write(&plan_path, plan_content.as_bytes())
+        .map_err(|err| format!("Failed to write plan file: {err}"))?;
+
+    // GC orphans rows whose session does not exist — seed the session row
+    // first so the fixture is indistinguishable from a live plan session.
+    {
+        let sid = session_id.clone();
+        let title = plan_title.clone();
+        tokio::task::spawn_blocking(move || {
+            if matches!(session_persistence::get_session(&sid), Ok(Some(_))) {
+                return Ok(());
+            }
+            let now = chrono::Utc::now().to_rfc3339();
+            session_persistence::upsert_session(&session_persistence::UnifiedSessionRecord {
+                session_id: sid.clone(),
+                name: title,
+                status: "idle".to_string(),
+                agent_exec_mode: Some("plan".to_string()),
+                created_at: now.clone(),
+                updated_at: now,
+                ..Default::default()
+            })
+        })
+        .await
+        .map_err(|err| err.to_string())?
+        .map_err(|err| format!("Failed to seed session row: {err}"))?;
+    }
+
+    let manager = match state.get_session(&session_id).await {
+        Some(session) => session.plan_approval_manager.clone(),
+        None => None,
+    };
+    match manager {
+        Some(manager) => {
+            manager
+                .mark_ready(&session_id, &plan_path, &plan_title, &plan_content, None)
+                .await;
+        }
+        None => {
+            let manager = crate::interaction::plan_approval::PlanApprovalManager::new();
+            if let Some(handle) = crate::interaction::plan_approval::global_app_handle() {
+                manager.set_app_handle(Some(handle.clone()));
+            }
+            manager
+                .mark_ready(&session_id, &plan_path, &plan_title, &plan_content, None)
+                .await;
+        }
+    }
+    Ok(())
 }

@@ -74,8 +74,7 @@ pub fn truncate_messages_from_sequence(
     )?;
     with_sessions_writer(|| {
         let conn = get_connection()?;
-        let sql =
-            format!("DELETE FROM {prefix}_messages WHERE session_id = ?1 AND sequence >= ?2");
+        let sql = format!("DELETE FROM {prefix}_messages WHERE session_id = ?1 AND sequence >= ?2");
         let deleted = conn.execute(&sql, params![session_id, from_sequence])?;
         Ok(deleted as i64)
     })

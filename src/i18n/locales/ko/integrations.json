@@ -889,10 +889,11 @@
     "installedVia": "설치 방법",
     "cliAccounts": "호환 구독 플랜",
     "apiKeys": "호환 API Key",
-    "noCliAccounts": "이 CLI에 추가된 Key가 없습니다",
+    "noSubscriptions": "이 CLI에 추가된 구독이 없습니다",
     "noApiKeys": "이 CLI는 자체 API Key를 지원하지 않습니다",
     "noApiKeysAdded": "호환 API Key가 아직 추가되지 않았습니다",
     "notSupported": "지원되지 않음",
+    "subscriptions": "구독",
     "cliKeys": "Subscription",
     "compatibleApis": "Supported Keys",
     "docs": "문서",
@@ -905,7 +906,7 @@
     "filterAllInstall": "모든 설치 상태",
     "filterAllReady": "모든 준비 상태",
     "filterReady": "준비됨",
-    "filterNoKeys": "키 없음"
+    "filterNoSubscriptions": "구독 없음"
   },
   "lspPreview": {
     "enable": "활성화",

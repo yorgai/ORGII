@@ -70,6 +70,38 @@ export function matchesIDEEventRecord(event: SessionEvent): boolean {
 // State Derivation
 // ============================================
 
+function getEventCallId(event: SessionEvent): string | undefined {
+  return (
+    event.callId ||
+    (event as { call_id?: string }).call_id ||
+    (event.result?.call_id as string | undefined)
+  );
+}
+
+function buildArgsByCallId(
+  events: SessionEvent[]
+): Map<string, Record<string, unknown>> {
+  const argsByCallId = new Map<string, Record<string, unknown>>();
+  for (const event of events) {
+    const callId = getEventCallId(event);
+    if (!callId || !event.args || Object.keys(event.args).length === 0) {
+      continue;
+    }
+    argsByCallId.set(callId, event.args);
+  }
+  return argsByCallId;
+}
+
+function mergeArgsFromCallEvent(
+  event: SessionEvent,
+  argsByCallId: Map<string, Record<string, unknown>>
+): SessionEvent {
+  if (event.args && Object.keys(event.args).length > 0) return event;
+  const callId = getEventCallId(event);
+  const args = callId ? argsByCallId.get(callId) : undefined;
+  return args ? { ...event, args } : event;
+}
+
 /**
  * Derive IDE state from events.
  * Processes all file, shell, and search events up to current point.
@@ -86,8 +118,11 @@ export function deriveIDEState(
   const exploreOperations: ExploreOperationEntry[] = [];
   const toolOperations: ToolOperationEntry[] = [];
 
+  const argsByCallId = buildArgsByCallId(events);
+
   // Process all events
-  for (const event of events) {
+  for (const rawEvent of events) {
+    const event = mergeArgsFromCallEvent(rawEvent, argsByCallId);
     const isCurrent = event.id === currentEventId;
 
     if (isExplorePanelTool(event.functionName)) {

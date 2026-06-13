@@ -27,6 +27,8 @@
 import { atom } from "jotai";
 import { atomFamily } from "jotai/utils";
 
+import { isInteractiveTool } from "../core/interactiveTools";
+import { hasLiveRuntimeResourceInLatestTurn } from "../core/runningEventGate";
 import type { Snapshot } from "../core/store/EventStoreProxy";
 import {
   eventStoreProxy,
@@ -162,3 +164,63 @@ export const chatEventsForSessionAtomFamily = atomFamily(
     return a;
   }
 );
+
+/**
+ * Per-session planning-footer signals, mirroring what the global
+ * `usePlanningIndicator` derives from `derivedSnapshotAtom` /
+ * `eventStoreVersionAtom` — but read from this session's own snapshot
+ * channel so session-scoped ChatHistory instances (subagent monitor
+ * cells) get a live footer driven by the RIGHT session.
+ */
+export interface SessionScopedPlanningMeta {
+  /** Snapshot version — bumps on every store mutation for this session. */
+  version: number;
+  /** True when any chat-visible event is still a live runtime resource. */
+  anyRunning: boolean;
+  /** True while an interactive tool is blocked waiting for user input. */
+  hasAwaitingUserInteraction: boolean;
+}
+
+const EMPTY_PLANNING_META: SessionScopedPlanningMeta = {
+  version: 0,
+  anyRunning: false,
+  hasAwaitingUserInteraction: false,
+};
+
+export const sessionScopedPlanningMetaAtomFamily = atomFamily(
+  (sessionId: string) => {
+    let prev: SessionScopedPlanningMeta = EMPTY_PLANNING_META;
+
+    const a = atom((get) => {
+      const { snapshot } = get(sessionSnapshotAtomFamily(sessionId));
+      if (!snapshot) return EMPTY_PLANNING_META;
+      const chatEvents = extractChatEvents(snapshot);
+      const next: SessionScopedPlanningMeta = {
+        version: snapshot.version,
+        anyRunning: hasLiveRuntimeResourceInLatestTurn(chatEvents),
+        hasAwaitingUserInteraction: chatEvents.some(
+          (event) =>
+            event.displayStatus === "awaiting_user" &&
+            event.activityStatus !== "processed" &&
+            isInteractiveTool(event.functionName)
+        ),
+      };
+      if (
+        next.version === prev.version &&
+        next.anyRunning === prev.anyRunning &&
+        next.hasAwaitingUserInteraction === prev.hasAwaitingUserInteraction
+      ) {
+        return prev;
+      }
+      prev = next;
+      return next;
+    });
+    a.debugLabel = `session/${sessionId}/planningMeta`;
+    return a;
+  }
+);
+
+/** Stable fallback for unscoped consumers (keeps hook call order legal). */
+export const noopSessionScopedPlanningMetaAtom =
+  atom<SessionScopedPlanningMeta>(EMPTY_PLANNING_META);
+noopSessionScopedPlanningMetaAtom.debugLabel = "session/noop/planningMeta";

@@ -73,6 +73,11 @@ pub struct KeyInfo {
     pub last_validated_at: Option<String>,
     pub oauth_refresh_failure_count: u32,
     pub last_oauth_refresh_failed_at: Option<String>,
+    pub temporary_unavailable_until: Option<String>,
+    pub temporary_unavailable_reason: Option<String>,
+    pub last_upstream_status: Option<u16>,
+    pub last_upstream_error_type: Option<String>,
+    pub rate_limit_reset_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub enabled: bool,
@@ -314,6 +319,11 @@ impl From<ModelKey> for KeyInfo {
             last_oauth_refresh_failed_at: entry
                 .last_oauth_refresh_failed_at
                 .map(|t| t.to_rfc3339()),
+            temporary_unavailable_until: entry.temporary_unavailable_until.map(|t| t.to_rfc3339()),
+            temporary_unavailable_reason: entry.temporary_unavailable_reason.clone(),
+            last_upstream_status: entry.last_upstream_status,
+            last_upstream_error_type: entry.last_upstream_error_type.clone(),
+            rate_limit_reset_at: entry.rate_limit_reset_at.map(|t| t.to_rfc3339()),
             created_at: entry.created_at.to_rfc3339(),
             updated_at: entry.updated_at.to_rfc3339(),
             enabled: entry.enabled,
@@ -588,6 +598,11 @@ pub async fn save_key(request: SaveKeyRequest) -> Result<KeyInfo, String> {
                 entry.oauth_refresh_failure_count = 0;
                 entry.last_oauth_refresh_failed_at = None;
                 entry.last_validation_error = None;
+                entry.temporary_unavailable_until = None;
+                entry.temporary_unavailable_reason = None;
+                entry.last_upstream_status = None;
+                entry.last_upstream_error_type = None;
+                entry.rate_limit_reset_at = None;
                 if entry.health_status == HealthStatus::Invalid {
                     entry.health_status = HealthStatus::Unknown;
                 }
@@ -608,6 +623,11 @@ pub async fn save_key(request: SaveKeyRequest) -> Result<KeyInfo, String> {
             entry.oauth_refresh_failure_count = 0;
             entry.last_oauth_refresh_failed_at = None;
             entry.last_validation_error = None;
+            entry.temporary_unavailable_until = None;
+            entry.temporary_unavailable_reason = None;
+            entry.last_upstream_status = None;
+            entry.last_upstream_error_type = None;
+            entry.rate_limit_reset_at = None;
         }
 
         if entry.model_type == ModelType::CursorCli {

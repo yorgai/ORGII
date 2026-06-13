@@ -1,3 +1,7 @@
+import {
+  beginOptimisticTurn,
+  failOptimisticTurn,
+} from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import { collectIdeContext } from "@src/services/context/collectors";
 import { retryInvokeTauri } from "@src/util/platform/tauri/retryInvoke";
 
@@ -25,19 +29,29 @@ async function sendPlanMessage(
   const ideContext = collectIdeContext({
     expectedRepoPath: params.workspacePath ?? null,
   });
-  await retryInvokeTauri(
-    "agent_send_message",
-    {
-      sessionId,
-      content,
-      mode: params.mode,
-      ...(params.model ? { model: params.model } : {}),
-      ...(params.accountId ? { accountId: params.accountId } : {}),
-      ...(params.workspacePath ? { workspacePath: params.workspacePath } : {}),
-      ...(ideContext ? { ideContext } : {}),
-    },
-    sessionId
-  );
+  // Raw invoke bypasses useMessageDispatch — without the optimistic running
+  // the planning indicator stays blank until Rust's first status event (#8).
+  beginOptimisticTurn(sessionId);
+  try {
+    await retryInvokeTauri(
+      "agent_send_message",
+      {
+        sessionId,
+        content,
+        mode: params.mode,
+        ...(params.model ? { model: params.model } : {}),
+        ...(params.accountId ? { accountId: params.accountId } : {}),
+        ...(params.workspacePath
+          ? { workspacePath: params.workspacePath }
+          : {}),
+        ...(ideContext ? { ideContext } : {}),
+      },
+      sessionId
+    );
+  } catch (error) {
+    failOptimisticTurn(sessionId);
+    throw error;
+  }
 }
 
 export const PlanExecutionService = {

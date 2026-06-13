@@ -106,7 +106,7 @@ pub static PROVIDERS: &[ProviderSpec] = &[
         name: provider_id::DEEPSEEK,
         display_name: "DeepSeek",
         keywords: &["deepseek"],
-        litellm_prefix: Some("deepseek/"),
+        litellm_prefix: None,
         skip_prefixes: &["deepseek/"],
         default_api_base: Some("https://api.deepseek.com/v1"),
         is_local: false,

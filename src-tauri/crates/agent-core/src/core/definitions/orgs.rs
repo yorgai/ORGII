@@ -4,9 +4,9 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
 #[cfg(not(test))]
 use std::sync::OnceLock;
+use std::sync::{Arc, Mutex};
 use tracing::{error, info};
 
 use key_vault::ModelType;
@@ -228,9 +228,7 @@ impl AgentOrgsStore {
             return Vec::new();
         };
         orgs.iter()
-            .filter(|org| {
-                org.agent_id == agent_id || members_reference(&org.children, agent_id)
-            })
+            .filter(|org| org.agent_id == agent_id || members_reference(&org.children, agent_id))
             .map(|org| org.name.clone())
             .collect()
     }
@@ -280,7 +278,10 @@ impl AgentOrgsStore {
         Self::validate_agent_references(&org)?;
         let id = org.id.clone();
         let snapshot = {
-            let mut guard = self.orgs.lock().map_err(|err| format!("Lock error: {}", err))?;
+            let mut guard = self
+                .orgs
+                .lock()
+                .map_err(|err| format!("Lock error: {}", err))?;
             if guard.iter().any(|existing| existing.id == id) {
                 return Err(format!("Org with id '{}' already exists", id));
             }
@@ -304,7 +305,10 @@ impl AgentOrgsStore {
     pub fn replace(&self, org: OrgDefinition) -> Result<(), String> {
         Self::validate_agent_references(&org)?;
         let snapshot = {
-            let mut guard = self.orgs.lock().map_err(|err| format!("Lock error: {}", err))?;
+            let mut guard = self
+                .orgs
+                .lock()
+                .map_err(|err| format!("Lock error: {}", err))?;
             let idx = guard
                 .iter()
                 .position(|existing| existing.id == org.id)
@@ -319,7 +323,10 @@ impl AgentOrgsStore {
     /// Remove an org by id. Returns `true` when an org was removed.
     pub fn remove(&self, org_id: &str) -> Result<bool, String> {
         let (removed, snapshot) = {
-            let mut guard = self.orgs.lock().map_err(|err| format!("Lock error: {}", err))?;
+            let mut guard = self
+                .orgs
+                .lock()
+                .map_err(|err| format!("Lock error: {}", err))?;
             let len_before = guard.len();
             guard.retain(|org| org.id != org_id);
             (guard.len() < len_before, guard.clone())

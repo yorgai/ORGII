@@ -299,7 +299,11 @@ mod tests {
         fn is_read_only(&self) -> bool {
             true
         }
-        async fn execute_text(&self, _params: Value, _ctx: &crate::tools::traits::CallContext) -> Result<String, ToolError> {
+        async fn execute_text(
+            &self,
+            _params: Value,
+            _ctx: &crate::tools::traits::CallContext,
+        ) -> Result<String, ToolError> {
             Ok("file_content_here".into())
         }
     }
@@ -316,7 +320,11 @@ mod tests {
         fn parameters(&self) -> Value {
             serde_json::json!({"type":"object","properties":{}})
         }
-        async fn execute_text(&self, _params: Value, _ctx: &crate::tools::traits::CallContext) -> Result<String, ToolError> {
+        async fn execute_text(
+            &self,
+            _params: Value,
+            _ctx: &crate::tools::traits::CallContext,
+        ) -> Result<String, ToolError> {
             Ok("edited".into())
         }
     }
@@ -336,7 +344,11 @@ mod tests {
         fn is_read_only(&self) -> bool {
             true
         }
-        async fn execute_text(&self, _params: Value, _ctx: &crate::tools::traits::CallContext) -> Result<String, ToolError> {
+        async fn execute_text(
+            &self,
+            _params: Value,
+            _ctx: &crate::tools::traits::CallContext,
+        ) -> Result<String, ToolError> {
             Ok("search_result".into())
         }
     }

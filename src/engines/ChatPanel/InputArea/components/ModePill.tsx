@@ -95,6 +95,12 @@ const ModePill: React.FC<ModePillProps> = memo(
       AGENT_EXEC_MODES.find((opt) => opt.id === mode) ?? AGENT_EXEC_MODES[0];
     const CurrentIcon = currentOption.icon;
     const currentLabel = t(currentOption.i18nKey);
+    const toneClassName =
+      mode === "plan"
+        ? "mode-pill-tone-plan"
+        : mode === "ask"
+          ? "mode-pill-tone-ask"
+          : "";
 
     const {
       isOpen,
@@ -169,7 +175,11 @@ const ModePill: React.FC<ModePillProps> = memo(
         <SelectorPill
           ref={triggerRef}
           icon={
-            <CurrentIcon size={14} strokeWidth={1.75} className="text-text-1" />
+            <CurrentIcon
+              size={14}
+              strokeWidth={1.75}
+              className={toneClassName || "text-text-1"}
+            />
           }
           label={currentLabel}
           tooltip={t("creator.switchMode")}
@@ -183,7 +193,7 @@ const ModePill: React.FC<ModePillProps> = memo(
               <X size={14} strokeWidth={1.75} />
             ) : undefined
           }
-          className="h-[28px] text-[13px]"
+          className={`h-[28px] text-[13px] ${toneClassName}`}
           size="sm"
         />
 

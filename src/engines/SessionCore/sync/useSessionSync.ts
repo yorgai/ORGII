@@ -76,9 +76,13 @@ export function useSessionSync(
   );
   const setSessionRuntimeStatus = useCallback(
     (status: CliSessionStatus) => {
-      setSessionRuntimeStatusAtomValue({ status, source: "sync" });
+      // Bound to the hook's current sessionId: stale adapter callbacks from a
+      // previous session carry the old id and are dropped by the setter's
+      // session gate instead of clobbering the visible session's status.
+      if (!sessionId) return;
+      setSessionRuntimeStatusAtomValue({ sessionId, status, source: "sync" });
     },
-    [setSessionRuntimeStatusAtomValue]
+    [sessionId, setSessionRuntimeStatusAtomValue]
   );
   const setSessionRuntimeError = useSetAtom(sessionRuntimeErrorAtom);
   const setPendingCancel = useSetAtom(isPendingCancelAtom);

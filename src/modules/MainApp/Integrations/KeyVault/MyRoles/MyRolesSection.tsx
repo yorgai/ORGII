@@ -31,10 +31,21 @@ import {
   computeBackAtMs,
 } from "@src/types/userPresence";
 
+export const MY_ROLES_TAB = {
+  PRESENCE: "presence",
+  PROFILE: "profile",
+} as const;
+
+export type MyRolesTab = (typeof MY_ROLES_TAB)[keyof typeof MY_ROLES_TAB];
+
 type PresenceGuidanceKey =
   | "general.presenceGuidanceOnline"
   | "general.presenceGuidanceInvisible"
   | "general.presenceGuidanceAway";
+
+interface MyRolesSectionProps {
+  activeTab?: MyRolesTab;
+}
 
 const CUSTOM_ROLE_COLOR_CLASS = "text-primary-6";
 
@@ -59,7 +70,9 @@ const BUILT_IN_STATUS_OPTIONS = [
   },
 ] as const;
 
-const MyRolesSection: React.FC = () => {
+const MyRolesSection: React.FC<MyRolesSectionProps> = ({
+  activeTab = MY_ROLES_TAB.PRESENCE,
+}) => {
   const { t } = useTranslation(["settings", "navigation"]);
   const settings = useAllSettings();
   const updateSetting = useSetAtom(updateSettingAtom);
@@ -68,6 +81,12 @@ const MyRolesSection: React.FC = () => {
 
   const questionAutoSkipTimeoutByPresence = settings[
     "agent.sde.questionAutoSkipTimeoutByPresence"
+  ] as Record<BuiltInPresenceMode, number>;
+  const planAutoApproveTimeoutByPresence = settings[
+    "agent.sde.planAutoApproveTimeoutByPresence"
+  ] as Record<BuiltInPresenceMode, number>;
+  const goalMaxTurnsByPresence = settings[
+    "agent.sde.goalMaxTurnsByPresence"
   ] as Record<BuiltInPresenceMode, number>;
   const presenceGuidanceOnline =
     (settings["general.presenceGuidanceOnline"] as string | undefined) ?? "";
@@ -152,6 +171,108 @@ const MyRolesSection: React.FC = () => {
     [questionAutoSkipTimeoutByPresence, updateSetting]
   );
 
+  const handlePlanAutoApproveTimeoutChange = useCallback(
+    (mode: BuiltInPresenceMode) => (value: number | undefined) => {
+      if (value === undefined) return;
+      updateSetting({
+        key: "agent.sde.planAutoApproveTimeoutByPresence",
+        value: {
+          ...planAutoApproveTimeoutByPresence,
+          [mode]: value,
+        },
+      });
+    },
+    [planAutoApproveTimeoutByPresence, updateSetting]
+  );
+
+  const handleGoalMaxTurnsChange = useCallback(
+    (mode: BuiltInPresenceMode) => (value: number | undefined) => {
+      if (value === undefined) return;
+      updateSetting({
+        key: "agent.sde.goalMaxTurnsByPresence",
+        value: {
+          ...goalMaxTurnsByPresence,
+          [mode]: value,
+        },
+      });
+    },
+    [goalMaxTurnsByPresence, updateSetting]
+  );
+
+  const renderPolicyRows = useCallback(
+    (mode: BuiltInPresenceMode, statusLabel: string) => (
+      <>
+        <SectionRow
+          label={t("sdeAgent.questionAutoSkipTimeoutByStatus", {
+            status: statusLabel,
+          })}
+          description={t("sdeAgent.questionAutoSkipTimeoutByStatusDesc")}
+        >
+          <NumberInput
+            value={questionAutoSkipTimeoutByPresence[mode]}
+            onChange={handleQuestionAutoSkipTimeoutChange(mode)}
+            min={0}
+            max={300}
+            step={5}
+            suffix={t("common:common.s")}
+            controlsPosition="sides"
+            style={SECTION_CONTROL_STYLE}
+          />
+        </SectionRow>
+        <SectionRow
+          label={t("sdeAgent.planAutoApproveTimeoutByStatus", {
+            status: statusLabel,
+            defaultValue: `${statusLabel} plan auto-approve`,
+          })}
+          description={t("sdeAgent.planAutoApproveTimeoutByStatusDesc", {
+            defaultValue:
+              "Auto-approve a pending plan after this many seconds in this status (0 = disabled).",
+          })}
+        >
+          <NumberInput
+            value={planAutoApproveTimeoutByPresence[mode]}
+            onChange={handlePlanAutoApproveTimeoutChange(mode)}
+            min={0}
+            max={3600}
+            step={10}
+            suffix={t("common:common.s")}
+            controlsPosition="sides"
+            style={SECTION_CONTROL_STYLE}
+          />
+        </SectionRow>
+        <SectionRow
+          label={t("sdeAgent.goalMaxTurnsByStatus", {
+            status: statusLabel,
+            defaultValue: `${statusLabel} goal continuation budget`,
+          })}
+          description={t("sdeAgent.goalMaxTurnsByStatusDesc", {
+            defaultValue:
+              "Keep working toward your last request for up to this many extra turns after the agent would normally stop (0 = disabled).",
+          })}
+        >
+          <NumberInput
+            value={goalMaxTurnsByPresence[mode]}
+            onChange={handleGoalMaxTurnsChange(mode)}
+            min={0}
+            max={100}
+            step={1}
+            controlsPosition="sides"
+            style={SECTION_CONTROL_STYLE}
+          />
+        </SectionRow>
+      </>
+    ),
+    [
+      t,
+      questionAutoSkipTimeoutByPresence,
+      planAutoApproveTimeoutByPresence,
+      goalMaxTurnsByPresence,
+      handleQuestionAutoSkipTimeoutChange,
+      handlePlanAutoApproveTimeoutChange,
+      handleGoalMaxTurnsChange,
+    ]
+  );
+
   const techSavvy = settings[
     "general.profileTechSavvy"
   ] as UserTechSavvySelection;
@@ -220,6 +341,69 @@ const MyRolesSection: React.FC = () => {
     [t]
   );
 
+  if (activeTab === MY_ROLES_TAB.PROFILE) {
+    return (
+      <div className="flex flex-col gap-3">
+        <SectionContainer title={t("myRoles.profile.title")}>
+          <SectionRow
+            label={t("myRoles.profile.techSavvy")}
+            description={t("myRoles.profile.techSavvyDescription")}
+          >
+            <Select
+              value={techSavvy}
+              onChange={handleTechSavvyChange}
+              options={techSavvyOptions}
+              placeholder={t("myRoles.profile.techSavvyPlaceholder")}
+              allowClear
+              style={SECTION_CONTROL_STYLE}
+            />
+          </SectionRow>
+          <SectionRow
+            label={t("myRoles.profile.jobRoles")}
+            description={t("myRoles.profile.jobRolesDescription")}
+            layout="vertical"
+          >
+            <TagsInput
+              value={jobRoles}
+              onChange={handleJobRolesChange}
+              placeholder={t("myRoles.profile.jobRolesPlaceholder")}
+              removeAriaLabel={removeJobRoleAriaLabel}
+            />
+          </SectionRow>
+          <SectionRow
+            label={t("myRoles.profile.familiarTechStacks")}
+            description={t("myRoles.profile.familiarTechStacksDescription")}
+            layout="vertical"
+          >
+            <Select
+              value={familiarTechStacks}
+              onChange={handleFamiliarTechStacksChange}
+              options={familiarTechStackOptions}
+              placeholder={t("myRoles.profile.familiarTechStacksPlaceholder")}
+              mode="multiple"
+              showSearch
+              allowClear
+              maxTagCount={4}
+              dropdownWidthMode="match"
+            />
+          </SectionRow>
+          <SectionRow
+            label={t("myRoles.profile.description")}
+            description={t("myRoles.profile.descriptionHelp")}
+            layout="vertical"
+          >
+            <Textarea
+              value={profileDescription}
+              onChange={handleProfileDescriptionChange}
+              rows={4}
+              placeholder={t("myRoles.profile.descriptionPlaceholder")}
+            />
+          </SectionRow>
+        </SectionContainer>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <SectionContainer>
@@ -233,9 +417,9 @@ const MyRolesSection: React.FC = () => {
         </SectionRow>
       </SectionContainer>
 
-      <SectionContainer title={t("general.presenceGuidanceOnline")}>
+      <SectionContainer title={t("navigation:sidebar.presence.online")}>
         <SectionRow
-          label={t("general.presenceGuidanceOnline")}
+          label={t("myRoles.presence.instructionForAgent")}
           layout="vertical"
         >
           <Textarea
@@ -247,30 +431,15 @@ const MyRolesSection: React.FC = () => {
             placeholder={t("general.presenceGuidancePlaceholder")}
           />
         </SectionRow>
-        <SectionRow
-          label={t("sdeAgent.questionAutoSkipTimeoutByStatus", {
-            status: t("navigation:sidebar.presence.online"),
-          })}
-          description={t("sdeAgent.questionAutoSkipTimeoutByStatusDesc")}
-        >
-          <NumberInput
-            value={questionAutoSkipTimeoutByPresence.online}
-            onChange={handleQuestionAutoSkipTimeoutChange(
-              USER_PRESENCE_MODE.ONLINE
-            )}
-            min={0}
-            max={300}
-            step={5}
-            suffix={t("common:common.s")}
-            controlsPosition="sides"
-            style={SECTION_CONTROL_STYLE}
-          />
-        </SectionRow>
+        {renderPolicyRows(
+          USER_PRESENCE_MODE.ONLINE,
+          t("navigation:sidebar.presence.online")
+        )}
       </SectionContainer>
 
-      <SectionContainer title={t("general.presenceGuidanceInvisible")}>
+      <SectionContainer title={t("navigation:sidebar.presence.invisible")}>
         <SectionRow
-          label={t("general.presenceGuidanceInvisible")}
+          label={t("myRoles.presence.instructionForAgent")}
           layout="vertical"
         >
           <Textarea
@@ -282,29 +451,17 @@ const MyRolesSection: React.FC = () => {
             placeholder={t("general.presenceGuidancePlaceholder")}
           />
         </SectionRow>
-        <SectionRow
-          label={t("sdeAgent.questionAutoSkipTimeoutByStatus", {
-            status: t("navigation:sidebar.presence.invisible"),
-          })}
-          description={t("sdeAgent.questionAutoSkipTimeoutByStatusDesc")}
-        >
-          <NumberInput
-            value={questionAutoSkipTimeoutByPresence.invisible}
-            onChange={handleQuestionAutoSkipTimeoutChange(
-              USER_PRESENCE_MODE.INVISIBLE
-            )}
-            min={0}
-            max={300}
-            step={5}
-            suffix={t("common:common.s")}
-            controlsPosition="sides"
-            style={SECTION_CONTROL_STYLE}
-          />
-        </SectionRow>
+        {renderPolicyRows(
+          USER_PRESENCE_MODE.INVISIBLE,
+          t("navigation:sidebar.presence.invisible")
+        )}
       </SectionContainer>
 
-      <SectionContainer title={t("general.presenceGuidanceAway")}>
-        <SectionRow label={t("general.presenceGuidanceAway")} layout="vertical">
+      <SectionContainer title={t("navigation:sidebar.presence.away")}>
+        <SectionRow
+          label={t("myRoles.presence.instructionForAgent")}
+          layout="vertical"
+        >
           <Textarea
             value={presenceGuidanceAway}
             onChange={handlePresenceGuidanceChange(
@@ -314,82 +471,10 @@ const MyRolesSection: React.FC = () => {
             placeholder={t("general.presenceGuidancePlaceholder")}
           />
         </SectionRow>
-        <SectionRow
-          label={t("sdeAgent.questionAutoSkipTimeoutByStatus", {
-            status: t("navigation:sidebar.presence.away"),
-          })}
-          description={t("sdeAgent.questionAutoSkipTimeoutByStatusDesc")}
-        >
-          <NumberInput
-            value={questionAutoSkipTimeoutByPresence.away}
-            onChange={handleQuestionAutoSkipTimeoutChange(
-              USER_PRESENCE_MODE.AWAY
-            )}
-            min={0}
-            max={300}
-            step={5}
-            suffix={t("common:common.s")}
-            controlsPosition="sides"
-            style={SECTION_CONTROL_STYLE}
-          />
-        </SectionRow>
-      </SectionContainer>
-
-      <SectionContainer title={t("myRoles.profile.title")}>
-        <SectionRow
-          label={t("myRoles.profile.techSavvy")}
-          description={t("myRoles.profile.techSavvyDescription")}
-        >
-          <Select
-            value={techSavvy}
-            onChange={handleTechSavvyChange}
-            options={techSavvyOptions}
-            placeholder={t("myRoles.profile.techSavvyPlaceholder")}
-            allowClear
-            style={SECTION_CONTROL_STYLE}
-          />
-        </SectionRow>
-        <SectionRow
-          label={t("myRoles.profile.jobRoles")}
-          description={t("myRoles.profile.jobRolesDescription")}
-          layout="vertical"
-        >
-          <TagsInput
-            value={jobRoles}
-            onChange={handleJobRolesChange}
-            placeholder={t("myRoles.profile.jobRolesPlaceholder")}
-            removeAriaLabel={removeJobRoleAriaLabel}
-          />
-        </SectionRow>
-        <SectionRow
-          label={t("myRoles.profile.familiarTechStacks")}
-          description={t("myRoles.profile.familiarTechStacksDescription")}
-          layout="vertical"
-        >
-          <Select
-            value={familiarTechStacks}
-            onChange={handleFamiliarTechStacksChange}
-            options={familiarTechStackOptions}
-            placeholder={t("myRoles.profile.familiarTechStacksPlaceholder")}
-            mode="multiple"
-            showSearch
-            allowClear
-            maxTagCount={4}
-            dropdownWidthMode="match"
-          />
-        </SectionRow>
-        <SectionRow
-          label={t("myRoles.profile.description")}
-          description={t("myRoles.profile.descriptionHelp")}
-          layout="vertical"
-        >
-          <Textarea
-            value={profileDescription}
-            onChange={handleProfileDescriptionChange}
-            rows={4}
-            placeholder={t("myRoles.profile.descriptionPlaceholder")}
-          />
-        </SectionRow>
+        {renderPolicyRows(
+          USER_PRESENCE_MODE.AWAY,
+          t("navigation:sidebar.presence.away")
+        )}
       </SectionContainer>
     </div>
   );

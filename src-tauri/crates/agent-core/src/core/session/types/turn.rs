@@ -206,7 +206,11 @@ mod tests {
     #[test]
     fn finalize_completed_transitions_state() {
         let mut turn = make_turn("hello");
-        let stats = TurnStats { prompt_tokens: 10, completion_tokens: 20, ..Default::default() };
+        let stats = TurnStats {
+            prompt_tokens: 10,
+            completion_tokens: 20,
+            ..Default::default()
+        };
         turn.finalize(DialogTurnState::Completed, stats);
         assert_eq!(turn.state, DialogTurnState::Completed);
         assert!(turn.is_finished());
@@ -262,7 +266,10 @@ mod tests {
     #[test]
     fn only_running_is_not_finished() {
         let running_turn = make_turn("hello");
-        assert!(!running_turn.is_finished(), "Running turn must not be finished");
+        assert!(
+            !running_turn.is_finished(),
+            "Running turn must not be finished"
+        );
         // All terminal variants must satisfy is_finished via `!= Running` logic
         let terminal = [
             DialogTurnState::Completed,

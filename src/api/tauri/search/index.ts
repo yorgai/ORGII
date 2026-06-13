@@ -34,7 +34,6 @@ import {
   gotoDefinition,
   searchSymbols,
 } from "./symbol";
-import { searchTantivy } from "./tantivy";
 
 /**
  * Code Search API
@@ -52,10 +51,6 @@ export type {
   SearchResultEvent,
   SearchCompleteEvent,
   IncrementalIndexResult,
-  TantivyMatchingLine,
-  TantivySearchHit,
-  TantivyIndexStats,
-  TantivyIndexInfo,
   SemanticHit,
   EmbeddingModelStatus,
   USearchIndexInfo,
@@ -103,16 +98,6 @@ export {
   stopEmbedder,
 } from "./semantic";
 
-export {
-  indexRepositoryTantivy,
-  searchTantivy,
-  getTantivyIndexInfo,
-  removeRepositoryTantivy,
-  clearTantivyIndex,
-  incrementalIndexFiles,
-  removeFilesFromIndex,
-} from "./tantivy";
-
 export type { MerkleChange, MerkleDiffResult, MerkleStats } from "./merkle";
 
 export {
@@ -142,7 +127,6 @@ export const searchApi = {
   checkAdvancedSearchEnabled,
   checkSemanticAvailable,
   searchSemantic,
-  searchTantivy,
   isCodeSearchAvailable,
   getTotalMatchCount,
   getTotalSymbolCount,

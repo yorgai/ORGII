@@ -20,7 +20,7 @@ import {
 /**
  * Which chip to show when {@link SpotlightFooterProps.hasActiveAction} is true.
  *
- * - `back` — Backspace + "Back" (drill-in palettes, e.g. RepoPalette).
+ * - `back` — Backspace + "Back" (drill-in palettes, e.g. WorkspacePalette).
  * - `switchColumn` — Tab + "Switch column" (two-column palettes like
  *   UnifiedModelPalette, where Backspace is intentionally inert and
  *   Tab/ArrowLeft hand focus back to the left column).

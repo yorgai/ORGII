@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "Mój obecny status",
+    "tabs": {
+      "presence": "Obecność",
+      "profile": "Moje profile"
+    },
+    "presence": {
+      "instructionForAgent": "Instrukcja dla Agent"
+    },
     "profile": {
-      "title": "O mnie",
+      "title": "Moje profile",
       "techSavvy": "Poziom techniczny",
       "techSavvyDescription": "Pomaga Agentowi dostosować poziom wyjaśnień i zakładane podstawy",
       "techSavvyPlaceholder": "Wybierz poziom…",
@@ -597,8 +604,8 @@
     "modelsTitle": "Modele",
     "compactionTitle": "Kompresja",
     "autoTimeoutTitle": "Auto-limit czasu",
-    "questionAutoSkipTimeoutByStatus": "Auto-pominięcie pytania — {{status}}",
-    "questionAutoSkipTimeoutByStatusDesc": "Automatycznie pomijaj pytania Agent po upływie limitu dla tego statusu (0 = wyłączone)",
+    "questionAutoSkipTimeoutByStatus": "Automatyczne pomijanie pytań",
+    "questionAutoSkipTimeoutByStatusDesc": "Automatycznie pomijaj pytania Agent po tym limicie czasu (0 = wyłączone)",
     "resourceTabs": {
       "tools": "Narzędzia",
       "mcp": "MCP",
@@ -989,7 +996,6 @@
     "storagePath": "Ścieżka pamięci",
     "storageUsage": "Zużycie pamięci",
     "storageUsageTotal": "Łącznie: {{size}}",
-    "searchIndex": "Indeks wyszukiwania",
     "embeddingIndex": "Indeks Embedding",
     "files": "plików",
     "chunks": "fragmentów",
@@ -1006,10 +1012,8 @@
     "embedded": "Osadzono",
     "index": "Indeksuj",
     "embed": "Osadź",
-    "indexNow": "Indeksuj teraz",
     "reindex": "Indeksuj ponownie",
     "reembed": "Osadź ponownie",
-    "deleteIndex": "Usuń indeks",
     "deleteEmbedding": "Usuń Embedding",
     "abort": "Anuluj",
     "removeAllIndexes": "Usuń wszystkie indeksy",
@@ -1024,7 +1028,6 @@
     "embeddingFailed": "Embedding nie powiódł się",
     "embeddingCancelledAt": "Embedding anulowano przy {{current}}/{{total}} plikach",
     "embeddingFiles": "Osadzanie {{current}}/{{total}} plików ({{chunks}} fragmentów)",
-    "filesIndexed": "Zaindeksowano {{count}} plików",
     "chunksEmbedded": "Osadzono {{count}} fragmentów",
     "errors": "{{count}} błędów",
     "modelNotInstalled": "Model niezainstalowany",

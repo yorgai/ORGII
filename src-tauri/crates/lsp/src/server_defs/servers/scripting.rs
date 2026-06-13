@@ -3,7 +3,9 @@
 use std::path::Path;
 
 use crate::install_pipeline::InstallMethod;
-use crate::root_detection::{ELIXIR_PATTERN, PHP_PATTERN, PYTHON_PATTERN, RUBY_PATTERN, RootPattern};
+use crate::root_detection::{
+    RootPattern, ELIXIR_PATTERN, PHP_PATTERN, PYTHON_PATTERN, RUBY_PATTERN,
+};
 use crate::server_defs::ServerDef;
 
 pub struct PythonServer;

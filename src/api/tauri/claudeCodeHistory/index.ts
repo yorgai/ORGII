@@ -24,6 +24,13 @@ export interface ClaudeCodeHistorySessionPage {
   hasMore: boolean;
 }
 
+export interface ClaudeCodeRecentPath {
+  path: string;
+  name?: string;
+  lastUsedAt: string;
+  sessionCount: number;
+}
+
 export async function claudeCodeHistoryListSessions(args?: {
   limit?: number;
   offset?: number;
@@ -35,6 +42,14 @@ export async function claudeCodeHistoryListSessions(args?: {
       offset: args?.offset,
     }
   );
+}
+
+export async function claudeCodeRecentPaths(args?: {
+  limit?: number;
+}): Promise<ClaudeCodeRecentPath[]> {
+  return invoke<ClaudeCodeRecentPath[]>("claude_code_recent_paths", {
+    limit: args?.limit,
+  });
 }
 
 export async function claudeCodeHistoryChunks(

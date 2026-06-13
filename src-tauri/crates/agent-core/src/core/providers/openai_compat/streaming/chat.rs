@@ -7,6 +7,7 @@ use tracing::{info, warn};
 use super::super::client::OpenAICompatClient;
 use super::super::types::{ChatCompletionRequest, ChatCompletionResponse, RequestBuilderExt};
 use super::think_split::ThinkTagSplitter;
+use super::translate_tool_choice_for_openai;
 use crate::providers::openai_policy::ChatTokenLimitField;
 use crate::providers::safe_truncate::safe_truncate_utf8;
 use crate::providers::traits::{finish_reason as finish, LLMResponse, ProviderError};
@@ -53,12 +54,24 @@ pub(super) async fn run_chat(
     );
 
     let wire_tools = tools.map(strip_tool_schema_cache_scopes);
+    // Extract forced tool_choice from side_query structured output
+    let (tool_choice_override, clean_wire_tools) = if let Some(ref wt) = wire_tools {
+        let (ovr, cleaned) = crate::core::side_query::extract_tool_choice_override(wt);
+        (ovr, Some(cleaned))
+    } else {
+        (None, None)
+    };
+    let wire_tools_final = clean_wire_tools.or(wire_tools);
+
     let wire_policy = this.chat_wire_policy(&resolved_model);
     let request_body = ChatCompletionRequest {
         model: resolved_model.clone(),
         messages: wire_messages,
-        tools: wire_tools,
-        tool_choice: if wire_policy.send_tool_choice_auto {
+        tools: wire_tools_final,
+        tool_choice: if let Some(ovr) = tool_choice_override {
+            // Map Anthropic-style {"type":"tool","name":"x"} → OpenAI {"type":"function","function":{"name":"x"}}
+            Some(translate_tool_choice_for_openai(&ovr))
+        } else if wire_policy.send_tool_choice_auto {
             tools.map(|_| Value::String("auto".to_string()))
         } else {
             None
@@ -158,10 +171,8 @@ pub(super) async fn run_chat(
     // Demux inline `<think>…</think>` reasoning out of the message content.
     // Mirrors the same logic used in `sse_stream::run_chat_streaming` so the
     // streaming and non-streaming paths surface reasoning identically.
-    let (content, reasoning_content) = split_inline_thinking(
-        choice.message.content,
-        choice.message.reasoning_content,
-    );
+    let (content, reasoning_content) =
+        split_inline_thinking(choice.message.content, choice.message.reasoning_content);
 
     let response = LLMResponse {
         content,

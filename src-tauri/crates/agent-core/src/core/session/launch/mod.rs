@@ -8,9 +8,9 @@
 
 mod launch_helpers;
 mod launch_org;
-mod launch_workspace;
 #[cfg(test)]
 mod launch_tests;
+mod launch_workspace;
 
 use std::collections::HashMap;
 
@@ -20,9 +20,7 @@ use crate::coordination::agent_org_runs::{
     AgentOrgRunEntryMode, AgentOrgRunStatus, AgentOrgRunStore, CreateAgentOrgRunParams,
     COORDINATOR_MEMBER_ID,
 };
-use crate::definitions::orgs::{
-    AgentOrgsStore, OrgMemberLaunchOverride,
-};
+use crate::definitions::orgs::{AgentOrgsStore, OrgMemberLaunchOverride};
 use crate::session::persistence;
 use crate::session::IdeContext;
 use crate::state::AgentAppState;
@@ -509,6 +507,7 @@ pub(crate) async fn launch_rust_agent_run(
                 ide_context_for_send,
                 agent_definition_id_for_send,
                 sub_agent_ids_for_send,
+                crate::foundation::session_bridge::TurnIntentBridgeSource::AgentOrg,
             )
             .await;
 
@@ -589,6 +588,10 @@ pub(crate) async fn launch_rust_agent_run(
         let app_handle_for_send = state.app_handle.clone();
 
         tokio::spawn(async move {
+            // A plain (non-org) launch's first message IS the user's real
+            // request — UserSubmit so downstream consumers (goal loop,
+            // org-task resume) treat it as user intent. Org-run launches
+            // keep the AgentOrg source.
             let send_result = send_initial_turn(
                 &state_for_send,
                 &session_id_for_send,
@@ -602,6 +605,7 @@ pub(crate) async fn launch_rust_agent_run(
                 ide_context_for_send,
                 agent_definition_id_for_send,
                 sub_agent_ids_for_send,
+                crate::foundation::session_bridge::TurnIntentBridgeSource::UserSubmit,
             )
             .await;
 

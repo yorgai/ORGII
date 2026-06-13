@@ -22,6 +22,10 @@ import {
 import Message from "@src/components/Message";
 import { useMessageDispatch } from "@src/engines/ChatPanel/hooks/useWorkspaceChat/useMessageDispatch";
 import { editTruncationTimestampAtom } from "@src/engines/SessionCore";
+import {
+  beginOptimisticTurn,
+  failOptimisticTurn,
+} from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
@@ -147,6 +151,11 @@ export function useEditUserMessage(): (
         }
         if (initiatedSessionId) {
           await cancelTurnForTimelineBoundary(initiatedSessionId, "rewind");
+          // The rewind boundary wrote `idle`; the truncate RPCs below can be
+          // slow and a resend is guaranteed to follow, so flip back to
+          // optimistic running now — otherwise the panel reads as frozen for
+          // the whole truncate window (#14).
+          beginOptimisticTurn(initiatedSessionId);
         }
 
         await eventStoreProxy.truncateBeforeId(
@@ -211,6 +220,7 @@ export function useEditUserMessage(): (
           "[useEditUserMessage] edit truncate/resubmit failed:",
           err
         );
+        if (initiatedSessionId) failOptimisticTurn(initiatedSessionId);
         Message.error(t("errors.errorOccurred"));
       } finally {
         if (clearTimerRef.current !== null) {

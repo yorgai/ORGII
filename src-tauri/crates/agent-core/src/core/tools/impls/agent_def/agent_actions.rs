@@ -171,9 +171,7 @@ pub(super) fn create_agent(
     };
 
     drop(agents);
-    store
-        .insert(agent)
-        .map_err(ToolError::ExecutionFailed)?;
+    store.insert(agent).map_err(ToolError::ExecutionFailed)?;
 
     Ok(format!("Created agent '{}' with id `{}`.", name, new_id))
 }

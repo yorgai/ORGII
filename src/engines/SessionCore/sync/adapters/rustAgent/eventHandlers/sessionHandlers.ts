@@ -168,6 +168,24 @@ export function handleWarning(event: AgentWSEvent): void {
 }
 
 /**
+ * Goal-loop lifecycle (presence goal mode). Continuation turns are
+ * already visible in the transcript as `↻ Continuing toward goal (n/M)`
+ * user-side rows; this handler surfaces only the terminal transitions
+ * (achieved / paused-on-budget) as toasts so the user notices them even
+ * when the session is in the background.
+ */
+export function handleGoalLoop(event: AgentWSEvent): void {
+  const status = event.status as string | undefined;
+  const message = (event.message as string | undefined) ?? "";
+  if (status === "achieved") {
+    Message.success(message || "Goal achieved", 6000);
+  } else if (status === "paused") {
+    Message.warning(message || "Goal paused — turn budget used", 8000);
+  }
+  // "continuing" is intentionally silent: the transcript row carries it.
+}
+
+/**
  * Module-level tracker for rate-limit hint deduplication.
  * Ensures we only append one hint event per rate-limit "episode"
  * (consecutive retries with kind=rate_limited).  Resets when the

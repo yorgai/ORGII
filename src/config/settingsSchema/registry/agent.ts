@@ -31,16 +31,50 @@ const questionAutoSkipTimeoutByPresenceSchema = z.object({
   away: z.number().int().min(0).max(300),
 });
 
+const planAutoApproveTimeoutByPresenceSchema = z.object({
+  online: z.number().int().min(0).max(3600),
+  invisible: z.number().int().min(0).max(3600),
+  away: z.number().int().min(0).max(3600),
+});
+
+const goalMaxTurnsByPresenceSchema = z.object({
+  online: z.number().int().min(0).max(100),
+  invisible: z.number().int().min(0).max(100),
+  away: z.number().int().min(0).max(100),
+});
+
 export const AGENT_SETTINGS_REGISTRY = {
   "agent.sde.questionAutoSkipTimeoutByPresence": {
     schema: questionAutoSkipTimeoutByPresenceSchema,
     default: {
       online: 0,
-      invisible: 0,
+      invisible: 30,
+      away: 180,
+    },
+    description:
+      "Auto-skip agent questions after N seconds per user status (0 = disabled). Backend-enforced: pending questions resolve even when the UI is closed.",
+    category: "agent",
+  },
+  "agent.sde.planAutoApproveTimeoutByPresence": {
+    schema: planAutoApproveTimeoutByPresenceSchema,
+    default: {
+      online: 0,
+      invisible: 120,
       away: 0,
     },
     description:
-      "Auto-skip agent questions after N seconds per user status (0 = disabled). Frontend runtime preference; agent decides how to continue.",
+      "Auto-approve pending plan approvals after N seconds per user status (0 = disabled). Backend-enforced; the approval card is marked as auto-approved.",
+    category: "agent",
+  },
+  "agent.sde.goalMaxTurnsByPresence": {
+    schema: goalMaxTurnsByPresenceSchema,
+    default: {
+      online: 0,
+      invisible: 20,
+      away: 0,
+    },
+    description:
+      "Goal continuation loop budget per user status (0 = disabled). When > 0, the agent judges its own turn-end output against the original request and keeps working until done or the budget runs out.",
     category: "agent",
   },
 } as const satisfies Record<string, SettingDefinition>;

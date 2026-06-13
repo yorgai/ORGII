@@ -69,10 +69,11 @@ impl UnifiedMessageProcessor {
         // 9a. Fire HookEvent::Stop — agent turn concluded.
         if let Some(ref executor) = self.event_handler_config.hook_executor {
             if executor.has_hooks_for(crate::specialization::hooks::HookEvent::Stop) {
-                let ctx = crate::specialization::hooks::events::HookContext::for_session(session_id)
-                    .with_var("ORGII_TURN_ID", turn_id)
-                    .with_var("ORGII_TOOL_CALLS", tool_calls_count.to_string())
-                    .with_var("ORGII_TOTAL_TOKENS", result.total_tokens.to_string());
+                let ctx =
+                    crate::specialization::hooks::events::HookContext::for_session(session_id)
+                        .with_var("ORGII_TURN_ID", turn_id)
+                        .with_var("ORGII_TOOL_CALLS", tool_calls_count.to_string())
+                        .with_var("ORGII_TOTAL_TOKENS", result.total_tokens.to_string());
                 let stop_executor = executor.clone();
                 tokio::spawn(async move {
                     stop_executor
@@ -159,6 +160,26 @@ impl UnifiedMessageProcessor {
                 })
                 .await;
             }
+        }
+
+        // 9e. Goal continuation loop (Ralph loop) — judge the completed
+        // turn against the standing goal and enqueue a continuation when
+        // the presence policy enables it (Invisible / custom autonomous
+        // modes). Fire-and-forget; skipped for cancelled turns (the user
+        // explicitly stopped — auto-continuing would fight the Stop).
+        if final_turn_state != DialogTurnState::Cancelled && !result.is_stream_error {
+            crate::session::goal_loop::spawn_turn_end_evaluation(
+                crate::session::goal_loop::GoalLoopTurnEnd {
+                    session_id: session_id.to_string(),
+                    response_text: response_text.to_string(),
+                    model: self.runtime.model.clone(),
+                    account_id: self.runtime.account_id.clone(),
+                    reliability: self.runtime.resolved.reliability.clone(),
+                    native_harness_type: self.runtime.native_harness_type,
+                    workspace: self.runtime.workspace_state.read().clone(),
+                    app_handle: self.app_handle.clone(),
+                },
+            );
         }
     }
 }

@@ -31,7 +31,7 @@ use core_types::activity::ActivityChunk;
 use super::db as cursor_db;
 
 use super::helpers::{
-    build_fallback_user_chunk, build_unloaded_turn_placeholder_chunk, bubbles_to_chunks,
+    bubbles_to_chunks, build_fallback_user_chunk, build_unloaded_turn_placeholder_chunk,
     cache_row_to_session_row, composer_source_updated_at, is_listable_cursor_session,
 };
 use super::io::{load_bubbles_by_id, load_composer_for_order, open_cursor_db};
@@ -45,10 +45,6 @@ pub use super::models::CursorIdeTurnSummary;
 
 // Items brought into scope so the test module's `use super::*` can reach them.
 #[cfg(test)]
-use rusqlite::Connection;
-#[cfg(test)]
-use serde_json::{json, Value};
-#[cfg(test)]
 use super::helpers::{
     assistant_text_bubble_to_chunk, assistant_tool_bubble_to_chunk, cursor_tool_name_to_canonical,
     normalize_created_at, parse_inner_json, user_bubble_to_chunk,
@@ -57,6 +53,10 @@ use super::helpers::{
 use super::io::load_content_blob;
 #[cfg(test)]
 use super::models::{RawBubble, RawComposerForOrder, RawCursorSubagentInfo, RawToolFormerData};
+#[cfg(test)]
+use rusqlite::Connection;
+#[cfg(test)]
+use serde_json::{json, Value};
 
 // ============================================================================
 // Constants

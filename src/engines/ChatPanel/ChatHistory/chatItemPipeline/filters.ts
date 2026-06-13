@@ -149,9 +149,9 @@ export function willEventRenderContent(event: SessionEvent): boolean {
   // Shell commands render when the command itself is known, even if the CLI
   // reports an empty stdout/stderr payload.
   if (normalized === "run_shell") {
+    if (hasShellCommand(event)) return true;
     const result = event.result;
-    if (!result) return false;
-    return hasShellCommand(event) || hasShellOutput(result);
+    return result ? hasShellOutput(result) : false;
   }
 
   // manage_todo: skip running (streaming placeholder)

@@ -14,6 +14,11 @@
 import { createStore } from "jotai";
 import { describe, expect, it } from "vitest";
 
+import type {
+  GitRepositoryStatus,
+  GitWorkingDirectoryFile,
+} from "@src/types/session/steps";
+
 import {
   STATUS_PRIORITY,
   gitFetchOriginStateAtom,
@@ -24,13 +29,26 @@ import {
 } from "../gitStatusAtom";
 
 function makeRepoStatus(
-  files: { path: string; status: string; staged: boolean }[]
-) {
+  files: {
+    path: string;
+    status: GitWorkingDirectoryFile["status"];
+    staged: boolean;
+  }[]
+): GitRepositoryStatus {
   return {
-    working_directory: { files },
-    branch_ahead_behind: { ahead: 0, behind: 0 },
-    do_conflicted_files_exist: false,
+    current_branch: "main",
     current_upstream_branch: "origin/main",
+    current_tip: "abc123",
+    branch_ahead_behind: { ahead: 0, behind: 0 },
+    exists: true,
+    merge_head_found: false,
+    squash_msg_found: false,
+    rebase_in_progress: false,
+    cherry_pick_in_progress: false,
+    working_directory: {
+      files: files.map((file) => ({ ...file, original_path: null })),
+    },
+    do_conflicted_files_exist: false,
   };
 }
 
@@ -65,7 +83,7 @@ describe("gitFileStatusMapAtom", () => {
         [
           "/repo",
           makeRepoStatus([
-            { path: "/src/index.ts", status: "modified", staged: false },
+            { path: "/src/index.ts", status: "M", staged: false },
           ]),
         ],
       ])
@@ -114,11 +132,11 @@ describe("workspaceFileStatusMapAtom", () => {
       new Map([
         [
           "/repo-a",
-          makeRepoStatus([{ path: "a.ts", status: "modified", staged: false }]),
+          makeRepoStatus([{ path: "a.ts", status: "M", staged: false }]),
         ],
         [
           "/repo-b",
-          makeRepoStatus([{ path: "b.ts", status: "added", staged: true }]),
+          makeRepoStatus([{ path: "b.ts", status: "A", staged: true }]),
         ],
       ])
     );

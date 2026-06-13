@@ -24,6 +24,13 @@ pub struct ClaudeOAuthRefreshConfig {
     pub key_id: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ClaudeOAuthRefreshEligibility {
+    Eligible,
+    NotExpired,
+    NotClaudeOauth,
+}
+
 struct AnthropicAuthState {
     access_token: String,
 }
@@ -100,7 +107,28 @@ impl AnthropicClient {
         Ok(auth_state.access_token.clone())
     }
 
-    pub(super) async fn refresh_auth_after_unauthorized(&self) -> Result<(), ProviderError> {
+    pub(super) async fn claude_oauth_refresh_eligibility(
+        &self,
+    ) -> Result<ClaudeOAuthRefreshEligibility, ProviderError> {
+        let Some(refresh_config) = &self.refresh_config else {
+            return Ok(ClaudeOAuthRefreshEligibility::NotClaudeOauth);
+        };
+        if self.auth_mode != AnthropicAuthMode::ClaudeOauth {
+            return Ok(ClaudeOAuthRefreshEligibility::NotClaudeOauth);
+        }
+        let key = key_vault::key_store::KEY_SERVICE
+            .get_key_by_id(&refresh_config.key_id)
+            .ok_or_else(|| {
+                ProviderError::AuthError(format!("Key not found: {}", refresh_config.key_id))
+            })?;
+        if key_vault::key_store::KEY_SERVICE.claude_code_oauth_key_needs_refresh(&key) {
+            Ok(ClaudeOAuthRefreshEligibility::Eligible)
+        } else {
+            Ok(ClaudeOAuthRefreshEligibility::NotExpired)
+        }
+    }
+
+    pub(super) async fn refresh_auth_after_local_expiry(&self) -> Result<(), ProviderError> {
         let Some(refresh_config) = &self.refresh_config else {
             return Err(ProviderError::AuthError(
                 "Claude Code OAuth access token was rejected and no refresh token is configured"
@@ -129,6 +157,35 @@ impl AnthropicClient {
         })?;
         auth_state.access_token = access_token;
         Ok(())
+    }
+
+    pub(super) fn mark_claude_oauth_upstream_health(
+        &self,
+        status: u16,
+        error_type: &str,
+        message: Option<&str>,
+        retry_after_secs: Option<u64>,
+    ) {
+        if let Some(refresh_config) = &self.refresh_config {
+            if self.auth_mode == AnthropicAuthMode::ClaudeOauth {
+                let _ = key_vault::key_store::KEY_SERVICE.mark_claude_oauth_upstream_health(
+                    &refresh_config.key_id,
+                    status,
+                    error_type,
+                    message,
+                    retry_after_secs,
+                );
+            }
+        }
+    }
+
+    pub(super) fn clear_claude_oauth_upstream_health(&self) {
+        if let Some(refresh_config) = &self.refresh_config {
+            if self.auth_mode == AnthropicAuthMode::ClaudeOauth {
+                let _ = key_vault::key_store::KEY_SERVICE
+                    .clear_claude_oauth_upstream_health(&refresh_config.key_id);
+            }
+        }
     }
 
     /// Build the Messages API URL.

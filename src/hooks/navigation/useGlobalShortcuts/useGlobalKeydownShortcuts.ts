@@ -55,7 +55,8 @@ interface UseGlobalKeydownShortcutsOptions {
   handleCloseCurrentTab: () => boolean;
   handleToggleWorkStationChatFocus: () => void;
   handleToggleStationMode: () => void;
-  confirmAndQuit: () => Promise<void>;
+  startHoldToQuit: () => void;
+  cancelHoldToQuit: () => void;
 }
 
 export function useGlobalKeydownShortcuts(
@@ -82,7 +83,8 @@ export function useGlobalKeydownShortcuts(
     handleCloseCurrentTab,
     handleToggleWorkStationChatFocus,
     handleToggleStationMode,
-    confirmAndQuit,
+    startHoldToQuit,
+    cancelHoldToQuit,
   } = options;
 
   useEffect(() => {
@@ -91,6 +93,18 @@ export function useGlobalKeydownShortcuts(
 
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const modifierKey = isMac ? event.metaKey : event.ctrlKey;
+
+      if (
+        modifierKey &&
+        event.code === "KeyQ" &&
+        !event.shiftKey &&
+        !event.altKey
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        startHoldToQuit();
+        return;
+      }
 
       if (event.key === "Backspace") {
         const target = event.target;
@@ -296,13 +310,6 @@ export function useGlobalKeydownShortcuts(
           break;
         }
 
-        case "q":
-          if (event.shiftKey || event.altKey || event.repeat) return;
-          event.preventDefault();
-          event.stopPropagation();
-          void confirmAndQuit();
-          break;
-
         case "w": {
           event.preventDefault();
           event.stopPropagation();
@@ -467,9 +474,22 @@ export function useGlobalKeydownShortcuts(
       }
     };
 
+    const handleKeyUp = (event: KeyboardEvent) => {
+      const releasedQuitChord =
+        event.key.toLowerCase() === "q" ||
+        event.key === "Meta" ||
+        event.key === "Control";
+      if (releasedQuitChord) {
+        cancelHoldToQuit();
+      }
+    };
+
     document.addEventListener("keydown", handleKeyDown, true);
+    document.addEventListener("keyup", handleKeyUp, true);
     return () => {
       document.removeEventListener("keydown", handleKeyDown, true);
+      document.removeEventListener("keyup", handleKeyUp, true);
+      cancelHoldToQuit();
     };
   }, [
     handleZoomReset,
@@ -492,6 +512,7 @@ export function useGlobalKeydownShortcuts(
     handleCloseCurrentTab,
     handleToggleWorkStationChatFocus,
     handleToggleStationMode,
-    confirmAndQuit,
+    startHoldToQuit,
+    cancelHoldToQuit,
   ]);
 }

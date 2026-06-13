@@ -2,12 +2,12 @@ import type { TFunction } from "i18next";
 
 import { ICONS } from "../../config";
 import type { SpotlightItem } from "../../types";
-import type { RepoPaletteText } from "./types";
+import type { WorkspacePaletteText } from "./types";
 
-interface BuildPinnedRepoActionsArgs {
+interface BuildPinnedWorkspaceActionsArgs {
   isManageMode: boolean;
   selectedCount: number;
-  paletteText: RepoPaletteText;
+  paletteText: WorkspacePaletteText;
   t: TFunction;
   onOpenLocalWorkspace: () => void;
   onOpenAddMenu: () => void;
@@ -16,7 +16,7 @@ interface BuildPinnedRepoActionsArgs {
   onToggleManageMode: () => void;
 }
 
-export function buildPinnedRepoActions({
+export function buildPinnedWorkspaceActions({
   isManageMode,
   selectedCount,
   paletteText,
@@ -26,7 +26,7 @@ export function buildPinnedRepoActions({
   onCreateWorkspace,
   onBulkDelete,
   onToggleManageMode,
-}: BuildPinnedRepoActionsArgs): SpotlightItem[] {
+}: BuildPinnedWorkspaceActionsArgs): SpotlightItem[] {
   const actions: SpotlightItem[] = [];
 
   if (!isManageMode) {
@@ -34,7 +34,7 @@ export function buildPinnedRepoActions({
       {
         id: "pinned-open-workspace-entry",
         label: paletteText.openFolderLabel,
-        icon: ICONS.folder,
+        icon: ICONS.folderOpen,
         type: "action",
         action: onOpenLocalWorkspace,
       },

@@ -99,6 +99,13 @@ export function useKeyVault(
             keyInfo.health_status as KeyVaultAccount["healthStatus"],
           failureCount: keyInfo.oauth_refresh_failure_count,
           lastFailureMessage: keyInfo.last_validation_error ?? undefined,
+          temporaryUnavailableUntil:
+            keyInfo.temporary_unavailable_until ?? undefined,
+          temporaryUnavailableReason:
+            keyInfo.temporary_unavailable_reason ?? undefined,
+          lastUpstreamStatus: keyInfo.last_upstream_status ?? undefined,
+          lastUpstreamErrorType: keyInfo.last_upstream_error_type ?? undefined,
+          rateLimitResetAt: keyInfo.rate_limit_reset_at ?? undefined,
           description: keyInfo.description ?? undefined,
           connectedAt: keyInfo.created_at
             ? new Date(keyInfo.created_at)

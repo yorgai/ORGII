@@ -78,6 +78,20 @@ describe("convertToExploreOperation", () => {
     expect(op?.event.args).toEqual({});
   });
 
+  it("marks live grep events loading from displayStatus", () => {
+    const event = minimalSessionEvent({
+      functionName: "code_search",
+      args: { action: "grep", pattern: "token" },
+      displayStatus: "running",
+    });
+
+    const op = convertToExploreOperation(event, true);
+    expect(op).not.toBeNull();
+    expect(op?.isLoading).toBe(true);
+    expect(op?.isCurrent).toBe(true);
+    expect(op?.query).toBe("token");
+  });
+
   it("does not synthesize rows for Rust agent grep no-match output", () => {
     const event = minimalSessionEvent({
       functionName: "code_search",

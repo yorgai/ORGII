@@ -496,10 +496,16 @@ pub fn run() {
             // Plan-approval lifecycle: process-wide AppHandle for terminal
             // transcript events pushed outside a live session manager, then
             // a one-shot GC pass that archives orphaned pending-plan rows
-            // (missing plan file / deleted session / session left plan mode).
+            // (missing plan file / deleted session), then a repair scan that
+            // finalizes historically stranded awaiting_user create_plan
+            // events (pre-backend-finalize archives whose FE patch never
+            // landed).
             agent_core::interaction::plan_approval::install_app_handle(app.handle().clone());
             tauri::async_runtime::spawn(async {
                 agent_core::interaction::plan_approval::gc_orphaned_pending_plans().await;
+                tokio::task::spawn_blocking(
+                    crate::agent_sessions::event_pipeline::agent_core_bridge::repair_stranded_plan_events,
+                );
             });
 
             // Install the production `MemberShutdownHook` for the

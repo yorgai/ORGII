@@ -19,6 +19,7 @@ import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { useKeyVault } from "@src/hooks/keyVault";
 import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
+import { useAgentOrgs } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentOrgs";
 import { useLaunchpadAgentCatalog } from "@src/modules/shared/launchpad/hooks";
 import { openWorkspaceSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
@@ -84,6 +85,7 @@ import {
 import { useSidebarBottomRightActions } from "./bottomActions";
 import {
   FOLDERS_MY_AGENTS_COLLAPSE_SECTION_ID,
+  FOLDERS_MY_AGENT_ORGS_COLLAPSE_SECTION_ID,
   FOLDERS_REPO_ITEM_PREFIX,
   FOLDERS_WORKSPACE_ITEM_PREFIX,
   buildWorkspaceRepoNameResolver,
@@ -212,6 +214,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const { localAccounts } = useKeyVault({ autoLoad: true });
   const { installedCliAgents, builtInRustAgents, customRustAgents } =
     useLaunchpadAgentCatalog();
+  const { orgs: agentOrgs } = useAgentOrgs();
   const { selectRepo, forceRefreshRepos } = useRepoSelection({
     autoLoad: false,
   });
@@ -236,7 +239,13 @@ export const WorkstationSidebarConnector: React.FC = () => {
   );
   const [foldersCollapsedSectionIds, setFoldersCollapsedSectionIds] = useState<
     Set<string>
-  >(() => new Set([FOLDERS_MY_AGENTS_COLLAPSE_SECTION_ID]));
+  >(
+    () =>
+      new Set([
+        FOLDERS_MY_AGENTS_COLLAPSE_SECTION_ID,
+        FOLDERS_MY_AGENT_ORGS_COLLAPSE_SECTION_ID,
+      ])
+  );
   const [projectsCollapsedSectionIds, setProjectsCollapsedSectionIds] =
     useState<Set<string>>(() => new Set());
   const defaultedProjectsLinearSectionIdsRef = useRef<Set<string>>(new Set());
@@ -414,6 +423,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     installedCliAgents,
     builtInRustAgents,
     customRustAgents,
+    agentOrgs,
     t,
     tCommon,
     onAddWorkspaceFolder: handleAddWorkspaceFolder,

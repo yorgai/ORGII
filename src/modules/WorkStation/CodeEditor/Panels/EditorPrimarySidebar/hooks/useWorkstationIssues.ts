@@ -360,16 +360,13 @@ export function useWorkstationIssues({
       if (result.data && mountedRef.current) {
         setListState((prev) => ({
           ...prev,
-          issues:
-            filterState === "open" || filterState === "all"
-              ? [result.data!, ...prev.issues]
-              : prev.issues,
+          issues: [result.data!, ...prev.issues],
         }));
         return result.data;
       }
       return null;
     },
-    [resolvedRemoteUrl, filterState, setListState]
+    [resolvedRemoteUrl, setListState]
   );
 
   const handleUpdateIssue = useCallback(
@@ -405,17 +402,14 @@ export function useWorkstationIssues({
         const updated = result.data;
         setListState((prev) => ({
           ...prev,
-          issues:
-            filterState === "open"
-              ? prev.issues.filter((i) => i.number !== number)
-              : prev.issues.map((i) => (i.number === number ? updated : i)),
+          issues: prev.issues.map((i) => (i.number === number ? updated : i)),
         }));
         setSelectedState((prev) =>
           prev.issue?.number === number ? { ...prev, issue: updated } : prev
         );
       }
     },
-    [resolvedRemoteUrl, filterState, setListState, setSelectedState]
+    [resolvedRemoteUrl, setListState, setSelectedState]
   );
 
   const handleReopenIssue = useCallback(
@@ -429,17 +423,14 @@ export function useWorkstationIssues({
         const updated = result.data;
         setListState((prev) => ({
           ...prev,
-          issues:
-            filterState === "closed"
-              ? prev.issues.filter((i) => i.number !== number)
-              : prev.issues.map((i) => (i.number === number ? updated : i)),
+          issues: prev.issues.map((i) => (i.number === number ? updated : i)),
         }));
         setSelectedState((prev) =>
           prev.issue?.number === number ? { ...prev, issue: updated } : prev
         );
       }
     },
-    [resolvedRemoteUrl, filterState, setListState, setSelectedState]
+    [resolvedRemoteUrl, setListState, setSelectedState]
   );
 
   const handleAddComment = useCallback(
@@ -502,6 +493,7 @@ export function useWorkstationIssues({
         closeIssue: null,
         reopenIssue: null,
         addComment: null,
+        refreshIssues: null,
       });
     };
   }, [setListState, setSelectedState, setCallbackAtom]);

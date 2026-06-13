@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "Meu status atual",
+    "tabs": {
+      "presence": "Presença",
+      "profile": "Meus perfis"
+    },
+    "presence": {
+      "instructionForAgent": "Instrução para o Agent"
+    },
     "profile": {
-      "title": "Sobre mim",
+      "title": "Meus perfis",
       "techSavvy": "Nível técnico",
       "techSavvyDescription": "Ajuda o agente a calibrar o quanto ele explica e presume",
       "techSavvyPlaceholder": "Selecionar um nível…",
@@ -597,8 +604,8 @@
     "modelsTitle": "Modelos",
     "compactionTitle": "Compactação",
     "autoTimeoutTitle": "Timeout automático",
-    "questionAutoSkipTimeoutByStatus": "Pular perguntas automaticamente — {{status}}",
-    "questionAutoSkipTimeoutByStatusDesc": "Pula perguntas do Agent automaticamente após o timeout para este status (0 = desabilitado)",
+    "questionAutoSkipTimeoutByStatus": "Pular perguntas automaticamente",
+    "questionAutoSkipTimeoutByStatusDesc": "Pula perguntas do Agent automaticamente após este timeout (0 = desabilitado)",
     "resourceTabs": {
       "tools": "Ferramentas",
       "mcp": "MCP",
@@ -989,7 +996,6 @@
     "storagePath": "Caminho de Armazenamento",
     "storageUsage": "Uso do armazenamento",
     "storageUsageTotal": "Total: {{size}}",
-    "searchIndex": "Índice de Busca",
     "embeddingIndex": "Índice de Embedding",
     "files": "arquivos",
     "chunks": "chunks",
@@ -1006,10 +1012,8 @@
     "embedded": "Com Embedding",
     "index": "Indexar",
     "embed": "Gerar Embedding",
-    "indexNow": "Indexar Agora",
     "reindex": "Reindexar",
     "reembed": "Regerar Embedding",
-    "deleteIndex": "Excluir Índice",
     "deleteEmbedding": "Excluir Embedding",
     "abort": "Cancelar",
     "removeAllIndexes": "Remover todos os índices",
@@ -1024,7 +1028,6 @@
     "embeddingFailed": "Falha no Embedding",
     "embeddingCancelledAt": "Embedding cancelado em {{current}}/{{total}} arquivos",
     "embeddingFiles": "Gerando Embedding de {{current}}/{{total}} arquivos ({{chunks}} chunks)",
-    "filesIndexed": "{{count}} arquivos indexados",
     "chunksEmbedded": "{{count}} chunks com Embedding",
     "errors": "{{count}} erros",
     "modelNotInstalled": "Modelo Não Instalado",

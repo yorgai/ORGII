@@ -363,9 +363,14 @@ export function handleQuestionRequest(
 
     if (qToolCallId) {
       const toolEventId = `tool-call-${qToolCallId}`;
+      // `autoResolveAt` (epoch ms | null) is the backend-authoritative
+      // auto-skip deadline from the presence policy. The card renders a
+      // countdown from it; the backend resolves regardless of the UI.
+      const autoResolveAt =
+        typeof event.autoResolveAt === "number" ? event.autoResolveAt : null;
       eventStoreProxy.updateById(
         toolEventId,
-        { result: { call_id: reqId } },
+        { result: { call_id: reqId, autoResolveAt } },
         eventSessionId
       );
     }

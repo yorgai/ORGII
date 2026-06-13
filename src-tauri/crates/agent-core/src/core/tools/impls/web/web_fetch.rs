@@ -78,9 +78,11 @@ impl Tool for WebFetchTool {
             .unwrap_or(MAX_FETCH_CHARS);
 
         if !url.starts_with("http://") && !url.starts_with("https://") {
-            return Err(ToolError::InvalidParams(
-                "URL must start with http:// or https://".to_string(),
-            ));
+            return Err(ToolError::InvalidParams(format!(
+                "URL must start with http:// or https:// (got: {url}). \
+                 For local files use `read_file` (with `offset`/`limit` for large files) \
+                 or `code_search` (action: grep) — not a web tool.",
+            )));
         }
 
         let response = self

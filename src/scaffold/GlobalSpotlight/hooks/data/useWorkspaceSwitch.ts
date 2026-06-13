@@ -1,9 +1,9 @@
 /**
  * useWorkspaceSwitch
  *
- * Lightweight workspace switcher shared by the RepoDropdown (compact anchored
+ * Lightweight workspace switcher shared by the WorkspaceDropdown (compact anchored
  * picker) and any other surface that needs to list multi-repo workspace
- * presets and activate one. Distinct from `useRepoPaletteWorkspace`, which is
+ * presets and activate one. Distinct from `useWorkspacePaletteWorkspace`, which is
  * the Spotlight-only flow that also owns manage/edit/delete actions.
  */
 import { useAtomValue, useSetAtom } from "jotai";

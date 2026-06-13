@@ -23,7 +23,10 @@ import GlobalDragDrop from "@src/components/GlobalDragDrop";
 import { AutoIndexingProvider } from "@src/components/System";
 import { hydrateFromPersistence } from "@src/components/TerminalInteractive/bufferCache";
 import { useGitAutoFetch } from "@src/hooks/git";
-import { useWindowFocusTracking } from "@src/hooks/platform";
+import {
+  useUserPresenceSync,
+  useWindowFocusTracking,
+} from "@src/hooks/platform";
 import { useProcessReconciliation } from "@src/hooks/terminal";
 import { APICallPanelProvider } from "@src/modules/shared/DevTools/APICallPanel";
 import { AppUpdater } from "@src/scaffold/AppUpdater";
@@ -37,6 +40,11 @@ import {
 
 const DeferredWindowFocusTracking: React.FC = () => {
   useWindowFocusTracking();
+  return null;
+};
+
+const DeferredUserPresenceSync: React.FC = () => {
+  useUserPresenceSync();
   return null;
 };
 
@@ -85,6 +93,7 @@ export const AppDeferredServices: React.FC<{ ready: boolean }> = ({
     <>
       <GlobalDragDrop />
       <DeferredWindowFocusTracking />
+      <DeferredUserPresenceSync />
       <DeferredGitAutoFetch />
       <DeferredProcessReconciliation />
       <DeferredTerminalPersistence />

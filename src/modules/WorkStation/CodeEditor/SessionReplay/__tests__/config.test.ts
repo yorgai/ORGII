@@ -60,4 +60,33 @@ describe("deriveIDEState", () => {
     expect(state.fileViewMode).toBe("explore");
     expect(state.selectedFileOperation?.eventId).toBe("r1");
   });
+
+  it("hydrates shell tool_result args from the matching tool_call", () => {
+    const runningCall = minimalSessionEvent({
+      id: "shell-call",
+      callId: "call-shell-1",
+      functionName: "run_shell",
+      uiCanonical: "run_shell",
+      args: { command: "npm run dev" },
+      result: undefined,
+      displayStatus: "running",
+    });
+    const finalResult = minimalSessionEvent({
+      id: "shell-result",
+      callId: "call-shell-1",
+      functionName: "run_shell",
+      uiCanonical: "run_shell",
+      actionType: "tool_result",
+      args: {},
+      result: { call_id: "call-shell-1", output: "ready" },
+      displayStatus: "completed",
+    });
+
+    const state = deriveIDEState([runningCall, finalResult], "shell-result");
+
+    expect(state.shellOperations.length).toBe(1);
+    expect(state.selectedShellOperation?.command).toBe("npm run dev");
+    expect(state.selectedShellOperation?.output).toBe("ready");
+    expect(state.selectedShellOperation?.eventId).toBe("shell-result");
+  });
 });

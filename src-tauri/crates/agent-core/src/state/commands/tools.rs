@@ -12,7 +12,9 @@ use crate::mcp::commands::McpState;
 use crate::state::commands::session::message::resolve_agent_mode;
 use crate::state::AgentAppState;
 use crate::tools::builtin_tools;
-use crate::tools::ui_metadata::{AgentKind, ChatBlock, SimulatorApp, ToolInfo};
+use crate::tools::ui_metadata::{
+    AgentKind, ChatBlock, SimulatorApp, ToolDisplayBehavior, ToolInfo,
+};
 
 fn builtin_tool_info() -> Vec<ToolInfo> {
     builtin_tools::builtin_tool_entries("builtin".to_string())
@@ -87,6 +89,7 @@ async fn append_mcp_tools(mcp: &McpState, tools: &mut Vec<ToolInfo>) {
             simulator_app: SimulatorApp::default(),
             app_subtool: Default::default(),
             chat_block: ChatBlock::Fallback,
+            display_behavior: ToolDisplayBehavior::WaitForResult,
             human_tool_key: None,
             hidden: false,
             label_running: String::new(),
@@ -181,6 +184,7 @@ fn runtime_tool_info(runtime: &crate::state::SessionRuntime) -> Vec<ToolInfo> {
                     simulator_app: SimulatorApp::default(),
                     app_subtool: Default::default(),
                     chat_block: ChatBlock::Fallback,
+                    display_behavior: ToolDisplayBehavior::WaitForResult,
                     human_tool_key: None,
                     hidden: false,
                     label_running: String::new(),

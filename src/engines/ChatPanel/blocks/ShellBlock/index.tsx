@@ -5,16 +5,15 @@
  *   - `"kill"` → compact header-only card (KillVariant)
  *   - default (`"run"`) → full TerminalBlock with command + output
  *
- * All user-visible lifecycle strings (`title`, `killTitle`,
- * `failedLabel`) are supplied pre-translated by the `ShellAdapter` in
- * `rendering/adapters/ShellAdapter.tsx` — the block resolves no i18n
- * keys of its own. That keeps the adapter as the single point where the
- * registry is consulted and avoids a circular import between ShellBlock
- * and the adapters module.
+ * Lifecycle strings (`title`, `killTitle`, `failedLabel`) are supplied
+ * pre-translated by the `ShellAdapter` in `rendering/adapters/ShellAdapter.tsx`.
+ * The block only resolves the foreground terminal long-wait label because that
+ * display state is derived from runtime process metadata local to this block.
  */
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { getToolIcon } from "@src/config/toolIcons";
+import { getEventIcon, getToolIcon } from "@src/config/toolIcons";
 import { extractShellData } from "@src/engines/SessionCore/rendering/props/propsDataExtractors";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
 import { killAgentShellProcess } from "@src/services/terminal";
@@ -29,8 +28,22 @@ import {
   FailedEventRow,
   getEventBlockContainerClasses,
 } from "../primitives";
+import {
+  TERMINAL_FOREGROUND_WAIT_THRESHOLD_MS,
+  resolveShellRuntimeDisplayState,
+} from "./shellRuntimeState";
 
 const SHELL_ACTION_KILL = "kill";
+
+function getTimestampAgeMs(
+  timestamp: string | undefined,
+  nowMs: number
+): number | null {
+  if (!timestamp) return null;
+  const timestampMs = new Date(timestamp).getTime();
+  if (Number.isNaN(timestampMs)) return null;
+  return Math.max(0, nowMs - timestampMs);
+}
 
 /** Unescape common backslash sequences produced by the wire payload. */
 function unescapeShellString(input: string | undefined): string {
@@ -120,6 +133,7 @@ const KillVariant: React.FC<KillVariantProps> = ({
 KillVariant.displayName = "ShellBlock.KillVariant";
 
 const RunShellView: React.FC<ShellBlockProps> = (props) => {
+  const { t } = useTranslation("sessions");
   const shellData = extractShellData(props);
   const {
     command,
@@ -147,8 +161,31 @@ const RunShellView: React.FC<ShellBlockProps> = (props) => {
       ref.fieldPath === "args.streamOutput"
   );
 
-  const isLoading =
-    props.status === "running" && props.showActiveEventPainting === true;
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const ageMs = getTimestampAgeMs(props.timestamp, Date.now());
+    if (
+      ageMs === null ||
+      ageMs >= TERMINAL_FOREGROUND_WAIT_THRESHOLD_MS ||
+      (props.status !== "running" && props.status !== "pending")
+    ) {
+      return undefined;
+    }
+    const timeout = window.setTimeout(() => {
+      setNowMs(Date.now());
+    }, TERMINAL_FOREGROUND_WAIT_THRESHOLD_MS - ageMs);
+    return () => window.clearTimeout(timeout);
+  }, [props.status, props.timestamp]);
+
+  const runtimeDisplayState = resolveShellRuntimeDisplayState({
+    status: props.status,
+    showActiveEventPainting: props.showActiveEventPainting,
+    timestamp: props.timestamp,
+    nowMs,
+    shellProcessStatus,
+    exitCode,
+  });
+  const isLoading = runtimeDisplayState.isLoading;
   const isFailed = props.status === "failed";
   const isErrorExit = Boolean(isFailure) || isFailed;
 
@@ -196,10 +233,18 @@ const RunShellView: React.FC<ShellBlockProps> = (props) => {
     trimmedDescription && trimmedDescription.length > 0
       ? trimmedDescription
       : props.title;
+  const runningStatusText = runtimeDisplayState.isLongForegroundWait
+    ? t("tools.terminalWaitRunning")
+    : undefined;
+  const runningStatusIcon = runtimeDisplayState.isLongForegroundWait
+    ? getEventIcon("await_output", { action: "wait_for" })
+    : undefined;
   return (
     <TerminalBlock
       command={command}
       title={headerTitle}
+      runningStatusText={runningStatusText}
+      runningStatusIcon={runningStatusIcon}
       output={isLoading ? undefined : unescapedOutput}
       streamOutput={
         isLoading ? unescapedStreamOutput || unescapedOutput : undefined

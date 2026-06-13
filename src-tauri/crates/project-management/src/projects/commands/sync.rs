@@ -121,10 +121,7 @@ impl PendingFlowScope {
     }
 }
 
-pub(super) fn connection_pending_key(
-    connection_id: &str,
-    adapter_id: &str,
-) -> (String, String) {
+pub(super) fn connection_pending_key(connection_id: &str, adapter_id: &str) -> (String, String) {
     PendingFlowScope::ConnectionId(connection_id.to_string()).pending_key(adapter_id)
 }
 

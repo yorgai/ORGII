@@ -105,6 +105,137 @@ pub fn parse_params<T: DeserializeOwned>(params: Value) -> Result<T, ToolError> 
         .map_err(|err| ToolError::InvalidParams(format!("parameter validation failed: {}", err)))
 }
 
+/// Like [`parse_params`], but on failure appends a summary of the expected
+/// schema (property names/types and the required list) so the model can
+/// self-correct in one round trip instead of guessing. Use for tools whose
+/// schema may not have reached the model intact (provider-side flattening).
+pub fn parse_params_described<T: DeserializeOwned + JsonSchema>(
+    params: Value,
+) -> Result<T, ToolError> {
+    serde_json::from_value(params).map_err(|err| {
+        ToolError::InvalidParams(format!(
+            "parameter validation failed: {}. Expected parameters — {}",
+            err,
+            schema_summary(&params_schema::<T>())
+        ))
+    })
+}
+
+/// One-line human/model-readable summary of a parameters schema:
+/// `field: type (required), other: type`.
+fn schema_summary(schema: &Value) -> String {
+    let Some(obj) = schema.as_object() else {
+        return "(no schema)".to_string();
+    };
+    let required: Vec<&str> = obj
+        .get("required")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect())
+        .unwrap_or_default();
+    let Some(props) = obj.get("properties").and_then(|v| v.as_object()) else {
+        return "(no parameters)".to_string();
+    };
+    if props.is_empty() {
+        return "(no parameters)".to_string();
+    }
+    props
+        .iter()
+        .map(|(name, prop)| {
+            let ty = prop
+                .get("type")
+                .map(|t| match t {
+                    Value::String(s) => s.clone(),
+                    Value::Array(parts) => parts
+                        .iter()
+                        .filter_map(|p| p.as_str())
+                        .collect::<Vec<_>>()
+                        .join("|"),
+                    _ => "any".to_string(),
+                })
+                .unwrap_or_else(|| "any".to_string());
+            if required.contains(&name.as_str()) {
+                format!("{}: {} (required)", name, ty)
+            } else {
+                format!("{}: {}", name, ty)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+// ============================================
+// LLM schema compatibility contract
+// ============================================
+
+/// Validate that a tool parameters schema is expressible in the
+/// least-common-denominator function-calling dialect that every LLM
+/// provider (and every proxy in between) understands.
+///
+/// Schemas that violate this contract get silently flattened to
+/// `"properties": {}` somewhere between the registry and the model —
+/// the model then cannot see any fields and every call fails at
+/// `parse_params` with a confusing "missing field" error. The classic
+/// trigger is a `#[serde(tag = "action")]` enum, which schemars renders
+/// as a top-level `oneOf` with no top-level `properties`.
+///
+/// Rules:
+/// - top level must be `type: "object"` with a `properties` key
+/// - no `oneOf` / `anyOf` / `allOf` / `$ref` anywhere in the schema
+/// - every name in `required` must exist in `properties`
+pub fn assert_llm_compatible_schema(schema: &Value) -> Result<(), String> {
+    let obj = schema
+        .as_object()
+        .ok_or_else(|| "schema must be a JSON object".to_string())?;
+
+    if obj.get("type").and_then(|v| v.as_str()) != Some("object") {
+        return Err("top-level `type` must be \"object\"".to_string());
+    }
+    let props = obj
+        .get("properties")
+        .ok_or_else(|| "top-level `properties` is missing".to_string())?
+        .as_object()
+        .ok_or_else(|| "top-level `properties` must be an object".to_string())?;
+
+    if let Some(required) = obj.get("required").and_then(|v| v.as_array()) {
+        for name in required.iter().filter_map(|v| v.as_str()) {
+            if !props.contains_key(name) {
+                return Err(format!(
+                    "`required` lists \"{}\" which is not in `properties`",
+                    name
+                ));
+            }
+        }
+    }
+
+    scan_for_forbidden_keywords(schema, "$")
+}
+
+fn scan_for_forbidden_keywords(value: &Value, path: &str) -> Result<(), String> {
+    const FORBIDDEN: [&str; 4] = ["oneOf", "anyOf", "allOf", "$ref"];
+    match value {
+        Value::Object(map) => {
+            for (key, child) in map {
+                if FORBIDDEN.contains(&key.as_str()) {
+                    return Err(format!(
+                        "`{}` at {} is not portable across LLM providers; flatten the schema \
+                         (plain object with scalar properties) instead",
+                        key, path
+                    ));
+                }
+                scan_for_forbidden_keywords(child, &format!("{}.{}", path, key))?;
+            }
+            Ok(())
+        }
+        Value::Array(items) => {
+            for (idx, child) in items.iter().enumerate() {
+                scan_for_forbidden_keywords(child, &format!("{}[{}]", path, idx))?;
+            }
+            Ok(())
+        }
+        _ => Ok(()),
+    }
+}
+
 // ============================================
 // Untyped helpers (legacy migration path)
 // ============================================
@@ -159,8 +290,7 @@ mod tests {
         let params = serde_json::json!({
             "subject": "audit yoyo-evolve",
         });
-        let parsed: StrictParams = parse_params(params)
-            .expect("clean params must deserialize");
+        let parsed: StrictParams = parse_params(params).expect("clean params must deserialize");
         assert_eq!(parsed.subject, "audit yoyo-evolve");
     }
 
@@ -176,13 +306,19 @@ mod tests {
             "__call_id": "call-1",
         });
         let result: Result<StrictParams, _> = parse_params(meta_leaked);
-        assert!(result.is_err(), "framework meta in params is a wiring bug, must fail closed");
+        assert!(
+            result.is_err(),
+            "framework meta in params is a wiring bug, must fail closed"
+        );
 
         let real_unknown = serde_json::json!({
             "subject": "x",
             "bogus_field": true,
         });
         let result: Result<StrictParams, _> = parse_params(real_unknown);
-        assert!(result.is_err(), "non-framework unknown fields must still fail closed");
+        assert!(
+            result.is_err(),
+            "non-framework unknown fields must still fail closed"
+        );
     }
 }

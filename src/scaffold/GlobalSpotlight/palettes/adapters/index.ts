@@ -8,5 +8,6 @@ export {
   buildRepoSpotlightItems,
   sortRepoItemsSelectedFirst,
 } from "./repoAdapter";
+export { isSystemPathRepoItem } from "@src/features/SessionCreator/utils/systemPathSource";
 export { buildBranchSpotlightItems } from "./branchAdapter";
 export { buildWorkspaceFolderItems } from "./workspaceFolderAdapter";

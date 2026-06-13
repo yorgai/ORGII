@@ -561,6 +561,44 @@ pub fn update_session_specs(session_id: &str, specs_json: &str) -> SqliteResult<
     })
 }
 
+/// Find all events with a given `function_name` whose persisted
+/// `meta_json.displayStatus` is `awaiting_user`, across all sessions.
+///
+/// Used by the startup plan-event repair scan: stranded `create_plan`
+/// tool-call events whose pending-plan row was archived without the FE
+/// patch ever landing must be finalized or they wedge the planning
+/// indicator forever.
+pub fn find_awaiting_user_events_by_function(
+    function_name: &str,
+) -> SqliteResult<Vec<CachedEvent>> {
+    let conn = get_connection()?;
+    let mut stmt = conn.prepare(
+        "SELECT id, session_id, event_type, function_name, thread_id,
+                args_json, result_json, content, created_at, meta_json, history_sequence
+         FROM events
+         WHERE function_name = ?1
+           AND meta_json LIKE '%\"displayStatus\":\"awaiting_user\"%'",
+    )?;
+    let rows = stmt
+        .query_map(params![function_name], |row| {
+            Ok(CachedEvent {
+                id: row.get(0)?,
+                session_id: row.get(1)?,
+                event_type: row.get(2)?,
+                function_name: row.get(3)?,
+                thread_id: row.get(4)?,
+                args_json: row.get(5)?,
+                result_json: row.get(6)?,
+                content: row.get(7)?,
+                created_at: row.get(8)?,
+                meta_json: row.get(9)?,
+                history_sequence: row.get(10)?,
+            })
+        })?
+        .collect::<SqliteResult<Vec<_>>>()?;
+    Ok(rows)
+}
+
 /// Get event by ID
 pub fn get_event(session_id: &str, event_id: &str) -> SqliteResult<Option<CachedEvent>> {
     let conn = get_connection()?;

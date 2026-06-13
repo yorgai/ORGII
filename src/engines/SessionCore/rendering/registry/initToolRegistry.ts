@@ -13,10 +13,21 @@ import type { AppType } from "@src/engines/Simulator/types/appTypes";
 import { invokeTauri } from "@src/util/platform/tauri/init";
 
 // Types from types.ts (source of truth for AppSubtool / ChatBlock)
-import type { AliasEntry, AppSubtool, ChatBlock } from "./types";
+import {
+  type AliasEntry,
+  type AppSubtool,
+  type ChatBlock,
+  TOOL_DISPLAY_BEHAVIOR,
+  type ToolDisplayBehavior,
+} from "./types";
 
 // Re-export types
-export type { AliasEntry, AppSubtool, ChatBlock } from "./types";
+export type {
+  AliasEntry,
+  AppSubtool,
+  ChatBlock,
+  ToolDisplayBehavior,
+} from "./types";
 
 // ============================================
 // Response types (match Rust ToolRegistryData)
@@ -30,6 +41,8 @@ export interface ToolActionInfo {
   appSubtool?: AppSubtool;
   /** Per-action ChatBlock override. Absent → inherit tool-level. */
   chatBlock?: ChatBlock;
+  /** Per-action display behavior override. Absent → inherit tool-level. */
+  displayBehavior?: ToolDisplayBehavior;
   labelRunning: string;
   labelDone: string;
   labelFailed: string;
@@ -47,6 +60,7 @@ interface RustToolInfoRow {
   simulatorApp?: string;
   appSubtool?: AppSubtool;
   chatBlock?: ChatBlock;
+  displayBehavior?: ToolDisplayBehavior;
   labelRunning?: string;
   labelDone?: string;
   labelFailed?: string;
@@ -109,6 +123,9 @@ let builtinChatBlockMap: Map<string, ChatBlock> | null = new Map(
   BASELINE_CHAT_BLOCKS
 );
 
+/** name → Agent Station display behavior. */
+let builtinDisplayBehaviorMap: Map<string, ToolDisplayBehavior> | null = null;
+
 /** name → ToolActionInfo[] (layout recipes from Rust). */
 let builtinActionsMap: Map<string, ToolActionInfo[]> | null = null;
 
@@ -149,6 +166,7 @@ export async function initToolRegistry(): Promise<void> {
     builtinStatusIconsMap = new Map();
     builtinAppSubtoolMap = new Map();
     builtinChatBlockMap = new Map(BASELINE_CHAT_BLOCKS);
+    builtinDisplayBehaviorMap = new Map();
     builtinActionsMap = new Map();
     builtinLabelsMap = new Map();
     builtinStatusLabelsMap = new Map();
@@ -177,6 +195,9 @@ export async function initToolRegistry(): Promise<void> {
       }
       if (tool.chatBlock) {
         builtinChatBlockMap.set(tool.name, tool.chatBlock);
+      }
+      if (tool.displayBehavior) {
+        builtinDisplayBehaviorMap.set(tool.name, tool.displayBehavior);
       }
       if (tool.actions && tool.actions.length > 0) {
         builtinActionsMap.set(tool.name, tool.actions);
@@ -218,6 +239,7 @@ export async function initToolRegistry(): Promise<void> {
     builtinStatusIconsMap = new Map();
     builtinAppSubtoolMap = new Map();
     builtinChatBlockMap = new Map(BASELINE_CHAT_BLOCKS);
+    builtinDisplayBehaviorMap = new Map();
     builtinActionsMap = new Map();
     builtinLabelsMap = new Map();
     builtinStatusLabelsMap = new Map();
@@ -272,6 +294,13 @@ function getBuiltinChatBlock(toolName: string): ChatBlock | null {
   return builtinChatBlockMap?.get(toolName) ?? null;
 }
 
+/** Get Agent Station display behavior for a built-in tool. */
+function getBuiltinDisplayBehavior(
+  toolName: string
+): ToolDisplayBehavior | null {
+  return builtinDisplayBehaviorMap?.get(toolName) ?? null;
+}
+
 /** Get all structured actions for a built-in tool. */
 export function getToolActions(toolName: string): ToolActionInfo[] {
   const uiCanonical = getCliUiCanonical(toolName);
@@ -301,6 +330,25 @@ export function getActionChatBlock(
   }
 
   return getChatBlock(uiCanonical);
+}
+
+export function getToolDisplayBehavior(
+  toolName: string,
+  actionName?: string
+): ToolDisplayBehavior {
+  const uiCanonical = getCliUiCanonical(toolName);
+  const actions = getToolActions(uiCanonical);
+
+  if (actionName && actions.length > 0) {
+    const match = actions.find((act) => act.name === actionName);
+    if (match?.displayBehavior) return match.displayBehavior;
+  }
+
+  return (
+    getBuiltinDisplayBehavior(toolName) ??
+    getBuiltinDisplayBehavior(uiCanonical) ??
+    TOOL_DISPLAY_BEHAVIOR.WAIT_FOR_RESULT
+  );
 }
 
 /**
@@ -521,6 +569,7 @@ export function _resetToolRegistry(): void {
   builtinStatusIconsMap = null;
   builtinAppSubtoolMap = null;
   builtinChatBlockMap = null;
+  builtinDisplayBehaviorMap = null;
   builtinActionsMap = null;
   builtinLabelsMap = null;
   builtinStatusLabelsMap = null;
@@ -561,6 +610,13 @@ export function _setBuiltinActionsMap(
   map: Map<string, ToolActionInfo[]>
 ): void {
   builtinActionsMap = map;
+}
+
+/** @internal - for tests: set builtin display behavior metadata. */
+export function _setBuiltinDisplayBehaviorMap(
+  map: Map<string, ToolDisplayBehavior>
+): void {
+  builtinDisplayBehaviorMap = map;
 }
 
 /** @internal - for tests: set builtin action → icon_id metadata. */

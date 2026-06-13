@@ -2,7 +2,7 @@
  * Workspace Folder Adapter
  *
  * Converts WorkspaceFolder domain objects into SpotlightItem format
- * for multi-root workspace display in the RepoPalette.
+ * for multi-root workspace display in the WorkspacePalette.
  */
 import type { GitRepositoryStatus } from "@src/types/session/steps";
 import type { WorkspaceFolder } from "@src/types/workspace";

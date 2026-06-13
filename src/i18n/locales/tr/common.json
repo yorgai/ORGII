@@ -371,10 +371,8 @@
     "foundByKeyword": "Anahtar kelime aramasıyla bulundu",
     "semanticSecondary": "meaning match",
     "hybridSecondary": "semantic + full-text",
-    "tantivySecondary": "indexed full-text",
     "semanticDescription": "Embedding-based meaning search",
-    "hybridDescription": "Combined semantic and full-text search",
-    "tantivyDescription": "Indexed full-text search"
+    "hybridDescription": "Combined semantic and full-text search"
   },
   "tabs": {
     "terminal": "Terminal",
@@ -471,12 +469,12 @@
     "delete": "Bunu silmek istediğinizden emin misiniz?",
     "unsavedChanges": "Kaydedilmemiş değişiklikleriniz var. Ayrılmak istediğinizden emin misiniz?",
     "discard": "Değişiklikler iptal edilsin mi?",
-    "removeTitle": "\"{{name}}\" ORGII workspace'ten kaldırılsın mı?",
-    "removeMessage": "Bu işlem kod klasörünü cihazınızdan silmez — yalnızca ORGII workspace'ten kaldırır. İstediğiniz zaman tekrar ekleyebilirsiniz.",
+    "removeTitle": "\"{{name}}\" ORGII'den kaldırılsın mı?",
+    "removeMessage": "Bu yalnızca ORGII ile bağlantısını kaldırır. Diskten hiçbir şey kaldırılmaz.",
     "deleteWorkspaceTitle": "\"{{name}}\" Workspace'i silinsin mi?",
     "deleteWorkspaceMessage": "Yalnızca Workspace ön ayarı silinir. İçindeki Repo ve klasörler etkilenmez.",
-    "deleteSelectedTitle": "Seçili {{count}} öğe silinsin mi?",
-    "deleteSelectedMessage": "Seçili Workspaces silinir ve seçili Repos'un bağlantısı kaldırılır. Diskteki Repo dosyaları silinmez.",
+    "deleteSelectedTitle": "Seçili {{count}} öğe ORGII'den kaldırılsın mı?",
+    "deleteSelectedMessage": "Bu yalnızca ORGII ile bağlantılarını kaldırır. Diskten hiçbir şey kaldırılmaz.",
     "disconnectTitle": "\"{{name}}\" bağlantısı kesilsin mi?",
     "disconnectMessage": "Bu hesaptaki tüm depolara erişim kaldırılacaktır.",
     "dropStashTitle": "Drop stash?",
@@ -1135,7 +1133,7 @@
     "repo": {
       "workspaceFolders": "Workspace Klasörleri",
       "addRepo": "Workspace ekle",
-      "addEntry": "Daha fazla Workspace seçeneği",
+      "addEntry": "Daha fazla içe aktarma seçeneği",
       "addRepoDescription": "Workspace aç, oluştur veya klonla",
       "sections": {
         "coding": "Workspace",
@@ -1144,6 +1142,7 @@
         "current": "Geçerli",
         "repo": "Depolar",
         "systemPaths": "Sistem Yolları",
+        "usedElsewhere": "Used elsewhere",
         "workspace": "Workspace"
       },
       "tabs": {
@@ -1464,12 +1463,12 @@
         }
       },
       "toast": {
-        "repoRemoved": "Repo başarıyla kaldırıldı",
-        "repoRemoveFailed": "Repo kaldırılamadı",
-        "workspaceRemoved": "Workspace silindi",
-        "workspaceRemoveFailed": "Workspace silinemedi",
-        "bulkDeleted": "{{count}} öğe silindi",
-        "bulkDeleteFailed": "{{count}} öğe silinemedi"
+        "repoRemoved": "Linkage to ORGII removed",
+        "repoRemoveFailed": "Failed to remove linkage to ORGII",
+        "workspaceRemoved": "Linkage to ORGII removed",
+        "workspaceRemoveFailed": "Failed to remove linkage to ORGII",
+        "bulkDeleted": "{{count}} linkages to ORGII removed",
+        "bulkDeleteFailed": "{{count}} linkages failed to remove"
       }
     }
   },
@@ -1480,7 +1479,7 @@
     "locateInFinder": "Finder'da bul",
     "copyLocalPath": "Yerel yolu kopyala",
     "copyEventsJson": "Events JSON kopyala",
-    "removeRepo": "Depoyu kaldır",
+    "removeRepo": "Remove from ORGII",
     "addRepo": "Depo ekle...",
     "simulatorView": "Simülatör görünümü",
     "addWorkspace": "Workspace ekle..."
@@ -2086,10 +2085,9 @@
     "selectWorkspaceToStart": "Başlamak için bir Workspace seçin",
     "selectRepoToStart": "Başlamak için bir Repo seçin"
   },
-  "quitConfirmation": {
-    "title": "ORGII'den çıkılsın mı?",
-    "message": "Etkin oturumlar ve arka plan görevleri durdurulacak.",
-    "okLabel": "Çık"
+  "holdToQuit": {
+    "title": "Çıkmak için {{shortcut}} tuşunu 1 saniye basılı tutun",
+    "subtitle": "İptal etmek için bırakın"
   },
   "projects": {
     "title": "Isı haritası",

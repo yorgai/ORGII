@@ -13,6 +13,7 @@ import {
   restoreToInputAtom,
   sessionRolledBackAtom,
 } from "@src/store/session/cliSessionStatusAtom";
+import { activeSessionIdAtom } from "@src/store/session/viewAtom";
 import {
   type ChatImageAttachment,
   chatImageAttachmentsAtom,
@@ -85,9 +86,16 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
   const restoreToInput = useAtomValue(restoreToInputAtom);
   const setRestoreToInput = useSetAtom(restoreToInputAtom);
   const sessionRolledBack = useAtomValue(sessionRolledBackAtom);
+  const activeSessionId = useAtomValue(activeSessionIdAtom);
   const setImageAttachments = useSetAtom(chatImageAttachmentsAtom);
   useEffect(() => {
     if (!restoreToInput || sessionRolledBack) return;
+    // Only consume restore payloads targeting this session. Without this
+    // guard, a cancel in session B could leak its prompt into session A's
+    // composer when both are mounted (e.g. side-by-side panels).
+    if (activeSessionId && restoreToInput.sessionId !== activeSessionId) {
+      return;
+    }
 
     const editor = composerInputRef.current;
     if (!editor) {
@@ -139,6 +147,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
   }, [
     restoreToInput,
     sessionRolledBack,
+    activeSessionId,
     setRestoreToInput,
     setImageAttachments,
     dropTargetId,

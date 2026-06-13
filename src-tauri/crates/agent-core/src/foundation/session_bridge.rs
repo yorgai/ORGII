@@ -363,11 +363,8 @@ pub type UpsertTurnIntentFn = fn(
     status: TurnIntentBridgeStatus,
 );
 
-pub type UpdateTurnIntentStatusFn = fn(
-    session_id: &str,
-    turn_intent_id: &str,
-    new_status: TurnIntentBridgeStatus,
-);
+pub type UpdateTurnIntentStatusFn =
+    fn(session_id: &str, turn_intent_id: &str, new_status: TurnIntentBridgeStatus);
 
 pub type MarkPendingTurnIntentsStaleFn = fn(session_id: &str);
 

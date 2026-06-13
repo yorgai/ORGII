@@ -78,8 +78,7 @@ mod tests {
 
     #[test]
     fn new_preserves_all_fields() {
-        let overrides =
-            SessionOverrides::new(Some(PathBuf::from("/tmp/project")), Some(false));
+        let overrides = SessionOverrides::new(Some(PathBuf::from("/tmp/project")), Some(false));
         assert_eq!(
             overrides.workspace.as_deref(),
             Some(std::path::Path::new("/tmp/project"))

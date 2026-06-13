@@ -14,7 +14,6 @@
 import {
   ArrowBigLeft,
   ArrowBigRight,
-  ArrowLeftRight,
   Box,
   Contrast,
   Dock,
@@ -237,7 +236,7 @@ export const WORKSPACE_ACTIONS = [
   {
     id: "switch-workspace",
     labelKey: "selectors.spotlight.actions.switchWorkspace.label",
-    icon: ArrowLeftRight,
+    icon: FolderTree,
     keywords: ["switch workspace", "workspace", "repo", "repository", "folder"],
     actionId: ACTION_ID.SPOTLIGHT_OPEN_WORKSPACE_PICKER,
     payload: { mode: "switch" },

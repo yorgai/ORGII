@@ -8,11 +8,11 @@
  * `SpotlightShell` / `PaletteBody` from "../shell".
  */
 
-export { RepoPalette } from "./RepoPalette";
-export type { RepoPaletteProps } from "./RepoPalette/types";
+export { WorkspacePalette } from "./WorkspacePalette";
+export type { WorkspacePaletteProps } from "./WorkspacePalette/types";
 
-export { RepoDropdown } from "./RepoPalette/RepoDropdown";
-export type { RepoDropdownProps } from "./RepoPalette/RepoDropdown";
+export { WorkspaceDropdown } from "./WorkspacePalette/WorkspaceDropdown";
+export type { WorkspaceDropdownProps } from "./WorkspacePalette/WorkspaceDropdown";
 
 export { BranchPalette } from "./BranchPalette";
 export type { BranchPaletteProps } from "./BranchPalette";

@@ -7,22 +7,15 @@
  * Features:
  * - Per-question single-select or multi-select with lettered badges
  * - Skip and Submit keyboard shortcuts
+ * - Auto-skip countdown rendered from the backend's `autoResolveAt`
+ *   deadline (presence policy). The backend is the resolver — the card
+ *   only displays the remaining time.
  *
  * Submission logic shared via useQuestionSubmission.
  * Selection state shared via useOptionSelection.
  */
-import { useAtomValue } from "jotai";
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
-import { useSettingValue } from "@src/hooks/settings/useSettings";
-import { useAutoTimeout } from "@src/hooks/ui";
-import { userPresenceAtom } from "@src/store/user/userPresenceAtom";
-import {
-  USER_PRESENCE_MODE,
-  isBuiltInPresenceMode,
-} from "@src/types/userPresence";
-import { isCliSession } from "@src/util/session/sessionDispatch";
 
 import { QuestionCardLoadingShell } from "./QuestionCardLoadingShell";
 import { QuestionCardShell } from "./QuestionCardShell";
@@ -137,28 +130,31 @@ const AskQuestionCard: React.FC<AskQuestionCardProps> = ({
   }, [currentBatch, selections, handleSkip, handleContinue]);
 
   // ============================================
-  // Auto-skip countdown
+  // Auto-skip countdown (display only)
   // ============================================
+  //
+  // The backend owns the auto-resolve deadline (presence policy) and
+  // resolves the batch even when this card never renders. We only show
+  // the remaining seconds from the `autoResolveAt` timestamp carried on
+  // the question event. When the deadline fires, the backend's
+  // interaction_finalized event completes the batch and the card
+  // disappears through the normal pending-batch flow.
 
-  const questionAutoSkipTimeoutByPresence = useSettingValue(
-    "agent.sde.questionAutoSkipTimeoutByPresence"
-  );
-  const userPresence = useAtomValue(userPresenceAtom);
-  const activePresenceMode = isBuiltInPresenceMode(userPresence.mode)
-    ? userPresence.mode
-    : USER_PRESENCE_MODE.ONLINE;
-  const questionAutoSkipTimeout =
-    questionAutoSkipTimeoutByPresence[activePresenceMode];
-  const isCliCodingSession = currentBatch
-    ? isCliSession(currentBatch.sessionId)
-    : false;
+  const autoResolveAt = currentBatch?.autoResolveAt ?? null;
+  // Tick once per second while a deadline is active; the remaining
+  // seconds are derived at render time (no setState-in-effect).
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
-  const { remaining: autoSkipRemaining, cancel: cancelAutoSkip } =
-    useAutoTimeout({
-      timeoutSeconds: questionAutoSkipTimeout,
-      enabled: isCliCodingSession && !!currentBatch && !isSubmitting,
-      onTimeout: handleSkip,
-    });
+  useEffect(() => {
+    if (!autoResolveAt || isSubmitting) return;
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [autoResolveAt, isSubmitting]);
+
+  const autoSkipRemaining =
+    autoResolveAt && !isSubmitting
+      ? Math.max(0, Math.ceil((autoResolveAt - nowMs) / 1000))
+      : null;
 
   // ============================================
   // Render
@@ -197,14 +193,8 @@ const AskQuestionCard: React.FC<AskQuestionCardProps> = ({
       onCustomOptionFocus={focusCustomAfterClick}
       registerCustomInput={registerCustomInput}
       onCustomInputEnter={handleContinue}
-      onSkip={() => {
-        cancelAutoSkip();
-        handleSkip();
-      }}
-      onSubmit={() => {
-        cancelAutoSkip();
-        handleContinue();
-      }}
+      onSkip={handleSkip}
+      onSubmit={handleContinue}
       disabled={isSubmitting}
       countdownLabel={
         autoSkipRemaining !== null

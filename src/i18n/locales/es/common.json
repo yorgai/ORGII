@@ -371,10 +371,8 @@
     "foundByKeyword": "Encontrado por búsqueda de palabras clave",
     "semanticSecondary": "meaning match",
     "hybridSecondary": "semantic + full-text",
-    "tantivySecondary": "indexed full-text",
     "semanticDescription": "Embedding-based meaning search",
-    "hybridDescription": "Combined semantic and full-text search",
-    "tantivyDescription": "Indexed full-text search"
+    "hybridDescription": "Combined semantic and full-text search"
   },
   "tabs": {
     "terminal": "Terminal",
@@ -471,12 +469,12 @@
     "delete": "¿Estás seguro de que quieres eliminar esto?",
     "unsavedChanges": "Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?",
     "discard": "¿Descartar cambios?",
-    "removeTitle": "¿Eliminar \"{{name}}\" del ORGII workspace?",
-    "removeMessage": "Esto no eliminará la carpeta de código de tu dispositivo, solo la quita del ORGII workspace. Puedes volver a agregarla en cualquier momento.",
+    "removeTitle": "¿Quitar \"{{name}}\" de ORGII?",
+    "removeMessage": "Esto solo elimina su vínculo con ORGII. No se eliminará nada del disco.",
     "deleteWorkspaceTitle": "¿Eliminar el Workspace \"{{name}}\"?",
     "deleteWorkspaceMessage": "Esto elimina solo el preset del Workspace. Los Repos y carpetas miembros no se verán afectados.",
-    "deleteSelectedTitle": "¿Eliminar los {{count}} elementos seleccionados?",
-    "deleteSelectedMessage": "Esto elimina los Workspaces seleccionados y desvincula los Repos seleccionados. Los archivos del Repo en el disco no se eliminan.",
+    "deleteSelectedTitle": "¿Quitar los {{count}} elementos seleccionados de ORGII?",
+    "deleteSelectedMessage": "Esto solo elimina su vínculo con ORGII. No se eliminará nada del disco.",
     "disconnectTitle": "¿Desconectar \"{{name}}\"?",
     "disconnectMessage": "Esto eliminará el acceso a todos los repos de esta cuenta.",
     "dropStashTitle": "Drop stash?",
@@ -1134,7 +1132,7 @@
     "repo": {
       "workspaceFolders": "Carpetas del Workspace",
       "addRepo": "Añadir espacio de trabajo",
-      "addEntry": "Más opciones de espacio de trabajo",
+      "addEntry": "Más opciones de importación",
       "addRepoDescription": "Abrir, crear o clonar un espacio de trabajo",
       "sections": {
         "coding": "Espacio de trabajo",
@@ -1143,6 +1141,7 @@
         "current": "Actual",
         "repo": "Repositorios",
         "systemPaths": "Rutas del sistema",
+        "usedElsewhere": "Used elsewhere",
         "workspace": "Espacio de trabajo"
       },
       "tabs": {
@@ -1462,12 +1461,12 @@
         }
       },
       "toast": {
-        "repoRemoved": "Repo eliminado correctamente",
-        "repoRemoveFailed": "Error al eliminar el repo",
-        "workspaceRemoved": "Workspace eliminado",
-        "workspaceRemoveFailed": "Error al eliminar el Workspace",
-        "bulkDeleted": "{{count}} elementos eliminados",
-        "bulkDeleteFailed": "No se pudieron eliminar {{count}} elementos"
+        "repoRemoved": "Linkage to ORGII removed",
+        "repoRemoveFailed": "Failed to remove linkage to ORGII",
+        "workspaceRemoved": "Linkage to ORGII removed",
+        "workspaceRemoveFailed": "Failed to remove linkage to ORGII",
+        "bulkDeleted": "{{count}} linkages to ORGII removed",
+        "bulkDeleteFailed": "{{count}} linkages failed to remove"
       }
     }
   },
@@ -1478,7 +1477,7 @@
     "locateInFinder": "Localizar en Finder",
     "copyLocalPath": "Copiar ruta local",
     "copyEventsJson": "Copiar Events JSON",
-    "removeRepo": "Eliminar repo",
+    "removeRepo": "Remove from ORGII",
     "addRepo": "Agregar repo...",
     "simulatorView": "Vista del simulador",
     "addWorkspace": "Añadir espacio de trabajo..."
@@ -2081,10 +2080,9 @@
     "selectWorkspaceToStart": "Selecciona un Workspace para empezar",
     "selectRepoToStart": "Selecciona un Repo para empezar"
   },
-  "quitConfirmation": {
-    "title": "¿Salir de ORGII?",
-    "message": "Las sesiones activas y las tareas en segundo plano se detendrán.",
-    "okLabel": "Salir"
+  "holdToQuit": {
+    "title": "Mantén {{shortcut}} durante 1 segundo para salir",
+    "subtitle": "Suelta para cancelar"
   },
   "projects": {
     "title": "Mapa de calor",

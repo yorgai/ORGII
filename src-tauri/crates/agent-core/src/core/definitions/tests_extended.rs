@@ -1165,14 +1165,17 @@ mod tests_extended {
     }
 
     // =========================================================================
-    // 29. OS agent policy has workspace_only = true
+    // 29. Builtin agents are default-open (workspace = focus, not sandbox)
     // =========================================================================
 
     #[test]
-    fn os_agent_policy_workspace_only_is_true() {
+    fn os_agent_policy_workspace_only_is_false() {
         let os = get_builtin_agent(OS_AGENT_ID).expect("os exists");
         let policy = os.agent_policy.expect("OS must have agent_policy");
-        assert!(policy.workspace_only, "OS agent must restrict to workspace");
+        assert!(
+            !policy.workspace_only,
+            "OS agent must be default-open (workspace is a focus, not a sandbox)"
+        );
     }
 
     #[test]
@@ -1186,17 +1189,20 @@ mod tests_extended {
     }
 
     #[test]
-    fn wingman_policy_workspace_only_is_true() {
+    fn wingman_policy_workspace_only_is_false() {
         let wm = get_builtin_agent(WINGMAN_AGENT_ID).expect("wingman exists");
         let policy = wm.agent_policy.expect("Wingman must have agent_policy");
-        assert!(policy.workspace_only, "Wingman must restrict to workspace");
+        assert!(
+            !policy.workspace_only,
+            "Wingman must be default-open like the other builtins"
+        );
     }
 
     #[test]
-    fn os_resolved_policy_workspace_only_is_true() {
+    fn os_resolved_policy_workspace_only_is_false() {
         let def = with_model(get_builtin_agent(OS_AGENT_ID).expect("os exists"));
         let resolved = ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
-        assert!(resolved.policy.workspace_only);
+        assert!(!resolved.policy.workspace_only);
     }
 
     #[test]

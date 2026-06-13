@@ -27,8 +27,8 @@ import {
   AgentSessionSearchPalette,
   BranchPalette,
   EditorPalette,
-  RepoPalette,
   SessionCreatorPalette,
+  WorkspacePalette,
 } from "./palettes";
 import type { BranchPaletteMode } from "./palettes/BranchPalette";
 import type { EditorPaletteMode } from "./palettes/EditorPalette/types";
@@ -482,7 +482,7 @@ const GlobalSpotlightInner: React.FC<
       : undefined;
 
   const body = workspacePickerMode ? (
-    <RepoPalette
+    <WorkspacePalette
       key={workspacePickerMode}
       isOpen={isOpen}
       onClose={closeModal}
@@ -608,4 +608,4 @@ export default GlobalSpotlight;
 // EXPORTS
 // ============================================
 
-export { RepoPalette, BranchPalette } from "./palettes";
+export { WorkspacePalette, BranchPalette } from "./palettes";

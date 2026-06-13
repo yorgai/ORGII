@@ -6,7 +6,7 @@
  *   - `index`           : code search indexing + embedding model
  *
  * The `index` tab body lives in `IndexingSection` and is lazy-loaded so
- * its tantivy/usearch refresh doesn't run when the user is on the
+ * its semantic index refresh doesn't run when the user is on the
  * Editor tab.
  */
 import React, { Suspense, lazy } from "react";

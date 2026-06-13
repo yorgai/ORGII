@@ -171,7 +171,8 @@ impl BindingStore {
                      target_session_id = excluded.target_session_id,
                      updated_at        = excluded.updated_at,
                      last_activity_at  = excluded.last_activity_at",
-                params![key_str, target_session_id, ts])?;
+                params![key_str, target_session_id, ts],
+            )?;
             Ok(())
         })
         .await
@@ -259,7 +260,8 @@ impl BindingStore {
             ensure_table(&conn)?;
             conn.execute(
                 "DELETE FROM gateway_bindings WHERE session_key = ?1",
-                params![key_str])?;
+                params![key_str],
+            )?;
             Ok(())
         })
         .await

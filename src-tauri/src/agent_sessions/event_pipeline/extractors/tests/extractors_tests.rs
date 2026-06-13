@@ -349,6 +349,85 @@ fn test_extract_todo() {
     }
 }
 
+/// The native `manage_todo` tool's result is `{"content": "<header>\n[JSON
+/// array]\n<nudge>"}` — `update`/`read` events carry NO `args.todos`, so the
+/// extractor must parse the embedded snapshot from the LLM-facing text.
+/// Regression pin for the simulator "updated to-dos / 0 items" bug.
+#[test]
+fn test_extract_todo_from_native_content_text() {
+    let content = "Updated todo #1 — 2 todos (1 remaining)\n[\n  {\n    \"activeForm\": \"Fixing bug\",\n    \"content\": \"Fix bug\",\n    \"index\": 0,\n    \"priority\": \"high\",\n    \"status\": \"completed\"\n  },\n  {\n    \"activeForm\": null,\n    \"blockedBy\": [0],\n    \"content\": \"Write tests\",\n    \"index\": 1,\n    \"priority\": \"medium\",\n    \"status\": \"in_progress\"\n  }\n]\n\nEnsure that you continue to use the todo list to track your progress.";
+    let event = make_event(
+        "manage_todo",
+        EventDisplayVariant::ToolCall,
+        serde_json::json!({"action": "update", "index": 1, "status": "in_progress"}),
+        serde_json::json!({"content": content}),
+    );
+
+    let data = extract_event_data(&event).unwrap();
+    match data {
+        ExtractedData::Todo(t) => {
+            assert_eq!(t.todos.len(), 2);
+            assert_eq!(t.todos[0].id, "0", "index backfills missing id");
+            assert_eq!(t.todos[0].content, "Fix bug");
+            assert_eq!(t.todos[0].active_form.as_deref(), Some("Fixing bug"));
+            assert_eq!(t.todos[1].status, "in_progress");
+            assert_eq!(t.todos[1].blocked_by, vec![0]);
+            assert_eq!(t.todos[1].active_form, None, "null activeForm dropped");
+        }
+        _ => panic!("Expected Todo variant"),
+    }
+}
+
+/// Structured `uiMetadata` (dual-track response) wins over every text
+/// fallback and yields exact rows.
+#[test]
+fn test_extract_todo_prefers_ui_metadata() {
+    let event = make_event(
+        "manage_todo",
+        EventDisplayVariant::ToolCall,
+        serde_json::json!({"action": "update", "index": 0}),
+        serde_json::json!({
+            "content": "garbled text without a parseable snapshot",
+            "uiMetadata": {
+                "display_type": "todo_list",
+                "data": {"todos": [
+                    {"index": 0, "content": "Ship feature", "status": "in_progress", "activeForm": "Shipping feature"}
+                ]},
+                "summary": "Updated todo #0 — 1 todos (1 remaining)"
+            }
+        }),
+    );
+
+    let data = extract_event_data(&event).unwrap();
+    match data {
+        ExtractedData::Todo(t) => {
+            assert_eq!(t.todos.len(), 1);
+            assert_eq!(t.todos[0].id, "0");
+            assert_eq!(t.todos[0].content, "Ship feature");
+            assert_eq!(t.todos[0].active_form.as_deref(), Some("Shipping feature"));
+        }
+        _ => panic!("Expected Todo variant"),
+    }
+}
+
+/// "No todos for this session." style outputs must yield an empty list, not
+/// a parse error or phantom rows.
+#[test]
+fn test_extract_todo_no_snapshot_text_yields_empty() {
+    let event = make_event(
+        "manage_todo",
+        EventDisplayVariant::ToolCall,
+        serde_json::json!({"action": "read"}),
+        serde_json::json!({"content": "No todos for this session."}),
+    );
+
+    let data = extract_event_data(&event).unwrap();
+    match data {
+        ExtractedData::Todo(t) => assert!(t.todos.is_empty()),
+        _ => panic!("Expected Todo variant"),
+    }
+}
+
 #[test]
 fn test_extract_org_task_create() {
     let event = make_event(

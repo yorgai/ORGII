@@ -18,7 +18,7 @@
  */
 import { HoverSidebar } from "@/src/scaffold/NavigationSidebar";
 import { useAtomValue } from "jotai";
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback, useEffect, useMemo } from "react";
 
 import { ActionSystemProvider } from "@src/ActionSystem";
 import { sendAdeActionResult } from "@src/api/tauri/agent";
@@ -31,6 +31,7 @@ import { pendingSessionProposal } from "@src/engines/SessionCore/hooks/useAgentA
 import SessionSyncProvider from "@src/engines/SessionCore/sync/SessionSyncProvider";
 import { SessionCreatorChatPanel } from "@src/features/SessionCreator/variants";
 import type { SessionCreatorChatPanelProps } from "@src/features/SessionCreator/variants/ChatPanel";
+import { dispatchWebviewLayoutChanged } from "@src/hooks/platform/useInlineWebview/webviewLayoutEvents";
 import SettingsSlot from "@src/modules/MainApp/Settings/SettingsSlot";
 import GlobalSessionSync from "@src/modules/shared/components/GlobalSessionSync";
 import { GlobalSpotlightPortal } from "@src/modules/shared/components/GlobalSpotlightPortal";
@@ -180,6 +181,17 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
   // (otherwise an existing zero-width chat would hide the settings panel
   // too).
   const isSlotVisible = chatPanelMode === "settings" ? true : isChatVisible;
+
+  useEffect(() => {
+    dispatchWebviewLayoutChanged();
+  }, [
+    chatLayout,
+    chatPosition,
+    chatPanelMaximized,
+    chatWidth,
+    isSlotVisible,
+    sidebarCollapsed,
+  ]);
 
   // Full mode is edge-to-edge only when sidebar is collapsed;
   // with sidebar visible it gets the same padding + radius as inset.

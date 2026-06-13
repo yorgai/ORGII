@@ -356,16 +356,6 @@ pub async fn session_patch(
     let identity_changed = patch.model.is_some();
     let switched_account = patch.account_id.clone();
     let switched_model = patch.model.clone();
-    // Chokepoint B: leaving Plan mode with a plan still pending abandons it.
-    // Evaluated before the patch is applied so the plan-mode lookup inside
-    // `resolve_pending`'s consumers can't race the mode write. The approve
-    // flow does not pass through `session_patch` (it writes the restored
-    // mode via `update_agent_exec_mode` after the pending row is already
-    // resolved), so this only fires on genuine ModePill switches.
-    let leaves_plan_mode = patch
-        .agent_exec_mode
-        .as_deref()
-        .is_some_and(|mode| mode != "plan");
     let patched_session_id = session_id.clone();
     let prev_account = tokio::task::spawn_blocking(move || {
         let prev_account = patch
@@ -377,18 +367,6 @@ pub async fn session_patch(
     })
     .await
     .map_err(|err| format!("session_patch task join error: {err}"))??;
-    if leaves_plan_mode {
-        let manager = state
-            .get_session(&patched_session_id)
-            .await
-            .and_then(|session| session.plan_approval_manager.clone());
-        agent_core::interaction::plan_approval::resolve_pending(
-            &patched_session_id,
-            agent_core::interaction::plan_approval::PlanResolution::Abandoned,
-            manager.as_deref(),
-        )
-        .await;
-    }
     if identity_changed {
         state.invalidate_session(&patched_session_id).await;
     }

@@ -93,7 +93,11 @@ impl Tool for TaskUpdateTool {
         params_schema::<TaskUpdateParams>()
     }
 
-    async fn execute_text(&self, params_value: Value, _ctx: &CallContext) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params_value: Value,
+        _ctx: &CallContext,
+    ) -> Result<String, ToolError> {
         let owner_member_id_value = params_value.get("owner_member_id").cloned();
         let params: TaskUpdateParams = parse_params(params_value)?;
         let task_id = params.id.trim().to_string();

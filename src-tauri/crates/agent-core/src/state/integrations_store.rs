@@ -24,9 +24,9 @@
 //! mutate the store.
 
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 #[cfg(not(test))]
 use std::sync::OnceLock;
+use std::sync::{Arc, Mutex};
 use tracing::{error, info};
 
 use crate::integrations::{IntegrationsConfig, IntegrationsError};

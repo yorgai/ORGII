@@ -316,7 +316,6 @@ impl Tool for ReadFileTool {
         );
         Ok(output)
     }
-
 }
 
 fn format_file_unchanged_stub(path: &str, entry: &ReadCacheEntry) -> String {
@@ -445,7 +444,10 @@ mod tests {
     async fn reads_embedded_builtin_skill_uri() {
         let tool = ReadFileTool::new(None);
         let output = tool
-            .execute(serde_json::json!({ "path": "builtin://create-orgii-agent/SKILL.md" }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "path": "builtin://create-orgii-agent/SKILL.md" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .unwrap();
 
@@ -467,11 +469,14 @@ mod tests {
     async fn embedded_builtin_skill_uri_supports_ranges() {
         let tool = ReadFileTool::new(None);
         let output = tool
-            .execute(serde_json::json!({
-                "path": "builtin://create-orgii-agent/SKILL.md",
-                "offset": 1,
-                "limit": 3
-            }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({
+                    "path": "builtin://create-orgii-agent/SKILL.md",
+                    "offset": 1,
+                    "limit": 3
+                }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .unwrap();
 
@@ -486,7 +491,10 @@ mod tests {
             .join("create-orgii-agent")
             .join("SKILL.md");
         let output = tool
-            .execute(serde_json::json!({ "path": path.to_string_lossy() }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "path": path.to_string_lossy() }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .unwrap();
 
@@ -504,7 +512,10 @@ mod tests {
     async fn unknown_embedded_builtin_skill_errors_explicitly() {
         let tool = ReadFileTool::new(None);
         let err = tool
-            .execute(serde_json::json!({ "path": "builtin://missing-skill/SKILL.md" }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "path": "builtin://missing-skill/SKILL.md" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .unwrap_err();
 
@@ -521,13 +532,19 @@ mod tests {
 
         let tool = ReadFileTool::new(Some(repo.path().to_path_buf()));
         let first = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "path": "marker.txt" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .unwrap();
         assert!(first.contains("hello"), "output was: {}", first);
 
         let second = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "path": "marker.txt" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .unwrap();
         assert!(
@@ -550,7 +567,10 @@ mod tests {
 
         let tool = ReadFileTool::new(Some(repo.path().to_path_buf()));
         let first = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "path": "marker.txt" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .unwrap();
         assert!(first.contains("hello"), "output was: {}", first);
@@ -559,7 +579,10 @@ mod tests {
         std::fs::write(&path, "updated").unwrap();
 
         let second = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
+            .execute(
+                serde_json::json!({ "path": "marker.txt" }),
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .unwrap();
         assert!(second.contains("updated"), "output was: {}", second);

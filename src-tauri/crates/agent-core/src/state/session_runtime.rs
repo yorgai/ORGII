@@ -6,7 +6,6 @@ use std::time::Instant;
 
 use crate::definitions::AgentDefinition;
 use crate::definitions::SessionMode;
-use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::interaction::mode_switch::ModeSwitchManager;
 use crate::interaction::permission::AgentPermissionManager;
 use crate::interaction::plan_approval::PlanApprovalManager;
@@ -27,6 +26,7 @@ use crate::session::prompt::cache::{
 use crate::session::wingman::WingmanSessionState;
 use crate::session::workspace::SessionWorkspace;
 use crate::session::{DialogScheduler, DialogTurn, DialogTurnState, TurnStats};
+use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::state::control_flow::CancelReason;
 use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registry::ToolRegistry;

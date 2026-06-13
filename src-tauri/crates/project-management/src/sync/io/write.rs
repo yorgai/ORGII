@@ -11,7 +11,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use super::super::types::{EntityType, OutboxEntry, OutboxOp, OutboxStatus};
 use super::{
     read::{load_by_id, read_adapter_binding, SyncCursor},
-    RETRY_BACKOFF_SECS, MAX_RETRY_COUNT,
+    MAX_RETRY_COUNT, RETRY_BACKOFF_SECS,
 };
 
 // ── Outbox append ─────────────────────────────────────────────────────────────

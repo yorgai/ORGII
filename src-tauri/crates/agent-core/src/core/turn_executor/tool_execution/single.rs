@@ -8,8 +8,8 @@ use serde_json::Value;
 use tracing::{info, warn};
 
 use crate::core::tools::traits::ToolExecuteResult;
-use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::providers::traits::ToolCallRequest;
+use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registry::ToolRegistry;
 
@@ -220,8 +220,7 @@ pub(super) async fn execute_single_tool(
             );
 
             let exec_start = Instant::now();
-            let ctx =
-                crate::tools::call_context::CallContext::new(&tool_call.id, session_id);
+            let ctx = crate::tools::call_context::CallContext::new(&tool_call.id, session_id);
             let raw_outcome = tools
                 .execute_with_policy(&tool_call.name, effective_args.clone(), policy, &ctx)
                 .await;

@@ -3,7 +3,7 @@ import type { ShortcutEntry } from "./types";
 export const GLOBAL_SHORTCUTS: ShortcutEntry[] = [
   {
     id: "quit_app",
-    command: "Confirm before quitting application",
+    command: "Hold to quit application",
     macKeys: "⌘Q",
     winKeys: "Ctrl+Q",
     scope: "global",

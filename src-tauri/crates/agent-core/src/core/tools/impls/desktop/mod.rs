@@ -6,11 +6,11 @@
 
 #[cfg(target_os = "macos")]
 pub mod escape_hotkey;
+mod peekaboo_cli_tool;
 #[cfg(target_os = "macos")]
 pub mod permissions;
 #[cfg(target_os = "macos")]
 pub mod screen_capture;
-mod peekaboo_cli_tool;
 
 pub use peekaboo_cli_tool::{
     restore_desktop_operation_visibility_now, show_desktop_operation_visibility_test,

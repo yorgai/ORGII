@@ -97,7 +97,7 @@ export function useSpotlight(
 
   // Shared repo list is only needed for action flows that ask the user to
   // choose a repo. The default Spotlight view no longer renders the repo list;
-  // workspace switching is delegated to RepoPalette.
+  // workspace switching is delegated to WorkspacePalette.
   const shouldFetchRepos = isOpen && state.missingParam === "repo";
 
   const activeRepoId = currentRepoId ?? currentRepo?.id;

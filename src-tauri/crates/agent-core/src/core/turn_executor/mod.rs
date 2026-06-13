@@ -47,7 +47,7 @@ use helpers::add_tool_result_rich_with_timestamp;
 pub(crate) use backoff::set_test_backoff_override_ms;
 pub(crate) use backoff::MAX_TOOL_OUTPUT_CHARS;
 
-use backoff::{MAX_CONSECUTIVE_ERRORS, MAX_REPEAT_STREAK};
+use backoff::{MAX_CONSECUTIVE_ERRORS, MAX_CONTEXT_RESCUE_ATTEMPTS, MAX_REPEAT_STREAK};
 pub(crate) use context_accounting::ContextUsageSnapshot;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -56,8 +56,8 @@ use serde_json::Value;
 use tracing::{info, warn};
 
 use crate::core::tools::traits::ToolExecuteResult;
-use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::providers::traits::{finish_reason as finish, LLMProvider, StreamDelta};
+use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::tools::names as tool_names;
 use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registry::ToolRegistry;
@@ -132,6 +132,9 @@ pub async fn execute_turn(
     // Stream-error retry budgets (split across generic vs overloaded — see
     // `stream_error_recovery` module for the full policy).
     let mut retry_budgets = RetryBudgets::default();
+    // In-turn ContextTooLong rescue attempts already burned (see the
+    // `ContextTooLong` arm below).
+    let mut context_rescue_attempts = 0u32;
 
     let mut file_tracker = file_tracker::FileTimeTracker::new();
     let mc_config = microcompact::MicrocompactConfig::default();
@@ -303,6 +306,40 @@ pub async fn execute_turn(
                 }
                 final_content = None;
                 break;
+            }
+            Err(err @ crate::providers::traits::ProviderError::ContextTooLong(_))
+                if context_rescue_attempts < MAX_CONTEXT_RESCUE_ATTEMPTS =>
+            {
+                // Self-rescue instead of aborting the whole turn (which
+                // discards every finding the agent accumulated — a 35-minute
+                // subagent run once died this way). First force-clear old
+                // tool results (cheap, no LLM); if that freed nothing, fall
+                // back to head-preserving hard truncation. Bounded by
+                // MAX_CONTEXT_RESCUE_ATTEMPTS.
+                context_rescue_attempts += 1;
+                warn!(
+                    "[agent-core] ContextTooLong (session={}), rescue attempt {}/{}: {}",
+                    session_id, context_rescue_attempts, MAX_CONTEXT_RESCUE_ATTEMPTS, err
+                );
+                let stats = microcompact::force_microcompact_messages(messages, &mc_config);
+                if stats.chars_saved == 0 && stats.images_cleared == 0 {
+                    // Nothing left to clear — hard-truncate the history while
+                    // keeping the head (system prompt + task statement).
+                    let window = crate::providers::model_hints::context_window_hint(&config.model);
+                    let budget = window.saturating_mul(3) / 4;
+                    let truncated =
+                        crate::model_context::compaction::ContextCompactor::simple_truncate(
+                            messages, budget,
+                        );
+                    warn!(
+                        "[agent-core] Context rescue truncation: {} -> {} messages (session={})",
+                        messages.len(),
+                        truncated.len(),
+                        session_id
+                    );
+                    *messages = truncated;
+                }
+                continue;
             }
             Err(err) => return Err(format!("LLM error: {}", err)),
         };
@@ -493,6 +530,14 @@ pub async fn execute_turn(
                             ),
                             Err(err) => (format!("Error: {}", err), None, true),
                         };
+                    // Apply the same per-tool output budget as the normal
+                    // execution path (`tool_execution/single.rs`). Without
+                    // this, the streaming pre-execution shortcut injects
+                    // unbounded tool output straight into the context —
+                    // a multi-MB read_file result here once blew up a
+                    // subagent's context beyond recovery.
+                    let budget = tools.get(&sr.tool_name).map(|t| t.output_budget());
+                    output = helpers::truncate_output(&output, budget);
                     if sr.tool_name == tool_names::READ_FILE && !is_err {
                         if let Some(path) = sr.args.get("path").and_then(|value| value.as_str()) {
                             if let Some(extra) = policy_context_activator.and_then(|activator| {

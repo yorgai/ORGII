@@ -54,8 +54,7 @@ const ROUTINE_SELECT_COLUMNS: &str =
     "id, name, description, enabled, trigger_json, run_template_json,
      output_policy_json, created_at, updated_at, last_evaluated_at, next_fire_at";
 
-const FIRE_SELECT_COLUMNS: &str =
-    "id, routine_id, fired_at, status, session_id, agent_org_run_id,
+const FIRE_SELECT_COLUMNS: &str = "id, routine_id, fired_at, status, session_id, agent_org_run_id,
      work_item_id, coalesced_into_fire_id, idempotency_key, started_at,
      completed_at, error";
 

@@ -235,13 +235,13 @@ pub fn init_schema(conn: &Connection) -> SqliteResult<()> {
         conn,
         "agent_org_tasks",
         "blocks_json",
-        "TEXT NOT NULL DEFAULT '[]'"
+        "TEXT NOT NULL DEFAULT '[]'",
     )?;
     add_column_if_missing(
         conn,
         "agent_org_tasks",
         "blocked_by_json",
-        "TEXT NOT NULL DEFAULT '[]'"
+        "TEXT NOT NULL DEFAULT '[]'",
     )?;
     add_column_if_missing(conn, "agent_org_tasks", "metadata_json", "TEXT")?;
     add_column_if_missing(conn, "agent_org_task_events", "actor_member_id", "TEXT")?;

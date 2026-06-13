@@ -64,6 +64,7 @@ Patterns:
         max_tokens: 512,
         temperature: 0.2,
         system_prompt: None,
+        ..Default::default()
     };
     let resp = side_query(provider, &messages, &cfg, model_id)
         .await

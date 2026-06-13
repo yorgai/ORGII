@@ -22,9 +22,7 @@ pub(super) fn encode_metadata(
         .transpose()
 }
 
-pub(super) fn decode_metadata(
-    raw: Option<String>,
-) -> Result<Option<serde_json::Value>, String> {
+pub(super) fn decode_metadata(raw: Option<String>) -> Result<Option<serde_json::Value>, String> {
     raw.map(|s| serde_json::from_str(&s).map_err(|err| format!("decode metadata: {err}")))
         .transpose()
 }
@@ -90,9 +88,7 @@ pub(super) fn row_to_task(row: &rusqlite::Row<'_>) -> SqliteResult<Task> {
     Ok(task)
 }
 
-pub(super) fn row_to_task_history_event(
-    row: &rusqlite::Row<'_>,
-) -> SqliteResult<TaskHistoryEvent> {
+pub(super) fn row_to_task_history_event(row: &rusqlite::Row<'_>) -> SqliteResult<TaskHistoryEvent> {
     let previous_status_raw: Option<String> = row.get(6)?;
     let next_status_raw: Option<String> = row.get(7)?;
     Ok(TaskHistoryEvent {

@@ -210,7 +210,11 @@ impl SessionWorkspace {
     /// `starts_with` against every canonical effective root plus
     /// `extra_allowed` (e.g. the active IDE repo). The rejection
     /// message lists every allowed root so the model can self-correct.
-    pub fn is_path_allowed(&self, candidate: &Path, extra_allowed: &[PathBuf]) -> Result<(), String> {
+    pub fn is_path_allowed(
+        &self,
+        candidate: &Path,
+        extra_allowed: &[PathBuf],
+    ) -> Result<(), String> {
         let resolved = canonicalize_candidate(candidate);
         let mut roots = self.effective_roots_canonical();
         roots.extend(extra_allowed.iter().map(|p| canonicalize_or_lexical(p)));

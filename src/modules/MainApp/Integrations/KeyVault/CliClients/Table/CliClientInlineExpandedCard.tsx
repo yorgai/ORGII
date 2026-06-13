@@ -1,8 +1,8 @@
 import { ExternalLink, Plus } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { formatAgentType, isApiKeyProvider } from "@src/assets/providers";
+import { formatAgentType } from "@src/assets/providers";
 import Button from "@src/components/Button";
 import StatusDot from "@src/components/StatusDot";
 import {
@@ -10,10 +10,6 @@ import {
   METHOD_DISPLAY_LABELS,
 } from "@src/config/cliAgents";
 import type { KeyVaultAccount } from "@src/hooks/keyVault";
-import {
-  getCliCompatibleAccounts,
-  useAgentCompatibility,
-} from "@src/hooks/models/useAgentCompatibility";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { openExternalLink } from "@src/util/platform/ipcRenderer";
 
@@ -26,26 +22,17 @@ import {
   InlineCardShell,
   InlineCardSplit,
   InlineCardTabs,
-  InlineSplitNavRow,
 } from "../../shared/InlineCardPrimitives";
 import { CliClientSection } from "../Preview/CliClientSection";
 
 export const CLI_CLIENT_INLINE_TAB = {
   STATUS: "status",
-  COMPATIBLE_KEYS: "compatible_keys",
+  SUBSCRIPTIONS: "subscriptions",
   CLIENT: "client",
 } as const;
 
 export type CliClientInlineTab =
   (typeof CLI_CLIENT_INLINE_TAB)[keyof typeof CLI_CLIENT_INLINE_TAB];
-
-const CLI_COMPATIBLE_SOURCE_TAB = {
-  KEYS: "keys",
-  PLANS: "plans",
-} as const;
-
-type CliCompatibleSourceTab =
-  (typeof CLI_COMPATIBLE_SOURCE_TAB)[keyof typeof CLI_COMPATIBLE_SOURCE_TAB];
 
 interface CliAgentsHandlers {
   actionMap: Record<string, "installing" | "detecting" | null>;
@@ -83,23 +70,11 @@ const CliClientInlineExpandedCard: React.FC<
   CliClientInlineExpandedCardProps
 > = ({ agent, accounts, activeTab, onActiveTabChange, onAdd, cliAgents }) => {
   const { t } = useTranslation("integrations");
-  const { registry } = useAgentCompatibility();
-  const [compatibleSourceTab, setCompatibleSourceTab] =
-    useState<CliCompatibleSourceTab>(CLI_COMPATIBLE_SOURCE_TAB.KEYS);
 
-  const cliAccounts = useMemo(
+  const subscriptionAccounts = useMemo(
     () => accounts.filter((account) => account.modelType === agent.name),
     [accounts, agent.name]
   );
-
-  const apiKeyAccounts = useMemo(
-    () =>
-      getCliCompatibleAccounts(registry, agent.name, accounts).filter(
-        (account) => isApiKeyProvider(account.modelType)
-      ),
-    [accounts, agent.name, registry]
-  );
-
   const hasClientActions =
     (!agent.installed && agent.installMethods.length > 0) ||
     (agent.installed && agent.uninstallMethods.length > 0);
@@ -111,8 +86,8 @@ const CliClientInlineExpandedCard: React.FC<
         label: t("keyVault.inlineCard.tabStatus"),
       },
       {
-        key: CLI_CLIENT_INLINE_TAB.COMPATIBLE_KEYS,
-        label: t("cliPreview.compatibleKeys"),
+        key: CLI_CLIENT_INLINE_TAB.SUBSCRIPTIONS,
+        label: t("cliPreview.subscriptions"),
       },
       {
         key: CLI_CLIENT_INLINE_TAB.CLIENT,
@@ -128,71 +103,28 @@ const CliClientInlineExpandedCard: React.FC<
     return match?.key ?? CLI_CLIENT_INLINE_TAB.STATUS;
   }, [activeTab, tabs]);
 
-  const selectedCompatibleAccounts =
-    compatibleSourceTab === CLI_COMPATIBLE_SOURCE_TAB.KEYS
-      ? apiKeyAccounts
-      : cliAccounts;
-
-  const selectedEmptyTitle =
-    compatibleSourceTab === CLI_COMPATIBLE_SOURCE_TAB.KEYS
-      ? agent.compatibleApiProviders.length > 0
-        ? t("cliPreview.noApiKeysAdded")
-        : t("cliPreview.noApiKeys")
-      : t("cliPreview.noCliAccounts");
-
-  const renderCompatibleSourceRow = (
-    sourceTab: CliCompatibleSourceTab,
-    label: string,
-    count: number
-  ) => (
-    <InlineSplitNavRow
-      key={sourceTab}
-      label={label}
-      meta={count}
-      selected={sourceTab === compatibleSourceTab}
-      onSelect={() => setCompatibleSourceTab(sourceTab)}
-    />
-  );
-
-  const compatibleKeysContent = (
-    <InlineCardSplit
-      left={
-        <>
-          {renderCompatibleSourceRow(
-            CLI_COMPATIBLE_SOURCE_TAB.KEYS,
-            t("cliPreview.keysTab"),
-            apiKeyAccounts.length
-          )}
-          {renderCompatibleSourceRow(
-            CLI_COMPATIBLE_SOURCE_TAB.PLANS,
-            t("cliPreview.plansTab"),
-            cliAccounts.length
-          )}
-        </>
-      }
-      right={
-        selectedCompatibleAccounts.length > 0 ? (
-          <InlineCardColumnStack gap="compact">
-            {selectedCompatibleAccounts.map((account) => (
-              <div
-                key={account.id}
-                className="flex h-9 min-h-9 items-center justify-between gap-3 rounded-md px-3 text-xs hover:bg-fill-1"
-              >
-                <div className="flex min-w-0 flex-1 items-center">
-                  <AccountSourceBreadcrumb
-                    modelType={account.modelType}
-                    accountName={account.name}
-                  />
-                </div>
-              </div>
-            ))}
-          </InlineCardColumnStack>
-        ) : (
-          <span className="px-1 text-xs text-text-3">{selectedEmptyTitle}</span>
-        )
-      }
-    />
-  );
+  const subscriptionsContent =
+    subscriptionAccounts.length > 0 ? (
+      <InlineCardColumnStack gap="compact">
+        {subscriptionAccounts.map((account) => (
+          <div
+            key={account.id}
+            className="flex h-9 min-h-9 items-center justify-between gap-3 rounded-md px-3 text-xs hover:bg-fill-1"
+          >
+            <div className="flex min-w-0 flex-1 items-center">
+              <AccountSourceBreadcrumb
+                modelType={account.modelType}
+                accountName={account.name}
+              />
+            </div>
+          </div>
+        ))}
+      </InlineCardColumnStack>
+    ) : (
+      <span className="px-1 text-xs text-text-3">
+        {t("cliPreview.noSubscriptions")}
+      </span>
+    );
 
   const clientContent = hasClientActions ? (
     <CliClientSection
@@ -223,8 +155,8 @@ const CliClientInlineExpandedCard: React.FC<
 
   const tabContent = (() => {
     switch (effectiveActiveTab) {
-      case CLI_CLIENT_INLINE_TAB.COMPATIBLE_KEYS:
-        return compatibleKeysContent;
+      case CLI_CLIENT_INLINE_TAB.SUBSCRIPTIONS:
+        return subscriptionsContent;
       case CLI_CLIENT_INLINE_TAB.CLIENT:
         return clientContent;
       case CLI_CLIENT_INLINE_TAB.STATUS:

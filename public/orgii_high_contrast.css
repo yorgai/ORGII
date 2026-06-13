@@ -50,6 +50,9 @@
   --cm-editor-background: #050505;
   --cm-editor-foreground: #ffffff;
   --cm-editor-selection: #1c1c1c;
+  --cm-editor-caret: #38bdf8;
+  --terminal-selection: #1c1c1c;
+  --terminal-caret: #38bdf8;
   --cm-editor-gutter-bg: #050505;
   --cm-editor-gutter-fg: #c7ced9;
   --cm-editor-line-highlight: #1c1c1c;
@@ -201,6 +204,9 @@ body {
   --cm-editor-background: #050505;
   --cm-editor-foreground: #ffffff;
   --cm-editor-selection: #1c1c1c;
+  --cm-editor-caret: #38bdf8;
+  --terminal-selection: #1c1c1c;
+  --terminal-caret: #38bdf8;
   --cm-editor-gutter-bg: #050505;
   --cm-editor-gutter-fg: #c7ced9;
   --cm-editor-line-highlight: #1c1c1c;

@@ -211,7 +211,6 @@ describe("applyLiveOperationOverlay", () => {
       functionName: "read_file",
       args: { path: "/repo/loading.ts" },
       displayStatus: "running",
-      status: "running",
       result: {},
     });
 

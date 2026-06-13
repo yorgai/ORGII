@@ -1,7 +1,7 @@
 //! Miscellaneous server definitions: YAML, Markdown, Shell, Dockerfile, SQL.
 
 use crate::install_pipeline::InstallMethod;
-use crate::root_detection::{GENERIC_PATTERN, RootPattern};
+use crate::root_detection::{RootPattern, GENERIC_PATTERN};
 use crate::server_defs::ServerDef;
 
 pub struct YamlServer;

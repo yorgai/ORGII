@@ -3,15 +3,11 @@
 pub mod commands;
 
 #[cfg(feature = "semantic-search")]
-pub mod bytes_filter;
-#[cfg(feature = "semantic-search")]
 pub mod embedders;
 #[cfg(feature = "semantic-search")]
 mod index;
 #[cfg(feature = "semantic-search")]
 pub mod semantic;
-#[cfg(feature = "semantic-search")]
-pub mod tantivy_index;
 #[cfg(feature = "semantic-search")]
 mod types;
 

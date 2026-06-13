@@ -1,18 +1,21 @@
 import type React from "react";
 
+import { isSystemPathRepoItem } from "@src/features/SessionCreator/utils/systemPathSource";
+import { REPO_KIND } from "@src/store/repo";
+
 import type { RepoItem, SpotlightItem } from "../../types";
 import {
   buildRepoSpotlightItems,
   sortRepoItemsSelectedFirst,
 } from "../adapters";
 import {
-  REPO_PALETTE_SECTION_KEY,
-  type RepoPaletteSectionKey,
-  type RepoPaletteText,
+  WORKSPACE_PALETTE_SECTION_KEY,
+  type WorkspacePaletteSectionKey,
+  type WorkspacePaletteText,
 } from "./types";
 
 function buildSectionHeader(
-  key: RepoPaletteSectionKey,
+  key: WorkspacePaletteSectionKey,
   label: string
 ): SpotlightItem {
   return {
@@ -28,7 +31,7 @@ function buildSectionHeader(
 
 function appendSection(
   target: SpotlightItem[],
-  key: RepoPaletteSectionKey,
+  key: WorkspacePaletteSectionKey,
   label: string,
   sectionItems: SpotlightItem[]
 ) {
@@ -36,31 +39,33 @@ function appendSection(
   target.push(buildSectionHeader(key, label), ...sectionItems);
 }
 
-interface BuildSectionedRepoItemsArgs {
+interface BuildSectionedWorkspaceItemsArgs {
   addMenuActive: boolean;
   sectionedAddItems: SpotlightItem[];
   workspaceItems: SpotlightItem[];
   openPathItem: SpotlightItem | null;
   filteredRepos: RepoItem[];
+  externalRecentRepos?: readonly RepoItem[];
   currentRepoId?: string;
   isMultiRoot: boolean;
   isManageMode: boolean;
   leadingRepos?: readonly RepoItem[];
   selectedIds: Set<string>;
   searchQuery: string;
-  paletteText: RepoPaletteText;
+  paletteText: WorkspacePaletteText;
   onRepoAction: (repo: RepoItem) => void;
   onLeadingRepoAction: (repo: RepoItem) => void;
   toggleSelection: (id: string) => void;
   renderRepoTrashAction?: (repo: RepoItem) => React.ReactNode;
 }
 
-export function buildSectionedRepoItems({
+export function buildSectionedWorkspaceItems({
   addMenuActive,
   sectionedAddItems,
   workspaceItems,
   openPathItem,
   filteredRepos,
+  externalRecentRepos = [],
   currentRepoId,
   isMultiRoot,
   isManageMode,
@@ -72,23 +77,36 @@ export function buildSectionedRepoItems({
   onLeadingRepoAction,
   toggleSelection,
   renderRepoTrashAction,
-}: BuildSectionedRepoItemsArgs): SpotlightItem[] {
+}: BuildSectionedWorkspaceItemsArgs): SpotlightItem[] {
   if (addMenuActive) {
     return sectionedAddItems;
   }
 
+  const persistedFolderRepos = filteredRepos.filter(
+    (repo) => !isSystemPathRepoItem(repo) && repo.kind === REPO_KIND.FOLDER
+  );
+  const persistedGitRepos = filteredRepos.filter(
+    (repo) => repo.kind !== REPO_KIND.FOLDER
+  );
+
+  const repoItemOptions = {
+    currentRepoId: isMultiRoot ? undefined : currentRepoId,
+    onAction: onRepoAction,
+    manageAction: isManageMode ? renderRepoTrashAction : undefined,
+    getSelectionState: isManageMode
+      ? (repo: RepoItem) => ({
+          checked: selectedIds.has(repo.id),
+          onToggle: () => toggleSelection(repo.id),
+        })
+      : undefined,
+  };
+
   const repoItems = sortRepoItemsSelectedFirst(
-    buildRepoSpotlightItems(filteredRepos, {
-      currentRepoId: isMultiRoot ? undefined : currentRepoId,
-      onAction: onRepoAction,
-      manageAction: isManageMode ? renderRepoTrashAction : undefined,
-      getSelectionState: isManageMode
-        ? (repo) => ({
-            checked: selectedIds.has(repo.id),
-            onToggle: () => toggleSelection(repo.id),
-          })
-        : undefined,
-    })
+    buildRepoSpotlightItems(persistedGitRepos, repoItemOptions)
+  );
+
+  const folderWorkspaceItems = sortRepoItemsSelectedFirst(
+    buildRepoSpotlightItems(persistedFolderRepos, repoItemOptions)
   );
 
   const leadingRepoItems =
@@ -99,13 +117,32 @@ export function buildSectionedRepoItems({
         })
       : [];
 
-  const sourceItems = [...leadingRepoItems, ...repoItems];
+  const externalRecentItems =
+    externalRecentRepos.length > 0 && !isManageMode
+      ? buildRepoSpotlightItems([...externalRecentRepos], {
+          currentRepoId,
+          onAction: onLeadingRepoAction,
+        })
+      : [];
+
+  const sourceItems = [
+    ...leadingRepoItems,
+    ...externalRecentItems,
+    ...folderWorkspaceItems,
+    ...repoItems,
+  ];
 
   const currentItems = [...workspaceItems, ...sourceItems].filter(
     (item) => item.data?.isCurrentSelection
   );
   const currentIds = new Set(currentItems.map((item) => item.id));
   const regularSystemPathItems = leadingRepoItems.filter(
+    (item) => !currentIds.has(item.id)
+  );
+  const regularExternalRecentItems = externalRecentItems.filter(
+    (item) => !currentIds.has(item.id)
+  );
+  const regularFolderWorkspaceItems = folderWorkspaceItems.filter(
     (item) => !currentIds.has(item.id)
   );
   const regularRepoItems = repoItems.filter((item) => !currentIds.has(item.id));
@@ -120,25 +157,37 @@ export function buildSectionedRepoItems({
 
   appendSection(
     sectionedItems,
-    REPO_PALETTE_SECTION_KEY.CURRENT,
+    WORKSPACE_PALETTE_SECTION_KEY.CURRENT,
     paletteText.sectionCurrentLabel,
     currentItems
   );
   appendSection(
     sectionedItems,
-    REPO_PALETTE_SECTION_KEY.SYSTEM_PATH,
+    WORKSPACE_PALETTE_SECTION_KEY.SYSTEM_PATH,
     paletteText.sectionSystemPathsLabel,
     regularSystemPathItems
   );
   appendSection(
     sectionedItems,
-    REPO_PALETTE_SECTION_KEY.REPO,
+    WORKSPACE_PALETTE_SECTION_KEY.EXTERNAL_RECENT,
+    paletteText.sectionExternalRecentLabel,
+    regularExternalRecentItems
+  );
+  appendSection(
+    sectionedItems,
+    WORKSPACE_PALETTE_SECTION_KEY.FOLDER_WORKSPACE,
+    paletteText.sectionFolderWorkspaceLabel,
+    regularFolderWorkspaceItems
+  );
+  appendSection(
+    sectionedItems,
+    WORKSPACE_PALETTE_SECTION_KEY.REPO,
     paletteText.sectionRepoLabel,
     regularRepoItems
   );
   appendSection(
     sectionedItems,
-    REPO_PALETTE_SECTION_KEY.MULTI_REPO_WORKSPACE,
+    WORKSPACE_PALETTE_SECTION_KEY.MULTI_REPO_WORKSPACE,
     paletteText.sectionMultiRepoWorkspaceLabel,
     regularWorkspaceItems
   );

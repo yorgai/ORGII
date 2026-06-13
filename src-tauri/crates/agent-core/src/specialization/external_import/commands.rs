@@ -9,7 +9,9 @@ use super::types::{
 };
 use crate::core::definitions::schema::{AgentDefinition, AgentTier, AgentToolSelection};
 use crate::core::definitions::store::AgentDefinitionsStore;
-use crate::specialization::mcp::config::{global_config_path, workspace_config_path, McpConfigFile};
+use crate::specialization::mcp::config::{
+    global_config_path, workspace_config_path, McpConfigFile,
+};
 use crate::specialization::policies::config::PolicyConfig;
 use crate::specialization::policies::{
     config_for_source, policies_dir_for_source, save_config_for_source, PolicySource,

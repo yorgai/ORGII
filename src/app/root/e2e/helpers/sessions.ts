@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { getPendingPlanApproval } from "@src/api/tauri/agent";
 import { promptDump } from "@src/api/tauri/agent/promptDump";
+import { respondPlanApproval } from "@src/api/tauri/agent/session";
 import { rpc } from "@src/api/tauri/rpc";
 import { normalizeAgentExecMode } from "@src/config/sessionCreatorConfig";
 import {
@@ -496,6 +497,58 @@ export function createSessionHelpers(store: E2EStore) {
 
   const seeders = createSessionSeederHelpers(store);
 
+  /**
+   * Wire-path exec-mode switch for the plan-lifecycle specs: the same
+   * `session_patch` RPC the ModePill drives. Pre-fix this was Chokepoint B
+   * (auto-Abandon of the pending plan); the decoupled lifecycle must leave
+   * the pending row untouched.
+   */
+  const patchSessionExecModeWire = async (
+    sessionId: string,
+    agentExecMode: string
+  ): Promise<{ ok: true } | Result<never>> => {
+    try {
+      await rpc.sessionAggregate.patch({
+        sessionId,
+        patch: { agentExecMode },
+      });
+      return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  /**
+   * Backend-truth pending-plan query (`agent_get_pending_plan_approval`) —
+   * bypasses the FE atom so specs assert the DB row, not the mirror.
+   */
+  const getPendingPlanApprovalWire = async (
+    sessionId: string
+  ): Promise<Result<{ snapshot: Json | null }>> => {
+    try {
+      const snapshot = await getPendingPlanApproval(sessionId);
+      return { ok: true, snapshot: (snapshot as unknown as Json) ?? null };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  /**
+   * Production plan-approval response (`agent_plan_approval_response`) —
+   * the exact RPC behind the Build/Skip buttons, callable cross-mode.
+   */
+  const respondPlanApprovalWire = async (
+    sessionId: string,
+    choice: "approve" | "approve_with_edits" | "reject"
+  ): Promise<{ ok: true } | Result<never>> => {
+    try {
+      await respondPlanApproval(sessionId, choice, undefined, {});
+      return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   return {
     promptDump: promptDumpHelper,
     getActiveSessionId,
@@ -515,8 +568,13 @@ export function createSessionHelpers(store: E2EStore) {
     seedSubagentJob: seeders.seedSubagentJob,
     debugSeedSubagentJobWire: seeders.debugSeedSubagentJobWire,
     killSubagentJobWire: seeders.killSubagentJobWire,
+    listRunningSubagentJobsWire: seeders.listRunningSubagentJobsWire,
     debugSeedChildSessionWire: seeders.debugSeedChildSessionWire,
+    debugSeedPendingPlanWire: seeders.debugSeedPendingPlanWire,
     deleteSessionWire: seeders.deleteSessionWire,
+    patchSessionExecModeWire,
+    getPendingPlanApprovalWire,
+    respondPlanApprovalWire,
     inspectChatState: createInspectChatStateHelper(store),
   };
 }

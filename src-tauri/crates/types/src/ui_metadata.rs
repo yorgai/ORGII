@@ -56,6 +56,19 @@ pub enum AppSubtool {
     OtherTool,
 }
 
+/// Agent Station live display behavior for a tool invocation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolDisplayBehavior {
+    /// Tool-call args are enough to build the primary UI immediately.
+    Instant,
+    /// Args plus live output are the primary UI while the tool runs.
+    Stream,
+    /// Meaningful body content should wait for the final tool result.
+    #[default]
+    WaitForResult,
+}
+
 impl AppSubtool {
     pub fn as_str(&self) -> &'static str {
         match self {

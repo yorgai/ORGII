@@ -144,17 +144,29 @@ export function beginTimelineBoundary(
       );
     });
   }
-  if (reason !== "force-send") {
-    void closeRunningEventsForTimelineBoundary(sessionId, reason).catch(
-      (error) => {
-        console.warn(
-          "[sessionTimelineBoundary] failed to close running events",
-          error
-        );
-      }
-    );
+  // All boundary causes close the interrupted turn's running events. For
+  // force-send this is what clears stale `displayStatus:"running"` rows that
+  // would otherwise keep `anyRunning` true in usePlanningIndicator and
+  // suppress the planning footer after the redispatch. Idempotent with the
+  // provider terminal's own close (rendered-status merge tolerates it).
+  void closeRunningEventsForTimelineBoundary(sessionId, reason).catch(
+    (error) => {
+      console.warn(
+        "[sessionTimelineBoundary] failed to close running events",
+        error
+      );
+    }
+  );
+  if (reason === "force-send") {
+    // Send Now guarantees a redispatch the moment the provider confirms the
+    // cancel — from the user's point of view the turn continues. Writing
+    // `idle` here blanked the planning footer for the whole interrupt window
+    // (the "force-send looks stuck" bug); keep the status mirror `running`
+    // and let the redispatch / terminal own the next transition.
+    return;
   }
   store.set(setSessionRuntimeStatusAtom, {
+    sessionId,
     status: "idle",
     source: "timeline-boundary",
   });

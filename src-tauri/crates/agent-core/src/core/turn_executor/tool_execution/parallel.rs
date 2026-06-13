@@ -8,8 +8,8 @@ use serde_json::Value;
 use tracing::info;
 
 use crate::core::tools::traits::ToolExecuteResult;
-use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::providers::traits::ToolCallRequest;
+use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registry::ToolRegistry;
 
@@ -214,8 +214,9 @@ pub(super) async fn execute_parallel_group(
                 let args = effective_args.clone();
                 async move {
                     let start = Instant::now();
-                    let raw_result =
-                        tools.execute_with_policy(tool_name, args, policy, &ctx).await;
+                    let raw_result = tools
+                        .execute_with_policy(tool_name, args, policy, &ctx)
+                        .await;
                     let duration_ms = start.elapsed().as_millis() as u64;
                     (*idx, raw_result, duration_ms)
                 }

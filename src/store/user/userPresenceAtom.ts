@@ -16,7 +16,10 @@ import { atomWithStorage } from "jotai/utils";
 
 import { settingsAtom } from "@src/store/settings/settingsAtom";
 import {
+  BUILT_IN_PRESENCE_POLICY,
   type BuiltInPresenceMode,
+  PRESENCE_STANCE,
+  type PresenceModeSpec,
   USER_PRESENCE_MODE,
   type UserPresenceMode,
   type UserPresenceState,
@@ -69,47 +72,128 @@ function builtInGuidanceKey(mode: BuiltInPresenceMode): string {
   }
 }
 
+const BUILT_IN_LABELS: Record<BuiltInPresenceMode, string> = {
+  [USER_PRESENCE_MODE.ONLINE]: "Online",
+  [USER_PRESENCE_MODE.INVISIBLE]: "Invisible",
+  [USER_PRESENCE_MODE.AWAY]: "Away",
+};
+
+type PresencePolicyByMode = Partial<Record<string, number>>;
+
+function policyNumber(
+  byPresence: unknown,
+  mode: BuiltInPresenceMode,
+  fallback: number
+): number {
+  if (byPresence && typeof byPresence === "object") {
+    const value = (byPresence as PresencePolicyByMode)[mode];
+    if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+      return value;
+    }
+  }
+  return fallback;
+}
+
 /**
- * Derived: wire snapshot for the agent runtime. Combines the current
- * presence with the per-mode guidance string. For built-in modes that's
- * the textarea in Settings → My Role; for custom-role modes it's the
- * `guidance` field on the role definition itself. Returns `undefined`
- * only when the resolution produces no meaningful content (e.g. a stale
- * `role:<id>` mode whose role was deleted) — the consumer then skips the
- * `user_presence` system-prompt section entirely.
+ * Derived: the fully-resolved spec for any mode id. Built-in modes draw
+ * guidance from Settings → My Role textareas and policy numbers from the
+ * three by-presence settings objects; custom-role modes draw everything
+ * from the role definition (with conservative interactive/0/0/0 defaults
+ * for roles created before the spec redesign).
+ *
+ * Returns `undefined` only for a stale `role:<id>` whose role was
+ * deleted — callers then treat the presence as unset.
+ */
+export const presenceModeSpecResolverAtom = atom(
+  (get) =>
+    (mode: UserPresenceMode): PresenceModeSpec | undefined => {
+      if (isBuiltInPresenceMode(mode)) {
+        const settings = get(settingsAtom);
+        const raw = settings[builtInGuidanceKey(mode) as keyof typeof settings];
+        const guidance = typeof raw === "string" ? raw.trim() : "";
+        const policy = BUILT_IN_PRESENCE_POLICY[mode];
+        const questionByPresence =
+          settings["agent.sde.questionAutoSkipTimeoutByPresence"];
+        const planByPresence =
+          settings["agent.sde.planAutoApproveTimeoutByPresence"];
+        const goalByPresence = settings["agent.sde.goalMaxTurnsByPresence"];
+        return {
+          id: mode,
+          label: BUILT_IN_LABELS[mode],
+          guidance,
+          stance: policy.stance,
+          questionAutoResolveSecs: policyNumber(
+            questionByPresence,
+            mode,
+            policy.questionAutoResolveSecs
+          ),
+          planAutoApproveSecs: policyNumber(
+            planByPresence,
+            mode,
+            policy.planAutoApproveSecs
+          ),
+          goalMaxTurns: policyNumber(goalByPresence, mode, policy.goalMaxTurns),
+          builtIn: true,
+        };
+      }
+
+      const roleId = parseCustomRoleId(mode);
+      if (!roleId) return undefined;
+      const role = get(customRoleByIdAtom).get(roleId);
+      if (!role) return undefined;
+      return {
+        id: mode,
+        label: role.label,
+        iconId: role.iconId,
+        guidance: role.guidance.trim(),
+        stance: role.stance ?? PRESENCE_STANCE.INTERACTIVE,
+        questionAutoResolveSecs: role.questionAutoResolveSecs ?? 0,
+        planAutoApproveSecs: role.planAutoApproveSecs ?? 0,
+        goalMaxTurns: role.goalMaxTurns ?? 0,
+        builtIn: false,
+      };
+    }
+);
+
+/** Derived: the resolved spec for the currently active mode. */
+export const activePresenceModeSpecAtom = atom(
+  (get): PresenceModeSpec | undefined => {
+    const presence = get(userPresenceAtom);
+    return get(presenceModeSpecResolverAtom)(presence.mode);
+  }
+);
+
+/**
+ * Derived: wire snapshot for the agent runtime. Ships the fully-resolved
+ * mode spec (label + guidance + stance + policy numbers) so the Rust
+ * side never needs to know about settings or custom-role storage —
+ * any custom mode gets full runtime behavior with zero backend changes.
+ *
+ * Returns `undefined` only when the active mode resolves to nothing
+ * (stale `role:<id>` whose role was deleted) — the consumer then skips
+ * the `user_presence` system-prompt section entirely.
  */
 export const userPresenceWireAtom = atom<UserPresenceWire | undefined>(
   (get) => {
     const presence = get(userPresenceAtom);
+    const spec = get(presenceModeSpecResolverAtom)(presence.mode);
+    if (!spec) return undefined;
 
-    let guidance: string | undefined;
-    if (isBuiltInPresenceMode(presence.mode)) {
-      const settings = get(settingsAtom);
-      const raw =
-        settings[builtInGuidanceKey(presence.mode) as keyof typeof settings];
-      guidance =
-        typeof raw === "string" && raw.trim().length > 0
-          ? raw.trim()
-          : undefined;
-    } else {
-      const roleId = parseCustomRoleId(presence.mode);
-      if (roleId) {
-        const role = get(customRoleByIdAtom).get(roleId);
-        guidance =
-          role && role.guidance.trim().length > 0
-            ? role.guidance.trim()
-            : undefined;
-      }
-    }
-
-    const wire: UserPresenceWire = { mode: presence.mode };
+    const wire: UserPresenceWire = {
+      mode: presence.mode,
+      label: spec.label,
+      stance: spec.stance,
+      questionAutoResolveSecs: spec.questionAutoResolveSecs,
+      planAutoApproveSecs: spec.planAutoApproveSecs,
+      goalMaxTurns: spec.goalMaxTurns,
+    };
 
     if (presence.mode === USER_PRESENCE_MODE.AWAY && presence.backAtMs) {
       wire.backAt = new Date(presence.backAtMs).toISOString();
     }
 
-    if (guidance) {
-      wire.guidance = guidance;
+    if (spec.guidance) {
+      wire.guidance = spec.guidance;
     }
 
     return wire;

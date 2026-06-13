@@ -137,8 +137,8 @@
       "joinSharedSession": "加入共享会话…"
     },
     "search": {
-      "folders": "搜索文件夹...",
-      "sessions": "搜索 Session...",
+      "folders": "搜索工作区...",
+      "sessions": "搜索会话...",
       "projects": "搜索项目..."
     },
     "folderCounts": {
@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "设置",
-      "clockLabel": "当前时间"
+      "clockLabel": "当前时间",
+      "updateAvailable": "下载更新 v{{version}}"
     },
     "settingsMenu": {
       "appearance": "外观",
@@ -415,9 +416,9 @@
       "startSession": "开始会话",
       "openDetails": "打开详情",
       "locateInFinder": "在 Finder 中显示",
-      "remove": "移除",
-      "removeSuccess": "工作区已移除",
-      "removeFailed": "移除工作区失败"
+      "remove": "Remove from ORGII",
+      "removeSuccess": "Linkage to ORGII removed",
+      "removeFailed": "Failed to remove linkage to ORGII"
     },
     "addWorkspace": "添加工作区"
   },

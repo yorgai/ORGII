@@ -32,9 +32,9 @@
 //! a bug.
 
 use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
 #[cfg(not(test))]
 use std::sync::OnceLock;
+use std::sync::{Arc, Mutex};
 use tracing::{error, info, warn};
 
 use super::schema::AgentDefinition;
@@ -469,52 +469,54 @@ fn load_overrides_from_disk(path: &std::path::Path) -> BTreeMap<String, AgentDef
         return BTreeMap::new();
     }
     match std::fs::read_to_string(path) {
-        Ok(content) => match serde_json::from_str::<BTreeMap<String, serde_json::Value>>(&content) {
-            Ok(mut raw) => {
-                let migrated = raw
-                    .values_mut()
-                    .fold(false, |acc, v| migrate_legacy_workspace_settings(v) || acc);
-                let overrides: BTreeMap<String, AgentDefinition> = raw
-                    .into_iter()
-                    .filter_map(|(id, delta)| {
-                        match compose_builtin_with_delta(&id, &delta) {
-                            Some(agent) => Some((id, agent)),
-                            None => {
-                                warn!(
-                                    "[builtin-overrides] Skipping overlay '{}' in {} \
+        Ok(content) => {
+            match serde_json::from_str::<BTreeMap<String, serde_json::Value>>(&content) {
+                Ok(mut raw) => {
+                    let migrated = raw
+                        .values_mut()
+                        .fold(false, |acc, v| migrate_legacy_workspace_settings(v) || acc);
+                    let overrides: BTreeMap<String, AgentDefinition> = raw
+                        .into_iter()
+                        .filter_map(
+                            |(id, delta)| match compose_builtin_with_delta(&id, &delta) {
+                                Some(agent) => Some((id, agent)),
+                                None => {
+                                    warn!(
+                                        "[builtin-overrides] Skipping overlay '{}' in {} \
                                      (unknown builtin or unparsable delta)",
-                                    id,
-                                    path.display()
-                                );
-                                None
-                            }
-                        }
-                    })
-                    .collect();
-                if migrated {
-                    if let Err(err) = save_overrides_to_disk(path, &overrides) {
-                        error!(
-                            "[builtin-overrides] migration: failed to persist \
+                                        id,
+                                        path.display()
+                                    );
+                                    None
+                                }
+                            },
+                        )
+                        .collect();
+                    if migrated {
+                        if let Err(err) = save_overrides_to_disk(path, &overrides) {
+                            error!(
+                                "[builtin-overrides] migration: failed to persist \
                              loadWorkspaceSettings removal: {err}"
-                        );
+                            );
+                        }
                     }
+                    info!(
+                        "[builtin-overrides] Loaded {} overrides from {}",
+                        overrides.len(),
+                        path.display()
+                    );
+                    overrides
                 }
-                info!(
-                    "[builtin-overrides] Loaded {} overrides from {}",
-                    overrides.len(),
-                    path.display()
-                );
-                overrides
+                Err(err) => {
+                    warn!(
+                        "[builtin-overrides] Failed to parse {}: {} — ignoring overlay",
+                        path.display(),
+                        err
+                    );
+                    BTreeMap::new()
+                }
             }
-            Err(err) => {
-                warn!(
-                    "[builtin-overrides] Failed to parse {}: {} — ignoring overlay",
-                    path.display(),
-                    err
-                );
-                BTreeMap::new()
-            }
-        },
+        }
         Err(err) => {
             warn!(
                 "[builtin-overrides] Failed to read {}: {} — ignoring overlay",
@@ -533,10 +535,7 @@ fn load_overrides_from_disk(path: &std::path::Path) -> BTreeMap<String, AgentDef
 /// newer release). Legacy full-snapshot entries compose identically —
 /// every field overwrites the compiled value — and are reduced to true
 /// deltas on the next write.
-fn compose_builtin_with_delta(
-    id: &str,
-    delta: &serde_json::Value,
-) -> Option<AgentDefinition> {
+fn compose_builtin_with_delta(id: &str, delta: &serde_json::Value) -> Option<AgentDefinition> {
     let builtin = super::builtin::get_builtin_agent(id)?;
     let mut base = serde_json::to_value(&builtin).ok()?;
     let (Some(base_obj), Some(delta_obj)) = (base.as_object_mut(), delta.as_object()) else {
@@ -633,8 +632,7 @@ mod overlay_tests {
 
     #[test]
     fn delta_round_trip_keeps_only_changed_fields() {
-        let mut effective =
-            crate::definitions::builtin::get_builtin_agent("builtin:sde").unwrap();
+        let mut effective = crate::definitions::builtin::get_builtin_agent("builtin:sde").unwrap();
         effective.name = "Custom SDE".to_string();
         effective.temperature = Some(0.3);
 
@@ -654,8 +652,7 @@ mod overlay_tests {
 
     #[test]
     fn delta_records_cleared_field_as_null() {
-        let mut effective =
-            crate::definitions::builtin::get_builtin_agent("builtin:sde").unwrap();
+        let mut effective = crate::definitions::builtin::get_builtin_agent("builtin:sde").unwrap();
         // SDE ships a soul; the user clears it.
         assert!(effective.soul_content.is_some());
         effective.soul_content = None;

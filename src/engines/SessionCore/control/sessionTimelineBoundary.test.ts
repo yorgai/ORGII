@@ -88,14 +88,58 @@ describe("sessionTimelineBoundary", () => {
     expect(isTimelineInterruptInFlight("session-1", "stop")).toBe(false);
   });
 
-  it("does not close running events for force-send boundaries", async () => {
+  it("closes running events for force-send boundaries", async () => {
     interruptSpy.mockResolvedValue(undefined);
+    getEventsSpy.mockResolvedValue([
+      {
+        id: "tool-call-1",
+        sessionId: "session-1",
+        displayStatus: "running",
+        actionType: "tool_call",
+        functionName: "run_shell",
+        args: {},
+      },
+    ]);
 
     await cancelTurnForTimelineBoundary("session-1", "force-send");
     await Promise.resolve();
 
-    expect(getEventsSpy).not.toHaveBeenCalled();
-    expect(patchByIdsSpy).not.toHaveBeenCalled();
+    expect(patchByIdsSpy).toHaveBeenCalledWith(
+      ["tool-call-1"],
+      { displayStatus: "failed", activityStatus: "processed" },
+      "session-1"
+    );
+  });
+
+  it("does not write idle status for force-send boundaries", async () => {
+    interruptSpy.mockResolvedValue(undefined);
+
+    await cancelTurnForTimelineBoundary("session-1", "force-send");
+
+    const idleWrites = storeSetSpy.mock.calls.filter(
+      ([, payload]) =>
+        payload !== null &&
+        typeof payload === "object" &&
+        (payload as { status?: string }).status === "idle"
+    );
+    expect(idleWrites).toHaveLength(0);
+  });
+
+  it("writes idle status for Stop boundaries", () => {
+    beginStopBoundary("session-1");
+
+    const idleWrites = storeSetSpy.mock.calls.filter(
+      ([, payload]) =>
+        payload !== null &&
+        typeof payload === "object" &&
+        (payload as { status?: string }).status === "idle"
+    );
+    expect(idleWrites).toHaveLength(1);
+    expect(idleWrites[0][1]).toMatchObject({
+      sessionId: "session-1",
+      status: "idle",
+      source: "timeline-boundary",
+    });
   });
 
   it("kills active shell processes for Stop boundaries", async () => {

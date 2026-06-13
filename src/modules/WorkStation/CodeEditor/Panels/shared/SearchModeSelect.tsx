@@ -20,7 +20,7 @@ import Select from "@src/components/Select";
 // Types
 // ============================================
 
-export type SearchMode = "regex" | "semantic" | "hybrid" | "tantivy";
+export type SearchMode = "regex" | "semantic" | "hybrid";
 
 export interface SearchModeSelectProps {
   /** Current search mode */
@@ -68,12 +68,6 @@ export const SEARCH_MODE_OPTIONS = [
     value: "hybrid" as const,
     label: "Hybrid",
     triggerLabel: "Hybrid Search",
-    advancedOnly: true,
-  },
-  {
-    value: "tantivy" as const,
-    label: "Tantivy",
-    triggerLabel: "Tantivy Search",
     advancedOnly: true,
   },
 ];

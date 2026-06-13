@@ -33,6 +33,24 @@ use serde_json::Value;
 use super::client::OpenAICompatClient;
 use crate::providers::traits::{LLMProvider, LLMResponse, ProviderError, StreamDelta};
 
+/// Translate Anthropic-style forced tool_choice
+/// `{"type":"tool","name":"emit_summary"}` → OpenAI-style
+/// `{"type":"function","function":{"name":"emit_summary"}}`.
+///
+/// Passes through values that are already OpenAI-format or plain strings
+/// (e.g. `"auto"`, `"none"`).
+pub(super) fn translate_tool_choice_for_openai(anthropic: &Value) -> Value {
+    if let Some(name) = anthropic.get("name").and_then(|n| n.as_str()) {
+        if anthropic.get("type").and_then(|t| t.as_str()) == Some("tool") {
+            return serde_json::json!({
+                "type": "function",
+                "function": { "name": name }
+            });
+        }
+    }
+    anthropic.clone()
+}
+
 #[async_trait]
 impl LLMProvider for OpenAICompatClient {
     async fn chat(

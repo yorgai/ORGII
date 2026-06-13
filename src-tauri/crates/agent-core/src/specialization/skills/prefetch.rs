@@ -135,6 +135,7 @@ pub async fn select_skills(
         max_tokens: SELECTION_MAX_TOKENS,
         temperature: 0.0,
         system_prompt: None,
+        ..Default::default()
     };
 
     let user_msg = serde_json::json!({

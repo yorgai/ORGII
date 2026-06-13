@@ -38,8 +38,8 @@ use std::sync::Arc;
 use serde_json::Value;
 
 use crate::core::providers::openai_compat::STREAM_PARSE_ERROR_KEY;
-use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::providers::traits::ToolCallRequest;
+use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registry::ToolRegistry;
 
@@ -290,7 +290,11 @@ mod tests {
         fn is_read_only(&self) -> bool {
             true
         }
-        async fn execute_text(&self, _params: Value, _ctx: &crate::tools::traits::CallContext) -> Result<String, ToolError> {
+        async fn execute_text(
+            &self,
+            _params: Value,
+            _ctx: &crate::tools::traits::CallContext,
+        ) -> Result<String, ToolError> {
             Ok("ok".into())
         }
     }
@@ -307,7 +311,11 @@ mod tests {
         fn parameters(&self) -> Value {
             serde_json::json!({"type":"object","properties":{}})
         }
-        async fn execute_text(&self, _params: Value, _ctx: &crate::tools::traits::CallContext) -> Result<String, ToolError> {
+        async fn execute_text(
+            &self,
+            _params: Value,
+            _ctx: &crate::tools::traits::CallContext,
+        ) -> Result<String, ToolError> {
             Ok("ok".into())
         }
     }
@@ -327,7 +335,11 @@ mod tests {
         fn is_read_only(&self) -> bool {
             true
         }
-        async fn execute_text(&self, _params: Value, _ctx: &crate::tools::traits::CallContext) -> Result<String, ToolError> {
+        async fn execute_text(
+            &self,
+            _params: Value,
+            _ctx: &crate::tools::traits::CallContext,
+        ) -> Result<String, ToolError> {
             Ok("ok".into())
         }
     }

@@ -9,7 +9,7 @@
  * When the user clicks a card, it sends the step's `command` as the next
  * user message via SessionService. Cards become disabled after selection.
  */
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue } from "jotai";
 import { ArrowUp, Check } from "lucide-react";
 import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 
@@ -21,6 +21,7 @@ import {
   EventBlockHeaderTitle,
 } from "@src/engines/ChatPanel/blocks/primitives";
 import { useMessageDispatch } from "@src/engines/ChatPanel/hooks/useWorkspaceChat/useMessageDispatch";
+import { beginOptimisticTurn } from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import { eventsAtom } from "@src/engines/SessionCore/core/atoms";
 import {
   type RawEventInput,
@@ -28,10 +29,7 @@ import {
 } from "@src/engines/SessionCore/rendering/props";
 import { useLifecycleLabels } from "@src/engines/SessionCore/rendering/registry";
 import { mintTurnIntentId } from "@src/engines/SessionCore/sync/adapters/shared/eventFactories";
-import {
-  isSessionActiveAtom,
-  setSessionRuntimeStatusAtom,
-} from "@src/store/session/cliSessionStatusAtom";
+import { isSessionActiveAtom } from "@src/store/session/cliSessionStatusAtom";
 import { activeSessionIdAtom } from "@src/store/session/viewAtom";
 
 // ============================================
@@ -158,7 +156,6 @@ const ChatVariant: React.FC<{
   const sessionId = useAtomValue(activeSessionIdAtom);
   const isSessionActive = useAtomValue(isSessionActiveAtom);
   const events = useAtomValue(eventsAtom);
-  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
 
   const { addUserMessage, dispatchMessageBySessionType } = useMessageDispatch({
     getSessionId: () => sessionId,
@@ -215,16 +212,7 @@ const ChatVariant: React.FC<{
       pendingRef.current = true;
       setSelectedIdx(idx);
 
-      // Mark running BEFORE appending the user message event, mirroring the
-      // order in useWorkspaceChat.handleSessChatSubmit. usePlanningIndicator's
-      // cold-start path captures `activationVersion` on the render where
-      // isSessionActive first flips true. If addUserMessage runs first the
-      // EventStore version bumps before activationVersion is recorded, so
-      // coldStartVisible stays false and the indicator is delayed by 1 second.
-      setSessionRuntimeStatus({
-        status: "running",
-        source: "interactive-event",
-      });
+      beginOptimisticTurn(sessionId, "interactive-event");
 
       void (async () => {
         try {
@@ -257,7 +245,6 @@ const ChatVariant: React.FC<{
       sessionId,
       addUserMessage,
       dispatchMessageBySessionType,
-      setSessionRuntimeStatus,
     ]
   );
 

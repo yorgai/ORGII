@@ -31,6 +31,10 @@ import InlineAlert from "@src/components/InlineAlert";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { useAgentTurnContext } from "@src/engines/ChatPanel/ChatHistory/AgentTurnContext";
 import { useChatSessionId } from "@src/engines/ChatPanel/ChatSessionContext";
+import {
+  beginOptimisticTurn,
+  failOptimisticTurn,
+} from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import {
   creatorDefaultExecModeAtom,
@@ -110,6 +114,9 @@ const AgentErrorChatItem: React.FC<AgentErrorChatItemProps> = memo(
       const { model, accountId } = resolveModelForMessage(lastModelSelection);
 
       setIsResuming(true);
+      // Resume bypasses useMessageDispatch — set the optimistic running so
+      // the planning indicator covers the gap (the "Resume looks dead" #10).
+      beginOptimisticTurn(sessionId);
       try {
         await SessionService.sendMessage({
           sessionId,
@@ -121,6 +128,7 @@ const AgentErrorChatItem: React.FC<AgentErrorChatItemProps> = memo(
         });
       } catch (err) {
         console.error("[AgentErrorChatItem] Resume failed:", err);
+        failOptimisticTurn(sessionId);
       } finally {
         setIsResuming(false);
       }

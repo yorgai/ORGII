@@ -7,11 +7,16 @@ import {
   useRef,
 } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
 } from "@src/hooks/perf/useDebouncedCallback";
-import { getUiScale } from "@src/util/platform/tauri/nativeFrame";
+import { toNativeFrame } from "@src/util/platform/tauri/nativeFrame";
+
+import { WEBVIEW_LAYOUT_CHANGED_EVENT } from "./webviewLayoutEvents";
+
+const logger = createLogger("InlineWebviewLayout");
 
 export interface UseWebviewLayoutParams {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -37,8 +42,8 @@ export function useWebviewLayout(
   const lastResizeRect = useRef<{
     width: number;
     height: number;
-    left: number;
-    top: number;
+    x: number;
+    y: number;
   } | null>(null);
 
   const getContainerRect = useCallback(() => {
@@ -53,16 +58,19 @@ export function useWebviewLayout(
       const rect = getContainerRect();
       if (!rect) return;
 
-      const scaleValue = getUiScale();
-      // WebKit reports child-anchor rects in CSS-zoomed coordinates, but Wry
-      // positions native child webviews in the window's unzoomed coordinate
-      // space. Re-expand the frame before crossing the Tauri boundary.
-      const nativeFrame = {
-        width: rect.width * scaleValue,
-        height: rect.height * scaleValue,
-        left: rect.left * scaleValue,
-        top: rect.top * scaleValue,
-      };
+      const nativeFrame = toNativeFrame(rect);
+      logger.rateLimited("native-frame", 1000, "measured frame", {
+        label: labelRef.current,
+        rect: {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        },
+        nativeFrame,
+      });
 
       const lastRect = lastResizeRect.current;
       if (
@@ -70,8 +78,8 @@ export function useWebviewLayout(
         lastRect &&
         Math.abs(lastRect.width - nativeFrame.width) < 2 &&
         Math.abs(lastRect.height - nativeFrame.height) < 2 &&
-        Math.abs(lastRect.left - nativeFrame.left) < 2 &&
-        Math.abs(lastRect.top - nativeFrame.top) < 2
+        Math.abs(lastRect.x - nativeFrame.x) < 2 &&
+        Math.abs(lastRect.y - nativeFrame.y) < 2
       ) {
         return;
       }
@@ -80,12 +88,9 @@ export function useWebviewLayout(
       try {
         await invoke("update_inline_webview_position", {
           label: labelRef.current,
-          x: Math.round(nativeFrame.left),
-          y: Math.round(nativeFrame.top),
-          width: Math.round(nativeFrame.width),
-          height: Math.round(nativeFrame.height),
+          ...nativeFrame,
         });
-        log("Position updated:", { rect, nativeFrame, scaleValue });
+        log("Position updated:", { rect, nativeFrame });
       } catch (err) {
         log("Failed to update position:", err);
       }
@@ -129,13 +134,17 @@ export function useWebviewLayout(
       scaleUpdateTimers.add(timer);
     };
 
-    const handleUiScaleApplied = () => {
+    const handleForcedLayoutChange = () => {
       void updatePosition({ force: true });
       [16, 50, 120, 240].forEach(scheduleForcedPositionUpdate);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("orgii-ui-scale-applied", handleUiScaleApplied);
+    window.addEventListener("orgii-ui-scale-applied", handleForcedLayoutChange);
+    window.addEventListener(
+      WEBVIEW_LAYOUT_CHANGED_EVENT,
+      handleForcedLayoutChange
+    );
 
     const scrollableParents: Element[] = [];
     let parent: Element | null = containerRef.current?.parentElement || null;
@@ -159,7 +168,11 @@ export function useWebviewLayout(
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener(
         "orgii-ui-scale-applied",
-        handleUiScaleApplied
+        handleForcedLayoutChange
+      );
+      window.removeEventListener(
+        WEBVIEW_LAYOUT_CHANGED_EVENT,
+        handleForcedLayoutChange
       );
       scrollableParents.forEach((el) => {
         el.removeEventListener("scroll", handleScroll);

@@ -172,6 +172,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
       commitPushPendingRef.current = true;
       const prompt = "Commit all current changes and push to the remote.";
       setSessionRuntimeStatus({
+        sessionId,
         status: "running",
         source: "interactive-event",
       });

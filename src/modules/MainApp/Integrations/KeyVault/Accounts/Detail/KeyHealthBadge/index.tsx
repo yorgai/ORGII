@@ -29,7 +29,17 @@ export interface KeyHealthBadgeProps {
   availableModelCount?: number;
   /** Number of enabled models (for degraded) */
   enabledModelCount?: number;
+  temporaryUnavailableUntil?: string;
+  temporaryUnavailableReason?: string;
+  lastUpstreamStatus?: number;
 }
+
+const formatCooldownUntil = (value?: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime()) || date <= new Date()) return null;
+  return date.toLocaleString();
+};
 
 const KeyHealthBadge: React.FC<KeyHealthBadgeProps> = ({
   healthStatus = "valid",
@@ -38,12 +48,16 @@ const KeyHealthBadge: React.FC<KeyHealthBadgeProps> = ({
   context = "local",
   availableModelCount,
   enabledModelCount,
+  temporaryUnavailableUntil,
+  temporaryUnavailableReason,
+  lastUpstreamStatus,
 }) => {
   const { t } = useTranslation("integrations");
   const isListing = context === "listing";
   const isCloudWarning = context === "cloud_warning";
   const isInvalid = healthStatus === "invalid";
   const isDegraded = healthStatus === "degraded";
+  const cooldownUntil = formatCooldownUntil(temporaryUnavailableUntil);
 
   // Cloud warning - local works but cloud has issues (shown in All/Local tabs)
   if (isCloudWarning) {
@@ -127,6 +141,15 @@ const KeyHealthBadge: React.FC<KeyHealthBadgeProps> = ({
         <div className="min-w-0">
           <div className="text-sm font-medium">{title}</div>
           <p className="mt-1 text-sm">{message}</p>
+          {cooldownUntil && (
+            <p className="mt-1 text-xs">
+              Temporarily unavailable until {cooldownUntil}
+              {temporaryUnavailableReason
+                ? ` (${temporaryUnavailableReason})`
+                : ""}
+              {lastUpstreamStatus ? ` · HTTP ${lastUpstreamStatus}` : ""}
+            </p>
+          )}
           {failureCount > 0 && (
             <p className="mt-1 text-xs">
               {t("keyVault.health.failuresDetected", {

@@ -125,20 +125,43 @@ fn extract_file_path(args: &Value) -> Option<String> {
 /// clobber `status`/`answers`/`choice` and the history card would render
 /// "Questions skipped" / a wrong choice. Wrapping plain strings in
 /// `{content, observation}` keeps the merge on the structured-merge path.
+///
+/// When the tool provided structured `ui_metadata` (dual-track response
+/// pattern), it is embedded into the result object under `uiMetadata` so
+/// extractors can consume exact structured data instead of re-parsing the
+/// LLM-facing text.
 pub(super) fn build_tool_result_event(
     session_id: &str,
     tool_call_id: &str,
     tool_name: &str,
     display_name: &str,
     result: &str,
+    ui_metadata: Option<&crate::tools::traits::ToolUIMetadata>,
 ) -> SessionEvent {
-    let result_value = match serde_json::from_str::<Value>(result) {
+    let mut result_value = match serde_json::from_str::<Value>(result) {
         Ok(Value::Object(object)) => Value::Object(object),
         _ => serde_json::json!({
             "content": result,
             "observation": result,
         }),
     };
+
+    if let Some(meta) = ui_metadata {
+        if let Ok(meta_value) = serde_json::to_value(meta) {
+            match &mut result_value {
+                Value::Object(object) => {
+                    object.insert("uiMetadata".to_string(), meta_value);
+                }
+                Value::String(text) => {
+                    result_value = serde_json::json!({
+                        "content": text,
+                        "uiMetadata": meta_value,
+                    });
+                }
+                _ => {}
+            }
+        }
+    }
 
     SessionEvent {
         id: format!("tool-result-{}", tool_call_id),

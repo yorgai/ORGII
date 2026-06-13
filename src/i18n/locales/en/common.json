@@ -365,6 +365,7 @@
     "fileCount_other": "{{count}} files",
     "queuedCount_one": "{{count}} queued",
     "queuedCount_other": "{{count}} queued",
+    "sendingNow": "sending now…",
     "processCount_one": "{{count}} running",
     "processCount_other": "{{count}} running",
     "filters": "Filters",
@@ -395,10 +396,8 @@
     "foundByKeyword": "Found by keyword search",
     "semanticSecondary": "meaning match",
     "hybridSecondary": "semantic + full-text",
-    "tantivySecondary": "indexed full-text",
     "semanticDescription": "Embedding-based meaning search",
-    "hybridDescription": "Combined semantic and full-text search",
-    "tantivyDescription": "Indexed full-text search"
+    "hybridDescription": "Combined semantic and full-text search"
   },
   "tabs": {
     "terminal": "Terminal",
@@ -495,12 +494,12 @@
     "delete": "Are you sure you want to delete this?",
     "unsavedChanges": "You have unsaved changes. Are you sure you want to leave?",
     "discard": "Discard changes?",
-    "removeTitle": "Remove \"{{name}}\" from ORGII workspace?",
-    "removeMessage": "This won't delete the code folder from your device — it only removes it from the ORGII workspace. You can re-add it anytime.",
+    "removeTitle": "Remove \"{{name}}\" from ORGII?",
+    "removeMessage": "This only removes its linkage to ORGII. Nothing will be removed from disk.",
     "deleteWorkspaceTitle": "Delete workspace \"{{name}}\"?",
     "deleteWorkspaceMessage": "This deletes the workspace preset only. Member repos and folders are not affected.",
-    "deleteSelectedTitle": "Delete {{count}} selected items?",
-    "deleteSelectedMessage": "This removes the selected workspaces and unlinks the selected repos. Repo files on disk are not deleted.",
+    "deleteSelectedTitle": "Remove {{count}} selected items from ORGII?",
+    "deleteSelectedMessage": "This only removes their linkage to ORGII. Nothing will be removed from disk.",
     "disconnectTitle": "Disconnect \"{{name}}\"?",
     "disconnectMessage": "This will remove access to all repos from this account.",
     "dropStashTitle": "Drop stash?",
@@ -1211,7 +1210,7 @@
     "repo": {
       "workspaceFolders": "Workspace Folders",
       "addRepo": "Add workspace",
-      "addEntry": "More Workspace Options",
+      "addEntry": "More import options",
       "addRepoDescription": "Open, create, or clone a workspace",
       "sections": {
         "coding": "Workspace",
@@ -1220,6 +1219,7 @@
         "current": "Current",
         "repo": "Repositories",
         "systemPaths": "System Paths",
+        "usedElsewhere": "Used elsewhere",
         "workspace": "Workspace"
       },
       "tabs": {
@@ -1539,12 +1539,12 @@
         }
       },
       "toast": {
-        "repoRemoved": "Repo removed successfully",
-        "repoRemoveFailed": "Failed to remove repo",
-        "workspaceRemoved": "Workspace deleted",
-        "workspaceRemoveFailed": "Failed to delete workspace",
-        "bulkDeleted": "{{count}} items deleted",
-        "bulkDeleteFailed": "{{count}} items failed to delete"
+        "repoRemoved": "Linkage to ORGII removed",
+        "repoRemoveFailed": "Failed to remove linkage to ORGII",
+        "workspaceRemoved": "Linkage to ORGII removed",
+        "workspaceRemoveFailed": "Failed to remove linkage to ORGII",
+        "bulkDeleted": "{{count}} linkages to ORGII removed",
+        "bulkDeleteFailed": "{{count}} linkages failed to remove"
       }
     }
   },
@@ -1555,7 +1555,7 @@
     "locateInFinder": "Locate in Finder",
     "copyLocalPath": "Copy local path",
     "copyEventsJson": "Copy Events JSON",
-    "removeRepo": "Remove repo",
+    "removeRepo": "Remove from ORGII",
     "addRepo": "Add repo...",
     "simulatorView": "Simulator View",
     "addWorkspace": "Add workspace..."
@@ -2158,11 +2158,6 @@
     "selectWorkspaceToStart": "Select a workspace to start",
     "selectRepoToStart": "Select a repo to start"
   },
-  "quitConfirmation": {
-    "title": "Quit ORGII?",
-    "message": "Active sessions and background tasks will stop.",
-    "okLabel": "Quit"
-  },
   "projects": {
     "title": "Heatmap",
     "workspace": "Workspace",
@@ -2182,5 +2177,9 @@
     "closePreview": "Close preview",
     "copiedToClipboard": "Image copied to clipboard",
     "previewAlt": "Preview"
+  },
+  "holdToQuit": {
+    "title": "Hold {{shortcut}} for 1 second to quit",
+    "subtitle": "Release to cancel"
   }
 }

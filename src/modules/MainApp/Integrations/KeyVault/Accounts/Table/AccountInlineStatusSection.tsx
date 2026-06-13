@@ -306,6 +306,9 @@ export const AccountInlineStatusSection: React.FC<
           healthStatus={effectiveHealthStatus}
           failureCount={account.failureCount}
           lastFailureMessage={account.lastFailureMessage}
+          temporaryUnavailableUntil={account.temporaryUnavailableUntil}
+          temporaryUnavailableReason={account.temporaryUnavailableReason}
+          lastUpstreamStatus={account.lastUpstreamStatus}
           availableModelCount={account.availableModels?.length}
           enabledModelCount={account.enabledModels?.length}
         />

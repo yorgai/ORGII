@@ -1,7 +1,7 @@
 //! JVM language server definitions: Java, Kotlin, Scala.
 
 use crate::install_pipeline::InstallMethod;
-use crate::root_detection::{JAVA_PATTERN, RootPattern};
+use crate::root_detection::{RootPattern, JAVA_PATTERN};
 use crate::server_defs::ServerDef;
 
 pub struct JavaServer;

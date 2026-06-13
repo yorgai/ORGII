@@ -1,8 +1,8 @@
 # Build, sign, notarize, and release ORGII for macOS (Apple Silicon) and Windows (x64).
 #
 # Trigger: push a tag matching v* (e.g. v1.0.1, v1.0.2, v1.0.1.1, v1.0.1.2)
-# Use four-part numeric versioning for builds (1.0.1.1, 1.0.1.2 ...) — compatible
-# with macOS, Windows MSI/WiX, and Tauri's updater without any format conversion.
+# Tauri app/updater versions must be SemVer. Four-part release tags are folded to
+# three-part SemVer before writing tauri.conf.json and latest.json.
 #
 # Sidecar binaries (peekaboo, agent-browser, dugite/git) are NOT bundled in the
 # .app. They are downloaded at first launch into ~/.orgii/bin/ by the app itself
@@ -189,8 +189,13 @@ jobs:
           TAR_NAME="${{ steps.artifacts.outputs.updater_tar_name }}"
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${TAR_NAME}"
 
+          if ! [[ "$SEMVER" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid updater SemVer: $SEMVER" >&2
+            exit 1
+          fi
+
           jq -n \
-            --arg version "${TAG#v}" \
+            --arg version "$SEMVER" \
             --arg notes "Release ${TAG}" \
             --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg signature "$SIGNATURE" \

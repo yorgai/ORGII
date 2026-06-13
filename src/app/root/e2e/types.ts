@@ -519,7 +519,7 @@ export interface E2EHelpers {
         | "waiting_for_user"
         | "waiting_for_funds";
       stationMode?: "my-station" | "agent-station";
-      selectedApp?: "CODE_EDITOR";
+      selectedApp?: "CODE_EDITOR" | "CHANNELS";
     }
   ) => Promise<Result<{ eventCount: number; chatEventCount: number }>>;
   seedSessionContextUsage: (
@@ -564,6 +564,7 @@ export interface E2EHelpers {
     subagentType?: string;
   }) => Promise<Result<{ sessionId: string; handle: string }>>;
   killSubagentJobWire: (handle: string) => Promise<{ ok: true } | Err>;
+  listRunningSubagentJobsWire: () => Promise<Result<{ jobs: Json[] }>>;
   debugSeedChildSessionWire: (input: {
     parentSessionId: string;
     sessionId: string;
@@ -572,7 +573,24 @@ export interface E2EHelpers {
     createdAt: string;
     updatedAt: string;
   }) => Promise<Result<{ sessionId: string }>>;
+  debugSeedPendingPlanWire: (input: {
+    sessionId: string;
+    planPath: string;
+    planTitle: string;
+    planContent: string;
+  }) => Promise<Result<{ sessionId: string }>>;
   deleteSessionWire: (sessionId: string) => Promise<{ ok: true } | Err>;
+  patchSessionExecModeWire: (
+    sessionId: string,
+    agentExecMode: string
+  ) => Promise<{ ok: true } | Err>;
+  getPendingPlanApprovalWire: (
+    sessionId: string
+  ) => Promise<Result<{ snapshot: Json | null }>>;
+  respondPlanApprovalWire: (
+    sessionId: string,
+    choice: "approve" | "approve_with_edits" | "reject"
+  ) => Promise<{ ok: true } | Err>;
   inspectChatState: () => Promise<
     Result<{
       activeSessionId: string | null;

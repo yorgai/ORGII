@@ -16,7 +16,11 @@ import type { TabPillItem } from "@src/components/TabPill";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import WorkItemContentStack from "@src/modules/ProjectManager/WorkItems/components/WorkItemContentStack";
 import { RepoDetailPage } from "@src/modules/shared/launchpad/components";
+import { CodeMapExplorePanel } from "@src/modules/shared/launchpad/components/CodeMapExplorePanel";
+import { CodeMapWorkspaceStatusPanel } from "@src/modules/shared/launchpad/components/CodeMapWorkspaceStatus";
 import RepoActionButtons from "@src/modules/shared/launchpad/components/RepoActionButtons";
+import { WorkspaceToolsReadiness } from "@src/modules/shared/launchpad/components/WorkspaceToolsReadiness";
+import { useRepoDetection } from "@src/modules/shared/launchpad/hooks";
 import {
   DetailPanelContainer,
   PanelFooter,
@@ -51,6 +55,9 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
 
     const isRepo = selectedWorkspace.kind === "repo";
     const detailsTabAvailable = isRepo && Boolean(selectedRepo);
+    const { repoType, configFiles, hasDocker, hasMakefile } = useRepoDetection(
+      selectedRepo?.path
+    );
 
     // Force back to Overview when the selected workspace cannot show details
     // (workspace-kind, or repo not yet hydrated). Prevents a stale "details"
@@ -207,6 +214,21 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
         <RepoDetailPage repo={selectedRepo} />
       ) : null;
 
+    const overviewBody =
+      resolvedActiveTab === WORKSPACE_OVERVIEW_TAB.OVERVIEW && selectedRepo ? (
+        <>
+          <CodeMapWorkspaceStatusPanel workspacePath={selectedRepo.path} />
+          <CodeMapExplorePanel workspacePath={selectedRepo.path} />
+          <WorkspaceToolsReadiness
+            workspacePath={selectedRepo.path}
+            repoType={repoType}
+            configFiles={configFiles}
+            hasDocker={hasDocker}
+            hasMakefile={hasMakefile}
+          />
+        </>
+      ) : null;
+
     const actionFooter =
       selectedRepo && resolvedActiveTab === WORKSPACE_OVERVIEW_TAB.OVERVIEW ? (
         <PanelFooter
@@ -238,6 +260,7 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
             size="large"
           />
         </div>
+        {overviewBody}
         {detailsBody}
       </section>
     );

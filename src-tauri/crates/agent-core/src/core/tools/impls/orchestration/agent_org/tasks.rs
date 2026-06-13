@@ -38,14 +38,16 @@ use crate::tools::traits::ToolError;
 pub mod task_create;
 #[path = "task_list_get.rs"]
 pub mod task_list_get;
-#[path = "task_update.rs"]
-pub mod task_update;
 #[cfg(test)]
 #[path = "task_tests.rs"]
 mod task_tests;
+#[path = "task_update.rs"]
+pub mod task_update;
 
 pub use task_create::{TaskCreateParams, TaskCreateTool};
-pub use task_list_get::{claim_error_message, TaskGetParams, TaskGetTool, TaskListParams, TaskListTool};
+pub use task_list_get::{
+    claim_error_message, TaskGetParams, TaskGetTool, TaskListParams, TaskListTool,
+};
 pub use task_update::{TaskUpdateParams, TaskUpdateTool};
 
 /// Shared context for the four task tools. Cloned cheaply via `Arc` —
@@ -94,7 +96,10 @@ impl TaskToolsContext {
         self.caller_member_id.clone()
     }
 
-    pub(crate) fn resolve_owner_member_id(&self, raw_owner_member_id: &str) -> Result<String, String> {
+    pub(crate) fn resolve_owner_member_id(
+        &self,
+        raw_owner_member_id: &str,
+    ) -> Result<String, String> {
         let owner_member_id = raw_owner_member_id.trim();
         if owner_member_id.is_empty() {
             return Err("owner_member_id must not be empty".to_string());
@@ -189,7 +194,10 @@ impl TaskToolsContext {
         }
     }
 
-    pub(crate) fn dispatch_ready_assigned_tasks_unblocked_by(&self, blocker_task_id: &str) -> Vec<String> {
+    pub(crate) fn dispatch_ready_assigned_tasks_unblocked_by(
+        &self,
+        blocker_task_id: &str,
+    ) -> Vec<String> {
         let tasks = match AgentOrgTaskStore::list(&self.org_context.run_id) {
             Ok(tasks) => tasks,
             Err(err) => {
@@ -260,4 +268,3 @@ pub(crate) fn task_to_json(task: &Task) -> Value {
         "updated_at": task.updated_at,
     })
 }
-

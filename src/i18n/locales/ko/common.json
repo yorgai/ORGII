@@ -371,10 +371,8 @@
     "foundByKeyword": "키워드 검색으로 발견됨",
     "semanticSecondary": "meaning match",
     "hybridSecondary": "semantic + full-text",
-    "tantivySecondary": "indexed full-text",
     "semanticDescription": "Embedding-based meaning search",
-    "hybridDescription": "Combined semantic and full-text search",
-    "tantivyDescription": "Indexed full-text search"
+    "hybridDescription": "Combined semantic and full-text search"
   },
   "tabs": {
     "terminal": "터미널",
@@ -471,12 +469,12 @@
     "delete": "정말 삭제하시겠습니까?",
     "unsavedChanges": "저장되지 않은 변경 사항이 있습니다. 정말 나가시겠습니까?",
     "discard": "변경 사항을 취소하시겠습니까?",
-    "removeTitle": "ORGII workspace에서 \"{{name}}\"을(를) 제거하시겠습니까?",
-    "removeMessage": "기기에서 코드 폴더가 삭제되지 않으며, ORGII workspace에서만 제거됩니다. 언제든지 다시 추가할 수 있습니다.",
+    "removeTitle": "\"{{name}}\"을(를) ORGII에서 제거하시겠습니까?",
+    "removeMessage": "ORGII와의 연결만 제거됩니다. 디스크에서는 아무것도 제거되지 않습니다.",
     "deleteWorkspaceTitle": "Workspace \"{{name}}\"을(를) 삭제하시겠습니까?",
     "deleteWorkspaceMessage": "Workspace 프리셋만 삭제됩니다. 포함된 Repo 및 폴더에는 영향이 없습니다.",
-    "deleteSelectedTitle": "선택한 {{count}}개 항목을 삭제하시겠습니까?",
-    "deleteSelectedMessage": "선택한 Workspace를 삭제하고 선택한 Repo의 연결을 해제합니다. 디스크의 Repo 파일은 삭제되지 않습니다.",
+    "deleteSelectedTitle": "선택한 {{count}}개 항목을 ORGII에서 제거하시겠습니까?",
+    "deleteSelectedMessage": "ORGII와의 연결만 제거됩니다. 디스크에서는 아무것도 제거되지 않습니다.",
     "disconnectTitle": "\"{{name}}\" 연결을 해제하시겠습니까?",
     "disconnectMessage": "이 계정의 모든 리포지토리에 대한 접근 권한이 제거됩니다.",
     "dropStashTitle": "Drop stash?",
@@ -1135,7 +1133,7 @@
     "repo": {
       "workspaceFolders": "Workspace 폴더",
       "addRepo": "Workspace 추가",
-      "addEntry": "추가 Workspace 옵션",
+      "addEntry": "추가 import 옵션",
       "addRepoDescription": "Workspace 열기, 생성 또는 클론",
       "sections": {
         "coding": "Workspace",
@@ -1144,6 +1142,7 @@
         "current": "Current",
         "repo": "리포지토리",
         "systemPaths": "시스템 경로",
+        "usedElsewhere": "Used elsewhere",
         "workspace": "Workspace"
       },
       "tabs": {
@@ -1463,12 +1462,12 @@
         }
       },
       "toast": {
-        "repoRemoved": "리포지토리가 제거되었습니다",
-        "repoRemoveFailed": "리포지토리 제거에 실패했습니다",
-        "workspaceRemoved": "Workspace가 삭제되었습니다",
-        "workspaceRemoveFailed": "Workspace 삭제에 실패했습니다",
-        "bulkDeleted": "{{count}}개 항목이 삭제되었습니다",
-        "bulkDeleteFailed": "{{count}}개 항목 삭제에 실패했습니다"
+        "repoRemoved": "Linkage to ORGII removed",
+        "repoRemoveFailed": "Failed to remove linkage to ORGII",
+        "workspaceRemoved": "Linkage to ORGII removed",
+        "workspaceRemoveFailed": "Failed to remove linkage to ORGII",
+        "bulkDeleted": "{{count}} linkages to ORGII removed",
+        "bulkDeleteFailed": "{{count}} linkages failed to remove"
       }
     }
   },
@@ -1479,7 +1478,7 @@
     "locateInFinder": "Finder에서 찾기",
     "copyLocalPath": "로컬 경로 복사",
     "copyEventsJson": "Events JSON 복사",
-    "removeRepo": "리포지토리 제거",
+    "removeRepo": "Remove from ORGII",
     "addRepo": "리포지토리 추가...",
     "simulatorView": "시뮬레이터 뷰",
     "addWorkspace": "Workspace 추가..."
@@ -2085,10 +2084,9 @@
     "selectWorkspaceToStart": "Workspace를 선택하여 시작",
     "selectRepoToStart": "Repo를 선택하여 시작"
   },
-  "quitConfirmation": {
-    "title": "ORGII를 종료하시겠습니까?",
-    "message": "활성 세션과 백그라운드 작업이 중지됩니다.",
-    "okLabel": "종료"
+  "holdToQuit": {
+    "title": "종료하려면 {{shortcut}}를 1초 동안 누르세요",
+    "subtitle": "취소하려면 놓으세요"
   },
   "projects": {
     "title": "히트맵",

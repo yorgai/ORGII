@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 
 use core_types::activity::ActivityChunk;
 
-use super::history::{CURSOR_IDE_CATEGORY, CURSORIDE_SESSION_PREFIX, CursorIdeSessionRow};
+use super::history::{CursorIdeSessionRow, CURSORIDE_SESSION_PREFIX, CURSOR_IDE_CATEGORY};
 use super::io::load_content_blob;
 use super::models::{
     CursorComposerContext, CursorWorkspaceMetadata, OrderedBubble, RawBubble, RawComposerHeader,
@@ -449,7 +449,10 @@ pub(super) fn user_bubble_to_chunk(session_id: &str, ob: &OrderedBubble) -> Opti
     Some(chunk)
 }
 
-pub(super) fn assistant_text_bubble_to_chunk(session_id: &str, ob: &OrderedBubble) -> Option<ActivityChunk> {
+pub(super) fn assistant_text_bubble_to_chunk(
+    session_id: &str,
+    ob: &OrderedBubble,
+) -> Option<ActivityChunk> {
     let text = ob.raw.text.trim();
     if text.is_empty() {
         return None;

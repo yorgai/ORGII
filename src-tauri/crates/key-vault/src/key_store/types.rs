@@ -313,6 +313,16 @@ pub struct ModelKey {
     pub oauth_refresh_failure_count: u32,
     #[serde(default, with = "optional_flexible_datetime")]
     pub last_oauth_refresh_failed_at: Option<DateTime<Utc>>,
+    #[serde(default, with = "optional_flexible_datetime")]
+    pub temporary_unavailable_until: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub temporary_unavailable_reason: Option<String>,
+    #[serde(default)]
+    pub last_upstream_status: Option<u16>,
+    #[serde(default)]
+    pub last_upstream_error_type: Option<String>,
+    #[serde(default, with = "optional_flexible_datetime")]
+    pub rate_limit_reset_at: Option<DateTime<Utc>>,
     /// Master switch — when false the key is disabled without clearing enabled_models.
     #[serde(default = "app_utils::default_true")]
     pub enabled: bool,
@@ -382,6 +392,11 @@ impl ModelKey {
             default_variants: Vec::new(),
             oauth_refresh_failure_count: 0,
             last_oauth_refresh_failed_at: None,
+            temporary_unavailable_until: None,
+            temporary_unavailable_reason: None,
+            last_upstream_status: None,
+            last_upstream_error_type: None,
+            rate_limit_reset_at: None,
             enabled: true,
         }
     }

@@ -334,26 +334,6 @@ pub async fn cli_agent_message(
         "cli_agent_message: loaded session"
     );
 
-    // Chokepoint A (CLI side): a user follow-up that runs in Build mode
-    // while a plan is still pending means the Build button was bypassed.
-    // Resolve the pending plan as Abandoned. The approve flow cannot trip
-    // this — `respond_plan_approval` resolves the pending row (Approved)
-    // before calling `cli_agent_message`.
-    {
-        let effective_mode = mode
-            .as_deref()
-            .or(session.agent_exec_mode.as_deref())
-            .unwrap_or("build");
-        if effective_mode == "build" {
-            agent_core::interaction::plan_approval::resolve_pending(
-                &session_id,
-                agent_core::interaction::plan_approval::PlanResolution::Abandoned,
-                None,
-            )
-            .await;
-        }
-    }
-
     let target_account_id = account_id.as_deref().or(session.account_id.as_deref());
 
     // If the user switched model/account, persist the change so run_session picks it up.

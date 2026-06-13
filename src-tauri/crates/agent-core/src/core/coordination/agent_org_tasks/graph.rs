@@ -59,9 +59,7 @@ pub(super) fn add_dependency_edges(
     }
 }
 
-pub(super) fn reject_dependency_cycle(
-    graph: &HashMap<String, Vec<String>>,
-) -> Result<(), String> {
+pub(super) fn reject_dependency_cycle(graph: &HashMap<String, Vec<String>>) -> Result<(), String> {
     let mut visiting = HashSet::new();
     let mut visited = HashSet::new();
     let mut stack = Vec::new();

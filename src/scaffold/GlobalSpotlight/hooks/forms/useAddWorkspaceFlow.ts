@@ -184,7 +184,7 @@ export function useAddWorkspaceFlow(
       {
         id: "add-workspace-existing",
         label: addWorkspaceText.options.openWorkspace,
-        icon: ICONS.importRepo,
+        icon: ICONS.folderOpen,
         type: "repo" as const,
         data: { isSelector: true },
         action: () => void localWorkspaceForm.handleOpenLocalWorkspace(),

@@ -21,7 +21,11 @@ fn cli_agents_are_cli_agents() {
     ];
     for t in &cli_types {
         assert!(t.is_cli_agent(), "{:?} should be a CLI agent", t);
-        assert!(!t.is_api_key_provider(), "{:?} should not be an API key provider", t);
+        assert!(
+            !t.is_api_key_provider(),
+            "{:?} should not be an API key provider",
+            t
+        );
     }
 }
 
@@ -45,7 +49,11 @@ fn api_providers_are_api_key_providers() {
         ModelType::AzureAnthropicApi,
     ];
     for t in &api_types {
-        assert!(t.is_api_key_provider(), "{:?} should be an API key provider", t);
+        assert!(
+            t.is_api_key_provider(),
+            "{:?} should be an API key provider",
+            t
+        );
         assert!(!t.is_cli_agent(), "{:?} should not be a CLI agent", t);
     }
 }
@@ -136,7 +144,13 @@ fn as_str_round_trips_through_from_str() {
     for t in &all_types {
         let s = t.as_str();
         let recovered = ModelType::from_str(s);
-        assert_eq!(recovered, Some(t.clone()), "Round-trip failed for {:?} (\"{}\")", t, s);
+        assert_eq!(
+            recovered,
+            Some(t.clone()),
+            "Round-trip failed for {:?} (\"{}\")",
+            t,
+            s
+        );
     }
 }
 
@@ -187,7 +201,11 @@ fn mask_api_key_masks_very_short_key_fully() {
     key.api_key = Some("abc".to_string());
     // short string — fully masked
     let masked = key.mask_api_key().unwrap();
-    assert!(!masked.contains("abc"), "Short key should be fully masked, got {:?}", masked);
+    assert!(
+        !masked.contains("abc"),
+        "Short key should be fully masked, got {:?}",
+        masked
+    );
 }
 
 #[test]
@@ -196,6 +214,14 @@ fn mask_api_key_shows_last_four_chars_of_long_key() {
     key.api_key = Some("sk-1234567890ABCDEF".to_string());
     let masked = key.mask_api_key().unwrap();
     // Last 4 chars should appear, rest masked
-    assert!(masked.ends_with("CDEF"), "Expected last 4 chars, got {:?}", masked);
-    assert!(masked.contains('*'), "Expected asterisks in masked key, got {:?}", masked);
+    assert!(
+        masked.ends_with("CDEF"),
+        "Expected last 4 chars, got {:?}",
+        masked
+    );
+    assert!(
+        masked.contains('*'),
+        "Expected asterisks in masked key, got {:?}",
+        masked
+    );
 }

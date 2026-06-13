@@ -51,8 +51,7 @@ const CLAUDE_CODE_OAUTH_MODELS_URL: &str = "https://api.anthropic.com/v1/models"
 const CLAUDE_CODE_OAUTH_BETA: &str = "oauth-2025-04-20";
 const CLAUDE_CODE_OAUTH_USER_AGENT: &str = "claude-cli/2.1.78 (orgii, cli)";
 
-const GEMINI_OAUTH_MODELS_URL: &str =
-    "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_OAUTH_MODELS_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models";
 
 /// Get the default base URL for a provider (without /v1 suffix for OpenAI-compat validation).
 /// Uses the unified provider_config module as the single source of truth.

@@ -212,13 +212,12 @@ pub async fn agent_def_tool_states(
     let def = state
         .get(&agent_id)
         .ok_or_else(|| format!("agent '{}' not found", agent_id))?;
-    let merged = super::resolver::resolve_definition(&def, Some(&state))
-        .map_err(|err| err.to_string())?;
+    let merged =
+        super::resolver::resolve_definition(&def, Some(&state)).map_err(|err| err.to_string())?;
     let capabilities = merged.capabilities.clone().unwrap_or_default();
     let resolved =
         super::resolved::ResolvedToolSelection::from_schema(&merged.tools, &capabilities);
-    let disabled =
-        crate::tools::derive_disabled_tools(&resolved.restrict_to, &resolved.excluded);
+    let disabled = crate::tools::derive_disabled_tools(&resolved.restrict_to, &resolved.excluded);
 
     let system_set: std::collections::HashSet<&str> = merged
         .tools

@@ -243,6 +243,7 @@ function todosFromMessage(message: MessageEntry): TodoLike[] {
     status: "success" as const,
     variant: "simulator" as const,
     context: "simulator" as const,
+    rustExtracted: message.event.extracted,
   });
   return todoData.todos as TodoLike[];
 }

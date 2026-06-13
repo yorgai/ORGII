@@ -94,13 +94,15 @@ impl McpManager {
             );
             let config = client.config().clone();
             if let Err(err) = self.connect_server(server_name, &config).await {
-                return Err(crate::specialization::mcp::errors::McpCallError::Transport {
-                    server: server_name.to_string(),
-                    message: format!(
-                        "MCP server '{}' is not alive and reconnect failed: {}",
-                        server_name, err
-                    ),
-                });
+                return Err(
+                    crate::specialization::mcp::errors::McpCallError::Transport {
+                        server: server_name.to_string(),
+                        message: format!(
+                            "MCP server '{}' is not alive and reconnect failed: {}",
+                            server_name, err
+                        ),
+                    },
+                );
             }
         }
 
@@ -186,13 +188,15 @@ impl McpManager {
         if !client.is_alive() {
             let config = client.config().clone();
             if let Err(err) = self.connect_server(server_name, &config).await {
-                return Err(crate::specialization::mcp::errors::McpCallError::Transport {
-                    server: server_name.to_string(),
-                    message: format!(
-                        "MCP server '{}' is not alive and reconnect failed: {}",
-                        server_name, err
-                    ),
-                });
+                return Err(
+                    crate::specialization::mcp::errors::McpCallError::Transport {
+                        server: server_name.to_string(),
+                        message: format!(
+                            "MCP server '{}' is not alive and reconnect failed: {}",
+                            server_name, err
+                        ),
+                    },
+                );
             }
         }
 

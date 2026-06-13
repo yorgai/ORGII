@@ -128,7 +128,8 @@ impl McpManager {
     pub async fn connect_server(&self, name: &str, config: &McpServerConfig) -> Result<(), String> {
         self.disconnect_server(name).await;
 
-        if is_remote(config) && crate::specialization::mcp::needs_auth_cache::is_cached(name).await {
+        if is_remote(config) && crate::specialization::mcp::needs_auth_cache::is_cached(name).await
+        {
             info!(
                 "[mcp:manager] Skipping '{}' connect (cached needs-auth)",
                 name

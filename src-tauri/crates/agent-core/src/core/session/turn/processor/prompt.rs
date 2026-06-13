@@ -97,8 +97,8 @@ impl UnifiedMessageProcessor {
 
         // Apply .orgii/hooks.json prompt hooks (PrePromptBuild event)
         if let Some(ref executor) = self.event_handler_config.hook_executor {
-            if let Some(hook_prompt) =
-                executor.collect_prompt_hooks(crate::specialization::hooks::HookEvent::PrePromptBuild)
+            if let Some(hook_prompt) = executor
+                .collect_prompt_hooks(crate::specialization::hooks::HookEvent::PrePromptBuild)
             {
                 info!(
                     "[unified_processor] Injecting hook prompt content ({} chars)",

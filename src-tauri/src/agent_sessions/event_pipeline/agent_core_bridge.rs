@@ -14,9 +14,9 @@ use serde_json::Value;
 use tauri::{AppHandle, Manager};
 
 use super::commands::{
-    push_events_to_session, save_events_retry, schedule_notify, session_event_to_cached_event,
-    update_spawning_tool_args_with_persist, update_tool_args_by_call_id_with_persist,
-    EventStoreState, BULK_WRITE_MAX_RETRIES,
+    cached_event_to_session_event, push_events_to_session, save_events_retry, schedule_notify,
+    session_event_to_cached_event, update_spawning_tool_args_with_persist,
+    update_tool_args_by_call_id_with_persist, EventStoreState, BULK_WRITE_MAX_RETRIES,
 };
 use super::types::{
     ActivityStatus, EventDisplayStatus, EventDisplayVariant, EventSource, SessionEvent,
@@ -116,6 +116,96 @@ fn read_session_events_adapter(handle: &AppHandle, session_id: &str) -> Vec<Sess
     state
         .with_store_opt(session_id, |store| store.events().to_vec())
         .unwrap_or_default()
+}
+
+/// Backend-authoritative finalize for a plan revision's interactive events.
+///
+/// `resolve_pending` pushes a separate terminal `plan_approval` event, but
+/// the ORIGINAL pending events — the `{revision}` pending card and the
+/// `tool-call-{revision}` create_plan tool call — are persisted with
+/// `displayStatus: awaiting_user` and were historically only patched by the
+/// FE `handlePlanApprovalArchived` broadcast handler. A missed broadcast
+/// (startup GC, app not focused) stranded them forever, permanently wedging
+/// `usePlanningIndicator`. This adapter patches both the in-memory store and
+/// SQLite so the backend no longer depends on the FE for convergence.
+fn finalize_plan_revision_events_adapter(
+    handle: &AppHandle,
+    session_id: &str,
+    plan_revision_id: &str,
+) {
+    let target_ids = [
+        plan_revision_id.to_string(),
+        format!("tool-call-{plan_revision_id}"),
+    ];
+    let state = handle.state::<EventStoreState>();
+
+    // In-memory: flip any still-awaiting events and collect them for the
+    // SQLite write-through.
+    let patched: Vec<SessionEvent> = state.with_store_mut(session_id, |store| {
+        let ids: Vec<String> = store
+            .events()
+            .iter()
+            .filter(|event| {
+                target_ids.contains(&event.id)
+                    && event.display_status == EventDisplayStatus::AwaitingUser
+            })
+            .map(|event| event.id.clone())
+            .collect();
+        if ids.is_empty() {
+            return Vec::new();
+        }
+        let patch = core_types::session_event::SessionEventPatch {
+            display_status: Some(EventDisplayStatus::Completed),
+            activity_status: Some(ActivityStatus::Processed),
+            ..Default::default()
+        };
+        store.patch_by_ids(&ids, &patch);
+        store
+            .events()
+            .iter()
+            .filter(|event| ids.contains(&event.id))
+            .cloned()
+            .collect()
+    });
+
+    if !patched.is_empty() {
+        schedule_notify(handle, &state, session_id);
+        let cached: Vec<_> = patched.iter().map(session_event_to_cached_event).collect();
+        let sid = session_id.to_string();
+        tokio::task::spawn_blocking(move || {
+            let _ = save_events_retry(
+                "finalize_plan_revision",
+                &sid,
+                &cached,
+                BULK_WRITE_MAX_RETRIES,
+            );
+        });
+        return;
+    }
+
+    // Store not loaded (restart / GC path): patch SQLite directly so the
+    // next es_load_from_cache hydrates a completed event.
+    let sid = session_id.to_string();
+    tokio::task::spawn_blocking(move || {
+        for event_id in &target_ids {
+            if let Ok(Some(cached)) = session_persistence::get_event(&sid, event_id) {
+                let mut event = cached_event_to_session_event(&cached);
+                if event.display_status != EventDisplayStatus::AwaitingUser {
+                    continue;
+                }
+                event.display_status = EventDisplayStatus::Completed;
+                event.activity_status = ActivityStatus::Processed;
+                event.recompute_extracted();
+                let updated = session_event_to_cached_event(&event);
+                let _ = save_events_retry(
+                    "finalize_plan_revision_cold",
+                    &sid,
+                    &[updated],
+                    BULK_WRITE_MAX_RETRIES,
+                );
+            }
+        }
+    });
 }
 
 fn persist_events_adapter(
@@ -233,6 +323,70 @@ fn persist_user_message_event_adapter(
     );
 }
 
+/// One-shot startup repair: finalize historically stranded `awaiting_user`
+/// `create_plan` events that no longer have a matching pending-plan row.
+///
+/// Before the backend-authoritative finalize existed, an archive whose FE
+/// broadcast was missed left the plan's tool-call event stuck in
+/// `awaiting_user` forever, wedging the session's planning indicator. This
+/// scan converges all such historical strands once; new resolutions are
+/// covered by `finalize_plan_revision_events_adapter`.
+pub fn repair_stranded_plan_events() {
+    let pending_revisions: std::collections::HashSet<String> =
+        match agent_core::interaction::plan_approval::pending_revision_ids() {
+            Ok(ids) => ids.into_iter().collect(),
+            Err(err) => {
+                tracing::warn!("[plan-repair] failed to list pending plan rows: {err}");
+                return;
+            }
+        };
+
+    let stranded = match session_persistence::find_awaiting_user_events_by_function("create_plan") {
+        Ok(rows) => rows,
+        Err(err) => {
+            tracing::warn!("[plan-repair] scan failed: {err}");
+            return;
+        }
+    };
+
+    let mut repaired = 0usize;
+    for cached in stranded {
+        let mut event = cached_event_to_session_event(&cached);
+        if event.display_status != EventDisplayStatus::AwaitingUser {
+            continue;
+        }
+        // Events belonging to a live pending plan stay awaiting — only
+        // strands without a backing row are repaired.
+        let revision = event
+            .id
+            .strip_prefix("tool-call-")
+            .unwrap_or(&event.id)
+            .to_string();
+        if pending_revisions.contains(&revision) {
+            continue;
+        }
+        event.display_status = EventDisplayStatus::Completed;
+        event.activity_status = ActivityStatus::Processed;
+        event.recompute_extracted();
+        let updated = session_event_to_cached_event(&event);
+        let session_id = event.session_id.clone();
+        if save_events_retry(
+            "plan_repair",
+            &session_id,
+            &[updated],
+            BULK_WRITE_MAX_RETRIES,
+        )
+        .is_ok()
+        {
+            repaired += 1;
+        }
+    }
+
+    if repaired > 0 {
+        tracing::info!("[plan-repair] finalized {repaired} stranded create_plan event(s)");
+    }
+}
+
 /// Register every IoC slot exposed by `agent_core::bus::event_pipeline_bridge`.
 /// Called once from `app::run` at startup.
 pub fn register() {
@@ -247,6 +401,7 @@ pub fn register() {
         pin_session_adapter,
         unpin_session_adapter,
         read_session_events_adapter,
+        finalize_plan_revision_events_adapter,
         persist_events_adapter,
         persist_events_async_adapter,
         persist_user_message_event_adapter,

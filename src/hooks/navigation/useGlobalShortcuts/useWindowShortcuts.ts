@@ -1,37 +1,21 @@
 import { useCallback } from "react";
-import { useTranslation } from "react-i18next";
 
-import { isAppQuittingAtom } from "@src/store/ui/overlayAtom";
+import { createLogger } from "@src/hooks/logger";
+import {
+  holdToQuitOverlayOpenAtom,
+  isAppQuittingAtom,
+} from "@src/store/ui/overlayAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 import { isTauriDesktop } from "@src/util/platform/tauri";
 
-interface QuitConfirmationCopy {
-  title: string;
-  message: string;
-  okLabel: string;
-  cancelLabel: string;
-}
+const logger = createLogger("WindowShortcuts");
+
+const HOLD_TO_QUIT_MS = 1000;
 
 let quitInProgress = false;
-let quitDialogOpen = false;
-
-async function confirmQuit(copy: QuitConfirmationCopy): Promise<boolean> {
-  try {
-    const { ask } = await import("@tauri-apps/plugin-dialog");
-    return await ask(copy.message, {
-      title: copy.title,
-      kind: "warning",
-      okLabel: copy.okLabel,
-      cancelLabel: copy.cancelLabel,
-    });
-  } catch {
-    return window.confirm(`${copy.title}\n\n${copy.message}`);
-  }
-}
+let holdToQuitTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function useWindowShortcuts() {
-  const { t } = useTranslation("common");
-
   const handleQuit = useCallback(async () => {
     if (!isTauriDesktop() || quitInProgress) return;
 
@@ -39,6 +23,7 @@ export function useWindowShortcuts() {
 
     try {
       const jotaiStore = getInstrumentedStore();
+      jotaiStore.set(holdToQuitOverlayOpenAtom, false);
       jotaiStore.set(isAppQuittingAtom, true);
 
       const { exit } = await import("@tauri-apps/plugin-process");
@@ -46,31 +31,38 @@ export function useWindowShortcuts() {
     } catch (error) {
       const jotaiStore = getInstrumentedStore();
       jotaiStore.set(isAppQuittingAtom, false);
+      jotaiStore.set(holdToQuitOverlayOpenAtom, false);
       quitInProgress = false;
-      console.error("Failed to quit app:", error);
+      if (holdToQuitTimer) {
+        clearTimeout(holdToQuitTimer);
+        holdToQuitTimer = null;
+      }
+      logger.error("failed to quit app", error);
     }
   }, []);
 
   const confirmAndQuit = useCallback(async () => {
-    if (!isTauriDesktop() || quitInProgress || quitDialogOpen) {
-      return;
-    }
+    await handleQuit();
+  }, [handleQuit]);
 
-    quitDialogOpen = true;
-    try {
-      const confirmed = await confirmQuit({
-        title: t("quitConfirmation.title"),
-        message: t("quitConfirmation.message"),
-        okLabel: t("quitConfirmation.okLabel"),
-        cancelLabel: t("actions.cancel"),
-      });
-      if (confirmed) {
-        await handleQuit();
-      }
-    } finally {
-      quitDialogOpen = false;
+  const cancelHoldToQuit = useCallback(() => {
+    if (holdToQuitTimer) {
+      clearTimeout(holdToQuitTimer);
+      holdToQuitTimer = null;
     }
-  }, [handleQuit, t]);
+    getInstrumentedStore().set(holdToQuitOverlayOpenAtom, false);
+  }, []);
+
+  const startHoldToQuit = useCallback(() => {
+    if (!isTauriDesktop() || quitInProgress || holdToQuitTimer) return;
+
+    getInstrumentedStore().set(holdToQuitOverlayOpenAtom, true);
+    holdToQuitTimer = setTimeout(() => {
+      holdToQuitTimer = null;
+      getInstrumentedStore().set(holdToQuitOverlayOpenAtom, false);
+      void handleQuit();
+    }, HOLD_TO_QUIT_MS);
+  }, [handleQuit]);
 
   const handleHideWindow = useCallback(async () => {
     if (!isTauriDesktop()) return;
@@ -87,6 +79,8 @@ export function useWindowShortcuts() {
   return {
     handleQuit,
     confirmAndQuit,
+    startHoldToQuit,
+    cancelHoldToQuit,
     handleHideWindow,
   };
 }

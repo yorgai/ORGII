@@ -41,8 +41,8 @@
 //!   composer model.
 //! - `composer` — Per-composer queries: model, timestamp, unified mode.
 
-mod db_path;
 pub mod composer;
+mod db_path;
 pub mod model_catalog;
 pub mod model_toggles;
 

@@ -4,7 +4,7 @@
 pub(super) use super::super::super::categories as tool_categories;
 pub(super) use super::super::super::names as tool_names;
 pub(super) use super::super::super::ui_metadata::{
-    AppSubtool, ChatBlock, HumanToolKey, SimulatorApp,
+    AppSubtool, ChatBlock, HumanToolKey, SimulatorApp, ToolDisplayBehavior,
 };
 pub(super) use super::super::types::{ActionEntry, ToolEntry, DEFAULT_TOOL_ENTRY};
 pub(super) use crate::definitions::capabilities::RequiredCapability;
@@ -33,6 +33,9 @@ pub(super) use HumanToolKey::{
 pub(super) use SimulatorApp::{
     BackgroundTasks as AppBackgroundTasks, Browser as AppBrowser, Canvas as AppCanvas,
     Channels as AppChannels, CodeEditor as AppCode, ProjectManager as AppProject,
+};
+pub(super) use ToolDisplayBehavior::{
+    Instant as DisplayInstant, Stream as DisplayStream, WaitForResult as DisplayWaitForResult,
 };
 // RequiredCapability aliases — one per action group.
 // `Core` is the DEFAULT_TOOL_ENTRY default so it's never spelled out explicitly.

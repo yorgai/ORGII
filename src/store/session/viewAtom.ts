@@ -33,7 +33,10 @@ import { atomWithStorage } from "jotai/utils";
 import { z } from "zod/v4";
 
 import { clearSessionAtom } from "@src/engines/SessionCore/core/atoms/actions";
-import { loadStatusAtom } from "@src/engines/SessionCore/core/atoms/metadata";
+import {
+  loadStatusAtom,
+  sessionIdAtom,
+} from "@src/engines/SessionCore/core/atoms/metadata";
 import {
   lastUsedRepoAtom,
   reposAtom,
@@ -43,6 +46,7 @@ import {
   matchRepoByPath,
   normalizeRepoPath,
 } from "@src/store/repo/matchRepoByPath";
+import { registerRuntimeStatusGateSessionAtoms } from "@src/store/session/cliSessionStatusAtom";
 import { sessionsAtom } from "@src/store/session/sessionAtom/atoms";
 import {
   activeFolderIdAtom,
@@ -143,6 +147,14 @@ workstationActiveSessionIdAtom.debugLabel = "workstationActiveSessionIdAtom";
  */
 export const activeSessionIdAtom = atom<string | null>(null);
 activeSessionIdAtom.debugLabel = "activeSessionIdAtom";
+
+// Runtime-status writes are gated to the visible session. Both "visible"
+// atoms qualify: the pipeline id (what the chat surface renders) and the
+// SessionCore sessionIdAtom (what the event store is subscribed to) — they
+// briefly diverge during session switches, and a write matching either one
+// is for a session the user can see. Registered here (not imported by the
+// status atom module) to avoid an import cycle through SessionCore actions.
+registerRuntimeStatusGateSessionAtoms([activeSessionIdAtom, sessionIdAtom]);
 
 /**
  * Is a session currently active?

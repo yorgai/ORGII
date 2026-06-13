@@ -101,7 +101,7 @@ fn context_window_hint_gemini() {
 fn context_window_hint_unknown_returns_default() {
     assert_eq!(
         context_window_hint("totally-unknown"),
-        DEFAULT_CONTEXT_WINDOW_HINT
+        128_000  // ModelCapabilities::unknown().context_window
     );
 }
 
@@ -120,17 +120,23 @@ fn wire_model_name_strips_prefix() {
 }
 
 #[test]
-fn wire_model_name_adds_litellm_prefix() {
+fn wire_model_name_keeps_direct_deepseek_model_bare() {
     let spec = find_by_name("deepseek").unwrap();
-    assert_eq!(wire_model_name(spec, "deepseek-r1"), "deepseek/deepseek-r1");
+    assert_eq!(wire_model_name(spec, "deepseek-r1"), "deepseek-r1");
 }
 
 #[test]
-fn wire_model_name_no_double_prefix() {
+fn wire_model_name_strips_stale_deepseek_prefix() {
+    let spec = find_by_name("deepseek").unwrap();
+    assert_eq!(wire_model_name(spec, "deepseek/deepseek-r1"), "deepseek-r1");
+}
+
+#[test]
+fn wire_model_name_keeps_direct_deepseek_v4_bare() {
     let spec = find_by_name("deepseek").unwrap();
     assert_eq!(
-        wire_model_name(spec, "deepseek/deepseek-r1"),
-        "deepseek/deepseek-r1"
+        wire_model_name(spec, "deepseek/deepseek-v4-pro"),
+        "deepseek-v4-pro"
     );
 }
 

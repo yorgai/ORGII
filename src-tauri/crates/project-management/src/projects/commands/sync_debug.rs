@@ -6,7 +6,7 @@
 //! (because `sync.rs` re-exports everything from its private submodules).
 
 #[cfg(debug_assertions)]
-use super::{PendingFlow, PENDING_FLOWS, connection_pending_key};
+use super::{connection_pending_key, PendingFlow, PENDING_FLOWS};
 
 /// Snapshot of a pending [`PendingFlow::Redirect`] entry's
 /// non-cancel-token fields. The e2e debug binary uses this to simulate

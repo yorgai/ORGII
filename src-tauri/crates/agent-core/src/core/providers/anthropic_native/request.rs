@@ -43,9 +43,36 @@ pub(super) fn prepare_request(
         crate::providers::model_hints::wire_model_name(client.provider_spec, model);
     let (system, anthropic_messages) = extract_system(messages);
 
-    let anthropic_tools = tools.map(convert_tools);
+    // Extract tool_choice override (from side_query structured output)
+    // before converting tools to Anthropic format.
+    let (tool_choice_override, clean_tools) = if let Some(t) = tools {
+        let (ovr, cleaned) = crate::core::side_query::extract_tool_choice_override(t);
+        (ovr, Some(cleaned))
+    } else {
+        (None, None)
+    };
+    let anthropic_tools = clean_tools.as_deref().map(convert_tools);
+
+    let caps = crate::providers::model_capabilities::resolve(&resolved_model, None);
+    let directive = if tool_choice_override.is_some() || clean_tools.is_some() {
+        // When tools are present (including structured output), use Auto
+        // directive — we want the model to respond, not suppress thinking.
+        crate::providers::anthropic_native::thinking::ThinkingDirective::Auto
+    } else {
+        // Plain side queries: suppress thinking when possible.
+        crate::providers::anthropic_native::thinking::ThinkingDirective::PlainText
+    };
     let (thinking, effective_temp, effective_max_tokens) =
-        build_thinking_params(&resolved_model, max_tokens, temperature);
+        build_thinking_params(&caps, directive, max_tokens, temperature);
+
+    let tool_choice = if let Some(ovr) = tool_choice_override {
+        // Forced tool_choice from structured output
+        Some(ovr)
+    } else if clean_tools.is_some() {
+        Some(json!({"type": "auto"}))
+    } else {
+        None
+    };
 
     let body = MessagesRequest {
         model: resolved_model.clone(),
@@ -53,7 +80,7 @@ pub(super) fn prepare_request(
         system: claude_oauth_system(system, client.auth_mode),
         messages: anthropic_messages,
         tools: anthropic_tools,
-        tool_choice: tools.map(|_| json!({"type": "auto"})),
+        tool_choice,
         temperature: effective_temp,
         stream,
         thinking,
