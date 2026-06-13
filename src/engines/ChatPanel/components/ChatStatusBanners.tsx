@@ -13,7 +13,7 @@ export type ChatRetryKind =
   (typeof CHAT_RETRY_KIND)[keyof typeof CHAT_RETRY_KIND];
 
 export const CHAT_STATUS_BAR_CONTAINER_CLASS =
-  "-mb-8 flex min-h-10 w-full items-center rounded-t-[12px] bg-bg-2 pb-9 pl-1 pt-2 text-[12px] font-medium text-text-1";
+  "-mb-8 flex min-h-10 w-full items-center rounded-t-[12px] bg-[var(--color-chat-container)] pb-9 pl-1 pt-2 text-[12px] font-medium text-text-1";
 
 export function toChatRetryKind(kind: string): ChatRetryKind {
   return kind === CHAT_RETRY_KIND.RATE_LIMITED

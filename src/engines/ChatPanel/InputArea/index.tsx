@@ -330,6 +330,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
             showEditHeader={showEditHeader}
             editLabel={editLabel}
           />
+          {!isEditMode && statusBanners}
 
           <ComposerShell
             ref={isEditMode ? editContainerRef : composerShellRef}
@@ -467,7 +468,6 @@ const InputArea: React.FC<InputAreaProps> = memo(
               />
             )}
           </ComposerShell>
-          {!isEditMode && statusBanners}
         </div>
 
         <InputAreaPortals
