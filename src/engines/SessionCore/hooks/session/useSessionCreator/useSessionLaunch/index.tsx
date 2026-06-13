@@ -396,11 +396,13 @@ export function useSessionLaunch(
           dispatchCategory === DISPATCH_CATEGORY.CLI_AGENT &&
           !sessionUsesHostedKey
         ) {
-          await emitOpenWorkspace(
+          void emitOpenWorkspace(
             result.sessionId,
             effectiveSource?.repoId ?? "",
             "Quick"
-          );
+          ).catch((error) => {
+            log.warn("Failed to open workspace after session launch", error);
+          });
         }
         navigateToLaunchedSession(result.sessionId, sessionUsesHostedKey);
         // After navigation: the pipeline atom now points at the launched

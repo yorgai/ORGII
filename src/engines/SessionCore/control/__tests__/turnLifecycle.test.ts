@@ -126,6 +126,25 @@ describe("turnLifecycle", () => {
     expect(getLastTurnTerminal(SESSION)?.status).toBe("failed");
   });
 
+  it("keeps a force-send dispatch reserved when the interrupted turn terminal lands", () => {
+    beginTurnDispatch(SESSION);
+    markTurnRunning(SESSION);
+
+    const forceSendGeneration = beginTurnDispatch(SESSION);
+    markTurnTerminal(SESSION, "cancelled");
+    expect(getTurnPhase(SESSION)).toBe("dispatching");
+
+    markTurnRunning(SESSION);
+    markTurnTerminal(SESSION, "completed", {
+      generation: forceSendGeneration,
+    });
+    expect(getTurnPhase(SESSION)).toBe("idle");
+    expect(getLastTurnTerminal(SESSION)).toMatchObject({
+      generation: forceSendGeneration,
+      status: "completed",
+    });
+  });
+
   it("accepts an unattributed terminal while working (normal provider turn end)", () => {
     markTurnRunning(SESSION);
     markTurnTerminal(SESSION, "completed");

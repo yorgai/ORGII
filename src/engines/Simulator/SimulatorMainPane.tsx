@@ -23,9 +23,14 @@ import { BootingState } from "./components/SimulatorContentArea/StateDisplays";
 import type { SimulatorContentAreaProps } from "./components/SimulatorContentArea/types";
 import { useSimulatorContent } from "./components/SimulatorContentArea/useSimulatorContent";
 
-function getEventRenderSignature(
-  event: SimulatorContentAreaProps["currentEvent"]
-): string {
+type RenderSignatureEvent =
+  | (NonNullable<SimulatorContentAreaProps["currentEvent"]> & {
+      lastActivityAt?: string;
+    })
+  | null
+  | undefined;
+
+function getEventRenderSignature(event: RenderSignatureEvent): string {
   if (!event) return "";
   return [
     event.id,
