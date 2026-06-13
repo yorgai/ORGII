@@ -19,9 +19,19 @@
 //!    of "fails loudly when the guess is wrong".
 //!
 //! @[MODEL LAUNCH]: when a new model family ships, add ONE row to
-//! [`FAMILY_RULES`]. Do not add substring checks anywhere else — the
-//! `no_substring_capability_checks_outside_this_module` test in this file
-//! is the enforcement point.
+//! [`FAMILY_RULES`]. Do not add model-family substring checks (`.contains`/
+//! `.starts_with` on `gpt-`, `claude`, `gemini`, …) anywhere else.
+//!
+//! The `no_substring_capability_checks_outside_this_module` test (in
+//! `tests/model_capabilities_tests.rs`) is the enforcement point: it scans
+//! the crate source and fails if a *new* module introduces such a check.
+//!
+//! A handful of pre-existing matchers are NOT yet routed through [`resolve`]
+//! and are tracked in that test's `CAPABILITY_CHECK_ALLOWLIST` (vision,
+//! tokenizer family, knowledge-cutoff, and reasoning-param detection — see
+//! the 2026-06-13 architecture audit S2 — plus the legacy provider-routing
+//! table in `model_hints`). Migrating one of those into [`ModelCapabilities`]
+//! should delete its allowlist entry, tightening the ratchet.
 
 use key_vault::key_store::KEY_SERVICE;
 
