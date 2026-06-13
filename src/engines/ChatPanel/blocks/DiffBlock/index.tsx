@@ -149,42 +149,38 @@ const SegmentView: React.FC<SegmentViewProps> = ({
 
   if (resolvedContent) {
     return (
-      <div className="animate-fade-in">
-        <ChatCodeBlock
-          code={resolvedContent}
-          language={resolvedLanguage}
-          filePath={filePath}
-          title={displayTitle}
-          separateTitle={false}
-          showLineNumbers
-          defaultCollapsed={false}
-          visibleLines={VISIBLE_LINES}
-          linesAdded={resolvedLinesAdded}
-          linesRemoved={linesRemoved}
-          diffPayload={diffPayload}
-          showLineCount={showResolvedLineCount}
-          trailingTags={trailingTags}
-          eventId={eventId}
-          isLoading={isLoading}
-        />
-      </div>
+      <ChatCodeBlock
+        code={resolvedContent}
+        language={resolvedLanguage}
+        filePath={filePath}
+        title={displayTitle}
+        separateTitle={false}
+        showLineNumbers
+        defaultCollapsed={false}
+        visibleLines={VISIBLE_LINES}
+        linesAdded={resolvedLinesAdded}
+        linesRemoved={linesRemoved}
+        diffPayload={diffPayload}
+        showLineCount={showResolvedLineCount}
+        trailingTags={trailingTags}
+        eventId={eventId}
+        isLoading={isLoading}
+      />
     );
   }
 
   if (isLoading) {
     return (
-      <div className="animate-fade-in">
-        <ChatCodeBlock
-          code=""
-          language={resolvedLanguage}
-          filePath={filePath}
-          title={displayTitle}
-          separateTitle={false}
-          defaultCollapsed
-          eventId={eventId}
-          isLoading
-        />
-      </div>
+      <ChatCodeBlock
+        code=""
+        language={resolvedLanguage}
+        filePath={filePath}
+        title={displayTitle}
+        separateTitle={false}
+        defaultCollapsed
+        eventId={eventId}
+        isLoading
+      />
     );
   }
 
@@ -315,7 +311,7 @@ const EditView: React.FC<EditViewProps> = (props) => {
   return (
     <div className="flex flex-col gap-3">
       {segments.map((segment, segmentIndex) => {
-        const segmentKey = `${segment.filePath}-${segmentIndex}`;
+        const segmentKey = `${eventId}-segment-${segmentIndex}`;
         if (segment.isDeleted) {
           const displayTitle =
             getFileName(segment.filePath) || segment.fileName || "file";

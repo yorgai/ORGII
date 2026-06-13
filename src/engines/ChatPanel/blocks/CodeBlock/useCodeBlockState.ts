@@ -134,7 +134,10 @@ export function useCodeBlockState({
 
   const totalLineCount = useMemo(() => {
     if (isDiff && parsedDiff) {
-      return parsedDiff.newValue.split("\n").length;
+      return Math.max(
+        parsedDiff.oldValue.split("\n").length,
+        parsedDiff.newValue.split("\n").length
+      );
     }
     return codeLines.length;
   }, [isDiff, parsedDiff, codeLines]);
@@ -149,6 +152,21 @@ export function useCodeBlockState({
   const displayedDiff = useMemo(() => {
     if (!isDiff) return null;
     if (isExpanded || !needsExpand) return diffPayload ?? parsedDiff;
+
+    if (diffPayload) {
+      return {
+        ...diffPayload,
+        oldValue: diffPayload.oldValue
+          .split("\n")
+          .slice(0, visibleLines)
+          .join("\n"),
+        newValue: diffPayload.newValue
+          .split("\n")
+          .slice(0, visibleLines)
+          .join("\n"),
+      };
+    }
+
     return parseUnifiedDiff(truncateDiff(code, visibleLines));
   }, [
     isDiff,
