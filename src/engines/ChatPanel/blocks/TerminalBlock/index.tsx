@@ -17,10 +17,8 @@ import React, {
 import { useTranslation } from "react-i18next";
 
 import ExpandOverlay from "@src/components/ExpandOverlay";
-import { TerminalCommand } from "@src/components/TerminalDisplay";
 import { getToolIcon } from "@src/config/toolIcons";
 import type { PayloadRef } from "@src/engines/SessionCore/core/types";
-import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import {
   BlockOutput,
@@ -137,8 +135,6 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     );
     const hasOutput = Boolean(displayOutput && displayOutput.trim().length > 0);
 
-    const { isDark } = useCurrentTheme();
-    const shikiTheme = isDark ? "one-dark-pro" : "github-light";
     const formattedCommand = useMemo(
       () => (command ? formatCommandForDisplay(command) : ""),
       [command]
@@ -300,15 +296,19 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
                         }
                   }
                 >
-                  <TerminalCommand
-                    command={formattedCommand}
-                    prefix="$"
-                    className="terminal-command--chat"
-                    shikiTheme={shikiTheme}
+                  <div
+                    className="terminal-command terminal-command--chat"
                     style={{
                       fontSize: "var(--chat-code-font-size, 13px)",
                     }}
-                  />
+                  >
+                    <span className="terminal-command__prefix select-none">
+                      $
+                    </span>
+                    <span className="terminal-command__text">
+                      {formattedCommand}
+                    </span>
+                  </div>
                   <ExpandOverlay
                     isExpanded={isCommandExpanded}
                     onToggle={(event) => {
@@ -342,8 +342,6 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
                         ? "success"
                         : "error"
                   }
-                  highlightLang="log"
-                  shikiTheme={shikiTheme}
                   withBorder={false}
                   sessionId={sessionId}
                   eventId={eventId}
