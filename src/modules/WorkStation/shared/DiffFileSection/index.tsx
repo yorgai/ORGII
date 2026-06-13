@@ -1,6 +1,7 @@
 import { useSetAtom } from "jotai";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import React, {
+  Suspense,
   memo,
   useCallback,
   useEffect,
@@ -30,6 +31,35 @@ import {
   getPreviewType,
   supportsSourceControlWorkingCopyPreview,
 } from "@src/util/file/previewTypes";
+
+const LazyImagePreview = React.lazy(
+  () =>
+    import("@src/modules/WorkStation/CodeEditor/Panels/EditorMainPane/content/FilePreviewContent/ImagePreview")
+);
+const LazyVideoPreview = React.lazy(
+  () =>
+    import("@src/modules/WorkStation/CodeEditor/Panels/EditorMainPane/content/FilePreviewContent/VideoPreview")
+);
+const LazyPdfPreview = React.lazy(
+  () =>
+    import("@src/modules/WorkStation/CodeEditor/Panels/EditorMainPane/content/FilePreviewContent/PdfPreview")
+);
+const LazyDocxPreview = React.lazy(
+  () =>
+    import("@src/modules/WorkStation/CodeEditor/Panels/EditorMainPane/content/FilePreviewContent/DocxPreview")
+);
+const LazyXlsxPreview = React.lazy(
+  () =>
+    import("@src/modules/WorkStation/CodeEditor/Panels/EditorMainPane/content/FilePreviewContent/XlsxPreview")
+);
+const LazyPptxPreview = React.lazy(
+  () =>
+    import("@src/modules/WorkStation/CodeEditor/Panels/EditorMainPane/content/FilePreviewContent/PptxPreview")
+);
+const LazyPagesPreview = React.lazy(
+  () =>
+    import("@src/modules/WorkStation/CodeEditor/Panels/EditorMainPane/content/FilePreviewContent/PagesPreview")
+);
 
 export interface DiffFileSectionData {
   path: string;
@@ -91,7 +121,6 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   defaultExpanded = true,
   repoPath,
   sectionRef,
-  onFileSelect,
   onRequestContent,
   hideDirectory = false,
   showBottomBorder = true,
@@ -178,31 +207,77 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
     previewType !== "code" &&
     previewType !== "database" &&
     supportsSourceControlWorkingCopyPreview(previewType);
+  const absoluteFilePath =
+    file.path.startsWith("/") || !repoPath
+      ? file.path
+      : `${repoPath}/${file.path}`;
 
+  function renderPreviewContent(): React.ReactNode {
+    if (!isPreviewable || file.status === "deleted") return null;
+
+    switch (previewType) {
+      case "image":
+        return (
+          <LazyImagePreview filePath={absoluteFilePath} className="h-full" />
+        );
+      case "video":
+        return (
+          <LazyVideoPreview filePath={absoluteFilePath} className="h-full" />
+        );
+      case "pdf":
+        return (
+          <LazyPdfPreview filePath={absoluteFilePath} className="h-full" />
+        );
+      case "docx":
+        return (
+          <LazyDocxPreview filePath={absoluteFilePath} className="h-full" />
+        );
+      case "xlsx":
+        return (
+          <LazyXlsxPreview
+            filePath={absoluteFilePath}
+            className="h-full"
+            readOnly
+          />
+        );
+      case "pptx":
+        return (
+          <LazyPptxPreview filePath={absoluteFilePath} className="h-full" />
+        );
+      case "pages":
+        return (
+          <LazyPagesPreview filePath={absoluteFilePath} className="h-full" />
+        );
+      default:
+        return null;
+    }
+  }
+
+  const previewContent = renderPreviewContent();
   const displayPath = getDisplayPath(file.path, repoPath);
   const { fileName, dirPath } = getFileNameAndDir(displayPath);
 
   const diffContent = (
     <div ref={containerRef}>
-      {isPreviewable ? (
-        <Placeholder
-          variant="empty"
-          title={t("placeholders.previewNotAvailableInline")}
-          className="py-8"
-          action={
-            onFileSelect
-              ? {
-                  label: t("actions.openInTab"),
-                  onClick: () => onFileSelect(file.path),
-                }
-              : undefined
-          }
-        />
+      {previewContent ? (
+        <div className="h-[480px] min-h-[320px] overflow-hidden bg-bg-1">
+          <Suspense
+            fallback={
+              <Placeholder
+                variant="loading"
+                placement="detail-panel"
+                fillParentHeight
+              />
+            }
+          >
+            {previewContent}
+          </Suspense>
+        </div>
       ) : isBinary ? (
         <Placeholder
           variant="empty"
-          title={t("placeholders.unsupportedFileType")}
-          subtitle={t("placeholders.binaryUnsupportedEncoding")}
+          title={t("placeholders.previewUnavailable")}
+          subtitle={displayPath}
         />
       ) : hasContent ? (
         <CodeMirrorDiff

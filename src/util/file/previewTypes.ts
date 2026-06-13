@@ -210,7 +210,15 @@ export function requiresFilePreviewRoute(filePath: string): boolean {
 export function supportsSourceControlWorkingCopyPreview(
   previewType: PreviewType
 ): boolean {
-  return previewType !== "xlsx";
+  return isSourceControlWorkingCopyPreviewType(previewType);
+}
+
+function isSourceControlWorkingCopyPreviewType(
+  previewType: PreviewType
+): boolean {
+  return ["image", "video", "pdf", "docx", "xlsx", "pptx", "pages"].includes(
+    previewType
+  );
 }
 
 /**
