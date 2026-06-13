@@ -1,7 +1,7 @@
 /**
  * Simulator shell replay using DOM + CSS, styled from the same terminal
  * settings as Workstation (theme palette + font atoms). Avoids xterm canvas/WebGL glitches.
- * Command: Shiki shellscript; output: Shiki log (build-style lines), theme follows app light/dark.
+ * Command and output render as plain terminal text without syntax highlighting.
  */
 import type { CSSProperties } from "react";
 import React, { memo, useMemo } from "react";
@@ -9,9 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import { TerminalCommand } from "@src/components/TerminalDisplay";
 import { stripAnsiCodes } from "@src/components/TerminalDisplay/utils/ansiProcessor";
-import { useShikiHighlight } from "@src/hooks/code";
 import { useTerminalSurfaceStyle } from "@src/hooks/terminal/useTerminalSurfaceStyle";
-import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import "./ShellCssOutput.scss";
 
@@ -45,22 +43,11 @@ const SimulatorShellCssOutputComponent: React.FC<
     typography,
   } = useTerminalSurfaceStyle();
 
-  const { isDark } = useCurrentTheme();
-  const shikiTheme = isDark ? "one-dark-pro" : "github-light";
-
   const isStreaming = isLoading && !!streamOutput;
   const displayOutput = isStreaming ? streamOutput : output;
   const plainOutput = stripAnsiCodes(displayOutput ?? "");
   const displayCommand =
     command.trim() || t("simulator.replay.ide.shell.noCommand");
-
-  // Skip Shiki during streaming — it's async and slow; plain text is fine
-  // while output is still arriving. Shiki kicks in once the command finishes.
-  const highlightedOutputHtml = useShikiHighlight(plainOutput, {
-    lang: "log",
-    theme: shikiTheme,
-    enabled: !isStreaming && plainOutput.length > 0,
-  });
 
   const surfaceTypographyVars = useMemo((): CSSProperties => {
     const letterSpacing = typography.letterSpacing;
@@ -90,8 +77,7 @@ const SimulatorShellCssOutputComponent: React.FC<
           <TerminalCommand
             command={displayCommand}
             prefix="$"
-            highlighted
-            shikiTheme={shikiTheme}
+            highlighted={false}
             style={{
               padding: 0,
               margin: 0,
@@ -100,20 +86,12 @@ const SimulatorShellCssOutputComponent: React.FC<
         </div>
       ) : null}
       {plainOutput ? (
-        highlightedOutputHtml ? (
-          <div
-            className="simulator-shell-shiki-output m-0 max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere] [&_pre.shiki]:!m-0 [&_pre.shiki]:!whitespace-pre-wrap [&_pre.shiki]:!bg-transparent [&_pre.shiki]:!p-0 [&_pre.shiki]:!shadow-none"
-            // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{ __html: highlightedOutputHtml }}
-          />
-        ) : (
-          <pre
-            className="simulator-shell-plain-pre m-0 min-w-0 max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
-            style={{ color: foreground }}
-          >
-            {plainOutput}
-          </pre>
-        )
+        <pre
+          className="simulator-shell-plain-pre m-0 min-w-0 max-w-full whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+          style={{ color: foreground }}
+        >
+          {plainOutput}
+        </pre>
       ) : null}
       {isLoading ? (
         <div

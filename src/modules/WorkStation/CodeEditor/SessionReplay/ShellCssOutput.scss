@@ -1,6 +1,6 @@
 /**
  * Unify command + output typography with terminal settings (atoms).
- * Overrides global .terminal-command / Shiki hardcoded 12px under this surface only.
+ * Overrides global .terminal-command typography under this surface only.
  */
 .simulator-shell-surface {
   --simulator-shell-font-size: 13px;
@@ -31,24 +31,6 @@
     line-height: inherit !important;
   }
 
-  .terminal-command__text pre[class*="shiki"],
-  .terminal-command__text pre[class*="shiki"] code,
-  .terminal-command__text pre[class*="shiki"] code span {
-    font-family: var(--simulator-shell-font-family) !important;
-    font-size: var(--simulator-shell-font-size) !important;
-    letter-spacing: var(--simulator-shell-letter-spacing) !important;
-    line-height: var(--simulator-shell-line-height) !important;
-  }
-
-  .simulator-shell-shiki-output pre[class*="shiki"],
-  .simulator-shell-shiki-output pre[class*="shiki"] code,
-  .simulator-shell-shiki-output pre[class*="shiki"] code span {
-    font-family: var(--simulator-shell-font-family) !important;
-    font-size: var(--simulator-shell-font-size) !important;
-    letter-spacing: var(--simulator-shell-letter-spacing) !important;
-    line-height: var(--simulator-shell-line-height) !important;
-  }
-
   .simulator-shell-plain-pre {
     font-family: var(--simulator-shell-font-family) !important;
     font-size: var(--simulator-shell-font-size) !important;
@@ -62,28 +44,6 @@
 .simulator-shell-surface pre::selection,
 .simulator-shell-surface code::selection,
 .simulator-shell-surface span::selection,
-.simulator-shell-surface .terminal-command__text pre[class*="shiki"]::selection,
-.simulator-shell-surface
-  .terminal-command__text
-  pre[class*="shiki"]
-  code::selection,
-.simulator-shell-surface
-  .terminal-command__text
-  pre[class*="shiki"]
-  code
-  span::selection,
-.simulator-shell-surface
-  .simulator-shell-shiki-output
-  pre[class*="shiki"]::selection,
-.simulator-shell-surface
-  .simulator-shell-shiki-output
-  pre[class*="shiki"]
-  code::selection,
-.simulator-shell-surface
-  .simulator-shell-shiki-output
-  pre[class*="shiki"]
-  code
-  span::selection,
 .simulator-shell-surface .simulator-shell-plain-pre::selection {
   background: var(--terminal-selection, var(--color-fill-2)) !important;
   background-color: var(--terminal-selection, var(--color-fill-2)) !important;
