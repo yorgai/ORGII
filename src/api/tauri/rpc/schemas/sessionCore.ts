@@ -225,6 +225,11 @@ export const PatchByIdsInput = z.object({
   sessionId: z.string().nullable(),
 });
 
+export const RemoveByIdInput = z.object({
+  id: z.string(),
+  sessionId: z.string().nullable(),
+});
+
 export const RemoveByIdPrefixInput = z.object({
   prefix: z.string(),
   sessionId: z.string().nullable(),

@@ -55,6 +55,30 @@ pub async fn es_patch_by_ids(
     Ok(count)
 }
 
+/// Remove one event by exact ID.
+#[tauri::command]
+pub async fn es_remove_by_id(
+    app: AppHandle,
+    state: State<'_, EventStoreState>,
+    session_id: Option<String>,
+    id: String,
+) -> Result<bool, String> {
+    let sid = state.resolve_session_id(session_id)?;
+    let removed = state.with_store_mut(&sid, |store| store.remove_by_id(&id));
+    if removed {
+        let persist_sid = sid.clone();
+        let persist_id = id.clone();
+        tokio::task::spawn_blocking(move || {
+            session_persistence::delete_event(&persist_sid, &persist_id)
+        })
+        .await
+        .map_err(|err| err.to_string())?
+        .map_err(|err| err.to_string())?;
+        schedule_notify(&app, &state, &sid);
+    }
+    Ok(removed)
+}
+
 /// Remove events whose IDs start with a given prefix.
 #[tauri::command]
 pub async fn es_remove_by_id_prefix(

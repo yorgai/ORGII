@@ -501,6 +501,14 @@ class EventStoreProxyImpl {
     });
   }
 
+  /** Remove one event by exact ID. */
+  async removeById(id: string, sessionId?: string): Promise<boolean> {
+    return rpc.sessionCore.eventStore.removeById({
+      id,
+      sessionId: sessionId ?? null,
+    });
+  }
+
   /** Remove events whose IDs start with a given prefix. Returns count removed. */
   async removeByIdPrefix(prefix: string, sessionId?: string): Promise<number> {
     return rpc.sessionCore.eventStore.removeByIdPrefix({

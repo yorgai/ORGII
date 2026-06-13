@@ -191,6 +191,10 @@ const eventStore = {
     .input(schemas.sessionCore.PatchByIdsInput)
     .output(z.number())
     .build(),
+  removeById: defineProcedure("es_remove_by_id")
+    .input(schemas.sessionCore.RemoveByIdInput)
+    .output(z.boolean())
+    .build(),
   removeByIdPrefix: defineProcedure("es_remove_by_id_prefix")
     .input(schemas.sessionCore.RemoveByIdPrefixInput)
     .output(z.number())

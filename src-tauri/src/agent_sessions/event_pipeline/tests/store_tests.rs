@@ -434,6 +434,33 @@ fn test_patch_by_ids_with_missing() {
 }
 
 #[test]
+fn test_remove_by_id_keeps_later_events() {
+    let mut store = EventStore::new();
+    store.set(vec![
+        make_event("stop-user", "raw"),
+        make_event("force-send-user", "raw"),
+        make_event("assistant-after", "message"),
+    ]);
+
+    assert!(store.remove_by_id("stop-user"));
+    assert_eq!(store.event_count(), 2);
+    assert!(store.get_by_id("stop-user").is_none());
+    assert!(store.get_by_id("force-send-user").is_some());
+    assert!(store.get_by_id("assistant-after").is_some());
+}
+
+#[test]
+fn test_remove_by_id_no_match() {
+    let mut store = EventStore::new();
+    store.set(vec![make_event("a", "message")]);
+    let v_before = store.version();
+
+    assert!(!store.remove_by_id("missing"));
+    assert_eq!(store.version(), v_before);
+    assert!(store.get_by_id("a").is_some());
+}
+
+#[test]
 fn test_remove_by_id_prefix() {
     let mut store = EventStore::new();
     store.set(vec![

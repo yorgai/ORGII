@@ -104,6 +104,18 @@ export function hasPriorTurns(
   return false;
 }
 
+export function getCurrentTurnUserEventId(
+  events: readonly SessionEvent[],
+  sessionId: string
+): string | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.sessionId && event.sessionId !== sessionId) continue;
+    if (event.source === "user") return event.id;
+  }
+  return null;
+}
+
 export function resolveRestorableUserMessage(options: {
   snapshotDisplayText?: string;
   snapshotImages?: unknown;
@@ -208,6 +220,8 @@ export function useSessionActions(options: UseSessionActionsOptions) {
       sessionId
     );
 
+    const stopUserEventId = getCurrentTurnUserEventId(events, sessionId);
+
     // Only restore the draft when the turn has not produced output yet.
     if (!currentTurnHasOutput) {
       const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
@@ -238,20 +252,8 @@ export function useSessionActions(options: UseSessionActionsOptions) {
         });
       }
 
-      // Find the last user event for this session — that's the message to discard.
-      let lastUserEventId: string | null = null;
-      for (let i = events.length - 1; i >= 0; i--) {
-        const ev = events[i];
-        if (ev.sessionId && ev.sessionId !== sessionId) continue;
-        if (ev.source === "user") {
-          lastUserEventId = ev.id;
-          break;
-        }
-      }
-
-      if (lastUserEventId) {
-        // Truncate removes this event and everything after it.
-        void eventStoreProxy.truncateBeforeId(lastUserEventId, sessionId);
+      if (stopUserEventId) {
+        void eventStoreProxy.removeById(stopUserEventId, sessionId);
       }
 
       if (hasPriorTurns(events, sessionId)) {

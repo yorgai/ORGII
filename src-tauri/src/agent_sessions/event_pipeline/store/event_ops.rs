@@ -174,6 +174,18 @@ impl EventStore {
         }
     }
 
+    pub fn remove_by_id(&mut self, id: &str) -> bool {
+        let Some(&idx) = self.id_index.get(id) else {
+            return false;
+        };
+        let event_id = self.events[idx].id.clone();
+        self.events.remove(idx);
+        self.mark_removed(event_id);
+        self.rebuild_indexes();
+        self.version += 1;
+        true
+    }
+
     /// Remove events whose IDs match a given prefix.
     /// Returns the number of events removed.
     pub fn remove_by_id_prefix(&mut self, prefix: &str) -> usize {

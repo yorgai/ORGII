@@ -196,6 +196,7 @@ pub fn delete_event(session_id: &str, event_id: &str) -> SqliteResult<bool> {
 
         if deleted > 0 {
             update_session_metadata(&conn, session_id)?;
+            super::turn_index::rebuild_turn_index(session_id)?;
         }
         tx.commit()?;
 
