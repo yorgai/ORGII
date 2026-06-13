@@ -369,7 +369,6 @@ const UserBubbleContent: React.FC<{
 
   return (
     <div className="flex flex-col items-start gap-1.5 text-left">
-      {hasImages && <ChatImageThumbnailRow images={images} />}
       {hasContent && (
         <div
           className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} rounded-lg bg-primary-1 p-3`}
@@ -377,6 +376,7 @@ const UserBubbleContent: React.FC<{
           <UserMessageContent text={strippedContent} />
         </div>
       )}
+      {hasImages && <ChatImageThumbnailRow images={images} />}
       {terminalPills.map((pill, index) => (
         <TerminalContextCard key={`${pill.displayName}-${index}`} pill={pill} />
       ))}
