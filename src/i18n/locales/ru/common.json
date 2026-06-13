@@ -1560,7 +1560,8 @@
     "openMyStation": "Перейти в My Station",
     "openAgentStation": "Перейти в Agent Station",
     "openOpsControl": "Перейти в Ops Control",
-    "changeLanguage": "Изменить язык"
+    "changeLanguage": "Изменить язык",
+    "switchToSystemTheme": "Следовать системной теме"
   },
   "commands": {
     "showBottomPanel": "Показать нижнюю панель",

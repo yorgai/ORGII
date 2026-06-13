@@ -1638,7 +1638,8 @@
     "openMyStation": "Go to My Station",
     "openAgentStation": "Go to Agent Station",
     "openOpsControl": "Go to Ops Control",
-    "changeLanguage": "Change language"
+    "changeLanguage": "Change language",
+    "switchToSystemTheme": "Follow system theme"
   },
   "commands": {
     "showBottomPanel": "Show Bottom Panel",

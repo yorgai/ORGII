@@ -123,6 +123,7 @@
     "language": "Langue",
     "languageSearchPlaceholder": "Rechercher des langues...",
     "languageNames": {
+      "system": "Suivre le système",
       "en": "Anglais",
       "zh": "Chinois simplifié",
       "fr": "Français",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "En ligne — consignes pour les agents",
     "presenceGuidanceInvisible": "Invisible — consignes pour les agents",
     "presenceGuidanceAway": "Absent — consignes pour les agents",
-    "presenceGuidancePlaceholder": "Indique à l'agent comment se comporter dans ce mode…"
+    "presenceGuidancePlaceholder": "Indique à l'agent comment se comporter dans ce mode…",
+    "followSystem": "Suivre le système"
   },
   "background": {
     "title": "Arrière-plan",

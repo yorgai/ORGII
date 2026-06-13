@@ -7,7 +7,12 @@
 import { type ComponentType, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { LANGUAGE_NAMES } from "@src/i18n";
+import {
+  LANGUAGE_NAMES,
+  LANGUAGE_PREFERENCE,
+  type SupportedLanguage,
+  getFollowSystemLanguageLabel,
+} from "@src/i18n";
 import { REPO_KIND } from "@src/store/repo";
 
 import { ICONS } from "../../config";
@@ -64,7 +69,10 @@ export function useConfirmationPage(
     if (state.currentLanguage) {
       parameters.push({
         label: t("settings:general.language"),
-        value: LANGUAGE_NAMES[state.currentLanguage],
+        value:
+          state.currentLanguage === LANGUAGE_PREFERENCE.SYSTEM
+            ? getFollowSystemLanguageLabel(t("settings:general.followSystem"))
+            : LANGUAGE_NAMES[state.currentLanguage as SupportedLanguage],
         icon: ICONS.language,
       });
     }

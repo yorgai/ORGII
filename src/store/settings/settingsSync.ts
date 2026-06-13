@@ -12,9 +12,23 @@ import i18n from "i18next";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useRef } from "react";
 
-import type { SupportedLanguage } from "@src/i18n";
+import {
+  THEME_PREFERENCE,
+  getGlobalTheme,
+  getSystemColorScheme,
+  normalizeGlobalThemePreference,
+  resolveGlobalThemePreference,
+} from "@src/config/appearance/globalThemes";
+import {
+  LANGUAGE_PREFERENCE,
+  type LanguagePreference,
+  resolveLanguagePreference,
+} from "@src/i18n";
 import { LANGUAGE_STORAGE_KEY } from "@src/store/ui/languageAtom";
+import { swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
+import { showThemeTransitionCover } from "@src/util/ui/theme/themeTransitionCover";
 
+import { systemColorSchemeAtom } from "../ui/uiAtom";
 import {
   handleExternalChangeAtom,
   handleFileDeletedAtom,
@@ -46,6 +60,7 @@ export function useSettingsSync(): void {
   const handleFileDeleted = useSetAtom(handleFileDeletedAtom);
   const settingsLoaded = useAtomValue(settingsLoadedAtom);
   const settings = useAtomValue(settingsAtom);
+  const setSystemColorScheme = useSetAtom(systemColorSchemeAtom);
 
   const writingRef = useRef(false);
 
@@ -78,23 +93,88 @@ export function useSettingsSync(): void {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sync theme to resolved CSS after settings load from disk or external edits.
+  useEffect(() => {
+    if (!settingsLoaded) return;
+
+    const themePreference = normalizeGlobalThemePreference(
+      settings["general.theme"]
+    );
+    const resolvedThemeId = resolveGlobalThemePreference(themePreference);
+    const selectedTheme = getGlobalTheme(resolvedThemeId);
+
+    try {
+      localStorage.setItem("theme", themePreference);
+    } catch {
+      // localStorage may be unavailable
+    }
+
+    void swapThemeCss(selectedTheme.baseCssPath);
+  }, [settingsLoaded, settings]);
+
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    const themePreference = normalizeGlobalThemePreference(
+      settings["general.theme"]
+    );
+    if (themePreference !== THEME_PREFERENCE.SYSTEM) return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleSystemThemeChange = () => {
+      const resolvedThemeId = resolveGlobalThemePreference(themePreference);
+      const selectedTheme = getGlobalTheme(resolvedThemeId);
+      const cover = showThemeTransitionCover();
+      void swapThemeCss(selectedTheme.baseCssPath)
+        .then(() => {
+          setSystemColorScheme(getSystemColorScheme());
+        })
+        .finally(() => {
+          void cover.hide();
+        });
+    };
+    mediaQuery.addEventListener("change", handleSystemThemeChange);
+    return () =>
+      mediaQuery.removeEventListener("change", handleSystemThemeChange);
+  }, [settingsLoaded, settings, setSystemColorScheme]);
+
   // Sync language to i18next + localStorage after settings load from disk.
   // This bridges the gap between the async settings.jsonc load and the
   // synchronous i18n init that reads localStorage on cold start.
   useEffect(() => {
     if (!settingsLoaded) return;
 
-    const diskLanguage = settings["general.language"] as SupportedLanguage;
-    if (!diskLanguage) return;
+    const languagePreference = settings[
+      "general.language"
+    ] as LanguagePreference;
+    if (!languagePreference) return;
 
-    if (i18n.language !== diskLanguage) {
-      i18n.changeLanguage(diskLanguage);
+    const resolvedLanguage = resolveLanguagePreference(languagePreference);
+    if (i18n.language !== resolvedLanguage) {
+      i18n.changeLanguage(resolvedLanguage);
     }
 
     try {
-      localStorage.setItem(LANGUAGE_STORAGE_KEY, JSON.stringify(diskLanguage));
+      localStorage.setItem(
+        LANGUAGE_STORAGE_KEY,
+        JSON.stringify(languagePreference)
+      );
     } catch {
       // localStorage may be unavailable
     }
+  }, [settingsLoaded, settings]);
+
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    const languagePreference = settings[
+      "general.language"
+    ] as LanguagePreference;
+    if (languagePreference !== LANGUAGE_PREFERENCE.SYSTEM) return;
+
+    const handleSystemLanguageChange = () => {
+      void i18n.changeLanguage(resolveLanguagePreference(languagePreference));
+    };
+    window.addEventListener("languagechange", handleSystemLanguageChange);
+    return () =>
+      window.removeEventListener("languagechange", handleSystemLanguageChange);
   }, [settingsLoaded, settings]);
 }

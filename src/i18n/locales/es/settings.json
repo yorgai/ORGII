@@ -123,6 +123,7 @@
     "language": "Idioma",
     "languageSearchPlaceholder": "Buscar idiomas...",
     "languageNames": {
+      "system": "Seguir el sistema",
       "en": "Inglés",
       "zh": "Chino simplificado",
       "fr": "Francés",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "En línea — instrucciones para los agentes",
     "presenceGuidanceInvisible": "Invisible — instrucciones para los agentes",
     "presenceGuidanceAway": "Ausente — instrucciones para los agentes",
-    "presenceGuidancePlaceholder": "Dile al agente cómo comportarse en este estado…"
+    "presenceGuidancePlaceholder": "Dile al agente cómo comportarse en este estado…",
+    "followSystem": "Seguir el sistema"
   },
   "background": {
     "title": "Fondo",

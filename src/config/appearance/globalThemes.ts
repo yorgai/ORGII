@@ -6,7 +6,21 @@ export const GLOBAL_THEME_IDS = [
 
 export type GlobalThemeId = (typeof GLOBAL_THEME_IDS)[number];
 
+export const THEME_PREFERENCE = {
+  SYSTEM: "system",
+} as const;
+
+export const GLOBAL_THEME_PREFERENCES = [
+  THEME_PREFERENCE.SYSTEM,
+  ...GLOBAL_THEME_IDS,
+] as const;
+
+export type GlobalThemePreference = (typeof GLOBAL_THEME_PREFERENCES)[number];
+
+export type SystemColorScheme = "light" | "dark";
+
 export const APPEARANCE_MODE = {
+  SYSTEM: "system",
   LIGHT: "light",
   DARK: "dark",
   HIGH_CONTRAST: "highContrast",
@@ -78,15 +92,50 @@ export const LEGACY_THEME_ALIASES = {
 } as const;
 
 export const DEFAULT_GLOBAL_THEME_ID: GlobalThemeId = "github-light";
+export const DEFAULT_GLOBAL_THEME_PREFERENCE: GlobalThemePreference =
+  THEME_PREFERENCE.SYSTEM;
 
 export function isGlobalThemeId(value: string): value is GlobalThemeId {
   return value in GLOBAL_THEMES;
+}
+
+export function isGlobalThemePreference(
+  value: string
+): value is GlobalThemePreference {
+  return value === THEME_PREFERENCE.SYSTEM || isGlobalThemeId(value);
+}
+
+export function getSystemColorScheme(): SystemColorScheme {
+  if (typeof window === "undefined") return APPEARANCE_MODE.LIGHT;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? APPEARANCE_MODE.DARK
+    : APPEARANCE_MODE.LIGHT;
+}
+
+export function getSystemThemeId(): GlobalThemeId {
+  return getSystemColorScheme() === APPEARANCE_MODE.DARK
+    ? "github-dark"
+    : "github-light";
+}
+
+export function getSystemThemeEnglishLabel(
+  colorScheme: SystemColorScheme = getSystemColorScheme()
+): "Light" | "Dark" {
+  return colorScheme === APPEARANCE_MODE.DARK ? "Dark" : "Light";
+}
+
+export function getFollowSystemThemeLabel(
+  colorScheme: SystemColorScheme = getSystemColorScheme(),
+  followSystemLabel = "Follow system"
+): string {
+  return `${followSystemLabel} (${getSystemThemeEnglishLabel(colorScheme)})`;
 }
 
 export function normalizeGlobalThemeId(
   value: string | null | undefined
 ): GlobalThemeId {
   if (!value) return DEFAULT_GLOBAL_THEME_ID;
+  if (value === THEME_PREFERENCE.SYSTEM) return getSystemThemeId();
   if (isGlobalThemeId(value)) return value;
   return (
     LEGACY_THEME_ALIASES[value as keyof typeof LEGACY_THEME_ALIASES] ??
@@ -94,10 +143,30 @@ export function normalizeGlobalThemeId(
   );
 }
 
+export function normalizeGlobalThemePreference(
+  value: string | null | undefined
+): GlobalThemePreference {
+  if (!value) return DEFAULT_GLOBAL_THEME_PREFERENCE;
+  if (isGlobalThemePreference(value)) return value;
+  return (
+    LEGACY_THEME_ALIASES[value as keyof typeof LEGACY_THEME_ALIASES] ??
+    DEFAULT_GLOBAL_THEME_PREFERENCE
+  );
+}
+
+export function resolveGlobalThemePreference(
+  preference: string | null | undefined
+): GlobalThemeId {
+  const normalizedPreference = normalizeGlobalThemePreference(preference);
+  return normalizedPreference === THEME_PREFERENCE.SYSTEM
+    ? getSystemThemeId()
+    : normalizedPreference;
+}
+
 export function getGlobalTheme(
   themeId: string | null | undefined
 ): GlobalThemeDefinition {
-  return GLOBAL_THEMES[normalizeGlobalThemeId(themeId)];
+  return GLOBAL_THEMES[resolveGlobalThemePreference(themeId)];
 }
 
 export function isThemeCssPathDark(
@@ -106,7 +175,10 @@ export function isThemeCssPathDark(
   return getGlobalTheme(themePath).isDark;
 }
 
-export const GLOBAL_THEME_GROUPS: Record<AppearanceMode, GlobalThemeId[]> = {
+export const GLOBAL_THEME_GROUPS: Record<
+  Exclude<AppearanceMode, typeof APPEARANCE_MODE.SYSTEM>,
+  GlobalThemeId[]
+> = {
   [APPEARANCE_MODE.LIGHT]: ["github-light"],
   [APPEARANCE_MODE.DARK]: ["github-dark"],
   [APPEARANCE_MODE.HIGH_CONTRAST]: ["orgii-high-contrast"],
@@ -115,16 +187,20 @@ export const GLOBAL_THEME_GROUPS: Record<AppearanceMode, GlobalThemeId[]> = {
 export function getAppearanceModeForTheme(
   themeId: string | null | undefined
 ): AppearanceMode {
-  const normalizedThemeId = normalizeGlobalThemeId(themeId);
-  if (normalizedThemeId === "orgii-high-contrast") {
+  const normalizedPreference = normalizeGlobalThemePreference(themeId);
+  if (normalizedPreference === THEME_PREFERENCE.SYSTEM) {
+    return APPEARANCE_MODE.SYSTEM;
+  }
+  if (normalizedPreference === "orgii-high-contrast") {
     return APPEARANCE_MODE.HIGH_CONTRAST;
   }
-  return GLOBAL_THEMES[normalizedThemeId].isDark
+  return GLOBAL_THEMES[normalizedPreference].isDark
     ? APPEARANCE_MODE.DARK
     : APPEARANCE_MODE.LIGHT;
 }
 
 export function normalizeAppearanceMode(value: string): AppearanceMode {
+  if (value === APPEARANCE_MODE.SYSTEM) return APPEARANCE_MODE.SYSTEM;
   if (value === APPEARANCE_MODE.DARK) return APPEARANCE_MODE.DARK;
   if (value === APPEARANCE_MODE.HIGH_CONTRAST) {
     return APPEARANCE_MODE.HIGH_CONTRAST;
@@ -132,19 +208,30 @@ export function normalizeAppearanceMode(value: string): AppearanceMode {
   return APPEARANCE_MODE.LIGHT;
 }
 
-export function getDefaultThemeForAppearanceMode(
+export function getDefaultThemePreferenceForAppearanceMode(
   mode: AppearanceMode
+): GlobalThemePreference {
+  if (mode === APPEARANCE_MODE.SYSTEM) return THEME_PREFERENCE.SYSTEM;
+  return GLOBAL_THEME_GROUPS[mode][0];
+}
+
+export function getDefaultThemeForAppearanceMode(
+  mode: Exclude<AppearanceMode, typeof APPEARANCE_MODE.SYSTEM>
 ): GlobalThemeId {
   return GLOBAL_THEME_GROUPS[mode][0];
 }
 
 export function getThemeOptionsForAppearanceMode(
   mode: AppearanceMode
-): GlobalThemeId[] {
+): GlobalThemePreference[] {
+  if (mode === APPEARANCE_MODE.SYSTEM) {
+    return [THEME_PREFERENCE.SYSTEM];
+  }
   return GLOBAL_THEME_GROUPS[mode];
 }
 
 export const APPEARANCE_MODE_OPTIONS = [
+  APPEARANCE_MODE.SYSTEM,
   APPEARANCE_MODE.LIGHT,
   APPEARANCE_MODE.DARK,
   APPEARANCE_MODE.HIGH_CONTRAST,

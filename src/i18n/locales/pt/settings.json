@@ -123,6 +123,7 @@
     "language": "Idioma",
     "languageSearchPlaceholder": "Pesquisar idiomas...",
     "languageNames": {
+      "system": "Seguir o sistema",
       "en": "Inglês",
       "zh": "Chinês simplificado",
       "fr": "Francês",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "Online — orientação para os agentes",
     "presenceGuidanceInvisible": "Invisível — orientação para os agentes",
     "presenceGuidanceAway": "Ausente — orientação para os agentes",
-    "presenceGuidancePlaceholder": "Diz ao agente como se comportar neste estado…"
+    "presenceGuidancePlaceholder": "Diz ao agente como se comportar neste estado…",
+    "followSystem": "Seguir o sistema"
   },
   "background": {
     "title": "Plano de fundo",

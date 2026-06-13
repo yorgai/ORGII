@@ -123,6 +123,7 @@
     "language": "語言",
     "languageSearchPlaceholder": "搜索語言...",
     "languageNames": {
+      "system": "跟隨系統",
       "en": "英語",
       "zh": "簡體中文",
       "fr": "法語",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "線上 — Agent 行為指引",
     "presenceGuidanceInvisible": "隱身 — Agent 行為指引",
     "presenceGuidanceAway": "離開 — Agent 行為指引",
-    "presenceGuidancePlaceholder": "告訴 Agent 在這個狀態下應如何行事…"
+    "presenceGuidancePlaceholder": "告訴 Agent 在這個狀態下應如何行事…",
+    "followSystem": "跟隨系統"
   },
   "background": {
     "title": "背景",

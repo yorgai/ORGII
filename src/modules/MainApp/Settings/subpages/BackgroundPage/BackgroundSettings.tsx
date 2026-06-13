@@ -112,10 +112,7 @@ export const BackgroundSettings: React.FC<BackgroundSettingsProps> = ({
             <Select
               value={globalThemeId}
               onChange={handleThemePresetChange}
-              options={themeOptions.map((option) => ({
-                label: t(option.labelKey),
-                value: option.value,
-              }))}
+              options={themeOptions}
               showSearch
               size="default"
               style={SECTION_CONTROL_STYLE}

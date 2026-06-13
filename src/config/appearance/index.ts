@@ -1,6 +1,11 @@
 export {
   GLOBAL_THEME_IDS,
+  GLOBAL_THEME_PREFERENCES,
+  THEME_PREFERENCE,
+  getFollowSystemThemeLabel,
+  getSystemThemeEnglishLabel,
   type GlobalThemeId,
+  type GlobalThemePreference,
   type ThemePrimaryColorPreset,
   type ThemeCssPath,
   type GlobalThemeDefinition,

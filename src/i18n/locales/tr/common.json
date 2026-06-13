@@ -1565,7 +1565,8 @@
     "openMyStation": "My Station'a git",
     "openAgentStation": "Agent Station'a git",
     "openOpsControl": "Ops Control'e git",
-    "changeLanguage": "Dili değiştir"
+    "changeLanguage": "Dili değiştir",
+    "switchToSystemTheme": "Sistem temasını izle"
   },
   "commands": {
     "showBottomPanel": "Alt paneli göster",

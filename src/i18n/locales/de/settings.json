@@ -123,6 +123,7 @@
     "language": "Sprache",
     "languageSearchPlaceholder": "Sprachen suchen...",
     "languageNames": {
+      "system": "System folgen",
       "en": "Englisch",
       "zh": "Vereinfachtes Chinesisch",
       "fr": "Französisch",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "Online — Hinweise für Agenten",
     "presenceGuidanceInvisible": "Unsichtbar — Hinweise für Agenten",
     "presenceGuidanceAway": "Abwesend — Hinweise für Agenten",
-    "presenceGuidancePlaceholder": "Sag dem Agent, wie er sich in diesem Modus verhalten soll…"
+    "presenceGuidancePlaceholder": "Sag dem Agent, wie er sich in diesem Modus verhalten soll…",
+    "followSystem": "System folgen"
   },
   "background": {
     "title": "Hintergrund",

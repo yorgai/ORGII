@@ -32,6 +32,7 @@ export const ACTION_ID = {
   APP_ZOOM_IN: "app.zoomIn",
   APP_ZOOM_OUT: "app.zoomOut",
   APP_ZOOM_RESET: "app.zoomReset",
+  THEME_SET_SYSTEM: "theme.setSystem",
   THEME_SET_LIGHT: "theme.setLight",
   THEME_SET_DARK: "theme.setDark",
   THEME_SET_HIGH_CONTRAST: "theme.setHighContrast",

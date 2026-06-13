@@ -16,8 +16,14 @@ import {
   normalizeApplicationUiFontId,
 } from "@src/config/appearance/applicationUiFonts";
 import {
+  APPEARANCE_MODE,
+  type SystemColorScheme,
+  THEME_PREFERENCE,
   getGlobalTheme,
+  getSystemColorScheme,
   normalizeGlobalThemeId,
+  normalizeGlobalThemePreference,
+  resolveGlobalThemePreference,
 } from "@src/config/appearance/globalThemes";
 import type { PrimaryColorPreset } from "@src/config/appearance/primaryColors";
 import {
@@ -29,23 +35,40 @@ import {
 // Theme & Appearance
 // ============================================
 
-/** Current global theme ID from settings.jsonc (normalized from legacy values) */
+/** Current global theme preference from settings.jsonc (normalized from legacy values) */
 export const globalThemeIdAtom = atom(
   (get) => {
     const theme = get(settingsAtom)["general.theme"];
-    return normalizeGlobalThemeId(theme);
+    return normalizeGlobalThemePreference(theme);
   },
   (_get, set, value: string) => {
-    const themeId = normalizeGlobalThemeId(value);
-    set(updateSettingAtom, { key: "general.theme", value: themeId });
+    const themePreference = normalizeGlobalThemePreference(value);
+    set(updateSettingAtom, { key: "general.theme", value: themePreference });
   }
 );
 globalThemeIdAtom.debugLabel = "globalThemeIdAtom";
 
-/** Current theme CSS file resolved from the global theme ID */
+export const systemColorSchemeAtom = atom<SystemColorScheme>(
+  getSystemColorScheme()
+);
+systemColorSchemeAtom.debugLabel = "systemColorSchemeAtom";
+
+/** Concrete theme ID after resolving the global theme preference */
+export const resolvedGlobalThemeIdAtom = atom((get) => {
+  const themePreference = get(globalThemeIdAtom);
+  if (themePreference === THEME_PREFERENCE.SYSTEM) {
+    return get(systemColorSchemeAtom) === APPEARANCE_MODE.DARK
+      ? "github-dark"
+      : "github-light";
+  }
+  return resolveGlobalThemePreference(themePreference);
+});
+resolvedGlobalThemeIdAtom.debugLabel = "resolvedGlobalThemeIdAtom";
+
+/** Current theme CSS file resolved from the global theme preference */
 export const themesAtom = atom(
   (get) => {
-    const themeId = get(globalThemeIdAtom);
+    const themeId = get(resolvedGlobalThemeIdAtom);
     return getGlobalTheme(themeId).baseCssPath;
   },
   (_get, set, value: string) => {
@@ -57,7 +80,7 @@ themesAtom.debugLabel = "themesAtom";
 
 /** Whether the active global theme is a dark variant */
 export const isDarkThemeAtom = atom<boolean>((get) => {
-  const themeId = get(globalThemeIdAtom);
+  const themeId = get(resolvedGlobalThemeIdAtom);
   return getGlobalTheme(themeId).isDark;
 });
 isDarkThemeAtom.debugLabel = "isDarkThemeAtom";

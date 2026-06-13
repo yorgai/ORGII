@@ -21,7 +21,7 @@ import {
 import { Placeholder } from "@/src/modules/shared/layouts/blocks";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
-import { useAtom, useSetAtom } from "jotai";
+import { useAtom } from "jotai";
 import { RefreshCw } from "lucide-react";
 import React, {
   Suspense,
@@ -50,8 +50,12 @@ import { useServiceAuth } from "@src/hooks/auth";
 import { useTimezoneSelect } from "@src/hooks/geo";
 import {
   LANGUAGE_NAMES,
+  LANGUAGE_PREFERENCE,
+  type LanguagePreference,
   SUPPORTED_LANGUAGES,
   type SupportedLanguage,
+  getFollowSystemLanguageLabel,
+  resolveLanguagePreference,
 } from "@src/i18n";
 import { NAV_BUTTON_PROPS } from "@src/modules/MainApp/Settings/config";
 import { checkForUpdatesManually } from "@src/scaffold/AppUpdater";
@@ -110,7 +114,7 @@ const GeneralTabBody: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation("settings");
   const [timezone, setTimezone] = useAtom(timezoneAtom);
-  const setLanguagePreference = useSetAtom(languageAtom);
+  const [languagePreference, setLanguagePreference] = useAtom(languageAtom);
   const [settingsFilePath, setSettingsFilePath] = useState(
     "~/.orgii/settings.jsonc"
   );
@@ -234,9 +238,9 @@ const GeneralTabBody: React.FC = () => {
 
   const handleLanguageChange = useCallback(
     (value: string | number | (string | number)[]) => {
-      const newLang = String(value) as SupportedLanguage;
-      i18n.changeLanguage(newLang);
-      setLanguagePreference(newLang);
+      const newPreference = String(value) as LanguagePreference;
+      void i18n.changeLanguage(resolveLanguagePreference(newPreference));
+      setLanguagePreference(newPreference);
     },
     [i18n, setLanguagePreference]
   );
@@ -244,11 +248,14 @@ const GeneralTabBody: React.FC = () => {
   // Language options for the selector
   // Format: "Translated Name · Native Name" (e.g., in French: "Anglais · English")
   const languageOptions = useMemo(
-    () =>
-      SUPPORTED_LANGUAGES.map((lang) => {
+    () => [
+      {
+        value: LANGUAGE_PREFERENCE.SYSTEM,
+        label: getFollowSystemLanguageLabel(t("general.followSystem")),
+      },
+      ...SUPPORTED_LANGUAGES.map((lang) => {
         const translatedName = t(`general.languageNames.${lang}`);
         const nativeName = LANGUAGE_NAMES[lang];
-        // If translated name equals native name, just show one
         const displayLabel =
           translatedName === nativeName
             ? nativeName
@@ -259,17 +266,25 @@ const GeneralTabBody: React.FC = () => {
           label: displayLabel,
         };
       }),
+    ],
     [t]
   );
 
   // Custom filter function to search languages by translated name, native name, and code
   const languageFilterOption = useCallback(
     (inputValue: string, option: { value: string | number }) => {
+      const searchTerm = inputValue.toLowerCase();
+      if (option.value === LANGUAGE_PREFERENCE.SYSTEM) {
+        const systemLabel = getFollowSystemLanguageLabel(
+          t("general.followSystem")
+        ).toLowerCase();
+        return systemLabel.includes(searchTerm);
+      }
+
       const lang = option.value as SupportedLanguage;
       const translatedName =
         t(`general.languageNames.${lang}`)?.toLowerCase() || "";
       const nativeName = LANGUAGE_NAMES[lang]?.toLowerCase() || "";
-      const searchTerm = inputValue.toLowerCase();
 
       return (
         translatedName.includes(searchTerm) ||
@@ -325,7 +340,7 @@ const GeneralTabBody: React.FC = () => {
       <SectionContainer>
         <SectionRow label={t("common:common.language")}>
           <Select
-            value={i18n.language}
+            value={languagePreference}
             onChange={handleLanguageChange}
             options={languageOptions}
             size="default"

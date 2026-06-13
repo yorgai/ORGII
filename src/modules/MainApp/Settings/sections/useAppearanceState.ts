@@ -1,18 +1,22 @@
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import Message from "@src/components/Message";
 import { APPLICATION_UI_FONT_IDS } from "@src/config/appearance/applicationUiFonts";
 import {
+  APPEARANCE_MODE,
   APPEARANCE_MODE_OPTIONS,
   GLOBAL_THEMES,
+  THEME_PREFERENCE,
   getAppearanceModeForTheme,
-  getDefaultThemeForAppearanceMode,
+  getDefaultThemePreferenceForAppearanceMode,
+  getFollowSystemThemeLabel,
   getGlobalTheme,
   getThemeOptionsForAppearanceMode,
   normalizeAppearanceMode,
-  normalizeGlobalThemeId,
+  normalizeGlobalThemePreference,
+  resolveGlobalThemePreference,
 } from "@src/config/appearance/globalThemes";
 import { PRIMARY_COLOR_PRESETS } from "@src/config/appearance/primaryColors";
 import {
@@ -22,10 +26,11 @@ import {
   globalThemeIdAtom,
   primaryColorPresetAtom,
   spotlightPlacementAtom,
+  systemColorSchemeAtom,
   uiScaleAtom,
   updateSettingsBatchAtom,
 } from "@src/store";
-import { preloadThemeCss, swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
+import { swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
 import { showThemeTransitionCover } from "@src/util/ui/theme/themeTransitionCover";
 
 const getApproxFontSize = (scale: number): string => {
@@ -61,18 +66,11 @@ export function useAppearanceState() {
     spotlightPlacementAtom
   );
   const updateSettingsBatch = useSetAtom(updateSettingsBatchAtom);
-
-  // Warm the browser's stylesheet cache for every theme variant the moment
-  // the user lands on the appearance page. The actual swap on click then
-  // hits cached bytes and applies on the same frame as the JS atom flip,
-  // so Tailwind / CSS-variable surfaces stop visibly trailing the
-  // background and other JS-driven layers during a theme switch.
-  useEffect(() => {
-    const uniquePaths = Array.from(
-      new Set(Object.values(GLOBAL_THEMES).map((theme) => theme.baseCssPath))
-    );
-    preloadThemeCss(uniquePaths);
-  }, []);
+  const systemColorScheme = useAtomValue(systemColorSchemeAtom);
+  const followSystemThemeLabel = getFollowSystemThemeLabel(
+    systemColorScheme,
+    t("general.followSystem")
+  );
 
   const appearanceMode = useMemo(
     () => getAppearanceModeForTheme(globalThemeId),
@@ -81,17 +79,17 @@ export function useAppearanceState() {
 
   const handleThemeChange = useCallback(
     async (themeIdValue: string) => {
-      const themeId = normalizeGlobalThemeId(themeIdValue);
-      const selectedTheme = getGlobalTheme(themeId);
-      updateSettingsBatch({
-        "general.theme": themeId,
-        "general.primaryColor": selectedTheme.defaultPrimaryColor,
-      });
-      localStorage.setItem("theme", themeId);
-
+      const themePreference = normalizeGlobalThemePreference(themeIdValue);
+      const resolvedThemeId = resolveGlobalThemePreference(themePreference);
+      const selectedTheme = getGlobalTheme(resolvedThemeId);
       const cover = showThemeTransitionCover();
       try {
         await swapThemeCss(selectedTheme.baseCssPath);
+        updateSettingsBatch({
+          "general.theme": themePreference,
+          "general.primaryColor": selectedTheme.defaultPrimaryColor,
+        });
+        localStorage.setItem("theme", themePreference);
       } finally {
         await cover.hide();
       }
@@ -103,7 +101,9 @@ export function useAppearanceState() {
     async (value: string | number | (string | number)[]) => {
       const rawMode = String(Array.isArray(value) ? value[0] : value);
       const selectedMode = normalizeAppearanceMode(rawMode);
-      await handleThemeChange(getDefaultThemeForAppearanceMode(selectedMode));
+      await handleThemeChange(
+        getDefaultThemePreferenceForAppearanceMode(selectedMode)
+      );
     },
     [handleThemeChange]
   );
@@ -125,10 +125,13 @@ export function useAppearanceState() {
   const appearanceModeOptions = useMemo(
     () =>
       APPEARANCE_MODE_OPTIONS.map((mode) => ({
-        label: t(`general.${mode}`),
+        label:
+          mode === APPEARANCE_MODE.SYSTEM
+            ? followSystemThemeLabel
+            : t(`general.${mode}`),
         value: mode,
       })),
-    [t]
+    [followSystemThemeLabel, t]
   );
 
   const primaryColorOptions = useMemo(
@@ -152,10 +155,13 @@ export function useAppearanceState() {
   const themeOptions = useMemo(
     () =>
       getThemeOptionsForAppearanceMode(appearanceMode).map((themeId) => ({
-        label: t(GLOBAL_THEMES[themeId].i18nKey),
+        label:
+          themeId === THEME_PREFERENCE.SYSTEM
+            ? followSystemThemeLabel
+            : t(GLOBAL_THEMES[themeId].i18nKey),
         value: themeId,
       })),
-    [appearanceMode, t]
+    [appearanceMode, followSystemThemeLabel, t]
   );
 
   return {

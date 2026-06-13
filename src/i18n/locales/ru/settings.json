@@ -123,6 +123,7 @@
     "language": "Язык",
     "languageSearchPlaceholder": "Поиск языков...",
     "languageNames": {
+      "system": "Следовать системе",
       "en": "Английский",
       "zh": "Китайский упрощённый",
       "fr": "Французский",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "В сети — инструкции для агентов",
     "presenceGuidanceInvisible": "Невидимый — инструкции для агентов",
     "presenceGuidanceAway": "Отошёл — инструкции для агентов",
-    "presenceGuidancePlaceholder": "Скажи агенту, как вести себя в этом режиме…"
+    "presenceGuidancePlaceholder": "Скажи агенту, как вести себя в этом режиме…",
+    "followSystem": "Следовать системе"
   },
   "background": {
     "title": "Фон",

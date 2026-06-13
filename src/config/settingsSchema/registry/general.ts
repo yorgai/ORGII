@@ -4,7 +4,7 @@ import {
   APPLICATION_UI_FONT_DEFAULT_ID,
   APPLICATION_UI_FONT_IDS,
 } from "@src/config/appearance/applicationUiFonts";
-import { GLOBAL_THEME_IDS } from "@src/config/appearance/globalThemes";
+import { GLOBAL_THEME_PREFERENCES } from "@src/config/appearance/globalThemes";
 import { DEFAULT_PRIMARY_COLOR_PRESET } from "@src/config/appearance/primaryColors";
 import {
   FAMILIAR_LANGUAGE_TECH_STACKS,
@@ -18,6 +18,7 @@ export const GENERAL_SETTINGS_REGISTRY = {
     // missing here is silently coerced to the default by validateSettings(),
     // which manifests as the language picker snapping back to English.
     schema: z.enum([
+      "system",
       "en",
       "fr",
       "zh",
@@ -32,10 +33,12 @@ export const GENERAL_SETTINGS_REGISTRY = {
       "vi",
       "pl",
     ]),
-    default: "en",
-    description: "Application display language",
+    default: "system",
+    description:
+      "Application display language, or system to follow the OS/browser preference",
     category: "general",
     enumLabels: {
+      system: "Follow system",
       en: "English",
       fr: "Français",
       zh: "简体中文",
@@ -52,11 +55,13 @@ export const GENERAL_SETTINGS_REGISTRY = {
     },
   },
   "general.theme": {
-    schema: z.enum(GLOBAL_THEME_IDS),
-    default: "github-light",
-    description: "Global UI theme preset",
+    schema: z.enum(GLOBAL_THEME_PREFERENCES),
+    default: "system",
+    description:
+      "Global UI theme preference, or system to follow the OS color scheme",
     category: "general",
     enumLabels: {
+      system: "Follow system",
       "github-light": "ORGII Light",
       "github-dark": "ORGII Dark",
       "orgii-high-contrast": "ORGII High Contrast",

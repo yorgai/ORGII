@@ -4,8 +4,10 @@ import { ACTION_ID } from "@src/ActionSystem/actionIds";
 import { defineAppActionRegistration } from "@src/ActionSystem/schema/actionRegistration";
 import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import {
-  type GlobalThemeId,
+  type GlobalThemePreference,
+  THEME_PREFERENCE,
   getGlobalTheme,
+  resolveGlobalThemePreference,
 } from "@src/config/appearance/globalThemes";
 import { updateSettingsBatchAtom } from "@src/store";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
@@ -14,18 +16,20 @@ import { showThemeTransitionCover } from "@src/util/ui/theme/themeTransitionCove
 
 const emptyParams = z.object({});
 
-async function applyTheme(themeId: GlobalThemeId): Promise<string> {
+async function applyTheme(
+  themePreference: GlobalThemePreference
+): Promise<string> {
   const store = getInstrumentedStore();
-  const selectedTheme = getGlobalTheme(themeId);
-  store.set(updateSettingsBatchAtom, {
-    "general.theme": themeId,
-    "general.primaryColor": selectedTheme.defaultPrimaryColor,
-  });
-  localStorage.setItem("theme", themeId);
-
+  const resolvedThemeId = resolveGlobalThemePreference(themePreference);
+  const selectedTheme = getGlobalTheme(resolvedThemeId);
   const cover = showThemeTransitionCover();
   try {
     await swapThemeCss(selectedTheme.baseCssPath);
+    store.set(updateSettingsBatchAtom, {
+      "general.theme": themePreference,
+      "general.primaryColor": selectedTheme.defaultPrimaryColor,
+    });
+    localStorage.setItem("theme", themePreference);
     return selectedTheme.id;
   } finally {
     await cover.hide();
@@ -34,7 +38,7 @@ async function applyTheme(themeId: GlobalThemeId): Promise<string> {
 
 function defineThemeAction(
   id: string,
-  themeId: GlobalThemeId,
+  themeId: GlobalThemePreference,
   description: string,
   message: string,
   examples: string[]
@@ -54,6 +58,14 @@ function defineThemeAction(
     }
   );
 }
+
+const themeSetSystem = defineThemeAction(
+  ACTION_ID.THEME_SET_SYSTEM,
+  THEME_PREFERENCE.SYSTEM,
+  "Switch ORGII to follow the system theme",
+  "System theme enabled",
+  ["follow system theme", "use system theme", "sync theme with system"]
+);
 
 const themeSetLight = defineThemeAction(
   ACTION_ID.THEME_SET_LIGHT,
@@ -80,6 +92,7 @@ const themeSetHighContrast = defineThemeAction(
 );
 
 export const themeZodActions = [
+  themeSetSystem,
   themeSetLight,
   themeSetDark,
   themeSetHighContrast,

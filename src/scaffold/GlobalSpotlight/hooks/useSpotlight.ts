@@ -21,7 +21,7 @@ import {
 import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 import { showScaleMessage } from "@src/hooks/navigation/useGlobalShortcuts/types";
 import { useFilteredItems } from "@src/hooks/search";
-import type { SupportedLanguage } from "@src/i18n";
+import type { LanguagePreference } from "@src/i18n";
 import {
   openAgentControlSpotlight,
   openSessionCreatorSpotlight,
@@ -335,7 +335,7 @@ export function useSpotlight(
   );
 
   const handleSelectLanguage = useCallback(
-    (language: SupportedLanguage, label: string) => {
+    (language: LanguagePreference, label: string) => {
       dispatch({
         type: "PUSH_LANGUAGE",
         payload: { language, label },

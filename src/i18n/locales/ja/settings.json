@@ -123,6 +123,7 @@
     "language": "言語",
     "languageSearchPlaceholder": "言語を検索...",
     "languageNames": {
+      "system": "システムに従う",
       "en": "英語",
       "zh": "簡体中国語",
       "fr": "フランス語",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "オンライン — Agent への指示",
     "presenceGuidanceInvisible": "オフライン表示 — Agent への指示",
     "presenceGuidanceAway": "離席中 — Agent への指示",
-    "presenceGuidancePlaceholder": "このモードでの Agent の振る舞いを指示してください…"
+    "presenceGuidancePlaceholder": "このモードでの Agent の振る舞いを指示してください…",
+    "followSystem": "システムに従う"
   },
   "background": {
     "title": "背景",

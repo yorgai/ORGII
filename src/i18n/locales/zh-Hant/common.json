@@ -1578,7 +1578,8 @@
     "openMyStation": "前往我的工作站",
     "openAgentStation": "前往 Agent 工作站",
     "openOpsControl": "前往 Ops Control",
-    "changeLanguage": "變更語言"
+    "changeLanguage": "變更語言",
+    "switchToSystemTheme": "跟隨系統主題"
   },
   "commands": {
     "showBottomPanel": "顯示底部面板",

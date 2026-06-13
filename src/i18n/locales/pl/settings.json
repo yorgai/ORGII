@@ -123,6 +123,7 @@
     "language": "Język",
     "languageSearchPlaceholder": "Szukaj języków...",
     "languageNames": {
+      "system": "Zgodnie z systemem",
       "en": "Angielski",
       "zh": "Chiński uproszczony",
       "fr": "Francuski",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "Online — wskazówki dla agentów",
     "presenceGuidanceInvisible": "Niewidoczny — wskazówki dla agentów",
     "presenceGuidanceAway": "Z dala — wskazówki dla agentów",
-    "presenceGuidancePlaceholder": "Powiedz agentowi, jak zachowywać się w tym trybie…"
+    "presenceGuidancePlaceholder": "Powiedz agentowi, jak zachowywać się w tym trybie…",
+    "followSystem": "Zgodnie z systemem"
   },
   "background": {
     "title": "Tło",

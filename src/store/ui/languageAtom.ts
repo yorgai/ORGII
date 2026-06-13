@@ -19,7 +19,7 @@
  */
 import { atom } from "jotai";
 
-import type { SupportedLanguage } from "@src/i18n";
+import type { LanguagePreference } from "@src/i18n";
 import {
   settingsAtom,
   updateSettingAtom,
@@ -32,8 +32,8 @@ export const LANGUAGE_STORAGE_KEY = "app-language";
  * Language preference atom (backed by settings.jsonc)
  */
 export const languageAtom = atom(
-  (get) => get(settingsAtom)["general.language"] as SupportedLanguage,
-  (_get, set, value: SupportedLanguage) => {
+  (get) => get(settingsAtom)["general.language"] as LanguagePreference,
+  (_get, set, value: LanguagePreference) => {
     set(updateSettingAtom, { key: "general.language", value });
     try {
       localStorage.setItem(LANGUAGE_STORAGE_KEY, JSON.stringify(value));

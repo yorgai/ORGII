@@ -7,8 +7,11 @@
  */
 import {
   LANGUAGE_NAMES,
+  LANGUAGE_PREFERENCE,
+  type LanguagePreference,
   SUPPORTED_LANGUAGES,
   type SupportedLanguage,
+  getFollowSystemLanguageLabel,
 } from "@src/i18n";
 
 import {
@@ -107,18 +110,25 @@ export function buildStaticActionItems(
 }
 
 export function buildLanguageItems(
-  currentLanguage: SupportedLanguage,
+  currentLanguage: LanguagePreference,
   searchQuery: string,
-  onSelectLanguage: (language: SupportedLanguage, label: string) => void,
+  onSelectLanguage: (language: LanguagePreference, label: string) => void,
   translate: Translator
 ): SpotlightItem[] {
   const queryLower = searchQuery.trim().toLowerCase();
+  const languagePreferences = [
+    LANGUAGE_PREFERENCE.SYSTEM,
+    ...SUPPORTED_LANGUAGES,
+  ];
 
-  return SUPPORTED_LANGUAGES.flatMap((language) => {
-    const translatedName = translate(
-      `settings:general.languageNames.${language}`
-    );
-    const nativeName = LANGUAGE_NAMES[language];
+  return languagePreferences.flatMap((language) => {
+    const isSystemPreference = language === LANGUAGE_PREFERENCE.SYSTEM;
+    const translatedName = isSystemPreference
+      ? getFollowSystemLanguageLabel(translate("settings:general.followSystem"))
+      : translate(`settings:general.languageNames.${language}`);
+    const nativeName = isSystemPreference
+      ? translatedName
+      : LANGUAGE_NAMES[language as SupportedLanguage];
     const label =
       translatedName === nativeName
         ? nativeName

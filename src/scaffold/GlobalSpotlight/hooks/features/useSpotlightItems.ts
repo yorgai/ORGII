@@ -16,7 +16,7 @@ import { useAtomValue } from "jotai";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { SupportedLanguage } from "@src/i18n";
+import type { LanguagePreference } from "@src/i18n";
 import {
   chatPanelMaximizedAtom,
   chatTurnPaginationEnabledAtom,
@@ -99,7 +99,7 @@ interface SpotlightItemsHandlers {
   onSelectEditorAction: (actionId: SpotlightEditorActionId) => void;
   onSelectRepo: (repo: RepoItem) => void;
   onSelectBranch: (branch: BranchItem) => void;
-  onSelectLanguage: (language: SupportedLanguage, label: string) => void;
+  onSelectLanguage: (language: LanguagePreference, label: string) => void;
   onSelectPath: (
     path: string,
     label: string,

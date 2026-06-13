@@ -1563,7 +1563,8 @@
     "openMyStation": "Aller à My Station",
     "openAgentStation": "Aller à Agent Station",
     "openOpsControl": "Aller à Ops Control",
-    "changeLanguage": "Changer la langue"
+    "changeLanguage": "Changer la langue",
+    "switchToSystemTheme": "Suivre le thème du système"
   },
   "commands": {
     "showBottomPanel": "Afficher le panneau inférieur",

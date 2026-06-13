@@ -6,13 +6,16 @@ import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import i18n from "@src/i18n";
 import {
   LANGUAGE_NAMES,
-  SUPPORTED_LANGUAGES,
-  type SupportedLanguage,
+  LANGUAGE_PREFERENCE,
+  LANGUAGE_PREFERENCES,
+  type LanguagePreference,
+  getFollowSystemLanguageLabel,
+  resolveLanguagePreference,
 } from "@src/i18n";
 import { languageAtom } from "@src/store/ui/languageAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
-const SupportedLanguageSchema = z.enum(SUPPORTED_LANGUAGES);
+const LanguagePreferenceSchema = z.enum(LANGUAGE_PREFERENCES);
 
 const settingsSetLanguageAction = defineZodAction(
   {
@@ -20,8 +23,8 @@ const settingsSetLanguageAction = defineZodAction(
     category: "settings",
     description: "Set the ORGII app language/locale",
     params: z.object({
-      language: SupportedLanguageSchema.describe(
-        "Supported language code, for example fr for French"
+      language: LanguagePreferenceSchema.describe(
+        "Language preference: system, or a supported language code such as fr"
       ),
     }),
     layer: "gui",
@@ -29,14 +32,20 @@ const settingsSetLanguageAction = defineZodAction(
     examples: ["change language to French", "set locale to fr"],
   },
   async ({ language }) => {
-    const supportedLanguage = language as SupportedLanguage;
+    const languagePreference = language as LanguagePreference;
+    const resolvedLanguage = resolveLanguagePreference(languagePreference);
     const store = getInstrumentedStore();
-    store.set(languageAtom, supportedLanguage);
-    await i18n.changeLanguage(supportedLanguage);
+    store.set(languageAtom, languagePreference);
+    await i18n.changeLanguage(resolvedLanguage);
+
+    const languageLabel =
+      languagePreference === LANGUAGE_PREFERENCE.SYSTEM
+        ? getFollowSystemLanguageLabel()
+        : LANGUAGE_NAMES[languagePreference];
 
     return {
       success: true,
-      message: `Language changed to ${LANGUAGE_NAMES[supportedLanguage]}`,
+      message: `Language changed to ${languageLabel}`,
     };
   }
 );

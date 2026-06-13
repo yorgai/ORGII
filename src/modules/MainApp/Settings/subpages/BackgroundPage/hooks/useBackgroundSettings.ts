@@ -15,15 +15,19 @@ import {
   resolveBackgroundColorPreset,
 } from "@src/config/appearance/backgroundColors";
 import {
+  APPEARANCE_MODE,
   APPEARANCE_MODE_OPTIONS,
   type AppearanceMode,
   GLOBAL_THEMES,
+  THEME_PREFERENCE,
   getAppearanceModeForTheme,
-  getDefaultThemeForAppearanceMode,
+  getDefaultThemePreferenceForAppearanceMode,
+  getFollowSystemThemeLabel,
   getGlobalTheme,
   getThemeOptionsForAppearanceMode,
   normalizeAppearanceMode,
-  normalizeGlobalThemeId,
+  normalizeGlobalThemePreference,
+  resolveGlobalThemePreference,
 } from "@src/config/appearance/globalThemes";
 import { buildSettingsPath } from "@src/config/mainAppPaths";
 import { useBackgroundImageStorage } from "@src/hooks/theme/useBackgroundImageStorage";
@@ -31,6 +35,7 @@ import { useUndoStackWithRestore } from "@src/hooks/ui";
 import {
   backgroundConfigPersistAtom,
   globalThemeIdAtom,
+  systemColorSchemeAtom,
   updateSettingsBatchAtom,
 } from "@src/store";
 import {
@@ -40,7 +45,7 @@ import {
 } from "@src/store/ui/backgroundConfigAtom";
 import { getStorageInfo } from "@src/util/core/storage/backgroundImage";
 import { prewarmColor } from "@src/util/ui/theme/glassMaterial";
-import { preloadThemeCss, swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
+import { swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
 import { showThemeTransitionCover } from "@src/util/ui/theme/themeTransitionCover";
 
 import { MAX_CUSTOM_BACKGROUND_COLORS } from "../config";
@@ -55,7 +60,7 @@ export interface UseBackgroundSettingsReturn {
   isDarkTheme: boolean;
   appearanceMode: AppearanceMode;
   appearanceModeOptions: { label: string; value: AppearanceMode }[];
-  themeOptions: { labelKey: string; value: string }[];
+  themeOptions: { label: string; value: string }[];
   isOptimizing: boolean;
   images: Map<string, string>;
   storageInfo: StorageInfo;
@@ -91,6 +96,11 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
   const { t } = useTranslation("settings");
   const [config, setConfig] = useAtom(backgroundConfigPersistAtom);
   const globalThemeId = useAtomValue(globalThemeIdAtom);
+  const systemColorScheme = useAtomValue(systemColorSchemeAtom);
+  const followSystemThemeLabel = getFollowSystemThemeLabel(
+    systemColorScheme,
+    t("general.followSystem")
+  );
   const updateSettingsBatch = useSetAtom(updateSettingsBatchAtom);
   const [storageInfo, setStorageInfo] = useState<StorageInfo>({
     path: "",
@@ -106,19 +116,25 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
   const appearanceModeOptions = useMemo(
     () =>
       APPEARANCE_MODE_OPTIONS.map((mode) => ({
-        label: t(`general.${mode}`),
+        label:
+          mode === APPEARANCE_MODE.SYSTEM
+            ? followSystemThemeLabel
+            : t(`general.${mode}`),
         value: mode,
       })),
-    [t]
+    [followSystemThemeLabel, t]
   );
 
   const themeOptions = useMemo(
     () =>
       getThemeOptionsForAppearanceMode(appearanceMode).map((themeId) => ({
-        labelKey: GLOBAL_THEMES[themeId].i18nKey,
+        label:
+          themeId === THEME_PREFERENCE.SYSTEM
+            ? followSystemThemeLabel
+            : t(GLOBAL_THEMES[themeId].i18nKey),
         value: themeId,
       })),
-    [appearanceMode]
+    [appearanceMode, followSystemThemeLabel, t]
   );
 
   // Load storage info
@@ -197,18 +213,6 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
 
     cleanupAndMigrate();
   }, [config, migrateImages, setConfig]);
-
-  // Warm the browser's stylesheet cache for every theme variant the moment
-  // the user lands on the background page. The actual swap on click then
-  // hits cached bytes and applies on the same frame as the JS atom flip,
-  // so Tailwind / CSS-variable surfaces stop visibly trailing the
-  // background and other JS-driven layers during a theme switch.
-  useEffect(() => {
-    const uniquePaths = Array.from(
-      new Set(Object.values(GLOBAL_THEMES).map((theme) => theme.baseCssPath))
-    );
-    preloadThemeCss(uniquePaths);
-  }, []);
 
   useEffect(() => {
     if (!config.backgroundColorId) return;
@@ -414,17 +418,17 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
 
   const applyThemeChange = useCallback(
     async (themeIdValue: string) => {
-      const themeId = normalizeGlobalThemeId(themeIdValue);
-      const selectedTheme = getGlobalTheme(themeId);
-      updateSettingsBatch({
-        "general.theme": themeId,
-        "general.primaryColor": selectedTheme.defaultPrimaryColor,
-      });
-      localStorage.setItem("theme", themeId);
-
+      const themePreference = normalizeGlobalThemePreference(themeIdValue);
+      const resolvedThemeId = resolveGlobalThemePreference(themePreference);
+      const selectedTheme = getGlobalTheme(resolvedThemeId);
       const cover = showThemeTransitionCover();
       try {
         await swapThemeCss(selectedTheme.baseCssPath);
+        updateSettingsBatch({
+          "general.theme": themePreference,
+          "general.primaryColor": selectedTheme.defaultPrimaryColor,
+        });
+        localStorage.setItem("theme", themePreference);
       } finally {
         await cover.hide();
       }
@@ -444,7 +448,9 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
     (value: string | number | (string | number)[]) => {
       const rawMode = String(Array.isArray(value) ? value[0] : value);
       const selectedMode = normalizeAppearanceMode(rawMode);
-      applyThemeChange(getDefaultThemeForAppearanceMode(selectedMode));
+      applyThemeChange(
+        getDefaultThemePreferenceForAppearanceMode(selectedMode)
+      );
     },
     [applyThemeChange]
   );

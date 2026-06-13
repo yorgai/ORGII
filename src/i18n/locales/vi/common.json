@@ -1561,7 +1561,8 @@
     "openMyStation": "Đi tới My Station",
     "openAgentStation": "Đi tới Agent Station",
     "openOpsControl": "Đi tới Ops Control",
-    "changeLanguage": "Thay đổi ngôn ngữ"
+    "changeLanguage": "Thay đổi ngôn ngữ",
+    "switchToSystemTheme": "Theo chủ đề hệ thống"
   },
   "commands": {
     "showBottomPanel": "Hiện bảng dưới",

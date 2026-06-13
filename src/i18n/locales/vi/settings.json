@@ -123,6 +123,7 @@
     "language": "Ngôn ngữ",
     "languageSearchPlaceholder": "Tìm kiếm ngôn ngữ...",
     "languageNames": {
+      "system": "Theo hệ thống",
       "en": "Tiếng Anh",
       "zh": "Tiếng Trung giản thể",
       "fr": "Tiếng Pháp",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "Trực tuyến — hướng dẫn cho Agent",
     "presenceGuidanceInvisible": "Ẩn — hướng dẫn cho Agent",
     "presenceGuidanceAway": "Đi vắng — hướng dẫn cho Agent",
-    "presenceGuidancePlaceholder": "Cho Agent biết cách hành xử trong trạng thái này…"
+    "presenceGuidancePlaceholder": "Cho Agent biết cách hành xử trong trạng thái này…",
+    "followSystem": "Theo hệ thống"
   },
   "background": {
     "title": "Hình nền",

@@ -27,6 +27,7 @@ import {
   List,
   Menu,
   MessageCircle,
+  MonitorCog,
   Moon,
   PanelBottom,
   PanelLeft,
@@ -62,6 +63,7 @@ export type SpotlightStaticActionId =
   | "add-workspace"
   | "create-multi-repo-workspace"
   | "toggle-sidebar"
+  | "set-system-theme"
   | "set-light-theme"
   | "set-dark-theme"
   | "set-high-contrast-theme"
@@ -284,6 +286,18 @@ export function buildThemeActions(
   currentThemeId: string
 ): SpotlightStaticActionDefinition[] {
   const actions: SpotlightStaticActionDefinition[] = [];
+
+  if (currentThemeId !== "system") {
+    actions.push({
+      id: "set-system-theme",
+      labelKey: "common:spotlightActions.switchToSystemTheme",
+      icon: MonitorCog,
+      keywords: ["system theme", "follow system", "theme", "appearance"],
+      actionId: ACTION_ID.THEME_SET_SYSTEM,
+      payload: {},
+      closeOnSuccess: false,
+    });
+  }
 
   if (currentThemeId !== "github-light") {
     actions.push({

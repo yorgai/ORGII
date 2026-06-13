@@ -123,6 +123,7 @@
     "language": "언어",
     "languageSearchPlaceholder": "언어 검색...",
     "languageNames": {
+      "system": "시스템 설정 따르기",
       "en": "영어",
       "zh": "중국어 간체",
       "fr": "프랑스어",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "온라인 — Agent 행동 지침",
     "presenceGuidanceInvisible": "숨김 — Agent 행동 지침",
     "presenceGuidanceAway": "자리비움 — Agent 행동 지침",
-    "presenceGuidancePlaceholder": "이 상태에서 Agent가 어떻게 행동해야 하는지 알려주세요…"
+    "presenceGuidancePlaceholder": "이 상태에서 Agent가 어떻게 행동해야 하는지 알려주세요…",
+    "followSystem": "시스템 설정 따르기"
   },
   "background": {
     "title": "배경",

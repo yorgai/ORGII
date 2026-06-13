@@ -123,6 +123,7 @@
     "language": "Dil",
     "languageSearchPlaceholder": "Dillerde ara...",
     "languageNames": {
+      "system": "Sistemi izle",
       "en": "İngilizce",
       "zh": "Basitleştirilmiş Çince",
       "fr": "Fransızca",
@@ -200,7 +201,8 @@
     "presenceGuidanceOnline": "Çevrimiçi — Agent'lar için yönerge",
     "presenceGuidanceInvisible": "Görünmez — Agent'lar için yönerge",
     "presenceGuidanceAway": "Uzakta — Agent'lar için yönerge",
-    "presenceGuidancePlaceholder": "Bu modda Agent nasıl davranmalı, anlat…"
+    "presenceGuidancePlaceholder": "Bu modda Agent nasıl davranmalı, anlat…",
+    "followSystem": "Sistemi izle"
   },
   "background": {
     "title": "Arka Plan",

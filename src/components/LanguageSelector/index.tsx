@@ -15,7 +15,7 @@
  * <LanguageSelector size="small" variant="ghost" />
  * ```
  */
-import { useSetAtom } from "jotai";
+import { useAtom } from "jotai";
 import { Globe } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,8 +24,11 @@ import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select";
 import {
   LANGUAGE_NAMES,
+  LANGUAGE_PREFERENCE,
+  type LanguagePreference,
   SUPPORTED_LANGUAGES,
-  type SupportedLanguage,
+  getFollowSystemLanguageLabel,
+  resolveLanguagePreference,
 } from "@src/i18n";
 import { languageAtom } from "@src/store/ui/languageAtom";
 
@@ -60,7 +63,7 @@ export interface LanguageSelectorProps {
   /**
    * Callback when language changes
    */
-  onLanguageChange?: (language: SupportedLanguage) => void;
+  onLanguageChange?: (language: LanguagePreference) => void;
 }
 
 // ============================================================================
@@ -74,39 +77,39 @@ export function LanguageSelector({
   className,
   onLanguageChange,
 }: LanguageSelectorProps) {
-  const { i18n } = useTranslation();
-  const setLanguagePreference = useSetAtom(languageAtom);
+  const { i18n, t } = useTranslation("settings");
+  const [languagePreference, setLanguagePreference] = useAtom(languageAtom);
 
   // Build options from supported languages
   const options: SelectOption[] = useMemo(
-    () =>
-      SUPPORTED_LANGUAGES.map((lang) => ({
+    () => [
+      {
+        value: LANGUAGE_PREFERENCE.SYSTEM,
+        label: getFollowSystemLanguageLabel(t("general.followSystem")),
+      },
+      ...SUPPORTED_LANGUAGES.map((lang) => ({
         value: lang,
         label: LANGUAGE_NAMES[lang],
       })),
-    []
+    ],
+    [t]
   );
 
   // Handle language change
   const handleChange = useCallback(
     (value: string | number | (string | number)[]) => {
-      const newLang = value as SupportedLanguage;
+      const newPreference = value as LanguagePreference;
 
-      // Update i18next
-      i18n.changeLanguage(newLang);
-
-      // Persist to settings.jsonc + localStorage mirror
-      setLanguagePreference(newLang);
-
-      // Optional callback
-      onLanguageChange?.(newLang);
+      void i18n.changeLanguage(resolveLanguagePreference(newPreference));
+      setLanguagePreference(newPreference);
+      onLanguageChange?.(newPreference);
     },
     [i18n, setLanguagePreference, onLanguageChange]
   );
 
   return (
     <Select
-      value={i18n.language as SupportedLanguage}
+      value={languagePreference}
       options={options}
       onChange={handleChange}
       size={size}

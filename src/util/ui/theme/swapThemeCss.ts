@@ -10,7 +10,7 @@
 
 const THEME_LINK_ATTR = "data-orgii-theme";
 const PRELOAD_LINK_ATTR = "data-orgii-theme-preload";
-const SWAP_TIMEOUT_MS = 2000;
+const SWAP_TIMEOUT_MS = 4000;
 
 let latestRequestedCssPath = "";
 
@@ -49,6 +49,14 @@ export function preloadThemeCss(paths: readonly string[]): void {
 
 function cssPathSelector(path: string): string {
   return path.replace(/"/g, '\\"');
+}
+
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
 }
 
 export function swapThemeCss(newCssPath: string): Promise<void> {
@@ -107,9 +115,25 @@ function swapFromExisting(
     newLink.setAttribute(THEME_LINK_ATTR, "");
 
     let settled = false;
-    const settle = () => {
+
+    const cleanupListeners = () => {
+      newLink.onload = null;
+      newLink.onerror = null;
+    };
+
+    const finishWithoutPromoting = () => {
       if (settled) return;
       settled = true;
+      cleanupListeners();
+      clearTimeout(timeoutId);
+      newLink.remove();
+      resolve();
+    };
+
+    const promoteLoadedLink = async () => {
+      if (settled) return;
+      settled = true;
+      cleanupListeners();
       clearTimeout(timeoutId);
 
       if (latestRequestedCssPath !== newCssPath) {
@@ -118,14 +142,17 @@ function swapFromExisting(
         return;
       }
 
+      await nextPaint();
       oldLink.remove();
       removeOtherThemeLinks(newLink);
       resolve();
     };
 
-    const timeoutId = setTimeout(settle, SWAP_TIMEOUT_MS);
-    newLink.onload = settle;
-    newLink.onerror = settle;
+    const timeoutId = setTimeout(finishWithoutPromoting, SWAP_TIMEOUT_MS);
+    newLink.onload = () => {
+      void promoteLoadedLink();
+    };
+    newLink.onerror = finishWithoutPromoting;
 
     head.insertBefore(newLink, oldLink.nextSibling);
   });
@@ -143,23 +170,42 @@ function insertFreshLink(
     link.setAttribute(THEME_LINK_ATTR, "");
 
     let settled = false;
-    const settle = () => {
+
+    const cleanupListeners = () => {
+      link.onload = null;
+      link.onerror = null;
+    };
+
+    const settle = async () => {
       if (settled) return;
       settled = true;
+      cleanupListeners();
       clearTimeout(timeoutId);
 
       if (latestRequestedCssPath !== cssPath) {
         link.remove();
       } else {
+        await nextPaint();
         removeOtherThemeLinks(link);
       }
 
       resolve();
     };
 
-    const timeoutId = setTimeout(settle, SWAP_TIMEOUT_MS);
-    link.onload = settle;
-    link.onerror = settle;
+    const cancel = () => {
+      if (settled) return;
+      settled = true;
+      cleanupListeners();
+      clearTimeout(timeoutId);
+      link.remove();
+      resolve();
+    };
+
+    const timeoutId = setTimeout(cancel, SWAP_TIMEOUT_MS);
+    link.onload = () => {
+      void settle();
+    };
+    link.onerror = cancel;
 
     head.insertBefore(link, head.firstChild);
   });

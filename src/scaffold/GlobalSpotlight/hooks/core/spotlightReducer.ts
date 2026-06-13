@@ -6,7 +6,12 @@
  */
 import { Folder, GitBranch } from "lucide-react";
 
-import { LANGUAGE_NAMES, type SupportedLanguage } from "@src/i18n";
+import {
+  LANGUAGE_NAMES,
+  LANGUAGE_PREFERENCE,
+  type LanguagePreference,
+  type SupportedLanguage,
+} from "@src/i18n";
 import { REPO_KIND } from "@src/store/repo/types";
 
 import { TAG_COLORS, getActionById } from "../../config";
@@ -51,7 +56,7 @@ function computeDerivedState(path: PathSegment[]): {
   currentAction: ActionDefinition | null;
   currentRepo: RepoItem | null;
   currentBranch: string | null;
-  currentLanguage: SupportedLanguage | null;
+  currentLanguage: LanguagePreference | null;
   missingParam: ParamType | null;
   isComplete: boolean;
 } {
@@ -72,7 +77,7 @@ function computeDerivedState(path: PathSegment[]): {
 
   const languageSegment = path.find((segment) => segment.type === "language");
   const currentLanguage =
-    (languageSegment?.data as SupportedLanguage | undefined) ?? null;
+    (languageSegment?.data as LanguagePreference | undefined) ?? null;
 
   // Determine missing param
   let missingParam: ParamType | null = null;
@@ -238,7 +243,10 @@ export function spotlightReducer(
           type: "language" as const,
           id: language,
           label,
-          icon: LANGUAGE_NAMES[language],
+          icon:
+            language === LANGUAGE_PREFERENCE.SYSTEM
+              ? label
+              : LANGUAGE_NAMES[language as SupportedLanguage],
           color: TAG_COLORS.language,
           data: language,
         },

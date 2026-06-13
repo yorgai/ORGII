@@ -1566,7 +1566,8 @@
     "openMyStation": "My Station に移動",
     "openAgentStation": "Agent Station に移動",
     "openOpsControl": "Ops Control に移動",
-    "changeLanguage": "言語を変更"
+    "changeLanguage": "言語を変更",
+    "switchToSystemTheme": "システムテーマに従う"
   },
   "commands": {
     "showBottomPanel": "ボトムパネルを表示",

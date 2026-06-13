@@ -65,10 +65,23 @@ export const SUPPORTED_LANGUAGES = [
 
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
+export const LANGUAGE_PREFERENCE = {
+  SYSTEM: "system",
+} as const;
+
+export const LANGUAGE_PREFERENCES = [
+  LANGUAGE_PREFERENCE.SYSTEM,
+  ...SUPPORTED_LANGUAGES,
+] as const;
+
+export type LanguagePreference = (typeof LANGUAGE_PREFERENCES)[number];
+
 /**
  * Default language - used when no preference is set
  */
 export const DEFAULT_LANGUAGE: SupportedLanguage = "en";
+export const DEFAULT_LANGUAGE_PREFERENCE: LanguagePreference =
+  LANGUAGE_PREFERENCE.SYSTEM;
 
 /**
  * Language display names in their native form
@@ -89,6 +102,74 @@ export const LANGUAGE_NAMES: Record<SupportedLanguage, string> = {
   vi: "Tiếng Việt",
   pl: "Polski",
 };
+
+export const LANGUAGE_ENGLISH_NAMES: Record<SupportedLanguage, string> = {
+  en: "English",
+  fr: "French",
+  zh: "Simplified Chinese",
+  "zh-Hant": "Traditional Chinese",
+  es: "Spanish",
+  ru: "Russian",
+  pt: "Portuguese",
+  de: "German",
+  ja: "Japanese",
+  ko: "Korean",
+  tr: "Turkish",
+  vi: "Vietnamese",
+  pl: "Polish",
+};
+
+export function isSupportedLanguage(value: string): value is SupportedLanguage {
+  return SUPPORTED_LANGUAGES.includes(value as SupportedLanguage);
+}
+
+export function isLanguagePreference(
+  value: string
+): value is LanguagePreference {
+  return value === LANGUAGE_PREFERENCE.SYSTEM || isSupportedLanguage(value);
+}
+
+export function resolveSystemLanguage(): SupportedLanguage {
+  if (typeof navigator === "undefined") return DEFAULT_LANGUAGE;
+  const browserLanguages = [navigator.language, ...navigator.languages].filter(
+    Boolean
+  );
+
+  for (const browserLanguage of browserLanguages) {
+    if (isSupportedLanguage(browserLanguage)) {
+      return browserLanguage;
+    }
+
+    const baseLanguage = browserLanguage.split("-")[0];
+    if (isSupportedLanguage(baseLanguage)) {
+      return baseLanguage;
+    }
+  }
+
+  return DEFAULT_LANGUAGE;
+}
+
+export function normalizeLanguagePreference(
+  value: string | null | undefined
+): LanguagePreference {
+  if (!value) return DEFAULT_LANGUAGE_PREFERENCE;
+  return isLanguagePreference(value) ? value : DEFAULT_LANGUAGE_PREFERENCE;
+}
+
+export function resolveLanguagePreference(
+  preference: string | null | undefined
+): SupportedLanguage {
+  const normalizedPreference = normalizeLanguagePreference(preference);
+  return normalizedPreference === LANGUAGE_PREFERENCE.SYSTEM
+    ? resolveSystemLanguage()
+    : normalizedPreference;
+}
+
+export function getFollowSystemLanguageLabel(
+  followSystemLabel = "Follow system"
+): string {
+  return `${followSystemLabel} (${LANGUAGE_ENGLISH_NAMES[resolveSystemLanguage()]})`;
+}
 
 // ============================================================================
 // INITIALIZATION
@@ -135,19 +216,16 @@ export type Namespace = (typeof NAMESPACES)[number];
  * write-side mirrors the value to localStorage so this function can pick it up.
  * After settings load, useSettingsSync calls i18n.changeLanguage() to reconcile.
  */
-function getPersistedLanguage(): SupportedLanguage {
+function getPersistedLanguagePreference(): LanguagePreference {
   try {
     const stored = localStorage.getItem("app-language");
     if (stored) {
-      const parsed = JSON.parse(stored);
-      if (SUPPORTED_LANGUAGES.includes(parsed)) {
-        return parsed as SupportedLanguage;
-      }
+      return normalizeLanguagePreference(JSON.parse(stored));
     }
   } catch {
     // Ignore parse errors
   }
-  return DEFAULT_LANGUAGE;
+  return DEFAULT_LANGUAGE_PREFERENCE;
 }
 
 /**
@@ -397,7 +475,9 @@ async function ensureLanguageLoaded(lang: SupportedLanguage): Promise<void> {
 async function initI18n(): Promise<void> {
   if (i18n.isInitialized) return;
 
-  const activeLang = getPersistedLanguage();
+  const activeLang = resolveLanguagePreference(
+    getPersistedLanguagePreference()
+  );
   const activeResources = await loadLanguageResources(activeLang);
 
   // JSON imports produce plain objects compatible with i18next's Resource type at

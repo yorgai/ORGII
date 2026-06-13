@@ -18,6 +18,22 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+function getOpaquePageBackground(): string {
+  const bodyBackground = getComputedStyle(document.body).backgroundColor;
+  if (bodyBackground && bodyBackground !== "rgba(0, 0, 0, 0)") {
+    return bodyBackground;
+  }
+
+  const rootBackground = getComputedStyle(
+    document.documentElement
+  ).backgroundColor;
+  if (rootBackground && rootBackground !== "rgba(0, 0, 0, 0)") {
+    return rootBackground;
+  }
+
+  return "#0f1115";
+}
+
 export function showThemeTransitionCover(): ThemeTransitionCoverHandle {
   const existing = document.querySelector<HTMLElement>(
     `[${THEME_TRANSITION_COVER_ATTR}]`
@@ -32,17 +48,22 @@ export function showThemeTransitionCover(): ThemeTransitionCoverHandle {
   }
 
   const shownAt = performance.now();
+  const currentBackground = getOpaquePageBackground();
   const wrapper = document.createElement("div");
-  wrapper.className = "liquid-modal-wrapper";
   wrapper.setAttribute(THEME_TRANSITION_COVER_ATTR, "");
   wrapper.setAttribute("aria-hidden", "true");
+  wrapper.style.position = "fixed";
+  wrapper.style.inset = "0";
   wrapper.style.zIndex = "10050";
   wrapper.style.pointerEvents = "auto";
+  wrapper.style.opacity = "1";
+  wrapper.style.backgroundColor = currentBackground;
+  wrapper.style.backdropFilter = "blur(18px) saturate(1.15)";
+  wrapper.style.setProperty(
+    "-webkit-backdrop-filter",
+    "blur(18px) saturate(1.15)"
+  );
   wrapper.style.transition = `opacity ${THEME_TRANSITION_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`;
-
-  const mask = document.createElement("div");
-  mask.className = "liquid-modal-mask";
-  wrapper.appendChild(mask);
 
   document.body.appendChild(wrapper);
 
