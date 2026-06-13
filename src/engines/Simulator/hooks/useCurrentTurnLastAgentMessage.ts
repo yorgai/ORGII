@@ -22,7 +22,11 @@ import {
   effectiveSimulatorEventIdsAtom,
   simulatorEventPreviewByIdAtom,
 } from "@src/engines/SessionCore";
-import type { SimulatorEventPreview } from "@src/engines/SessionCore";
+import type {
+  SessionEvent,
+  SimulatorEventPreview,
+} from "@src/engines/SessionCore";
+import { simulatorEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
 
 export interface CurrentTurnLastAgentMessage {
   text: string;
@@ -42,10 +46,40 @@ function isAssistantMessagePreview(preview: SimulatorEventPreview): boolean {
   );
 }
 
+function safeString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function getThinkingText(event: SessionEvent | undefined): string | undefined {
+  if (!event || event.extracted?.kind !== "thinking") return undefined;
+  return event.extracted.content?.trim() || undefined;
+}
+
+function getMessageOrThinkingText(
+  preview: SimulatorEventPreview,
+  event: SessionEvent | undefined
+): string | undefined {
+  if (preview.displayVariant === "thinking") {
+    return (
+      getThinkingText(event) ||
+      safeString(event?.result?.thought)?.trim() ||
+      safeString(event?.result?.content)?.trim() ||
+      safeString(event?.result?.observation)?.trim() ||
+      preview.displayText?.trim() ||
+      undefined
+    );
+  }
+
+  if (!isAssistantMessagePreview(preview)) return undefined;
+  return preview.displayText?.trim() || undefined;
+}
+
 export function useCurrentTurnLastAgentMessage(): CurrentTurnLastAgentMessage | null {
   const eventIds = useAtomValue(effectiveSimulatorEventIdsAtom);
   const previewById = useAtomValue(simulatorEventPreviewByIdAtom);
+  const simulatorEvents = useAtomValue(simulatorEventsAtom);
   const currentIndex = useAtomValue(currentSimulatorEventIndexAtom);
+  const eventById = new Map(simulatorEvents.map((event) => [event.id, event]));
 
   if (eventIds.length === 0) return null;
 
@@ -75,9 +109,10 @@ export function useCurrentTurnLastAgentMessage(): CurrentTurnLastAgentMessage | 
   }
 
   for (let index = cursor; index >= turnStart; index--) {
-    const preview = previewById[eventIds[index]];
-    if (!preview || !isAssistantMessagePreview(preview)) continue;
-    const text = preview.displayText?.trim();
+    const eventId = eventIds[index];
+    const preview = previewById[eventId];
+    if (!preview) continue;
+    const text = getMessageOrThinkingText(preview, eventById.get(eventId));
     if (!text) continue;
     return {
       text,

@@ -927,6 +927,7 @@
     "thought": "思考",
     "thinkingRunning": "思考中",
     "thinkingDone": "思考",
+    "thinkingDuration": "{{duration}}",
     "noThoughtPreview": "思考プレビューはありません",
     "message": "メッセージ",
     "pathCopied": "パスをコピーしました！",

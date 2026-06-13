@@ -927,6 +927,7 @@
     "thought": "사고",
     "thinkingRunning": "생각 중",
     "thinkingDone": "사고",
+    "thinkingDuration": "{{duration}} 동안",
     "noThoughtPreview": "사고 미리보기를 사용할 수 없습니다",
     "message": "메시지",
     "pathCopied": "경로가 복사되었습니다!",

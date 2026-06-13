@@ -213,8 +213,13 @@ describe("extractThinkingData", () => {
     expect(extractThinkingData(props).content).toBe("args content");
   });
 
-  it("extracts duration from result", () => {
-    const props = makeUniversalProps({ result: { duration: 3500 } });
+  it("extracts legacy second duration from result", () => {
+    const props = makeUniversalProps({ result: { duration: 3.5 } });
+    expect(extractThinkingData(props).duration).toBe(3500);
+  });
+
+  it("extracts millisecond duration from result", () => {
+    const props = makeUniversalProps({ result: { durationMs: 3500 } });
     expect(extractThinkingData(props).duration).toBe(3500);
   });
 

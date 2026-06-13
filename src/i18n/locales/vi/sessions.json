@@ -927,6 +927,7 @@
     "thought": "Suy nghĩ",
     "thinkingRunning": "Đang suy nghĩ",
     "thinkingDone": "Suy nghĩ",
+    "thinkingDuration": "trong {{duration}}",
     "noThoughtPreview": "Không có bản xem trước suy nghĩ",
     "message": "Tin nhắn",
     "pathCopied": "Đã sao chép đường dẫn!",

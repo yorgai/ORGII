@@ -8,6 +8,8 @@
 
 use std::collections::HashSet;
 
+use chrono::DateTime;
+
 use crate::agent_sessions::event_pipeline::ingestion::types::RawActivityChunk;
 
 // ============================================================================
@@ -46,10 +48,12 @@ pub fn consolidate_activity_chunks(chunks: &[RawActivityChunk]) -> Vec<RawActivi
 
         if !content.trim().is_empty() {
             let first_id = group[0].chunk_id.as_deref().unwrap_or("unknown");
+            let first_time = group[0].created_at.clone();
             let last_time = group
                 .last()
                 .and_then(|c| c.created_at.clone())
-                .or_else(|| group[0].created_at.clone());
+                .or_else(|| first_time.clone());
+            let duration_ms = duration_between_iso_ms(first_time.as_deref(), last_time.as_deref());
 
             out.push(RawActivityChunk {
                 chunk_id: Some(format!("merged:thinking:{}", first_id)),
@@ -60,6 +64,8 @@ pub fn consolidate_activity_chunks(chunks: &[RawActivityChunk]) -> Vec<RawActivi
                     "thought": content,
                     "content": content,
                     "observation": content,
+                    "duration": duration_ms,
+                    "durationMs": duration_ms,
                     "is_delta": false
                 })),
                 created_at: last_time,
@@ -263,6 +269,15 @@ fn is_empty_chunk(chunk: &RawActivityChunk) -> bool {
 // ============================================================================
 // Helpers
 // ============================================================================
+
+fn duration_between_iso_ms(started_at: Option<&str>, ended_at: Option<&str>) -> Option<i64> {
+    let started_at = started_at?;
+    let ended_at = ended_at?;
+    let start = DateTime::parse_from_rfc3339(started_at).ok()?;
+    let end = DateTime::parse_from_rfc3339(ended_at).ok()?;
+    let duration_ms = end.signed_duration_since(start).num_milliseconds();
+    (duration_ms > 0).then_some(duration_ms)
+}
 
 fn result_is_delta(chunk: &RawActivityChunk) -> bool {
     chunk

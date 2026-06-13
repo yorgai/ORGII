@@ -947,6 +947,7 @@
     "thought": "Pensamento",
     "thinkingRunning": "Pensando",
     "thinkingDone": "Pensamento",
+    "thinkingDuration": "por {{duration}}",
     "noThoughtPreview": "Sem prévia de pensamento disponível",
     "message": "Mensagem",
     "pathCopied": "Caminho copiado!",

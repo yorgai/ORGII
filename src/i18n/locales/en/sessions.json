@@ -951,6 +951,7 @@
     "thought": "Thought",
     "thinkingRunning": "Thinking",
     "thinkingDone": "Thought",
+    "thinkingDuration": "for {{duration}}",
     "noThoughtPreview": "No thought preview available",
     "message": "Message",
     "pathCopied": "Path Copied!",

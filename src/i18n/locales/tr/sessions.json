@@ -927,6 +927,7 @@
     "thought": "Düşünce",
     "thinkingRunning": "Düşünüyor",
     "thinkingDone": "Düşünce",
+    "thinkingDuration": "{{duration}} boyunca",
     "noThoughtPreview": "Düşünce önizlemesi mevcut değil",
     "message": "Mesaj",
     "pathCopied": "Yol kopyalandı!",

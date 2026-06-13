@@ -933,6 +933,7 @@
     "thought": "Мысль",
     "thinkingRunning": "Размышляет",
     "thinkingDone": "Мысль",
+    "thinkingDuration": "за {{duration}}",
     "noThoughtPreview": "Предварительный просмотр размышлений недоступен",
     "message": "Сообщение",
     "pathCopied": "Путь скопирован!",

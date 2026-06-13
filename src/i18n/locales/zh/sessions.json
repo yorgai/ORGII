@@ -931,6 +931,7 @@
     "thought": "思考",
     "thinkingRunning": "思考中",
     "thinkingDone": "思考",
+    "thinkingDuration": "用时 {{duration}}",
     "noThoughtPreview": "无思考预览可用",
     "message": "消息",
     "pathCopied": "路径复制！",

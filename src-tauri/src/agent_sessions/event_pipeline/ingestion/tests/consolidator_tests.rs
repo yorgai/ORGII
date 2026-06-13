@@ -80,6 +80,17 @@ fn test_consolidate_thinking_deltas() {
         .as_str()
         .unwrap();
     assert_eq!(thought, "Hello world");
+    let duration_ms = result[0]
+        .result
+        .as_ref()
+        .unwrap()
+        .as_object()
+        .unwrap()
+        .get("durationMs")
+        .unwrap()
+        .as_i64()
+        .unwrap();
+    assert_eq!(duration_ms, 1000);
 }
 
 #[test]
