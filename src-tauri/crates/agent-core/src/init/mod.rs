@@ -59,10 +59,17 @@ use session_factory::build_session_runtime;
 fn build_policy_context_activator(
     workspace_root: &Path,
     agent_id: &str,
-    is_channel_session: bool,
+    // Whether to load the OS-agent (workspace-independent) policy set instead
+    // of the workspace-scoped one. Driven by `cap_flags.has_gateway` at the
+    // call site: gateway-capable agents run without a meaningful workspace
+    // root, so their policies must come from the OS-agent set. Named for the
+    // decision it drives, not the capability that happens to feed it (the
+    // prior `is_channel_session` name asserted a message-source dimension it
+    // was never actually given — see architecture audit S5).
+    use_os_agent_policy_set: bool,
     sovereign_prompt: bool,
 ) -> Option<Arc<crate::policies::activation::SessionScopedContextActivator>> {
-    let policy_set = if is_channel_session || sovereign_prompt {
+    let policy_set = if use_os_agent_policy_set || sovereign_prompt {
         crate::policies::load_enabled_policy_set_for_os_agent(agent_id)
     } else {
         crate::policies::load_enabled_policy_set(workspace_root, agent_id)
