@@ -200,34 +200,6 @@ export function useSessionActions(options: UseSessionActionsOptions) {
     beginStopBoundary(sessionId);
     setSessionRolledBack(false);
 
-    const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
-    const currentUserMessage = resolveRestorableUserMessage({
-      lastUserMessage: store.get(lastUserMessageAtom),
-      pendingDisplayText:
-        pendingSyntheticEvent?.source === "user"
-          ? pendingSyntheticEvent.displayText
-          : undefined,
-      pendingImages: pendingSyntheticEvent?.result?.images,
-    });
-
-    if (currentUserMessage) {
-      setRestoreToInput({
-        sessionId,
-        displayContent: currentUserMessage.displayContent,
-        imageDataUrls: currentUserMessage.imageDataUrls,
-      });
-      markRestoredStopDraft({
-        sessionId,
-        displayContent: currentUserMessage.displayContent,
-        imageDataUrls: currentUserMessage.imageDataUrls,
-      });
-      suppressRestoredStopSubmit({
-        sessionId,
-        displayContent: currentUserMessage.displayContent,
-        imageDataUrls: currentUserMessage.imageDataUrls,
-      });
-    }
-
     // When the current turn has not produced any assistant/tool output,
     // discard the user message that started it so the chat rolls back cleanly.
     const events = store.get(sortedEventsAtom);
@@ -235,7 +207,37 @@ export function useSessionActions(options: UseSessionActionsOptions) {
       events,
       sessionId
     );
+
+    // Only restore the draft when the turn has not produced output yet.
     if (!currentTurnHasOutput) {
+      const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
+      const currentUserMessage = resolveRestorableUserMessage({
+        lastUserMessage: store.get(lastUserMessageAtom),
+        pendingDisplayText:
+          pendingSyntheticEvent?.source === "user"
+            ? pendingSyntheticEvent.displayText
+            : undefined,
+        pendingImages: pendingSyntheticEvent?.result?.images,
+      });
+
+      if (currentUserMessage) {
+        setRestoreToInput({
+          sessionId,
+          displayContent: currentUserMessage.displayContent,
+          imageDataUrls: currentUserMessage.imageDataUrls,
+        });
+        markRestoredStopDraft({
+          sessionId,
+          displayContent: currentUserMessage.displayContent,
+          imageDataUrls: currentUserMessage.imageDataUrls,
+        });
+        suppressRestoredStopSubmit({
+          sessionId,
+          displayContent: currentUserMessage.displayContent,
+          imageDataUrls: currentUserMessage.imageDataUrls,
+        });
+      }
+
       // Find the last user event for this session — that's the message to discard.
       let lastUserEventId: string | null = null;
       for (let i = events.length - 1; i >= 0; i--) {
