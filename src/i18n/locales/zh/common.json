@@ -237,6 +237,8 @@
     "title": "分页",
     "roundOf": "第 {{current}} / {{total}} 轮",
     "round": "第 {{current}} 轮",
+    "previousRound": "上一轮",
+    "nextRound": "下一轮",
     "latestRound": "最新轮次",
     "searchRounds": "搜索轮次"
   },

@@ -235,6 +235,8 @@
     "title": "ページネーション",
     "roundOf": "Round {{current}} / {{total}}",
     "round": "Round {{current}}",
+    "previousRound": "前のRound",
+    "nextRound": "次のRound",
     "latestRound": "最新のRound",
     "searchRounds": "Round を検索"
   },

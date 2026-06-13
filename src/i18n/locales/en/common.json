@@ -242,7 +242,9 @@
     "title": "Pagination",
     "roundOf": "Round {{current}} / {{total}}",
     "round": "Round {{current}}",
-    "latestRound": "Latest Round",
+    "previousRound": "Previous round",
+    "nextRound": "Next round",
+    "latestRound": "Latest round",
     "searchRounds": "Search rounds"
   },
   "optional": "optional",

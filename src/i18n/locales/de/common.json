@@ -235,7 +235,9 @@
     "title": "Seitennummerierung",
     "roundOf": "Round {{current}} / {{total}}",
     "round": "Round {{current}}",
-    "latestRound": "Letzte Runde",
+    "previousRound": "Vorherige Runde",
+    "nextRound": "Nächste Runde",
+    "latestRound": "Neueste Runde",
     "searchRounds": "Rounds suchen"
   },
   "optional": "optional",

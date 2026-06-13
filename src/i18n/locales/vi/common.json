@@ -235,6 +235,8 @@
     "title": "Phân trang",
     "roundOf": "Round {{current}} / {{total}}",
     "round": "Round {{current}}",
+    "previousRound": "Round trước",
+    "nextRound": "Round tiếp theo",
     "latestRound": "Round mới nhất",
     "searchRounds": "Tìm kiếm rounds"
   },

@@ -235,6 +235,8 @@
     "title": "Sayfalama",
     "roundOf": "Round {{current}} / {{total}}",
     "round": "Round {{current}}",
+    "previousRound": "Önceki round",
+    "nextRound": "Sonraki round",
     "latestRound": "En son round",
     "searchRounds": "Round ara"
   },

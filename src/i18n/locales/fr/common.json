@@ -235,7 +235,9 @@
     "title": "Pagination",
     "roundOf": "Round {{current}} / {{total}}",
     "round": "Round {{current}}",
-    "latestRound": "Dernier round",
+    "previousRound": "Round précédent",
+    "nextRound": "Round suivant",
+    "latestRound": "Round le plus récent",
     "searchRounds": "Rechercher des rounds"
   },
   "optional": "facultatif",

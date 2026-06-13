@@ -235,6 +235,8 @@
     "title": "페이지네이션",
     "roundOf": "Round {{current}} / {{total}}",
     "round": "Round {{current}}",
+    "previousRound": "이전 Round",
+    "nextRound": "다음 Round",
     "latestRound": "최신 Round",
     "searchRounds": "Round 검색"
   },

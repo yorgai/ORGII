@@ -235,6 +235,8 @@
     "title": "Пагинация",
     "roundOf": "Round {{current}} / {{total}}",
     "round": "Round {{current}}",
+    "previousRound": "Предыдущий раунд",
+    "nextRound": "Следующий раунд",
     "latestRound": "Последний раунд",
     "searchRounds": "Поиск rounds"
   },
