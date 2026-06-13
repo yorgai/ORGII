@@ -14,7 +14,7 @@ import { useRouteViewMode } from "@src/config/routeViewModeConfig";
 import { replayModeAtom } from "@src/engines/SessionCore";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 
-const STATION_MODE_SHORTCUT_ID = "toggle_station_mode";
+const AGENT_STATION_SHORTCUT_ID = "open_agent_station";
 
 export interface UseFollowAgentReturn {
   showFollowAgent: boolean;
@@ -46,7 +46,7 @@ export function useFollowAgent(): UseFollowAgentReturn {
     followAgentTooltipLabel: t("common:actions.switchToStation", {
       station: agentStationLabel,
     }),
-    followAgentShortcut: getShortcutKeys(STATION_MODE_SHORTCUT_ID),
+    followAgentShortcut: getShortcutKeys(AGENT_STATION_SHORTCUT_ID),
     handleFollowAgent,
   };
 }

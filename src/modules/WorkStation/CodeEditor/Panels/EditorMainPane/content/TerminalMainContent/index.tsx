@@ -106,7 +106,7 @@ const TerminalMainContent: React.FC<TerminalMainContentProps> = ({
               />
             </span>
             <span
-              className="pointer-events-none mx-2 h-4 w-px shrink-0 bg-border-2"
+              className="pointer-events-none mx-1 h-4 w-px shrink-0 bg-border-2"
               aria-hidden
             />
           </>

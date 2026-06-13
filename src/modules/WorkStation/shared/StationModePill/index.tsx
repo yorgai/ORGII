@@ -17,7 +17,9 @@ import { type StationMode, stationModeAtom } from "@src/store/ui/simulatorAtom";
 
 import { WorkstationToolbarTooltip } from "../WorkstationToolbarTooltip";
 
-const STATION_MODE_SHORTCUT_ID = "toggle_station_mode";
+const MY_STATION_SHORTCUT_ID = "open_my_station";
+const AGENT_STATION_SHORTCUT_ID = "open_agent_station";
+const OPS_CONTROL_SHORTCUT_ID = "open_ops_control";
 
 interface IconSwitchButtonProps {
   label: string;
@@ -77,7 +79,9 @@ const StationModePill: React.FC = () => {
   const agentSegment = t("terminology.agentStation");
   const opsControlSegment = t("navigation:routes.opsControl");
 
-  const shortcut = getShortcutKeys(STATION_MODE_SHORTCUT_ID);
+  const myStationShortcut = getShortcutKeys(MY_STATION_SHORTCUT_ID);
+  const agentStationShortcut = getShortcutKeys(AGENT_STATION_SHORTCUT_ID);
+  const opsControlShortcut = getShortcutKeys(OPS_CONTROL_SHORTCUT_ID);
   const activeStationMode = stationMode;
 
   const handleChange = useCallback(
@@ -113,7 +117,7 @@ const StationModePill: React.FC = () => {
           selected
           onClick={() => handleChange("ops-control")}
           testId="station-mode-ops-control"
-          shortcut={shortcut}
+          shortcut={opsControlShortcut}
           selectedClassName="bg-warning-6 text-white"
         />
       )}
@@ -124,7 +128,7 @@ const StationModePill: React.FC = () => {
         selected={activeStationMode === "my-station"}
         onClick={() => handleChange("my-station")}
         testId="station-mode-my-station"
-        shortcut={shortcut}
+        shortcut={myStationShortcut}
       />
       <IconSwitchButton
         label={agentSegment}
@@ -133,7 +137,7 @@ const StationModePill: React.FC = () => {
         selected={activeStationMode === "agent-station"}
         onClick={() => handleChange("agent-station")}
         testId="station-mode-agent-station"
-        shortcut={shortcut}
+        shortcut={agentStationShortcut}
       />
     </div>
   );

@@ -396,7 +396,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
               {manageButton}
             </div>
             {hasActionPills && (
-              <div aria-hidden className="mx-2 h-4 w-px shrink-0 bg-border-2" />
+              <div aria-hidden className="mx-1 h-4 w-px shrink-0 bg-border-2" />
             )}
             <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5 scrollbar-hide">
               {actionPills}
@@ -409,7 +409,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
               {actionPills}
             </div>
             {hasActionPills && (
-              <div aria-hidden className="mx-2 h-4 w-px shrink-0 bg-border-2" />
+              <div aria-hidden className="mx-1 h-4 w-px shrink-0 bg-border-2" />
             )}
             {manageButton}
           </>

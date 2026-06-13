@@ -15,7 +15,6 @@ import { Check, Plus, X } from "lucide-react";
 import React, { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import Tooltip from "@src/components/Tooltip";
 import { INPUT_AREA_BUTTONS } from "@src/config/inputAreaTokens";
 
 import "./VoiceRecordingBar.scss";
@@ -110,39 +109,27 @@ const VoiceRecordingBar: React.FC<VoiceRecordingBarProps> = memo(
           {formatElapsed(elapsedSeconds)}
         </span>
 
-        <Tooltip
-          content={t("common:tooltips.cancelRecording")}
-          position="top"
-          mouseEnterDelay={200}
+        <button
+          type="button"
+          onClick={onCancel}
+          className={`${INPUT_AREA_BUTTONS.iconButtonBase} cursor-pointer leading-none`}
+          style={{ lineHeight: 0 }}
+          data-testid="composer-voice-cancel"
+          aria-label={t("common:tooltips.cancelRecording")}
         >
-          <button
-            type="button"
-            onClick={onCancel}
-            className={`${INPUT_AREA_BUTTONS.iconButtonBase} cursor-pointer leading-none`}
-            style={{ lineHeight: 0 }}
-            data-testid="composer-voice-cancel"
-            aria-label={t("common:tooltips.cancelRecording")}
-          >
-            <X size={INPUT_AREA_BUTTONS.iconSize} strokeWidth={1.75} />
-          </button>
-        </Tooltip>
+          <X size={INPUT_AREA_BUTTONS.iconSize} strokeWidth={1.75} />
+        </button>
 
-        <Tooltip
-          content={t("common:tooltips.stopAndTranscribe")}
-          position="top-end"
-          mouseEnterDelay={200}
+        <button
+          type="button"
+          onClick={onAccept}
+          className={`${INPUT_AREA_BUTTONS.iconButtonBase} cursor-pointer bg-fill-3 leading-none`}
+          style={{ lineHeight: 0 }}
+          data-testid="composer-voice-accept"
+          aria-label={t("common:tooltips.stopAndTranscribe")}
         >
-          <button
-            type="button"
-            onClick={onAccept}
-            className={`${INPUT_AREA_BUTTONS.iconButtonBase} cursor-pointer bg-fill-3 leading-none`}
-            style={{ lineHeight: 0 }}
-            data-testid="composer-voice-accept"
-            aria-label={t("common:tooltips.stopAndTranscribe")}
-          >
-            <Check size={INPUT_AREA_BUTTONS.iconSize} strokeWidth={1.75} />
-          </button>
-        </Tooltip>
+          <Check size={INPUT_AREA_BUTTONS.iconSize} strokeWidth={1.75} />
+        </button>
       </div>
     );
   }

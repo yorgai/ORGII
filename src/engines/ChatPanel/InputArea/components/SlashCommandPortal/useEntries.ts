@@ -96,9 +96,14 @@ export function useEntries({
           label: CATEGORY_LABELS.skill,
           translationKey: "creator.slashMenu.skills",
         });
-        for (const item of matchedSkillItems) {
-          result.push({ kind: "item", item, flatIndex: idx++ });
-        }
+        result.push({
+          kind: "skill-items-group",
+          items: matchedSkillItems.map((item) => ({
+            kind: "item",
+            item,
+            flatIndex: idx++,
+          })),
+        });
       }
 
       return { entries: result, totalFlat: idx };

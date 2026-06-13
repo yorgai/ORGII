@@ -40,6 +40,7 @@ import { useKeyboard } from "./useKeyboard";
 
 const PANEL_WIDTH = 280;
 const MAX_PANEL_HEIGHT = 360;
+const MAX_SKILLS_SECTION_HEIGHT = 200;
 
 const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   visible,
@@ -377,6 +378,33 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
                     );
                   }}
                 />
+              );
+            }
+
+            if (entry.kind === "skill-items-group") {
+              return (
+                <div
+                  key="skills-list"
+                  className="scrollbar-overlay overflow-y-auto"
+                  style={{ maxHeight: MAX_SKILLS_SECTION_HEIGHT }}
+                >
+                  {entry.items.map(({ item, flatIndex }) => (
+                    <SlashItemRow
+                      key={`${item.category}-${item.source}-${item.name}`}
+                      item={item}
+                      isActive={
+                        keyboardNavigated && flatIndex === highlightIndex
+                      }
+                      onMouseEnter={() => {
+                        if (!mouseMovedRef.current) return;
+                        setKeyboardNavigated(false);
+                        setHighlightIndex(flatIndex);
+                        setOpenFlyout(null);
+                      }}
+                      onClick={() => onSelect(item)}
+                    />
+                  ))}
+                </div>
               );
             }
 

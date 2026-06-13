@@ -473,7 +473,7 @@ export function ChatPanelHeader({
             {showCreatorPresenceInHeader && (
               <>
                 <div
-                  className="mx-2 h-4 w-px shrink-0 bg-border-2"
+                  className="mx-1 h-4 w-px shrink-0 bg-border-2"
                   role="separator"
                   aria-hidden
                 />
@@ -484,7 +484,7 @@ export function ChatPanelHeader({
               showProjectAgentSwitchInHeader) && (
               <>
                 <div
-                  className="mx-2 h-4 w-px shrink-0 bg-border-2"
+                  className="mx-1 h-4 w-px shrink-0 bg-border-2"
                   role="separator"
                   aria-hidden
                 />
