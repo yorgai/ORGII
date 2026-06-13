@@ -33,10 +33,10 @@ export const SidebarTabButton: React.FC<{
       className={cn(
         "group relative flex flex-1 select-none items-center justify-center",
         cursorReset || isActive ? "cursor-default" : "cursor-pointer",
-        "rounded-[100px] border-[0.5px] border-transparent",
+        "rounded-[100px] border border-transparent",
         "h-[28px] px-[10px]",
         isActive
-          ? "border-border-1 bg-fill-2 text-text-1 shadow-[0_1px_4px_rgba(0,0,0,0.10)]"
+          ? "border-border-2 bg-fill-2 text-text-1 shadow-[0_1px_4px_rgba(0,0,0,0.10)]"
           : "bg-transparent text-text-2 hover:bg-fill-2 hover:text-text-1",
         tab.disabled && "cursor-not-allowed opacity-50",
         "transition-[background-color,color,box-shadow] duration-150"
