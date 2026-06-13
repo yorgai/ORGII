@@ -21,6 +21,10 @@ const MY_STATION_SHORTCUT_ID = "open_my_station";
 const AGENT_STATION_SHORTCUT_ID = "open_agent_station";
 const OPS_CONTROL_SHORTCUT_ID = "open_ops_control";
 
+const SELECTED_STATION_BUTTON_STYLE: React.CSSProperties = {
+  boxShadow: "var(--sidebar-tab-pill-selected-shadow)",
+};
+
 interface IconSwitchButtonProps {
   label: string;
   tooltipLabel: string;
@@ -29,7 +33,6 @@ interface IconSwitchButtonProps {
   icon: LucideIcon;
   testId?: string;
   shortcut: string;
-  selectedClassName?: string;
 }
 
 const IconSwitchButton: React.FC<IconSwitchButtonProps> = ({
@@ -40,9 +43,8 @@ const IconSwitchButton: React.FC<IconSwitchButtonProps> = ({
   icon: Icon,
   testId,
   shortcut,
-  selectedClassName = "bg-primary-6 text-white",
 }) => {
-  const buttonSizeClass = "h-6 w-7";
+  const buttonSizeClass = "h-[28px] w-[42px]";
 
   return (
     <WorkstationToolbarTooltip
@@ -59,9 +61,11 @@ const IconSwitchButton: React.FC<IconSwitchButtonProps> = ({
           ariaPressed={selected}
           testId={testId}
           sizeClassName={buttonSizeClass}
-          selectedClassName={selectedClassName}
-          unselectedClassName="bg-transparent text-text-1 hover:bg-fill-3"
-          transitionClassName="transition-colors duration-150"
+          selectedClassName="bg-fill-2 text-text-1"
+          unselectedClassName="bg-transparent text-text-2 hover:bg-fill-2 hover:text-text-1"
+          className="flex-shrink-0"
+          style={selected ? SELECTED_STATION_BUTTON_STYLE : undefined}
+          transitionClassName="transition-[background-color,color,box-shadow] duration-150"
           strokeWidth={1.85}
         />
       </span>
@@ -104,7 +108,7 @@ const StationModePill: React.FC = () => {
 
   return (
     <div
-      className="flex items-center gap-px rounded-[100px] border border-border-2 bg-fill-1 p-0.5"
+      className="flex items-center gap-1"
       data-tour-target={GENERAL_LAYOUT_TOUR_TARGETS.stationModePill}
     >
       {activeStationMode === "ops-control" && (
@@ -118,7 +122,6 @@ const StationModePill: React.FC = () => {
           onClick={() => handleChange("ops-control")}
           testId="station-mode-ops-control"
           shortcut={opsControlShortcut}
-          selectedClassName="bg-warning-6 text-white"
         />
       )}
       <IconSwitchButton
