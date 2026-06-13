@@ -92,7 +92,13 @@ export function useQuestionSubmission(): UseQuestionSubmissionReturn {
         if (isExpired) {
           Message.warning(t("chat.questionExpired"));
           // Backend has nothing to finalize, so we flip the event ourselves.
-          markEventStaleAnswered(chunkId, [[t("chat.skippedByUser")]]);
+          // The user DID answer — expired only means the pending request was
+          // already gone (session restart, etc.). Use their real selections,
+          // not a "skipped" placeholder.
+          markEventStaleAnswered(
+            chunkId,
+            buildAnswerLabels(questions, selections, customTexts)
+          );
           return true;
         }
         Message.error(t("chat.failedToSubmit", { msg }));
@@ -122,7 +128,7 @@ export function useQuestionSubmission(): UseQuestionSubmissionReturn {
         if (isExpired) {
           Message.warning(t("chat.questionExpired"));
         }
-        markEventStaleAnswered(chunkId, [[skippedLabel]]);
+        markEventStaleAnswered(chunkId, [[skippedLabel]], "rejected");
         return true;
       }
     },

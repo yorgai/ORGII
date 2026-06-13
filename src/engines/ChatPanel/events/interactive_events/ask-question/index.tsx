@@ -75,9 +75,70 @@ interface AnsweredPair {
 // Extract answered data from event
 // ============================================
 
-function extractAnsweredData(props: RawEventInput): {
+// Parse the LLM-facing prose blob written by Rust `format_answers_for_llm`
+// (see `src-tauri/crates/agent-core/src/core/interaction/question.rs:304`).
+// Format:
+//   `User has answered your questions: "Q1" = "A1", "Q2" = "A2". You can ...`
+//
+// We use the known question texts (from `args.questions`) as left/right
+// anchors, which is robust against answer text containing `", "`, commas,
+// multi-select joined answers, or the literal `Unanswered` placeholder.
+//
+// Returns an array aligned to `questionTexts.length`; positions that could
+// not be located are filled with an empty array so downstream `[idx]` lookup
+// stays stable.
+export function parseAnswersFromContent(
+  resultContent: string,
+  questionTexts: string[]
+): string[][] {
+  const prefix = "User has answered your questions: ";
+  if (!resultContent.startsWith(prefix)) {
+    return questionTexts.map(() => []);
+  }
+  const trailing = ". You can now continue";
+  let body = resultContent.slice(prefix.length);
+  const trailIdx = body.indexOf(trailing);
+  if (trailIdx >= 0) body = body.slice(0, trailIdx);
+
+  // Locate each `"Qi" = "` opener by question text.
+  const openers: { idx: number; afterEq: number }[] = questionTexts.map((q) => {
+    if (!q) return { idx: -1, afterEq: -1 };
+    const opener = `"${q}" = "`;
+    const idx = body.indexOf(opener);
+    return idx < 0
+      ? { idx: -1, afterEq: -1 }
+      : { idx, afterEq: idx + opener.length };
+  });
+
+  return questionTexts.map((_q, i) => {
+    const cur = openers[i];
+    if (cur.idx < 0) return [];
+    // Find the next opener that comes after the current one to bound the
+    // answer; if none, the answer runs to the end of body (minus trailing `"`).
+    let nextStart = body.length;
+    for (let j = 0; j < openers.length; j++) {
+      const next = openers[j];
+      if (j === i || next.idx < 0) continue;
+      if (next.idx > cur.idx && next.idx < nextStart) {
+        // The separator before `"Qj" = "` is `, ` — back up 2 chars to drop it.
+        nextStart = next.idx - 2;
+      }
+    }
+    let raw = body.slice(cur.afterEq, nextStart);
+    // Strip the trailing `"` that closes the answer.
+    if (raw.endsWith('"')) raw = raw.slice(0, -1);
+    // Rust writes the literal "Unanswered" placeholder when answers are empty.
+    // Kept in sync with `format_answers_for_llm` in
+    // `src-tauri/crates/agent-core/src/core/interaction/question.rs:313`.
+    if (raw === "Unanswered") return [];
+    return [raw];
+  });
+}
+
+export function extractAnsweredData(props: RawEventInput): {
   pairs: AnsweredPair[];
   isAnswered: boolean;
+  isRejected: boolean;
 } {
   const event = props.event;
   const result = (event?.result || props.result) as
@@ -86,6 +147,8 @@ function extractAnsweredData(props: RawEventInput): {
   const args = (event?.args || props.args) as
     | Record<string, unknown>
     | undefined;
+
+  const isRejected = result?.status === "rejected";
 
   // "answered" requires an explicit signal from the backend: either the
   // result status field is set to "answered"/"responsed", or the agent
@@ -112,10 +175,11 @@ function extractAnsweredData(props: RawEventInput): {
   );
 
   const isAnswered =
-    result?.status === "answered" ||
-    result?.status === "responsed" ||
-    hasAnswerPayload ||
-    contentSignalsAnswered;
+    !isRejected &&
+    (result?.status === "answered" ||
+      result?.status === "responsed" ||
+      hasAnswerPayload ||
+      contentSignalsAnswered);
 
   // Try to extract structured questions from args
   const structuredQuestions = args?.questions as
@@ -129,58 +193,32 @@ function extractAnsweredData(props: RawEventInput): {
   const resultAnswers = result?.answers as string[][] | undefined;
   const resultAnswer = result?.answer as string | undefined;
 
-  // When the structured `answers` field was clobbered, parse the answer
-  // tokens out of the LLM-facing content. Format is stable (see Rust
-  // `question::format_answers_for_llm`):
-  //   `User has answered your questions: "Q1" = "A1", "Q2" = "A2". You can ...`
-  // We strip the prefix + trailing sentence, then split on the literal
-  // `", "` separator between question/answer pairs. Each token's answer
-  // is the substring between the first `= "` and the trailing `"`.
-  const parsedContentAnswers: string[][] | undefined =
-    contentSignalsAnswered && !resultAnswers
-      ? (() => {
-          const prefix = "User has answered your questions: ";
-          const trailing = ". You can now continue";
-          let body = resultContent.slice(prefix.length);
-          const trailIdx = body.indexOf(trailing);
-          if (trailIdx >= 0) body = body.slice(0, trailIdx);
-          // Split on the literal `", "` between Q/A pairs. The answer text
-          // itself may contain `, ` (without quotes), which won't match.
-          const tokens = body.split(/",\s*"/);
-          // Normalise the first/last token to drop the outer quotes that
-          // `split` left dangling (only on the boundary tokens).
-          const answers = tokens
-            .map((token, idx) => {
-              let t = token;
-              if (idx === 0 && t.startsWith('"')) t = t.slice(1);
-              if (idx === tokens.length - 1 && t.endsWith('"'))
-                t = t.slice(0, -1);
-              const eqIdx = t.indexOf('" = "');
-              if (eqIdx < 0) return [];
-              const answer = t.slice(eqIdx + 5);
-              return [answer];
-            })
-            .filter((arr) => arr.length > 0);
-          return answers.length > 0 ? answers : undefined;
-        })()
-      : undefined;
-
-  const effectiveAnswers = resultAnswers ?? parsedContentAnswers;
-
   if (Array.isArray(structuredQuestions) && structuredQuestions.length > 0) {
     const topLevelText =
       (args?.title as string) || (args?.prompt as string) || "";
 
-    const pairs: AnsweredPair[] = structuredQuestions.map((sq, idx) => {
-      const questionText =
+    const questionTexts = structuredQuestions.map(
+      (sq, idx) =>
         sq.question ||
         sq.prompt ||
         sq.header ||
         sq.title ||
         sq.text ||
         sq.content ||
-        "";
+        (idx === 0 ? topLevelText : "")
+    );
 
+    // When the structured `answers` field was clobbered by the Rust merge
+    // fallback, parse them out of the LLM-facing content using question
+    // texts as left anchors. The parsed array is aligned to questions.length.
+    const parsedContentAnswers =
+      contentSignalsAnswered && !resultAnswers
+        ? parseAnswersFromContent(resultContent, questionTexts)
+        : undefined;
+
+    const effectiveAnswers = resultAnswers ?? parsedContentAnswers;
+
+    const pairs: AnsweredPair[] = structuredQuestions.map((sq, idx) => {
       let answers: string[] = [];
       if (Array.isArray(effectiveAnswers) && effectiveAnswers[idx]) {
         answers = effectiveAnswers[idx];
@@ -189,12 +227,12 @@ function extractAnsweredData(props: RawEventInput): {
       }
 
       return {
-        question: questionText || (idx === 0 ? topLevelText : ""),
+        question: questionTexts[idx],
         answers,
       };
     });
 
-    return { pairs, isAnswered };
+    return { pairs, isAnswered, isRejected };
   }
 
   // Legacy single question format
@@ -207,11 +245,12 @@ function extractAnsweredData(props: RawEventInput): {
 
   const answer = resultAnswer || (questionData?.answer as string) || "";
 
-  if (!question) return { pairs: [], isAnswered };
+  if (!question) return { pairs: [], isAnswered, isRejected };
 
   return {
     pairs: [{ question, answers: answer ? [answer] : [] }],
     isAnswered,
+    isRejected,
   };
 }
 
@@ -223,8 +262,13 @@ type QuestionDisplayStatus = "answered" | "pending" | "failed";
 
 function resolveDisplayStatus(
   rawStatus: string | undefined,
-  isAnswered: boolean
+  isAnswered: boolean,
+  isRejected: boolean
 ): QuestionDisplayStatus {
+  // User-dismissed via Skip button: Rust finalize sets `result.status =
+  // "rejected"`, FE optimistic overlay does the same. Always render as the
+  // terminal "Questions skipped" state — don't paint as answered/pending.
+  if (isRejected) return "failed";
   if (isAnswered) return "answered";
   // Tool call completed without a user reply — agent proceeded on its own.
   // Show "skipped" (static terminal state), not a loading spinner.
@@ -397,7 +441,7 @@ const QuestionStreamingPlaceholder: React.FC<{ eventId?: string }> = ({
 export const AskQuestionEvent: React.FC<AskQuestionEventProps> = (props) => {
   const normalizedProps = useNormalizedEventProps(props, "ask_user_questions");
 
-  const { pairs, isAnswered } = useMemo(
+  const { pairs, isAnswered, isRejected } = useMemo(
     () => extractAnsweredData(props),
     [props]
   );
@@ -425,7 +469,7 @@ export const AskQuestionEvent: React.FC<AskQuestionEventProps> = (props) => {
     return null;
   }
 
-  const status = resolveDisplayStatus(rawStatus, isAnswered);
+  const status = resolveDisplayStatus(rawStatus, isAnswered, isRejected);
 
   return (
     <QuestionHistoryBlock

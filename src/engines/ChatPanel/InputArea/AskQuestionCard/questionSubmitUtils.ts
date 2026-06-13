@@ -103,10 +103,14 @@ export function validateAnswers(
  * pending request (e.g. the session was restarted after the question was
  * asked). This is the ONLY optimistic path — the normal flow relies on the
  * Rust `agent:interaction_finalized` broadcast.
+ *
+ * `status` distinguishes "user answered" (default) from "user dismissed via
+ * Skip" ("rejected"). The history card renders the two differently.
  */
 export function markEventStaleAnswered(
   chunkId: string,
-  answerLabels: string[][]
+  answerLabels: string[][],
+  status: "answered" | "rejected" = "answered"
 ): void {
   if (!chunkId) return;
   eventStoreProxy.getEvents().then((events) => {
@@ -117,7 +121,7 @@ export function markEventStaleAnswered(
       result: {
         ...(evt.result as Record<string, unknown>),
         answers: answerLabels,
-        status: "answered",
+        status,
       },
       displayStatus: "completed" as EventDisplayStatus,
       activityStatus: "processed",

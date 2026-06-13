@@ -23,6 +23,12 @@ interface FailedEventRowProps {
   action?: string;
   detail?: string | null;
   eventId?: string;
+  /**
+   * Optional trailing slot for an inline remediation control (e.g. an
+   * "Install" button when an LSP server is missing). Rendered right-aligned
+   * after the detail subtitle.
+   */
+  trailingAction?: React.ReactNode;
 }
 
 export const FailedEventRow: React.FC<FailedEventRowProps> = ({
@@ -30,6 +36,7 @@ export const FailedEventRow: React.FC<FailedEventRowProps> = ({
   label,
   detail,
   eventId,
+  trailingAction,
 }) => {
   const icon = (
     <X size={SESSION_UI_TOKENS.ICON.SIZE_SM} className="text-danger-6" />
@@ -50,6 +57,9 @@ export const FailedEventRow: React.FC<FailedEventRowProps> = ({
         <EventBlockHeaderSubtitle title={trimmedDetail}>
           {trimmedDetail}
         </EventBlockHeaderSubtitle>
+      )}
+      {trailingAction && (
+        <div className="ml-auto shrink-0">{trailingAction}</div>
       )}
     </div>
   );

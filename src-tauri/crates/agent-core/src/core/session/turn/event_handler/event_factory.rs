@@ -111,6 +111,20 @@ fn extract_file_path(args: &Value) -> Option<String> {
 
 /// Build a `SessionEvent` for a tool_result. The `merge_events` path in
 /// `EventStore` folds this into the matching tool_call via `call_id`.
+///
+/// Always emits an `Object` result (`{content, observation}` or a richer
+/// parsed JSON object). This is load-bearing for the interactive-tool
+/// finalize pipeline: `EventStore::merge_events_with_hydration` merges
+/// `result` field-by-field **only when both sides are objects** — its
+/// fallback `(_, incoming) => incoming` arm replaces the target wholesale.
+///
+/// `agent:interaction_finalized` writes the structured payload first
+/// (`{status, answers|choice, content, observation}`); then the generic
+/// `on_tool_result` runs and pushes this event with the tool's textual
+/// return value. If we emitted a `Value::String`, the fallback arm would
+/// clobber `status`/`answers`/`choice` and the history card would render
+/// "Questions skipped" / a wrong choice. Wrapping plain strings in
+/// `{content, observation}` keeps the merge on the structured-merge path.
 pub(super) fn build_tool_result_event(
     session_id: &str,
     tool_call_id: &str,
@@ -120,7 +134,10 @@ pub(super) fn build_tool_result_event(
 ) -> SessionEvent {
     let result_value = match serde_json::from_str::<Value>(result) {
         Ok(Value::Object(object)) => Value::Object(object),
-        _ => Value::String(result.to_string()),
+        _ => serde_json::json!({
+            "content": result,
+            "observation": result,
+        }),
     };
 
     SessionEvent {

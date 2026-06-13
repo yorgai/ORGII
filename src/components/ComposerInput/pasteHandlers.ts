@@ -16,6 +16,7 @@
 import { capPillText, storePillText } from "@src/config/pillTokens";
 import { createLogger } from "@src/hooks/logger";
 import type { InstalledSkill } from "@src/types/extensions";
+import { extractSkillNameFromPath } from "@src/util/skills/skillPath";
 
 import type { ComposerFragmentPart } from "./cutHandler";
 import type { ComposerPillAttrs } from "./types";
@@ -105,21 +106,6 @@ export function createDropHandler(ctx: DropHandlerContext) {
       return false;
     }
   };
-}
-
-/**
- * Matches skill file paths of the form:
- *   …/skills/<name>/SKILL.md
- *   …/skills-cursor/<name>/SKILL.md
- *
- * Returns the skill directory name (second-to-last path segment) or null.
- */
-function extractSkillNameFromPath(text: string): string | null {
-  const trimmed = text.trim();
-  const match = trimmed.match(
-    /[/\\]skills(?:-[^/\\]+)?[/\\]([^/\\]+)[/\\]SKILL\.md$/i
-  );
-  return match ? match[1] : null;
 }
 
 /**

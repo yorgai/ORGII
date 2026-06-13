@@ -8,6 +8,7 @@
  * hiding read failures behind a generic header was the bug that
  * `fix(cursor): keep native sessions continuous` set out to fix.
  */
+import { Sparkles } from "lucide-react";
 import React, { useMemo } from "react";
 
 import FileTypeIcon from "@src/components/FileTypeIcon";
@@ -16,6 +17,7 @@ import { extractFileData } from "@src/engines/SessionCore/rendering/props/propsD
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
 import { getFileName } from "@src/util/file/pathUtils";
 import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
+import { extractSkillNameFromPath } from "@src/util/skills/skillPath";
 
 import { extractResultText } from "../ToolCallBlock/helpers";
 import {
@@ -44,13 +46,18 @@ export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
     repoPath: props.repoPath,
   });
   const baseName = fileName || getFileName(filePath) || "file";
-  const displayName = baseName;
+  const skillName = useMemo(
+    () => extractSkillNameFromPath(filePath),
+    [filePath]
+  );
+  const isSkill = Boolean(skillName);
+  const displayName = isSkill ? `${skillName} skill` : baseName;
   const fullPathTitle = displayPath.title || filePath || fileName || "file";
   const iconName = baseName;
   const isLoading =
     status === "running" && props.showActiveEventPainting === true;
   const isFailed = status === "failed";
-  const title = props.title || "Read";
+  const title = isSkill ? "Use" : props.title || "Read";
 
   const {
     isHeaderHovered,
@@ -61,11 +68,18 @@ export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
 
   const toolIcon = useMemo(
     () =>
-      getToolIcon("read_file", {
-        size: SESSION_UI_TOKENS.ICON.SIZE_SM,
-        className: "text-text-2",
-      }),
-    []
+      isSkill ? (
+        <Sparkles
+          size={SESSION_UI_TOKENS.ICON.SIZE_SM}
+          className="text-text-2"
+        />
+      ) : (
+        getToolIcon("read_file", {
+          size: SESSION_UI_TOKENS.ICON.SIZE_SM,
+          className: "text-text-2",
+        })
+      ),
+    [isSkill]
   );
 
   if (isFailed) {
@@ -107,11 +121,13 @@ export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
           title={displayName}
           className="text-text-1"
         >
-          <FileTypeIcon
-            fileName={iconName}
-            size="small"
-            className="mr-1.5 shrink-0"
-          />
+          {!isSkill && (
+            <FileTypeIcon
+              fileName={iconName}
+              size="small"
+              className="mr-1.5 shrink-0"
+            />
+          )}
           <span
             data-testid="read-file-path"
             className={`min-w-0 truncate ${isLoading ? `font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}` : ""}`.trim()}
