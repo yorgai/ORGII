@@ -18,6 +18,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useRef } from "react";
 
 import {
+  type ShellProcessMap,
   shellProcessMapAtom,
   updateShellProcessAtom,
 } from "@src/store/session/shellProcessAtom";
@@ -53,6 +54,29 @@ interface PtySessionInfo {
   shell_kind: ShellKind;
   cwd: string | null;
   name: string | null;
+}
+
+export function findStaleShellProcesses(
+  processMap: ShellProcessMap,
+  runningJobs: readonly RunningShellJob[]
+): Array<{ sessionId: string; pid: number }> {
+  const liveJobKeys = new Set(
+    runningJobs.map((job) => `${job.session_id}:${job.pid}`)
+  );
+  const staleProcesses: Array<{ sessionId: string; pid: number }> = [];
+
+  for (const [sessionId, sessionProcesses] of processMap.entries()) {
+    for (const process of sessionProcesses.values()) {
+      if (
+        (process.status === "running" || process.status === "background") &&
+        !liveJobKeys.has(`${sessionId}:${process.pid}`)
+      ) {
+        staleProcesses.push({ sessionId, pid: process.pid });
+      }
+    }
+  }
+
+  return staleProcesses;
 }
 
 export function useProcessReconciliation(): void {
@@ -91,6 +115,18 @@ export function useProcessReconciliation(): void {
           "agent_list_running_shell_jobs"
         );
         if (cancelled) return;
+
+        for (const process of findStaleShellProcesses(
+          shellProcessMapRef.current,
+          runningJobs
+        )) {
+          dispatchUpdateShellProcessRef.current({
+            type: "exit",
+            sessionId: process.sessionId,
+            pid: process.pid,
+            killed: false,
+          });
+        }
 
         for (const job of runningJobs) {
           const existing = shellProcessMapRef.current
