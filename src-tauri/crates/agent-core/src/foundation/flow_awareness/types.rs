@@ -259,7 +259,7 @@ impl Activity {
         let preview = content_preview.map(|s| {
             let s = s.into();
             if s.len() > MAX_PREVIEW_CHARS {
-                format!("{}...", &s[..MAX_PREVIEW_CHARS])
+                format!("{}...", crate::utils::safe_truncate_utf8(&s, MAX_PREVIEW_CHARS))
             } else {
                 s
             }
@@ -376,4 +376,66 @@ pub struct FlowSummary {
     pub current_errors: Vec<String>,
     /// Time since last activity (seconds).
     pub idle_seconds: Option<u64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn clipboard_preview(content: &str) -> Option<String> {
+        let activity = Activity::clipboard(
+            ClipboardOp::Copy,
+            Some(content.to_string()),
+            None::<String>,
+        );
+        match activity.activity_type {
+            ActivityType::Clipboard {
+                content_preview, ..
+            } => content_preview,
+            other => panic!("expected Clipboard activity, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn clipboard_preview_short_content_unchanged() {
+        assert_eq!(clipboard_preview("hello"), Some("hello".to_string()));
+    }
+
+    #[test]
+    fn clipboard_preview_ascii_truncated_with_ellipsis() {
+        let content = "a".repeat(MAX_PREVIEW_CHARS + 50);
+        let preview = clipboard_preview(&content).expect("preview present");
+        assert!(preview.ends_with("..."));
+        assert_eq!(preview.len(), MAX_PREVIEW_CHARS + 3);
+    }
+
+    /// Regression: a multi-byte char straddling the `MAX_PREVIEW_CHARS` byte
+    /// boundary previously panicked (`&s[..MAX_PREVIEW_CHARS]`). It must now
+    /// truncate safely at a char boundary.
+    #[test]
+    fn clipboard_preview_multibyte_at_boundary_does_not_panic() {
+        // Fill up to one byte before the limit with ASCII, then place a 4-byte
+        // emoji so its bytes straddle MAX_PREVIEW_CHARS.
+        let mut content = "a".repeat(MAX_PREVIEW_CHARS - 1);
+        content.push('😀');
+        content.push_str("trailing");
+        let preview = clipboard_preview(&content).expect("preview present");
+        assert!(preview.ends_with("..."));
+        // The emoji bytes that crossed the boundary are dropped, so the head is
+        // the ASCII run; everything before the ellipsis is valid UTF-8.
+        let head = preview.trim_end_matches("...");
+        assert!(head.is_char_boundary(head.len()));
+        assert_eq!(head, "a".repeat(MAX_PREVIEW_CHARS - 1));
+    }
+
+    #[test]
+    fn clipboard_preview_cjk_at_boundary_does_not_panic() {
+        // CJK chars are 3 bytes each; this guarantees the cut lands mid-char.
+        let content = "界".repeat(MAX_PREVIEW_CHARS);
+        let preview = clipboard_preview(&content).expect("preview present");
+        assert!(preview.ends_with("..."));
+        let head = preview.trim_end_matches("...");
+        assert!(head.is_char_boundary(head.len()));
+        assert!(head.len() <= MAX_PREVIEW_CHARS);
+    }
 }

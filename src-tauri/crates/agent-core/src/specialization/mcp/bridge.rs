@@ -79,18 +79,12 @@ pub const TRUNCATION_MARKER: &str = "… [truncated]";
 /// Uses `char_indices()` to find the last safe UTF-8 boundary — never
 /// panics on multi-byte sequences.
 pub fn truncate_description(text: &str, max_chars: usize) -> String {
-    if text.chars().count() <= max_chars {
+    let head = crate::utils::safe_truncate_chars(text, max_chars);
+    if head.len() == text.len() {
         return text.to_string();
     }
-    let mut end_byte = text.len();
-    for (idx, (byte_idx, _)) in text.char_indices().enumerate() {
-        if idx == max_chars {
-            end_byte = byte_idx;
-            break;
-        }
-    }
-    let mut out = String::with_capacity(end_byte + TRUNCATION_MARKER.len());
-    out.push_str(&text[..end_byte]);
+    let mut out = String::with_capacity(head.len() + TRUNCATION_MARKER.len());
+    out.push_str(head);
     out.push_str(TRUNCATION_MARKER);
     out
 }

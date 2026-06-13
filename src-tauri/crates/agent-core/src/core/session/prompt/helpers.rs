@@ -6,6 +6,7 @@
 use std::path::Path;
 
 use crate::session::types::ToolSummary;
+use crate::utils::safe_truncate_utf8;
 
 // ============================================
 // Conventions loader
@@ -34,13 +35,9 @@ pub(super) fn cap_text(text: &str, max_bytes: usize, label: &str) -> String {
     if text.len() <= max_bytes {
         return text.to_string();
     }
-    let mut end = max_bytes;
-    while !text.is_char_boundary(end) && end > 0 {
-        end -= 1;
-    }
     format!(
         "{}\n\n[{} truncated at {}KB]",
-        &text[..end],
+        safe_truncate_utf8(text, max_bytes),
         label,
         max_bytes / 1000
     )
@@ -64,11 +61,7 @@ pub(super) fn truncate_preview(s: &str, max_bytes: usize) -> String {
     if s.len() <= max_bytes {
         return s.to_string();
     }
-    let mut end = max_bytes;
-    while end > 0 && !s.is_char_boundary(end) {
-        end -= 1;
-    }
-    format!("{}...", &s[..end])
+    format!("{}...", safe_truncate_utf8(s, max_bytes))
 }
 
 pub(super) fn truncate_at_boundary(s: &str, max_chars: usize) -> String {
@@ -76,16 +69,12 @@ pub(super) fn truncate_at_boundary(s: &str, max_chars: usize) -> String {
     if trimmed.len() <= max_chars {
         return trimmed.replace('\n', " ");
     }
-    let mut end = max_chars;
-    while end > 0 && !trimmed.is_char_boundary(end) {
-        end -= 1;
-    }
-    let window = &trimmed[..end];
+    let window = safe_truncate_utf8(trimmed, max_chars);
     let cut = window
         .rfind(". ")
         .map(|pos| pos + 1)
         .or_else(|| window.rfind('\n'))
-        .unwrap_or(end);
+        .unwrap_or(window.len());
     let mut result: String = window[..cut].replace('\n', " ");
     result.push_str("...");
     result

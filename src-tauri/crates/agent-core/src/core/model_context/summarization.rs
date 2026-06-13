@@ -10,13 +10,10 @@ pub(crate) fn truncate_for_summary(text: &str, max_chars: usize) -> String {
     if text.len() <= max_chars {
         text.to_string()
     } else {
-        let boundary = text
-            .char_indices()
-            .map(|(i, _)| i)
-            .take_while(|&i| i <= max_chars)
-            .last()
-            .unwrap_or(0);
-        format!("{}... [truncated]", &text[..boundary])
+        format!(
+            "{}... [truncated]",
+            crate::utils::safe_truncate_utf8(text, max_chars)
+        )
     }
 }
 

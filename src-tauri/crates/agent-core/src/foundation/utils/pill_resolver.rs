@@ -298,14 +298,7 @@ fn truncate_content(s: &str, max_bytes: usize) -> &str {
 
 /// Public-within-crate alias so `__tests__` can exercise the truncation logic directly.
 pub(crate) fn truncate_content_pub(s: &str, max_bytes: usize) -> &str {
-    if s.len() <= max_bytes {
-        return s;
-    }
-    let mut end = max_bytes;
-    while end > 0 && !s.is_char_boundary(end) {
-        end -= 1;
-    }
-    &s[..end]
+    super::safe_truncate_utf8(s, max_bytes)
 }
 
 #[cfg(test)]

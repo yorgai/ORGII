@@ -561,14 +561,7 @@ fn random_wechat_uin() -> String {
 }
 
 fn clip_utf8(s: &str, max_bytes: usize) -> String {
-    if s.len() <= max_bytes {
-        return s.to_string();
-    }
-    let mut end = max_bytes;
-    while end > 0 && !s.is_char_boundary(end) {
-        end -= 1;
-    }
-    s[..end].to_string()
+    crate::utils::safe_truncate_utf8(s, max_bytes).to_string()
 }
 
 #[cfg(test)]

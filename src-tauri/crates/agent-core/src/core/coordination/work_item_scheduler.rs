@@ -340,14 +340,7 @@ fn notify_inbox_blocked(short_id: &str, title: &str, reason: &str) {
 }
 
 fn truncate(s: &str, max_len: usize) -> &str {
-    if s.len() <= max_len {
-        return s;
-    }
-    let mut end = max_len;
-    while end > 0 && !s.is_char_boundary(end) {
-        end -= 1;
-    }
-    &s[..end]
+    crate::utils::safe_truncate_utf8(s, max_len)
 }
 
 #[cfg(test)]

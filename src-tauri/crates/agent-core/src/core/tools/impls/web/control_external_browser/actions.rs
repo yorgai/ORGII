@@ -319,14 +319,7 @@ pub(super) fn format_json_result(prefix: &str, result: &Value) -> String {
 /// Truncate `s` to at most `max_bytes`, snapping back to the nearest UTF-8
 /// char boundary so multi-byte sequences (e.g. emoji, CJK) are not split.
 fn truncate_on_char_boundary(s: &str, max_bytes: usize) -> &str {
-    if s.len() <= max_bytes {
-        return s;
-    }
-    let mut end = max_bytes;
-    while end > 0 && !s.is_char_boundary(end) {
-        end -= 1;
-    }
-    &s[..end]
+    crate::utils::safe_truncate_utf8(s, max_bytes)
 }
 
 #[cfg(test)]

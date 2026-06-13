@@ -100,14 +100,11 @@ fn cap_text_utf8(text: &str, max_bytes: usize) -> String {
     if text.len() <= max_bytes {
         return text.to_string();
     }
-    let mut boundary = max_bytes;
-    while boundary > 0 && !text.is_char_boundary(boundary) {
-        boundary -= 1;
-    }
+    let head = crate::utils::safe_truncate_utf8(text, max_bytes);
     format!(
         "{}\n\n[policy truncated: omitted {} bytes]",
-        &text[..boundary],
-        text.len() - boundary
+        head,
+        text.len() - head.len()
     )
 }
 
