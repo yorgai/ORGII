@@ -11,6 +11,7 @@ import { useAtomValue } from "jotai";
 import { type FC, lazy, useCallback, useEffect, useState } from "react";
 
 import { type MemberEntry, projectApi } from "@src/api/http/project";
+import { createLogger } from "@src/hooks/logger";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { currentRepoAtom } from "@src/store/repo";
 import type { Label } from "@src/types/core/shared";
@@ -18,6 +19,8 @@ import type { Label } from "@src/types/core/shared";
 const RepoSettingsPage = lazy(
   () => import("../../Projects/components/RepoSettings")
 );
+
+const log = createLogger("RepoSettingsTab");
 
 interface RepoSettingsTabContentProps {
   initialSection?: string;
@@ -66,7 +69,7 @@ export const RepoSettingsTabContent: FC<RepoSettingsTabContentProps> = ({
         setLabels(labelsFile.labels);
       } catch (err) {
         if (cancelled) return;
-        console.error("[RepoSettingsTab] Failed to load data:", err);
+        log.error("[RepoSettingsTab] Failed to load data:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }

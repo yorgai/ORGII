@@ -8,8 +8,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
 import { useMounted } from "@src/hooks/lifecycle/useMounted";
+import { createLogger } from "@src/hooks/logger";
 
 import type { OrgMember } from "../types";
+
+const log = createLogger("AgentOrgs");
 
 export function useAgentOrgs() {
   const [orgs, setOrgs] = useState<OrgMember[]>([]);
@@ -22,7 +25,7 @@ export function useAgentOrgs() {
       const result = await rpc.agentOrgs.orgs.list();
       if (mountedRef.current) setOrgs(result);
     } catch (error) {
-      console.error("[AgentOrgs] Failed to fetch:", error);
+      log.error("[AgentOrgs] Failed to fetch:", error);
     } finally {
       if (mountedRef.current) setLoading(false);
     }
@@ -37,7 +40,7 @@ export function useAgentOrgs() {
         const result = await rpc.agentOrgs.orgs.list();
         if (!cancelled) setOrgs(result);
       } catch (error) {
-        console.error("[AgentOrgs] Failed to fetch:", error);
+        log.error("[AgentOrgs] Failed to fetch:", error);
       } finally {
         if (!cancelled) setLoading(false);
       }

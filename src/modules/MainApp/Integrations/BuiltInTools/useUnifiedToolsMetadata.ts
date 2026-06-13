@@ -6,9 +6,12 @@
  */
 import { useCallback, useEffect, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { invokeTauri } from "@src/util/platform/tauri/init";
 
 import type { RawToolInfo } from "./types";
+
+const log = createLogger("Tools");
 
 // ============================================
 // Module-level cache (prevents re-fetch on every mount)
@@ -74,7 +77,7 @@ export function useUnifiedToolsMetadata() {
         setLoading(false);
       })
       .catch((err: unknown) => {
-        console.error("[Tools] Failed to list tools:", err);
+        log.error("[Tools] Failed to list tools:", err);
         setError(err instanceof Error ? err.message : String(err));
         setLoading(false);
       });
@@ -94,7 +97,7 @@ export function useUnifiedToolsMetadata() {
         }
       })
       .catch((err: unknown) => {
-        console.error("[Tools] Failed to list tools:", err);
+        log.error("[Tools] Failed to list tools:", err);
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));
           setLoading(false);

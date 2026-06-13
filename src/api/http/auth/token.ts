@@ -18,6 +18,9 @@ import {
   isTauriProduction,
   storeHostedToken,
 } from "@src/config/serviceAuth";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("Auth0Token");
 
 // ============================================
 // Types
@@ -71,7 +74,7 @@ export async function exchangeCodeForTokens(
         audience,
       });
     } catch (err) {
-      console.error("[Auth0Token] Tauri token exchange failed:", err);
+      log.error("[Auth0Token] Tauri token exchange failed:", err);
       throw new Error(
         typeof err === "string" ? err : "Token exchange failed via Tauri"
       );
@@ -100,7 +103,7 @@ export async function exchangeCodeForTokens(
 
     if (!response.ok) {
       const errorData = data as TokenError;
-      console.error("[Auth0Token] Token exchange failed:", errorData);
+      log.error("[Auth0Token] Token exchange failed:", errorData);
       throw new Error(
         errorData.error_description ||
           errorData.error ||
@@ -149,7 +152,7 @@ export async function refreshAccessToken(
         refreshToken,
       });
     } catch (err) {
-      console.error("[Auth0Token] Tauri token refresh failed:", err);
+      log.error("[Auth0Token] Tauri token refresh failed:", err);
       throw new Error(
         typeof err === "string" ? err : "Token refresh failed via Tauri"
       );
@@ -175,7 +178,7 @@ export async function refreshAccessToken(
 
     if (!response.ok) {
       const errorData = data as TokenError;
-      console.error("[Auth0Token] Token refresh failed:", errorData);
+      log.error("[Auth0Token] Token refresh failed:", errorData);
       throw new Error(
         errorData.error_description || errorData.error || "Token refresh failed"
       );
@@ -225,14 +228,14 @@ export async function revokeRefreshToken(refreshToken: string): Promise<void> {
     if (response.ok) {
       // Token revoked successfully - no action needed
     } else {
-      console.warn(
+      log.warn(
         "[Auth0Token] Token revocation returned non-OK status:",
         response.status
       );
     }
   } catch (error) {
     // Don't throw on revocation failure - user is logging out anyway
-    console.warn("[Auth0Token] Token revocation failed:", error);
+    log.warn("[Auth0Token] Token revocation failed:", error);
   }
 }
 

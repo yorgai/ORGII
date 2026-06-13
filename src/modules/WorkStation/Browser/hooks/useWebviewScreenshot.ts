@@ -14,7 +14,10 @@ import { useTranslation } from "react-i18next";
 
 import Message from "@src/components/Message";
 import { useImageAttachment } from "@src/engines/ChatPanel/hooks/useInputArea/useImageAttachment";
+import { createLogger } from "@src/hooks/logger";
 import { invokeTauri } from "@src/util/platform/tauri/init";
+
+const log = createLogger("useWebviewScreenshot");
 
 // ============================================
 // Helpers
@@ -87,7 +90,7 @@ export function useWebviewScreenshot(
     } catch (error) {
       const reason =
         error instanceof Error ? error.message : String(error ?? "unknown");
-      console.error("[useWebviewScreenshot] capture failed:", reason);
+      log.error("[useWebviewScreenshot] capture failed:", reason);
       Message.error(t("browser.screenshot.failed", { reason }));
     } finally {
       setIsCapturing(false);

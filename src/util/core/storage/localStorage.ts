@@ -10,6 +10,9 @@
  * - Fallback to direct read if not cached
  * - Write-through cache (writes update both cache and storage)
  */
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("localStorageCache");
 
 // ============================================
 // Cache State
@@ -99,7 +102,7 @@ export function setCached(key: string, value: string): void {
   try {
     localStorage.setItem(key, value);
   } catch (error) {
-    console.error(`[localStorageCache] Failed to write ${key}:`, error);
+    log.error(`[localStorageCache] Failed to write ${key}:`, error);
   }
 }
 
@@ -118,7 +121,7 @@ export function removeCached(key: string): void {
   try {
     localStorage.removeItem(key);
   } catch (error) {
-    console.error(`[localStorageCache] Failed to remove ${key}:`, error);
+    log.error(`[localStorageCache] Failed to remove ${key}:`, error);
   }
 }
 

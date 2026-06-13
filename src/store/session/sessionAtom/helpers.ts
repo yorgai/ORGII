@@ -3,7 +3,11 @@
  *
  * Utility functions for session ID validation and localStorage persistence.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { SESSION_CACHE_INVALIDATION_KEY } from "./atoms";
+
+const log = createLogger("SessionAtom");
 
 /**
  * Validate if a string is a valid UUID
@@ -23,7 +27,7 @@ export const getSessionCacheInvalidationTimestamp = (): number | null => {
     const timestamp = localStorage.getItem(SESSION_CACHE_INVALIDATION_KEY);
     return timestamp ? parseInt(timestamp, 10) : null;
   } catch (error) {
-    console.error(
+    log.error(
       "[SessionAtom] Failed to get cache invalidation timestamp:",
       error
     );

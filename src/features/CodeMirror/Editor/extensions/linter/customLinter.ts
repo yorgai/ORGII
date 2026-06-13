@@ -11,7 +11,11 @@ import {
 import type { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 
+import { createLogger } from "@src/hooks/logger";
+
 import { convertAndSortDiagnostics } from "./diagnosticsConverter";
+
+const log = createLogger("Linter");
 
 /**
  * Create a CodeMirror linter extension from a custom linting function.
@@ -31,7 +35,7 @@ export function createCustomLinterExtension(
 
       return convertAndSortDiagnostics(diagnostics, view.state.doc);
     } catch (error) {
-      console.error("[Linter] Error during custom linting:", error);
+      log.error("[Linter] Error during custom linting:", error);
       return [];
     }
   };

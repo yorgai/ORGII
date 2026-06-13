@@ -7,6 +7,7 @@ import { deleteSession } from "@src/api/tauri/agent";
 import { benchmarkApi } from "@src/api/tauri/benchmark";
 import { rpc } from "@src/api/tauri/rpc";
 import Message from "@src/components/Message";
+import { createLogger } from "@src/hooks/logger";
 import type { GoToNewSessionOptions } from "@src/hooks/navigation/useAppNavigation";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import {
@@ -34,6 +35,8 @@ import {
   NEW_SESSION_MENU_ITEM_ID,
   getDraftIdFromMenuItemId,
 } from "./sidebarConnectorUtils";
+
+const log = createLogger("WorkstationSidebar");
 
 interface UseWorkstationSidebarHandlersParams {
   activeSessionId: string;
@@ -98,7 +101,7 @@ export function useWorkstationSidebarHandlers({
           goToNewSession();
         }
       } catch (error) {
-        console.error("[WorkstationSidebar] Failed to delete session:", error);
+        log.error("[WorkstationSidebar] Failed to delete session:", error);
         Message.error(tCommon("sessions:chat.failedToDeleteSession"));
       }
     },
@@ -128,7 +131,7 @@ export function useWorkstationSidebarHandlers({
         await writeTextFile(filePath, markdown);
         Message.success(tCommon("sessions:chat.exportSuccess", "Exported!"));
       } catch (error) {
-        console.error("[WorkstationSidebar] Export markdown failed:", error);
+        log.error("[WorkstationSidebar] Export markdown failed:", error);
         Message.error(tCommon("sessions:chat.exportFailed", "Export failed"));
       }
     },
@@ -235,7 +238,7 @@ export function useWorkstationSidebarHandlers({
         });
       } catch (error) {
         upsertSession({ ...session, pinned: session.pinned ?? false });
-        console.error("[WorkstationSidebar] Failed to toggle pin:", error);
+        log.error("[WorkstationSidebar] Failed to toggle pin:", error);
       }
     },
     [sessionMap]
@@ -261,7 +264,7 @@ export function useWorkstationSidebarHandlers({
         });
       } catch (error) {
         upsertSession({ ...session, tags: currentTags });
-        console.error("[WorkstationSidebar] Failed to add tag:", error);
+        log.error("[WorkstationSidebar] Failed to add tag:", error);
       }
     },
     [sessionMap, tCommon]

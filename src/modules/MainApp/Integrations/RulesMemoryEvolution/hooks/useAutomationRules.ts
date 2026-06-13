@@ -10,9 +10,12 @@ import {
   removeAutomationRule,
   updateAutomationRule,
 } from "@src/api/tauri/agent";
+import { createLogger } from "@src/hooks/logger";
 import type { ActionInstance } from "@src/modules/MainApp/AgentOrgs/data";
 
 import type { AutomationRule, AutomationStatus } from "../types";
+
+const log = createLogger("AutomationRules");
 
 const DEFAULT_STATUS: AutomationStatus = {
   running: false,
@@ -161,7 +164,7 @@ export function useAutomationRules() {
       if (seq !== refreshSeqRef.current) return;
       setStatus(statusResult);
     } catch (error) {
-      console.error("[AutomationRules] Failed to fetch rules:", error);
+      log.error("[AutomationRules] Failed to fetch rules:", error);
     } finally {
       if (seq === refreshSeqRef.current) setLoading(false);
     }
@@ -176,7 +179,7 @@ export function useAutomationRules() {
         );
         await refresh();
       } catch (error) {
-        console.error("[AutomationRules] Failed to add rule:", error);
+        log.error("[AutomationRules] Failed to add rule:", error);
         setLoading(false);
         throw error;
       }
@@ -195,7 +198,7 @@ export function useAutomationRules() {
         );
         await refresh();
       } catch (error) {
-        console.error("[AutomationRules] Failed to update rule:", error);
+        log.error("[AutomationRules] Failed to update rule:", error);
         setLoading(false);
         throw error;
       }
@@ -210,7 +213,7 @@ export function useAutomationRules() {
         await removeAutomationRule(ruleId);
         await refresh();
       } catch (error) {
-        console.error("[AutomationRules] Failed to remove rule:", error);
+        log.error("[AutomationRules] Failed to remove rule:", error);
         setLoading(false);
         throw error;
       }

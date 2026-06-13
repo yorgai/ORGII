@@ -8,6 +8,9 @@
  * not the full file. This means line numbers won't match the original file.
  */
 import { GitDiffHunk } from "@src/api/http/git";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("buildContentFromHunks");
 
 export const buildContentFromHunks = (
   hunks: GitDiffHunk[]
@@ -16,7 +19,7 @@ export const buildContentFromHunks = (
     return { oldContent: "", newContent: "" };
   }
 
-  console.warn(
+  log.warn(
     "[buildContentFromHunks] Using fallback hunk reconstruction - line numbers may not match original file"
   );
 

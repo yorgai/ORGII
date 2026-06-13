@@ -1,6 +1,7 @@
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import type { EditOperation, EditSource } from "@src/types/editor/document";
 import {
   createEditOperation,
@@ -35,6 +36,8 @@ import type {
   UseFileContentOptions,
   UseFileContentReturn,
 } from "../fileContent/types";
+
+const log = createLogger("FileContent");
 
 export type { FileError, UseFileContentOptions, UseFileContentReturn };
 export {
@@ -250,7 +253,7 @@ export function useFileContent(
             }
           })
           .catch((error: unknown) => {
-            console.error("[FileContent] Failed to fetch file mtime:", error);
+            log.error("[FileContent] Failed to fetch file mtime:", error);
             if (currentFilePathRef.current === filePath) {
               setDiskMtime(null);
               cacheFileMetadata(filePath, false, null);

@@ -18,6 +18,7 @@ import {
   pendingSyntheticEventAtom,
 } from "@src/engines/SessionCore/core/atoms";
 import { SESSION_CREATOR_LAUNCH_MODE } from "@src/features/SessionCreator/types";
+import { createLogger } from "@src/hooks/logger";
 import { collectIdeContext } from "@src/services/context/collectors";
 import {
   activeSessionIdAtom,
@@ -74,6 +75,8 @@ import type { UseSessionLaunchOptions, UseSessionLaunchReturn } from "./types";
 import { useWalletModalState } from "./walletModalState";
 
 export type { UseSessionLaunchOptions, UseSessionLaunchReturn } from "./types";
+
+const log = createLogger("useSessionLaunch");
 
 export function useSessionLaunch(
   options: UseSessionLaunchOptions
@@ -279,7 +282,7 @@ export function useSessionLaunch(
         );
         return true;
       } catch (error) {
-        console.error("Error creating Cursor IDE session:", error);
+        log.error("Error creating Cursor IDE session:", error);
         Message.error(
           formatAgentLaunchError(
             error instanceof Error
@@ -360,10 +363,7 @@ export function useSessionLaunch(
       if (selectedAgentOrgId) {
         void loadSidebarSessions({ forceRefresh: true }).catch(
           (error: unknown) => {
-            console.warn(
-              "Failed to refresh sidebar after Agent Org launch",
-              error
-            );
+            log.warn("Failed to refresh sidebar after Agent Org launch", error);
           }
         );
       }
@@ -416,7 +416,7 @@ export function useSessionLaunch(
       setSessionSource(null);
       return true;
     } catch (error) {
-      console.error("Error creating session:", error);
+      log.error("Error creating session:", error);
       handleNonCursorLaunchError({
         advancedConfig,
         clearDraft,

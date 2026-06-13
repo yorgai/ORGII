@@ -34,7 +34,10 @@
  */
 import { useCallback, useEffect, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { invokeTauri } from "@src/util/platform/tauri/init";
+
+const log = createLogger("useBrowserLayering");
 
 export interface UseBrowserLayeringOptions {
   /** Inline webview label, e.g. `browser-session-${sessionId}`. */
@@ -77,7 +80,7 @@ export function useBrowserLayering(
         label: webviewLabel,
       });
     } catch (error) {
-      console.warn("[useBrowserLayering] sendToBack failed:", error);
+      log.warn("[useBrowserLayering] sendToBack failed:", error);
     }
   }, [webviewLabel]);
 
@@ -88,7 +91,7 @@ export function useBrowserLayering(
         label: webviewLabel,
       });
     } catch (error) {
-      console.warn("[useBrowserLayering] bringToFront failed:", error);
+      log.warn("[useBrowserLayering] bringToFront failed:", error);
     }
   }, [webviewLabel]);
 

@@ -12,8 +12,11 @@ import {
   type CodeEditorWebSocketMessage,
   getCodeEditorWebSocket,
 } from "@src/api/realtime/codeEditorWebSocket";
+import { createLogger } from "@src/hooks/logger";
 
 import type { LspDiagnostic } from "./types";
+
+const log = createLogger("LSP");
 
 // Dynamic import helpers for Tauri
 async function tauriInvoke<T>(
@@ -74,7 +77,7 @@ export class LspClient {
       // textDocument/publishDiagnostics through ws, not Tauri events)
       this.subscribeToWsDiagnostics();
     } catch (error) {
-      console.error(`[LSP] Failed to start ${this.language} server:`, error);
+      log.error(`[LSP] Failed to start ${this.language} server:`, error);
       throw error;
     }
   }
@@ -104,7 +107,7 @@ export class LspClient {
       const delay = 500 * Math.pow(2, attempt);
       setTimeout(() => this.subscribeToWsDiagnostics(attempt + 1), delay);
     } else {
-      console.warn(
+      log.warn(
         `[LSP] WebSocket not available after ${MAX_WS_RETRIES} retries for ${this.language} — diagnostics will not work`
       );
     }
@@ -178,7 +181,7 @@ export class LspClient {
 
       this.openDocuments.add(uri);
     } catch (error) {
-      console.error(`[LSP] didOpen failed for ${this.language}:`, error);
+      log.error(`[LSP] didOpen failed for ${this.language}:`, error);
       throw error;
     }
   }

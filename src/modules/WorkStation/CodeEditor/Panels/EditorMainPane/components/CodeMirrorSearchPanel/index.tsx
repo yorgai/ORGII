@@ -29,6 +29,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
@@ -39,6 +40,8 @@ import {
 } from "@src/modules/WorkStation/shared/tokens";
 
 import { ReplaceInput, SearchInput } from "../../../shared";
+
+const log = createLogger("CodeMirrorSearchPanel");
 
 // ============================================
 // Types
@@ -101,7 +104,7 @@ function applySearch(
       effects: setSearchQuery.of(searchQueryObj),
     });
   } catch (error) {
-    console.error("Search error:", error);
+    log.error("Search error:", error);
   }
 }
 

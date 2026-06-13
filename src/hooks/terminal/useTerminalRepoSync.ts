@@ -8,6 +8,7 @@
 import { useAtomValue } from "jotai";
 import { useEffect, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { currentRepoAtom } from "@src/store/repo";
 import {
   initializedTerminalIdsAtom,
@@ -18,6 +19,8 @@ import {
   isAgentPtySessionId,
   toBackendPtySessionId,
 } from "@src/util/ui/terminal/ptySessionId";
+
+const log = createLogger("TerminalRepoSync");
 
 function shellEscapePath(path: string): string {
   return `'${path.replace(/'/g, "'\\''")}'`;
@@ -55,8 +58,7 @@ export function useTerminalRepoSync(): void {
       const ptyId = toBackendPtySessionId(session.id);
       invokeTauri("write_pty", { sessionId: ptyId, data: cdCmd }).catch(
         (err) => {
-          // eslint-disable-next-line no-console
-          console.warn(
+          log.warn(
             `[TerminalRepoSync] Failed to cd terminal ${session.id}:`,
             err
           );

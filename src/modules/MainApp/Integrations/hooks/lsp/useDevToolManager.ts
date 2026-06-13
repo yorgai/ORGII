@@ -18,12 +18,15 @@ import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useMountedCleanup } from "@src/hooks/lifecycle/useMounted";
+import { createLogger } from "@src/hooks/logger";
 import type {
   ActionState,
   InstallCommandResult,
   UninstallCommandResult,
 } from "@src/modules/MainApp/Integrations/DevTools/LanguageServersPage/types";
 import { invalidateDepsAtom } from "@src/store/platform/systemDepsAtom";
+
+const log = createLogger("DevToolManager");
 
 const SUCCESS_AUTO_HIDE = 10000;
 const FAILED_AUTO_HIDE = 8000;
@@ -112,7 +115,7 @@ export function useDevToolManager<TItem>({
       const result = await invoke<TItem[]>(invokeNames.checkInstalled);
       if (mountedRef.current) setItems(result);
     } catch (error) {
-      console.error(
+      log.error(
         `[DevToolManager:${invokeNames.checkInstalled}] Failed:`,
         error
       );
@@ -136,7 +139,7 @@ export function useDevToolManager<TItem>({
       );
       if (mountedRef.current) setWorkspaceConfig(config);
     } catch (error) {
-      console.error(
+      log.error(
         `[DevToolManager:${invokeNames.getWorkspaceConfig}] Failed:`,
         error
       );
@@ -159,7 +162,7 @@ export function useDevToolManager<TItem>({
         // Cache miss is non-fatal — the live `fetchItems()` below still
         // populates the table. Surface the failure for debugging instead
         // of silently swallowing it.
-        console.warn(
+        log.warn(
           `[DevToolManager:${invokeNames.getCached}] cache load failed:`,
           err
         );
@@ -241,7 +244,7 @@ export function useDevToolManager<TItem>({
           scheduleReset(key, FAILED_AUTO_HIDE);
         }
       } catch (error) {
-        console.error(`[DevToolManager:install] Failed:`, error);
+        log.error(`[DevToolManager:install] Failed:`, error);
         if (!mountedRef.current) return;
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -305,10 +308,7 @@ export function useDevToolManager<TItem>({
           invalidateDeps();
           scheduleReset(key, SUCCESS_AUTO_HIDE);
         } else {
-          console.warn(
-            `[DevToolManager:uninstall] Not supported:`,
-            result.error
-          );
+          log.warn(`[DevToolManager:uninstall] Not supported:`, result.error);
           setActionStates((prev) => ({
             ...prev,
             [key]: {
@@ -320,7 +320,7 @@ export function useDevToolManager<TItem>({
           scheduleReset(key, FAILED_AUTO_HIDE);
         }
       } catch (error) {
-        console.error(`[DevToolManager:uninstall] Failed:`, error);
+        log.error(`[DevToolManager:uninstall] Failed:`, error);
         if (!mountedRef.current) return;
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -360,7 +360,7 @@ export function useDevToolManager<TItem>({
           return { disabled: newDisabled };
         });
       } catch (error) {
-        console.error(`[DevToolManager:workspaceToggle] Failed:`, error);
+        log.error(`[DevToolManager:workspaceToggle] Failed:`, error);
         // Resync from backend so the UI doesn't show a phantom toggle that
         // never persisted (F6: surface workspace-toggle failures).
         await fetchWorkspaceConfig();

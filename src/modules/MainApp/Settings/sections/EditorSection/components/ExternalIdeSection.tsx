@@ -17,7 +17,10 @@ import DropdownFooter from "@src/components/Dropdown/DropdownFooter";
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import Message from "@src/components/Message";
 import Select from "@src/components/Select";
+import { createLogger } from "@src/hooks/logger";
 import { preferIDEAtom } from "@src/store/config/configAtom";
+
+const log = createLogger("ExternalIdeSection");
 
 interface IdeItem {
   name: string;
@@ -83,7 +86,7 @@ const ExternalIdeSection: React.FC = () => {
         setIdeOptions(normalized);
       }
     } catch (error) {
-      console.error("Failed to read stored IDE list", error);
+      log.error("Failed to read stored IDE list", error);
     }
   }, []);
 
@@ -126,7 +129,7 @@ const ExternalIdeSection: React.FC = () => {
         );
       }
     } catch (error) {
-      console.error("Failed to detect IDEs", error);
+      log.error("Failed to detect IDEs", error);
       Message.error(
         "Unable to detect IDEs. Please ensure your IDE is installed and try again."
       );

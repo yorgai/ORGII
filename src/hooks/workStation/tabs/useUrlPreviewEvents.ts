@@ -10,9 +10,12 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { EditorTabService } from "@src/services/workStation";
 import { createUrlPreviewTab } from "@src/store/workstation/tabs/factories";
 import { isTauriDesktop } from "@src/util/platform/tauri";
+
+const log = createLogger("useUrlPreviewEvents");
 
 interface UrlPreviewPayload {
   url: string;
@@ -40,7 +43,7 @@ export function useUrlPreviewEvents(): void {
 
       const { url, title } = event.payload;
       if (!url) {
-        console.warn("[useUrlPreviewEvents] Received event with empty URL");
+        log.warn("[useUrlPreviewEvents] Received event with empty URL");
         return;
       }
 

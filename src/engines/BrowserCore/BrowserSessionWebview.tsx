@@ -7,6 +7,7 @@
 import { useAtomValue } from "jotai";
 import React, { useEffect, useMemo, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { useInlineWebview } from "@src/hooks/platform/useInlineWebview";
 import { sidebarWidthAtom } from "@src/store/ui/sidebarAtom";
 import {
@@ -16,6 +17,8 @@ import {
 } from "@src/store/ui/simulatorAtom";
 import { NEW_TAB_TITLE } from "@src/store/workstation/browser/tabs";
 import { BrowserSession } from "@src/types/ui/tabs";
+
+const log = createLogger("BrowserSessionWebview");
 
 const ABOUT_BLANK_URL = "about:blank";
 
@@ -85,7 +88,7 @@ const BrowserSessionWebview: React.FC<BrowserSessionWebviewProps> = ({
         onSessionUpdate(session.id, { isLoading: false });
       },
       onError: (error: string | Error) => {
-        console.error("[BrowserSessionWebview] WebView error:", error);
+        log.error("[BrowserSessionWebview] WebView error:", error);
         onSessionUpdate(session.id, {
           error: typeof error === "string" ? error : error.message,
           isLoading: false,
@@ -157,7 +160,7 @@ const BrowserSessionWebview: React.FC<BrowserSessionWebviewProps> = ({
           onSessionUpdate(session.id, { isLoading: false });
         })
         .catch((err) => {
-          console.error("[BrowserSessionWebview] Reload failed:", err);
+          log.error("[BrowserSessionWebview] Reload failed:", err);
           onSessionUpdate(session.id, { isLoading: false });
         })
         .finally(() => {

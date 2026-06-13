@@ -6,6 +6,7 @@ import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Message from "@src/components/Message";
+import { createLogger } from "@src/hooks/logger";
 import type { BackgroundConfig } from "@src/store/ui/backgroundConfigAtom";
 import { getStorageInfo } from "@src/util/core/storage/backgroundImage";
 import {
@@ -14,6 +15,8 @@ import {
 } from "@src/util/optimization/imageOptimizer";
 
 import type { StorageInfo } from "../types";
+
+const log = createLogger("BackgroundPage");
 
 // ============================================================================
 // StorageInfo refresh helper
@@ -101,7 +104,7 @@ export function useBackgroundImageHandlers({
           duration: 2000,
         });
       } catch (error) {
-        console.error("Image processing error:", error);
+        log.error("Image processing error:", error);
         const errorMsg =
           error instanceof Error ? error.message : "Unknown error";
         Message.error({
@@ -144,7 +147,7 @@ export function useBackgroundImageHandlers({
           content: t("background.failedToDelete"),
           duration: 2000,
         });
-        console.error("Error deleting image:", error);
+        log.error("Error deleting image:", error);
       }
     },
     [config, removeImage, setConfig, setStorageInfo, t]

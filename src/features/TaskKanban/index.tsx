@@ -22,6 +22,7 @@ import {
   OPS_CONTROL_SESSION_PREVIEW_SURFACE_CLASS,
 } from "@src/config/opsControlCardTokens";
 import type { KanbanTask, TaskStatus } from "@src/features/KanbanBoard";
+import { createLogger } from "@src/hooks/logger";
 import { kanbanReplayModeAtom } from "@src/store/ui/kanbanReplayAtom";
 import {
   kanbanAgentTypeFilterAtom,
@@ -53,6 +54,8 @@ import {
   beginKanbanHorizontalScrollGuard,
   resetKanbanHorizontalScroll,
 } from "./utils/scrollGuard";
+
+const log = createLogger("TaskKanban");
 
 export interface TaskKanbanProps {
   /**
@@ -243,7 +246,7 @@ const Kanban: React.FC<TaskKanbanProps> = ({
       repoPath: compareRepoPath,
       title: `Compare ${worktreeSessionIds.length} Worktrees`,
     }).catch((err: unknown) => {
-      console.error("[TaskKanban] failed to open compare window:", err);
+      log.error("[TaskKanban] failed to open compare window:", err);
     });
   }, [worktreeSessionIds, compareRepoPath]);
 

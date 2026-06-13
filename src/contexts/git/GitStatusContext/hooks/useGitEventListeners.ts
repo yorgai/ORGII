@@ -9,6 +9,7 @@
 import { useEffect, useRef } from "react";
 
 import { getCodeEditorWebSocket } from "@src/api/realtime/codeEditorWebSocket";
+import { createLogger } from "@src/hooks/logger";
 import type {
   GitFileStatusCode,
   GitRepositoryStatus,
@@ -19,6 +20,8 @@ import { decodeOctalPath } from "@src/util/file/pathUtils";
 import { computeSuggestedAction } from "@src/util/git/computeSuggestedAction";
 
 import type { GitStatusRefs } from "../types";
+
+const log = createLogger("GitStatusContext");
 
 interface UseGitEventListenersOptions {
   selectedRepoId: string | null;
@@ -82,7 +85,7 @@ export function useGitEventListeners({
       try {
         const ws = getCodeEditorWebSocket();
         if (!ws) {
-          console.error("[GitStatusContext] WebSocket client not available");
+          log.error("[GitStatusContext] WebSocket client not available");
           return;
         }
 

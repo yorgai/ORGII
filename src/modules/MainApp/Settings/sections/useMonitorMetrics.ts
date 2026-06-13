@@ -15,6 +15,7 @@ import {
   useState,
 } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { useRamHistory } from "@src/hooks/perf";
 import {
   monitorActiveTabAtom,
@@ -23,6 +24,8 @@ import {
   networkRefreshTriggerAtom,
   storageRefreshTriggerAtom,
 } from "@src/store";
+
+const log = createLogger("Monitor");
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -145,7 +148,7 @@ export function useMonitorMetrics(activeTab: string): UseMonitorMetricsReturn {
         children.reduce((sum, child) => sum + child.memory_mb, 0);
       recordRamSample(appRamTotal);
     } catch (error) {
-      console.error("[Monitor] Failed to fetch metrics:", error);
+      log.error("[Monitor] Failed to fetch metrics:", error);
     }
   }, [recordRamSample]);
 

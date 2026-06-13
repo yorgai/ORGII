@@ -8,6 +8,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { gitApi } from "@src/api/http/git";
+import { createLogger } from "@src/hooks/logger";
 import {
   branchCacheAtom,
   branchLoadingRepoIdsAtom,
@@ -19,6 +20,8 @@ import type { Branch } from "@src/store/repo/types";
 
 import type { BranchItem } from "../../types";
 import type { UseBranchesOptions } from "../core/types";
+
+const log = createLogger("useBranches");
 
 // ============================================
 // Return Interface
@@ -174,7 +177,7 @@ export function useBranches(
           });
         }
       } catch (error) {
-        console.error("[useBranches] Error fetching branches:", error);
+        log.error("[useBranches] Error fetching branches:", error);
         setBranches([]);
       } finally {
         setIsFetching(false);

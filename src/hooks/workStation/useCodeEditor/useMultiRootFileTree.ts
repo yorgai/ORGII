@@ -10,6 +10,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
 import { getCodeEditorWebSocket } from "@src/api/realtime/codeEditorWebSocket";
+import { createLogger } from "@src/hooks/logger";
 import type { FileNode } from "@src/store/workstation/codeEditor/file";
 import {
   fileLoadingTreeAtom,
@@ -27,6 +28,8 @@ import {
   updateTreeChildren,
   updateTreeExpansion,
 } from "./helpers";
+
+const log = createLogger("useMultiRootFileTree");
 
 // ============================================
 // Types
@@ -249,7 +252,7 @@ export function useMultiRootFileTree(
           const children = await loadDirectoryContents(path, false, rootPath);
           setFileTree((prev) => updateTreeChildren(prev, path, children));
         } catch (err) {
-          console.error("[useMultiRootFileTree] Error loading directory:", {
+          log.error("[useMultiRootFileTree] Error loading directory:", {
             path,
             error: err,
           });
@@ -338,7 +341,7 @@ export function useMultiRootFileTree(
               );
               localTree = updateTreeChildren(localTree, dirPath, children);
             } catch (err) {
-              console.error("[useMultiRootFileTree] Error revealing file:", {
+              log.error("[useMultiRootFileTree] Error revealing file:", {
                 dirPath,
                 error: err,
               });

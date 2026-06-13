@@ -11,7 +11,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { log } from "@src/hooks/logger";
+import { log, logDebug, logError, logWarn } from "@src/hooks/logger";
 import { isTauriReady } from "@src/util/platform/tauri/init";
 
 /**
@@ -50,7 +50,7 @@ function parseDeepLink(
 
     return { path, search };
   } catch (error) {
-    console.error("[DeepLinkHandler] Failed to parse deep link:", error);
+    logError("DeepLinkHandler", "Failed to parse deep link:", error);
     return null;
   }
 }
@@ -94,7 +94,7 @@ export function useDeepLinkHandler(): void {
 
             const parsed = parseDeepLink(url);
             if (!parsed) {
-              console.warn("[DeepLinkHandler] Could not parse deep link:", url);
+              logWarn("DeepLinkHandler", "Could not parse deep link:", url);
               continue;
             }
 
@@ -113,8 +113,9 @@ export function useDeepLinkHandler(): void {
         hasSetupListener.current = true;
         log("DeepLinkHandler", "Deep link listener ready");
       } catch (error) {
-        console.error(
-          "[DeepLinkHandler] Failed to setup deep link listener:",
+        logError(
+          "DeepLinkHandler",
+          "Failed to setup deep link listener:",
           error
         );
       }
@@ -180,9 +181,9 @@ export function useDeepLinkHandler(): void {
         }
       } catch (error) {
         // getCurrent may not be available in all versions of the plugin
-        // eslint-disable-next-line no-console
-        console.debug(
-          "[DeepLinkHandler] Could not check initial deep link:",
+        logDebug(
+          "DeepLinkHandler",
+          "Could not check initial deep link:",
           error
         );
       }

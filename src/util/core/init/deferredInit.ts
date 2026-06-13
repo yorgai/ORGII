@@ -9,6 +9,9 @@
  * - Use `waitForFirstPaint()` in hooks to defer API calls
  * - Use `deferAfterPaint()` for one-time deferred operations
  */
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("DeferredInit");
 
 // ============================================
 // State
@@ -43,7 +46,7 @@ export function signalFirstPaintComplete(): void {
     try {
       callback();
     } catch (error) {
-      console.error("[DeferredInit] Error in deferred callback:", error);
+      log.error("[DeferredInit] Error in deferred callback:", error);
     }
   });
 

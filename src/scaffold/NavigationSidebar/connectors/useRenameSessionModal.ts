@@ -1,8 +1,11 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { createLogger } from "@src/hooks/logger";
 import { type Session, upsertSession } from "@src/store/session";
 import { getSessionListDisplayName } from "@src/util/session/sessionSidebarRow";
+
+const log = createLogger("WorkstationSidebar");
 
 export interface UseRenameSessionModalResult {
   visible: boolean;
@@ -51,7 +54,7 @@ export function useRenameSessionModal(): UseRenameSessionModalResult {
         upsertSession({ ...existing, name: newName });
         setVisible(false);
       } catch (error) {
-        console.error("[WorkstationSidebar] Failed to rename session:", error);
+        log.error("[WorkstationSidebar] Failed to rename session:", error);
       } finally {
         setLoading(false);
       }

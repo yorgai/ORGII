@@ -10,6 +10,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("useLspGlobalConfig");
+
 interface ServerOverrideWire {
   enabled: boolean;
   binaryPath?: string;
@@ -55,7 +59,7 @@ export function useLspGlobalConfig() {
       setConfig(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
-      console.error("[useLspGlobalConfig] Failed to load config:", err);
+      log.error("[useLspGlobalConfig] Failed to load config:", err);
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +74,7 @@ export function useLspGlobalConfig() {
       await invoke("lsp_set_auto_install", { enabled });
       setConfig((prev) => ({ ...prev, autoInstall: enabled }));
     } catch (err) {
-      console.error("[useLspGlobalConfig] Failed to set auto-install:", err);
+      log.error("[useLspGlobalConfig] Failed to set auto-install:", err);
       throw err;
     }
   }, []);

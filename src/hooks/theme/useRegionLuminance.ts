@@ -22,6 +22,7 @@
 import { useAtomValue } from "jotai";
 import { useEffect, useMemo, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { resolvedBackgroundConfigAtom } from "@src/store";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
@@ -38,6 +39,8 @@ import type {
   RegionLuminanceMap,
 } from "./luminanceTypes";
 import { useBackgroundImage } from "./useBackgroundImage";
+
+const log = createLogger("RegionLuminance");
 
 // ============================================
 // Hook
@@ -94,7 +97,7 @@ export function useRegionLuminance(): UseRegionLuminanceReturn {
       })
       .catch((error) => {
         if (!cancelled) {
-          console.error("[RegionLuminance] Failed to sample:", error);
+          log.error("[RegionLuminance] Failed to sample:", error);
           setSampleTick((tick) => tick + 1);
         }
       });

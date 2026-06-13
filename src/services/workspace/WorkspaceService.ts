@@ -6,6 +6,7 @@
  * - "Save Workspace As..." to user-chosen location
  * - Recent workspace tracking (localStorage)
  */
+import { createLogger } from "@src/hooks/logger";
 import type {
   RecentWorkspace,
   WorkspaceConfig,
@@ -13,6 +14,8 @@ import type {
   WorkspaceFolderEntry,
 } from "@src/types/workspace";
 import { WORKSPACE_FILE_EXTENSION } from "@src/types/workspace";
+
+const log = createLogger("WorkspaceService");
 
 const RECENT_WORKSPACES_KEY = "soyd_recent_workspaces";
 const AUTO_WORKSPACE_FILE_NAME = "last-workspace.orgii-workspace";
@@ -143,10 +146,7 @@ function writeRecentWorkspaces(entries: RecentWorkspace[]): void {
   try {
     localStorage.setItem(RECENT_WORKSPACES_KEY, JSON.stringify(entries));
   } catch (error) {
-    console.error(
-      "[WorkspaceService] Failed to write recent workspaces:",
-      error
-    );
+    log.error("[WorkspaceService] Failed to write recent workspaces:", error);
   }
 }
 

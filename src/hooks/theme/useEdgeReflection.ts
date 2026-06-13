@@ -18,6 +18,10 @@ import {
   useState,
 } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("useEdgeReflection");
+
 // Hook configuration options
 export interface UseEdgeReflectionOptions {
   /** Enable edge reflection */
@@ -213,7 +217,7 @@ function sampleEdgeColors(
 
     return { topColor: defaultColor, avgColor: defaultColor };
   } catch (error) {
-    console.warn("Edge sampling failed:", error);
+    log.warn("Edge sampling failed:", error);
     return { topColor: defaultColor, avgColor: defaultColor };
   }
 }

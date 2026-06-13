@@ -21,6 +21,7 @@ import type { WorkspaceRecord } from "@src/api/tauri/workspace";
 import Input from "@src/components/Input";
 import { CODEMIRROR_STYLE_NONCE } from "@src/features/CodeMirror/config/csp";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
+import { createLogger } from "@src/hooks/logger";
 import {
   ONBOARDING_LOADING_VIDEO_MAX_WIDTH_CLASS,
   OnboardingLayout,
@@ -44,6 +45,8 @@ import {
 import type { WorkspaceFolder } from "@src/types/workspace";
 
 const SELECT_REPO_BODY_CLASS = "select-repo-mode";
+
+const log = createLogger("SelectRepoPage");
 
 interface SelectRepoListItem {
   id: string;
@@ -436,7 +439,7 @@ const SelectRepoPage: React.FC = () => {
         selectRepo(repoId);
         navigate("/orgii/app/start-page");
       } catch (error) {
-        console.error("[SelectRepoPage] Failed to open repo", repoId, error);
+        log.error("[SelectRepoPage] Failed to open repo", repoId, error);
       }
     },
     [selectRepo, navigate]

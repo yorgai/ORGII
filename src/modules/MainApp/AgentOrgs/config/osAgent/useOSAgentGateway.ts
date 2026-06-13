@@ -11,8 +11,11 @@ import {
   startGateway,
   stopGateway,
 } from "@src/api/tauri/agent";
+import { createLogger } from "@src/hooks/logger";
 
 import type { GatewayStatusInfo } from "./types";
+
+const log = createLogger("OSAgent");
 
 const POLL_INTERVAL_MS = 10_000;
 
@@ -37,7 +40,7 @@ export function useOSAgentGateway(loaded: boolean): UseOSAgentGatewayReturn {
         setGatewayStatus(status as unknown as GatewayStatusInfo)
       )
       .catch((err) => {
-        console.warn("Failed to fetch OS agent gateway status:", err);
+        log.warn("Failed to fetch OS agent gateway status:", err);
         setGatewayStatus(null);
       });
   }, []);
@@ -63,7 +66,7 @@ export function useOSAgentGateway(loaded: boolean): UseOSAgentGatewayReturn {
       refreshGatewayStatus();
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
-      console.error("[OSAgent] Failed to start gateway:", errMsg); // eslint-disable-line no-console
+      log.error("[OSAgent] Failed to start gateway:", errMsg);
       alert(`Gateway start failed:\n${errMsg}`);
     } finally {
       setGatewayLoading(false);
@@ -76,7 +79,7 @@ export function useOSAgentGateway(loaded: boolean): UseOSAgentGatewayReturn {
       await stopGateway();
       refreshGatewayStatus();
     } catch (err: unknown) {
-      console.error("[OSAgent] Failed to stop gateway:", err);
+      log.error("[OSAgent] Failed to stop gateway:", err);
     } finally {
       setGatewayLoading(false);
     }

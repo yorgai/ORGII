@@ -17,6 +17,7 @@ import { ROUTES } from "@src/config/routes";
 import type { CalendarEvent } from "@src/features/CalendarView";
 import type { GanttTask } from "@src/features/GanttChart";
 import type { KanbanTask, TaskStatus } from "@src/features/KanbanBoard";
+import { createLogger } from "@src/hooks/logger";
 import type { ProjectData } from "@src/modules/ProjectManager/shared";
 import type {
   WorkItem as WorkItemExtended,
@@ -24,6 +25,8 @@ import type {
 } from "@src/types/core/workItem";
 
 import type { WorkItemsViewTab } from "../types";
+
+const log = createLogger("WorkItemsHandlers");
 
 const WORK_ITEM_STATUS_TO_FILE: Record<WorkItemStatus, string> = {
   backlog: "backlog",
@@ -275,7 +278,7 @@ export function useWorkItemsHandlers({
     async (updates: Partial<ProjectData>) => {
       const success = await updateProjectApi(updates);
       if (!success) {
-        console.error("[WorkItemsHandlers] Failed to update project");
+        log.error("[WorkItemsHandlers] Failed to update project");
       }
     },
     [updateProjectApi]

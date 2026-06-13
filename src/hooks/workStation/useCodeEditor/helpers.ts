@@ -7,9 +7,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { readDir, stat } from "@tauri-apps/plugin-fs";
 
+import { createLogger } from "@src/hooks/logger";
 import type { FileNode } from "@src/store/workstation/codeEditor/file";
 import { createGitignoreChecker } from "@src/util/file/gitignoreParser";
 import { decodeOctalPath } from "@src/util/file/pathUtils";
+
+const log = createLogger("useCodeEditor");
 
 // ============================================
 // Constants
@@ -140,7 +143,7 @@ export async function loadDirectoryContents(
 
     return sortFileNodes(nodes);
   } catch (error) {
-    console.error(`[useCodeEditor] Failed to read directory ${dirPath}:`, {
+    log.error(`[useCodeEditor] Failed to read directory ${dirPath}:`, {
       error,
       message: error instanceof Error ? error.message : String(error),
     });

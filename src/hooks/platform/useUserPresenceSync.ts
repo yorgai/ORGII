@@ -16,7 +16,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAtomValue } from "jotai";
 import { useEffect } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { userPresenceWireAtom } from "@src/store/user/userPresenceAtom";
+
+const log = createLogger("UserPresenceSync");
 
 export function useUserPresenceSync() {
   const wire = useAtomValue(userPresenceWireAtom);
@@ -24,7 +27,7 @@ export function useUserPresenceSync() {
   useEffect(() => {
     if (!wire) return;
     invoke("set_user_presence", { presence: wire }).catch((error) => {
-      console.error("[UserPresenceSync] Failed to push presence:", error);
+      log.error("[UserPresenceSync] Failed to push presence:", error);
     });
   }, [wire]);
 }

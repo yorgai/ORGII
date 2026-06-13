@@ -1,3 +1,7 @@
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("ChannelActionDialog");
+
 export type ChannelActionDialogKind = "info" | "warning" | "error";
 
 export async function showChannelActionDialog(
@@ -17,6 +21,6 @@ export function showChannelActionDialogSafely(
   kind: ChannelActionDialogKind = "info"
 ): void {
   void showChannelActionDialog(dialogMessage, kind).catch((error) => {
-    console.error("[ChannelActionDialog] Failed to show dialog:", error);
+    log.error("[ChannelActionDialog] Failed to show dialog:", error);
   });
 }

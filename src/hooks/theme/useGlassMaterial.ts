@@ -30,6 +30,7 @@ import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useMountedCleanup } from "@src/hooks/lifecycle/useMounted";
+import { createLogger } from "@src/hooks/logger";
 // Direct leaf import to avoid pulling @src/store's barrel — which transitively
 // reaches Glass → useGlassMaterial and creates a circular dependency.
 import { resolvedBackgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
@@ -45,6 +46,8 @@ import type { WallpaperColorField } from "@src/util/ui/theme/glassMaterial/types
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import { useBackgroundImage } from "./useBackgroundImage";
+
+const log = createLogger("useGlassMaterial");
 
 // Neutral color field used when no background image or color is available
 // (e.g. Glass mode — native OS provides the background, not a URL).
@@ -219,7 +222,7 @@ export function useGlassMaterial(
         onResolved?.(resolvedMaterial);
       }
     } catch (error) {
-      console.error("[useGlassMaterial] Resolution failed:", error);
+      log.error("[useGlassMaterial] Resolution failed:", error);
       if (isMountedRef.current) {
         setIsLoading(false);
       }

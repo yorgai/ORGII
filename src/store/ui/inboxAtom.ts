@@ -13,6 +13,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { atom } from "jotai";
 
 import type { InboxMessage } from "@src/api/types/inbox";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("inbox");
 
 // ============================================
 // DB row shape (matches Rust InboxMessage)
@@ -95,7 +98,7 @@ export const loadInboxAtom = atom(null, async (_get, set) => {
     const rows = (await invoke("inbox_list")) as InboxDbRow[];
     set(inboxDbMessagesAtom, rows.map(dbRowToInboxMessage));
   } catch (err) {
-    console.error("[inbox] Failed to load from DB:", err);
+    log.error("[inbox] Failed to load from DB:", err);
   } finally {
     set(inboxDbLoadedAtom, true);
   }
@@ -110,7 +113,7 @@ export const upsertInboxMessageAtom = atom(
     try {
       await invoke("inbox_upsert", { message: row });
     } catch (err) {
-      console.error("[inbox] Failed to upsert:", err);
+      log.error("[inbox] Failed to upsert:", err);
       return;
     }
     const current = get(inboxDbMessagesAtom);
@@ -136,7 +139,7 @@ export const updateInboxStatusAtom = atom(
         status: params.status,
       });
     } catch (err) {
-      console.error("[inbox] Failed to update status:", err);
+      log.error("[inbox] Failed to update status:", err);
       return;
     }
     const current = get(inboxDbMessagesAtom);
@@ -157,7 +160,7 @@ export const deleteInboxMessageAtom = atom(
     try {
       await invoke("inbox_delete", { id });
     } catch (err) {
-      console.error("[inbox] Failed to delete:", err);
+      log.error("[inbox] Failed to delete:", err);
       return;
     }
     const current = get(inboxDbMessagesAtom);

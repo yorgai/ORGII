@@ -11,6 +11,7 @@ import { type MutableRefObject, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import Message from "@src/components/Message";
+import { createLogger } from "@src/hooks/logger";
 
 import type { DragDropBehavior, DroppedFolder } from "../types";
 import {
@@ -31,10 +32,11 @@ import {
  */
 const DEBUG = false;
 
+const moduleLog = createLogger("drag-drop");
+
 function log(tag: string, payload: Record<string, unknown> = {}) {
   if (!DEBUG) return;
-  // eslint-disable-next-line no-console
-  console.debug(`[drag-drop] ${tag}`, payload);
+  moduleLog.debug(`[drag-drop] ${tag}`, payload);
 }
 
 function summarizeDataTransfer(

@@ -22,6 +22,7 @@ import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { eventsAtom } from "@src/engines/SessionCore/core/atoms";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { isShellTool } from "@src/engines/SessionCore/sync/adapters/shared";
+import { createLogger } from "@src/hooks/logger";
 import {
   terminalFontSizeAtom,
   terminalLetterSpacingAtom,
@@ -38,6 +39,8 @@ import {
   formatSystemChunk,
   getXTermTheme,
 } from "../TerminalInteractive/utils";
+
+const log = createLogger("TerminalReadOnly");
 
 /** Safe text extraction — handles string, {content:…}, etc. */
 function safeStr(value: unknown): string | undefined {
@@ -174,7 +177,7 @@ const TerminalReadOnly: React.FC<TerminalReadOnlyProps> = ({
         fitAddonRef.current.fit();
         terminalRef.current.refresh(0, terminalRef.current.rows - 1);
       } catch (error) {
-        console.warn("[TerminalReadOnly] Fit error:", error);
+        log.warn("[TerminalReadOnly] Fit error:", error);
       }
     }
   }, []);
@@ -224,7 +227,7 @@ const TerminalReadOnly: React.FC<TerminalReadOnlyProps> = ({
       try {
         const webglAddon = new WebglAddon();
         webglAddon.onContextLoss(() => {
-          console.warn(
+          log.warn(
             "[TerminalReadOnly] WebGL context lost, falling back to canvas"
           );
           webglAddon.dispose();
@@ -233,7 +236,7 @@ const TerminalReadOnly: React.FC<TerminalReadOnlyProps> = ({
         terminal.loadAddon(webglAddon);
         webglAddonRef.current = webglAddon;
       } catch (error) {
-        console.warn("[TerminalReadOnly] WebGL addon failed:", error);
+        log.warn("[TerminalReadOnly] WebGL addon failed:", error);
       }
     };
 

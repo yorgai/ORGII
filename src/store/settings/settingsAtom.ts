@@ -22,6 +22,9 @@ import {
   validateSettings,
 } from "@src/config/settingsSchema";
 import { generateSettingsJsonSchema } from "@src/config/settingsSchema/generateJsonSchema";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("Settings");
 
 // ============================================
 // Core Atom
@@ -119,7 +122,7 @@ export const updateSettingAtom = atom(
     try {
       await enqueueSettingsPartialWrite({ [update.key]: update.value });
     } catch (err) {
-      console.error("[Settings] Failed to write setting to disk:", err);
+      log.error("[Settings] Failed to write setting to disk:", err);
     }
   }
 );
@@ -139,7 +142,7 @@ export const updateSettingsBatchAtom = atom(
     try {
       await enqueueSettingsPartialWrite(updates as Record<string, unknown>);
     } catch (err) {
-      console.error("[Settings] Failed to write batch settings to disk:", err);
+      log.error("[Settings] Failed to write batch settings to disk:", err);
     }
   }
 );
@@ -159,7 +162,7 @@ export const resetAllSettingsAtom = atom(null, async (_get, set) => {
     const jsonc = generateJsoncContent(defaults);
     await rpc.settings.write({ content: jsonc });
   } catch (err) {
-    console.error("[Settings] Failed to reset settings:", err);
+    log.error("[Settings] Failed to reset settings:", err);
   }
 });
 resetAllSettingsAtom.debugLabel = "resetAllSettingsAtom";
@@ -198,7 +201,7 @@ export const initSettingsAtom = atom(null, async (_get, set) => {
     // so the startup critical path ends here.
     if (Object.keys(missingKeys).length > 0) {
       enqueueSettingsPartialWrite(missingKeys).catch((err) => {
-        console.error("[Settings] Failed to backfill missing defaults:", err);
+        log.error("[Settings] Failed to backfill missing defaults:", err);
       });
     }
 
@@ -220,7 +223,7 @@ export const initSettingsAtom = atom(null, async (_get, set) => {
       setTimeout(scheduleSchemaWrite, 2000);
     }
   } catch (err) {
-    console.error("[Settings] Failed to load settings from disk:", err);
+    log.error("[Settings] Failed to load settings from disk:", err);
     // Fall back to defaults (already set in the atom)
     set(settingsLoadedAtom, true);
   }
@@ -253,7 +256,7 @@ export const handleFileDeletedAtom = atom(null, async (_get, set) => {
     const jsonc = generateJsoncContent(defaults);
     await rpc.settings.write({ content: jsonc });
   } catch (err) {
-    console.error("[Settings] Failed to recreate settings file:", err);
+    log.error("[Settings] Failed to recreate settings file:", err);
   }
 });
 handleFileDeletedAtom.debugLabel = "handleFileDeletedAtom";

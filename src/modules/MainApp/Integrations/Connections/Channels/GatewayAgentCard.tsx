@@ -20,12 +20,15 @@ import Button from "@src/components/Button";
 import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select/types";
 import Switch from "@src/components/Switch";
+import { createLogger } from "@src/hooks/logger";
 import {
   SECTION_ACTION_GAP_CLASSES,
   SECTION_CONTROL_STYLE,
   SectionContainer,
   SectionRow,
 } from "@src/modules/shared/layouts/SectionLayout";
+
+const log = createLogger("GatewayAgentCard");
 
 interface GatewayBinding {
   accountId: string | null;
@@ -80,7 +83,7 @@ const GatewayAgentCard: React.FC = () => {
         setSavedBinding(binding);
       } catch (err: unknown) {
         if (!cancelled) {
-          console.error("[GatewayAgentCard] load failed", err);
+          log.error("[GatewayAgentCard] load failed", err);
           setErrorMessage(err instanceof Error ? err.message : String(err));
         }
       } finally {
@@ -148,7 +151,7 @@ const GatewayAgentCard: React.FC = () => {
         groupSessionsPerUser: checked,
       }));
     } catch (err: unknown) {
-      console.error("[GatewayAgentCard] toggle group-per-user failed", err);
+      log.error("[GatewayAgentCard] toggle group-per-user failed", err);
       setGroupPerUser(!checked);
     }
   }, []);
@@ -160,7 +163,7 @@ const GatewayAgentCard: React.FC = () => {
       await setGatewayModel(accountId, model);
       setSavedBinding((prev) => ({ ...prev, accountId, model }));
     } catch (err: unknown) {
-      console.error("[GatewayAgentCard] save failed", err);
+      log.error("[GatewayAgentCard] save failed", err);
       setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
@@ -176,7 +179,7 @@ const GatewayAgentCard: React.FC = () => {
       setModel(null);
       setSavedBinding((prev) => ({ ...prev, accountId: null, model: null }));
     } catch (err: unknown) {
-      console.error("[GatewayAgentCard] clear failed", err);
+      log.error("[GatewayAgentCard] clear failed", err);
       setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);

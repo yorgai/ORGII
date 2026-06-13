@@ -3,8 +3,12 @@
  *
  * Stash management functions.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
 import type { StashList, StashResult } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Create a stash - save working directory changes
@@ -34,7 +38,7 @@ export const gitStashPush = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to stash push:", error);
+    log.error("[GitAPI] Failed to stash push:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Failed to stash changes";
     return {
@@ -62,7 +66,7 @@ export const gitStashList = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to list stashes:", error);
+    log.error("[GitAPI] Failed to list stashes:", error);
     return undefined;
   }
 };
@@ -93,7 +97,7 @@ export const gitStashApply = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to apply stash:", error);
+    log.error("[GitAPI] Failed to apply stash:", error);
     // Return error result instead of undefined so caller can show specific error
     const errorMessage =
       error instanceof Error ? error.message : "Failed to apply stash";
@@ -124,7 +128,7 @@ export const gitStashDrop = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to drop stash:", error);
+    log.error("[GitAPI] Failed to drop stash:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Failed to drop stash";
     return {

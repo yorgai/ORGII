@@ -15,8 +15,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { getGitBatchFileDiffs } from "@src/api/http/git";
+import { createLogger } from "@src/hooks/logger";
 import type { GitFile } from "@src/types/git/types";
 import { diffBaseRefForFile } from "@src/util/git/diffBaseRef";
+
+const log = createLogger("GitDiffContent");
 
 interface FetchedDiff {
   path: string;
@@ -119,7 +122,7 @@ export function useGitDiffLoader({
       })
       .catch((error) => {
         if (cancelled) return;
-        console.error("[GitDiffContent] Self-fetch failed:", error);
+        log.error("[GitDiffContent] Self-fetch failed:", error);
         setFetchedDiff({
           path: gitFile.path,
           oldContent: "",

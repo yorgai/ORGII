@@ -13,12 +13,15 @@
  */
 import React, { useEffect, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   addToBackgroundCache,
   backgroundImageCache,
 } from "@src/util/core/init/backgroundInit";
 
 import { AnimationComponents } from "./animations";
+
+const log = createLogger("BackgroundLayer");
 
 interface BackgroundLayerProps {
   image: string | null;
@@ -69,7 +72,7 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
       setDisplayedImage(image);
     };
     img.onerror = () => {
-      console.error("Failed to load background image:", image);
+      log.error("Failed to load background image:", image);
       setDisplayedImage(image);
     };
   }, [image]);

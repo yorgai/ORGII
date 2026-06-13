@@ -26,11 +26,14 @@ import {
   isPlanDisplayEvent,
   planAliasesContain,
 } from "@src/engines/SessionCore/derived/planDisplayEvents";
+import { createLogger } from "@src/hooks/logger";
 import {
   simulatorFollowAppLockAtom,
   simulatorSelectedAppAtom,
   stationModeAtom,
 } from "@src/store/ui/simulatorAtom";
+
+const log = createLogger("ChatEventReplay");
 
 export interface UseChatEventReplayReturn {
   /**
@@ -71,7 +74,7 @@ export function useChatEventReplay(): UseChatEventReplayReturn {
   const replayEventById = useCallback(
     (eventId: string) => {
       if (!eventId) {
-        console.warn("[ChatEventReplay] No event_id provided");
+        log.warn("[ChatEventReplay] No event_id provided");
         return;
       }
 
@@ -97,7 +100,7 @@ export function useChatEventReplay(): UseChatEventReplayReturn {
       });
 
       if (!event) {
-        console.warn(
+        log.warn(
           `[ChatEventReplay] Event not found: ${lookupId}`,
           eventId !== lookupId ? `(extracted from: ${eventId})` : "",
           `| total events: ${sortedEvents.length}`
@@ -123,8 +126,7 @@ export function useChatEventReplay(): UseChatEventReplayReturn {
       // fall back to `AppType.CHANNELS` inside `useSimulatorContent` via
       // `event.source === "user"`.
       if (process.env.NODE_ENV === "development" && event.functionName) {
-        // eslint-disable-next-line no-console
-        console.debug(
+        log.debug(
           `[ChatEventReplay] Event ${lookupId}: ${event.functionName} → follow dock`
         );
       }

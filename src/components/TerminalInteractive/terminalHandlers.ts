@@ -2,12 +2,15 @@ import type { SerializeAddon } from "@xterm/addon-serialize";
 import type { IDisposable, Terminal } from "@xterm/xterm";
 import type { MutableRefObject } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { getUiScaleFromCssVar } from "@src/lib/dndKit";
 import { invokeTauri, isTauriReady } from "@src/util/platform/tauri/init";
 
 import { setTerminalBuffer } from "./bufferCache";
 import type { TerminalViewProps } from "./types";
 import { createTerminalFileLinks } from "./utils";
+
+const log = createLogger("Terminal");
 
 interface RegisterTerminalEventHandlersParams {
   terminal: Terminal;
@@ -35,7 +38,7 @@ function cacheSerializedTerminalBuffer(
       }
     } catch (error) {
       if (warnOnError) {
-        console.warn("[Terminal] Failed to serialize buffer:", error);
+        log.warn("[Terminal] Failed to serialize buffer:", error);
       }
     }
   }
@@ -61,7 +64,7 @@ function registerInputHandler({
         sessionId: sessionIdRef.current,
         data: batch,
       }).catch((error) => {
-        console.error("Failed to write to PTY:", error);
+        log.error("Failed to write to PTY:", error);
       });
     }
   };
@@ -127,7 +130,7 @@ function registerResizeHandler(
             cols,
           },
         }).catch((error) => {
-          console.error("Failed to resize PTY:", error);
+          log.error("Failed to resize PTY:", error);
         });
       }
     }, 50);

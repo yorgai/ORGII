@@ -3,6 +3,7 @@
  *
  * Commit listing and creation functions.
  */
+import { createLogger } from "@src/hooks/logger";
 import { shouldIncludeGitCoauthor } from "@src/services/git/operations/commitAttribution";
 
 import { fetchRustApi, gitRepoUrl } from "./client";
@@ -11,6 +12,8 @@ import type {
   GitCommitResultFull,
   GitCommitsResponse,
 } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Get commit history with pagination
@@ -75,7 +78,7 @@ export const getGitLocalCommits = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error(
+    log.error(
       "[GitAPI] Failed to fetch local commits from Rust server:",
       error
     );
@@ -144,7 +147,7 @@ export const gitAmendCommit = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to amend commit:", error);
+    log.error("[GitAPI] Failed to amend commit:", error);
     return undefined;
   }
 };

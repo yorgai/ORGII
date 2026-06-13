@@ -148,7 +148,7 @@ const ErrorPageContent: React.FC<{ error?: unknown }> = ({ error }) => {
   // Log error for debugging
   useEffect(() => {
     if (error) {
-      console.error("[ErrorPage] Error:", error);
+      logger.error("[ErrorPage] Error:", error);
     }
   }, [error]);
 
@@ -173,7 +173,7 @@ const ErrorPageContent: React.FC<{ error?: unknown }> = ({ error }) => {
         // Use the dedicated hide_all_inline_webviews command
         await invoke<string[]>("hide_all_inline_webviews");
       } catch (error) {
-        console.warn("[ErrorPage] Failed to hide webviews:", error);
+        logger.warn("[ErrorPage] Failed to hide webviews:", error);
         // This is expected to fail gracefully if no webviews exist
       }
     };

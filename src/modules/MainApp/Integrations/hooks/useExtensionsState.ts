@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { McpConfigScope } from "@src/api/tauri/rpc/schemas/mcp";
 import { WIZARD_IDS } from "@src/config/mainAppPaths";
 import type { KeyVaultAccount } from "@src/hooks/keyVault";
+import { createLogger } from "@src/hooks/logger";
 import { useWizardParam } from "@src/hooks/navigation";
 import { useSkillEditor } from "@src/hooks/skills/useSkillEditor";
 import { useSkillsHub } from "@src/hooks/skills/useSkillsHub";
@@ -31,6 +32,8 @@ import {
 } from "./extensionStateAssemblers";
 import { toggleModelForAccounts } from "./modelToggle";
 import { useMcpHandlers } from "./useMcpHandlers";
+
+const log = createLogger("Extensions");
 
 export interface UseExtensionsStateReturn {
   extensionSelectedId: string | null;
@@ -104,7 +107,7 @@ export function useExtensionsState(
       .then((cfg: McpConfigFile) => {
         if (!cancelled) mcpSetConfig(cfg);
       })
-      .catch(console.error);
+      .catch(log.error);
     return () => {
       cancelled = true;
     };
@@ -179,7 +182,7 @@ export function useExtensionsState(
           setExtensionSelectedId(null);
           openWizard(WIZARD_IDS.SKILL_EDIT, skillName);
         })
-        .catch(console.error);
+        .catch(log.error);
     },
     [skillsHubRaw, skillEditorHook, openWizard]
   );

@@ -14,6 +14,7 @@
 import { useAtomValue } from "jotai";
 import { useEffect, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 // Direct leaf import to avoid pulling @src/store's barrel — which transitively
 // reaches Glass → useBackgroundImage and creates a circular dependency.
 import { backgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
@@ -22,6 +23,8 @@ import {
   backgroundImageCache,
 } from "@src/util/core/init/backgroundInit";
 import { loadBackgroundImageAsBlob } from "@src/util/core/storage/backgroundImage";
+
+const log = createLogger("useBackgroundImage");
 
 /**
  * Get the best available URL for the current config, synchronously.
@@ -87,7 +90,7 @@ export function useBackgroundImage(): string {
           }
         } catch (error) {
           if (cancelled) return;
-          console.error("Error loading background image:", error);
+          log.error("Error loading background image:", error);
         }
       }
 

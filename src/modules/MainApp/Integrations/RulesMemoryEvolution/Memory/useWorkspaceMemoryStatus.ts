@@ -17,7 +17,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
 import type { WorkspaceMemoryStatus } from "@src/api/tauri/rpc/schemas/workspaceMemory";
+import { createLogger } from "@src/hooks/logger";
 import { activeFolderAtom } from "@src/store/workspace/derived";
+
+const log = createLogger("useWorkspaceMemoryStatus");
 
 export type WorkspaceMemoryScope = "workspace" | "personal";
 
@@ -38,7 +41,7 @@ function useWorkspacePath(scope: WorkspaceMemoryScope): ResolvedWorkspace {
         if (!cancelled) setPersonalWs(path);
       })
       .catch((err: unknown) => {
-        console.warn(
+        log.warn(
           "[useWorkspaceMemoryStatus] project_personal_workspace failed:",
           err
         );
@@ -64,7 +67,7 @@ function fetchStatus(
       if (!signal.cancelled) onResult(result);
     })
     .catch((err: unknown) => {
-      console.warn("[WorkspaceMemoryStatus] fetch failed:", err);
+      log.warn("[WorkspaceMemoryStatus] fetch failed:", err);
     })
     .finally(() => {
       if (!signal.cancelled) onDone();

@@ -32,6 +32,7 @@ import type {
   CursorModelEntry,
   CursorModelSource,
 } from "@src/api/tauri/cursorBridge";
+import { createLogger } from "@src/hooks/logger";
 
 import {
   type CursorModelCacheState,
@@ -39,6 +40,8 @@ import {
   getCursorModelCacheState,
   subscribeCursorModelCache,
 } from "./cursorModelCache";
+
+const log = createLogger("useCursorModels");
 
 export interface UseCursorModelsResult {
   /**
@@ -144,8 +147,7 @@ export function useCursorModels(
       } catch (err) {
         // Non-fatal — pill falls back to the global default and the
         // picker still works.
-        // eslint-disable-next-line no-console
-        console.warn(
+        log.warn(
           "[useCursorModels] getComposerModel failed",
           err instanceof Error ? err.message : String(err)
         );

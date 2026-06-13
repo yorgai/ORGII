@@ -3,10 +3,13 @@ import { emit } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 import { ROUTES } from "@src/config/routes";
+import { createLogger } from "@src/hooks/logger";
 import i18n from "@src/i18n";
 
 import { getBaseUrl } from "../../core/env";
 import { isTauriDesktop } from "../../platform/tauri";
+
+const log = createLogger("WindowManager");
 
 /**
  * Minimal tab interface for window operations.
@@ -69,7 +72,7 @@ export const openWindow = async (
   }
 ): Promise<WebviewWindow | null> => {
   if (!isTauriDesktop()) {
-    console.warn("Cannot open window: Not in Tauri desktop environment");
+    log.warn("Cannot open window: Not in Tauri desktop environment");
     return null;
   }
 
@@ -98,7 +101,7 @@ export const openWindow = async (
     const webview = WebviewWindow.getByLabel(label);
     return webview;
   } catch (error) {
-    console.error(`Window ${label} creation failed:`, error);
+    log.error(`Window ${label} creation failed:`, error);
     return null;
   }
 };
@@ -125,7 +128,7 @@ export const closeWindow = async (label: string): Promise<boolean> => {
 
     return false;
   } catch (error) {
-    console.error("Error closing window:", error);
+    log.error("Error closing window:", error);
     return false;
   }
 };
@@ -159,7 +162,7 @@ export const openWindowReusable = async (
   }
 ): Promise<WebviewWindow | null> => {
   if (!isTauriDesktop()) {
-    console.warn("Cannot open window: Not in Tauri desktop environment");
+    log.warn("Cannot open window: Not in Tauri desktop environment");
     return null;
   }
 
@@ -184,7 +187,7 @@ export const openWindowReusable = async (
 
     return WebviewWindow.getByLabel(label);
   } catch (error) {
-    console.error(`Window ${label} show-or-create failed:`, error);
+    log.error(`Window ${label} show-or-create failed:`, error);
     return null;
   }
 };
@@ -210,7 +213,7 @@ export const openMultiWindow = async (
   }
 ): Promise<WebviewWindow | null> => {
   if (!isTauriDesktop()) {
-    console.warn("Cannot open multi-window: Not in Tauri desktop environment");
+    log.warn("Cannot open multi-window: Not in Tauri desktop environment");
     return null;
   }
 
@@ -236,7 +239,7 @@ export const openMultiWindow = async (
 
     return window;
   } catch (error) {
-    console.error(`Error opening multi-window ${label}:`, error);
+    log.error(`Error opening multi-window ${label}:`, error);
     return null;
   }
 };
@@ -249,7 +252,7 @@ export const openMultiWindow = async (
 export const openModeSelectionWindow =
   async (): Promise<WebviewWindow | null> => {
     if (!isTauriDesktop()) {
-      console.warn(
+      log.warn(
         "Cannot open mode selection window: Not in Tauri desktop environment"
       );
       return null;
@@ -270,7 +273,7 @@ export const openModeSelectionWindow =
         }
       );
     } catch (error) {
-      console.error("Error opening mode selection window:", error);
+      log.error("Error opening mode selection window:", error);
       return null;
     }
   };
@@ -282,7 +285,7 @@ export const openModeSelectionWindow =
  */
 export const openNewProjectWindow = async (): Promise<WebviewWindow | null> => {
   if (!isTauriDesktop()) {
-    console.warn(
+    log.warn(
       "Cannot open new project window: Not in Tauri desktop environment"
     );
     return null;
@@ -302,7 +305,7 @@ export const openNewProjectWindow = async (): Promise<WebviewWindow | null> => {
       }
     );
   } catch (error) {
-    console.error("Error opening new project window:", error);
+    log.error("Error opening new project window:", error);
     return null;
   }
 };
@@ -319,9 +322,7 @@ export const openWorkspaceWindow = async (
   projectId: string
 ): Promise<WebviewWindow | null> => {
   if (!isTauriDesktop()) {
-    console.warn(
-      "Cannot open workspace window: Not in Tauri desktop environment"
-    );
+    log.warn("Cannot open workspace window: Not in Tauri desktop environment");
     return null;
   }
 
@@ -344,7 +345,7 @@ export const openWorkspaceWindow = async (
       }
     );
   } catch (error) {
-    console.error("Error opening workspace window:", error);
+    log.error("Error opening workspace window:", error);
     return null;
   }
 };
@@ -363,7 +364,7 @@ export const emitOpenWorkspace = async (
   buildType?: string
 ): Promise<boolean> => {
   if (!isTauriDesktop()) {
-    console.warn("Cannot emit event: Not in Tauri desktop environment");
+    log.warn("Cannot emit event: Not in Tauri desktop environment");
     return false;
   }
 
@@ -376,7 +377,7 @@ export const emitOpenWorkspace = async (
     });
     return true;
   } catch (error) {
-    console.error("Error sending open workspace message:", error);
+    log.error("Error sending open workspace message:", error);
     return false;
   }
 };
@@ -393,7 +394,7 @@ export const emitOpenWorkflowWorkspace = async (
   projectId: string
 ): Promise<boolean> => {
   if (!isTauriDesktop()) {
-    console.warn("Cannot emit event: Not in Tauri desktop environment");
+    log.warn("Cannot emit event: Not in Tauri desktop environment");
     return false;
   }
 
@@ -405,7 +406,7 @@ export const emitOpenWorkflowWorkspace = async (
     });
     return true;
   } catch (error) {
-    console.error("Error sending open workflow workspace message:", error);
+    log.error("Error sending open workflow workspace message:", error);
     return false;
   }
 };
@@ -475,7 +476,7 @@ export const openWorktreeCompareWindow = async (
  */
 export const toggleMainWindow = async (): Promise<void> => {
   if (!isTauriDesktop()) {
-    console.warn("Cannot toggle window: Not in Tauri desktop environment");
+    log.warn("Cannot toggle window: Not in Tauri desktop environment");
     return;
   }
 
@@ -492,7 +493,7 @@ export const toggleMainWindow = async (): Promise<void> => {
     }
 
     if (!mainWindow) {
-      console.warn("Main window not found");
+      log.warn("Main window not found");
       return;
     }
 
@@ -508,7 +509,7 @@ export const toggleMainWindow = async (): Promise<void> => {
       await mainWindow.setFocus();
     }
   } catch (error) {
-    console.error("Failed to toggle main window state:", error);
+    log.error("Failed to toggle main window state:", error);
   }
 };
 
@@ -529,9 +530,7 @@ export const openTabInNewWindow = async (
   }
 ): Promise<WebviewWindow | null> => {
   if (!isTauriDesktop()) {
-    console.warn(
-      "Cannot open tab in new window: Not in Tauri desktop environment"
-    );
+    log.warn("Cannot open tab in new window: Not in Tauri desktop environment");
     return null;
   }
 
@@ -576,7 +575,7 @@ export const openTabInNewWindow = async (
       y: options?.y,
     });
   } catch (error) {
-    console.error("Error opening tab in new window:", error);
+    log.error("Error opening tab in new window:", error);
     return null;
   }
 };

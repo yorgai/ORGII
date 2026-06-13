@@ -36,6 +36,7 @@ import {
   failOptimisticTurn,
 } from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
+import { createLogger } from "@src/hooks/logger";
 import {
   creatorDefaultExecModeAtom,
   creatorDefaultModelSelectionAtom,
@@ -44,6 +45,8 @@ import {
 import { resolveModelForMessage } from "@src/util/session/resolveModelForMessage";
 
 import { sanitizeAgentErrorMessage } from "./sanitizeAgentErrorMessage";
+
+const log = createLogger("AgentErrorChatItem");
 
 export interface AgentErrorChatItemProps {
   errorMessage: string;
@@ -129,7 +132,7 @@ const AgentErrorChatItem: React.FC<AgentErrorChatItemProps> = memo(
           mode: agentExecMode,
         });
       } catch (err) {
-        console.error("[AgentErrorChatItem] Resume failed:", err);
+        log.error("[AgentErrorChatItem] Resume failed:", err);
         failOptimisticTurn(sessionId);
       } finally {
         setIsResuming(false);

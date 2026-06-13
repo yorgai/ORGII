@@ -2,10 +2,13 @@ import { type MutableRefObject, useCallback, useEffect, useRef } from "react";
 
 import { getCursorNativeModels } from "@src/api/services/keyValidation";
 import { NATIVE_HARNESS_TYPE } from "@src/api/tauri/rpc/schemas/validation";
+import { createLogger } from "@src/hooks/logger";
 import { getMyKeyFallbackNativeModels } from "@src/hooks/models/nativeHarnessAccountModels";
 import { getDefaultEnabledModels } from "@src/util/modelGrouping";
 
 import type { EnvVar, WizardData } from "../types";
+
+const log = createLogger("useApiSetup");
 
 const CURSOR_REFRESH_TOKEN_ENV_KEY = "CURSOR_REFRESH_TOKEN";
 
@@ -168,7 +171,7 @@ export function useApiSetupCursorToken({
         setTokenDetected(true);
         cursorHydratedTokenRef.current = trimmed;
       } catch (err) {
-        console.warn("[useApiSetup] Cursor model hydration failed:", err);
+        log.warn("[useApiSetup] Cursor model hydration failed:", err);
         const fallbackModels =
           agentModelsRef.current.length > 0
             ? agentModelsRef.current

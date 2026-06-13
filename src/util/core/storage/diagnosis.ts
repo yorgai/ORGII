@@ -1,11 +1,14 @@
-/* eslint-disable no-console */
 /**
  * Background Storage Diagnostic Utility
  *
  * Helps diagnose and fix issues with background image storage persistence.
  * Run this in browser console to check storage status.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { getStorageInfo, listBackgroundImages } from "./backgroundImage";
+
+const log = createLogger("StorageDiagnosis");
 
 interface StorageDiagnostics {
   storagePath: string;
@@ -111,9 +114,8 @@ export const diagnoseBackgroundStorage =
  * Usage in console: window.displayBackgroundDiagnostics()
  */
 export const displayDiagnostics = async (): Promise<void> => {
-  console.group("🔍 Background Storage Diagnostics");
+  log.debug("🔍 Background Storage Diagnostics");
   await diagnoseBackgroundStorage();
-  console.groupEnd();
 };
 
 /**

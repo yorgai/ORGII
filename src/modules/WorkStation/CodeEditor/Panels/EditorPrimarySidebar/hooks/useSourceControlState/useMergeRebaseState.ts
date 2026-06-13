@@ -10,8 +10,11 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useActionSystemOptional } from "@src/ActionSystem";
 import { RebaseConflictDialog } from "@src/components/GitDialogs";
+import { createLogger } from "@src/hooks/logger";
 import type { GitFile } from "@src/types/git/types";
 import type { GitRepositoryStatus } from "@src/types/session/steps";
+
+const log = createLogger("useMergeRebaseState");
 
 export interface UseMergeRebaseStateOptions {
   gitStatus: GitRepositoryStatus | null;
@@ -108,7 +111,7 @@ export function useMergeRebaseState(
         }
         await fetchGitStatus();
       } catch (error) {
-        console.error("Failed to abort rebase:", error);
+        log.error("Failed to abort rebase:", error);
       }
     }
   }, [

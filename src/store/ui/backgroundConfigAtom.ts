@@ -20,6 +20,9 @@ import {
   DEFAULT_BUNDLED_BACKGROUND_IMAGE,
   sanitizeCustomColorsArray,
 } from "@src/config/appearance/backgroundConfig";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("BackgroundConfig");
 
 // ============================================
 // Types
@@ -137,7 +140,7 @@ function getStoredBackgroundConfig(): BackgroundConfig {
       };
     }
   } catch (err) {
-    console.warn("[BackgroundConfig] Failed to parse stored config:", err);
+    log.warn("[BackgroundConfig] Failed to parse stored config:", err);
   }
   return DEFAULT_BACKGROUND_CONFIG;
 }

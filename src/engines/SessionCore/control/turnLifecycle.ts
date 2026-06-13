@@ -37,10 +37,13 @@
  */
 import { atom } from "jotai";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   getInstrumentedStore,
   isStoreInitialized,
 } from "@src/util/core/state/instrumentedStore";
+
+const log = createLogger("turnLifecycle");
 
 export type TurnPhase = "idle" | "dispatching" | "working" | "stopping";
 
@@ -135,7 +138,7 @@ function armDeadman(
     ) {
       return;
     }
-    console.warn(
+    log.warn(
       `[turnLifecycle] dead-man: session ${sessionId} stuck in "${phase}" for ` +
         `${timeoutMs}ms (generation ${armedGeneration}) — forcing idle`
     );
@@ -233,7 +236,7 @@ export function markTurnTerminal(
     return;
   }
   if (state.phase === "dispatching" && options.generation === undefined) {
-    console.warn(
+    log.warn(
       `[turnLifecycle] discarding unattributed "${status}" terminal for ` +
         `session ${sessionId} while dispatching (generation ${state.generation})`
     );

@@ -36,8 +36,11 @@ import React, {
 } from "react";
 
 import { gitApi } from "@src/api/http/git";
+import { createLogger } from "@src/hooks/logger";
 import { repoMapAtom } from "@src/store/repo";
 import { gitStatusBatchManager } from "@src/util/api/batchRequest";
+
+const log = createLogger("MultiRepoGitStatusContext");
 
 // ============================================
 // Types
@@ -163,7 +166,7 @@ export const MultiRepoGitStatusProvider: React.FC<{
         const repoPath = repo?.path || repo?.fs_uri;
 
         if (!repoPath) {
-          console.warn(
+          log.warn(
             `[MultiRepoGitStatusContext] No path found for repo ${repoId}`
           );
           writeErrorEntry();
@@ -185,7 +188,7 @@ export const MultiRepoGitStatusProvider: React.FC<{
           statusResponse;
 
         if (!statusData) {
-          console.warn(
+          log.warn(
             `[MultiRepoGitStatusContext] ❌ No status data for ${repoId}`
           );
           writeErrorEntry();
@@ -222,7 +225,7 @@ export const MultiRepoGitStatusProvider: React.FC<{
           return updated;
         });
       } catch (error) {
-        console.error(
+        log.error(
           `[MultiRepoGitStatusContext] ❌ Error fetching ${repoId}:`,
           error
         );

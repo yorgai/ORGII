@@ -23,6 +23,7 @@ import GlobalDragDrop from "@src/components/GlobalDragDrop";
 import { AutoIndexingProvider } from "@src/components/System";
 import { hydrateFromPersistence } from "@src/components/TerminalInteractive/bufferCache";
 import { useGitAutoFetch } from "@src/hooks/git";
+import { createLogger } from "@src/hooks/logger";
 import {
   useUserPresenceSync,
   useWindowFocusTracking,
@@ -37,6 +38,8 @@ import {
   startAutoSave,
   stopAutoSave,
 } from "@src/services/terminal";
+
+const log = createLogger("TerminalPersistence");
 
 const DeferredWindowFocusTracking: React.FC = () => {
   useWindowFocusTracking();
@@ -65,7 +68,7 @@ const DeferredTerminalPersistence: React.FC = () => {
     loadPersistedBuffers()
       .then((buffers) => hydrateFromPersistence(buffers))
       .catch((error) => {
-        console.warn("[TerminalPersistence] Failed to load buffers:", error);
+        log.warn("[TerminalPersistence] Failed to load buffers:", error);
       });
 
     startAutoSave();

@@ -5,7 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
 import type { McpConfigScope } from "@src/api/tauri/rpc/schemas/mcp";
+import { createLogger } from "@src/hooks/logger";
 import { clearToolsCache } from "@src/modules/MainApp/Integrations/BuiltInTools/useUnifiedToolsMetadata";
+
+const log = createLogger("MCP");
 
 export type { McpConfigScope };
 
@@ -328,7 +331,7 @@ export function useMcpServers(options: UseMcpServersOptions = {}) {
         await refresh();
         return result;
       } catch (err) {
-        console.error("[MCP] Failed to bulk set disabled:", err);
+        log.error("[MCP] Failed to bulk set disabled:", err);
         await refresh();
         throw err;
       }
@@ -350,7 +353,7 @@ export function useMcpServers(options: UseMcpServersOptions = {}) {
         await refresh();
         return result;
       } catch (err) {
-        console.error("[MCP] Failed to bulk reconnect:", err);
+        log.error("[MCP] Failed to bulk reconnect:", err);
         await refresh();
         throw err;
       }

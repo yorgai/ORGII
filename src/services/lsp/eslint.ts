@@ -11,6 +11,10 @@
  */
 import type { Diagnostic } from "@/src/modules/WorkStation/CodeEditor/Panels/EditorBottomPanel/content/ProblemsContent/types";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("ESLint");
+
 /**
  * ESLint diagnostic from Rust backend
  */
@@ -41,7 +45,7 @@ async function tauriInvoke<T>(
     return await invoke<T>(cmd, args);
   } catch (error) {
     if (!tauriWarningLogged) {
-      console.warn("[ESLint] Tauri not available:", error);
+      log.warn("[ESLint] Tauri not available:", error);
       tauriWarningLogged = true;
     }
     return null;

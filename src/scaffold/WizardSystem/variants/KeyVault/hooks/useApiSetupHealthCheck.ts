@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 
 import { autoDetectKey } from "@src/api/services/keyValidation";
+import { createLogger } from "@src/hooks/logger";
 
 import type { WizardData } from "../types";
+
+const log = createLogger("ApiSetup");
 
 interface UseApiSetupHealthCheckOptions {
   data: WizardData;
@@ -42,7 +45,7 @@ export function useApiSetupHealthCheck({
           }
         } catch (err) {
           if (!cancelled) {
-            console.error("[ApiSetup] Failed to fetch quota:", err);
+            log.error("[ApiSetup] Failed to fetch quota:", err);
           }
         }
       }

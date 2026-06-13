@@ -8,7 +8,11 @@
  * These provide significant performance improvements over the pure TypeScript
  * implementations, especially for large codebases.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { invokeTauri, isTauriReady } from "./init";
+
+const log = createLogger("FileUtils");
 
 // ============================================
 // Types
@@ -215,7 +219,7 @@ export async function isBinaryFile(
       const result = await isBinaryFileNative(filePath, checkContent);
       return result.is_binary;
     } catch (error) {
-      console.warn(
+      log.warn(
         "[FileUtils] Native binary detection failed, using fallback:",
         error
       );
@@ -245,7 +249,7 @@ export async function shouldIgnorePath(
       );
       return result.should_ignore;
     } catch (error) {
-      console.warn(
+      log.warn(
         "[FileUtils] Native ignore check failed, using fallback:",
         error
       );
@@ -270,7 +274,7 @@ export async function filterIgnoredPaths(
     try {
       return await filterIgnoredPathsNative(relativePaths, gitignorePatterns);
     } catch (error) {
-      console.warn("[FileUtils] Native filter failed, using fallback:", error);
+      log.warn("[FileUtils] Native filter failed, using fallback:", error);
     }
   }
 

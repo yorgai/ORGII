@@ -12,12 +12,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
 import type { AgentToolStateRow } from "@src/api/tauri/rpc/schemas/agentDef";
+import { createLogger } from "@src/hooks/logger";
 import type {
   AgentDefinition,
   AgentToolSelection,
   CapabilitySet,
 } from "@src/modules/MainApp/AgentOrgs/types";
 import type { AgentKind } from "@src/modules/MainApp/Integrations/BuiltInTools/types";
+
+const log = createLogger("useAgentToolEditor");
 
 export type ToolEditorState = "system_pinned" | "enabled" | "disabled";
 
@@ -104,7 +107,7 @@ export function useAgentToolEditor(agentId: string): AgentToolEditorState {
       const rows = await rpc.agentDef.toolStates({ agentId: id });
       setResolvedStates(new Map(rows.map((row) => [row.name, row])));
     } catch (err) {
-      console.error("[useAgentToolEditor] toolStates failed:", err);
+      log.error("[useAgentToolEditor] toolStates failed:", err);
     }
   }, []);
 
@@ -129,7 +132,7 @@ export function useAgentToolEditor(agentId: string): AgentToolEditorState {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          console.error("[useAgentToolEditor] load failed:", err);
+          log.error("[useAgentToolEditor] load failed:", err);
           setLoaded(true);
         }
       });
@@ -168,7 +171,7 @@ export function useAgentToolEditor(agentId: string): AgentToolEditorState {
       })
       .then(() => fetchResolvedStates(pending.agentId))
       .catch((err: unknown) => {
-        console.error("[useAgentToolEditor] persistTools failed:", err);
+        log.error("[useAgentToolEditor] persistTools failed:", err);
       });
   }, [fetchResolvedStates]);
 

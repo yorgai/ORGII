@@ -1,6 +1,7 @@
 import type { Terminal } from "@xterm/xterm";
 import type { MutableRefObject } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import type { ShellType } from "@src/store/ui/editorSettingsAtom";
 import {
   invokeTauri,
@@ -11,6 +12,8 @@ import {
 import { deleteTerminalBuffer, getTerminalBuffer } from "./bufferCache";
 import type { TerminalViewProps } from "./types";
 import { writeBrowserModeMessage } from "./utils";
+
+const log = createLogger("TerminalView");
 
 interface PtyOutputPayload {
   bytes?: number[];
@@ -104,7 +107,7 @@ async function fetchPtyInfo(
       cwd: ptyInfo.cwd || undefined,
     });
   } catch (error) {
-    console.error("[TerminalView] Failed to get PTY info:", error);
+    log.error("[TerminalView] Failed to get PTY info:", error);
   }
 }
 
@@ -292,7 +295,7 @@ export async function initPtyConnection({
     setIsConnecting(false);
     terminal.focus();
   } catch (error) {
-    console.error("Failed to create/connect PTY session:", error);
+    log.error("Failed to create/connect PTY session:", error);
     setIsConnecting(false);
     const terminal = terminalRef.current;
     if (terminal) {

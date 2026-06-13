@@ -35,6 +35,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import { UploadFileList } from "./UploadFileList";
@@ -43,6 +44,8 @@ import "./index.scss";
 import type { CustomRequestOptions, UploadFile } from "./types";
 
 export type { CustomRequestOptions, UploadFile } from "./types";
+
+const log = createLogger("Upload");
 
 export interface UploadProps {
   /**
@@ -254,7 +257,7 @@ const Upload: React.FC<UploadProps> = ({
   const defaultUpload = useCallback(
     async (file: File, uploadFile: UploadFile) => {
       if (!action) {
-        console.error("Upload action URL is required");
+        log.error("Upload action URL is required");
         return;
       }
 
@@ -316,9 +319,7 @@ const Upload: React.FC<UploadProps> = ({
     async (file: File) => {
       // Validate file size
       if (maxSize && file.size > maxSize) {
-        console.error(
-          `File ${file.name} exceeds maximum size of ${maxSize} bytes`
-        );
+        log.error(`File ${file.name} exceeds maximum size of ${maxSize} bytes`);
         return;
       }
 
@@ -333,7 +334,7 @@ const Upload: React.FC<UploadProps> = ({
 
       // Check max count
       if (maxCount && newFileList.length > maxCount) {
-        console.error(`Maximum ${maxCount} files allowed`);
+        log.error(`Maximum ${maxCount} files allowed`);
         return;
       }
 

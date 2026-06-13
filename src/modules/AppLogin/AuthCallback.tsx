@@ -37,8 +37,11 @@ import {
   serviceExpiryAtom,
   serviceValidatedAtom,
 } from "@src/hooks/auth";
+import { createLogger } from "@src/hooks/logger";
 
 import { LoginLoadingState } from "./index";
+
+const log = createLogger("AuthCallback");
 
 interface DecodedUserInfo {
   userId: string;
@@ -65,7 +68,7 @@ function extractUserFromToken(token: string): DecodedUserInfo | null {
       name: decoded.name || decoded.nickname,
     };
   } catch (error) {
-    console.error("[AuthCallback] Failed to decode token:", error);
+    log.error("[AuthCallback] Failed to decode token:", error);
     return null;
   }
 }
@@ -110,7 +113,7 @@ const AuthCallback: React.FC = () => {
       const search = location.search;
 
       if (!search) {
-        console.error("[AuthCallback] No query params found in URL");
+        log.error("[AuthCallback] No query params found in URL");
         setError(t("market.auth.noAuthCode"));
         safeTimeout(() => {
           navigate(ROUTES.auth.login.path, { replace: true });
@@ -121,7 +124,7 @@ const AuthCallback: React.FC = () => {
       const result = parseAuth0Callback(search);
 
       if (result.error) {
-        console.error("[AuthCallback] Auth0 error:", result.error);
+        log.error("[AuthCallback] Auth0 error:", result.error);
         setError(result.error);
         safeTimeout(() => {
           navigate(ROUTES.auth.login.path, { replace: true });
@@ -130,7 +133,7 @@ const AuthCallback: React.FC = () => {
       }
 
       if (!result.code) {
-        console.error("[AuthCallback] No authorization code in response");
+        log.error("[AuthCallback] No authorization code in response");
         setError(t("market.auth.noAuthCode"));
         safeTimeout(() => {
           navigate(ROUTES.auth.login.path, { replace: true });
@@ -164,14 +167,11 @@ const AuthCallback: React.FC = () => {
       const expectedState = await getOAuthState();
       if (cancelled) return;
       if (!expectedState || !result.state || result.state !== expectedState) {
-        console.error(
-          "[AuthCallback] OAuth state mismatch — rejecting callback",
-          {
-            hasExpected: !!expectedState,
-            hasReceived: !!result.state,
-            matches: result.state === expectedState,
-          }
-        );
+        log.error("[AuthCallback] OAuth state mismatch — rejecting callback", {
+          hasExpected: !!expectedState,
+          hasReceived: !!result.state,
+          matches: result.state === expectedState,
+        });
         await clearOAuthState();
         setError(t("market.auth.authSessionExpired"));
         safeTimeout(() => {
@@ -190,9 +190,7 @@ const AuthCallback: React.FC = () => {
       if (cancelled) return;
 
       if (!codeVerifier) {
-        console.error(
-          "[AuthCallback] No code verifier found - PKCE flow broken"
-        );
+        log.error("[AuthCallback] No code verifier found - PKCE flow broken");
         setError(t("market.auth.authSessionExpired"));
         safeTimeout(() => {
           navigate(ROUTES.auth.login.path, { replace: true });
@@ -246,10 +244,7 @@ const AuthCallback: React.FC = () => {
             window.dispatchEvent(new Event("localStorageChange"));
           }
         } catch (profileError) {
-          console.warn(
-            "[AuthCallback] Failed to persist user info:",
-            profileError
-          );
+          log.warn("[AuthCallback] Failed to persist user info:", profileError);
         }
 
         await clearProcessedCode();
@@ -259,7 +254,7 @@ const AuthCallback: React.FC = () => {
         const redirectPath = storedRedirect || ROUTES.app.home.start.path;
         navigate(redirectPath, { replace: true });
       } catch (exchangeError) {
-        console.error("[AuthCallback] Token exchange failed:", exchangeError);
+        log.error("[AuthCallback] Token exchange failed:", exchangeError);
         const errorMessage =
           exchangeError instanceof Error
             ? exchangeError.message

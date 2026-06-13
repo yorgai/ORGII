@@ -4,12 +4,15 @@
  * Provides file and folder search functionality using native Tauri search.
  * The native search uses Rust with fuzzy matching for file and folder paths.
  */
+import { createLogger } from "@src/hooks/logger";
 import { debounceAsync } from "@src/util/core/debounce";
 import {
   convertToSearchResultItems,
   isNativeSearchAvailable,
   searchFilesNative,
 } from "@src/util/platform/tauri/fileSearch";
+
+const log = createLogger("FileSearch");
 
 // Type definition for search results
 interface SearchResultItem {
@@ -114,7 +117,7 @@ const searchNative = async (
       showFullPath: true,
     };
   } catch (error) {
-    console.warn("[FileSearch] Native search failed:", error);
+    log.warn("[FileSearch] Native search failed:", error);
     return null;
   }
 };

@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import { getGitFileContent } from "@src/api/http/git/diff";
 import type { CommitDiffResult } from "@src/api/http/git/types";
+import { createLogger } from "@src/hooks/logger";
 import { decodeOctalPath } from "@src/util/file/pathUtils";
+
+const log = createLogger("GitCommitDetailContent");
 
 type FileLoadState = "idle" | "loading" | "ready" | "error";
 
@@ -59,8 +62,7 @@ export function useCommitFileDiffLoader({
     );
 
     if (!fileInfo) {
-      // eslint-disable-next-line no-console
-      console.warn("[GitCommitDetailContent] file_not_in_commit_payload", {
+      log.warn("[GitCommitDetailContent] file_not_in_commit_payload", {
         commitSha,
         selectedFilePath,
       });
@@ -72,8 +74,7 @@ export function useCommitFileDiffLoader({
     const newRef = commitSha;
 
     const fetchContent = async () => {
-      // eslint-disable-next-line no-console
-      console.debug("[GitCommitDetailContent] file_load_start", {
+      log.debug("[GitCommitDetailContent] file_load_start", {
         commitSha,
         selectedFilePath,
       });
@@ -110,8 +111,7 @@ export function useCommitFileDiffLoader({
         const newFailed = expectedNew && !newResult;
 
         if (oldFailed || newFailed) {
-          // eslint-disable-next-line no-console
-          console.warn("[GitCommitDetailContent] file_load_partial_failure", {
+          log.warn("[GitCommitDetailContent] file_load_partial_failure", {
             selectedFilePath,
             oldRef,
             newRef,
@@ -127,8 +127,7 @@ export function useCommitFileDiffLoader({
 
         const isBinaryEncoding =
           oldResult?.encoding === "base64" || newResult?.encoding === "base64";
-        // eslint-disable-next-line no-console
-        console.debug("[GitCommitDetailContent] file_load_ready", {
+        log.debug("[GitCommitDetailContent] file_load_ready", {
           selectedFilePath,
           isBinaryEncoding,
         });
@@ -138,8 +137,7 @@ export function useCommitFileDiffLoader({
         setFileLoadState("ready");
       } catch (err) {
         if (!cancelled) {
-          // eslint-disable-next-line no-console
-          console.error("[GitCommitDetailContent] file_load_error", {
+          log.error("[GitCommitDetailContent] file_load_error", {
             selectedFilePath,
             oldRef,
             newRef,

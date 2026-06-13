@@ -12,6 +12,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   deleteBackgroundImage,
   listBackgroundImages,
@@ -19,6 +20,8 @@ import {
   migrateImagesToStorage,
   saveBackgroundImage,
 } from "@src/util/core/storage/backgroundImage";
+
+const log = createLogger("useBackgroundImageStorage");
 
 // Hook return value type
 export interface UseBackgroundImageStorageReturn {
@@ -67,7 +70,7 @@ export function useBackgroundImageStorage(): UseBackgroundImageStorageReturn {
             imageMap.set(imageId, dataUrl);
           }
         } catch (err) {
-          console.error(`Error loading image ${imageId}:`, err);
+          log.error(`Error loading image ${imageId}:`, err);
         }
       }
 
@@ -76,7 +79,7 @@ export function useBackgroundImageStorage(): UseBackgroundImageStorageReturn {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to load images";
       setError(errorMessage);
-      console.error("Error loading background images:", err);
+      log.error("Error loading background images:", err);
     } finally {
       setLoading(false);
     }
@@ -99,7 +102,7 @@ export function useBackgroundImageStorage(): UseBackgroundImageStorageReturn {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to save image";
         setError(errorMessage);
-        console.error("[useBackgroundImageStorage] Error saving:", err);
+        log.error("[useBackgroundImageStorage] Error saving:", err);
         // Re-throw the error so it can be caught by the component
         throw err;
       }
@@ -128,7 +131,7 @@ export function useBackgroundImageStorage(): UseBackgroundImageStorageReturn {
 
         return dataUrl;
       } catch (err) {
-        console.error(`Error loading image ${imageId}:`, err);
+        log.error(`Error loading image ${imageId}:`, err);
         return null;
       }
     },
@@ -156,7 +159,7 @@ export function useBackgroundImageStorage(): UseBackgroundImageStorageReturn {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to delete image";
       setError(errorMessage);
-      console.error("Error deleting background image:", err);
+      log.error("Error deleting background image:", err);
       return false;
     }
   }, []);
@@ -178,7 +181,7 @@ export function useBackgroundImageStorage(): UseBackgroundImageStorageReturn {
 
         return imageIds;
       } catch (err) {
-        console.error("Error migrating images:", err);
+        log.error("Error migrating images:", err);
         return [];
       }
     },

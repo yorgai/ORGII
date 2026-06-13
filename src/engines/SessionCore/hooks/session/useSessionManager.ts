@@ -10,6 +10,7 @@
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { reposAtom } from "@src/store/repo";
 import {
   SESSION_CACHE_INVALIDATED_EVENT,
@@ -23,6 +24,8 @@ import {
   sessionLoadingAtom,
   sessionsAtom,
 } from "@src/store/session";
+
+const log = createLogger("useSessionManager");
 
 export interface UseSessionManagerOptions {
   /** Auto-load sessions on mount (default: true) */
@@ -85,7 +88,7 @@ export function useSessionManager(
         forceRefresh: cacheWasInvalidated || sessionsLengthRef.current === 0,
       });
     } catch (err) {
-      console.error("[useSessionManager] Failed to load sessions:", err);
+      log.error("[useSessionManager] Failed to load sessions:", err);
     } finally {
       isLoadingRef.current = false;
     }

@@ -7,6 +7,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("Dependencies");
+
 export const DEP_CATEGORIES = [
   "package-manager",
   "runtime",
@@ -62,7 +66,7 @@ export function useSystemDependencies() {
       .catch((err: unknown) => {
         // Cache miss is non-fatal — `detect_system_dependencies` below
         // performs the live scan. Surface the failure for debugging.
-        console.warn("[Dependencies] cache load failed:", err);
+        log.warn("[Dependencies] cache load failed:", err);
       });
 
     invoke<SystemDependencies>("detect_system_dependencies")
@@ -74,7 +78,7 @@ export function useSystemDependencies() {
       })
       .catch((error) => {
         if (!cancelled) {
-          console.error("[Dependencies] scan failed:", error);
+          log.error("[Dependencies] scan failed:", error);
           setIsLoading(false);
         }
       });
@@ -92,7 +96,7 @@ export function useSystemDependencies() {
       );
       setData(result);
     } catch (error) {
-      console.error("[Dependencies] refresh failed:", error);
+      log.error("[Dependencies] refresh failed:", error);
     } finally {
       setIsRefreshing(false);
     }

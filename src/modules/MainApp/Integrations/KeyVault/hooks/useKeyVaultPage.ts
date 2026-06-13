@@ -21,11 +21,14 @@ import type { ModelType, SaveKeyRequest } from "@src/api/types/keys";
 import Message from "@src/components/Message";
 import { WIZARD_IDS, buildIntegrationsPath } from "@src/config/mainAppPaths";
 import { useKeyVault } from "@src/hooks/keyVault";
+import { createLogger } from "@src/hooks/logger";
 import { useWizardParam } from "@src/hooks/navigation";
 import { clearStaleAccountIdAtom } from "@src/store/session/creatorDefaultModelAtom";
 
 import { disconnectAccount } from "./disconnectAccount";
 import { refreshAccountModels } from "./refreshAccountModels";
+
+const log = createLogger("KeyVaultPage");
 
 export function useKeyVaultPage() {
   const { t } = useTranslation("integrations");
@@ -117,7 +120,7 @@ export function useKeyVaultPage() {
           t("keyVault.toasts.refreshError", { name, error: detail }),
           5000
         );
-        console.error("[Refresh] Error:", err);
+        log.error("[Refresh] Error:", err);
       } finally {
         setRefreshingAccountId(null);
         setRefreshLoading(false);
@@ -164,7 +167,7 @@ export function useKeyVaultPage() {
         Message.error(
           err instanceof Error ? err.message : t("common:status.saveFailed")
         );
-        console.error("Submit error:", err);
+        log.error("Submit error:", err);
       } finally {
         setFormLoading(false);
       }

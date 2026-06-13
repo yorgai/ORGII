@@ -19,7 +19,10 @@ import type {
   AvailableApiProvider,
   KeyInfo,
 } from "@src/api/tauri/rpc/schemas/validation";
+import { createLogger } from "@src/hooks/logger";
 import { agentRegistryAtom } from "@src/store/session/agentRegistryAtom";
+
+const log = createLogger("useSessionDiscovery");
 
 // ============================================
 // Type Definitions
@@ -228,7 +231,7 @@ export function useSessionDiscovery(
       if (!mountedRef.current) return;
       const errorMessage =
         err instanceof Error ? err.message : "Failed to load session data";
-      console.error("[useSessionDiscovery] Refresh failed:", err);
+      log.error("[useSessionDiscovery] Refresh failed:", err);
       setError(errorMessage);
       onError?.(err as Error);
     } finally {

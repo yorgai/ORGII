@@ -21,6 +21,10 @@ import {
 } from "@codemirror/view";
 import { invoke } from "@tauri-apps/api/core";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("DirtyDiff");
+
 // ============================================
 // Types
 // ============================================
@@ -67,10 +71,7 @@ async function computeDirtyDiffRust(
     }
     return changes;
   } catch (error) {
-    console.warn(
-      "[DirtyDiff] Rust computation failed, returning empty:",
-      error
-    );
+    log.warn("[DirtyDiff] Rust computation failed, returning empty:", error);
     return new Map();
   }
 }
@@ -307,7 +308,7 @@ export function dirtyDiffGutter(
         } catch (error) {
           // Only log if not destroyed (expected when switching files)
           if (!this.destroyed) {
-            console.warn("[DirtyDiff] Computation error:", error);
+            log.warn("[DirtyDiff] Computation error:", error);
           }
         } finally {
           this.isComputing = false;

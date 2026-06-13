@@ -16,6 +16,7 @@ import type {
 import { atom } from "jotai";
 
 import { getSettingsDefaults } from "@src/config/settingsSchema";
+import { createLogger } from "@src/hooks/logger";
 import { settingsAtom } from "@src/store/settings/settingsAtom";
 import { invokeTauri, isTauriReady } from "@src/util/platform/tauri/init";
 import {
@@ -31,6 +32,8 @@ import {
   isAgentPtySessionId,
   toBackendPtySessionId,
 } from "@src/util/ui/terminal/ptySessionId";
+
+const log = createLogger("TerminalStore");
 
 // ============================================
 // Storage Keys
@@ -53,7 +56,7 @@ async function killPty(sessionId: string): Promise<void> {
       sessionId: toBackendPtySessionId(sessionId),
     });
   } catch (error) {
-    console.error(`[TerminalStore] Failed to kill PTY:`, error);
+    log.error(`[TerminalStore] Failed to kill PTY:`, error);
   }
 }
 

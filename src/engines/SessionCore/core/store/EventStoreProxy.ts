@@ -468,6 +468,7 @@ class EventStoreProxyImpl {
     try {
       return await rpc.sessionCore.eventStore.saveToCache({ sessionId });
     } catch (error) {
+      // Raw console.warn kept intentionally: asserted by EventStoreProxy.test.ts.
       console.warn(
         `[EventStoreProxy] saveToCache failed for ${sessionId}; continuing with in-memory EventStore`,
         error

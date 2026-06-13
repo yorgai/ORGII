@@ -29,8 +29,11 @@ import {
 } from "@src/engines/SessionCore/rendering/props";
 import { useLifecycleLabels } from "@src/engines/SessionCore/rendering/registry";
 import { mintTurnIntentId } from "@src/engines/SessionCore/sync/adapters/shared/eventFactories";
+import { createLogger } from "@src/hooks/logger";
 import { isSessionActiveAtom } from "@src/store/session/cliSessionStatusAtom";
 import { activeSessionIdAtom } from "@src/store/session/viewAtom";
+
+const log = createLogger("NextStepEvent");
 
 // ============================================
 // Types
@@ -231,7 +234,7 @@ const ChatVariant: React.FC<{
             turnIntentId
           );
         } catch (err) {
-          console.error("[NextStepEvent] send failed:", err);
+          log.error("[NextStepEvent] send failed:", err);
           setSelectedIdx(null);
         } finally {
           pendingRef.current = false;

@@ -24,7 +24,10 @@ import {
 } from "react";
 import { v4 as uuidv4 } from "uuid";
 
+import { createLogger } from "@src/hooks/logger";
 import { toNativeFrame } from "@src/util/platform/tauri/nativeFrame";
+
+const moduleLog = createLogger("useEmbeddedWebview");
 
 /** Tauri command names wired to a specific auth webview type. */
 export interface EmbeddedWebviewCommands {
@@ -81,7 +84,8 @@ export function useEmbeddedWebview({
 
   const log = useCallback(
     (...args: unknown[]) => {
-      if (debug) console.log(`[useEmbeddedWebview:${labelPrefix}]`, ...args); // eslint-disable-line no-console
+      if (debug)
+        moduleLog.debug(`[useEmbeddedWebview:${labelPrefix}]`, ...args);
     },
     [debug, labelPrefix]
   );

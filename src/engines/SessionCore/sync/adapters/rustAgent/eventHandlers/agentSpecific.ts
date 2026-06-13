@@ -13,6 +13,7 @@ import {
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { sanitizeTodoDisplayText } from "@src/engines/SessionCore/hooks/session/todoNormalization";
+import { createLogger } from "@src/hooks/logger";
 import {
   clearPendingPlanApproval,
   pendingPlanApprovalsAtom,
@@ -39,6 +40,8 @@ import {
   getToolCallId,
 } from "./streamHelpers";
 import type { EventHandlerContext } from "./types";
+
+const log = createLogger("AgentSpecificHandlers");
 
 // Validate against the FULL `AgentExecMode` union (not just the picker
 // entries in `AGENT_EXEC_MODES`). The picker omits `wingman` and `review`,
@@ -334,7 +337,7 @@ export function handleExitPlanMode(
       patch: { agentExecMode: restoreMode },
     })
     .catch((err) => {
-      console.error(
+      log.error(
         `[exit_plan_mode] session_patch failed for ${eventSessionId}:`,
         err
       );

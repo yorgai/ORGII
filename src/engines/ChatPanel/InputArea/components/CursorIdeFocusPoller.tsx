@@ -23,7 +23,10 @@ import { memo, useEffect, useRef } from "react";
 
 import { cursorBridgeComposerLastUpdatedAt } from "@src/api/tauri/cursorBridge";
 import { ensureCursorIdeEventsInStore } from "@src/engines/SessionCore/sync/adapters/cursorIdeAdapter";
+import { createLogger } from "@src/hooks/logger";
 import { composerIdFromSessionId } from "@src/util/session/sessionDispatch";
+
+const log = createLogger("CursorIdeFocusPoller");
 
 const POLL_INTERVAL_ACTIVE_MS = 1000;
 const POLL_INTERVAL_IDLE_MS = 4000;
@@ -80,8 +83,7 @@ const CursorIdeFocusPoller = memo<CursorIdeFocusPollerProps>(
               // Non-fatal: the next tick will retry. Don't surface
               // a toast — this runs every second and the user
               // already sees stale-but-readable state.
-              // eslint-disable-next-line no-console
-              console.warn(
+              log.warn(
                 "[CursorIdeFocusPoller] reload failed",
                 err instanceof Error ? err.message : String(err)
               );
@@ -90,8 +92,7 @@ const CursorIdeFocusPoller = memo<CursorIdeFocusPollerProps>(
         } catch (err) {
           // Probe SELECT can fail transiently (DB locked while
           // Cursor writes). Swallow and try again next tick.
-          // eslint-disable-next-line no-console
-          console.warn(
+          log.warn(
             "[CursorIdeFocusPoller] probe failed",
             err instanceof Error ? err.message : String(err)
           );

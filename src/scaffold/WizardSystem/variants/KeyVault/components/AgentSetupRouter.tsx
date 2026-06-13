@@ -11,6 +11,7 @@ import {
   getCodexOAuthModels as fetchCodexOAuthModels,
 } from "@src/api/services/keyValidation";
 import { LOCAL_MODEL_PROVIDER } from "@src/api/types/keys";
+import { createLogger } from "@src/hooks/logger";
 import {
   getClaudeCodeOAuthDefaultEnabledModels,
   getClaudeCodeOAuthModels,
@@ -34,6 +35,8 @@ import type {
   GeminiSessionValues,
   KiroSessionValues,
 } from "./setup/types";
+
+const log = createLogger("ApiSetup");
 
 interface AgentSetupRouterProps extends AgentSetupProps {
   agentCategory: string | null;
@@ -133,7 +136,7 @@ export const AgentSetupRouter: React.FC<AgentSetupRouterProps> = ({
                 values.idToken
               );
             } catch (err) {
-              console.warn(
+              log.warn(
                 "[ApiSetup] Codex OAuth model discovery failed; using fallback models:",
                 err
               );
@@ -287,7 +290,7 @@ export const AgentSetupRouter: React.FC<AgentSetupRouterProps> = ({
                 values.accessToken
               );
             } catch (err) {
-              console.warn(
+              log.warn(
                 "[ApiSetup] Claude Code OAuth model discovery failed; using fallback models:",
                 err
               );

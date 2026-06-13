@@ -20,6 +20,7 @@ import React, {
   useState,
 } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { uint8ArrayToDataUrl } from "@src/util/file/binaryUtils";
 import { getFileExtensionLower, getFileName } from "@src/util/file/pathUtils";
@@ -27,6 +28,8 @@ import { getImageMimeType } from "@src/util/file/previewTypes";
 
 import { ImageBottomBar } from "./ImageBottomBar";
 import "./index.scss";
+
+const log = createLogger("ImagePreview");
 
 // ============================================
 // Types
@@ -134,7 +137,7 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
         setImageUrl(dataUrl);
       } catch (err) {
         if (cancelled) return;
-        console.error("Failed to load image:", err);
+        log.error("Failed to load image:", err);
         setError(err instanceof Error ? err.message : "Failed to load image");
         setLoading(false);
       }

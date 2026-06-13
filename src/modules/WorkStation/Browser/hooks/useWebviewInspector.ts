@@ -9,6 +9,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("useWebviewInspector");
+
 // ============================================
 // Types
 // ============================================
@@ -157,7 +161,7 @@ export function useWebviewInspector(
         prevSelectionRef.current = null;
       }
     } catch (error) {
-      console.error("[useWebviewInspector] Toggle failed:", error);
+      log.error("[useWebviewInspector] Toggle failed:", error);
     } finally {
       setIsLoading(false);
     }
@@ -171,7 +175,7 @@ export function useWebviewInspector(
       await invoke("enable_webview_inspect_mode", { label: webviewLabel });
       setIsInspectMode(true);
     } catch (error) {
-      console.error("[useWebviewInspector] Enable failed:", error);
+      log.error("[useWebviewInspector] Enable failed:", error);
     }
   }, [webviewLabel]);
 
@@ -187,7 +191,7 @@ export function useWebviewInspector(
       await invoke("disable_webview_inspect_mode", { label: webviewLabel });
       await invoke("clear_element_selection", { label: webviewLabel });
     } catch (error) {
-      console.error("[useWebviewInspector] Disable failed:", error);
+      log.error("[useWebviewInspector] Disable failed:", error);
     }
   }, [webviewLabel]);
 
@@ -211,7 +215,7 @@ export function useWebviewInspector(
         }
       }
     } catch (error) {
-      console.warn(
+      log.warn(
         "[useWebviewInspector] Polling error:",
         error instanceof Error ? error.message : String(error)
       );
@@ -227,7 +231,7 @@ export function useWebviewInspector(
       setSelectedElement(null);
       prevSelectionRef.current = null;
     } catch (error) {
-      console.error("[useWebviewInspector] Clear selection failed:", error);
+      log.error("[useWebviewInspector] Clear selection failed:", error);
     }
   }, [webviewLabel]);
 

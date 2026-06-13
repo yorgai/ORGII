@@ -23,6 +23,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
 import { useMounted } from "@src/hooks/lifecycle/useMounted";
+import { createLogger } from "@src/hooks/logger";
 
 import { INTERNAL_AGENT_IDS } from "../config/agentConstants";
 import {
@@ -33,6 +34,8 @@ import {
   customAgentsAtom,
 } from "../store/builtInAgentsAtom";
 import type { AgentDefinition } from "../types";
+
+const log = createLogger("AgentDefinitions");
 
 // Module-level guard so concurrent first-mounts coalesce into a single
 // in-flight fetch instead of racing N requests against the backend.
@@ -94,7 +97,7 @@ export function useAgentDefinitions() {
           applyResult(result);
         }
       } catch (error) {
-        console.error("[AgentDefinitions] Failed to fetch:", error);
+        log.error("[AgentDefinitions] Failed to fetch:", error);
         if (mountedRef.current) {
           setLoadError(error instanceof Error ? error.message : String(error));
         }
@@ -123,7 +126,7 @@ export function useAgentDefinitions() {
       void fetchAllDefs(true)
         .then((result) => applyResult(result))
         .catch((error) => {
-          console.error(
+          log.error(
             "[AgentDefinitions] Failed to refresh after defs-changed:",
             error
           );
@@ -158,7 +161,7 @@ export function useAgentDefinitions() {
         await rpc.agentDef.add({ agentJson: JSON.stringify(agent) });
         await refresh({ forceFresh: true });
       } catch (error) {
-        console.error("[AgentDefinitions] Failed to add:", error);
+        log.error("[AgentDefinitions] Failed to add:", error);
         throw error;
       } finally {
         if (mountedRef.current) setLoading(false);
@@ -184,7 +187,7 @@ export function useAgentDefinitions() {
         setAgentDefsLoaded(true);
         setLoadError(null);
       } catch (error) {
-        console.error("[AgentDefinitions] Failed to remove:", error);
+        log.error("[AgentDefinitions] Failed to remove:", error);
         throw error;
       } finally {
         if (mountedRef.current) setLoading(false);

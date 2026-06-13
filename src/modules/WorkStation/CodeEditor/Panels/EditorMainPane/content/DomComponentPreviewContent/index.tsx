@@ -23,6 +23,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { PenTool } from "lucide-react";
 import React, { Suspense, memo, useCallback, useMemo, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { FileHeader } from "@src/modules/WorkStation/shared";
 import { WorkstationToolbarTooltip } from "@src/modules/WorkStation/shared";
 import type { ToggleOption } from "@src/modules/shared/components/FileHeader";
@@ -30,6 +31,8 @@ import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { IFRAME_STYLE_NONCE } from "@src/util/iframeCspNonce";
 
 const CodeViewerContent = React.lazy(() => import("../CodeViewerContent"));
+
+const log = createLogger("DomComponentPreview");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -294,7 +297,7 @@ const MetaStrip: React.FC<MetaStripProps> = memo(
       try {
         await invoke("open_webview_devtools", { label: "main" });
       } catch (error) {
-        console.error("[DomComponentPreview] open devtools failed:", error);
+        log.error("[DomComponentPreview] open devtools failed:", error);
       }
     }, []);
 

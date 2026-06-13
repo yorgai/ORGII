@@ -24,8 +24,11 @@ import {
   cursorBridgeGetDefaultModel,
   cursorBridgeListModels,
 } from "@src/api/tauri/cursorBridge";
+import { createLogger } from "@src/hooks/logger";
 
 import { createPillCache } from "../createPillCache";
+
+const log = createLogger("cursorModelCache");
 
 export interface CursorModelCacheState {
   models: CursorModelEntry[];
@@ -62,8 +65,7 @@ const cache = createPillCache<CursorModelCacheState>({
         // Default-model lookup is a soft-fail: if the global setting is
         // unreadable we can still render the picker; the pill just falls
         // back to the empty seed.
-        // eslint-disable-next-line no-console
-        console.warn(
+        log.warn(
           "[cursorModelCache] getDefaultModel failed",
           err instanceof Error ? err.message : String(err)
         );

@@ -13,8 +13,12 @@
  * - Ping/pong keep-alive
  * - Global debug mode via window.__ORGII_WS_DEBUG__
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { parseWSMessage } from "./schemas";
 import type { WSEventType, WSMessage } from "./types";
+
+const moduleLog = createLogger("OrgiiaiWS");
 
 interface WSDebugLog {
   timestamp: string;
@@ -46,8 +50,7 @@ const wsDebug = {
   },
   recent: (count = 10) => {
     const recent = debugLogs.slice(-count);
-    // eslint-disable-next-line no-console
-    console.table(
+    moduleLog.debug(
       recent.map((log) => ({
         time: log.timestamp,
         dir: log.direction === "in" ? "⬅️ IN" : "➡️ OUT",
@@ -203,7 +206,7 @@ export class OrgiiaiWSClient {
             const data = parseWSMessage(event.data);
             this.handleMessage(data);
           } catch (err) {
-            console.error("[OrgiiaiWS] Parse error:", err);
+            moduleLog.error("[OrgiiaiWS] Parse error:", err);
           }
         };
 
@@ -316,12 +319,12 @@ export class OrgiiaiWSClient {
         try {
           handler(data as WSMessage);
         } catch (err) {
-          console.error(`[OrgiiaiWS] Handler error for ${eventType}:`, err);
+          moduleLog.error(`[OrgiiaiWS] Handler error for ${eventType}:`, err);
         }
       }
     } else {
       if (globalDebugEnabled && eventType === "agent.event") {
-        console.warn(
+        moduleLog.warn(
           `%c[OrgiiaiWS] ⚠️ No handlers registered for ${eventType}`,
           "color: #F59E0B;",
           {
@@ -376,7 +379,7 @@ export class OrgiiaiWSClient {
         }
         await this.connect();
       } catch (err) {
-        console.error("[OrgiiaiWS] Reconnect failed:", err);
+        moduleLog.error("[OrgiiaiWS] Reconnect failed:", err);
       }
     }, delay);
   }

@@ -15,6 +15,7 @@ import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
+import { createLogger } from "@src/hooks/logger";
 import { useEnsureAgentDefs } from "@src/modules/MainApp/AgentOrgs/hooks/useEnsureAgentDefs";
 import {
   builtInAgentsAtom,
@@ -25,6 +26,8 @@ import type {
   AgentDefinition,
   AgentToolSelection,
 } from "../../AgentOrgs/types";
+
+const log = createLogger("useAgentToolMatrix");
 
 export interface AgentToolStateRow {
   agentId: string;
@@ -169,7 +172,7 @@ export function useAgentToolMatrix() {
           },
         });
       } catch (error) {
-        console.error("[useAgentToolMatrix] toggle failed:", error);
+        log.error("[useAgentToolMatrix] toggle failed:", error);
         // Roll back.
         setRecords((prev) =>
           prev.map((entry) => (entry.id === agentId ? record : entry))

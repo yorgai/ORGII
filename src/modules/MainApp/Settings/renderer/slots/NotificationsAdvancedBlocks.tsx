@@ -16,9 +16,12 @@ import Button from "@src/components/Button";
 import Message from "@src/components/Message";
 import Slider from "@src/components/Slider";
 import Switch from "@src/components/Switch";
+import { createLogger } from "@src/hooks/logger";
 import { NAV_BUTTON_PROPS } from "@src/modules/MainApp/Settings/config";
 import { useSetting } from "@src/store/settings";
 import { isMacOS } from "@src/util/platform/tauri";
+
+const log = createLogger("Notifications");
 
 interface NotificationCategoryConfig {
   key:
@@ -130,7 +133,7 @@ const NotificationsAdvancedBlocks: React.FC = () => {
       try {
         await invoke("clear_dock_badge");
       } catch (error) {
-        console.error("[Notifications] Failed to clear badge:", error);
+        log.error("[Notifications] Failed to clear badge:", error);
       }
     }
   };

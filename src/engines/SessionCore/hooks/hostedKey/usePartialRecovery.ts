@@ -18,6 +18,8 @@
  */
 import { useCallback, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
 import type { SessionEvent } from "../../core/types";
 import {
   type PartialStreamState,
@@ -26,6 +28,8 @@ import {
   partialCache,
   updatePartialState,
 } from "../../storage/partialCache";
+
+const log = createLogger("PartialRecovery");
 
 // ============================================
 // Types
@@ -263,7 +267,7 @@ export function usePartialRecovery(
       try {
         state = await partialCache.load(sessionId);
       } catch (loadErr) {
-        console.warn(
+        log.warn(
           "[PartialRecovery] Failed to load partial file (will retry on next load):",
           loadErr
         );
@@ -283,7 +287,7 @@ export function usePartialRecovery(
       try {
         recoveredEvents = buildRecoveredEvents(sessionId, state);
       } catch (transformErr) {
-        console.warn(
+        log.warn(
           "[PartialRecovery] Failed to transform partial state into events:",
           transformErr
         );
@@ -304,7 +308,7 @@ export function usePartialRecovery(
       try {
         await partialCache.delete(sessionId);
       } catch (deleteErr) {
-        console.warn(
+        log.warn(
           "[PartialRecovery] Failed to delete partial after successful recovery " +
             "(will be re-recovered on next load):",
           deleteErr

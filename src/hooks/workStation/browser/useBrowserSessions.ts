@@ -12,6 +12,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { useWorkStationPanels } from "@src/hooks/workStation/panels/useWorkStationPanels";
 import { useBrowserConsole } from "@src/modules/WorkStation/Browser/hooks/useBrowserConsole";
 import { useBrowserNetworkLogs } from "@src/modules/WorkStation/Browser/hooks/useBrowserNetworkLogs";
@@ -27,6 +28,8 @@ import {
   workStationPrimarySidebarWidthPersistAtom,
 } from "@src/store/ui/workStationAtom";
 import type { SecondaryPanelPosition } from "@src/store/ui/workStationAtom";
+
+const log = createLogger("Browser");
 
 // Delay before starting polling hooks to avoid IPC pressure during app switching
 const POLLING_START_DELAY_MS = 150;
@@ -263,7 +266,7 @@ export function useBrowserSessions(
     try {
       await invoke("open_webview_devtools", { label: activeWebviewLabel });
     } catch (error) {
-      console.error("[Browser] Failed to open native DevTools:", error);
+      log.error("[Browser] Failed to open native DevTools:", error);
     }
   }, [activeWebviewLabel]);
 

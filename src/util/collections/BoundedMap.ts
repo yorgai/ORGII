@@ -74,7 +74,6 @@
  * });
  * ```
  */
-
 export interface BoundedMapOptions<K, V> {
   /**
    * Hard upper bound on the number of entries the map can hold. Must
@@ -257,6 +256,8 @@ export class BoundedMap<K, V> {
       try {
         this.onEvict(oldKey, oldValue);
       } catch (err) {
+        // Raw console.warn kept intentionally: asserted by BoundedMap.test.ts
+        // and this is a dependency-free low-level collection utility.
         console.warn(
           `[${this.name}] onEvict callback threw for evicted entry:`,
           err

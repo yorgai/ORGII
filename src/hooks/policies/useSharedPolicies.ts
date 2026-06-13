@@ -7,6 +7,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("SharedPolicies");
+
 export type PolicySource = "global" | "workspace" | "personal";
 export type PolicyKind = "rule" | "automation";
 
@@ -64,7 +68,7 @@ export function useSharedPolicies(options: UseSharedPoliciesOptions = {}) {
       })
       .catch((err: unknown) => {
         if (!cancelled)
-          console.error("[SharedPolicies] Failed to list policies:", err);
+          log.error("[SharedPolicies] Failed to list policies:", err);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -88,7 +92,7 @@ export function useSharedPolicies(options: UseSharedPoliciesOptions = {}) {
       })
       .catch((err: unknown) => {
         if (!cancelled)
-          console.error("[SharedPolicies] Failed to list policies:", err);
+          log.error("[SharedPolicies] Failed to list policies:", err);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -300,7 +304,7 @@ export function useSharedPolicies(options: UseSharedPoliciesOptions = {}) {
           })
           .catch((err: unknown) => {
             if (!cancelled)
-              console.error(
+              log.error(
                 `[SharedPolicies] Failed to list policies for ${repo.name}:`,
                 err
               );

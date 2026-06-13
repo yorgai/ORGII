@@ -8,7 +8,10 @@ import {
   RebaseConflictDialog,
 } from "@src/components/GitDialogs";
 import type { GitOperationResult } from "@src/hooks/git/useGitOperations";
+import { createLogger } from "@src/hooks/logger";
 import type { GitFile } from "@src/types/git/types";
+
+const log = createLogger("pullErrorHandlers");
 
 export interface HandlePullErrorOptions {
   pullResult: GitOperationResult;
@@ -46,7 +49,7 @@ export async function handlePullError({
       await stashPush();
       const retryPull = await doPull();
       if (!retryPull.success) {
-        console.error("Pull failed after stash");
+        log.error("Pull failed after stash");
       }
     } else if (result === "discard_pull") {
       const allFilePaths = currentFiles.map((file: GitFile) => file.path);
@@ -55,7 +58,7 @@ export async function handlePullError({
       }
       const retryPull = await doPull();
       if (!retryPull.success) {
-        console.error("Pull failed after discard");
+        log.error("Pull failed after discard");
       }
     }
     return true;

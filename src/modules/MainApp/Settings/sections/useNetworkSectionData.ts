@@ -9,11 +9,14 @@ import {
   getRestrictedServices,
   isRegionSanctioned,
 } from "@src/config/providerRegions";
+import { createLogger } from "@src/hooks/logger";
 import { useNetworkMonitor } from "@src/hooks/perf";
 import {
   monitorScanningAtom,
   networkRefreshTriggerAtom,
 } from "@src/store/ui/settingsPanelAtoms";
+
+const log = createLogger("useNetworkSectionData");
 
 export interface VpnInterface {
   name: string;
@@ -61,7 +64,7 @@ export function useNetworkSectionData() {
         });
       })
       .catch((err) => {
-        console.warn("[useNetworkSectionData] detect_vpn failed:", err);
+        log.warn("[useNetworkSectionData] detect_vpn failed:", err);
       })
       .finally(() => {
         vpnLoadingRef.current = false;

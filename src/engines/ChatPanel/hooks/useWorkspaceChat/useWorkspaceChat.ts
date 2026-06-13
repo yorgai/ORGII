@@ -29,6 +29,7 @@ import {
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import { mintTurnIntentId } from "@src/engines/SessionCore/sync/adapters/shared/eventFactories";
+import { createLogger } from "@src/hooks/logger";
 import {
   isSessionActiveAtom,
   lastUserMessageAtom,
@@ -60,6 +61,8 @@ import {
 } from "./stopSubmitGuard";
 import { useMessageDispatch } from "./useMessageDispatch";
 import { useSessionActions } from "./useSessionActions";
+
+const log = createLogger("useWorkspaceChat");
 
 /**
  * Module-level submit guard shared across all useWorkspaceChat instances.
@@ -379,7 +382,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         await addUserMessage(finalInput, imageDataUrls, turnIntentId);
         userEventAppended = true;
         void enterAgentOrgSessionIntervention(sessionId).catch((error) => {
-          console.warn("[useWorkspaceChat] intervention failed:", error);
+          log.warn("[useWorkspaceChat] intervention failed:", error);
         });
         // Pass finalInput as displayText so the pill format is preserved in
         // the persisted event. Only needed when the agent content differs
@@ -396,7 +399,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           turnIntentId
         );
       } catch (error) {
-        console.error("Error sending message:", error);
+        log.error("Error sending message:", error);
         Message.error(t("errors.failedToSendMessage"));
         _sharedSubmitGuard.current = false;
         _sharedSubmitPayload.current = null;
@@ -454,7 +457,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           `direct:${sessionId}:${stableSubmitHash(submitPayloadKey)}`
         );
       } catch (error) {
-        console.error("Error sending message:", error);
+        log.error("Error sending message:", error);
         Message.error(t("errors.failedToSendMessage"));
       } finally {
         setLoading(false);

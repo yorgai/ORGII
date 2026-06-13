@@ -59,12 +59,15 @@ import {
   noopSessionScopedPlanningMetaAtom,
   sessionScopedPlanningMetaAtomFamily,
 } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
+import { createLogger } from "@src/hooks/logger";
 import {
   isPendingCancelAtom,
   isSessionActiveAtom,
   sessionRuntimeStatusAtom,
   setSessionRuntimeStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
+
+const log = createLogger("usePlanningIndicator");
 
 /** How long (ms) to wait without new events before showing the indicator */
 const IDLE_THRESHOLD_MS = 1000;
@@ -350,7 +353,7 @@ export function usePlanningIndicator(
   useEffect(() => {
     if (scoped || !visible || !sessionId) return;
     const timerId = window.setTimeout(() => {
-      console.warn(
+      log.warn(
         `[usePlanningIndicator] watchdog: planning indicator stuck for ${PLANNING_WATCHDOG_MS}ms — ` +
           "forcing session status to 'completed'. This usually means Rust dropped agent:complete " +
           "or the idle agent:queue_status frame."

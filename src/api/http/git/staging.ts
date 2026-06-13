@@ -3,7 +3,11 @@
  *
  * File staging, unstaging, and discard functions.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
+
+const log = createLogger("GitAPI");
 
 /**
  * Stage files for commit
@@ -27,7 +31,7 @@ export const gitStageFiles = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to stage files:", error);
+    log.error("[GitAPI] Failed to stage files:", error);
     return false;
   }
 };
@@ -54,7 +58,7 @@ export const gitUnstageFiles = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to unstage files:", error);
+    log.error("[GitAPI] Failed to unstage files:", error);
     return false;
   }
 };
@@ -81,7 +85,7 @@ export const gitDiscardChanges = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to discard changes:", error);
+    log.error("[GitAPI] Failed to discard changes:", error);
     return false;
   }
 };
@@ -112,7 +116,7 @@ export const gitResolveConflict = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to resolve conflict:", error);
+    log.error("[GitAPI] Failed to resolve conflict:", error);
     return false;
   }
 };

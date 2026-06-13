@@ -31,6 +31,7 @@ import {
   HOST_DESKTOP,
   resolveHostDesktop,
 } from "@src/config/windowChromeRadius";
+import { createLogger } from "@src/hooks/logger";
 import { useSidebarState } from "@src/hooks/ui/sidebar/useSidebarState";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { getSidebarSurfaceBackgroundStyle } from "@src/modules/shared/layouts/viewContainerTokens";
@@ -47,6 +48,8 @@ import { isTauriDesktop } from "@src/util/platform/tauri";
 import { SIDEBAR_STYLE } from "./config";
 import { useForceVisibleSidebar } from "./contexts/ForceVisibleContext";
 import type { SidebarBaseProps } from "./types";
+
+const log = createLogger("SidebarBase");
 
 const PLATFORM_SIDEBAR_RADIUS =
   resolveHostDesktop() === HOST_DESKTOP.MACOS ? SIDEBAR_STYLE.borderRadius : 8;
@@ -167,7 +170,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
             });
             await menu.popup();
           } catch (error) {
-            console.error("Failed to show sidebar context menu:", error);
+            log.error("Failed to show sidebar context menu:", error);
           }
         })();
       },

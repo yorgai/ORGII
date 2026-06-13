@@ -8,6 +8,7 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 
+import { createLogger } from "@src/hooks/logger";
 import { getGlobalCommonHeaders } from "@src/util/config/headers";
 import { captureApiCallStack } from "@src/util/monitoring/apiTracker";
 
@@ -15,6 +16,8 @@ import { NOTIFICATION_DURATION } from "./config";
 import { showResponseErrorNotification } from "./errorHandling";
 import { getOrRefreshHostedToken } from "./tokenRefresh";
 import type { DataField, HttpMethod } from "./types";
+
+const log = createLogger("API");
 
 // ============================================
 // Types
@@ -63,7 +66,7 @@ function handleServiceAuthError(
   onNoAuth?: () => void
 ): DataField<never> | undefined {
   if (statusCode === 401) {
-    console.warn(
+    log.warn(
       "[API] 401 Hosted-service token invalid - main session unaffected"
     );
     onNoAuth?.();
@@ -78,7 +81,7 @@ function handleServiceAuthError(
 
   if (statusCode === 403) {
     if (detail === "Not authenticated" || detail === "Expired token") {
-      console.warn("[API] 403 Hosted-service auth error:", detail);
+      log.warn("[API] 403 Hosted-service auth error:", detail);
       onNoAuth?.();
     }
     return {
@@ -186,12 +189,12 @@ async function hostedServiceRequest<T>(
     }
 
     if (statusCode === 500) {
-      console.error(`API ${method} 500 error [${path}]:`, response.data);
+      log.error(`API ${method} 500 error [${path}]:`, response.data);
       onError?.();
       return undefined;
     }
 
-    console.error(
+    log.error(
       `Hosted service API error (${statusCode}) [${path}]:`,
       detail || "Unknown error",
       response.data
@@ -205,12 +208,12 @@ async function hostedServiceRequest<T>(
 
     const errorStr = String(error);
     if (errorStr.includes("timeout")) {
-      console.error(`API ${method} timeout [${path}]:`, error);
+      log.error(`API ${method} timeout [${path}]:`, error);
       onError?.();
       return undefined;
     }
 
-    console.error(`API ${method} error [${path}]:`, error);
+    log.error(`API ${method} error [${path}]:`, error);
     onError?.();
     return undefined;
   }

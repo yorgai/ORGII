@@ -15,6 +15,7 @@ import React, {
 } from "react";
 
 import { getSettingsDefaults } from "@src/config/settingsSchema";
+import { createLogger } from "@src/hooks/logger";
 import { useGlobalTerminalTabs } from "@src/hooks/ui/tabs/useGlobalTabs";
 import { useSyncTerminalSessions } from "@src/hooks/ui/tabs/useSyncGlobalTabs";
 import { settingsAtom } from "@src/store/settings/settingsAtom";
@@ -27,6 +28,8 @@ import {
   generateUniqueLabelFromBase,
 } from "@src/util/ui/terminal/naming";
 import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
+
+const log = createLogger("TerminalContext");
 
 interface TerminalSession {
   id: string;
@@ -130,7 +133,7 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({
               await Promise.all(cleanupPromises);
             }
           } catch (error) {
-            console.error("[TerminalContext] PTY cleanup error:", error);
+            log.error("[TerminalContext] PTY cleanup error:", error);
           }
         };
         cleanupAllPTY();
@@ -193,7 +196,7 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({
             });
           }
         } catch (err) {
-          console.error(`[TerminalContext] Failed to kill PTY:`, err);
+          log.error(`[TerminalContext] Failed to kill PTY:`, err);
         }
       };
       killPTY();

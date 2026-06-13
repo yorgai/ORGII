@@ -1,3 +1,7 @@
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("Tauri");
+
 declare global {
   interface Window {
     __TAURI_IPC__: unknown;
@@ -31,11 +35,11 @@ const patchTauriInternals = () => {
             try {
               return originalUnregisterCallback.call(this, id);
             } catch (error) {
-              console.warn("Tauri unregisterCallback error suppressed:", error);
+              log.warn("Tauri unregisterCallback error suppressed:", error);
             }
           }
         : function (id: unknown) {
-            console.warn(
+            log.warn(
               "Tauri unregisterCallback called with id:",
               id,
               "- function not available, ignoring"
@@ -75,7 +79,7 @@ const patchTauriInternals = () => {
     internals.unregisterCallback = patchedUnregisterCallback;
   } catch (error) {
     // Never let patching crash the app.
-    console.warn("Failed to patch Tauri internals (safe to ignore):", error);
+    log.warn("Failed to patch Tauri internals (safe to ignore):", error);
   }
 };
 
@@ -118,14 +122,11 @@ const patchTauriEventPluginInternals = () => {
                   // Expected race condition, silently ignore
                   return;
                 }
-                console.warn(
-                  "Tauri unregisterListener error suppressed:",
-                  error
-                );
+                log.warn("Tauri unregisterListener error suppressed:", error);
               }
             }
           : function (event: string, eventId: number) {
-              console.warn(
+              log.warn(
                 "Tauri unregisterListener called:",
                 event,
                 eventId,
@@ -169,7 +170,7 @@ const patchTauriEventPluginInternals = () => {
       eventInternals.unregisterListener = patchedUnregisterListener;
       return true;
     } catch (error) {
-      console.warn(
+      log.warn(
         "Failed to patch Tauri event plugin internals (safe to ignore):",
         error
       );
@@ -277,10 +278,7 @@ export function safeUnlisten(
       unlistenFn();
     } catch (error) {
       if (!silent) {
-        console.warn(
-          "safeUnlisten: Error during cleanup (safe to ignore):",
-          error
-        );
+        log.warn("safeUnlisten: Error during cleanup (safe to ignore):", error);
       }
       // Error is swallowed - this is expected during race conditions
     }

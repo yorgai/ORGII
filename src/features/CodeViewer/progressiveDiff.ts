@@ -4,8 +4,12 @@
  * Thin wrapper around the Rust diff engine. Rust `similar` is fast enough
  * that we no longer need JS-side chunking, progressive rendering, or caching.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { computeDiffAsync } from "./diffUtils";
 import type { DiffLine } from "./types";
+
+const log = createLogger("ProgressiveDiff");
 
 interface ProgressiveDiffOptions {
   oldValue: string;
@@ -54,7 +58,7 @@ export const computeDiffProgressive = (
     })
     .catch((error) => {
       if (!cancelled) {
-        console.error("[ProgressiveDiff] Rust diff error:", error);
+        log.error("[ProgressiveDiff] Rust diff error:", error);
         onComplete?.([]);
       }
     });

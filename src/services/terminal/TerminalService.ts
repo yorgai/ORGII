@@ -15,6 +15,7 @@
  */
 import { Command } from "@tauri-apps/plugin-shell";
 
+import { createLogger } from "@src/hooks/logger";
 import { WorkStationViewService } from "@src/services/workStation";
 import {
   activeTerminalIdAtom,
@@ -29,6 +30,8 @@ import {
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 import { invokeTauri, isTauriReady } from "@src/util/platform/tauri/init";
 import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
+
+const log = createLogger("TerminalService");
 
 // ============================================
 // Subprocess Execution Result
@@ -269,7 +272,7 @@ export const TerminalService = {
       };
     } catch (error) {
       // If the Shell plugin fails (e.g., not in allowlist), fall back to PTY
-      console.warn(
+      log.warn(
         "[TerminalService] Subprocess exec failed, falling back to PTY:",
         error
       );

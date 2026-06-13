@@ -29,6 +29,7 @@ import SettingsTable, {
   type SettingsTableColumn,
 } from "@src/components/SettingsTable";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
+import { createLogger } from "@src/hooks/logger";
 import {
   CollapsibleSection,
   DETAIL_PANEL_TOKENS,
@@ -62,6 +63,8 @@ import {
 } from "./utils";
 
 export type { UsageHistoryFilters };
+
+const log = createLogger("UsageHistory");
 
 const EMPTY_FILTERS: UsageHistoryFilters = {
   source: "all",
@@ -128,7 +131,7 @@ const UsageHistory: React.FC<UsageHistoryProps> = ({
           setItems(sessions);
         }
       } catch (err) {
-        console.warn("[UsageHistory] Failed to load sessions:", err);
+        log.warn("[UsageHistory] Failed to load sessions:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }

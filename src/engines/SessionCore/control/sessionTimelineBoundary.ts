@@ -7,6 +7,7 @@ import { isTimelineBoundaryClosableRuntimeEvent } from "@src/engines/SessionCore
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { markSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
+import { createLogger } from "@src/hooks/logger";
 import { killAgentShellProcess } from "@src/services/terminal";
 import {
   isPendingCancelAtom,
@@ -21,6 +22,8 @@ import { holdSessionQueueForStopAtom } from "@src/store/ui/messageQueueAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
 import { streamingDeltaContentAtom } from "../core/atoms";
+
+const log = createLogger("sessionTimelineBoundary");
 
 export type TimelineBoundaryReason = "stop" | "force-send" | "rewind";
 
@@ -138,7 +141,7 @@ export function beginTimelineBoundary(
   clearLiveStreamingForSession(sessionId);
   if (isUserStop) {
     void killActiveShellProcessesForStop(sessionId).catch((error) => {
-      console.warn(
+      log.warn(
         "[sessionTimelineBoundary] failed to kill active shell processes",
         error
       );
@@ -151,7 +154,7 @@ export function beginTimelineBoundary(
   // provider terminal's own close (rendered-status merge tolerates it).
   void closeRunningEventsForTimelineBoundary(sessionId, reason).catch(
     (error) => {
-      console.warn(
+      log.warn(
         "[sessionTimelineBoundary] failed to close running events",
         error
       );
@@ -200,7 +203,7 @@ export async function cancelTurnForTimelineBoundary(
       onError: options.onError,
     });
   } catch (error) {
-    console.warn("[sessionTimelineBoundary] interrupt failed", error);
+    log.warn("[sessionTimelineBoundary] interrupt failed", error);
     if (options.onError) {
       options.onError(error instanceof Error ? error.message : String(error));
     }

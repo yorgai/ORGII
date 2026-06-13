@@ -4,6 +4,8 @@
  * Utility for handling SSE streams from Rust HTTP server.
  * Provides a simple interface for connecting to SSE endpoints and handling events.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import {
   parseSSEEndData,
   parseSSEErrorData,
@@ -11,6 +13,8 @@ import {
   parseSSEStartData,
 } from "./sseSchemas";
 import type { SSEEndData, SSEErrorData, SSEOutputData } from "./sseSchemas";
+
+const log = createLogger("SSE");
 
 export interface SSEMessage {
   event: string;
@@ -52,7 +56,7 @@ export function createSSEStream(options: SSEStreamOptions): () => void {
       const data = parseSSEStartData(event.data);
       onStart?.(data);
     } catch (parseError) {
-      console.error("[SSE] Failed to parse start event:", parseError);
+      log.error("[SSE] Failed to parse start event:", parseError);
     }
   });
 
@@ -62,7 +66,7 @@ export function createSSEStream(options: SSEStreamOptions): () => void {
       const data = parseSSEOutputData(event.data);
       onOutput?.(data);
     } catch (parseError) {
-      console.error("[SSE] Failed to parse output event:", parseError);
+      log.error("[SSE] Failed to parse output event:", parseError);
     }
   });
 
@@ -73,7 +77,7 @@ export function createSSEStream(options: SSEStreamOptions): () => void {
       onEnd?.(data);
       eventSource.close();
     } catch (parseError) {
-      console.error("[SSE] Failed to parse end event:", parseError);
+      log.error("[SSE] Failed to parse end event:", parseError);
       eventSource.close();
     }
   });
@@ -100,7 +104,7 @@ export function createSSEStream(options: SSEStreamOptions): () => void {
   eventSource.onerror = (_error) => {
     // Only log if the connection was open (avoid duplicate error on intentional close)
     if (eventSource.readyState !== EventSource.CLOSED) {
-      console.error("[SSE] Connection error");
+      log.error("[SSE] Connection error");
       onError?.("Connection lost", {
         error: "Connection lost",
         error_type: "network_error",

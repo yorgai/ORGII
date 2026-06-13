@@ -8,6 +8,7 @@
  *   import { TestService } from "@src/services/test";
  *   await TestService.runAll(repoPath);
  */
+import { createLogger } from "@src/hooks/logger";
 import {
   clearResultsAtom,
   lastRunSummaryAtom,
@@ -30,6 +31,8 @@ import {
   isTauriReady,
   listenTauri,
 } from "@src/util/platform/tauri/init";
+
+const log = createLogger("TestService");
 
 // ============================================
 // Jotai Store Access (uses app's instrumented store)
@@ -87,14 +90,14 @@ async function initializeEventListener(): Promise<void> {
           break;
 
         case "error":
-          console.error("[TestService] Test error:", data.message);
+          log.error("[TestService] Test error:", data.message);
           break;
       }
     });
 
     eventListenerInitialized = true;
   } catch (error) {
-    console.error("[TestService] Failed to initialize event listener:", error);
+    log.error("[TestService] Failed to initialize event listener:", error);
   }
 }
 
@@ -144,7 +147,7 @@ export const TestService = {
       getStore().set(testFrameworkAtom, detected);
       return detected;
     } catch (error) {
-      console.error("[TestService] Failed to detect framework:", error);
+      log.error("[TestService] Failed to detect framework:", error);
       return "unknown";
     }
   },
@@ -173,7 +176,7 @@ export const TestService = {
 
       return result.items;
     } catch (error) {
-      console.error("[TestService] Failed to discover tests:", error);
+      log.error("[TestService] Failed to discover tests:", error);
       return [];
     } finally {
       store.set(setDiscoveringAtom, false);
@@ -215,7 +218,7 @@ export const TestService = {
       store.set(lastRunSummaryAtom, summary);
       return summary;
     } catch (error) {
-      console.error("[TestService] Failed to run tests:", error);
+      log.error("[TestService] Failed to run tests:", error);
       return null;
     }
   },

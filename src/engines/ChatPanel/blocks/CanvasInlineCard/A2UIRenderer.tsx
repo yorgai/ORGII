@@ -35,10 +35,14 @@ import React, {
   useSyncExternalStore,
 } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
 import { A2UIActionProvider } from "./A2UIActionContext";
 import type { A2UIActionHandler } from "./A2UIActionContext";
 import { renderA2UIElement } from "./a2uiElements";
 import type { A2UIElement } from "./types";
+
+const log = createLogger("A2UIRenderer");
 
 // ─── catalog definition ────────────────────────────────────────────────────────
 
@@ -259,7 +263,7 @@ const A2UIRenderer = forwardRef<A2UIRendererHandle, A2UIRendererProps>(
           // eslint-disable-next-line no-new-func
           new Function(js)();
         } catch (err) {
-          console.error("[canvas_eval]", err);
+          log.error("[canvas_eval]", err);
         }
       },
     }));

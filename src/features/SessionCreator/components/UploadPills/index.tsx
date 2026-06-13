@@ -15,10 +15,13 @@
 import { Image, X } from "lucide-react";
 import React, { createElement, useCallback, useEffect, useMemo } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { getPreviewType } from "@src/util/file/previewTypes";
 
 import { STYLE_CONFIG, getFileTypeIcon } from "./config";
 import type { UploadPillProps, UploadPillsProps } from "./types";
+
+const log = createLogger("ImagePill");
 
 // ============================================
 // Constants
@@ -57,7 +60,7 @@ const ImagePill: React.FC<ImagePillProps> = ({
           isObjectUrl: true,
         };
       } catch (error) {
-        console.error("[ImagePill] Failed to create object URL:", error);
+        log.error("[ImagePill] Failed to create object URL:", error);
         return { previewUrl: null, isObjectUrl: false };
       }
     }

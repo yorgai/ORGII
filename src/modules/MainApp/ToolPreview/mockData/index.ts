@@ -17,9 +17,12 @@
  */
 import type { EventDisplayStatus } from "@src/engines/SessionCore/core/types";
 import { getCliUiCanonical } from "@src/engines/SessionCore/rendering/registry/initToolRegistry";
+import { createLogger } from "@src/hooks/logger";
 
 import { MOCK_EVENT_DATA } from "./events";
 import { generateMockId } from "./shared";
+
+const log = createLogger("Playground sync");
 
 export { MOCK_EVENT_DATA } from "./events";
 export {
@@ -432,7 +435,7 @@ if (process.env.NODE_ENV === "development") {
       }
 
       if (missing.length > 0) {
-        console.warn(
+        log.warn(
           "[Playground sync] The following event types are registered in COMPONENT_LOADERS " +
             "but are missing entries. Add them to keep Playground in sync:\n" +
             missing

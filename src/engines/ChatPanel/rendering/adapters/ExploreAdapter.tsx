@@ -20,6 +20,7 @@ import {
   useLifecycleLabels,
 } from "@src/engines/SessionCore/rendering/registry";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
+import { createLogger } from "@src/hooks/logger";
 import { TerminalService } from "@src/services/terminal";
 import { formatToolTargetPath } from "@src/util/file/repoPathDisplay";
 import { getToolDisplayLabelFromRegistry } from "@src/util/ui/rendering/registryToolLabel";
@@ -28,6 +29,8 @@ import ExploreBlock from "../../blocks/ExploreBlock";
 import ListDirBlock from "../../blocks/ListDirBlock";
 import { extractResultText } from "../../blocks/ToolCallBlock/helpers";
 import { FailedEventRow } from "../../blocks/primitives";
+
+const log = createLogger("ExploreAdapter");
 
 const BRACKETED_DIR_RE = /^\[dir\]\s+(.+)$/i;
 const BRACKETED_FILE_RE = /^\[file\]\s+(.+)$/i;
@@ -60,7 +63,7 @@ const LspInstallInlineButton: React.FC<{ language: string }> = ({
         { language }
       );
       if (!result.command) {
-        console.warn(
+        log.warn(
           "[ExploreAdapter] No install command available:",
           result.error
         );
@@ -69,7 +72,7 @@ const LspInstallInlineButton: React.FC<{ language: string }> = ({
       }
       await TerminalService.execute(result.command);
     } catch (error: unknown) {
-      console.error("[ExploreAdapter] LSP install failed:", error);
+      log.error("[ExploreAdapter] LSP install failed:", error);
     } finally {
       setInstalling(false);
     }

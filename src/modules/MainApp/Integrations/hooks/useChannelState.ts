@@ -15,6 +15,7 @@ import {
 } from "@src/api/http/integrations";
 import { toggleChannel } from "@src/api/tauri/agent";
 import { WIZARD_IDS, buildWizardPath } from "@src/config/mainAppPaths";
+import { createLogger } from "@src/hooks/logger";
 import { useWizardParam } from "@src/hooks/navigation";
 import type { WizardCategory } from "@src/scaffold/WizardSystem/variants/Channel/channelWizardTypes";
 import { showChannelActionDialogSafely } from "@src/util/dialogs/channelActionDialog";
@@ -38,6 +39,8 @@ import type {
   ChannelProbeResult,
   ChannelSelection,
 } from "../Connections/Channels";
+
+const log = createLogger("integrations");
 
 function resolveConnectionStatus(
   enabled: boolean,
@@ -249,7 +252,7 @@ export function useChannelState(options: UseChannelStateOptions = {}) {
         selectedChannel.accountId,
         checked
       ).catch((err: unknown) => {
-        console.error("[integrations] Failed to toggle channel:", err);
+        log.error("[integrations] Failed to toggle channel:", err);
         // Roll back the optimistic local write so the UI reflects the
         // actual backend state, and surface the failure to the user.
         update(`${selectedChannelPath}.enabled`, !checked);

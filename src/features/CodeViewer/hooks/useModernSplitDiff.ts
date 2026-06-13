@@ -14,6 +14,7 @@ import {
 } from "react";
 
 import { getLanguageFromPath } from "@src/config/languageMap";
+import { createLogger } from "@src/hooks/logger";
 
 import type {
   AlignedLine,
@@ -24,6 +25,8 @@ import type {
 } from "../types";
 import { collapseSplitViewLines } from "../utils/collapseLines";
 import { computeAlignedDiffAsync } from "../utils/diffAlgorithm";
+
+const log = createLogger("SplitDiff");
 
 interface UseModernSplitDiffOptions {
   oldValue: string;
@@ -81,7 +84,7 @@ export function useModernSplitDiff(options: UseModernSplitDiffOptions) {
         if (!cancelled) setRawAlignedLines(result);
       })
       .catch((error) => {
-        console.error("[SplitDiff] Rust aligned diff error:", error);
+        log.error("[SplitDiff] Rust aligned diff error:", error);
         if (!cancelled) setRawAlignedLines([]);
       });
 

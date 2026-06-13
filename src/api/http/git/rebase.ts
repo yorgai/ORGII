@@ -3,8 +3,12 @@
  *
  * Rebase operations and conflict resolution.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
 import type { RebaseResult } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Rebase current branch onto another branch
@@ -32,7 +36,7 @@ export const gitRebase = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to rebase:", error);
+    log.error("[GitAPI] Failed to rebase:", error);
     return undefined;
   }
 };
@@ -55,7 +59,7 @@ export const gitRebaseContinue = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to continue rebase:", error);
+    log.error("[GitAPI] Failed to continue rebase:", error);
     return undefined;
   }
 };
@@ -78,7 +82,7 @@ export const gitRebaseAbort = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to abort rebase:", error);
+    log.error("[GitAPI] Failed to abort rebase:", error);
     return false;
   }
 };
@@ -101,7 +105,7 @@ export const gitRebaseSkip = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to skip rebase commit:", error);
+    log.error("[GitAPI] Failed to skip rebase commit:", error);
     return false;
   }
 };

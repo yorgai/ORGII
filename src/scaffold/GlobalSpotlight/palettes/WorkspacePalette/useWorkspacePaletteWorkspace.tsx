@@ -20,6 +20,7 @@ import {
   listWorkspaces,
 } from "@src/api/tauri/workspace";
 import Message from "@src/components/Message";
+import { createLogger } from "@src/hooks/logger";
 import { useFilteredItems } from "@src/hooks/search";
 import {
   activeWorkspaceIdAtom,
@@ -33,6 +34,8 @@ import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAc
 import { ICONS } from "../../config";
 import type { AddWorkspaceModalStage } from "../../hooks";
 import type { RepoItem, SpotlightItem } from "../../types";
+
+const log = createLogger("WorkspacePalette");
 
 // ============================================================================
 // Types
@@ -168,7 +171,7 @@ export function useWorkspacePaletteWorkspace({
           t("selectors.spotlight.toast.workspaceRemoved", "Workspace deleted")
         );
       } catch (error) {
-        console.error("Error deleting workspace:", error);
+        log.error("Error deleting workspace:", error);
         Message.error(
           error instanceof Error
             ? error.message
@@ -239,7 +242,7 @@ export function useWorkspacePaletteWorkspace({
           activeWorkspaceWasDeleted = true;
         }
       } else {
-        console.error("Error deleting workspace:", result.reason);
+        log.error("Error deleting workspace:", result.reason);
         failedCount += 1;
       }
     }
@@ -247,7 +250,7 @@ export function useWorkspacePaletteWorkspace({
       if (result.status === "fulfilled") {
         deletedCount += 1;
       } else {
-        console.error("Error removing repo:", result.reason);
+        log.error("Error removing repo:", result.reason);
         failedCount += 1;
       }
     }
@@ -258,14 +261,14 @@ export function useWorkspacePaletteWorkspace({
       try {
         setSavedWorkspaces(await listWorkspaces());
       } catch (error) {
-        console.error("Error refreshing workspaces:", error);
+        log.error("Error refreshing workspaces:", error);
       }
     }
     if (repoTargetIds.length > 0) {
       try {
         await refreshReposForce();
       } catch (error) {
-        console.error("Error refreshing repos:", error);
+        log.error("Error refreshing repos:", error);
       }
     }
 

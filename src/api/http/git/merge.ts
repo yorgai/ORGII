@@ -3,8 +3,12 @@
  *
  * Merge operations and conflict resolution.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
 import type { MergeResult } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Merge a branch into current branch
@@ -34,7 +38,7 @@ export const gitMerge = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to merge:", error);
+    log.error("[GitAPI] Failed to merge:", error);
     return undefined;
   }
 };
@@ -57,7 +61,7 @@ export const gitMergeAbort = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to abort merge:", error);
+    log.error("[GitAPI] Failed to abort merge:", error);
     return false;
   }
 };
@@ -80,7 +84,7 @@ export const gitMergeContinue = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to continue merge:", error);
+    log.error("[GitAPI] Failed to continue merge:", error);
     return undefined;
   }
 };

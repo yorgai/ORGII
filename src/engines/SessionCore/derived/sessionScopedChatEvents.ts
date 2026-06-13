@@ -27,6 +27,8 @@
 import { atom } from "jotai";
 import { atomFamily } from "jotai/utils";
 
+import { createLogger } from "@src/hooks/logger";
+
 import { isInteractiveTool } from "../core/interactiveTools";
 import { hasLiveRuntimeResourceInLatestTurn } from "../core/runningEventGate";
 import type { Snapshot } from "../core/store/EventStoreProxy";
@@ -39,6 +41,8 @@ import {
   derivePlanDisplayEvents,
   planEventContentSignature,
 } from "./planDisplayEvents";
+
+const log = createLogger("sessionScopedChatEvents");
 
 interface SnapshotState {
   snapshot: Snapshot | null;
@@ -90,7 +94,7 @@ const sessionSnapshotAtomFamily = atomFamily((sessionId: string) => {
       // Swallow load errors here: the consumer (ChatHistory) is allowed
       // to render an empty state. `useSessionEvents` already covers
       // explicit error surfacing for callers that need it.
-      console.warn(
+      log.warn(
         `[sessionScopedChatEvents] loadFromCache(${sessionId}) failed:`,
         err
       );

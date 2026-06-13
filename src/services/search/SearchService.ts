@@ -10,6 +10,7 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 
+import { createLogger } from "@src/hooks/logger";
 import { PanelService } from "@src/services/panel";
 import {
   type SearchOptions,
@@ -26,6 +27,8 @@ import {
   searchSetOptionsAtom,
 } from "@src/store/workstation/codeEditor/search";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
+
+const log = createLogger("SearchService");
 
 // ============================================
 // Jotai Store Access (uses app's instrumented store)
@@ -95,7 +98,7 @@ export const SearchService = {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Search failed";
       store.set(searchErrorAtom, message);
-      console.error("[SearchService] Search failed:", error);
+      log.error("[SearchService] Search failed:", error);
       return [];
     } finally {
       store.set(searchLoadingAtom, false);

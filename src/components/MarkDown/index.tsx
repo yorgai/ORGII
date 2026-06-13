@@ -11,7 +11,11 @@
 import React, { Component, type ReactNode, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 
+import { createLogger } from "@src/hooks/logger";
+
 import type { MarkdownProps } from "./MarkDownImpl";
+
+const log = createLogger("Markdown");
 
 interface MarkdownErrorBoundaryProps {
   children: ReactNode;
@@ -35,7 +39,7 @@ class MarkdownErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    console.error("Markdown preview failed to render:", error, errorInfo);
+    log.error("Markdown preview failed to render:", error, errorInfo);
   }
 
   render() {

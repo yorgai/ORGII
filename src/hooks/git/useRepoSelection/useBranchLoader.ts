@@ -5,6 +5,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useRef, useState } from "react";
 
 import { gitApi } from "@src/api/http/git";
+import { createLogger } from "@src/hooks/logger";
 import {
   type Branch,
   REPO_KIND,
@@ -18,6 +19,8 @@ import { debounce } from "@src/util/core/debounce";
 
 import { isCheckingOut } from "./singleton";
 import type { UseBranchLoaderReturn } from "./types";
+
+const log = createLogger("useBranchLoader");
 
 export function useBranchLoader(): UseBranchLoaderReturn {
   const selectedRepoId = useAtomValue(selectedRepoIdAtom);
@@ -74,10 +77,7 @@ export function useBranchLoader(): UseBranchLoaderReturn {
         lastFastBranchRepoRef.current = selectedRepoId;
       }
     } catch (error) {
-      console.error(
-        "[useBranchLoader] Failed to fast load current branch:",
-        error
-      );
+      log.error("[useBranchLoader] Failed to fast load current branch:", error);
     } finally {
       loadingFastBranchRef.current = false;
     }
@@ -128,7 +128,7 @@ export function useBranchLoader(): UseBranchLoaderReturn {
         }
       }
     } catch (error) {
-      console.error("[useBranchLoader] Failed to load branches:", error);
+      log.error("[useBranchLoader] Failed to load branches:", error);
     } finally {
       setBranchLoading(false);
       loadingBranchesRef.current = false;

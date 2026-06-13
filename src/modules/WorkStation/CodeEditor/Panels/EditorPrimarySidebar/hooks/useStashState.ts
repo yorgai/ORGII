@@ -15,7 +15,10 @@ import { useTranslation } from "react-i18next";
 import { useActionSystemOptional } from "@src/ActionSystem";
 import { gitApi } from "@src/api/http/git";
 import type { StashEntry } from "@src/api/http/git/types";
+import { createLogger } from "@src/hooks/logger";
 import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
+
+const log = createLogger("useStashState");
 
 export interface UseStashStateOptions {
   /** Repository ID (UUID) */
@@ -90,7 +93,7 @@ export function useStashState(
         setStashes([]);
       }
     } catch (err) {
-      console.error("[useStashState] Failed to fetch stash list:", err);
+      log.error("[useStashState] Failed to fetch stash list:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch stashes");
       setStashes([]);
     } finally {
@@ -157,7 +160,7 @@ export function useStashState(
           return false;
         }
       } catch (err) {
-        console.error("[useStashState] Failed to stash push:", err);
+        log.error("[useStashState] Failed to stash push:", err);
         const errorMsg =
           err instanceof Error ? err.message : "Failed to stash changes";
         showGitActionDialogSafely(errorMsg, "error");
@@ -225,7 +228,7 @@ export function useStashState(
           return false;
         }
       } catch (err) {
-        console.error("[useStashState] Failed to apply stash:", err);
+        log.error("[useStashState] Failed to apply stash:", err);
         const errorMsg = stripGitPrefix(
           err instanceof Error ? err.message : "Failed to apply stash"
         );
@@ -299,7 +302,7 @@ export function useStashState(
           return false;
         }
       } catch (err) {
-        console.error("[useStashState] Failed to pop stash:", err);
+        log.error("[useStashState] Failed to pop stash:", err);
         const errorMsg = stripGitPrefix(
           err instanceof Error ? err.message : "Failed to pop stash"
         );
@@ -370,7 +373,7 @@ export function useStashState(
           return false;
         }
       } catch (err) {
-        console.error("[useStashState] Failed to drop stash:", err);
+        log.error("[useStashState] Failed to drop stash:", err);
         const errorMsg = stripGitPrefix(
           err instanceof Error ? err.message : "Failed to drop stash"
         );

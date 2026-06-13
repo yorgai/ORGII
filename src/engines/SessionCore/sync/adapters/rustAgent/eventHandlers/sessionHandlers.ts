@@ -5,6 +5,7 @@
  */
 import Message from "@src/components/Message";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import { createLogger } from "@src/hooks/logger";
 import { streamRetryStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 
 import {
@@ -15,6 +16,8 @@ import {
 import type { AgentTokenUsage, AgentWSEvent } from "../../shared/types";
 import { resetAllStreamingState } from "./streamHelpers";
 import type { EventHandlerContext } from "./types";
+
+const log = createLogger("SessionHandlers");
 
 function settleTerminalRuntime(
   sessionId: string,
@@ -163,7 +166,7 @@ export function handleError(
 export function handleWarning(event: AgentWSEvent): void {
   const warning = event.warning || "Unknown warning";
   const source = event.source || "unknown";
-  console.warn(`[agent:warning] [${source}] ${warning}`);
+  log.warn(`[agent:warning] [${source}] ${warning}`);
   Message.warning(`[${source}] ${warning}`, 5000);
 }
 

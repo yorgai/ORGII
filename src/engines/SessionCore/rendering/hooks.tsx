@@ -22,6 +22,7 @@ import type {
   RenderMode,
   UnifiedRenderOptions,
 } from "@src/engines/SessionCore/rendering/registry/types";
+import { createLogger } from "@src/hooks/logger";
 import i18n from "@src/i18n";
 import { getRegistryEventType } from "@src/lib/activityData/activityNormalizers";
 
@@ -32,6 +33,8 @@ import {
   loadEventComponent,
   resolveEventType,
 } from "./registry/events";
+
+const log = createLogger("UnifiedEventRenderer");
 
 // ============================================
 // Types
@@ -97,7 +100,7 @@ class UnifiedErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    console.error(
+    log.error(
       `[UnifiedEventRenderer] Failed to render ${this.props.eventType}:`,
       error,
       errorInfo
@@ -173,10 +176,7 @@ const LazyEventComponent: React.FC<LazyEventComponentProps> = ({
         }
       })
       .catch((error) => {
-        console.error(
-          `[UnifiedEventRenderer] Failed to load ${eventType}:`,
-          error
-        );
+        log.error(`[UnifiedEventRenderer] Failed to load ${eventType}:`, error);
         if (mounted) {
           setLoading(false);
         }
@@ -262,7 +262,7 @@ export function useUnifiedEventRenderer(
     (event: EventData, extras: ExtraProps = {}): React.ReactNode => {
       if (!event) {
         if (process.env.NODE_ENV === "development") {
-          console.warn(
+          log.warn(
             "[UnifiedEventRenderer] renderEvent called with undefined event"
           );
         }

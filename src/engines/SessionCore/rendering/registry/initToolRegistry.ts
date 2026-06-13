@@ -10,6 +10,7 @@
  * NOTE: No static fallback in production. Tests inject fixtures via vitest.setup.ts.
  */
 import type { AppType } from "@src/engines/Simulator/types/appTypes";
+import { createLogger } from "@src/hooks/logger";
 import { invokeTauri } from "@src/util/platform/tauri/init";
 
 // Types from types.ts (source of truth for AppSubtool / ChatBlock)
@@ -28,6 +29,8 @@ export type {
   ChatBlock,
   ToolDisplayBehavior,
 } from "./types";
+
+const log = createLogger("initToolRegistry");
 
 // ============================================
 // Response types (match Rust ToolRegistryData)
@@ -232,7 +235,7 @@ export async function initToolRegistry(): Promise<void> {
       )
     );
   } catch (err) {
-    console.error("[initToolRegistry] Failed to fetch from Rust:", err);
+    log.error("[initToolRegistry] Failed to fetch from Rust:", err);
     builtinSimulatorAppMap = new Map();
     builtinIconIdMap = new Map();
     builtinActionIconsMap = new Map();

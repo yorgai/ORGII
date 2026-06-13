@@ -17,6 +17,7 @@ import React, { useEffect, useRef, useState } from "react";
 
 import { useRepoDropdownActions } from "@src/hooks/git/useRepoDropdownActions";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
+import { createLogger } from "@src/hooks/logger";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { REPO_KIND } from "@src/store/repo";
 import {
@@ -27,6 +28,8 @@ import {
 import { isMacOS, isTauriDesktop } from "@src/util/platform/tauri";
 
 import "./ModeSelectionWindow.scss";
+
+const log = createLogger("ModeSelectionWindow");
 
 const ModeSelectionWindow: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -55,7 +58,7 @@ const ModeSelectionWindow: React.FC = () => {
         // Set transparent background for rounded corners
         await window.setBackgroundColor("rgba(0, 0, 0, 0)");
       } catch (error) {
-        console.error("Failed to initialize window settings:", error);
+        log.error("Failed to initialize window settings:", error);
       }
     };
 
@@ -112,7 +115,7 @@ const ModeSelectionWindow: React.FC = () => {
     try {
       setSelectedIndex(index);
     } catch (error) {
-      console.error("Error handling repo click:", error);
+      log.error("Error handling repo click:", error);
     }
   };
 
@@ -128,7 +131,7 @@ const ModeSelectionWindow: React.FC = () => {
       // Close mode selection window
       closeWindow();
     } catch (error) {
-      console.error("Error handling repo double click:", error);
+      log.error("Error handling repo double click:", error);
     }
   };
 

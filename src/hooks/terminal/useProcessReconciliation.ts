@@ -17,6 +17,7 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   shellProcessMapAtom,
   updateShellProcessAtom,
@@ -30,6 +31,8 @@ import {
 import type { ShellKind } from "@src/types/terminal";
 import { invokeTauri } from "@src/util/platform/tauri/init";
 import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
+
+const log = createLogger("ProcessReconciliation");
 
 interface RunningShellJob {
   session_id: string;
@@ -111,7 +114,7 @@ export function useProcessReconciliation(): void {
           }
         }
       } catch (err) {
-        console.error("[ProcessReconciliation] agent jobs:", err);
+        log.error("[ProcessReconciliation] agent jobs:", err);
       }
 
       // --- Background subagent workers ---
@@ -132,7 +135,7 @@ export function useProcessReconciliation(): void {
           });
         }
       } catch (err) {
-        console.error("[ProcessReconciliation] subagent jobs:", err);
+        log.error("[ProcessReconciliation] subagent jobs:", err);
       }
 
       // --- PTY sessions ---
@@ -165,7 +168,7 @@ export function useProcessReconciliation(): void {
           }
         }
       } catch (err) {
-        console.error("[ProcessReconciliation] pty sessions:", err);
+        log.error("[ProcessReconciliation] pty sessions:", err);
       }
     }
 

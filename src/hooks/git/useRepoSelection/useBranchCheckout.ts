@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 
 import { gitApi } from "@src/api/http/git";
+import { createLogger } from "@src/hooks/logger";
 import {
   REPO_KIND,
   currentBranchAtom,
@@ -23,6 +24,8 @@ import {
 } from "./singleton";
 import type { UseBranchCheckoutReturn } from "./types";
 
+const log = createLogger("useBranchCheckout");
+
 export function useBranchCheckout(): UseBranchCheckoutReturn {
   const selectedRepoId = useAtomValue(selectedRepoIdAtom);
   const [currentBranch, setCurrentBranch] = useAtom(currentBranchAtom);
@@ -39,7 +42,7 @@ export function useBranchCheckout(): UseBranchCheckoutReturn {
   const selectBranch = useCallback(
     async (branch: string) => {
       if (!selectedRepoId) {
-        console.warn("[useBranchCheckout] Cannot checkout: no repo selected");
+        log.warn("[useBranchCheckout] Cannot checkout: no repo selected");
         return;
       }
 
@@ -48,7 +51,7 @@ export function useBranchCheckout(): UseBranchCheckoutReturn {
         repo?.path || repo?.fs_uri || currentRepo?.path || currentRepo?.fs_uri;
 
       if (!repoPath) {
-        console.warn("[useBranchCheckout] Cannot checkout: no repo path");
+        log.warn("[useBranchCheckout] Cannot checkout: no repo path");
         return;
       }
 
@@ -90,7 +93,7 @@ export function useBranchCheckout(): UseBranchCheckoutReturn {
         } else {
           // Rollback on failure
           setCurrentBranch(previousBranch);
-          console.error(
+          log.error(
             `[useBranchCheckout] Failed to checkout branch "${branch}":`,
             result.error,
             `errorType: ${result.errorType}`
@@ -112,7 +115,7 @@ export function useBranchCheckout(): UseBranchCheckoutReturn {
         }
       } catch (error) {
         setCurrentBranch(previousBranch);
-        console.error("[useBranchCheckout] Checkout error:", error);
+        log.error("[useBranchCheckout] Checkout error:", error);
         showGitActionDialogSafely(
           error instanceof Error
             ? error.message

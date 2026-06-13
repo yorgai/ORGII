@@ -106,7 +106,6 @@ async function getDiffFilePaths(repoPath: string): Promise<Set<string>> {
     });
     return new Set(paths);
   } catch (err) {
-    // eslint-disable-next-line no-console
     logger.warn("Failed to get diff files:", err);
     return new Set();
   }
@@ -337,7 +336,6 @@ export function startWorkspaceScan(
   };
 
   startScan().catch((err) => {
-    // eslint-disable-next-line no-console
     logger.error("Unexpected error:", err);
     store.set(isScanningAtom, false);
     for (const unlisten of unlisteners) {

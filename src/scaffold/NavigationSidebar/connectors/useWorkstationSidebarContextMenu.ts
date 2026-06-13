@@ -6,6 +6,7 @@ import {
 import { type MouseEvent, useCallback } from "react";
 
 import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
+import { createLogger } from "@src/hooks/logger";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { Session } from "@src/store/session";
 import {
@@ -18,6 +19,8 @@ import {
   isDraftMenuItemId,
 } from "./sidebarConnectorUtils";
 import type { UseRenameSessionModalResult } from "./useRenameSessionModal";
+
+const log = createLogger("WorkstationSidebar");
 
 interface UseWorkstationSidebarContextMenuParams {
   sessionMap: Map<string, Session>;
@@ -113,7 +116,7 @@ export function useWorkstationSidebarContextMenu({
         const menu = await TauriMenu.new({ items: menuItems });
         await menu.popup();
       } catch (error) {
-        console.error("[WorkstationSidebar] Context menu failed:", error);
+        log.error("[WorkstationSidebar] Context menu failed:", error);
       }
     },
     [

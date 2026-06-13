@@ -42,12 +42,15 @@ import type {
   ComponentLoader,
   SimulatorContextConfig,
 } from "@src/engines/SessionCore/rendering/registry/types";
+import { createLogger } from "@src/hooks/logger";
 
 // Re-export tool category utilities
 export {
   getCategoryForUiCanonical,
   type EventCategory,
 } from "@src/engines/SessionCore/rendering/registry/toolCategories";
+
+const log = createLogger("UnifiedRegistry");
 
 // ============================================
 // Component Loaders by ui_canonical
@@ -516,7 +519,7 @@ export async function loadEventComponent(
   try {
     return await loadComponent(uiCanonical, loader);
   } catch (error) {
-    console.error(
+    log.error(
       `[UnifiedRegistry] Failed to load ${eventType} (ui_canonical: ${uiCanonical}):`,
       error
     );

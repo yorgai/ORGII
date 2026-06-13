@@ -1,6 +1,10 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import React from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("TrafficLights");
+
 // ============================================
 // Type Definitions
 // ============================================
@@ -60,7 +64,7 @@ const TrafficLights: React.FC<TrafficLightsProps> = ({
       const currentWindow = WebviewWindow.getCurrent();
       await currentWindow.close();
     } catch (error) {
-      console.error("Error closing window:", error);
+      log.error("Error closing window:", error);
     }
   };
 
@@ -75,7 +79,7 @@ const TrafficLights: React.FC<TrafficLightsProps> = ({
       const currentWindow = WebviewWindow.getCurrent();
       await currentWindow.minimize();
     } catch (error) {
-      console.error("Error minimizing window:", error);
+      log.error("Error minimizing window:", error);
     }
   };
 
@@ -96,7 +100,7 @@ const TrafficLights: React.FC<TrafficLightsProps> = ({
         await currentWindow.maximize();
       }
     } catch (error) {
-      console.error("Error maximizing/restoring window:", error);
+      log.error("Error maximizing/restoring window:", error);
     }
   };
 

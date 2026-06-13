@@ -29,6 +29,7 @@ import type { SelectOption } from "@src/components/Select";
 import TabPill from "@src/components/TabPill";
 import type { TabPillItem } from "@src/components/TabPill";
 import { ROUTES } from "@src/config/routes";
+import { createLogger } from "@src/hooks/logger";
 import { useProjectDataChanged } from "@src/hooks/project";
 import type { LinearProjectSelection } from "@src/modules/ProjectManager/Panels/ProjectManagerSidebar/content/WorkspaceTreeContent";
 import WorkItemSection from "@src/modules/ProjectManager/WorkItems/components/WorkItemSection";
@@ -52,6 +53,8 @@ import {
   type WorkspaceSourceMode,
 } from "./projectsUtils";
 import { useProjectsGrouping } from "./useProjectsGrouping";
+
+const log = createLogger("ProjectsPage");
 
 // ============================================
 // Types
@@ -158,7 +161,7 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({
         setFileProjectsLoaded(true);
       } catch (err) {
         if (cancelled?.current) return;
-        console.error("[ProjectsPage] Failed to load projects:", err);
+        log.error("[ProjectsPage] Failed to load projects:", err);
         if (!fileProjectsLoadedRef.current) {
           setFileProjects([]);
         }

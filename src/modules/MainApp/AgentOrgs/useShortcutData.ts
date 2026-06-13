@@ -13,6 +13,7 @@ import { gitApi } from "@src/api/http/git";
 import type { GitBranchInfo } from "@src/api/http/git/types";
 import { useSessionManager } from "@src/engines/SessionCore/hooks/session/useSessionManager";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
+import { createLogger } from "@src/hooks/logger";
 import {
   branchCacheAtom,
   getBranchesFromCache,
@@ -20,6 +21,8 @@ import {
   isValidUUID,
   setBranchCacheWithLRU,
 } from "@src/store/repo";
+
+const log = createLogger("useShortcutData");
 
 // Types matching CommandCard expectations
 export interface RepoItem {
@@ -197,7 +200,7 @@ export function useShortcutData(): UseShortcutDataReturn {
           );
         }
       } catch (error) {
-        console.error("[useShortcutData] Error fetching branches:", error);
+        log.error("[useShortcutData] Error fetching branches:", error);
         setBranches([]);
       } finally {
         setLoadingBranches(false);

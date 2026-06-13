@@ -3,6 +3,8 @@
  *
  * Branch listing and information functions.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import {
   branchRequestCache,
   cleanupCache,
@@ -14,6 +16,8 @@ import type {
   GitBranchInfo,
   GitBranchesResponse,
 } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Get all branches (local and optionally remote) - with request deduplication
@@ -45,10 +49,7 @@ export const getGitBranches = async (params: {
   )
     .then((response) => response.data)
     .catch((error) => {
-      console.error(
-        "[GitAPI] Failed to fetch branches from Rust server:",
-        error
-      );
+      log.error("[GitAPI] Failed to fetch branches from Rust server:", error);
       return undefined;
     })
     .finally(() => cleanupCache(branchRequestCache, cacheKey));
@@ -78,7 +79,7 @@ export const getGitCurrentBranch = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error(
+    log.error(
       "[GitAPI] Failed to fetch current branch from Rust server:",
       error
     );
@@ -108,7 +109,7 @@ export const getGitCurrentBranchName = async (params: {
     );
     return response.data.name;
   } catch (error) {
-    console.error(
+    log.error(
       "[GitAPI] Failed to fetch current branch name from Rust server:",
       error
     );
@@ -135,10 +136,7 @@ export const getGitAheadBehind = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error(
-      "[GitAPI] Failed to fetch ahead/behind from Rust server:",
-      error
-    );
+    log.error("[GitAPI] Failed to fetch ahead/behind from Rust server:", error);
     return undefined;
   }
 };
@@ -162,7 +160,7 @@ export const getGitDefaultBranch = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error(
+    log.error(
       "[GitAPI] Failed to fetch default branch from Rust server:",
       error
     );

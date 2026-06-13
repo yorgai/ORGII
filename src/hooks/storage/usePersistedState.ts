@@ -20,6 +20,10 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("usePersistedState");
+
 // ============================================================================
 // Internal subscriber registry
 // ============================================================================
@@ -212,7 +216,7 @@ export function usePersistedState<T>(
           })
         );
       } catch (error) {
-        console.warn(`[usePersistedState] Failed to write "${key}":`, error);
+        log.warn(`[usePersistedState] Failed to write "${key}":`, error);
       }
     },
     [key, componentId]

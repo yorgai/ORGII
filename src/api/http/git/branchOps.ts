@@ -3,7 +3,11 @@
  *
  * Branch creation, deletion, and checkout functions.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
+
+const log = createLogger("GitAPI");
 
 /**
  * Create a new branch
@@ -33,7 +37,7 @@ export const gitCreateBranch = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to create branch:", error);
+    log.error("[GitAPI] Failed to create branch:", error);
     return false;
   }
 };
@@ -58,7 +62,7 @@ export const gitDeleteBranch = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to delete branch:", error);
+    log.error("[GitAPI] Failed to delete branch:", error);
     return false;
   }
 };
@@ -191,7 +195,7 @@ export const gitRenameBranch = async (params: {
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[GitAPI] Failed to rename branch:", errorMessage);
+    log.error("[GitAPI] Failed to rename branch:", errorMessage);
     return { success: false, error: errorMessage };
   }
 };
@@ -225,7 +229,7 @@ export const gitCheckout = async (params: {
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("[GitAPI] Failed to checkout:", errorMessage);
+    log.error("[GitAPI] Failed to checkout:", errorMessage);
     const parsed = parseCheckoutError(errorMessage);
     return {
       success: false,

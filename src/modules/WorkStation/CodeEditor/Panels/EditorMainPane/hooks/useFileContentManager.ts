@@ -13,6 +13,7 @@
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   type UseFileContentReturn,
   invalidateFileCache,
@@ -20,6 +21,8 @@ import {
 } from "@src/hooks/workStation/editor/useFileContent";
 
 import type { UseFileContentManagerOptions } from "../types";
+
+const log = createLogger("useFileContentManager");
 
 // ============================================
 // Helpers
@@ -110,7 +113,7 @@ export function useFileContentManager(
       // Notify success (e.g., refresh git status)
       onSaveSuccessRef.current?.();
     } catch (err) {
-      console.error("[useFileContentManager] Save failed:", err);
+      log.error("[useFileContentManager] Save failed:", err);
     } finally {
       setSaving(false);
     }

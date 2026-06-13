@@ -92,6 +92,7 @@ function getAdditionalDirectories(
     );
 
   if (!exactMatch && looseMatch) {
+    // Raw console.warn kept intentionally: asserted by launchPayload.test.ts.
     console.warn(
       "[launchPayload] session repoPath only loose-matched a workspace folder (trailing slash / case drift) — proceeding with loose match",
       {
@@ -106,6 +107,7 @@ function getAdditionalDirectories(
       .map((folder) => normalizePath(folder.path))
       .filter((path) => path && looseMatchKey(path) !== projectKey);
     if (dropped.length > 0) {
+      // Raw console.warn kept intentionally: asserted by launchPayload.test.ts.
       console.warn(
         "[launchPayload] session repoPath is not among the IDE workspace folders — dropping additional directories",
         { sessionRepoPath, droppedDirectories: dropped }

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
 } from "@src/hooks/perf/useDebouncedCallback";
 import { isTauriDesktop } from "@src/util/platform/tauri";
+
+const log = createLogger("useDocumentStorage");
 
 export type JSONContent =
   | string
@@ -87,7 +90,7 @@ export function useDocumentStorage() {
         setDocuments(docs);
       }
     } catch (error) {
-      console.error("Error loading from localStorage:", error);
+      log.error("Error loading from localStorage:", error);
       setDocuments([]);
     }
   }, []);
@@ -140,7 +143,7 @@ export function useDocumentStorage() {
 
           setDocuments(docs);
         } catch (error) {
-          console.error("Error reading documents from filesystem:", error);
+          log.error("Error reading documents from filesystem:", error);
           // Fallback to localStorage
           loadFromLocalStorage();
         }
@@ -149,7 +152,7 @@ export function useDocumentStorage() {
         loadFromLocalStorage();
       }
     } catch (error) {
-      console.error("Error loading documents:", error);
+      log.error("Error loading documents:", error);
       loadFromLocalStorage();
     } finally {
       setIsLoading(false);
@@ -197,7 +200,7 @@ export function useDocumentStorage() {
 
         return true;
       } catch (error) {
-        console.error("Error saving document:", error);
+        log.error("Error saving document:", error);
         return false;
       }
     },
@@ -276,7 +279,7 @@ export function useDocumentStorage() {
         setError("Document not found");
         return null;
       } catch (error) {
-        console.error("Error loading document:", error);
+        log.error("Error loading document:", error);
         setError("Failed to load document");
         return null;
       } finally {
@@ -324,7 +327,7 @@ export function useDocumentStorage() {
 
         return true;
       } catch (error) {
-        console.error("Error saving document:", error);
+        log.error("Error saving document:", error);
         setError("Failed to save document");
         return false;
       } finally {
@@ -372,7 +375,7 @@ export function useDocumentStorage() {
 
         return true;
       } catch (error) {
-        console.error("Error deleting document:", error);
+        log.error("Error deleting document:", error);
         setError("Failed to delete document");
         return false;
       }

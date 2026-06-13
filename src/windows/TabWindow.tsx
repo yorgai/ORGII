@@ -2,8 +2,11 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import React, { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { createLogger } from "@src/hooks/logger";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { TabWindowData } from "@src/util/ui/window/windowManager";
+
+const log = createLogger("TabWindow");
 
 // Lazy load the content components based on tab type
 const TabContent = React.lazy(() => import("./TabWindowContent"));
@@ -22,7 +25,7 @@ const TabWindow: React.FC<TabWindowProps> = () => {
       const parsed = JSON.parse(decodeURIComponent(dataParam));
       return parsed;
     } catch (error) {
-      console.error("[TabWindow] Failed to parse tab data:", error);
+      log.error("[TabWindow] Failed to parse tab data:", error);
       return null;
     }
   }, [searchParams]);
@@ -39,7 +42,7 @@ const TabWindow: React.FC<TabWindowProps> = () => {
         }
       } catch (error) {
         if (!cancelled) {
-          console.error("Failed to initialize window:", error);
+          log.error("Failed to initialize window:", error);
         }
       }
     };

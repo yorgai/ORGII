@@ -15,7 +15,10 @@ import { type RefObject, useEffect, useRef } from "react";
 
 import { getGitBlame } from "@src/api/http/git/blame";
 import type { BlameLineData } from "@src/features/CodeMirror/config/gitBlame";
+import { createLogger } from "@src/hooks/logger";
 import { selectedRepoIdAtom } from "@src/store/repo";
+
+const log = createLogger("useGitBlame");
 
 // ============================================
 // Configuration
@@ -111,8 +114,7 @@ export function useGitBlame(
         if (!cancelled) {
           blameDataRef.current = new Map();
         }
-        // eslint-disable-next-line no-console
-        console.debug("[useGitBlame] Blame fetch failed:", error);
+        log.debug("[useGitBlame] Blame fetch failed:", error);
       }
     };
 

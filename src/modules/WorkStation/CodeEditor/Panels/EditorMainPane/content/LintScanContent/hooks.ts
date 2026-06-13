@@ -3,10 +3,13 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import type { LintToolInfo } from "@src/modules/MainApp/Integrations/DevTools/LanguageServersPage/types";
 
 import { LANGUAGE_DEFS } from "./config";
 import type { LanguageStat } from "./types";
+
+const log = createLogger("LintScanContent");
 
 /**
  * Lightweight lint tool loader for the scan tab.
@@ -39,7 +42,7 @@ export function useCachedLintTools() {
 
     load().catch((err) => {
       if (!cancelled) {
-        console.warn("[LintScanContent] Failed to load lint tools:", err);
+        log.warn("[LintScanContent] Failed to load lint tools:", err);
       }
     });
 
@@ -90,7 +93,7 @@ export function useLanguageComposition(repoPath: string) {
       results.sort((langA, langB) => langB.fileCount - langA.fileCount);
       setStats(results);
     } catch (err) {
-      console.warn("[LintScanContent] Language detection failed:", err);
+      log.warn("[LintScanContent] Language detection failed:", err);
       fetchedRef.current = false;
     } finally {
       setLoading(false);

@@ -22,6 +22,7 @@ import { memo, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
+import { createLogger } from "@src/hooks/logger";
 import { IconButton } from "@src/modules/WorkStation/shared";
 import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
 import { lspClientManager } from "@src/services/lsp/LspClientManager";
@@ -31,6 +32,8 @@ import {
   lspInstallPromptAtom,
   triggerLspRetry,
 } from "@src/store/workstation/codeEditor/diagnostics";
+
+const log = createLogger("LspInstallPrompt");
 
 /** Result from lsp_get_install_command Tauri command */
 interface InstallCommandResult {
@@ -56,7 +59,7 @@ export const LspInstallPrompt = memo(() => {
       );
 
       if (!result.command) {
-        console.warn(
+        log.warn(
           "[LspInstallPrompt] No install command available:",
           result.error
         );
@@ -81,7 +84,7 @@ export const LspInstallPrompt = memo(() => {
         triggerLspRetry();
       }, 3000);
     } catch (error: unknown) {
-      console.error("[LspInstallPrompt] Install failed:", error);
+      log.error("[LspInstallPrompt] Install failed:", error);
       setInstalling(false);
     }
   }, [prompt]);

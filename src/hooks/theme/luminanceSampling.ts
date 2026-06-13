@@ -18,12 +18,15 @@ import {
   type SampleRegion,
   calculateImageLuminance,
 } from "@src/api/tauri/perf";
+import { createLogger } from "@src/hooks/logger";
 
 import type {
   LuminanceRegion,
   RegionLuminanceData,
   RegionLuminanceMap,
 } from "./luminanceTypes";
+
+const log = createLogger("RegionLuminance");
 
 export const REGION_SAMPLE_AREAS: Record<
   LuminanceRegion,
@@ -146,8 +149,7 @@ async function sampleAllRegionsRust(
       imagePath,
       regions
     );
-    // eslint-disable-next-line no-console
-    console.debug(
+    log.debug(
       `[RegionLuminance] Rust processed ${result.regions.length} regions in ${result.processing_time_ms.toFixed(2)}ms`
     );
     const map: Partial<RegionLuminanceMap> = {};
@@ -155,8 +157,7 @@ async function sampleAllRegionsRust(
       map[region.name as LuminanceRegion] = luminanceToData(region.luminance);
     return map as RegionLuminanceMap;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.warn(
+    log.warn(
       "[RegionLuminance] Rust acceleration failed, falling back:",
       error
     );

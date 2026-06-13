@@ -17,6 +17,7 @@ import {
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   type FileNode,
   fileContentAtom,
@@ -40,6 +41,8 @@ import {
   isBinaryContent,
 } from "@src/util/file/binaryDetection";
 import { createGitignoreChecker } from "@src/util/file/gitignoreParser";
+
+const log = createLogger("FileService");
 
 // ============================================
 // Jotai Store Access (uses app's instrumented store)
@@ -204,7 +207,7 @@ export const FileService = {
       const message =
         error instanceof Error ? error.message : "Failed to read file";
       store.set(fileContentErrorAtom, message);
-      console.error("[FileService] Failed to open:", error);
+      log.error("[FileService] Failed to open:", error);
     } finally {
       store.set(fileLoadingContentAtom, false);
     }
@@ -219,7 +222,7 @@ export const FileService = {
     const fileContent = content ?? store.get(fileContentAtom);
 
     if (!filePath) {
-      console.error("[FileService] No file to save");
+      log.error("[FileService] No file to save");
       return false;
     }
 
@@ -234,7 +237,7 @@ export const FileService = {
       const message =
         error instanceof Error ? error.message : "Failed to save file";
       store.set(fileSaveErrorAtom, message);
-      console.error("[FileService] Failed to save:", error);
+      log.error("[FileService] Failed to save:", error);
       return false;
     } finally {
       store.set(fileSavingAtom, false);
@@ -271,7 +274,7 @@ export const FileService = {
       const message =
         error instanceof Error ? error.message : "Failed to load file tree";
       store.set(fileTreeErrorAtom, message);
-      console.error("[FileService] Failed to load tree:", error);
+      log.error("[FileService] Failed to load tree:", error);
     } finally {
       store.set(fileLoadingTreeAtom, false);
     }
@@ -306,7 +309,7 @@ export const FileService = {
         try {
           children = await loadDirectoryContents(path, repoPath || undefined);
         } catch (error) {
-          console.error("[FileService] Failed to load directory:", error);
+          log.error("[FileService] Failed to load directory:", error);
           return;
         }
       }
@@ -357,7 +360,7 @@ export const FileService = {
       await invoke("show_in_folder", { path: filePath });
       return true;
     } catch (error) {
-      console.error("[FileService] Failed to reveal in Finder:", error);
+      log.error("[FileService] Failed to reveal in Finder:", error);
       return false;
     }
   },
@@ -431,7 +434,7 @@ export const FileService = {
 
       return true;
     } catch (error) {
-      console.error("[FileService] Failed to create:", error);
+      log.error("[FileService] Failed to create:", error);
       return false;
     }
   },
@@ -457,7 +460,7 @@ export const FileService = {
 
       return true;
     } catch (error) {
-      console.error("[FileService] Failed to delete:", error);
+      log.error("[FileService] Failed to delete:", error);
       return false;
     }
   },
@@ -481,7 +484,7 @@ export const FileService = {
 
       return true;
     } catch (error) {
-      console.error("[FileService] Failed to rename:", error);
+      log.error("[FileService] Failed to rename:", error);
       return false;
     }
   },

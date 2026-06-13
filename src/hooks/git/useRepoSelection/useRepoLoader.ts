@@ -5,6 +5,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getRepos } from "@src/api/tauri/repo";
+import { createLogger } from "@src/hooks/logger";
 import {
   type CachedRepo,
   REPO_STORAGE_KEYS,
@@ -24,6 +25,8 @@ import {
   setGlobalReposLoaded,
 } from "./singleton";
 import type { UseRepoLoaderReturn } from "./types";
+
+const log = createLogger("useRepoLoader");
 
 function readStoredRepoId(key: string): string | null {
   const stored = localStorage.getItem(key);
@@ -194,8 +197,7 @@ export function useRepoLoader(): UseRepoLoaderReturn {
         }
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error("[useRepoLoader] Failed to load repos:", error);
+      log.error("[useRepoLoader] Failed to load repos:", error);
 
       // Clear the optimistic selectedRepoId that AuthRedirect set — it was
       // never validated against the repo list and would leave a dangling ID.

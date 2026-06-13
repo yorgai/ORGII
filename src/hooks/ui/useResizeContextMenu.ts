@@ -18,6 +18,10 @@ import {
 import i18next from "i18next";
 import { type MouseEvent, useCallback } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("useResizeContextMenu");
+
 export interface ResizeContextMenuPositionAction {
   target: "left" | "right";
   onSelect: () => void;
@@ -128,7 +132,7 @@ export function useResizeContextMenu({
           const menu = await TauriMenu.new({ items });
           await menu.popup();
         } catch (error) {
-          console.error("Failed to show resize context menu:", error);
+          log.error("Failed to show resize context menu:", error);
         }
       })();
     },

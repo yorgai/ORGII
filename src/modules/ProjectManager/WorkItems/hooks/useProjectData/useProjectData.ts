@@ -6,12 +6,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { type MemberEntry, projectApi } from "@src/api/http/project";
+import { createLogger } from "@src/hooks/logger";
 import { useProjectDataChanged } from "@src/hooks/project";
 import type { ProjectData } from "@src/modules/ProjectManager/shared";
 import type { Label, Person } from "@src/types/core/shared";
 
 import type { UseProjectDataOptions, UseProjectDataReturn } from "./types";
 import { useProjectDataFile } from "./useProjectDataFile";
+
+const log = createLogger("useProjectData");
 
 export function useProjectData(
   options: UseProjectDataOptions = {}
@@ -65,7 +68,7 @@ export function useProjectData(
           ? err.message
           : "Failed to load project from store";
       setError(message);
-      console.error("[useProjectData] Load error:", err);
+      log.error("[useProjectData] Load error:", err);
     } finally {
       setLoading(false);
     }
@@ -86,7 +89,7 @@ export function useProjectData(
         await file.updateProjectFile(merged, updates);
         return true;
       } catch (err) {
-        console.error("[useProjectData] Update error:", err);
+        log.error("[useProjectData] Update error:", err);
         await loadFromFiles();
         return false;
       }
@@ -165,7 +168,7 @@ export function useProjectData(
             ? err.message
             : "Failed to load project from store";
         setError(message);
-        console.error("[useProjectData] Load error:", err);
+        log.error("[useProjectData] Load error:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -202,7 +205,7 @@ export function useProjectData(
             ? err.message
             : "Failed to load project from store";
         setError(message);
-        console.error("[useProjectData] Load error:", err);
+        log.error("[useProjectData] Load error:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }

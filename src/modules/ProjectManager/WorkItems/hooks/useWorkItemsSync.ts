@@ -4,8 +4,11 @@ import { useCallback, useEffect, useMemo } from "react";
 
 import { type MemberEntry, projectApi } from "@src/api/http/project";
 import Message from "@src/components/Message";
+import { createLogger } from "@src/hooks/logger";
 import type { ProjectData } from "@src/modules/ProjectManager/shared";
 import { projectStatusBarStateAtom } from "@src/store/ui/workStationAtom";
+
+const log = createLogger("WorkItemsPage");
 
 interface UseWorkItemsSyncParams {
   project: ProjectData | null;
@@ -55,7 +58,7 @@ export function useWorkItemsSync({
       onProjectDeleted?.();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.error("[WorkItemsPage] Failed to delete project:", error);
+      log.error("[WorkItemsPage] Failed to delete project:", error);
       Message.error(message);
     }
   }, [onProjectDeleted, project]);

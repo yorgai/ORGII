@@ -15,6 +15,7 @@ import {
   chatShowsStatusLine,
   getChatLazyComponent,
 } from "@src/engines/SessionCore/rendering/registry/events";
+import { createLogger } from "@src/hooks/logger";
 import { getRegistryEventType } from "@src/lib/activityData/activityNormalizers";
 import {
   extractTextFromContent,
@@ -26,6 +27,8 @@ import AgentErrorChatItem from "../ChatItems/AgentErrorChatItem";
 import "./ActivityRouter.scss";
 import { isAgentErrorEvent } from "./chatItemPipeline/classifiers";
 import UserMessageContent from "./components/UserMessageContent";
+
+const log = createLogger("ActivityRouter");
 
 export type ActivityStatus = "processed" | "pending" | "agent";
 
@@ -150,7 +153,7 @@ class ActivityErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    console.error(
+    log.error(
       `[ActivityRouter] Failed to render ${this.props.eventType}:`,
       error,
       errorInfo

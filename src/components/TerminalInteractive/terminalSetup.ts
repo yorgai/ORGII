@@ -8,12 +8,15 @@ import { Terminal } from "@xterm/xterm";
 import type { MutableRefObject } from "react";
 
 import { ShellIntegrationAddon } from "@src/engines/TerminalCore/addons/ShellIntegrationAddon";
+import { createLogger } from "@src/hooks/logger";
 // Direct leaf import to avoid pulling @src/store's barrel — which transitively
 // reaches SidebarModules/Terminal → engines/TerminalCore → this file.
 import type { TerminalThemeName } from "@src/store/ui/uiAtom";
 
 import type { TerminalViewProps } from "./types";
 import { getXTermTheme } from "./utils";
+
+const log = createLogger("Terminal");
 
 interface CreateTerminalInstanceParams {
   terminalTheme: TerminalThemeName;
@@ -100,14 +103,14 @@ export function loadTerminalWebgl(
   try {
     const webglAddon = new WebglAddon();
     webglAddon.onContextLoss(() => {
-      console.warn("[Terminal] WebGL context lost, falling back to canvas");
+      log.warn("[Terminal] WebGL context lost, falling back to canvas");
       webglAddon.dispose();
       webglAddonRef.current = null;
     });
     terminal.loadAddon(webglAddon);
     webglAddonRef.current = webglAddon;
   } catch (error) {
-    console.warn(
+    log.warn(
       "[Terminal] WebGL addon failed to load, using canvas renderer:",
       error
     );

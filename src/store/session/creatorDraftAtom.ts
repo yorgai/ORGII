@@ -12,6 +12,9 @@ import { atomWithStorage } from "jotai/utils";
 import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
 import type { ComposerSnapshot } from "@src/components/ComposerInput";
 import type { UploadedFile } from "@src/features/SessionCreator/types";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("SessionCreatorDraft");
 
 const SESSION_CREATOR_DRAFT_STORAGE_KEY = "orgii:sessionCreatorDrafts";
 
@@ -65,7 +68,7 @@ export const sessionCreatorDraftStoreAtom =
           if (!item) return initialValue;
           return JSON.parse(item) as SessionCreatorDraftStore;
         } catch (error) {
-          console.warn("[SessionCreatorDraft] Failed to load drafts:", error);
+          log.warn("[SessionCreatorDraft] Failed to load drafts:", error);
           return initialValue;
         }
       },
@@ -73,7 +76,7 @@ export const sessionCreatorDraftStoreAtom =
         try {
           localStorage.setItem(key, JSON.stringify(value));
         } catch (error) {
-          console.error("[SessionCreatorDraft] Failed to save drafts:", error);
+          log.error("[SessionCreatorDraft] Failed to save drafts:", error);
         }
       },
       removeItem: (key) => {

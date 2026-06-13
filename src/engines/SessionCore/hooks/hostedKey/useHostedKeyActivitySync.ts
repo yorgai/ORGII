@@ -26,9 +26,12 @@ import {
 } from "@src/api/http/session/hostedKey";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { processChunksRust } from "@src/engines/SessionCore/ingestion/rustBridge";
+import { createLogger } from "@src/hooks/logger";
 import type { ActivityChunk } from "@src/types/session/session";
 
 import { eventToChunk, isEmptyThinkingEndFrame } from "./hostedKeyEventUtils";
+
+const log = createLogger("CloudActivitySync");
 
 // ============================================
 // Constants
@@ -178,7 +181,7 @@ export function useHostedKeyActivitySync(
         }
       }
     } catch (err) {
-      console.error("[CloudActivitySync] Failed to store events:", err);
+      log.error("[CloudActivitySync] Failed to store events:", err);
       // Only re-add events if still the same session
       if (sessionIdRef.current === sid) {
         eventBufferRef.current.unshift(...eventsToStore);
@@ -239,10 +242,7 @@ export function useHostedKeyActivitySync(
               }
             })
             .catch((err) => {
-              console.warn(
-                "[CloudActivitySync] processChunksRust failed:",
-                err
-              );
+              log.warn("[CloudActivitySync] processChunksRust failed:", err);
             });
         }
       }
@@ -298,7 +298,7 @@ export function useHostedKeyActivitySync(
         return newCursor;
       }
     } catch (err) {
-      console.error("[CloudActivitySync] Failed to refresh cursor:", err);
+      log.error("[CloudActivitySync] Failed to refresh cursor:", err);
     }
 
     return cursorRef.current;
@@ -354,7 +354,7 @@ export function useHostedKeyActivitySync(
     } catch (err) {
       if (sessionIdRef.current !== sid) return [];
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error("[CloudActivitySync] Failed to load history:", err);
+      log.error("[CloudActivitySync] Failed to load history:", err);
       setError(errorMsg);
       // Re-throw so the call-site .catch() can distinguish a real network
       // failure from an empty history (both previously appeared as []).
@@ -400,7 +400,7 @@ export function useHostedKeyActivitySync(
           return processChunksRust(activityChunks, sid);
         }
       } catch (err) {
-        console.error("[CloudActivitySync] Failed to load more history:", err);
+        log.error("[CloudActivitySync] Failed to load more history:", err);
       }
 
       return [];
@@ -469,7 +469,7 @@ export function useHostedKeyActivitySync(
       .catch((err: unknown) => {
         if (sessionIdRef.current !== initSessionId) return;
         const msg = err instanceof Error ? err.message : String(err);
-        console.error("[CloudActivitySync] Init loadHistory failed:", msg);
+        log.error("[CloudActivitySync] Init loadHistory failed:", msg);
         setError(msg);
         // Do NOT setIsReady(true) — keep the sync paused so the caller can
         // retry or surface the error rather than processing events on top of

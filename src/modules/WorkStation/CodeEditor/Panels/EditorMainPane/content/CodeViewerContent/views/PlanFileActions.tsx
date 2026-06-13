@@ -14,12 +14,15 @@ import { isOwnKey } from "@src/api/tauri/session";
 import Button from "@src/components/Button";
 import Message from "@src/components/Message";
 import { PlanExecutionService } from "@src/engines/SessionCore/services/PlanExecutionService";
+import { createLogger } from "@src/hooks/logger";
 import { useSessionExecModeField } from "@src/hooks/session/useSessionPatch";
 import { currentRepoAtom } from "@src/store/repo";
 import { creatorDefaultModelSelectionAtom } from "@src/store/session/creatorDefaultModelAtom";
 import { sessionByIdAtom } from "@src/store/session/sessionAtom";
 import { activeSessionIdAtom } from "@src/store/session/viewAtom";
 import { isAgentSession } from "@src/util/session/sessionDispatch";
+
+const log = createLogger("PlanFileActions");
 
 interface PlanFileActionsProps {
   planContent: string;
@@ -94,7 +97,7 @@ export const PlanFileActions: React.FC<PlanFileActionsProps> = memo(
         mode: "build",
       }).catch((err: unknown) => {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        console.error("[PlanFileActions] Agent message error:", errorMsg);
+        log.error("[PlanFileActions] Agent message error:", errorMsg);
         Message.error(errorMsg);
       });
     }, [

@@ -22,6 +22,7 @@ import { rejectQuestion, respondQuestion } from "@src/api/tauri/agent";
 import Message from "@src/components/Message";
 import { extractQuestionBatch } from "@src/engines/ChatPanel/InputArea/AskQuestionCard/extractQuestionBatch";
 import { chatEventsAtom } from "@src/engines/SessionCore";
+import { createLogger } from "@src/hooks/logger";
 import type { ChatImageAttachment } from "@src/store/ui/chatImageAtom";
 import { wpReadOnlyAtom } from "@src/store/ui/chatPanelAtom";
 
@@ -33,6 +34,8 @@ import type {
   SubmitMessageOptions,
   SubmitOverrideInput,
 } from "./types";
+
+const log = createLogger("useSubmitMessage");
 
 // ============================================================================
 // Types
@@ -120,12 +123,12 @@ export function useSubmitMessage({
             void respondQuestion(batch.sessionId, batch.questionId, [
               [displayText.trim()],
             ]).catch((err: unknown) => {
-              console.warn("[useSubmitMessage] respondQuestion failed:", err);
+              log.warn("[useSubmitMessage] respondQuestion failed:", err);
             });
           } else {
             void rejectQuestion(batch.sessionId, batch.questionId).catch(
               (err: unknown) => {
-                console.warn("[useSubmitMessage] rejectQuestion failed:", err);
+                log.warn("[useSubmitMessage] rejectQuestion failed:", err);
               }
             );
           }
@@ -262,7 +265,7 @@ export function useSubmitMessage({
 
         if (draftSessionId && editorStillContainsSubmittedText) {
           void flushDraft("").catch((err: unknown) => {
-            console.warn("[useSubmitMessage] flushDraft(clear) failed:", err);
+            log.warn("[useSubmitMessage] flushDraft(clear) failed:", err);
           });
         }
 
@@ -299,7 +302,7 @@ export function useSubmitMessage({
               if (draftSessionId) {
                 const restoredText = editor.getTextWithPills();
                 void flushDraft(restoredText).catch((err: unknown) => {
-                  console.warn(
+                  log.warn(
                     "[useSubmitMessage] flushDraft(restore) failed:",
                     err
                   );
@@ -307,7 +310,7 @@ export function useSubmitMessage({
               }
             }
           } catch (restoreErr) {
-            console.warn(
+            log.warn(
               "[useSubmitMessage] failed to restore editor content:",
               restoreErr
             );
@@ -317,7 +320,7 @@ export function useSubmitMessage({
             try {
               imageAttachment.restoreImages(imagesSnapshot);
             } catch (restoreErr) {
-              console.warn(
+              log.warn(
                 "[useSubmitMessage] failed to restore image attachments:",
                 restoreErr
               );
@@ -328,7 +331,7 @@ export function useSubmitMessage({
             try {
               citeCode.restoreCiteCode(citeSnapshot);
             } catch (restoreErr) {
-              console.warn(
+              log.warn(
                 "[useSubmitMessage] failed to restore cite-code state:",
                 restoreErr
               );
@@ -348,7 +351,7 @@ export function useSubmitMessage({
       // ── Post-send cleanup ─────────────────────────────────────────────────
       if (draftSessionId && replyTargetEventId) {
         void clearReplyTarget().catch((err: unknown) => {
-          console.warn(
+          log.warn(
             "[useSubmitMessage] clearReplyTarget(post-send) failed:",
             err
           );

@@ -9,6 +9,9 @@ import {
   secureGetAccessToken,
 } from "@src/api/http/auth/secure";
 import { SERVICE_AUTH_CONFIG, getRefreshToken } from "@src/config/serviceAuth";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("API");
 
 // ============================================
 // Constants
@@ -102,13 +105,13 @@ export async function getOrRefreshHostedToken(): Promise<string | null> {
         return tokenResponse.access_token;
       } catch (error) {
         lastError = error;
-        console.warn(
+        log.warn(
           `[API] Token refresh attempt ${attempt + 1}/${MAX_RETRIES + 1} failed:`,
           error
         );
 
         if (isAuthError(error)) {
-          console.error("[API] Auth error - refresh token is invalid");
+          log.error("[API] Auth error - refresh token is invalid");
           break;
         }
 
@@ -119,13 +122,13 @@ export async function getOrRefreshHostedToken(): Promise<string | null> {
         }
 
         if (!navigator.onLine) {
-          console.warn("[API] Offline - skipping further retry attempts");
+          log.warn("[API] Offline - skipping further retry attempts");
           break;
         }
       }
     }
 
-    console.error("[API] Failed to refresh hosted-service token:", lastError);
+    log.error("[API] Failed to refresh hosted-service token:", lastError);
     return null;
   })();
 

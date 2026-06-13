@@ -1,7 +1,10 @@
+import { createLogger } from "@src/hooks/logger";
 import type { EditOperation } from "@src/types/editor/document";
 
 import { MAX_LOADED_FILES_SIZE, MAX_METADATA_CACHE_SIZE } from "./constants";
 import type { UnsavedContentCache } from "./types";
+
+const log = createLogger("FileContent");
 
 interface FileMetadataCache {
   isBinary: boolean;
@@ -84,7 +87,7 @@ export function onExternalFileChange(filePath: string): void {
     try {
       callback(filePath);
     } catch (error) {
-      console.error("[FileContent] File change callback error:", error);
+      log.error("[FileContent] File change callback error:", error);
     }
   }
 }

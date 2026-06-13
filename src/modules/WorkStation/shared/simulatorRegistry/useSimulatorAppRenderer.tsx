@@ -7,12 +7,15 @@
 import React, { Suspense, useCallback } from "react";
 
 import type { SimulatorAppBaseState } from "@src/engines/Simulator/apps/core/types";
+import { createLogger } from "@src/hooks/logger";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
 import {
   getAppForEvent as getAppForEventFromRegistry,
   getSimulatorAppConfig,
 } from "./registry";
+
+const log = createLogger("SimulatorAppRenderer");
 
 // ============================================
 // Types
@@ -67,7 +70,7 @@ export function useSimulatorAppRenderer(): UseSimulatorAppRendererReturn {
         appType as never
       );
       if (!config) {
-        console.warn(
+        log.warn(
           `[SimulatorAppRenderer] No app registered for type: ${appType}`
         );
         return null;

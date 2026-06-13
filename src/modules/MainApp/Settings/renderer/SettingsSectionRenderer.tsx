@@ -2,9 +2,12 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { getSettingsSectionById } from "@src/config/settingsUiManifest";
+import { createLogger } from "@src/hooks/logger";
 
 import SettingsContainerRenderer from "./SettingsContainerRenderer";
 import { settingsSectionSlotRegistry } from "./slotRegistry";
+
+const log = createLogger("SettingsRenderer");
 
 interface SettingsSectionRendererProps {
   sectionId: string;
@@ -28,7 +31,7 @@ const SettingsSectionRenderer: React.FC<SettingsSectionRendererProps> = ({
   const hasContainers = Boolean(section.containers?.length);
 
   if (section.customSectionSlotId && !SectionSlot) {
-    console.error(
+    log.error(
       "[SettingsRenderer] Missing section slot for id:",
       section.customSectionSlotId
     );

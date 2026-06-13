@@ -17,12 +17,15 @@
  */
 import { copyFile, mkdir, readDir } from "@tauri-apps/plugin-fs";
 
+import { createLogger } from "@src/hooks/logger";
 import { EditorTabService } from "@src/services/workStation";
 import { fileClipboardAtom } from "@src/store/workstation/codeEditor/file/clipboardAtom";
 import { createFileTab } from "@src/store/workstation/tabs";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
 import { FileService } from "./FileService";
+
+const log = createLogger("FileOperationsService");
 
 // ============================================
 // Types
@@ -55,7 +58,7 @@ export const FileOperationsService = {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to open file";
-      console.error("[FileOperationsService] Failed to open:", error);
+      log.error("[FileOperationsService] Failed to open:", error);
       return { success: false, message };
     }
   },
@@ -82,7 +85,7 @@ export const FileOperationsService = {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to open file";
-      console.error("[FileOperationsService] Failed to open at line:", error);
+      log.error("[FileOperationsService] Failed to open at line:", error);
       return { success: false, message };
     }
   },
@@ -261,7 +264,7 @@ export const FileOperationsService = {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to create folder";
-      console.error("[FileOperationsService] Failed to create folder:", error);
+      log.error("[FileOperationsService] Failed to create folder:", error);
       return { success: false, message };
     }
   },
@@ -283,7 +286,7 @@ export const FileOperationsService = {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to copy";
-      console.error("[FileOperationsService] Failed to copy:", error);
+      log.error("[FileOperationsService] Failed to copy:", error);
       return { success: false, message };
     }
   },
@@ -320,7 +323,7 @@ export const FileOperationsService = {
             await copyFile(sourcePath, destPath);
             pastedCount++;
           } catch (copyError) {
-            console.error(
+            log.error(
               `[FileOperationsService] Failed to copy ${sourcePath}:`,
               copyError
             );
@@ -341,7 +344,7 @@ export const FileOperationsService = {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to paste";
-      console.error("[FileOperationsService] Failed to paste:", error);
+      log.error("[FileOperationsService] Failed to paste:", error);
       return { success: false, message };
     }
   },
@@ -418,7 +421,7 @@ export const FileOperationsService = {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to duplicate";
-      console.error("[FileOperationsService] Failed to duplicate:", error);
+      log.error("[FileOperationsService] Failed to duplicate:", error);
       return { success: false, message };
     }
   },

@@ -33,7 +33,10 @@
  * ```
  */
 import { rpc } from "@src/api/tauri/rpc";
+import { createLogger } from "@src/hooks/logger";
 import { BoundedMap } from "@src/util/collections/BoundedMap";
+
+const log = createLogger("PartialCache");
 
 // ============================================
 // Types
@@ -233,7 +236,7 @@ async function save(
   try {
     await rpc.sessionCore.partial.save({ sessionId, state });
   } catch (error) {
-    console.warn("[PartialCache] Failed to save partial:", error);
+    log.warn("[PartialCache] Failed to save partial:", error);
   }
 }
 
@@ -338,7 +341,7 @@ async function load(sessionId: string): Promise<PartialStreamState | null> {
     const raw = await rpc.sessionCore.partial.load({ sessionId });
     if (raw === null || raw === undefined) return null;
     if (!isPartialStreamState(raw)) {
-      console.warn(
+      log.warn(
         "[PartialCache] Partial file for session",
         sessionId,
         "failed schema check — discarding to prevent corrupt recovery.",
@@ -348,7 +351,7 @@ async function load(sessionId: string): Promise<PartialStreamState | null> {
     }
     return raw;
   } catch (error) {
-    console.warn("[PartialCache] Failed to load partial:", error);
+    log.warn("[PartialCache] Failed to load partial:", error);
     return null;
   }
 }
@@ -370,7 +373,7 @@ async function remove(sessionId: string): Promise<void> {
   try {
     await rpc.sessionCore.partial.delete({ sessionId });
   } catch (error) {
-    console.warn("[PartialCache] Failed to delete partial:", error);
+    log.warn("[PartialCache] Failed to delete partial:", error);
   }
 }
 
@@ -396,7 +399,7 @@ async function listAll(): Promise<string[]> {
   try {
     return await rpc.sessionCore.partial.listAll();
   } catch (error) {
-    console.warn("[PartialCache] Failed to list partials:", error);
+    log.warn("[PartialCache] Failed to list partials:", error);
     return [];
   }
 }
@@ -414,7 +417,7 @@ async function cleanupStale(maxAgeHours?: number): Promise<number> {
       maxAgeHours: maxAgeHours ?? 24,
     });
   } catch (error) {
-    console.warn("[PartialCache] Failed to cleanup stale partials:", error);
+    log.warn("[PartialCache] Failed to cleanup stale partials:", error);
     return 0;
   }
 }

@@ -10,6 +10,8 @@
  * - Progress events during archiving
  * - Base64 encoding for transport
  */
+import { createLogger } from "@src/hooks/logger";
+
 import {
   base64ToFile,
   ensureTauriReady,
@@ -17,6 +19,8 @@ import {
   isTauriReady,
   listenTauri,
 } from "./init";
+
+const log = createLogger("FolderArchive");
 
 // ============================================
 // Types
@@ -112,7 +116,7 @@ export async function createFolderArchive(
 
     return result;
   } catch (error) {
-    console.error("[FolderArchive] Archive creation failed:", error);
+    log.error("[FolderArchive] Archive creation failed:", error);
     throw error;
   } finally {
     unlisten?.();
@@ -137,7 +141,7 @@ export async function getFolderInfo(folderPath: string): Promise<FolderInfo> {
     });
     return info;
   } catch (error) {
-    console.error("[FolderArchive] Failed to get folder info:", error);
+    log.error("[FolderArchive] Failed to get folder info:", error);
     throw error;
   }
 }
@@ -202,7 +206,7 @@ export async function createFolderArchiveSafe(
   try {
     return await createFolderArchiveAsFile(options);
   } catch (error) {
-    console.warn("[FolderArchive] Archive creation failed:", error);
+    log.warn("[FolderArchive] Archive creation failed:", error);
     return null;
   }
 }

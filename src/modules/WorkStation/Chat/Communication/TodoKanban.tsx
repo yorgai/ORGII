@@ -31,11 +31,14 @@ import KanbanBoard, {
   type KanbanTask,
   type TaskStatus,
 } from "@src/features/KanbanBoard";
+import { createLogger } from "@src/hooks/logger";
 import { normalizeActivity } from "@src/lib/activityData";
 import { formatSmartDateTime } from "@src/util/data/formatters/date";
 import { prettifyMemberName } from "@src/util/data/formatters/memberName";
 
 import type { MessageEntry } from "./types";
+
+const log = createLogger("TodoKanban");
 
 // Below this threshold we keep the relative "X min ago" feel; above it
 // we switch to absolute clock time (HH:mm, prefixed with Yesterday / month
@@ -109,7 +112,7 @@ function normalizeLifecycleStatus(
       return "pending";
     default:
       if (process.env.NODE_ENV !== "production") {
-        console.warn(
+        log.warn(
           `[TodoKanban] Unknown todo status ${JSON.stringify(status)} — ` +
             `routing to 'pending'. Expected one of: pending, in_progress, completed, cancelled.`
         );

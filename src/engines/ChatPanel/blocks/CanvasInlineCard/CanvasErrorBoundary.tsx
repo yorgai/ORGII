@@ -8,7 +8,10 @@
  */
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
+
+const log = createLogger("CanvasInlineCard");
 
 interface Props {
   children: ReactNode;
@@ -29,11 +32,7 @@ export class CanvasErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(
-      "[CanvasInlineCard] render error:",
-      error,
-      info.componentStack
-    );
+    log.error("[CanvasInlineCard] render error:", error, info.componentStack);
   }
 
   render() {

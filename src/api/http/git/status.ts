@@ -3,6 +3,8 @@
  *
  * Repository status and suggested action functions.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import {
   cleanupCache,
   fetchRustApi,
@@ -10,6 +12,8 @@ import {
   statusRequestCache,
 } from "./client";
 import type { GitStatusData, GitSuggestedActionData } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Get comprehensive git repository status (with request deduplication)
@@ -45,7 +49,7 @@ export const getGitStatus = async (params: {
   )
     .then((response) => response.data)
     .catch((error) => {
-      console.error("[GitAPI] Failed to fetch status from Rust server:", error);
+      log.error("[GitAPI] Failed to fetch status from Rust server:", error);
       return undefined;
     })
     .finally(() => cleanupCache(statusRequestCache, cacheKey));
@@ -79,7 +83,7 @@ export const getGitSuggestedAction = async (params: {
     const response = await fetchRustApi<GitSuggestedActionData>(endpoint);
     return response.data;
   } catch (error) {
-    console.error(
+    log.error(
       "[GitAPI] Failed to fetch suggested action from Rust server:",
       error
     );

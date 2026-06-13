@@ -8,6 +8,9 @@
  * - Cancel: Dismisses the dialog
  */
 import type { GitErrorType } from "@src/api/http/git/streaming";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("GitErrorDialog");
 
 // ============================================
 // Types
@@ -336,7 +339,7 @@ export async function showGitErrorDialog(
     }
     return "cancel";
   } catch (error) {
-    console.error("[GitErrorDialog] Failed to show dialog:", error);
+    log.error("[GitErrorDialog] Failed to show dialog:", error);
     return "cancel";
   }
 }

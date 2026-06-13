@@ -24,6 +24,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ensureCursorIdeEventsInStore } from "@src/engines/SessionCore/sync/adapters/cursorIdeAdapter";
+import { createLogger } from "@src/hooks/logger";
 import { formatInvokeError } from "@src/util/formatInvokeError";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
@@ -34,6 +35,8 @@ import {
   eventStoreProxy,
   isStreamingSnapshot,
 } from "./EventStoreProxy";
+
+const log = createLogger("useSessionEvents");
 
 interface SessionEventsState {
   events: SessionEvent[];
@@ -237,7 +240,7 @@ export function useSessionEvents(
         //      the console during development.
         if (!cancelled) {
           const normalizedErr = normalizeSessionEventsError(err);
-          console.warn(
+          log.warn(
             `[useSessionEvents] Failed to load events for session=${sessionId}:`,
             normalizedErr
           );

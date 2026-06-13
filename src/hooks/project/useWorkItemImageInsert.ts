@@ -8,7 +8,10 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { type RefObject, useCallback } from "react";
 
 import { projectApi } from "@src/api/http/project";
+import { createLogger } from "@src/hooks/logger";
 import { optimizeImage } from "@src/util/optimization/imageOptimizer";
+
+const log = createLogger("useWorkItemImageInsert");
 
 interface ImageInsertable {
   insertImage: (src: string, alt?: string) => void;
@@ -75,10 +78,7 @@ export function useWorkItemImageInsert({
 
           editorRef.current?.insertImage(assetUrl, file.name);
         } catch (err) {
-          console.error(
-            "[useWorkItemImageInsert] Failed to insert image:",
-            err
-          );
+          log.error("[useWorkItemImageInsert] Failed to insert image:", err);
         }
       }
     },

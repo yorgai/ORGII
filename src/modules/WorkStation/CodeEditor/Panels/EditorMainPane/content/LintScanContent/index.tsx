@@ -28,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import Button from "@src/components/Button";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
+import { createLogger } from "@src/hooks/logger";
 import { DETAIL_PANEL_TOKENS } from "@src/modules/shared/layouts/blocks";
 import {
   PANEL_HEADER_TOKENS,
@@ -55,6 +56,8 @@ import ScanProgressSection from "./ScanProgressSection";
 import { LANGUAGE_DEFS, SCOPE_OPTIONS, TOOL_ICON_FILE } from "./config";
 import { useCachedLintTools, useLanguageComposition } from "./hooks";
 import type { LintScanContentProps } from "./types";
+
+const log = createLogger("LintScanContent");
 
 const LintScanContent: React.FC<LintScanContentProps> = memo(({ repoPath }) => {
   const { t } = useTranslation();
@@ -175,7 +178,7 @@ const LintScanContent: React.FC<LintScanContentProps> = memo(({ repoPath }) => {
         setAvailableTools(tools.filter((tool) => tool.installed));
       } catch (err) {
         if (!cancelled) {
-          console.warn("[LintScanContent] Failed to fetch tools:", err);
+          log.warn("[LintScanContent] Failed to fetch tools:", err);
         }
       }
     };

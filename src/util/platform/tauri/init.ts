@@ -19,6 +19,10 @@
  * - Event listeners are scoped per session ID (e.g., 'pty-output-{sessionId}')
  * - Multiple terminals can coexist without conflicts
  */
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("Tauri");
+
 type TauriInvoke = (
   cmd: string,
   args?: Record<string, unknown>
@@ -93,7 +97,7 @@ export const initializeTauriAPIs = async (): Promise<boolean> => {
 
       return true;
     } catch (error) {
-      console.error("[Tauri] Failed to load Tauri APIs:", error);
+      log.error("[Tauri] Failed to load Tauri APIs:", error);
       tauriState.isAvailable = false;
       return false;
     }

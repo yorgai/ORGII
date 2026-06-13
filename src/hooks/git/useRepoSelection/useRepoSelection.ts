@@ -21,6 +21,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { currentGitStatusAtom } from "@src/store/git";
 import { registerOpenedRepo, unregisterWindow } from "@src/store/repo";
 import {
@@ -41,6 +42,8 @@ import type { UseRepoSelectionOptions, UseRepoSelectionReturn } from "./types";
 import { useBranchCheckout } from "./useBranchCheckout";
 import { useBranchLoader } from "./useBranchLoader";
 import { useRepoLoader } from "./useRepoLoader";
+
+const log = createLogger("useRepoSelection");
 
 export function useRepoSelection(
   options: UseRepoSelectionOptions = {}
@@ -123,8 +126,7 @@ export function useRepoSelection(
           // macOS system-level recent documents
           invoke("add_to_recent_documents", { path: repoPath }).catch(
             (error) => {
-              // eslint-disable-next-line no-console
-              console.debug(
+              log.debug(
                 "[useRepoSelection] Failed to add to system recent:",
                 error
               );
@@ -132,16 +134,14 @@ export function useRepoSelection(
           );
           // App menu bar (File > Open Recent)
           invoke("menu_add_recent", { path: repoPath }).catch((error) => {
-            // eslint-disable-next-line no-console
-            console.debug(
+            log.debug(
               "[useRepoSelection] Failed to add to menu recent:",
               error
             );
           });
         }
       } else {
-        // eslint-disable-next-line no-console
-        console.warn(
+        log.warn(
           `[useRepoSelection] WARNING: Repo not found in repoMap for id: ${repoId}`
         );
       }

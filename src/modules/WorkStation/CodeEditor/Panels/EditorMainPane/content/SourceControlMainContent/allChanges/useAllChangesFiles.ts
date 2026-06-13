@@ -8,6 +8,7 @@ import React, {
 } from "react";
 
 import { gitApi } from "@src/api/http/git";
+import { createLogger } from "@src/hooks/logger";
 import type { GitFile } from "@src/types/git/types";
 import { decodeOctalPath } from "@src/util/file/pathUtils";
 
@@ -18,6 +19,8 @@ import {
   getEffectiveRepoPath,
   getRelativePath,
 } from "./utils";
+
+const log = createLogger("AllChangesView");
 
 interface UseAllChangesFilesOptions {
   files: GitFile[];
@@ -187,7 +190,7 @@ export function useAllChangesFiles({
                   )
                 );
               } catch (error) {
-                console.error(
+                log.error(
                   "[AllChangesView] Untracked disk read failed:",
                   untrackedFile.path,
                   error
@@ -197,7 +200,7 @@ export function useAllChangesFiles({
           );
         }
       } catch (error) {
-        console.error("[AllChangesView] Failed to load stats:", error);
+        log.error("[AllChangesView] Failed to load stats:", error);
       } finally {
         isLoadingStatsRef.current = false;
       }
@@ -294,7 +297,7 @@ export function useAllChangesFiles({
                 )
               );
             } catch (error) {
-              console.error(
+              log.error(
                 "[AllChangesView] Untracked-file disk read failed:",
                 file.path,
                 absolutePath,
@@ -304,7 +307,7 @@ export function useAllChangesFiles({
           }
         }
       } catch (error) {
-        console.error("[AllChangesView] Failed to load content:", error);
+        log.error("[AllChangesView] Failed to load content:", error);
       } finally {
         inFlightContentRef.current.delete(file.path);
       }

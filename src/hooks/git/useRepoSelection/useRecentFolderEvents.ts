@@ -4,8 +4,11 @@ import { readDir } from "@tauri-apps/plugin-fs";
 import { useCallback, useEffect, useRef } from "react";
 
 import * as repoApi from "@src/api/tauri/repo";
+import { createLogger } from "@src/hooks/logger";
 import { REPO_KIND, type Repo } from "@src/store/repo";
 import { isTauriDesktop } from "@src/util/platform/tauri";
+
+const log = createLogger("useRecentFolderEvents");
 
 interface UseRecentFolderEventsOptions {
   repos: Repo[];
@@ -146,7 +149,7 @@ export function useRecentFolderEvents({
           return;
         }
       } catch (error) {
-        console.error(
+        log.error(
           "[useRecentFolderEvents] Failed to resolve repo from backend list:",
           error
         );
@@ -164,10 +167,7 @@ export function useRecentFolderEvents({
         selectRepoRef.current(importedRepoId);
       }, 0);
     } catch (error) {
-      console.error(
-        "[useRecentFolderEvents] Failed to open recent folder:",
-        error
-      );
+      log.error("[useRecentFolderEvents] Failed to open recent folder:", error);
     }
   }, []);
 
@@ -193,7 +193,7 @@ export function useRecentFolderEvents({
       await repoApi.importLocalRepo({ fs_path: folderPath });
       await forceRefreshReposRef.current();
     } catch (error) {
-      console.error(
+      log.error(
         "[useRecentFolderEvents] Failed to import workspace folder:",
         error
       );
@@ -296,7 +296,7 @@ export function useRecentFolderEvents({
     };
 
     setupListeners().catch((error) => {
-      console.error(
+      log.error(
         "[useRecentFolderEvents] Failed to setup recent folder listeners:",
         error
       );

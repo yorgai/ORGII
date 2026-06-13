@@ -18,9 +18,12 @@ import {
   getGlobalTheme,
   normalizeGlobalThemeId,
 } from "@src/config/appearance/globalThemes";
+import { createLogger } from "@src/hooks/logger";
 import { settingsSyncTimestampAtom } from "@src/store/ui/settingsSyncAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 import { swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
+
+const log = createLogger("CrossWindowSync");
 
 // Prefixes for settings that should be synced across windows
 // Any localStorage key starting with these prefixes will trigger a sync
@@ -96,10 +99,7 @@ export function useCrossWindowSettingsSync(): void {
         try {
           handler(event.newValue);
         } catch (error) {
-          console.warn(
-            `[CrossWindowSync] Handler failed for ${event.key}:`,
-            error
-          );
+          log.warn(`[CrossWindowSync] Handler failed for ${event.key}:`, error);
         }
       }
 
@@ -132,12 +132,10 @@ function forceAtomRefresh(key: string, _newValue: string | null): void {
 
     // Log for debugging
     if (process.env.NODE_ENV === "development") {
-      // eslint-disable-next-line no-console
-      console.debug(`[CrossWindowSync] Synced: ${key}`);
+      log.debug(`[CrossWindowSync] Synced: ${key}`);
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.warn("[CrossWindowSync] Failed to refresh atoms:", error);
+    log.warn("[CrossWindowSync] Failed to refresh atoms:", error);
   }
 }
 

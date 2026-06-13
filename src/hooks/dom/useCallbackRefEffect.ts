@@ -224,6 +224,8 @@ export class CallbackRefEffectLifecycle<T extends Element> {
 }
 
 function defaultWarn(msg: string, err: unknown): void {
+  // Documented fallback when no warn handler is injected; this raw
+  // console.warn is asserted by CallbackRefEffectLifecycle.test.ts.
   console.warn(msg, err);
 }
 

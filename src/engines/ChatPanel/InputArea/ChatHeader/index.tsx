@@ -7,10 +7,13 @@ import { wingmanStop } from "@src/api/tauri/agent";
 import { useChatContext } from "@src/contexts/workspace/ChatContext";
 import { useStepState } from "@src/engines/SessionCore";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
+import { createLogger } from "@src/hooks/logger";
 import { useWingmanStatus } from "@src/hooks/wingman/useWingmanStatus";
 import { streamRetryStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 
 import StreamingHud from "./StreamingHud";
+
+const log = createLogger("ChatHeader");
 
 const ChatHeader = () => {
   const { t } = useTranslation("sessions");
@@ -39,7 +42,7 @@ const ChatHeader = () => {
               title={t("chat.stopWingman")}
               onClick={() => {
                 if (sessionId) {
-                  wingmanStop(sessionId).catch(console.error);
+                  wingmanStop(sessionId).catch(log.error);
                 }
               }}
             >

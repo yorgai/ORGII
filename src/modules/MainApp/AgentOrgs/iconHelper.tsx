@@ -32,6 +32,10 @@ import {
 } from "lucide-react";
 import React from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("iconHelper");
+
 // Icon name to component mapping
 const ICON_MAP: Record<string, LucideIcon> = {
   // Core controls
@@ -79,7 +83,7 @@ export function renderActionIcon(
 ): React.ReactNode {
   const IconComponent = ICON_MAP[iconName];
   if (!IconComponent) {
-    console.warn(`Unknown icon name: ${iconName}`);
+    log.warn(`Unknown icon name: ${iconName}`);
     return null;
   }
   return <IconComponent size={props?.size || 14} {...props} />;

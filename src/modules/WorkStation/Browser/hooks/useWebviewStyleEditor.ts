@@ -9,6 +9,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("useWebviewStyleEditor");
+
 // ============================================
 // Types
 // ============================================
@@ -172,7 +176,7 @@ export function useWebviewStyleEditor(
       onStylesFetchedRef.current?.(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error("[useWebviewStyleEditor] Failed to fetch styles:", message);
+      log.error("[useWebviewStyleEditor] Failed to fetch styles:", message);
       setError(message);
       setStyles(null);
     } finally {
@@ -222,7 +226,7 @@ export function useWebviewStyleEditor(
 
         return success;
       } catch (err) {
-        console.error("[useWebviewStyleEditor] Failed to set style:", err);
+        log.error("[useWebviewStyleEditor] Failed to set style:", err);
         // Revert optimistic update
         refresh();
         return false;
@@ -274,7 +278,7 @@ export function useWebviewStyleEditor(
 
         return allSuccess;
       } catch (err) {
-        console.error("[useWebviewStyleEditor] Failed to set styles:", err);
+        log.error("[useWebviewStyleEditor] Failed to set styles:", err);
         refresh();
         return false;
       } finally {

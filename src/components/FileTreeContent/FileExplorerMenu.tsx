@@ -354,7 +354,7 @@ export function FileExplorerContextMenu(props: FileExplorerContextMenuProps) {
           onClose();
         }, 50);
       } catch (error: unknown) {
-        console.error(
+        logger.error(
           "[FileExplorerContextMenu] Failed to show native context menu:",
           error
         );

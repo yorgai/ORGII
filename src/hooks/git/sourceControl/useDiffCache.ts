@@ -12,10 +12,13 @@ import {
 } from "react";
 
 import { GitFileDiffResult, gitApi } from "@src/api/http/git";
+import { createLogger } from "@src/hooks/logger";
 import type { GitFile } from "@src/types/git/types";
 import { decodeOctalPath } from "@src/util/file/pathUtils";
 import { buildContentFromHunks } from "@src/util/git/buildContentFromHunks";
 import { isUntrackedGitFile } from "@src/util/git/diffBaseRef";
+
+const log = createLogger("useDiffCache");
 
 export interface UseDiffCacheOptions {
   selectedRepoId: string | null;
@@ -69,9 +72,7 @@ export function useDiffCache(options: UseDiffCacheOptions): UseDiffCacheResult {
 
       // Need repo path for API call
       if (!repoPath) {
-        console.warn(
-          "[useDiffCache] No repo path available for batch diff load"
-        );
+        log.warn("[useDiffCache] No repo path available for batch diff load");
         return;
       }
 
@@ -201,7 +202,7 @@ export function useDiffCache(options: UseDiffCacheOptions): UseDiffCacheResult {
                   newContent = diff.new_content || "";
                 } else {
                   // Fallback: build from hunks
-                  console.warn(
+                  log.warn(
                     "[useDiffCache] Building from hunks for:",
                     file.path,
                     {
@@ -251,7 +252,7 @@ export function useDiffCache(options: UseDiffCacheOptions): UseDiffCacheResult {
           });
         }
       } catch (error) {
-        console.error("[useDiffCache] Batch load error:", error);
+        log.error("[useDiffCache] Batch load error:", error);
       }
     },
     [selectedRepoId, repoPath, setFiles]
@@ -314,7 +315,7 @@ export function useDiffCache(options: UseDiffCacheOptions): UseDiffCacheResult {
 
         if (filesToPrefetch.length > 0) {
           batchLoadFileDiffs(filesToPrefetch).catch((error) => {
-            console.warn("[useDiffCache] Prefetch failed:", error);
+            log.warn("[useDiffCache] Prefetch failed:", error);
           });
         }
       } finally {

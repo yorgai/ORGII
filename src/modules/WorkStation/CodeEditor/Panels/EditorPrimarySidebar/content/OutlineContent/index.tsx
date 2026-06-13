@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 import { Virtuoso } from "react-virtuoso";
 
 import { type SymbolInfo, getFileSymbols } from "@src/api/tauri/search";
+import { createLogger } from "@src/hooks/logger";
 import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
@@ -35,6 +36,8 @@ import {
   mapToOutlineSymbol,
 } from "./outlineHelpers";
 import type { OutlineSymbol } from "./types";
+
+const log = createLogger("OutlineContent");
 
 // ============================================
 // Types
@@ -115,12 +118,7 @@ export const OutlineContent: React.FC<OutlineContentProps> = memo(
           .catch((err) => {
             if (fetchIdRef.current !== fetchId) return;
             const errorMsg = err instanceof Error ? err.message : String(err);
-            console.error(
-              "[OutlineContent] Error for:",
-              path,
-              "Error:",
-              errorMsg
-            );
+            log.error("[OutlineContent] Error for:", path, "Error:", errorMsg);
             fetchedPathRef.current = path;
             setFetchState({
               symbols: [],
@@ -273,7 +271,7 @@ export const OutlineContent: React.FC<OutlineContentProps> = memo(
     }
 
     if (error) {
-      console.error(
+      log.error(
         "[OutlineContent] Symbol parse error:",
         error,
         "filePath:",

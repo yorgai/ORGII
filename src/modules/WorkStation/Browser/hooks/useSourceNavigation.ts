@@ -12,6 +12,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { FileOperationsService } from "@src/services/file";
 import {
   isNativeSearchAvailable,
@@ -46,6 +47,8 @@ export {
   formatSourceLocation,
 } from "./sourceNavigation/pathUtils";
 
+const log = createLogger("useSourceNavigation");
+
 // ============================================
 // Component Index Functions (AST-based lookup)
 // ============================================
@@ -67,7 +70,7 @@ export async function indexRepository(
     });
     return stats;
   } catch (error) {
-    console.warn("[UiIndexer] Failed to index repository:", error);
+    log.warn("[UiIndexer] Failed to index repository:", error);
     return null;
   }
 }
@@ -85,8 +88,7 @@ async function lookupComponentInIndex(
       }
     );
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.debug("[UiIndexer] Lookup failed:", error);
+    log.debug("[UiIndexer] Lookup failed:", error);
     return [];
   }
 }
@@ -256,16 +258,13 @@ export function useSourceNavigation(
             }
           }
         } catch (searchError) {
-          console.warn(
-            "[useSourceNavigation] Content search failed:",
-            searchError
-          );
+          log.warn("[useSourceNavigation] Content search failed:", searchError);
         }
 
         results.sort((a, b) => b.score - a.score);
         return results.slice(0, 10).map(({ path, line }) => ({ path, line }));
       } catch (error) {
-        console.error("[useSourceNavigation] Error searching:", error);
+        log.error("[useSourceNavigation] Error searching:", error);
 
         if (onSearchFiles) {
           onSearchFiles(searchTerm);
@@ -309,8 +308,7 @@ export function useSourceNavigation(
           method: "component-index",
         };
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.debug("[useSourceNavigation] Enrich failed:", error);
+        log.debug("[useSourceNavigation] Enrich failed:", error);
         return sourceLocation;
       }
     },
@@ -320,8 +318,7 @@ export function useSourceNavigation(
   const openSourceLocation = useCallback(
     async (sourceLocation: SourceLocation): Promise<boolean> => {
       if (!sourceLocation.path) {
-        // eslint-disable-next-line no-console
-        console.warn(
+        log.warn(
           "[useSourceNavigation] No source path available:",
           sourceLocation
         );
@@ -337,7 +334,7 @@ export function useSourceNavigation(
         );
 
         if (!result.success) {
-          console.error(
+          log.error(
             "[useSourceNavigation] Failed to open file:",
             result.message
           );
@@ -346,7 +343,7 @@ export function useSourceNavigation(
 
         return true;
       } catch (error) {
-        console.error("[useSourceNavigation] Error opening source:", error);
+        log.error("[useSourceNavigation] Error opening source:", error);
         return false;
       }
     },
@@ -363,7 +360,7 @@ export function useSourceNavigation(
         );
         return result.success;
       } catch (error) {
-        console.error("[useSourceNavigation] Error opening file:", error);
+        log.error("[useSourceNavigation] Error opening file:", error);
         return false;
       }
     },
@@ -378,16 +375,14 @@ export function useSourceNavigation(
       usages: ComponentSearchResult[];
     }> => {
       if (!sourceLocation) {
-        // eslint-disable-next-line no-console
-        console.debug("[getDefinitionAndUsages] No sourceLocation");
+        log.debug("[getDefinitionAndUsages] No sourceLocation");
         return { definition: null, usages: [] };
       }
 
       const componentName =
         sourceLocation.componentName || sourceLocation.searchHint;
       if (!componentName || !repoPath) {
-        // eslint-disable-next-line no-console
-        console.debug(
+        log.debug(
           "[getDefinitionAndUsages] Missing componentName or repoPath",
           {
             componentName,
@@ -400,8 +395,7 @@ export function useSourceNavigation(
       try {
         const indexed = await isRepoIndexed(repoPath);
         if (!indexed) {
-          // eslint-disable-next-line no-console
-          console.warn("[getDefinitionAndUsages] Repo not indexed yet!");
+          log.warn("[getDefinitionAndUsages] Repo not indexed yet!");
           return { definition: null, usages: [] };
         }
 
@@ -434,8 +428,7 @@ export function useSourceNavigation(
 
         return { definition, usages };
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.debug(
+        log.debug(
           "[useSourceNavigation] getDefinitionAndUsages failed:",
           error
         );

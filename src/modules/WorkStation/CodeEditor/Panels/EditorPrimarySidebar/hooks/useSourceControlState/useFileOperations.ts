@@ -15,8 +15,11 @@ import { type Dispatch, type SetStateAction, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useActionSystemOptional } from "@src/ActionSystem";
+import { createLogger } from "@src/hooks/logger";
 import type { GitFile } from "@src/types/git/types";
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
+
+const log = createLogger("useFileOperations");
 
 export interface UseFileOperationsOptions {
   gitFiles: GitFile[];
@@ -63,7 +66,7 @@ export function useFileOperations(
       if (!file) return;
 
       if (!dispatch) {
-        console.warn(
+        log.warn(
           "[useFileOperations] No dispatch available - cannot stage/unstage"
         );
         return;
@@ -84,7 +87,7 @@ export function useFileOperations(
           await dispatch("git.unstage", { paths: [file.path] }, "user");
         }
       } catch (error) {
-        console.error("Failed to stage/unstage file:", error);
+        log.error("Failed to stage/unstage file:", error);
         // Revert optimistic update on error
         setGitFiles((prevFiles) =>
           prevFiles.map((fileItem) =>
@@ -103,9 +106,7 @@ export function useFileOperations(
       if (!file) return;
 
       if (!dispatch) {
-        console.warn(
-          "[useFileOperations] No dispatch available - cannot discard"
-        );
+        log.warn("[useFileOperations] No dispatch available - cannot discard");
         return;
       }
 
@@ -132,7 +133,7 @@ export function useFileOperations(
         }
         await fetchGitStatus();
       } catch (error) {
-        console.error("Failed to discard file changes:", error);
+        log.error("Failed to discard file changes:", error);
       }
     },
     [gitFiles, repoPath, fetchGitStatus, dispatch, t]
@@ -144,9 +145,7 @@ export function useFileOperations(
     if (unstagedFiles.length === 0) return;
 
     if (!dispatch) {
-      console.warn(
-        "[useFileOperations] No dispatch available - cannot stage all"
-      );
+      log.warn("[useFileOperations] No dispatch available - cannot stage all");
       return;
     }
 
@@ -165,7 +164,7 @@ export function useFileOperations(
         "user"
       );
     } catch (error) {
-      console.error("Failed to stage all files:", error);
+      log.error("Failed to stage all files:", error);
       await fetchGitStatus();
     }
   }, [gitFiles, setGitFiles, fetchGitStatus, dispatch]);
@@ -176,7 +175,7 @@ export function useFileOperations(
     if (stagedFiles.length === 0) return;
 
     if (!dispatch) {
-      console.warn(
+      log.warn(
         "[useFileOperations] No dispatch available - cannot unstage all"
       );
       return;
@@ -197,7 +196,7 @@ export function useFileOperations(
         "user"
       );
     } catch (error) {
-      console.error("Failed to unstage all files:", error);
+      log.error("Failed to unstage all files:", error);
       await fetchGitStatus();
     }
   }, [gitFiles, setGitFiles, fetchGitStatus, dispatch]);
@@ -208,7 +207,7 @@ export function useFileOperations(
     if (unstagedFiles.length === 0) return;
 
     if (!dispatch) {
-      console.warn(
+      log.warn(
         "[useFileOperations] No dispatch available - cannot discard all"
       );
       return;
@@ -246,7 +245,7 @@ export function useFileOperations(
       }
       await fetchGitStatus();
     } catch (error) {
-      console.error("Failed to discard all changes:", error);
+      log.error("Failed to discard all changes:", error);
     }
   }, [gitFiles, repoPath, fetchGitStatus, dispatch, t]);
 
@@ -281,7 +280,7 @@ export function useFileOperations(
       if (!file) return;
 
       if (!dispatch) {
-        console.warn(
+        log.warn(
           "[useFileOperations] No dispatch available - cannot stage resolved"
         );
         // Fallback to gitOutputIntegration if available
@@ -290,7 +289,7 @@ export function useFileOperations(
             await gitOutputIntegration.stageWithOutput({ files: [file.path] });
             await fetchGitStatus();
           } catch (error) {
-            console.error("Failed to stage resolved file:", error);
+            log.error("Failed to stage resolved file:", error);
           }
         }
         return;
@@ -301,7 +300,7 @@ export function useFileOperations(
         await dispatch("git.stage", { paths: [file.path] }, "user");
         await fetchGitStatus();
       } catch (error) {
-        console.error("Failed to stage resolved file:", error);
+        log.error("Failed to stage resolved file:", error);
       }
     },
     [gitFiles, fetchGitStatus, gitOutputIntegration, dispatch]

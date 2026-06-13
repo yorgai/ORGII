@@ -17,6 +17,7 @@ import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import { format as formatSql } from "sql-formatter";
 
 import type { TableInfo } from "@src/engines/DatabaseCore";
+import { createLogger } from "@src/hooks/logger";
 
 import {
   BASIC_SETUP_SQL_CONFIG,
@@ -26,6 +27,8 @@ import {
   getCodeMirrorTheme,
 } from "../config";
 import "./index.scss";
+
+const log = createLogger("SqlEditor");
 
 // ============================================
 // Types
@@ -92,7 +95,7 @@ export const SqlQueryEditor: React.FC<SqlQueryEditorProps> = memo(
         setValue(formatted);
       } catch {
         // If formatting fails, keep original
-        console.warn("SQL formatting failed");
+        log.warn("SQL formatting failed");
       }
     }, [value, setValue]);
 

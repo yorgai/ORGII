@@ -21,6 +21,7 @@ import { forceTurnIdle } from "@src/engines/SessionCore/control/turnLifecycle";
 import { pendingSyntheticEventAtom } from "@src/engines/SessionCore/core/atoms";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { clearSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
+import { createLogger } from "@src/hooks/logger";
 import {
   isPendingCancelAtom,
   lastUserMessageAtom,
@@ -34,6 +35,8 @@ import {
   markRestoredStopDraft,
   suppressRestoredStopSubmit,
 } from "./stopSubmitGuard";
+
+const log = createLogger("useSessionActions");
 
 interface RestorableUserMessage {
   displayContent: string;
@@ -118,7 +121,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
         },
       });
     } catch (err) {
-      console.error("[useSessionActions] resume failed:", err);
+      log.error("[useSessionActions] resume failed:", err);
       failOptimisticTurn(sessionId);
       Message.error(t("errors.failedToResume"));
     }
@@ -137,7 +140,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
   const interruptSession = useCallback(async () => {
     const sessionId = getSessionId();
     if (!sessionId) {
-      console.error("[useSessionActions] No session ID found for interrupt");
+      log.error("[useSessionActions] No session ID found for interrupt");
       return;
     }
 

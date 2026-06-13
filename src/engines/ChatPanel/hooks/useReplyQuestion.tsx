@@ -11,10 +11,13 @@ import { rejectQuestion, respondQuestion } from "@src/api/tauri/agent";
 import Message from "@src/components/Message";
 import { updateEventByIdAtom, useStepState } from "@src/engines/SessionCore";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
+import { createLogger } from "@src/hooks/logger";
 import {
   isAgentSession,
   isCliSession,
 } from "@src/util/session/sessionDispatch";
+
+const log = createLogger("useReplyQuestion");
 
 /**
  * Reply / ignore handlers for inline `Q` chat items rendered by
@@ -96,7 +99,7 @@ const useReplyQuestion = () => {
           Message.error("Failed to submit answer. Please try again.");
         }
       } catch (error) {
-        console.error("Error replying to question:", error);
+        log.error("Error replying to question:", error);
         Message.error("An error occurred while sending the reply");
       }
     },

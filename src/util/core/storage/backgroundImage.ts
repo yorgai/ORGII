@@ -4,6 +4,9 @@
  * Stores custom background images in ~/.orgii/backgrounds/
  * Since we only ship as Tauri app, we always use filesystem storage.
  */
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("BackgroundImage");
 
 // Constants
 const BACKGROUNDS_FOLDER = "backgrounds";
@@ -146,7 +149,7 @@ export async function saveBackgroundImage(
     saveMetadata(metadata);
     return imageId;
   } catch (error) {
-    console.error("[BackgroundImage] Failed to save:", error);
+    log.error("[BackgroundImage] Failed to save:", error);
     return null;
   }
 }
@@ -167,7 +170,7 @@ export async function loadBackgroundImage(
     const imageMeta = metadata[imageId];
 
     if (!imageMeta) {
-      console.warn(`[BackgroundImage] Metadata not found for: ${imageId}`);
+      log.warn(`[BackgroundImage] Metadata not found for: ${imageId}`);
       return null;
     }
 
@@ -180,7 +183,7 @@ export async function loadBackgroundImage(
     // Convert to data URL
     return uint8ArrayToDataUrl(uint8Array, imageMeta.mimeType);
   } catch (error) {
-    console.error(`[BackgroundImage] Failed to load ${imageId}:`, error);
+    log.error(`[BackgroundImage] Failed to load ${imageId}:`, error);
     return null;
   }
 }
@@ -208,7 +211,7 @@ export async function loadBackgroundImageAsBlob(
     const imageMeta = metadata[imageId];
 
     if (!imageMeta) {
-      console.warn(`[BackgroundImage] Metadata not found for: ${imageId}`);
+      log.warn(`[BackgroundImage] Metadata not found for: ${imageId}`);
       return null;
     }
 
@@ -222,7 +225,7 @@ export async function loadBackgroundImageAsBlob(
     const blob = new Blob([uint8Array], { type: imageMeta.mimeType });
     return URL.createObjectURL(blob);
   } catch (error) {
-    console.error(`[BackgroundImage] Failed to load ${imageId}:`, error);
+    log.error(`[BackgroundImage] Failed to load ${imageId}:`, error);
     return null;
   }
 }
@@ -256,7 +259,7 @@ export async function deleteBackgroundImage(imageId: string): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error(`[BackgroundImage] Failed to delete ${imageId}:`, error);
+    log.error(`[BackgroundImage] Failed to delete ${imageId}:`, error);
     return false;
   }
 }
@@ -318,10 +321,7 @@ export async function migrateImagesToStorage(
 export async function debugBackgroundStorage() {
   const info = await getStorageInfo();
 
-  // eslint-disable-next-line no-console
-  console.group("🖼️ Background Image Storage");
-  // eslint-disable-next-line no-console
-  console.groupEnd();
+  log.debug("🖼️ Background Image Storage");
 
   return info;
 }

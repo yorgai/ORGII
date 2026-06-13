@@ -15,8 +15,11 @@
 import { useAtomValue } from "jotai";
 import { useEffect, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { activeOverlayCountAtom } from "@src/store/ui/overlayLayerAtom";
 import { invokeTauri } from "@src/util/platform/tauri/init";
+
+const log = createLogger("useGlobalBrowserWebviewLayering");
 
 export function useGlobalBrowserWebviewLayering(): void {
   const count = useAtomValue(activeOverlayCountAtom);
@@ -31,7 +34,7 @@ export function useGlobalBrowserWebviewLayering(): void {
     void invokeTauri<string[]>("browser_webviews_set_layer_for_all", {
       sendToBack: shouldBeBack,
     }).catch((error) => {
-      console.warn("[useGlobalBrowserWebviewLayering] reorder failed:", error);
+      log.warn("[useGlobalBrowserWebviewLayering] reorder failed:", error);
     });
   }, [count]);
 }

@@ -32,6 +32,7 @@ import {
 } from "@src/features/SessionCreator/utils/systemPathSource";
 import { useRegionCheck } from "@src/hooks/config";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
+import { createLogger } from "@src/hooks/logger";
 import { useAgentCompatibility } from "@src/hooks/models/useAgentCompatibility";
 import { useAgentDefinitions } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentDefinitions";
 import { useAgentOrgs } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentOrgs";
@@ -73,6 +74,8 @@ import TagPanel from "./TagPanel";
 import "./index.scss";
 import { resolveSessionCreatorAgentHeroContent } from "./resolveSessionCreatorAgentHero";
 import { useSessionCreatorChatPanelHandlers } from "./useSessionCreatorChatPanelHandlers";
+
+const log = createLogger("ChatPanel");
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -677,7 +680,7 @@ const SessionCreatorChatPanelSingle: React.FC<
               onMouseEnter={preloadWingmanWindows}
               onFocus={preloadWingmanWindows}
               onClick={() => {
-                handleShareScreenClick().catch(console.error);
+                handleShareScreenClick().catch(log.error);
               }}
             >
               <Airplay size={13} strokeWidth={1.75} />

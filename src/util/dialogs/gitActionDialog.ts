@@ -1,3 +1,7 @@
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("GitActionDialog");
+
 export type GitActionDialogKind = "info" | "warning" | "error";
 
 export async function showGitActionDialog(
@@ -17,6 +21,6 @@ export function showGitActionDialogSafely(
   kind: GitActionDialogKind = "info"
 ): void {
   void showGitActionDialog(dialogMessage, kind).catch((error) => {
-    console.error("[GitActionDialog] Failed to show dialog:", error);
+    log.error("[GitActionDialog] Failed to show dialog:", error);
   });
 }

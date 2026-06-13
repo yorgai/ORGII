@@ -25,7 +25,10 @@ import type {
   SaveKeyRequest,
 } from "@src/api/services/keyValidation";
 import { CLI_AGENT } from "@src/api/tauri/rpc/schemas/validation";
+import { createLogger } from "@src/hooks/logger";
 import { replaceModelAliasesFromKeys } from "@src/hooks/models/modelAliasRegistry";
+
+const log = createLogger("useLocalKeys");
 
 // Re-export types for convenience
 export type { ModelType, KeyInfo };
@@ -130,7 +133,7 @@ export function useLocalKeys(
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
-      console.error("Failed to load keys:", err);
+      log.error("Failed to load keys:", err);
     } finally {
       setLoading(false);
     }
@@ -372,7 +375,7 @@ export function useLocalKeys(
 
         return true;
       } catch (err) {
-        console.error(`[Refresh] Error:`, err);
+        log.error(`[Refresh] Error:`, err);
         return false;
       } finally {
         pendingValidations.current.delete(validationKey);

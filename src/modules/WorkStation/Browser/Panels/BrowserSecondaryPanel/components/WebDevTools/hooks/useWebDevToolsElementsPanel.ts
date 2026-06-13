@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { useRefreshSpin } from "@src/hooks/ui";
 import { useSourceNavigation } from "@src/modules/WorkStation/Browser/hooks/useSourceNavigation";
 import { useWebviewDOMTree } from "@src/modules/WorkStation/Browser/hooks/useWebviewDOMTree";
@@ -20,6 +21,8 @@ import type { SourceLocation } from "@src/modules/WorkStation/Browser/hooks/useW
 import { useWebviewStyleEditor } from "@src/modules/WorkStation/Browser/hooks/useWebviewStyleEditor";
 
 import type { WebDevToolsProps } from "../types";
+
+const log = createLogger("WebDevTools");
 
 const DOM_TREE_DIRTY_POLL_MS = 1500;
 
@@ -129,7 +132,7 @@ export function useWebDevToolsElementsPanel({
       setIsIndexBuilt(true);
       setIndexRefreshKey((k) => k + 1);
     } catch (error) {
-      console.error("[WebDevTools] Failed to build index:", error);
+      log.error("[WebDevTools] Failed to build index:", error);
     }
   }, [isIndexBuilt, repoPath]);
 
@@ -143,7 +146,7 @@ export function useWebDevToolsElementsPanel({
       setIsIndexBuilt(false);
       setIndexRefreshKey((k) => k + 1);
     } catch (error) {
-      console.error("[WebDevTools] Failed to clear index:", error);
+      log.error("[WebDevTools] Failed to clear index:", error);
     }
   }, [repoPath]);
 

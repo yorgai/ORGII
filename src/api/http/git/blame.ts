@@ -3,8 +3,12 @@
  *
  * File blame/annotation functions.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
 import type { BlameResult } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Get blame information for a file
@@ -24,7 +28,7 @@ export const getGitBlame = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to get blame:", error);
+    log.error("[GitAPI] Failed to get blame:", error);
     return undefined;
   }
 };

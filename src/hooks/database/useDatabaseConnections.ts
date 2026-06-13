@@ -27,6 +27,7 @@ import {
   type TableInfo,
   getConnectionPath,
 } from "@src/engines/DatabaseCore";
+import { createLogger } from "@src/hooks/logger";
 import {
   type DatabaseConnection,
   addConnectionConfig,
@@ -36,6 +37,8 @@ import {
   loadConnectionConfigs,
   removeConnectionConfig,
 } from "@src/store/workstation/database";
+
+const log = createLogger("useDatabaseConnections");
 
 // ============================================
 // Types
@@ -266,8 +269,7 @@ export function useDatabaseConnections(): UseDatabaseConnectionsReturn {
                 )
               );
             } catch (err) {
-              // eslint-disable-next-line no-console
-              console.debug(`Lazy connect failed: ${connectionId}`, err);
+              log.debug(`Lazy connect failed: ${connectionId}`, err);
               setConnections((current) =>
                 current.map((item) =>
                   item.id === connectionId

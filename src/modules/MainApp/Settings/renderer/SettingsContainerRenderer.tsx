@@ -6,10 +6,13 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import type { SettingsContainerDefinition } from "@src/config/settingsUiManifest/types";
+import { createLogger } from "@src/hooks/logger";
 import { useAllSettings } from "@src/store/settings";
 
 import SettingsFieldRenderer from "./SettingsFieldRenderer";
 import { settingsRowSlotRegistry } from "./slotRegistry";
+
+const log = createLogger("SettingsRenderer");
 
 interface SettingsContainerRendererProps {
   sectionId: string;
@@ -36,7 +39,7 @@ const SettingsContainerRenderer: React.FC<SettingsContainerRendererProps> = ({
         if (row.kind === "custom") {
           const SlotComponent = settingsRowSlotRegistry[row.customSlotId];
           if (!SlotComponent) {
-            console.error(
+            log.error(
               "[SettingsRenderer] Missing row slot for id:",
               row.customSlotId
             );

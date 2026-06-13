@@ -24,6 +24,9 @@ import { atomWithStorage } from "jotai/utils";
 import React, { createContext, useContext, useEffect, useMemo } from "react";
 
 import { ROUTE_PATHS } from "@src/config/routePaths";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("WindowScopedState");
 
 // ============================================
 // Window ID Management
@@ -299,7 +302,7 @@ class WindowRegistryClass {
         JSON.stringify(registry)
       );
     } catch (e) {
-      console.error("Failed to save window registry:", e);
+      log.error("Failed to save window registry:", e);
     }
   }
 

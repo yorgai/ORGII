@@ -15,6 +15,7 @@ import {
   searchCodeRegex,
   searchCodeStreaming,
 } from "@src/api/tauri/search";
+import { createLogger } from "@src/hooks/logger";
 import { useDebouncedCallback } from "@src/hooks/perf/useDebouncedCallback";
 import type {
   SearchOptions as StoreSearchOptions,
@@ -29,6 +30,8 @@ import {
   parseFilePatterns,
 } from "./transformers";
 import type { SearchResultActions } from "./types";
+
+const log = createLogger("useSearchExecution");
 
 // Module-level constants for search mode flags
 const USE_FAST_SEARCH = true;
@@ -240,10 +243,7 @@ export function useSearchExecution(
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Search failed";
-        console.error(
-          "[useSearchExecution] Streaming search error:",
-          errorMessage
-        );
+        log.error("[useSearchExecution] Streaming search error:", errorMessage);
         setError(errorMessage);
         setLoading(false);
       }
@@ -290,10 +290,7 @@ export function useSearchExecution(
       setActualTotalFiles(filteredResults.length);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Search failed";
-      console.error(
-        "[useSearchExecution] Fallback search error:",
-        errorMessage
-      );
+      log.error("[useSearchExecution] Fallback search error:", errorMessage);
       setError(errorMessage);
       setResults([]);
       setHasMore(false);

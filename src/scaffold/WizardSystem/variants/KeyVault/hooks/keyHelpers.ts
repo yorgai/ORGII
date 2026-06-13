@@ -4,9 +4,12 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type { DetectedKey } from "@src/api/types/keys";
+import { createLogger } from "@src/hooks/logger";
 import { getDefaultEnabledModels } from "@src/util/modelGrouping";
 
 import type { WizardData } from "../types";
+
+const log = createLogger("ApiSetup");
 
 interface ExtractionResult {
   api_key: string | null;
@@ -167,7 +170,7 @@ export async function extractKeysFromInput(
       setExtractError(notFoundMsg);
     }
   } catch (err) {
-    console.error("[ApiSetup] Extraction failed:", err);
+    log.error("[ApiSetup] Extraction failed:", err);
     setExtractError(err instanceof Error ? err.message : failedMsg);
   } finally {
     setExtracting(false);

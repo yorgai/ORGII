@@ -7,10 +7,13 @@ import i18next from "i18next";
 import { useEffect, useRef } from "react";
 
 import { type GitCommitInfo, getGitRemotes } from "@src/api/http/git";
+import { createLogger } from "@src/hooks/logger";
 import { copyText } from "@src/util/data/clipboard";
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
 import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
 import { openExternalLink } from "@src/util/platform/ipcRenderer";
+
+const log = createLogger("GitHistoryContextMenu");
 
 type DispatchFn = (
   actionType: string,
@@ -352,7 +355,7 @@ export default function GitHistoryContextMenu(
         });
         await menu.popup();
       } catch (error) {
-        console.error("[GitHistoryContextMenu] Failed to show menu:", error);
+        log.error("[GitHistoryContextMenu] Failed to show menu:", error);
       } finally {
         onClose();
       }

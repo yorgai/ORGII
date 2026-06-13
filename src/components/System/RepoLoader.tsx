@@ -18,6 +18,7 @@ import { setEventStoreRepoContext } from "@src/engines/SessionCore/ingestion/rus
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { useRecentFolderEvents } from "@src/hooks/git/useRepoSelection/useRecentFolderEvents";
 import { useWorkspaceGitStatus } from "@src/hooks/git/useWorkspaceGitStatus";
+import { createLogger } from "@src/hooks/logger";
 import { useTerminalRepoSync } from "@src/hooks/terminal/useTerminalRepoSync";
 import {
   closeWorkspace,
@@ -35,6 +36,8 @@ import {
   workspaceFoldersAtom,
 } from "@src/store/ui/workspaceFoldersAtom";
 import type { WorkspaceFolder } from "@src/types/workspace";
+
+const log = createLogger("RepoLoader");
 
 function normalizeToFsPath(path: string): string {
   return path.startsWith("file://") ? path.replace("file://", "") : path;
@@ -88,7 +91,7 @@ export const RepoLoader: FC = () => {
       setConfigPath(result.filePath);
       recordRecentWorkspace(result.filePath, result.folders);
     } catch (error) {
-      console.error("[RepoLoader] Failed to open workspace file:", error);
+      log.error("[RepoLoader] Failed to open workspace file:", error);
     }
   }, [dispatchSetFolders, setConfigPath]);
 

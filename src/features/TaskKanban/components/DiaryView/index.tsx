@@ -8,12 +8,15 @@ import type { GitCommitInfo } from "@src/api/http/git/types";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import type { KanbanTask } from "@src/features/KanbanBoard";
+import { createLogger } from "@src/hooks/logger";
 import type { Session } from "@src/store/session";
 import { sessionMapAtom } from "@src/store/session/sessionAtom/atoms";
 
 import type { DiaryTimelineDisplayMode } from "../../config";
 import { buildDiaryDaySummary } from "../../utils/diaryUtils";
 import DiaryPanel from "../DiaryPanel";
+
+const log = createLogger("DiaryView");
 
 export interface DiaryViewProps {
   tasks: KanbanTask[];
@@ -168,7 +171,7 @@ const DiaryView: React.FC<DiaryViewProps> = ({
             return next;
           });
         } catch (error: unknown) {
-          console.warn("[DiaryView] failed to load session events", error);
+          log.warn("[DiaryView] failed to load session events", error);
         }
       })();
     }
@@ -213,7 +216,7 @@ const DiaryView: React.FC<DiaryViewProps> = ({
     }
 
     loadCommits().catch((error: unknown) => {
-      console.warn("[DiaryView] failed to load git commits", error);
+      log.warn("[DiaryView] failed to load git commits", error);
       if (!cancelled) setCommits([]);
     });
 

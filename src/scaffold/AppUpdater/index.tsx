@@ -6,9 +6,12 @@ import { atom, useAtomValue } from "jotai";
 import { useEffect } from "react";
 
 import Message from "@src/components/Message";
+import { createLogger } from "@src/hooks/logger";
 import i18n from "@src/i18n";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 import { isTauriDesktop } from "@src/util/platform/tauri";
+
+const log = createLogger("AppUpdater");
 
 type AppUpdate = NonNullable<Awaited<ReturnType<typeof check>>>;
 
@@ -113,7 +116,7 @@ export async function checkForAppUpdates(onUserClick = false) {
       await installAppUpdate(update);
     }
   } catch (err) {
-    console.error("Update check failed:", err);
+    log.error("Update check failed:", err);
     if (onUserClick) {
       await message(`Update check failed: ${err}`, {
         title: "Update Error",

@@ -12,6 +12,7 @@ import {
   clearAuthStateCompletely,
   useServiceAuth,
 } from "@src/hooks/auth/useServiceAuth";
+import { createLogger } from "@src/hooks/logger";
 import {
   ONBOARDING_LOADING_VIDEO_WIDTH_CLASS,
   OnboardingLayout,
@@ -21,6 +22,8 @@ import {
 const LOGIN_COLUMN_WIDTH_CLASS = ONBOARDING_LOADING_VIDEO_WIDTH_CLASS;
 const GITHUB_REPO_URL = "https://github.com/yorg-ai/orgii";
 const OSS_LOGIN_ENABLED = false;
+
+const log = createLogger("LoginPage");
 
 /** Primary CTAs — taller than default `Button` large for login prominence */
 const LOGIN_ACTION_BUTTON_CLASS = `pointer-events-auto relative z-10 h-14 ${LOGIN_COLUMN_WIDTH_CLASS} text-base font-medium`;
@@ -290,7 +293,7 @@ const LoginPage: React.FC = () => {
     try {
       await login();
     } catch (err) {
-      console.error("[LoginPage] login() error:", err);
+      log.error("[LoginPage] login() error:", err);
     }
   };
 

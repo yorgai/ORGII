@@ -12,11 +12,14 @@ import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
 import type { GitHubRepo } from "@src/api/http/github/types";
 import Message from "@src/components/Message";
 import { useGitHubConnections } from "@src/hooks/git";
+import { createLogger } from "@src/hooks/logger";
 import {
   effectiveWorkspaceDefaultRepoLocationAtom,
   workspaceCustomDefaultRepoPathAtom,
 } from "@src/store/config/configAtom";
 import { resolveDefaultRepoParentPath } from "@src/util/workspace/defaultRepoPath";
+
+const log = createLogger("CloneForm");
 
 // ============================================
 // Types
@@ -190,7 +193,7 @@ export function useCloneForm(
       }
       return null;
     } catch (error) {
-      console.error("Failed to open folder picker:", error);
+      log.error("Failed to open folder picker:", error);
       Message.error("Failed to select directory");
       return null;
     }

@@ -155,7 +155,7 @@ export function useServiceAuth(): UseServiceAuthReturn {
           return false;
         }
 
-        console.warn(
+        logger.warn(
           `[ServiceAuth] Token refresh attempt ${attempt + 1}/${MAX_REFRESH_RETRIES} failed:`,
           refreshError
         );

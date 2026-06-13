@@ -25,6 +25,7 @@ import UserActionButton from "@src/engines/ChatPanel/InputArea/components/UserAc
 import { useSlashItemsCache } from "@src/engines/ChatPanel/hooks/useInputArea/useSlashItemsCache";
 import { useMessageDispatch } from "@src/engines/ChatPanel/hooks/useWorkspaceChat/useMessageDispatch";
 import { mintTurnIntentId } from "@src/engines/SessionCore/sync/adapters/shared/eventFactories";
+import { createLogger } from "@src/hooks/logger";
 import { EditorTabService } from "@src/services/workStation";
 import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
 import {
@@ -49,6 +50,8 @@ import { SLASH_ACTIONS } from "@src/types/extensions";
 
 import { buildMcpToolCommand } from "../SlashCommandPortal/slashItemUtils";
 import PinActionsPanel, { actionKey } from "./PinActionsPanel";
+
+const log = createLogger("PinnedActionsBar");
 
 const BUILTIN_SLASH_ITEMS: SlashItem[] = [
   {
@@ -190,7 +193,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
             turnIntentId
           );
         } catch (err) {
-          console.error("[PinnedActionsBar] commit & push failed:", err);
+          log.error("[PinnedActionsBar] commit & push failed:", err);
         } finally {
           commitPushPendingRef.current = false;
         }

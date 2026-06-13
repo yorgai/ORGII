@@ -15,6 +15,10 @@ import { python } from "@codemirror/lang-python";
 import { rust } from "@codemirror/lang-rust";
 import { Extension } from "@codemirror/state";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("CodeMirror");
+
 // ============================================
 // File Extension to Language Mapping
 // ============================================
@@ -259,7 +263,7 @@ export async function loadLanguageExtension(
       }
     }
   } catch (error) {
-    console.warn(
+    log.warn(
       `[CodeMirror] Failed to load language extension for ${langKey}:`,
       error
     );

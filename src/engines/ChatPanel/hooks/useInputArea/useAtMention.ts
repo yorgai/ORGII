@@ -9,6 +9,7 @@ import { type MutableRefObject, type RefObject, useCallback } from "react";
 import type { ComposerInputRef } from "@src/components/ComposerInput";
 import { getTerminalBuffer } from "@src/components/TerminalInteractive/bufferCache";
 import { storePillText } from "@src/config/pillTokens";
+import { createLogger } from "@src/hooks/logger";
 import {
   capPillText,
   loadBrowserPillContent,
@@ -17,6 +18,8 @@ import {
 import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 
 import type { AtMentionHandlers, CustomMentionOption } from "./types";
+
+const log = createLogger("useAtMention");
 
 interface UseAtMentionOptions {
   composerInputRef: RefObject<ComposerInputRef | null>;
@@ -60,7 +63,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
   const handleAtSelect = useCallback(
     (type: MenuItemId | string, value?: string, displayName?: string) => {
       if (!composerInputRef.current || !value) {
-        console.warn("[handleAtSelect] Missing composerInputRef or value", {
+        log.warn("[handleAtSelect] Missing composerInputRef or value", {
           composerInputRef: !!composerInputRef.current,
           value,
         });

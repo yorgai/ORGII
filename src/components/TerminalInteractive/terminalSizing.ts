@@ -2,6 +2,10 @@ import type { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
 import type { MutableRefObject } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("Terminal");
+
 interface TerminalSizingRefs {
   containerRef: MutableRefObject<HTMLDivElement | null>;
   terminalRef: MutableRefObject<Terminal | null>;
@@ -29,7 +33,7 @@ export function createRedrawTerminalAfterLayoutChange({
         fitAddon.fit();
         terminal.refresh(0, terminal.rows - 1);
       } catch (error) {
-        console.warn("[Terminal] redraw after layout change failed:", error);
+        log.warn("[Terminal] redraw after layout change failed:", error);
       }
     });
   };
@@ -58,7 +62,7 @@ export function createFitTerminal({
         fitAddonRef.current.fit();
         terminalRef.current.refresh(0, terminalRef.current.rows - 1);
       } catch (error) {
-        console.warn("[Terminal] Fit error:", error);
+        log.warn("[Terminal] Fit error:", error);
       }
     }
   };

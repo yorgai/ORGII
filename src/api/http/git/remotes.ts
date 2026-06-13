@@ -3,12 +3,16 @@
  *
  * Remote repository management functions.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
 import type {
   GitCredentialFillResponse,
   GitRemoteInfo,
   GitRemotesResponse,
 } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Get all configured remotes
@@ -27,7 +31,7 @@ export const getGitRemotes = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to fetch remotes from Rust server:", error);
+    log.error("[GitAPI] Failed to fetch remotes from Rust server:", error);
     return undefined;
   }
 };
@@ -76,7 +80,7 @@ export const addGitRemote = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to add remote:", error);
+    log.error("[GitAPI] Failed to add remote:", error);
     return undefined;
   }
 };
@@ -104,7 +108,7 @@ export const updateGitRemote = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to update remote:", error);
+    log.error("[GitAPI] Failed to update remote:", error);
     return undefined;
   }
 };
@@ -128,7 +132,7 @@ export const deleteGitRemote = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to delete remote:", error);
+    log.error("[GitAPI] Failed to delete remote:", error);
     return false;
   }
 };

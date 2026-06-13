@@ -29,6 +29,7 @@ import React, { useEffect, useRef, useState } from "react";
 
 import { CustomScrollbar } from "@src/components/CustomScrollbar";
 import type { GitFileStatus } from "@src/config/gitStatus";
+import { createLogger } from "@src/hooks/logger";
 import { useEditorAppearanceSettings } from "@src/hooks/settings";
 import { EditorService } from "@src/services/workStation";
 
@@ -48,6 +49,8 @@ import {
 import { createCopyFileRefExtension } from "../shared/createCopyFileRefExtension";
 import { getLanguageExtension } from "../shared/languageExtensions";
 import "./index.scss";
+
+const log = createLogger("CodeMirrorDiff");
 
 // ============================================
 // Types
@@ -406,7 +409,7 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
       setUnifiedScrollEl(view.scrollDOM);
       setUnifiedLines(view.state.doc.lines);
     } catch (err) {
-      console.error("[CodeMirrorDiff] Error creating unified view:", err);
+      log.error("[CodeMirrorDiff] Error creating unified view:", err);
     }
 
     return () => {
@@ -546,7 +549,7 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
         });
       }
     } catch (err) {
-      console.error("[CodeMirrorDiff] Error creating split view:", err);
+      log.error("[CodeMirrorDiff] Error creating split view:", err);
     }
 
     return () => {

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "@src/App";
 import { applyHostDesktopWindowChromeRadius } from "@src/config/windowChromeRadius";
 import { installGlobalTauriSelectAllShortcut } from "@src/hooks/keyboard/useTauriSelectAllShortcut";
-import { initializeLogging } from "@src/hooks/logger/useLogger";
+import { createLogger, initializeLogging } from "@src/hooks/logger/useLogger";
 import { i18nReady } from "@src/i18n";
 import "@src/util/core/storage/cleanup";
 import "@src/util/platform/tauri";
@@ -17,6 +17,8 @@ import { initializeTauriAPIs, invokeTauri } from "./util/platform/tauri/init";
 applyHostDesktopWindowChromeRadius();
 initializeLogging();
 installGlobalTauriSelectAllShortcut();
+
+const log = createLogger("Init");
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -155,7 +157,7 @@ async function initializeApp() {
     await Promise.race([initPromise, timeoutPromise]);
   } catch (error) {
     // Log but continue - we want to mount React even if some init failed
-    console.warn("[Init] Initialization issue:", error);
+    log.warn("[Init] Initialization issue:", error);
   }
 
   // Mount React app
@@ -170,7 +172,7 @@ async function initializeApp() {
     const splashTimeoutId = setTimeout(() => {
       const splash = document.getElementById("splash");
       if (splash && splash.style.display !== "none") {
-        console.error("[Init] React failed to render within timeout");
+        log.critical("[Init] React failed to render within timeout");
         // Check if React rendered anything at all
         if (!reactRendered && rootElement.children.length === 0) {
           showEmergencyError(
@@ -180,7 +182,7 @@ async function initializeApp() {
           );
         } else {
           // React rendered something but splash wasn't hidden - just hide splash
-          console.warn("[Init] Splash still visible, force hiding");
+          log.warn("[Init] Splash still visible, force hiding");
           splash.style.display = "none";
         }
       }
@@ -191,7 +193,7 @@ async function initializeApp() {
       error: unknown,
       errorInfo: { componentStack?: string }
     ) => {
-      console.error("[React] Uncaught error:", error, errorInfo);
+      log.critical("[React] Uncaught error:", error, errorInfo);
       clearTimeout(splashTimeoutId);
       showEmergencyError(
         "Critical React Error",
@@ -204,7 +206,7 @@ async function initializeApp() {
       const rootOptions: Record<string, unknown> = {
         // Called for errors caught by Error Boundaries (React 19+)
         onCaughtError: (error: unknown, errorInfo: unknown) => {
-          console.error("[React] Error caught by boundary:", error, errorInfo);
+          log.error("[React] Error caught by boundary:", error, errorInfo);
           // ErrorBoundary handles display - just mark as rendered
           reactRendered = true;
         },
@@ -212,7 +214,7 @@ async function initializeApp() {
         onUncaughtError: handleReactError,
         // Called for errors during hydration or recoverable errors
         onRecoverableError: (error: unknown, errorInfo: unknown) => {
-          console.warn("[React] Recoverable error:", error, errorInfo);
+          log.warn("[React] Recoverable error:", error, errorInfo);
         },
       };
       const root = createRoot(
@@ -229,7 +231,7 @@ async function initializeApp() {
     } catch (error) {
       // This only catches synchronous errors (rare in React 18)
       clearTimeout(splashTimeoutId);
-      console.error("[Init] React mount failed synchronously:", error);
+      log.critical("[Init] React mount failed synchronously:", error);
       showEmergencyError(
         "Critical Startup Error",
         "React failed to initialize. This is usually caused by corrupted application data.",
@@ -261,13 +263,13 @@ async function initializeApp() {
       }
     }
   } else {
-    console.error("Failed to find the root element");
+    log.critical("Failed to find the root element");
   }
 }
 
 // Start initialization
 initializeApp().catch((error) => {
-  console.error("[Init] App initialization failed:", error);
+  log.critical("[Init] App initialization failed:", error);
   showEmergencyError(
     "Initialization Failed",
     "The application failed to initialize. Please try restarting."

@@ -6,6 +6,7 @@
  */
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 
+import { createLogger } from "@src/hooks/logger";
 import { triggerSessionExpired } from "@src/store/ui/uiAtom";
 import { getGlobalCommonHeaders } from "@src/util/config/headers";
 
@@ -32,6 +33,8 @@ import type {
   HttpMethod,
   RequestOptions,
 } from "./types";
+
+const log = createLogger("API");
 
 /**
  * Unified API request handler that processes all HTTP methods
@@ -114,7 +117,7 @@ export async function makeRequest<T>(
       axiosError.code === "ECONNABORTED" ||
       axiosError.message?.includes("timeout")
     ) {
-      console.error(`API ${method} timeout [${url}]:`, error);
+      log.error(`API ${method} timeout [${url}]:`, error);
       showTimeoutErrorNotification();
       onError?.();
       return undefined;
@@ -134,7 +137,7 @@ export async function makeRequest<T>(
           showServerErrorNotification(url, method, isAgentApi);
         }
       }
-      console.error(`API ${method} 500 error [${url}]:`, typedError.response);
+      log.error(`API ${method} 500 error [${url}]:`, typedError.response);
       onError?.();
       return undefined;
     }
@@ -146,12 +149,10 @@ export async function makeRequest<T>(
       const detail = errorData?.detail || errorData?.message;
 
       if (target !== "hostedService") {
-        console.error(
-          "[API] 401 Unauthorized - Session expired or invalid token"
-        );
+        log.error("[API] 401 Unauthorized - Session expired or invalid token");
         triggerSessionExpired();
       } else {
-        console.warn(
+        log.warn(
           "[API] 401 Hosted-service token invalid - main session unaffected"
         );
       }
@@ -191,10 +192,10 @@ export async function makeRequest<T>(
       const detail = errorData?.detail || errorData?.message;
       if (detail === "Not authenticated" || detail === "Expired token") {
         if (target !== "hostedService") {
-          console.error("[API] 403 Forbidden - Session expired:", detail);
+          log.error("[API] 403 Forbidden - Session expired:", detail);
           triggerSessionExpired();
         } else {
-          console.warn("[API] 403 Hosted-service auth error:", detail);
+          log.warn("[API] 403 Hosted-service auth error:", detail);
         }
         onNoAuth?.();
       }
@@ -225,7 +226,7 @@ export async function makeRequest<T>(
     if (!silent) {
       showErrorNotification(url, errorMessage, method, isAgentApi);
     }
-    console.error(`API ${method} error [${url}]:`, typedError.response);
+    log.error(`API ${method} error [${url}]:`, typedError.response);
     onError?.();
     return undefined;
   }
@@ -280,7 +281,7 @@ export async function makeDeleteRequest<T>(
 
     if (status === 401) {
       const detail = typedError.response?.data?.detail;
-      console.error("[API DELETE] 401 Unauthorized - Session expired");
+      log.error("[API DELETE] 401 Unauthorized - Session expired");
       if (target !== "hostedService") {
         triggerSessionExpired();
       }
@@ -293,7 +294,7 @@ export async function makeDeleteRequest<T>(
     if (status === 403) {
       const detail = typedError.response?.data?.detail;
       if (detail === "Not authenticated" || detail === "Expired token") {
-        console.error("[API DELETE] 403 Forbidden - Session expired:", detail);
+        log.error("[API DELETE] 403 Forbidden - Session expired:", detail);
         if (target !== "hostedService") {
           triggerSessionExpired();
         }
@@ -311,14 +312,14 @@ export async function makeDeleteRequest<T>(
       } else {
         showServerErrorNotification(url, "DELETE", isAgentApi);
       }
-      console.error(`API DELETE 500 error [${url}]:`, typedError.response);
+      log.error(`API DELETE 500 error [${url}]:`, typedError.response);
       onError?.();
       return undefined;
     }
 
     const errorMessage = buildErrorMessage(typedError, "DELETE", url);
     showErrorNotification(url, errorMessage, "DELETE", isAgentApi);
-    console.error(`API DELETE error [${url}]:`, typedError.response);
+    log.error(`API DELETE error [${url}]:`, typedError.response);
     onError?.();
     return undefined;
   }

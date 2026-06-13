@@ -30,6 +30,7 @@ import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { deleteSession as deleteCachedSession } from "@src/engines/SessionCore/storage/cacheAdapter";
+import { createLogger } from "@src/hooks/logger";
 import {
   clearPendingPlanApproval,
   pendingPlanApprovalsAtom,
@@ -44,6 +45,8 @@ import {
 
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
 import { showRevertConfirm } from "../components/RevertConfirmDialog";
+
+const log = createLogger("useEditUserMessage");
 
 const TRUNCATION_GUARD_CLEAR_DELAY_MS = 500;
 const USER_MESSAGE_EVENT_ID_PREFIX = "user-message-";
@@ -122,7 +125,7 @@ export function useEditUserMessage(): (
             revertFiles = choice === "revert";
           }
         } catch (err) {
-          console.warn(
+          log.warn(
             "[useEditUserMessage] checkSnapshotChanges failed, proceeding with revert:",
             err
           );
@@ -135,7 +138,7 @@ export function useEditUserMessage(): (
         !dbEventId &&
         isAgentSession(initiatedSessionId)
       ) {
-        console.error(
+        log.error(
           "[useEditUserMessage] dbEventId is null for agent session — SQLite truncate will be skipped. " +
             "The edit will appear to work but history will reappear after reload.",
           {
@@ -181,7 +184,7 @@ export function useEditUserMessage(): (
             // events that predate the rewind.
             await Promise.all([
               deleteCachedSession(initiatedSessionId).catch((err) =>
-                console.warn(
+                log.warn(
                   "[useEditUserMessage] deleteSession failed (non-fatal):",
                   err
                 )
@@ -189,7 +192,7 @@ export function useEditUserMessage(): (
               eventStoreProxy
                 .evictSession(initiatedSessionId)
                 .catch((err) =>
-                  console.warn(
+                  log.warn(
                     "[useEditUserMessage] evictSession failed (non-fatal):",
                     err
                   )
@@ -216,10 +219,7 @@ export function useEditUserMessage(): (
           );
         }
       } catch (err) {
-        console.error(
-          "[useEditUserMessage] edit truncate/resubmit failed:",
-          err
-        );
+        log.error("[useEditUserMessage] edit truncate/resubmit failed:", err);
         if (initiatedSessionId) failOptimisticTurn(initiatedSessionId);
         Message.error(t("errors.errorOccurred"));
       } finally {

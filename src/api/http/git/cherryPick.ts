@@ -3,8 +3,12 @@
  *
  * Cherry-pick operations and conflict resolution.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
 import type { CherryPickResult } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Cherry-pick a commit
@@ -32,7 +36,7 @@ export const gitCherryPick = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to cherry-pick:", error);
+    log.error("[GitAPI] Failed to cherry-pick:", error);
     return undefined;
   }
 };
@@ -55,7 +59,7 @@ export const gitCherryPickContinue = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to continue cherry-pick:", error);
+    log.error("[GitAPI] Failed to continue cherry-pick:", error);
     return undefined;
   }
 };
@@ -78,7 +82,7 @@ export const gitCherryPickAbort = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to abort cherry-pick:", error);
+    log.error("[GitAPI] Failed to abort cherry-pick:", error);
     return false;
   }
 };

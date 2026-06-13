@@ -10,6 +10,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import Switch from "@src/components/Switch";
+import { createLogger } from "@src/hooks/logger";
 import {
   useLanguageServers,
   useLspGlobalConfig,
@@ -23,6 +24,8 @@ import { currentRepoAtom } from "@src/store";
 
 import type { LspHandlers } from "./Table/LanguageServerInlineExpandedCard";
 import LanguageServersTable from "./Table/LanguageServersTable";
+
+const log = createLogger("LanguageServersPage");
 
 const LanguageServersPage: React.FC = () => {
   const { t } = useTranslation("settings");
@@ -67,7 +70,7 @@ const LanguageServersPage: React.FC = () => {
     try {
       await setAutoInstall(checked);
     } catch (error) {
-      console.error("Failed to toggle auto-install:", error);
+      log.error("Failed to toggle auto-install:", error);
     }
   };
 

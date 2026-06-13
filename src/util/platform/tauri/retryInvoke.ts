@@ -7,8 +7,11 @@
  */
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { makeErrorEvent } from "@src/engines/SessionCore/sync/adapters/shared/eventBuilders";
+import { createLogger } from "@src/hooks/logger";
 
 import { invokeTauri } from "./init";
+
+const log = createLogger("retryInvoke");
 
 const MAX_RETRIES = 2;
 const RETRY_DELAYS_MS = [2_000, 5_000];
@@ -51,7 +54,7 @@ export async function retryInvokeTauri<T = unknown>(
 
       const delay =
         RETRY_DELAYS_MS[attempt] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
-      console.warn(
+      log.warn(
         `[retryInvoke] ${cmd} attempt ${attempt + 1}/${MAX_RETRIES + 1} failed (rate limit), retrying in ${delay}ms`
       );
       await new Promise((resolve) => setTimeout(resolve, delay));

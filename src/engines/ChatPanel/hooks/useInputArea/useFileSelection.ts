@@ -7,9 +7,12 @@ import { useAtom } from "jotai";
 import { type MutableRefObject, type RefObject, useCallback } from "react";
 
 import type { ComposerInputRef } from "@src/components/ComposerInput";
+import { createLogger } from "@src/hooks/logger";
 import { contextItemsAtom } from "@src/store/session";
 
 import type { FileSelectionHandlers } from "./types";
+
+const log = createLogger("useFileSelection");
 
 interface UseFileSelectionOptions {
   composerInputRef: RefObject<ComposerInputRef | null>;
@@ -31,7 +34,7 @@ export function useFileSelection(
   const handleSelectFile = useCallback(
     (file: string) => {
       if (!composerInputRef.current) {
-        console.warn("composerInputRef.current is null");
+        log.warn("composerInputRef.current is null");
         return;
       }
 

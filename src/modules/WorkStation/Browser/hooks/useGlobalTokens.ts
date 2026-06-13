@@ -12,10 +12,13 @@ import { invoke } from "@tauri-apps/api/core";
 import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   type TokenDefinition,
   scannedTokensAtom,
 } from "@src/store/workstation/browser/tokens/tokenAtoms";
+
+const log = createLogger("useGlobalTokens");
 
 // Re-export for consumers
 export type { TokenDefinition } from "@src/store/workstation/browser/tokens/tokenAtoms";
@@ -140,7 +143,7 @@ export function useGlobalTokens(
    */
   const scan = useCallback(async () => {
     if (!repoPath) {
-      console.warn("[useGlobalTokens] No repo path provided");
+      log.warn("[useGlobalTokens] No repo path provided");
       return;
     }
 
@@ -163,7 +166,7 @@ export function useGlobalTokens(
       setScannedTokens(result.tokens);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error("[useGlobalTokens] Scan failed:", message);
+      log.error("[useGlobalTokens] Scan failed:", message);
       setError(message);
     } finally {
       setLoading(false);

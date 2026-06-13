@@ -13,8 +13,11 @@ import { useTranslation } from "react-i18next";
 import { respondPermission } from "@src/api/tauri/agent";
 import Message from "@src/components/Message";
 import type { PermissionRequestEvent } from "@src/engines/SessionCore/sync/adapters/shared";
+import { createLogger } from "@src/hooks/logger";
 
 import { PermissionCardBody } from "./PermissionCardBody";
+
+const log = createLogger("PermissionCard");
 
 function buildArgsPreview(args: Record<string, unknown>) {
   return Object.entries(args)
@@ -86,7 +89,7 @@ const PermissionCard: React.FC<PermissionCardProps> = ({
           prev.filter((req) => req.requestId !== respondingId)
         );
       } catch (err) {
-        console.error("[PermissionCard] Failed to respond:", err);
+        log.error("[PermissionCard] Failed to respond:", err);
         Message.error(t("chat.permissionFailed"));
       } finally {
         setIsSubmitting(false);

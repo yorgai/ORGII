@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
+import { createLogger } from "@src/hooks/logger";
 
 import { FLOW_AWARENESS_CONFIG } from "./config";
 import type {
@@ -36,6 +37,8 @@ import type {
   UseFlowAwarenessOptions,
   UseFlowAwarenessReturn,
 } from "./types";
+
+const log = createLogger("FlowAwareness");
 
 // Types imported from types module for consistency
 
@@ -108,7 +111,7 @@ export function useFlowAwareness(
       try {
         await rpc.flow.recordActivities({ activities: batch });
       } catch (err) {
-        console.warn("[FlowAwareness] Failed to record activities batch:", err);
+        log.warn("[FlowAwareness] Failed to record activities batch:", err);
         // Don't put activities back in queue - they're lost to avoid memory leaks
         // The system should be resilient to occasional data loss
       }
@@ -297,7 +300,7 @@ export function useFlowAwareness(
         });
         return result || ""; // Ensure we never return undefined
       } catch (err) {
-        console.error("[FlowAwareness] Failed to get context:", err);
+        log.error("[FlowAwareness] Failed to get context:", err);
         // Return empty string instead of throwing - callers should handle gracefully
         return "";
       }
@@ -349,7 +352,7 @@ export function useFlowAwareness(
             : [],
         };
       } catch (err) {
-        console.error("[FlowAwareness] Failed to get summary:", err);
+        log.error("[FlowAwareness] Failed to get summary:", err);
         return fallbackSummary;
       }
     },
@@ -358,9 +361,7 @@ export function useFlowAwareness(
 
   const clearSession = useCallback(async (): Promise<void> => {
     if (!sessionId) {
-      console.warn(
-        "[FlowAwareness] Cannot clear session: no sessionId provided"
-      );
+      log.warn("[FlowAwareness] Cannot clear session: no sessionId provided");
       return;
     }
 
@@ -371,7 +372,7 @@ export function useFlowAwareness(
         (activity) => activity.sessionId !== sessionId
       );
     } catch (err) {
-      console.error("[FlowAwareness] Failed to clear session:", err);
+      log.error("[FlowAwareness] Failed to clear session:", err);
       throw new Error(`Failed to clear flow session: ${err}`);
     }
   }, [sessionId]);

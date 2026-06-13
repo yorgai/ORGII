@@ -7,6 +7,7 @@
 import { openInSimulatorCanvas } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/openInSimulatorCanvas";
 import type { CanvasInlineMode } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/types";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import { createLogger } from "@src/hooks/logger";
 import { clearMcpProgressForCallAtom } from "@src/store/session/mcpProgressAtom";
 
 import { makeToolResultEvent } from "../../shared/eventBuilders";
@@ -19,6 +20,8 @@ import {
 import type { AgentWSEvent } from "../../shared/types";
 import { clearStreamingInfo, getToolCallId } from "./streamHelpers";
 import type { EventHandlerContext } from "./types";
+
+const log = createLogger("ToolHandlers");
 
 export function handleToolCall(
   event: AgentWSEvent,
@@ -47,11 +50,11 @@ export function handleToolCall(
     // the later tool_result could never pair with (broke Build-button
     // wiring in the `create_plan` pipeline). Drop the event and log
     // loudly so the bug surfaces instead of being papered over.
-    // eslint-disable-next-line no-console
-    console.warn(
-      "[toolHandlers] agent:tool_call dropped — missing tool_call_id",
-      { tool: event.tool, sessionId, eventSessionId }
-    );
+    log.warn("[toolHandlers] agent:tool_call dropped — missing tool_call_id", {
+      tool: event.tool,
+      sessionId,
+      eventSessionId,
+    });
     return;
   }
 

@@ -9,6 +9,7 @@ import { atom } from "jotai";
 import { REPLAY_CONFIG } from "@src/config/workspace/replayConfig";
 import { clearLoadedPayloads } from "@src/engines/SessionCore/payloads";
 import { clearLoadedTurnRegistry } from "@src/engines/SessionCore/turns/loadedTurnRegistry";
+import { createLogger } from "@src/hooks/logger";
 import { messageQueueAtom } from "@src/store/ui/messageQueueAtom";
 
 import { isVisibleInChat } from "../../ingestion/visibilityFilters";
@@ -48,6 +49,8 @@ import {
   replayModeAtom,
   replayTimeRangeAtom,
 } from "./replay";
+
+const log = createLogger("loadSession");
 
 function normalizeUserText(value: string | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim();
@@ -356,7 +359,7 @@ export const loadSessionAtom = atom(
     // Explicit sessionId avoids the "active session" fallback that crashes on
     // app restart when Rust has no active session but localStorage has a stale id.
     eventStoreProxy.mergeEvents(mergedEvents, sessionId).catch((err) => {
-      console.warn("[loadSession] Failed to sync events to Rust store:", err);
+      log.warn("[loadSession] Failed to sync events to Rust store:", err);
     });
     set(specsAtom, specs);
     set(isFromCacheAtom, isFromCache);

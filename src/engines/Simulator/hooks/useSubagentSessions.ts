@@ -24,6 +24,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("useSubagentSessions");
 
 export interface SubagentSession {
   /** Stable React key — equals the child session id. */
@@ -297,8 +300,7 @@ export function useSubagentSessions(
         queueMicrotask(() => setSessions(mapped));
       })
       .catch((err) => {
-        // eslint-disable-next-line no-console
-        console.error("[useSubagentSessions] fetch failed", err);
+        log.error("[useSubagentSessions] fetch failed", err);
       });
 
     return () => {

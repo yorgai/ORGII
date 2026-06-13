@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import { EDITOR_TAB_CANVAS_BG_CLASS } from "@src/config/workstation/tokens";
+import { createLogger } from "@src/hooks/logger";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { webviewBlockedAtom } from "@src/store/ui/overlayAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
@@ -26,6 +27,8 @@ import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import BrowserSessionWebview from "./BrowserSessionWebview";
 import type { UseBrowserStateReturn } from "./hooks/useBrowserState";
 import "./index.scss";
+
+const log = createLogger("BrowserCore");
 
 const ABOUT_BLANK_URL = "about:blank";
 const SHOW_WEBVIEW_FRAME_ANCHOR = false;
@@ -109,7 +112,7 @@ export const BrowserCore: React.FC<BrowserCoreProps> = ({
             "loop completed with undelivered notifications"
           ))
       ) {
-        console.warn("[BrowserCore] Suppressed ResizeObserver error");
+        log.warn("[BrowserCore] Suppressed ResizeObserver error");
         event.stopImmediatePropagation();
         event.preventDefault();
         return true;

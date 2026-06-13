@@ -16,6 +16,7 @@ import { selectAtom } from "jotai/utils";
 import { type MutableRefObject, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
+import { createLogger } from "@src/hooks/logger";
 import { invalidateFileCache } from "@src/hooks/workStation/editor/useFileContent";
 import { tabToHost } from "@src/store/workstation/tabHost";
 import {
@@ -25,6 +26,8 @@ import {
 
 import { DEFAULT_PANEL_STATE } from "../config";
 import type { UseEditorPaneStateReturn } from "../types";
+
+const log = createLogger("useEditorPaneState");
 
 // ============================================
 // Helpers
@@ -180,7 +183,7 @@ export function useEditorPaneState(
                     })
                   );
                 } catch (err) {
-                  console.error("[closeTab] Save failed:", err);
+                  log.error("[closeTab] Save failed:", err);
                   return; // Don't close if save failed
                 }
               }
@@ -244,7 +247,7 @@ export function useEditorPaneState(
           return { tabs: newTabs, activeTabId: newActiveTabId };
         });
       } catch (err) {
-        console.error("[closeTab] Error:", err);
+        log.error("[closeTab] Error:", err);
       }
     },
     [updatePaneStateFn, fileContentStateRef, forceRefreshRef, t]

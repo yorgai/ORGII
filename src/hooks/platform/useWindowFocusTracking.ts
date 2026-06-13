@@ -15,13 +15,17 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("WindowFocus");
+
 export function useWindowFocusTracking() {
   useEffect(() => {
     async function handleFocus() {
       try {
         await invoke("set_window_focus", { focused: true });
       } catch (error) {
-        console.error("[WindowFocus] Failed to set focused state:", error);
+        log.error("[WindowFocus] Failed to set focused state:", error);
       }
     }
 
@@ -29,7 +33,7 @@ export function useWindowFocusTracking() {
       try {
         await invoke("set_window_focus", { focused: false });
       } catch (error) {
-        console.error("[WindowFocus] Failed to set blur state:", error);
+        log.error("[WindowFocus] Failed to set blur state:", error);
       }
     }
 

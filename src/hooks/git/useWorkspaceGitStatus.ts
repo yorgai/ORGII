@@ -13,12 +13,15 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { getGitStatus } from "@src/api/http/git/status";
 import { getCodeEditorWebSocket } from "@src/api/realtime/codeEditorWebSocket";
+import { createLogger } from "@src/hooks/logger";
 import { workspaceGitStatusMapAtom } from "@src/store/git";
 import {
   isMultiRootWorkspaceAtom,
   workspaceFoldersAtom,
 } from "@src/store/ui/workspaceFoldersAtom";
 import type { GitRepositoryStatus } from "@src/types/session/steps";
+
+const log = createLogger("useWorkspaceGitStatus");
 
 interface RegisteredFolder {
   id: string;
@@ -95,10 +98,7 @@ export function useWorkspaceGitStatus(): void {
         });
       }
     } catch (error) {
-      console.error(
-        "[useWorkspaceGitStatus] Failed to register watchers:",
-        error
-      );
+      log.error("[useWorkspaceGitStatus] Failed to register watchers:", error);
     }
   }, [isMultiRoot]);
 

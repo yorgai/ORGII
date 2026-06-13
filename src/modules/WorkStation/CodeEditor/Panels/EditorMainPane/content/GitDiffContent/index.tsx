@@ -31,6 +31,7 @@ import {
   type TextSelectionInfo,
   hasConflictMarkers,
 } from "@src/features/CodeMirror";
+import { createLogger } from "@src/hooks/logger";
 import {
   type DiffViewMode,
   FileHeader,
@@ -56,6 +57,8 @@ import {
 
 import { ImageDiffView } from "./ImageDiffView";
 import { useGitDiffLoader } from "./useGitDiffLoader";
+
+const log = createLogger("GitDiffContent");
 
 const LazyTextSelectionDropdown = React.lazy(
   () => import("@src/scaffold/ContextMenu/variants/TextSelectionDropdown")
@@ -387,7 +390,7 @@ const GitDiffContentInner: React.FC<GitDiffContentProps> = ({
       // Refresh git status so source control panel updates immediately
       forceRefresh();
     } catch (error) {
-      console.error("[GitDiffContent] Save error:", error);
+      log.error("[GitDiffContent] Save error:", error);
     } finally {
       setSaving(false);
     }

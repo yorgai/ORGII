@@ -107,7 +107,7 @@ module.exports = {
       },
     ],
 
-    // Discourage direct console usage — migrate to @src/util/logger
+    // Discourage direct console usage — migrate to @src/hooks/logger
     "no-console": ["warn", { allow: ["warn", "error"] }],
 
     "no-restricted-syntax": [

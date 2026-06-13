@@ -21,10 +21,13 @@ import {
   type GitOperationResult,
   useGitOperations,
 } from "@src/hooks/git/useGitOperations";
+import { createLogger } from "@src/hooks/logger";
 import type { GitFile } from "@src/types/git/types";
 import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
 
 import { handlePullError } from "./pullErrorHandlers";
+
+const log = createLogger("SyncOperations");
 
 export interface UseSyncOperationsOptions {
   selectedRepoId: string | null;
@@ -185,13 +188,11 @@ export function useSyncOperations(
 
       if (!pushResult.success) {
         if (pushResult.errorType === "authentication_failed") {
-          console.error(
-            "Authentication failed. Please check your credentials."
-          );
+          log.error("Authentication failed. Please check your credentials.");
         } else if (pushResult.errorType === "network_error") {
-          console.error("Network error. Please check your connection.");
+          log.error("Network error. Please check your connection.");
         } else {
-          console.error("Publish failed:", pushResult.errorType);
+          log.error("Publish failed:", pushResult.errorType);
         }
         return;
       }
@@ -202,7 +203,7 @@ export function useSyncOperations(
         refreshStashesRef.current(),
       ]);
     } catch (error) {
-      console.error("Failed to publish branch:", error);
+      log.error("Failed to publish branch:", error);
     } finally {
       setPublishLoading(false);
     }
@@ -245,7 +246,7 @@ export function useSyncOperations(
           dispatch,
         });
         if (!handled) {
-          console.error("Pull failed:", pullResult.errorType);
+          log.error("Pull failed:", pullResult.errorType);
         }
         return;
       }
@@ -289,13 +290,11 @@ export function useSyncOperations(
           } else if (pushResult.errorType === "protected_branch") {
             await handleProtectedBranch();
           } else if (pushResult.errorType === "authentication_failed") {
-            console.error(
-              "Authentication failed. Please check your credentials."
-            );
+            log.error("Authentication failed. Please check your credentials.");
           } else if (pushResult.errorType === "network_error") {
-            console.error("Network error. Please check your connection.");
+            log.error("Network error. Please check your connection.");
           } else {
-            console.error("Push failed:", pushResult.errorType);
+            log.error("Push failed:", pushResult.errorType);
           }
           return;
         }
@@ -310,7 +309,7 @@ export function useSyncOperations(
         refreshStashesRef.current(),
       ]);
     } catch (error) {
-      console.error("Failed to sync:", error);
+      log.error("Failed to sync:", error);
     } finally {
       setSyncLoading(false);
     }
@@ -345,7 +344,7 @@ export function useSyncOperations(
           dispatch,
         });
         if (!handled) {
-          console.error("Pull failed:", pullResult.errorType);
+          log.error("Pull failed:", pullResult.errorType);
         }
         return;
       }
@@ -356,7 +355,7 @@ export function useSyncOperations(
         refreshStashesRef.current(),
       ]);
     } catch (error) {
-      console.error("Failed to pull:", error);
+      log.error("Failed to pull:", error);
     } finally {
       setPullLoading(false);
     }
@@ -454,13 +453,11 @@ export function useSyncOperations(
         } else if (pushResult.errorType === "protected_branch") {
           await handleProtectedBranch();
         } else if (pushResult.errorType === "authentication_failed") {
-          console.error(
-            "Authentication failed. Please check your credentials."
-          );
+          log.error("Authentication failed. Please check your credentials.");
         } else if (pushResult.errorType === "network_error") {
-          console.error("Network error. Please check your connection.");
+          log.error("Network error. Please check your connection.");
         } else {
-          console.error("Push failed:", pushResult.errorType);
+          log.error("Push failed:", pushResult.errorType);
         }
         return;
       }
@@ -474,7 +471,7 @@ export function useSyncOperations(
         refreshStashesRef.current(),
       ]);
     } catch (error) {
-      console.error("Failed to push:", error);
+      log.error("Failed to push:", error);
     } finally {
       setPushLoading(false);
     }
@@ -500,13 +497,11 @@ export function useSyncOperations(
 
       if (!fetchResult.success) {
         if (fetchResult.errorType === "authentication_failed") {
-          console.error(
-            "Authentication failed. Please check your credentials."
-          );
+          log.error("Authentication failed. Please check your credentials.");
         } else if (fetchResult.errorType === "network_error") {
-          console.error("Network error. Please check your connection.");
+          log.error("Network error. Please check your connection.");
         } else {
-          console.error("Fetch failed:", fetchResult.errorType);
+          log.error("Fetch failed:", fetchResult.errorType);
         }
         return;
       }
@@ -517,7 +512,7 @@ export function useSyncOperations(
         refreshStashesRef.current(),
       ]);
     } catch (error) {
-      console.error("Failed to fetch:", error);
+      log.error("Failed to fetch:", error);
     } finally {
       setFetchLoading(false);
     }

@@ -1,5 +1,6 @@
 import React, { Component, ReactNode } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import ErrorPage from "@src/modules/shared/Error";
 import {
   hasGlobalErrorAtom,
@@ -7,11 +8,13 @@ import {
 } from "@src/store/ui/overlayAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
+const log = createLogger("ErrorBoundary");
+
 const getJotaiStore = () => {
   try {
     return getInstrumentedStore();
   } catch (error) {
-    console.error("[ErrorBoundary] Failed to get instrumented store:", error);
+    log.error("[ErrorBoundary] Failed to get instrumented store:", error);
     return null;
   }
 };
@@ -41,14 +44,14 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("React Error Boundary caught an error:", error, errorInfo);
+    log.error("React Error Boundary caught an error:", error, errorInfo);
 
     if (
       error.message?.includes("Loading chunk") ||
       error.message?.includes("ChunkLoadError") ||
       error.name === "ChunkLoadError"
     ) {
-      console.warn(
+      log.warn(
         "Chunk loading error in React boundary, reloading page:",
         error.message
       );
@@ -63,7 +66,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       errorInfo.componentStack?.includes("throwException") ||
       errorInfo.componentStack?.includes("renderRootSync")
     ) {
-      console.warn(
+      log.warn(
         "React Suspense error detected, redirecting to error page:",
         error.message
       );
@@ -185,7 +188,7 @@ const GlobalErrorHandler: React.FC<{ children: ReactNode }> = ({
         typeof reason.message === "string" &&
         reason.message.length > 0;
       if (!isMeaningfulError) {
-        console.warn(
+        log.warn(
           "[GlobalErrorHandler] Suppressing empty-reason unhandled rejection:",
           reason
         );

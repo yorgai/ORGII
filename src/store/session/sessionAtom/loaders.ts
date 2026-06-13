@@ -30,6 +30,7 @@ import {
   sessionAggregateList,
   toFrontendSessions,
 } from "@src/api/tauri/session";
+import { createLogger } from "@src/hooks/logger";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 import { isPrimarySessionListSession } from "@src/util/session/sessionVisibility";
@@ -50,6 +51,8 @@ import {
 } from "./paginationAtoms";
 import { persistSessions } from "./persistence";
 import type { Session, SessionStatus } from "./types";
+
+const log = createLogger("SessionAtom");
 
 function normalizeCursorIdeStatus(isActive: boolean): SessionStatus {
   return isActive ? "running" : "completed";
@@ -244,7 +247,7 @@ export const loadSessions = async (options?: {
         ...cursorPageResult.value.sessions.map(cursorIdeRowToSession)
       );
     } else {
-      console.warn(
+      log.warn(
         "[SessionAtom] Cursor IDE history load failed (continuing without it):",
         cursorPageResult.reason
       );
@@ -258,7 +261,7 @@ export const loadSessions = async (options?: {
           )
         );
       } else {
-        console.warn(
+        log.warn(
           `[SessionAtom] ${result.source.displayName} event load failed (continuing without it):`,
           result.reason
         );
@@ -273,7 +276,7 @@ export const loadSessions = async (options?: {
     persistSessions(fetched);
     store.set(sessionLastLoadedAtom, now);
   } catch (error) {
-    console.error("[SessionAtom] Failed to load sessions:", error);
+    log.error("[SessionAtom] Failed to load sessions:", error);
     store.set(
       sessionErrorAtom,
       error instanceof Error ? error.message : "Failed to load sessions"
@@ -406,7 +409,7 @@ export const loadSidebarSessions = async (options?: {
           loading: false,
         });
       } catch (error) {
-        console.warn(`[SessionAtom] ${category} initial page failed:`, error);
+        log.warn(`[SessionAtom] ${category} initial page failed:`, error);
         setPaginationFor(category, { loading: false });
       }
     })
@@ -448,7 +451,7 @@ export const refreshCursorIdeSidebarSessions = async (
     });
     persistSessions(store.get(sessionsAtom));
   } catch (error) {
-    console.warn("[SessionAtom] Cursor IDE refresh failed:", error);
+    log.warn("[SessionAtom] Cursor IDE refresh failed:", error);
     setPaginationFor(category, { loading: false });
   }
 };
@@ -477,7 +480,7 @@ export const loadMoreCategory = async (
     });
     persistSessions(store.get(sessionsAtom));
   } catch (error) {
-    console.warn(`[SessionAtom] loadMoreCategory(${category}) failed:`, error);
+    log.warn(`[SessionAtom] loadMoreCategory(${category}) failed:`, error);
     setPaginationFor(category, { loading: false });
   }
 };

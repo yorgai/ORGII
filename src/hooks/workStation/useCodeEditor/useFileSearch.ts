@@ -7,6 +7,7 @@
 import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useDeferredValue } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { useDebouncedCallback } from "@src/hooks/perf";
 import type { FileSearchResult } from "@src/store/workstation/codeEditor/file";
 import {
@@ -19,6 +20,8 @@ import {
 import { searchFilesNative } from "@src/util/platform/tauri/fileSearch";
 
 import { DEFAULT_EXCLUDE_DIRS } from "./helpers";
+
+const log = createLogger("useCodeEditor");
 
 // ============================================
 // Types
@@ -89,7 +92,7 @@ export function useFileSearch(repoPath: string): UseFileSearchReturn {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to search files";
         setSearchError(errorMessage);
-        console.error("[useCodeEditor] Error searching files:", err);
+        log.error("[useCodeEditor] Error searching files:", err);
         setSearchResults([]);
       } finally {
         setSearchLoading(false);

@@ -4,6 +4,7 @@
  * Main orchestrator hook for WorkItem page.
  * Combines state, data transformations, and handlers.
  */
+import { createLogger } from "@src/hooks/logger";
 import { useWorkItemInboxNotifications } from "@src/modules/MainApp/Inbox/hooks/useWorkItemInboxNotifications";
 
 import type { WorkItemsViewTab } from "../types";
@@ -12,6 +13,8 @@ import { useWorkItemActions } from "./useWorkItemActions";
 import { useWorkItemsData } from "./useWorkItemsData";
 import { useWorkItemsHandlers } from "./useWorkItemsHandlers";
 import { useWorkItemsState } from "./useWorkItemsState";
+
+const log = createLogger("WorkItems");
 
 export interface UseWorkItemsOptions {
   /** Project ID from the active tab */
@@ -71,7 +74,7 @@ export function useWorkItems(options: UseWorkItemsOptions = {}) {
     teamId: data.teamId,
     projectSlug,
     onError: (errorMessage) => {
-      console.error("Failed to update work item:", errorMessage);
+      log.error("Failed to update work item:", errorMessage);
     },
     onSuccess: () => {
       data.refresh();

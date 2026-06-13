@@ -18,8 +18,11 @@ import type {
   Snapshot,
   StreamingSnapshot,
 } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import { createLogger } from "@src/hooks/logger";
 
 import type { SubagentSession } from "./useSubagentSessions";
+
+const log = createLogger("multiSessionSimulator");
 
 const MAX_EVENTS_PER_SUBAGENT_SESSION = 360;
 
@@ -154,7 +157,7 @@ export function useMultiSessionSimulatorEvents(
           })
           .catch((err) => {
             hydrationRequestedRef.current.delete(sessionId);
-            console.warn(
+            log.warn(
               "[multiSessionSimulator] full snapshot hydration failed",
               sessionId,
               err
@@ -212,11 +215,7 @@ export function useMultiSessionSimulatorEvents(
               // session would be permanently stuck with no events after a
               // transient cache failure.
               loadedRef.current.delete(sid);
-              console.warn(
-                "[multiSessionSimulator] cache load failed",
-                sid,
-                err
-              );
+              log.warn("[multiSessionSimulator] cache load failed", sid, err);
             });
         }
       }

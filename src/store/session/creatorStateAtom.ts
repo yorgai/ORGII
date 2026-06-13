@@ -11,7 +11,10 @@ import { atomWithStorage } from "jotai/utils";
 
 import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
 import type { DispatchCategory } from "@src/api/tauri/session";
+import { createLogger } from "@src/hooks/logger";
 import { BUILTIN_SDE_DEF_ID } from "@src/util/session/sessionDispatch";
+
+const log = createLogger("SessionCreatorState");
 
 // ============================================
 // Type Definitions
@@ -164,7 +167,7 @@ export const sessionCreatorStateAtom = atomWithStorage<SessionCreatorState>(
         const nextState = { ...initialValue, ...parsed };
         return normalizeSessionCreatorState(nextState);
       } catch (error) {
-        console.warn("[SessionCreatorState] Failed to load state:", error);
+        log.warn("[SessionCreatorState] Failed to load state:", error);
         return initialValue;
       }
     },
@@ -172,7 +175,7 @@ export const sessionCreatorStateAtom = atomWithStorage<SessionCreatorState>(
       try {
         localStorage.setItem(key, JSON.stringify(value));
       } catch (error) {
-        console.error("[SessionCreatorState] Failed to save state:", error);
+        log.error("[SessionCreatorState] Failed to save state:", error);
       }
     },
     removeItem: (key) => {

@@ -8,6 +8,7 @@ import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { useAtom, useAtomValue } from "jotai";
 import { useCallback } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   fileContentAtom,
   fileContentErrorAtom,
@@ -23,6 +24,8 @@ import {
   isBinaryByExtension,
   isBinaryContent,
 } from "@src/util/file/binaryDetection";
+
+const log = createLogger("useCodeEditor");
 
 // ============================================
 // Types
@@ -98,7 +101,7 @@ export function useFileContent(): UseFileContentReturn {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load file content";
         setContentError(errorMessage);
-        console.error("[useCodeEditor] Error loading file content:", err);
+        log.error("[useCodeEditor] Error loading file content:", err);
         setFileContent("");
         setSavedContent("");
         setIsBinary(false);
@@ -142,7 +145,7 @@ export function useFileContent(): UseFileContentReturn {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to save file";
         setSaveError(errorMessage);
-        console.error("[useCodeEditor] Error saving file:", err);
+        log.error("[useCodeEditor] Error saving file:", err);
         return false;
       } finally {
         setSaving(false);

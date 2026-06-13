@@ -3,6 +3,8 @@
  *
  * File diff, batch diff, and commit diff functions.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
 import type {
   CommitDiffResult,
@@ -14,6 +16,8 @@ import type {
   GitFileContentResult,
   GitFileDiffResult,
 } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Get file content at a specific git ref
@@ -65,7 +69,7 @@ export const getGitFileDiff = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to get file diff:", error);
+    log.error("[GitAPI] Failed to get file diff:", error);
     return undefined;
   }
 };
@@ -130,7 +134,7 @@ export const getGitBatchFileDiffs = async (params: {
     });
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to get batch file diffs:", error);
+    log.error("[GitAPI] Failed to get batch file diffs:", error);
     return undefined;
   }
 };
@@ -154,7 +158,7 @@ export const getGitDiffSummary = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to get diff summary:", error);
+    log.error("[GitAPI] Failed to get diff summary:", error);
     return undefined;
   }
 };
@@ -177,7 +181,7 @@ export const getGitStagedDiff = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to get staged diff:", error);
+    log.error("[GitAPI] Failed to get staged diff:", error);
     return undefined;
   }
 };
@@ -224,7 +228,7 @@ export const getGitDiffNumstat = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to get diff numstat:", error);
+    log.error("[GitAPI] Failed to get diff numstat:", error);
     return undefined;
   }
 };
@@ -250,7 +254,7 @@ export const getGitDiffNumstatCombined = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to get combined diff numstat:", error);
+    log.error("[GitAPI] Failed to get combined diff numstat:", error);
     return undefined;
   }
 };
@@ -287,7 +291,7 @@ export const getGitCommitDiff = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to get commit diff:", error);
+    log.error("[GitAPI] Failed to get commit diff:", error);
     return undefined;
   }
 };

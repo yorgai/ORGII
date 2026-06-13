@@ -12,10 +12,13 @@ import {
   getLoginUrl,
 } from "@src/api/http/auth/login";
 import { SERVICE_AUTH_STORAGE_KEYS } from "@src/config/serviceAuth";
+import { createLogger } from "@src/hooks/logger";
 import { loginModalFixAtom, loginModalVisibleAtom } from "@src/store";
 import { userAtom } from "@src/store/user";
 import type { IUserInfo } from "@src/types/core/user";
 import { isTauriDesktop } from "@src/util/platform/tauri";
+
+const log = createLogger("Login");
 
 // OAuth callback template for Tauri desktop
 const callbackTemplate = `
@@ -48,7 +51,7 @@ async function stopOAuthServer() {
   try {
     await cancel(54031);
   } catch (error) {
-    console.error("Error stopping OAuth server:", error);
+    log.error("Error stopping OAuth server:", error);
   }
 }
 
@@ -62,11 +65,11 @@ function authing_signin(
   try {
     code = new URLSearchParams(url.search).get("code");
   } catch (error) {
-    console.error("Error parsing URL for code:", error);
+    log.error("Error parsing URL for code:", error);
     code = null;
   }
   if (!code) {
-    console.error("No code found in URL");
+    log.error("No code found in URL");
     return;
   }
 
@@ -100,7 +103,7 @@ function authing_signin(
             setUser(userInfoRes.data.user_public);
           }
         } catch (err) {
-          console.error("Failed to get current user info:", err);
+          log.error("Failed to get current user info:", err);
         }
 
         // Close the modal after all user info is updated
@@ -110,7 +113,7 @@ function authing_signin(
       }
     })
     .catch((err) => {
-      console.error(err);
+      log.error(err);
     })
     .finally(() => {
       // Clear login in progress flag
@@ -155,7 +158,7 @@ async function startOAuthFlow(
     // Initiate your OAuth flow here
     openAuthingSignIn("54031", login_url);
   } catch (error) {
-    console.error("Error starting OAuth server:", error);
+    log.error("Error starting OAuth server:", error);
   }
 }
 
@@ -199,7 +202,7 @@ const LoginModal = () => {
                 setVisible(false);
               }
             } catch (error) {
-              console.error("Login error:", error);
+              log.error("Login error:", error);
             } finally {
               setIsLoading(false);
             }

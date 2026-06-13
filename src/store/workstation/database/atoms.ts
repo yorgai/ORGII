@@ -21,6 +21,9 @@ import type {
   DatabaseType,
   TableInfo,
 } from "@src/engines/DatabaseCore";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("Database");
 
 // ============================================
 // Runtime Connection State (UI)
@@ -93,7 +96,7 @@ export function loadConnectionConfigs(): DatabaseConnectionConfig[] {
       return JSON.parse(stored) as DatabaseConnectionConfig[];
     }
   } catch (error) {
-    console.warn("Failed to load connection configs:", error);
+    log.warn("Failed to load connection configs:", error);
   }
   return [];
 }
@@ -107,7 +110,7 @@ export function saveConnectionConfigs(
   try {
     localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(configs));
   } catch (error) {
-    console.warn("Failed to save connection configs:", error);
+    log.warn("Failed to save connection configs:", error);
   }
 }
 
@@ -267,7 +270,7 @@ const queryHistoryStorage = {
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
-      console.warn("Failed to persist query history:", error);
+      log.warn("Failed to persist query history:", error);
     }
   },
   removeItem: (key: string): void => {

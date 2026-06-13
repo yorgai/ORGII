@@ -5,7 +5,10 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 
+import { createLogger } from "@src/hooks/logger";
 import { NotificationSettings } from "@src/store/ui/notificationAtom";
+
+const log = createLogger("Notification");
 
 // Audio element for completion sounds
 let audioElement: HTMLAudioElement | null = null;
@@ -17,7 +20,7 @@ const getAudioElement = (): HTMLAudioElement => {
     audioElement = new Audio("/sounds/completion.mp3");
     // Add error handler to fall back to generated sound
     audioElement.addEventListener("error", () => {
-      console.warn("Sound file not found, using generated sound");
+      log.warn("Sound file not found, using generated sound");
     });
   }
   return audioElement;
@@ -57,7 +60,7 @@ const playGeneratedSound = (volume: number): void => {
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.3);
   } catch (error) {
-    console.error("Failed to play generated sound:", error);
+    log.error("Failed to play generated sound:", error);
   }
 };
 
@@ -79,14 +82,14 @@ export const checkNotificationPermission = async (): Promise<string> => {
     const granted = await isPermissionGranted();
     return granted ? "granted" : "denied";
   } catch (error) {
-    console.error(
+    log.error(
       "[Notification] Permission check failed, trying Rust command:",
       error
     );
     try {
       return await invoke<string>("check_notification_permission");
     } catch (invokeError) {
-      console.error("[Notification] Rust command also failed:", invokeError);
+      log.error("[Notification] Rust command also failed:", invokeError);
       return "unknown";
     }
   }
@@ -104,14 +107,14 @@ export const requestNotificationPermission = async (): Promise<string> => {
         ? "denied"
         : "unknown";
   } catch (error) {
-    console.error(
+    log.error(
       "[Notification] Permission request failed, trying Rust command:",
       error
     );
     try {
       return await invoke<string>("request_notification_permission");
     } catch (invokeError) {
-      console.error("[Notification] Rust command also failed:", invokeError);
+      log.error("[Notification] Rust command also failed:", invokeError);
       return "denied";
     }
   }
@@ -128,12 +131,12 @@ export const sendSystemNotification = async (
     await sendNotification({ title, body });
     return true;
   } catch (error) {
-    console.error("[Notification] Send failed, trying Rust command:", error);
+    log.error("[Notification] Send failed, trying Rust command:", error);
     try {
       await invoke("send_notification", { title, body });
       return true;
     } catch (invokeError) {
-      console.error("[Notification] Rust command also failed:", invokeError);
+      log.error("[Notification] Rust command also failed:", invokeError);
       return false;
     }
   }

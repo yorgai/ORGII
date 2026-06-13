@@ -1,10 +1,12 @@
-/* eslint-disable no-console */
 /**
  * Development Mode IndexedDB Protection
  *
  * Prevents IndexedDB from being cleared during hot reload in development mode.
  * This utility detects potential storage clearing issues and provides warnings.
  */
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("DevIndexedDBProtection");
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -21,11 +23,10 @@ export const checkDevToolsStorageSettings = (): void => {
   }
 
   // Log warning about potential DevTools settings
-  console.groupCollapsed(
+  log.debug(
     "%c⚠️ IndexedDB Persistence Check",
     "color: orange; font-weight: bold"
   );
-  console.groupEnd();
 };
 
 /**
@@ -47,12 +48,12 @@ export const monitorIndexedDBPersistence = (): void => {
       const ourDB = databases.find((db) => db.name === DB_NAME);
 
       if (!ourDB) {
-        console.debug(
+        log.debug(
           `IndexedDB '${DB_NAME}' not found - this might be a fresh start or storage was cleared`
         );
       }
     } catch (error) {
-      console.error("Error checking IndexedDB:", error);
+      log.error("Error checking IndexedDB:", error);
     }
   };
 

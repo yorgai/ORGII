@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { gitApi } from "@src/api/http/git";
 import { useGitHubConnections } from "@src/hooks/git";
+import { createLogger } from "@src/hooks/logger";
 import {
   branchCacheAtom,
   branchLoadingRepoIdsAtom,
@@ -21,6 +22,8 @@ import {
 
 import type { BranchItem } from "../../types";
 import type { UseBranchFetchOptions } from "./types";
+
+const log = createLogger("useBranchFetch");
 
 export function useBranchFetch(options: UseBranchFetchOptions) {
   const {
@@ -144,10 +147,7 @@ export function useBranchFetch(options: UseBranchFetchOptions) {
           setBranches(branchItems);
         })
         .catch((error) => {
-          console.error(
-            "[useBranchFetch] Error fetching GitHub branches:",
-            error
-          );
+          log.error("[useBranchFetch] Error fetching GitHub branches:", error);
         })
         .finally(() => {
           setIsFetching(false);
@@ -236,7 +236,7 @@ export function useBranchFetch(options: UseBranchFetchOptions) {
         }
       } catch (error) {
         if (cancelled || intendedRepoIdRef.current !== fetchRepoId) return;
-        console.error("[useBranchFetch] Failed to fetch branches:", error);
+        log.error("[useBranchFetch] Failed to fetch branches:", error);
       } finally {
         if (!cancelled && intendedRepoIdRef.current === fetchRepoId) {
           setIsFetching(false);

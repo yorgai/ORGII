@@ -30,6 +30,7 @@ import {
   useState,
 } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
@@ -50,6 +51,8 @@ import {
   buildRootSearchResult,
   mergeSearchResultsByRoot,
 } from "./contextMenuSearchRoots";
+
+const log = createLogger("ContextMenu");
 
 // Default configuration
 const DEFAULT_OPTIONS: UseContextMenuOptions = {
@@ -189,7 +192,7 @@ export function useContextMenu(
         }
         updateSearchResults(results);
       } catch (error) {
-        console.error("[ContextMenu] Search failed:", error);
+        log.error("[ContextMenu] Search failed:", error);
         updateSearchResults([]);
       } finally {
         setSearchLoading(false);

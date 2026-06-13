@@ -26,6 +26,7 @@ import {
   normalizeGlobalThemeId,
 } from "@src/config/appearance/globalThemes";
 import { buildSettingsPath } from "@src/config/mainAppPaths";
+import { createLogger } from "@src/hooks/logger";
 import { useBackgroundImageStorage } from "@src/hooks/theme/useBackgroundImageStorage";
 import { useUndoStackWithRestore } from "@src/hooks/ui";
 import {
@@ -47,6 +48,8 @@ import { MAX_CUSTOM_BACKGROUND_COLORS } from "../config";
 import type { MatrixCharSet, StorageInfo } from "../types";
 import { normalizeHexColor } from "../utils";
 import { useBackgroundImageHandlers } from "./useBackgroundImageHandlers";
+
+const log = createLogger("BackgroundPage");
 
 export interface UseBackgroundSettingsReturn {
   // State
@@ -136,7 +139,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
           });
         }
       } catch (error) {
-        console.error("Failed to load storage info:", error);
+        log.error("Failed to load storage info:", error);
       }
     };
 
@@ -182,7 +185,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
 
           needsUpdate = true;
         } catch (error) {
-          console.error("[BackgroundPage] Migration failed:", error);
+          log.error("[BackgroundPage] Migration failed:", error);
           updatedConfig.customImages = (config.customImages || []).filter(
             (img: string) => !img.startsWith("data:")
           );

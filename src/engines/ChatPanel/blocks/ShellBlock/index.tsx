@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { getEventIcon, getToolIcon } from "@src/config/toolIcons";
 import { extractShellData } from "@src/engines/SessionCore/rendering/props/propsDataExtractors";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
+import { createLogger } from "@src/hooks/logger";
 import { killAgentShellProcess } from "@src/services/terminal";
 
 import TerminalBlock from "../TerminalBlock";
@@ -32,6 +33,8 @@ import {
   TERMINAL_FOREGROUND_WAIT_THRESHOLD_MS,
   resolveShellRuntimeDisplayState,
 } from "./shellRuntimeState";
+
+const log = createLogger("ShellBlock");
 
 const SHELL_ACTION_KILL = "kill";
 
@@ -201,7 +204,7 @@ const RunShellView: React.FC<ShellBlockProps> = (props) => {
       try {
         await killAgentShellProcess({ pid, sessionId: props.sessionId });
       } catch (err: unknown) {
-        console.error("[ShellBlock] Failed to kill process:", err);
+        log.error("[ShellBlock] Failed to kill process:", err);
       }
     },
     [props.sessionId]

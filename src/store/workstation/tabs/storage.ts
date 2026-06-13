@@ -15,12 +15,16 @@
  * longer exist). Old keys are ignored — the user's open-tab list will
  * reset once on first launch after the upgrade.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { FILE_TAB_TYPES, TOOL_TAB_TYPES } from "./types";
 import type {
   PanelState,
   WorkStationLayoutState,
   WorkStationTab,
 } from "./types";
+
+const log = createLogger("workStationTabs");
 
 export const LAYOUT_STORAGE_KEY = "workstation:layout-v2";
 
@@ -97,7 +101,7 @@ export function createDebouncedStorage<T>(delay = 100) {
         try {
           localStorage.setItem(key, JSON.stringify(value));
         } catch (err) {
-          console.error(
+          log.error(
             "[workStationTabs] Failed to persist to localStorage:",
             err
           );

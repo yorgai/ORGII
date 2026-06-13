@@ -23,6 +23,8 @@
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
 import type { DragDropBehavior, DroppedFolder } from "../types";
 import {
   getChatDropTargetId,
@@ -30,6 +32,8 @@ import {
   isDropInsideChatDropTarget,
   isRepositoryDropPage,
 } from "./utils";
+
+const log = createLogger("drag-drop");
 
 export interface UseTauriDragDropOptions {
   handleIdeFileDrop: (
@@ -164,7 +168,7 @@ export function useTauriDragDrop(options: UseTauriDragDropOptions): void {
         unlistenFn = unlisten;
       })
       .catch((err) => {
-        console.warn("[drag-drop] tauri:subscribe-failed", err);
+        log.warn("[drag-drop] tauri:subscribe-failed", err);
       });
 
     return () => {

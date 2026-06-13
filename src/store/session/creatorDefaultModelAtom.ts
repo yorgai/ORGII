@@ -49,6 +49,7 @@ import type {
   AdvancedConfig,
   KeySource,
 } from "@src/features/SessionCreator/types";
+import { createLogger } from "@src/hooks/logger";
 import {
   rawSettingsAtom,
   settingsLoadedAtom,
@@ -57,6 +58,8 @@ import { formatModelNameFull } from "@src/util/formatModelName";
 
 import { dispatchCategoryAtom } from "./creatorStateAtom";
 import type { RecentModelEntry } from "./recentModelEntriesAtom";
+
+const log = createLogger("CreatorDefaultModel");
 
 // ============================================
 // Type Definitions
@@ -119,7 +122,7 @@ function persistToSettings(map: LastModelPairMap): void {
   rpc.settings
     .writePartial({ partial: { [SETTINGS_KEY]: map } })
     .catch((err: unknown) => {
-      console.error("[LastModelPair] Failed to persist:", err);
+      log.error("[LastModelPair] Failed to persist:", err);
     });
 }
 
@@ -206,7 +209,7 @@ async function pruneStaleEntries(map: LastModelPairMap): Promise<{
     }
     return { pruned: result, changed };
   } catch (err) {
-    console.error("[lastModelAtom] Failed to prune stale entries:", err);
+    log.error("[lastModelAtom] Failed to prune stale entries:", err);
     return { pruned: map, changed: false };
   }
 }
@@ -241,7 +244,7 @@ export const hydrateCreatorDefaultModelAtom = atom(null, async (get, set) => {
       persistToSettings(cachedMap);
     }
   } catch (err) {
-    console.error("[CreatorDefaultModel] Hydration failed:", err);
+    log.error("[CreatorDefaultModel] Hydration failed:", err);
   }
 });
 

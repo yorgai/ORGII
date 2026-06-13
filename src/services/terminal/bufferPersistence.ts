@@ -20,7 +20,10 @@ import {
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
 
+import { createLogger } from "@src/hooks/logger";
 import { isTauriReady } from "@src/util/platform/tauri/init";
+
+const log = createLogger("bufferPersistence");
 
 // ============================================
 // Types
@@ -189,7 +192,7 @@ export async function flushPendingWrites(): Promise<void> {
 
     await writeStoredData({ version: STORAGE_VERSION, buffers });
   } catch (error) {
-    console.error("[bufferPersistence] Failed to flush:", error);
+    log.error("[bufferPersistence] Failed to flush:", error);
   }
 }
 
@@ -213,7 +216,7 @@ export async function loadPersistedBuffers(): Promise<
 
     return result;
   } catch (error) {
-    console.error("[bufferPersistence] Failed to load:", error);
+    log.error("[bufferPersistence] Failed to load:", error);
     return new Map();
   }
 }
@@ -233,7 +236,7 @@ export async function clearPersistedBuffer(sessionId: string): Promise<void> {
     const buffers = stored.buffers.filter((buf) => buf.sessionId !== sessionId);
     await writeStoredData({ version: STORAGE_VERSION, buffers });
   } catch (error) {
-    console.error("[bufferPersistence] Failed to clear buffer:", error);
+    log.error("[bufferPersistence] Failed to clear buffer:", error);
   }
 }
 
@@ -248,7 +251,7 @@ export async function clearAllPersistedBuffers(): Promise<void> {
   try {
     await writeStoredData({ version: STORAGE_VERSION, buffers: [] });
   } catch (error) {
-    console.error("[bufferPersistence] Failed to clear all buffers:", error);
+    log.error("[bufferPersistence] Failed to clear all buffers:", error);
   }
 }
 

@@ -12,6 +12,8 @@
  */
 import { z } from "zod";
 
+import { createLogger } from "@src/hooks/logger";
+
 import type {
   ActionLayer,
   ActionResult,
@@ -23,6 +25,8 @@ import {
   zodActionToGUIControlManifestAction,
   zodActionToLLMTool,
 } from "./defineZodAction";
+
+const log = createLogger("ZodActionRegistry");
 
 // ============================================
 // Registry Class
@@ -41,7 +45,7 @@ export class ZodActionRegistry {
    */
   register<TParams extends z.ZodTypeAny>(action: ZodAction<TParams>): void {
     if (this.actions.has(action.meta.id)) {
-      console.warn(`[ZodActionRegistry] Overwriting: ${action.meta.id}`);
+      log.warn(`[ZodActionRegistry] Overwriting: ${action.meta.id}`);
     }
     this.actions.set(action.meta.id, action);
     this.notifyListeners();

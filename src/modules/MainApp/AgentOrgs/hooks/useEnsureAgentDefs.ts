@@ -22,6 +22,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
+import { createLogger } from "@src/hooks/logger";
 
 import { INTERNAL_AGENT_IDS } from "../config/agentConstants";
 import {
@@ -30,6 +31,8 @@ import {
   builtInAgentsAtom,
   customAgentsAtom,
 } from "../store/builtInAgentsAtom";
+
+const log = createLogger("useEnsureAgentDefs");
 
 /**
  * Returns `true` once the agent definition atoms have been populated.
@@ -62,7 +65,7 @@ export function useEnsureAgentDefs(): boolean {
         setLoaded(true);
       })
       .catch((err) => {
-        console.warn("[useEnsureAgentDefs] load failed:", err);
+        log.warn("[useEnsureAgentDefs] load failed:", err);
       });
 
     return () => {

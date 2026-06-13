@@ -21,8 +21,11 @@ import {
   validateSettings,
 } from "@src/config/settingsSchema";
 import { CodeMirrorEditor } from "@src/features/CodeMirror";
+import { createLogger } from "@src/hooks/logger";
 import { PanelFooter } from "@src/modules/shared/layouts/blocks";
 import { handleExternalChangeAtom, settingsAtom } from "@src/store/settings";
+
+const log = createLogger("SettingsJsonEditor");
 
 const SettingsJsonEditor: React.FC = () => {
   const { t } = useTranslation("settings");
@@ -72,7 +75,7 @@ const SettingsJsonEditor: React.FC = () => {
         if (!cancelled) setSettingsPath(path);
       })
       .catch((err) => {
-        console.warn("[SettingsJsonEditor] rpc.settings.getPath failed:", err);
+        log.warn("[SettingsJsonEditor] rpc.settings.getPath failed:", err);
       });
     return () => {
       cancelled = true;

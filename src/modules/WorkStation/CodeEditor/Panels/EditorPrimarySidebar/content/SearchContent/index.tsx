@@ -31,6 +31,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
+import { createLogger } from "@src/hooks/logger";
 import { HUMANTOOLS_TEXT_KEYS } from "@src/modules/WorkStation/shared";
 import { HEADER_BUTTON } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
@@ -56,6 +57,8 @@ import { SearchResults, type SearchResultsHandle } from "./components";
 import { SEARCH_CONSTANTS } from "./config";
 import type { SearchContentHandle, SearchContentProps } from "./types";
 import { useSearchContent } from "./useSearchContent";
+
+const log = createLogger("SearchContent");
 
 // ============================================
 // Main Component
@@ -224,14 +227,14 @@ export const SearchContent = forwardRef<
               await writeTextFile(file.file_path, updated);
             }
           } catch (fileErr) {
-            console.warn(
+            log.warn(
               `[SearchContent] replaceAll: failed to process ${file.file_path}:`,
               fileErr
             );
           }
         }
       } catch (err) {
-        console.warn("[SearchContent] replaceAll: unexpected error:", err);
+        log.warn("[SearchContent] replaceAll: unexpected error:", err);
       } finally {
         setIsReplacingAll(false);
       }

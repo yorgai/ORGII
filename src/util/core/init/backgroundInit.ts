@@ -19,8 +19,11 @@
  * - Preset images are preloaded immediately (no async conversion needed)
  */
 import { DEFAULT_BUNDLED_BACKGROUND_IMAGE } from "@src/config/appearance/backgroundConfig";
+import { createLogger } from "@src/hooks/logger";
 
 import { loadBackgroundImageAsBlob } from "../storage/backgroundImage";
+
+const log = createLogger("BackgroundInit");
 
 const BACKGROUND_CONFIG_KEY = "orgii_background_config";
 
@@ -174,7 +177,7 @@ export const initBackgroundImage = async (): Promise<void> => {
         await preloadImage(blobUrl);
         return;
       } else {
-        console.warn(
+        log.warn(
           "[BackgroundInit] Custom background load timeout or failed, using default"
         );
       }
@@ -191,7 +194,7 @@ export const initBackgroundImage = async (): Promise<void> => {
     await loadDefaultBackground();
   } catch (error) {
     // Non-critical error - load default background
-    console.warn("[BackgroundInit] Error loading background:", error);
+    log.warn("[BackgroundInit] Error loading background:", error);
     await loadDefaultBackground();
   }
 };

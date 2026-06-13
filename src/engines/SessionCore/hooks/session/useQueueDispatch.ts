@@ -46,6 +46,7 @@ import {
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { createSyntheticUserEvent } from "@src/engines/SessionCore/sync/adapters/shared";
+import { createLogger } from "@src/hooks/logger";
 import { markSessionActive } from "@src/store/session";
 import {
   lastUserMessageAtom,
@@ -72,6 +73,8 @@ import {
   isCliSession,
   isCursorIdeSession,
 } from "@src/util/session/sessionDispatch";
+
+const log = createLogger("useQueueDispatch");
 
 const MAX_SENT_QUEUE_ID_CACHE = 200;
 
@@ -254,7 +257,7 @@ export function useQueueDispatch(): void {
           );
           await eventStoreProxy.append([userEvent], sessionId);
           void enterAgentOrgSessionIntervention(sessionId).catch((error) => {
-            console.warn("[useQueueDispatch] intervention failed:", error);
+            log.warn("[useQueueDispatch] intervention failed:", error);
           });
           // Pass displayContent as displayText when it differs from content
           // (i.e. skill pills were expanded) so the persisted event stores
@@ -295,7 +298,7 @@ export function useQueueDispatch(): void {
             });
           }
         } catch (err) {
-          console.error("[useQueueDispatch] dispatch failed:", err);
+          log.error("[useQueueDispatch] dispatch failed:", err);
           // IPC failed before the backend received the message: close the
           // reserved turn and park the message so it does not retry in a
           // tight loop — the user can fix the issue and press Send Now.
@@ -367,10 +370,7 @@ export function useQueueDispatch(): void {
           explicitMsg.sessionId,
           "force-send"
         ).catch((error) => {
-          console.warn(
-            "[useQueueDispatch] force-send interrupt failed:",
-            error
-          );
+          log.warn("[useQueueDispatch] force-send interrupt failed:", error);
         });
       }
       // stopping (or interrupt already requested): wait for the terminal.

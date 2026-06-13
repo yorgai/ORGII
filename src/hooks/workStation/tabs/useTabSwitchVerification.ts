@@ -14,7 +14,11 @@
  */
 import { useCallback, useEffect, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
 import { FILE_API_BASE_URL } from "../fileContent/constants";
+
+const log = createLogger("TabSwitchVerification");
 
 // ============================================
 // Types
@@ -111,7 +115,7 @@ export function useTabSwitchVerification(
   useEffect(() => {
     if (isActive && filePath) {
       verifyFile().catch((error) => {
-        console.warn("[TabSwitchVerification]", error);
+        log.warn("[TabSwitchVerification]", error);
       });
     }
   }, [isActive, filePath, verifyFile]);

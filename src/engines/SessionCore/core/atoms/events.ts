@@ -26,12 +26,16 @@
  */
 import { atom } from "jotai";
 
+import { createLogger } from "@src/hooks/logger";
+
 import {
   type DerivedSnapshot,
   type Snapshot,
   eventStoreProxy,
 } from "../store/EventStoreProxy";
 import type { SessionEvent } from "../types";
+
+const log = createLogger("eventsAtom");
 
 // ============================================
 // Direct Streaming Text (bypass EventStore round-trip)
@@ -175,11 +179,11 @@ export const eventsAtom = atom(
           return eventStoreProxy.set(next);
         })
         .catch((err) => {
-          console.warn("[eventsAtom] Failed to sync to Rust EventStore:", err);
+          log.warn("[eventsAtom] Failed to sync to Rust EventStore:", err);
         });
     } else {
       eventStoreProxy.set(update).catch((err) => {
-        console.warn("[eventsAtom] Failed to sync to Rust EventStore:", err);
+        log.warn("[eventsAtom] Failed to sync to Rust EventStore:", err);
       });
     }
   }

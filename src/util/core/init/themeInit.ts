@@ -2,6 +2,9 @@ import {
   getGlobalTheme,
   normalizeGlobalThemeId,
 } from "@src/config/appearance/globalThemes";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("Theme");
 
 /**
  * Initialize theme CSS
@@ -53,7 +56,7 @@ const initTheme = (): Promise<void> => {
     link.onerror = (error) => {
       if (resolved) return;
       resolved = true;
-      console.error("[Theme] Failed to load CSS:", theme, error);
+      log.error("[Theme] Failed to load CSS:", theme, error);
       // Don't block app startup - resolve anyway
       resolve();
     };
@@ -66,7 +69,7 @@ const initTheme = (): Promise<void> => {
       if (resolved) return;
       resolved = true;
       const duration = performance.now() - startTime;
-      console.warn(
+      log.warn(
         `[Theme] CSS load timeout after ${duration.toFixed(0)}ms, continuing:`,
         theme
       );

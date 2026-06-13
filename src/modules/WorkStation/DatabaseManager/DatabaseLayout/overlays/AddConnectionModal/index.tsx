@@ -15,6 +15,7 @@ import {
   type TursoConnectionConfig,
   isValidSqliteFile,
 } from "@src/engines/DatabaseCore";
+import { createLogger } from "@src/hooks/logger";
 import { PanelFooter } from "@src/modules/shared/layouts/blocks";
 
 import { AddConnectionModalHeader } from "./AddConnectionModalHeader";
@@ -32,6 +33,8 @@ import "./index.scss";
 import type { AddConnectionModalProps, ConnectionStatus } from "./types";
 
 export type { AddConnectionModalProps } from "./types";
+
+const log = createLogger("AddConnectionModal");
 
 export const AddConnectionModal: React.FC<AddConnectionModalProps> = memo(
   ({ isOpen, onAdd, onClose }) => {
@@ -141,7 +144,7 @@ export const AddConnectionModal: React.FC<AddConnectionModalProps> = memo(
           });
         }
       } catch (err) {
-        console.error("Failed to open file dialog:", err);
+        log.error("Failed to open file dialog:", err);
       }
     }, []);
 

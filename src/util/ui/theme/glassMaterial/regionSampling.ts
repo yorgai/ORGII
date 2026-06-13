@@ -4,12 +4,16 @@
  * Samples specific areas of the background image to extract
  * semantic color properties per UI region.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import {
   DEFAULT_COLOR_FIELD,
   getColorTemperature,
   rgbToHsl,
 } from "./colorAnalysis";
 import type { GlassRegion, WallpaperColorField } from "./types";
+
+const log = createLogger("GlassMaterialResolver");
 
 // ============================================
 // Region Sampling Coordinates
@@ -174,7 +178,7 @@ export async function sampleRegion(
 
         resolve(colorField);
       } catch (error) {
-        console.error("[GlassMaterialResolver] Sampling failed:", error);
+        log.error("[GlassMaterialResolver] Sampling failed:", error);
         resolve(DEFAULT_COLOR_FIELD);
       }
     };

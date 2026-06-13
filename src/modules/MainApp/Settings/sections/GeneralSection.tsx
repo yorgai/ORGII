@@ -48,6 +48,7 @@ import Switch from "@src/components/Switch";
 import { ROUTES } from "@src/config/routes";
 import { useServiceAuth } from "@src/hooks/auth";
 import { useTimezoneSelect } from "@src/hooks/geo";
+import { createLogger } from "@src/hooks/logger";
 import {
   LANGUAGE_NAMES,
   SUPPORTED_LANGUAGES,
@@ -63,6 +64,8 @@ import { languageAtom } from "@src/store/ui/languageAtom";
 import { userAtom } from "@src/store/user";
 import { IUserInfo } from "@src/types/core/user";
 import { copyText } from "@src/util/data/clipboard";
+
+const log = createLogger("GeneralSection");
 
 export const GENERAL_TAB_KEYS = {
   GENERAL: "general",
@@ -284,7 +287,7 @@ const GeneralTabBody: React.FC = () => {
     try {
       await login();
     } catch (error) {
-      console.error("Login error:", error);
+      log.error("Login error:", error);
       Message.error("Login failed. Please try again.");
     }
   };
@@ -309,7 +312,7 @@ const GeneralTabBody: React.FC = () => {
       Message.success("Signed out successfully");
       navigate(ROUTES.auth.login.path, { replace: true });
     } catch (error) {
-      console.error("Logout error:", error);
+      log.error("Logout error:", error);
       Message.error("Logout failed. Please try again.");
     }
   };

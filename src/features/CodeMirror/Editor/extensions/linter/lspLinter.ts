@@ -38,8 +38,12 @@ import {
 import type { Extension } from "@codemirror/state";
 import { EditorView, ViewPlugin } from "@codemirror/view";
 
+import { createLogger } from "@src/hooks/logger";
+
 import { convertAndSortDiagnostics, withTimeout } from "./diagnosticsConverter";
 import { LSP_MAX_RETRIES, LSP_RETRY_BASE_DELAY, LSP_TIMEOUT } from "./types";
+
+const log = createLogger("Linter");
 
 /**
  * Create LSP + ESLint combined linter extension.
@@ -204,7 +208,7 @@ export function createLspLinterExtension(
             lspRetryCount >= LSP_MAX_RETRIES
               ? `Language server for ${language} not available after ${LSP_MAX_RETRIES} attempts`
               : `Language server for ${language} timed out (attempt ${lspRetryCount}/${LSP_MAX_RETRIES})`;
-          console.warn(`[Linter] ${errorMsg}`);
+          log.warn(`[Linter] ${errorMsg}`);
           handleLspFailure(errorMsg);
         }
       })
@@ -220,7 +224,7 @@ export function createLspLinterExtension(
         }
         const errorStr = error instanceof Error ? error.message : String(error);
         const errorMsg = `Language server for ${language} failed: ${errorStr}`;
-        console.warn(`[Linter] ${errorMsg}`);
+        log.warn(`[Linter] ${errorMsg}`);
         handleLspFailure(errorMsg);
       });
   };
@@ -315,7 +319,7 @@ export function createLspLinterExtension(
               eslintError instanceof Error
                 ? eslintError.message
                 : String(eslintError);
-            console.warn(`[Linter] ESLint failed: ${errorStr}`);
+            log.warn(`[Linter] ESLint failed: ${errorStr}`);
             updateEslintHealth("failed", errorStr);
           }
         });

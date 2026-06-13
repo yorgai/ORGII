@@ -26,8 +26,11 @@
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { getCliUiCanonical } from "@src/engines/SessionCore/rendering/registry/initToolRegistry";
 import { resolveToolName } from "@src/engines/SessionCore/rendering/registry/toolAliases";
+import { createLogger } from "@src/hooks/logger";
 
 import type { ActivityArgs, ActivityResult } from "./types";
+
+const log = createLogger("normalizeActivity");
 
 /** Output of normalizeActivity() — lightweight struct for callers */
 export interface NormalizedActivityResult {
@@ -150,7 +153,7 @@ export function normalizeActivity(
 ): NormalizedActivityResult {
   if (!event) {
     if (process.env.NODE_ENV === "development") {
-      console.warn(
+      log.warn(
         "[normalizeActivity] Received undefined/null event, returning defaults"
       );
     }

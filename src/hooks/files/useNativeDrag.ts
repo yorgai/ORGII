@@ -19,6 +19,10 @@ import {
   useRef,
 } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("NativeDrag");
+
 const DRAG_THRESHOLD_PX = 5;
 
 let cachedFileIcon: string | undefined;
@@ -122,7 +126,7 @@ export function useNativeDrag(rowRef: RefObject<HTMLDivElement | null>) {
             }
           );
         } catch (error) {
-          console.error("[NativeDrag] startDrag failed:", error);
+          log.error("[NativeDrag] startDrag failed:", error);
           rowRef.current?.classList.remove("is-dragging");
           globalWindow.__internalFileTreeDrag = false;
         }

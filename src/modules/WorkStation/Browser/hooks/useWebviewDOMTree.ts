@@ -11,10 +11,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
 } from "@src/hooks/perf/useDebouncedCallback";
+
+const log = createLogger("useWebviewDOMTree");
 
 // ============================================
 // Types
@@ -367,7 +370,7 @@ export function useWebviewDOMTree(
         });
       } catch (err) {
         if (!isMissingWebviewError(err)) {
-          console.error("[useWebviewDOMTree] Clear highlight failed:", err);
+          log.error("[useWebviewDOMTree] Clear highlight failed:", err);
         }
       }
     },
@@ -393,7 +396,7 @@ export function useWebviewDOMTree(
           });
         } catch (err) {
           if (!isMissingWebviewError(err)) {
-            console.error("[useWebviewDOMTree] Highlight failed:", err);
+            log.error("[useWebviewDOMTree] Highlight failed:", err);
           }
         }
       } else {
@@ -422,7 +425,7 @@ export function useWebviewDOMTree(
         return result;
       } catch (err) {
         if (!isMissingWebviewError(err)) {
-          console.error("[useWebviewDOMTree] Select failed:", err);
+          log.error("[useWebviewDOMTree] Select failed:", err);
         }
         return null;
       }

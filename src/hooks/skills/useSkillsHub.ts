@@ -11,6 +11,7 @@ import { useAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
 import { useMounted } from "@src/hooks/lifecycle/useMounted";
+import { createLogger } from "@src/hooks/logger";
 import {
   installedSkillsAtom,
   installedSkillsLoadingAtom,
@@ -21,6 +22,8 @@ import type {
   InstalledSkill,
   SkillUpdateInfo,
 } from "@src/types/extensions";
+
+const log = createLogger("SkillsHub");
 
 interface UseSkillsHubOptions {
   /** When false, skips the initial installed-skills fetch (no Tauri IPC on mount). */
@@ -55,7 +58,7 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
       const result = await listInstalledSkills();
       setInstalledSkills(result);
     } catch (err) {
-      console.error("[SkillsHub] Failed to list installed skills:", err);
+      log.error("[SkillsHub] Failed to list installed skills:", err);
     } finally {
       setInstalledLoading(false);
     }
@@ -93,7 +96,7 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
         if (!cancelled) setInstalledSkills(result);
       } catch (err) {
         if (!cancelled)
-          console.error("[SkillsHub] Failed to list installed skills:", err);
+          log.error("[SkillsHub] Failed to list installed skills:", err);
       } finally {
         if (!cancelled) setInstalledLoading(false);
       }
@@ -196,7 +199,7 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
       if (mountedRef.current) setUpdates(result);
     } catch (err) {
       if (mountedRef.current)
-        console.error("[SkillsHub] Failed to check updates:", err);
+        log.error("[SkillsHub] Failed to check updates:", err);
     } finally {
       if (mountedRef.current) setUpdatesLoading(false);
     }
@@ -214,7 +217,7 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
         return true;
       } catch (err) {
         if (mountedRef.current)
-          console.error("[SkillsHub] Failed to update skill:", err);
+          log.error("[SkillsHub] Failed to update skill:", err);
         return false;
       } finally {
         if (mountedRef.current) setUpdating(null);

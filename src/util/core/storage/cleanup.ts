@@ -4,11 +4,14 @@
  * NOTE: Most cleanup is now handled automatically by useRepoManager.
  * These utilities are for manual cleanup scenarios.
  */
+import { createLogger } from "@src/hooks/logger";
 import {
   REPO_STORAGE_KEYS,
   isValidUUID,
   resetRepoStore,
 } from "@src/store/repo";
+
+const log = createLogger("StorageCleanup");
 
 // Storage key prefixes that should have valid UUIDs
 const UUID_STORAGE_PREFIXES = ["orgii_git_status_cache_"];
@@ -91,7 +94,7 @@ export const cleanupInvalidUUIDStorage = (): void => {
       localStorage.removeItem(key);
     });
   } catch (error) {
-    console.error("[cleanupInvalidStorage] Error during cleanup:", error);
+    log.error("[cleanupInvalidStorage] Error during cleanup:", error);
   }
 };
 
@@ -209,7 +212,7 @@ export const cleanupStaleRepoReferences = (
 
     return result;
   } catch (error) {
-    console.error("[cleanupStaleRepoReferences] Error during cleanup:", error);
+    log.error("[cleanupStaleRepoReferences] Error during cleanup:", error);
     return result;
   }
 };
@@ -311,7 +314,7 @@ export const clearProjectRepoCache = (): { clearedCount: number } => {
     resetRepoStore();
     return { clearedCount };
   } catch (error) {
-    console.error("[clearProjectRepoCache] Error during cleanup:", error);
+    log.error("[clearProjectRepoCache] Error during cleanup:", error);
     return { clearedCount };
   }
 };
@@ -347,7 +350,7 @@ export const clearSessionData = (): { clearedCount: number } => {
     });
     return { clearedCount };
   } catch (error) {
-    console.error("[clearSessionData] Error during cleanup:", error);
+    log.error("[clearSessionData] Error during cleanup:", error);
     return { clearedCount };
   }
 };

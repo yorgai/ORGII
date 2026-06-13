@@ -6,6 +6,7 @@ import {
   getCodexOAuthModels as fetchCodexOAuthModels,
 } from "@src/api/services/keyValidation";
 import type { DetectedKey } from "@src/api/types/keys";
+import { createLogger } from "@src/hooks/logger";
 import {
   getClaudeCodeOAuthDefaultEnabledModels,
   getClaudeCodeOAuthModels,
@@ -15,6 +16,8 @@ import {
 
 import type { WizardData } from "../types";
 import { applyKey } from "./keyHelpers";
+
+const log = createLogger("ApiSetup");
 
 interface UseApiSetupTokenDetectionOptions {
   data: WizardData;
@@ -73,7 +76,7 @@ export function useApiSetupTokenDetection({
           );
           if (discovered.length > 0) fallbackModels = discovered;
         } catch (err) {
-          console.warn(
+          log.warn(
             "[ApiSetup] Codex OAuth model discovery failed during auto-detect; using fallback models:",
             err
           );
@@ -157,7 +160,7 @@ export function useApiSetupTokenDetection({
 
       applySelectedKey(keys[0]);
     } catch (err) {
-      console.error("[ApiSetup] Failed to auto-detect credentials:", err);
+      log.error("[ApiSetup] Failed to auto-detect credentials:", err);
       setTokenError(t("keyVault.failedToDetectKeys"));
     } finally {
       setDetectingToken(false);

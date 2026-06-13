@@ -32,6 +32,7 @@ import { normalizeGitStatus } from "@src/config/gitStatus";
 import { useFileSelection } from "@src/hooks/git/sourceControl";
 import { useRepoStatusListener } from "@src/hooks/git/useRepoStatusListener";
 import { useMounted } from "@src/hooks/lifecycle/useMounted";
+import { createLogger } from "@src/hooks/logger";
 import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
@@ -39,6 +40,8 @@ import {
 import type { GitFile } from "@src/types/git/types";
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
 import { decodeOctalPath } from "@src/util/file/pathUtils";
+
+const log = createLogger("usePerRepoSourceControl");
 
 // ============================================
 // Types
@@ -259,7 +262,7 @@ export function usePerRepoSourceControl(
         }
         await fetchStatus();
       } catch (err) {
-        console.error("[usePerRepoSourceControl] stage/unstage failed:", err);
+        log.error("[usePerRepoSourceControl] stage/unstage failed:", err);
       }
     },
     [fetchStatus]
@@ -290,7 +293,7 @@ export function usePerRepoSourceControl(
         }
         await fetchStatus();
       } catch (err) {
-        console.error("[usePerRepoSourceControl] discard failed:", err);
+        log.error("[usePerRepoSourceControl] discard failed:", err);
       }
     },
     [repoPath, fetchStatus]
@@ -303,7 +306,7 @@ export function usePerRepoSourceControl(
       await gitRef.current.stage(unstaged.map((f) => f.path));
       await fetchStatus();
     } catch (err) {
-      console.error("[usePerRepoSourceControl] stageAll failed:", err);
+      log.error("[usePerRepoSourceControl] stageAll failed:", err);
     }
   }, [fetchStatus]);
 
@@ -314,7 +317,7 @@ export function usePerRepoSourceControl(
       await gitRef.current.unstage(staged.map((f) => f.path));
       await fetchStatus();
     } catch (err) {
-      console.error("[usePerRepoSourceControl] unstageAll failed:", err);
+      log.error("[usePerRepoSourceControl] unstageAll failed:", err);
     }
   }, [fetchStatus]);
 
@@ -352,7 +355,7 @@ export function usePerRepoSourceControl(
       }
       await fetchStatus();
     } catch (err) {
-      console.error("[usePerRepoSourceControl] discardAll failed:", err);
+      log.error("[usePerRepoSourceControl] discardAll failed:", err);
     }
   }, [repoPath, fetchStatus]);
 
@@ -369,7 +372,7 @@ export function usePerRepoSourceControl(
       setCommitMessage("");
       await fetchStatus();
     } catch (err) {
-      console.error("[usePerRepoSourceControl] commit failed:", err);
+      log.error("[usePerRepoSourceControl] commit failed:", err);
     } finally {
       setCommitLoading(false);
     }
@@ -383,7 +386,7 @@ export function usePerRepoSourceControl(
       });
       if (message) setCommitMessage(message);
     } catch (err) {
-      console.error(
+      log.error(
         "[usePerRepoSourceControl] generate commit message failed:",
         err
       );

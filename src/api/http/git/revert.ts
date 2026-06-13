@@ -3,8 +3,12 @@
  *
  * Commit revert operations.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
 import type { RevertResult } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Revert a commit
@@ -32,7 +36,7 @@ export const gitRevert = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to revert:", error);
+    log.error("[GitAPI] Failed to revert:", error);
     return undefined;
   }
 };
@@ -55,7 +59,7 @@ export const gitRevertAbort = async (params: {
     );
     return true;
   } catch (error) {
-    console.error("[GitAPI] Failed to abort revert:", error);
+    log.error("[GitAPI] Failed to abort revert:", error);
     return false;
   }
 };

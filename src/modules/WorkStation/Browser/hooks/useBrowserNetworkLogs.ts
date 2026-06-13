@@ -8,6 +8,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("useBrowserNetworkLogs");
+
 // ============================================
 // Types
 // ============================================
@@ -196,8 +200,7 @@ export function useBrowserNetworkLogs(
         process.env.NODE_ENV === "development" &&
         !String(error).includes("not found")
       ) {
-        // eslint-disable-next-line no-console
-        console.debug("[useBrowserNetworkLogs] Poll error:", error);
+        log.debug("[useBrowserNetworkLogs] Poll error:", error);
       }
     }
   }, [

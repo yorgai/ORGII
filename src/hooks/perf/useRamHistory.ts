@@ -10,6 +10,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("useRamHistory");
+
 const DISPLAY_WINDOW_MS = 30 * 60 * 1000;
 const CACHE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_SAMPLES = 2880;
@@ -115,7 +119,7 @@ export function useRamHistory(): UseRamHistoryResult {
       samplesRef.current = sorted;
       setStats(computeStats(visibleSamples(sorted)));
     } catch (err) {
-      console.error("[useRamHistory] hydrate failed:", err);
+      log.error("[useRamHistory] hydrate failed:", err);
     }
   }, []);
 

@@ -23,7 +23,10 @@ import React, { useEffect, useRef } from "react";
 
 import { initSessionCore } from "@src/engines/SessionCore";
 import { initToolRegistry } from "@src/engines/SessionCore/rendering/registry/initToolRegistry";
+import { createLogger } from "@src/hooks/logger";
 import { preloadCache } from "@src/util/core/storage/localStorage";
+
+const log = createLogger("App");
 
 export function useAppDeferredInitialization(): boolean {
   const [deferredComponentsReady, setDeferredComponentsReady] =
@@ -41,7 +44,7 @@ export function useAppDeferredInitialization(): boolean {
       try {
         preloadCache();
       } catch (error) {
-        console.error("[App] localStorage cache preload failed:", error);
+        log.error("[App] localStorage cache preload failed:", error);
       }
 
       // Initialize SessionCore: await so the Tauri es:changed listener is
@@ -64,7 +67,7 @@ export function useAppDeferredInitialization(): boolean {
       idleCallbackId = requestIdleCallback(
         () => {
           initDeferred().catch((error) => {
-            console.error("[App] Deferred init failed:", error);
+            log.error("[App] Deferred init failed:", error);
           });
         },
         { timeout: 2000 }
@@ -78,7 +81,7 @@ export function useAppDeferredInitialization(): boolean {
 
     const timeoutId = setTimeout(() => {
       initDeferred().catch((error) => {
-        console.error("[App] Deferred init failed:", error);
+        log.error("[App] Deferred init failed:", error);
       });
     }, 100);
 

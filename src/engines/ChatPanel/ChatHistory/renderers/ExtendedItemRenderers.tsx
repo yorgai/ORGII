@@ -19,6 +19,7 @@ import {
   StackedBlock,
 } from "@src/engines/ChatPanel/blocks/primitives";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { createLogger } from "@src/hooks/logger";
 
 import ActionSummaryGroup from "../../ChatItems/ActionSummaryGroup";
 import ReadFileGroup from "../../ChatItems/ReadFileGroup";
@@ -29,6 +30,8 @@ import {
   MemoizedThreadSelector,
   type ThreadSelectorChatItem,
 } from "./MemoizedItems";
+
+const log = createLogger("ChatItemRenderer");
 
 // ============================================
 // Renderer Functions
@@ -41,7 +44,7 @@ export function renderActivity(
 ): React.ReactElement | null {
   const event = chatItem.event;
   if (!event && process.env.NODE_ENV === "development") {
-    console.warn("[ChatItemRenderer] activity item missing event:", chatItem);
+    log.warn("[ChatItemRenderer] activity item missing event:", chatItem);
   }
   if (!event) return null;
 
@@ -220,7 +223,7 @@ export function renderDefault(
   _itemKey: string
 ): React.ReactElement | null {
   if (process.env.NODE_ENV === "development") {
-    console.warn(
+    log.warn(
       "[ChatItemRenderer] Unknown chat type, using default:",
       chatItem.type,
       chatItem

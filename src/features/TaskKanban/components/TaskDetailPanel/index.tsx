@@ -29,6 +29,7 @@ import ChatView from "@src/engines/ChatPanel/ChatView";
 import { useChatEventReplay } from "@src/engines/ChatPanel/hooks/useChatEventReplay";
 import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
+import { createLogger } from "@src/hooks/logger";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { sessionMapAtom } from "@src/store/session";
 import { chatTurnPaginationEnabledAtom } from "@src/store/ui/chatPanelAtom";
@@ -49,6 +50,8 @@ import {
   isMergeSettledStatus,
 } from "./helpers";
 import "./index.scss";
+
+const log = createLogger("TaskDetailPanel");
 
 export interface TaskDetailPanelProps {
   visible: boolean;
@@ -187,7 +190,7 @@ const SessionTaskPanel: React.FC<SessionTaskPanelProps> = ({
       repoPath: session?.worktreePath ?? session?.repoPath,
       hasWorktree: hasWorktree || isSettled,
     }).catch((error: unknown) => {
-      console.error("[TaskDetailPanel] failed to open diff window:", error);
+      log.error("[TaskDetailPanel] failed to open diff window:", error);
     });
   }, [sessionId, task.title, session, hasWorktree, isSettled]);
 

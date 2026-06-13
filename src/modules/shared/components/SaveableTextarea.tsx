@@ -10,7 +10,10 @@ import { useTranslation } from "react-i18next";
 import Button from "@src/components/Button";
 import Textarea from "@src/components/Textarea";
 import { useKeyboardSave } from "@src/hooks/keyboard";
+import { createLogger } from "@src/hooks/logger";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
+
+const log = createLogger("SaveableTextarea");
 
 export interface SaveableTextareaProps {
   /** Current saved value */
@@ -63,7 +66,7 @@ const SaveableTextarea: React.FC<SaveableTextareaProps> = ({
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
     } catch (err: unknown) {
-      console.error("[SaveableTextarea] Save failed:", err);
+      log.error("[SaveableTextarea] Save failed:", err);
       setSaveStatus("error");
       setTimeout(() => setSaveStatus("idle"), 3000);
     } finally {

@@ -17,7 +17,11 @@
 import { homeDir, join } from "@tauri-apps/api/path";
 import { mkdir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 
+import { createLogger } from "@src/hooks/logger";
+
 import type { CommitStatsEntry } from "./types";
+
+const log = createLogger("StatsCache");
 
 const DISK_FORMAT_VERSION = 3;
 const MAX_MEMORY_ENTRIES = 2000;
@@ -78,8 +82,7 @@ async function loadFromDisk(): Promise<void> {
       }
     }
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.debug(
+    log.debug(
       "[StatsCache] Disk cache not found or corrupt, starting fresh:",
       err
     );
@@ -161,7 +164,6 @@ async function saveToDisk(): Promise<void> {
     await writeTextFile(path, JSON.stringify(data));
   } catch (err) {
     dirty = true;
-    // eslint-disable-next-line no-console
-    console.debug("[StatsCache] Failed to save to disk:", err);
+    log.debug("[StatsCache] Failed to save to disk:", err);
   }
 }

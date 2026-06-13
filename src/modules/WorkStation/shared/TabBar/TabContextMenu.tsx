@@ -281,7 +281,7 @@ export function TabContextMenu(props: TabContextMenuProps) {
           onClose();
         }, 50);
       } catch (error) {
-        console.error(
+        logger.error(
           "[TabContextMenu] Failed to show native context menu:",
           error
         );

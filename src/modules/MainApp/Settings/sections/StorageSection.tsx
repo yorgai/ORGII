@@ -26,11 +26,14 @@ import SettingsTable, {
   SETTINGS_TABLE_COL,
   type SettingsTableColumn,
 } from "@src/components/SettingsTable";
+import { createLogger } from "@src/hooks/logger";
 import {
   monitorScanningAtom,
   storageRefreshTriggerAtom,
 } from "@src/store/ui/settingsPanelAtoms";
 import { copyText } from "@src/util/data/clipboard";
+
+const log = createLogger("Storage");
 
 interface StorageCategory {
   key: string;
@@ -83,7 +86,7 @@ const StorageSection: React.FC = () => {
         t("common:refreshToast.successName", { name: t("sections.storage") })
       );
     } catch (error) {
-      console.error("[Storage] Failed to fetch disk usage:", error);
+      log.error("[Storage] Failed to fetch disk usage:", error);
       Message.error(t("storage.scanFailed"));
     } finally {
       setIsScanning(false);
@@ -113,7 +116,7 @@ const StorageSection: React.FC = () => {
           await invoke("open_folder", { path: target });
         }
       } catch (error) {
-        console.error("[Storage] Failed to open storage directory:", error);
+        log.error("[Storage] Failed to open storage directory:", error);
         Message.error(t("storage.openFolderFailed"));
       }
     },
@@ -130,7 +133,7 @@ const StorageSection: React.FC = () => {
           await invoke("show_in_folder", { path: cat.path });
         }
       } catch (error) {
-        console.error("[Storage] Failed to reveal/open:", error);
+        log.error("[Storage] Failed to reveal/open:", error);
         Message.error(t("storage.openFolderFailed"));
       }
     },
@@ -146,7 +149,7 @@ const StorageSection: React.FC = () => {
         setDiskUsage(report);
         Message.success(t("storage.clearSuccess"));
       } catch (error) {
-        console.error("[Storage] Failed to clear category:", error);
+        log.error("[Storage] Failed to clear category:", error);
         Message.error(t("storage.clearFailed"));
       } finally {
         setClearingKey(null);
@@ -277,7 +280,7 @@ const StorageSection: React.FC = () => {
       if (!logsDir) setLogsDir(dir);
       await invoke("open_folder", { path: dir });
     } catch (error) {
-      console.error("[Storage] Failed to open logs directory:", error);
+      log.error("[Storage] Failed to open logs directory:", error);
       Message.error(t("storage.openFolderFailed"));
     }
   }, [logsDir, t]);
@@ -299,7 +302,7 @@ const StorageSection: React.FC = () => {
         }
       } catch (error) {
         if (!cancelled) {
-          console.error("[Storage] Auto-scan failed:", error);
+          log.error("[Storage] Auto-scan failed:", error);
           Message.error(t("storage.scanFailed"));
         }
       } finally {

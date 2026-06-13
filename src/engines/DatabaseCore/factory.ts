@@ -5,7 +5,11 @@
  * Decoupled from any store — callers provide configs directly, and
  * can optionally pass a config loader for reconnection.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import type { DatabaseConnectionConfig, IDatabaseService } from "./types";
+
+const log = createLogger("DatabaseFactory");
 
 const MAX_SERVICE_CACHE = 50;
 const serviceCache = new Map<string, IDatabaseService>();
@@ -108,7 +112,7 @@ export const DatabaseServiceFactory = {
       if (firstKey) {
         const evicted = serviceCache.get(firstKey);
         if (evicted?.isConnected()) {
-          evicted.disconnect().catch(console.error);
+          evicted.disconnect().catch(log.error);
         }
         serviceCache.delete(firstKey);
       }
@@ -155,7 +159,7 @@ export const DatabaseServiceFactory = {
     const service = serviceCache.get(connectionId);
     if (service) {
       if (service.isConnected()) {
-        service.disconnect().catch(console.error);
+        service.disconnect().catch(log.error);
       }
       return serviceCache.delete(connectionId);
     }

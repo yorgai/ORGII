@@ -8,6 +8,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
 import { getCodeEditorWebSocket } from "@src/api/realtime/codeEditorWebSocket";
+import { createLogger } from "@src/hooks/logger";
 import type { FileNode } from "@src/store/workstation/codeEditor/file";
 import {
   fileLoadingTreeAtom,
@@ -24,6 +25,8 @@ import {
   updateTreeChildren,
   updateTreeExpansion,
 } from "./helpers";
+
+const log = createLogger("useCodeEditor");
 
 // ============================================
 // Types
@@ -85,7 +88,7 @@ export function useFileTree(
       const errorMessage =
         err instanceof Error ? err.message : "Failed to load file tree";
       setTreeError(errorMessage);
-      console.error("[useCodeEditor] Error loading file tree:", err);
+      log.error("[useCodeEditor] Error loading file tree:", err);
     } finally {
       setLoadingTree(false);
     }
@@ -112,7 +115,7 @@ export function useFileTree(
           const children = await loadDirectoryContents(path, false, repoPath);
           setFileTree((prev) => updateTreeChildren(prev, path, children));
         } catch (err) {
-          console.error("[useCodeEditor] Error loading directory:", {
+          log.error("[useCodeEditor] Error loading directory:", {
             path,
             error: err,
           });
@@ -197,7 +200,7 @@ export function useFileTree(
               );
               localTree = updateTreeChildren(localTree, dirPath, children);
             } catch (err) {
-              console.error("[useCodeEditor] Error revealing file:", {
+              log.error("[useCodeEditor] Error revealing file:", {
                 dirPath,
                 error: err,
               });

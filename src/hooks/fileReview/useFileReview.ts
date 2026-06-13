@@ -31,6 +31,7 @@ import type { SnapshotRecord } from "@src/api/tauri/agent";
 import { beginTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
+import { createLogger } from "@src/hooks/logger";
 import { sessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 import {
   clearFileReviewAtom,
@@ -49,6 +50,8 @@ import {
   isAgentSession,
   isCliSession,
 } from "@src/util/session/sessionDispatch";
+
+const log = createLogger("useFileReview");
 
 const SNAPSHOT_REFRESH_INTERVAL_MS = 1_000;
 const SNAPSHOT_REFRESH_WINDOW_MS = 120_000;
@@ -196,7 +199,7 @@ export function useFileReviewSync(
         return entries.length;
       } catch (error) {
         if (!cancelled) {
-          console.error("[useFileReviewSync] Failed to load snapshots:", error);
+          log.error("[useFileReviewSync] Failed to load snapshots:", error);
         }
         return 0;
       }
@@ -220,7 +223,7 @@ export function useFileReviewSync(
         }
       } catch (error) {
         if (!cancelled) {
-          console.error(
+          log.error(
             "[useFileReviewSync] Failed to load workspace path:",
             error
           );
@@ -240,7 +243,7 @@ export function useFileReviewSync(
         );
       } catch (error) {
         if (!cancelled) {
-          console.warn(
+          log.warn(
             "[useFileReviewSync] Failed to load file resolutions:",
             error
           );
@@ -320,10 +323,7 @@ export function useFileReviewSync(
         lastSnapshotCountRef.current = 0;
       } catch (error) {
         if (!cancelled) {
-          console.warn(
-            "[useFileReviewSync] Failed to verify file changes:",
-            error
-          );
+          log.warn("[useFileReviewSync] Failed to verify file changes:", error);
         }
       }
     };
@@ -372,7 +372,7 @@ export function useFileReviewSync(
         })
         .catch((error: unknown) => {
           if (!cancelled) {
-            console.warn("[useFileReviewSync] Snapshot refresh failed:", error);
+            log.warn("[useFileReviewSync] Snapshot refresh failed:", error);
           }
         });
     };
@@ -469,7 +469,7 @@ export function useFileReviewBatchActions(
       dispatchUndoAll();
       setRedoSnapshotAnchors(redoAnchors);
     } catch (error) {
-      console.error("[useFileReviewBatchActions] Revert all failed:", error);
+      log.error("[useFileReviewBatchActions] Revert all failed:", error);
       throw error;
     }
   }, [
@@ -508,7 +508,7 @@ export function useFileReviewBatchActions(
       dispatchUndoAll();
       setRedoSnapshotAnchors([]);
     } catch (error) {
-      console.error("[useFileReviewBatchActions] Redo failed:", error);
+      log.error("[useFileReviewBatchActions] Redo failed:", error);
       throw error;
     }
   }, [redoSnapshotAnchors, sessionId, dispatchUndoAll, setRedoSnapshotAnchors]);

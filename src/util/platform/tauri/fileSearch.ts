@@ -10,9 +10,12 @@
  * - Path-aware scoring (filename matches ranked higher)
  * - Cached file index for repeated searches
  */
+import { createLogger } from "@src/hooks/logger";
 import type { SearchResultItem } from "@src/scaffold/ContextMenu/types";
 
 import { ensureTauriReady, invokeTauri, isTauriReady } from "./init";
+
+const log = createLogger("FileSearch");
 
 // ============================================
 // Types
@@ -90,7 +93,7 @@ export async function searchFilesNative(
 
     return result;
   } catch (error) {
-    console.error("[FileSearch] Native search failed:", error);
+    log.error("[FileSearch] Native search failed:", error);
     throw error;
   }
 }
@@ -117,7 +120,7 @@ export async function indexProjectFiles(
     });
     return count;
   } catch (error) {
-    console.error("[FileSearch] Failed to index project:", error);
+    log.error("[FileSearch] Failed to index project:", error);
     throw error;
   }
 }
@@ -142,7 +145,7 @@ export async function prewarmFileIndex(rootPath: string): Promise<number> {
     return count;
   } catch (error) {
     // Non-fatal — search will still work, just cold on first use.
-    console.warn("[FileSearch] Prewarm failed (non-fatal):", error);
+    log.warn("[FileSearch] Prewarm failed (non-fatal):", error);
     return 0;
   }
 }
@@ -160,7 +163,7 @@ export async function clearFileIndexCache(): Promise<void> {
   try {
     await invokeTauri("clear_file_index_cache");
   } catch (error) {
-    console.error("[FileSearch] Failed to clear cache:", error);
+    log.error("[FileSearch] Failed to clear cache:", error);
     throw error;
   }
 }
@@ -209,7 +212,7 @@ export async function searchFilesNativeSafe(
     const results = await searchFilesNative(options);
     return convertToSearchResultItems(results);
   } catch (error) {
-    console.warn("[FileSearch] Native search failed, returning empty:", error);
+    log.warn("[FileSearch] Native search failed, returning empty:", error);
     return { files: [], folders: [] };
   }
 }

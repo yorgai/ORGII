@@ -20,6 +20,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useCallback } from "react";
 
 import type { ColumnInfo, QueryResult } from "@src/engines/DatabaseCore";
+import { createLogger } from "@src/hooks/logger";
 import {
   type DatabaseConnection,
   databaseConnectionsAtom,
@@ -27,6 +28,8 @@ import {
   databaseLoadingAtom,
   removeConnectionConfig,
 } from "@src/store/workstation/database";
+
+const log = createLogger("useSqliteDatabase");
 
 // ============================================
 // Types (re-export for convenience)
@@ -159,7 +162,7 @@ export function useSqliteDatabase(): UseSqliteDatabaseReturn {
 
   const closeDatabase = useCallback(
     (connectionId: string) => {
-      invoke("db_close", { connectionId }).catch(console.error);
+      invoke("db_close", { connectionId }).catch(log.error);
       removeConnectionConfig(connectionId);
       setConnections((prev) => prev.filter((conn) => conn.id !== connectionId));
     },

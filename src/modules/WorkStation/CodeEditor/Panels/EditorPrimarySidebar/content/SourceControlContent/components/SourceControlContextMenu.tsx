@@ -15,11 +15,14 @@ import {
 import i18next from "i18next";
 import { useEffect, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import type { GitFile } from "@src/types/git/types";
 import { copyText } from "@src/util/data/clipboard";
 import { getFileManagerRevealLabelKey } from "@src/util/platform/fileManagerLabels";
 
 import { GIT_LABELS } from "../config";
+
+const log = createLogger("SourceControlContextMenu");
 
 // ============================================
 // Types
@@ -259,7 +262,7 @@ export default function SourceControlContextMenu(
         const menu = await TauriMenu.new({ items });
         await menu.popup();
       } catch (error) {
-        console.error("[SourceControlContextMenu] Failed to show menu:", error);
+        log.error("[SourceControlContextMenu] Failed to show menu:", error);
       } finally {
         // Always close so the parent resets showContextMenu → allows re-open
         onClose();

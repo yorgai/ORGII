@@ -46,6 +46,9 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef } from "react";
 
 import { parseRawSessionEvent } from "@src/engines/SessionCore/core/schemas";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("useSessionChannel");
 
 export function validateSessionChannelMessage(message: string): string {
   parseRawSessionEvent(message);
@@ -221,7 +224,7 @@ export function useSessionChannel(
             sessionId,
             channelId,
           }) as Promise<void>,
-        warn: (message, error) => console.warn(message, error),
+        warn: (message, error) => log.warn(message, error),
       },
       (raw) => onEventRef.current(raw)
     );

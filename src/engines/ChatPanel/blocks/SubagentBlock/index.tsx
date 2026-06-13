@@ -16,6 +16,8 @@ import { Infinity, Square } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { createLogger } from "@src/hooks/logger";
+
 import {
   EVENT_BLOCK_ICON_WRAPPER_CLASSES,
   EVENT_LOADING_SHIMMER_TEXT_CLASSES,
@@ -28,6 +30,8 @@ import {
   extractSummary,
   formatElapsedTime,
 } from "./SubagentHelpers";
+
+const log = createLogger("SubagentBlock");
 
 // ============================================
 // Types
@@ -116,7 +120,7 @@ const SubagentBlock: React.FC<SubagentBlockProps> = memo(
             CANCEL_REASON.PROGRAMMATIC_SHUTDOWN
           );
         } catch (err) {
-          console.error("Failed to cancel subagent:", err);
+          log.error("Failed to cancel subagent:", err);
           setIsStopping(false);
         }
       },

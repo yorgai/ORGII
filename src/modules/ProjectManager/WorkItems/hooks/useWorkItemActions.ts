@@ -6,6 +6,9 @@
 import { useCallback, useState } from "react";
 
 import { type WorkItemFrontmatter, projectApi } from "@src/api/http/project";
+import { createLogger } from "@src/hooks/logger";
+
+const log = createLogger("useWorkItemActions");
 
 interface UseWorkItemActionsOptions {
   onSuccess?: () => void;
@@ -40,7 +43,7 @@ export function useWorkItemActions(options: UseWorkItemActionsOptions = {}) {
           err instanceof Error ? err.message : "Failed to delete work item";
         setError(errorMessage);
         options.onError?.(errorMessage);
-        console.error("[useWorkItemActions] Delete error:", err);
+        log.error("[useWorkItemActions] Delete error:", err);
       } finally {
         setUpdating(null);
       }
@@ -67,7 +70,7 @@ export function useWorkItemActions(options: UseWorkItemActionsOptions = {}) {
           err instanceof Error ? err.message : "Failed to restore work item";
         setError(errorMessage);
         options.onError?.(errorMessage);
-        console.error("[useWorkItemActions] Restore error:", err);
+        log.error("[useWorkItemActions] Restore error:", err);
       } finally {
         setUpdating(null);
       }
@@ -93,7 +96,7 @@ export function useWorkItemActions(options: UseWorkItemActionsOptions = {}) {
 
       try {
         if (!projectSlug) {
-          console.error("[useWorkItemActions] No projectSlug");
+          log.error("[useWorkItemActions] No projectSlug");
           options.onError?.("No project available");
           return null;
         }
@@ -134,7 +137,7 @@ export function useWorkItemActions(options: UseWorkItemActionsOptions = {}) {
           err instanceof Error ? err.message : "Failed to create work item";
         setError(errorMessage);
         options.onError?.(errorMessage);
-        console.error("[useWorkItemActions] Create error:", err);
+        log.error("[useWorkItemActions] Create error:", err);
         return null;
       } finally {
         setUpdating(null);

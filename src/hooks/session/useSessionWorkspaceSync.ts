@@ -43,6 +43,7 @@ import {
   listSessionWorkspace,
   removeSessionDirectory,
 } from "@src/api/tauri/agent/sessionWorkspace";
+import { createLogger } from "@src/hooks/logger";
 import { useTauriListen } from "@src/hooks/platform/useTauriListen";
 import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
 
@@ -51,6 +52,8 @@ import {
   nonIdeManagedPaths,
   trimTrailingSlashes,
 } from "./sessionWorkspaceSyncPlan";
+
+const log = createLogger("useSessionWorkspaceSync");
 
 interface WorkspaceMirror {
   sessionId: string;
@@ -134,7 +137,7 @@ export function useSessionWorkspaceSync(
       const warnKey = `${syncSessionId}:${mirror.workspaceRoot}`;
       if (detachedWarnKeyRef.current !== warnKey) {
         detachedWarnKeyRef.current = warnKey;
-        console.warn(
+        log.warn(
           "[useSessionWorkspaceSync] session workspaceRoot is not an IDE workspace folder — skipping sync",
           {
             sessionId: syncSessionId,
@@ -170,7 +173,7 @@ export function useSessionWorkspaceSync(
         }
       } catch (error) {
         if (isTransientLifecycleError(error)) return;
-        console.error("[useSessionWorkspaceSync] addSessionDirectory failed", {
+        log.error("[useSessionWorkspaceSync] addSessionDirectory failed", {
           sessionId: syncSessionId,
           path,
           error,
@@ -191,10 +194,11 @@ export function useSessionWorkspaceSync(
         }
       } catch (error) {
         if (isTransientLifecycleError(error)) return;
-        console.error(
-          "[useSessionWorkspaceSync] removeSessionDirectory failed",
-          { sessionId: syncSessionId, path, error }
-        );
+        log.error("[useSessionWorkspaceSync] removeSessionDirectory failed", {
+          sessionId: syncSessionId,
+          path,
+          error,
+        });
       }
     }
   }, []);
@@ -233,8 +237,7 @@ export function useSessionWorkspaceSync(
       // Debug breadcrumb for agent/settings-driven workspace changes —
       // intentionally not mirrored into UI state (out of scope for the
       // IDE sync layer).
-      // eslint-disable-next-line no-console
-      console.info(
+      log.info(
         "[useSessionWorkspaceSync] non-IDE-managed workspace entries changed (agent/settings-driven; not mirrored to UI)",
         {
           sessionId: next.sessionId,
@@ -299,7 +302,7 @@ export function useSessionWorkspaceSync(
           // finishes) will populate the mirror.
           return;
         }
-        console.error("[useSessionWorkspaceSync] workspace snapshot failed", {
+        log.error("[useSessionWorkspaceSync] workspace snapshot failed", {
           sessionId,
           error,
         });

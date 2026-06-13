@@ -23,6 +23,7 @@ import { currentEventAtom } from "@src/engines/SessionCore/core/atoms";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { simulatorEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
 import { extractTodoData } from "@src/engines/SessionCore/rendering/props";
+import { createLogger } from "@src/hooks/logger";
 import { normalizeActivity } from "@src/lib/activityData";
 import { isTodoEvent } from "@src/modules/WorkStation/Chat/Communication/utils";
 import {
@@ -40,6 +41,8 @@ import {
   normalizePersistedTodoList as normalizePersistedTodoListCore,
   sanitizeTodoDisplayText,
 } from "./todoNormalization";
+
+const log = createLogger("useTodoSync");
 
 // ============================================
 // Helper Functions
@@ -165,7 +168,7 @@ export function useTodoSync(sessionId?: string): void {
         // agent" — and warn loudly for everything else.
         if (cancelled) return;
         if (isExpectedTodoLoadRejection(err)) return;
-        console.warn(
+        log.warn(
           `[useTodoSync] Failed to load persisted todos (session=${currentSessionId}):`,
           err
         );

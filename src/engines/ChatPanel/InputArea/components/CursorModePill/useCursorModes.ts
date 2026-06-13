@@ -22,6 +22,7 @@ import type {
   CursorModeEntry,
   CursorModeSource,
 } from "@src/api/tauri/cursorBridge";
+import { createLogger } from "@src/hooks/logger";
 
 import {
   type CursorModeCacheState,
@@ -29,6 +30,8 @@ import {
   getCursorModeCacheState,
   subscribeCursorModeCache,
 } from "./cursorModeCache";
+
+const log = createLogger("useCursorModes");
 
 /** Cursor's first-launch default mode id when nothing is recorded. */
 const DEFAULT_MODE_ID = "agent";
@@ -120,8 +123,7 @@ export function useCursorModes(
             : prev
         );
       } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn(
+        log.warn(
           "[useCursorModes] getComposerMode failed",
           err instanceof Error ? err.message : String(err)
         );

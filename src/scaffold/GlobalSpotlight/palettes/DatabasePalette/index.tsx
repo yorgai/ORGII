@@ -10,10 +10,14 @@ import { Database, FileText, FolderSearch, Link } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { createLogger } from "@src/hooks/logger";
+
 import type { BasePaletteProps } from "../../shared";
 import { PaletteBody, SpotlightShell } from "../../shell";
 import type { SpotlightItem } from "../../types";
 import { useSelectorKernel } from "../core";
+
+const log = createLogger("DatabasePalette");
 
 // ============ TYPES ============
 
@@ -83,7 +87,7 @@ export const DatabasePalette: React.FC<DatabasePaletteProps> = ({
       } catch (err) {
         setError(t("database.spotlight.pickerError"));
         setIsLoading(false);
-        console.error("Failed to pick:", err);
+        log.error("Failed to pick:", err);
       }
     },
     [onScanPath, onClose, t]

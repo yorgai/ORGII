@@ -7,10 +7,13 @@ import type { TFunction } from "i18next";
 
 import Message from "@src/components/Message";
 import type { KeyVaultAccount, ModelType } from "@src/hooks/keyVault";
+import { createLogger } from "@src/hooks/logger";
 import { sessionsAtom } from "@src/store/session/sessionAtom";
 import { isActiveStatus } from "@src/types/session/session";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
+
+const log = createLogger("KeyVault");
 
 interface DisconnectDeps {
   getAccount: (id: string) => KeyVaultAccount | undefined;
@@ -83,6 +86,6 @@ export async function disconnectAccount(
     }
   } catch (err) {
     Message.error(t("keyVault.toasts.deleteError", { name: accountLabel }));
-    console.error("Delete error:", err);
+    log.error("Delete error:", err);
   }
 }

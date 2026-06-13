@@ -5,6 +5,7 @@
  * Extracted from useContextMenu to keep the hook file under 600 lines.
  */
 import { projectApi } from "@src/api/http/project";
+import { createLogger } from "@src/hooks/logger";
 import { STYLE_CONFIG } from "@src/scaffold/ContextMenu/config";
 import type { SearchResultItem } from "@src/scaffold/ContextMenu/types";
 import type { Session } from "@src/store/session/sessionAtom";
@@ -14,6 +15,8 @@ import {
   searchFilesNative,
 } from "@src/util/platform/tauri/fileSearch";
 import { stripPillReferences } from "@src/util/session/stripPillReferences";
+
+const log = createLogger("ContextMenu");
 
 // ── Files ─────────────────────────────────────────────────────────────────────
 
@@ -34,7 +37,7 @@ export async function searchFiles(
       max_results: STYLE_CONFIG.searchResultsMaxItems,
     });
   } catch (error) {
-    console.warn("[ContextMenu] File search failed for root", {
+    log.warn("[ContextMenu] File search failed for root", {
       repoPath,
       queryLength: searchQuery.length,
       error,
@@ -43,7 +46,7 @@ export async function searchFiles(
   }
   const elapsedMs = Math.round(performance.now() - startedAt);
   if (elapsedMs > 500) {
-    console.warn("[ContextMenu] Slow file search", {
+    log.warn("[ContextMenu] Slow file search", {
       elapsedMs,
       nativeSearchTimeMs: results.search_time_ms,
       totalIndexed: results.total_indexed,

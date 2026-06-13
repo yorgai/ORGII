@@ -18,6 +18,8 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useRef } from "react";
 
+import { createLogger } from "@src/hooks/logger";
+
 import { derivedSnapshotAtom, eventStoreVersionAtom } from "../atoms/events";
 import { sessionIdAtom } from "../atoms/metadata";
 import type { SessionEvent } from "../types";
@@ -27,6 +29,8 @@ import {
   eventStoreProxy,
   isStreamingSnapshot,
 } from "./EventStoreProxy";
+
+const log = createLogger("useEventStoreBridge");
 
 function applyEventUpserts(
   previousEvents: SessionEvent[],
@@ -210,7 +214,7 @@ export function useEventStoreBridge(): void {
                 .catch((err) => {
                   // Allow a retry on the next streaming snapshot.
                   hydrationRequestedRef.current.delete(sessionId);
-                  console.warn(
+                  log.warn(
                     "[useEventStoreBridge] full snapshot hydration failed",
                     sessionId,
                     err

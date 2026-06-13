@@ -128,6 +128,7 @@ export async function typedInvoke<
   if (output && isDev) {
     const parsed = output.safeParse(transformed);
     if (!parsed.success) {
+      // Raw console.error kept intentionally: asserted by rpc/router.test.ts.
       console.error(
         `[RPC:${command}] Output validation failed`,
         parsed.error.issues,

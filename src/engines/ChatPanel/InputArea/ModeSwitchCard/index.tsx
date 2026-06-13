@@ -14,9 +14,12 @@ import { useCallback, useEffect, useState } from "react";
 
 import { eventsAtom } from "@src/engines/SessionCore/core/atoms";
 import { stripMcpPrefix } from "@src/engines/SessionCore/core/interactiveTools";
+import { createLogger } from "@src/hooks/logger";
 
 import { ModeSwitchCardBody } from "./ModeSwitchCardBody";
 import { isResolved, skipMode, switchMode } from "./useModeSwitchActions";
+
+const log = createLogger("ModeSwitchInputCard");
 
 // ============================================
 // Hook
@@ -77,7 +80,7 @@ export function ModeSwitchInputCard({
     if (!pending) return;
     setDismissed(pending.eventId);
     switchMode(pending.eventId, pending.targetMode).catch((err: unknown) => {
-      console.error("[ModeSwitchInputCard] Failed to switch mode:", err);
+      log.error("[ModeSwitchInputCard] Failed to switch mode:", err);
     });
   }, [pending]);
 
@@ -85,7 +88,7 @@ export function ModeSwitchInputCard({
     if (!pending) return;
     setDismissed(pending.eventId);
     skipMode(pending.eventId).catch((err: unknown) => {
-      console.error("[ModeSwitchInputCard] Failed to skip mode switch:", err);
+      log.error("[ModeSwitchInputCard] Failed to skip mode switch:", err);
     });
   }, [pending]);
 

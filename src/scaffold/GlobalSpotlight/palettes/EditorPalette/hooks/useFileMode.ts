@@ -8,6 +8,7 @@ import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import FileTypeIcon, {
   getFileTypeFromName,
 } from "@src/components/FileTypeIcon";
+import { createLogger } from "@src/hooks/logger";
 import {
   type ContextMenuSearchRoot,
   buildContextMenuSearchRoots,
@@ -26,6 +27,8 @@ import {
   mapNativeFileResultsForRoot,
   mergeFileModeResults,
 } from "./fileModeSearch";
+
+const log = createLogger("EditorPalette");
 
 export interface UseFileModeOptions {
   repoPath: string;
@@ -147,7 +150,7 @@ export function useFileMode({
           0
         );
         if (elapsedMs > 500) {
-          console.warn("[EditorPalette] Slow file search", {
+          log.warn("[EditorPalette] Slow file search", {
             elapsedMs,
             nativeSearchTimeMs,
             totalIndexed,
@@ -165,7 +168,7 @@ export function useFileMode({
 
         setFiles(fileResults);
       } catch (err) {
-        console.error("[useFileMode] Search failed:", err);
+        log.error("[useFileMode] Search failed:", err);
         setError(err instanceof Error ? err.message : "Search failed");
         setFiles([]);
       } finally {

@@ -4,6 +4,8 @@
  * Handlers for message, thinking, and tool call delta events.
  * Also handles agent:streaming_complete from Rust StreamingBuffer.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { mergeStreamingText } from "../../shared/streamTextAccumulator";
 import { capStreamContent } from "../../shared/subagentTracking";
 import type { AgentWSEvent, StreamRefs } from "../../shared/types";
@@ -16,6 +18,8 @@ import {
   updateStreamingInfo,
 } from "./streamHelpers";
 import type { EventHandlerContext } from "./types";
+
+const log = createLogger("StreamHandlers");
 
 function toolCallDeltaMessageId(toolCallId: string): string {
   return `tool-call-${toolCallId}`;
@@ -46,7 +50,7 @@ export function handleMessageDelta(
   if (!delta) return;
 
   if (!ctx.assistantStreamRef || !ctx.thinkingStreamRef) {
-    console.warn(
+    log.warn(
       "[streamHandlers] handleMessageDelta: StreamRefs missing, dropping delta"
     );
     return;
@@ -74,7 +78,7 @@ export function handleThinkingDelta(
   ctx.setStreaming(true);
 
   if (!ctx.thinkingStreamRef) {
-    console.warn(
+    log.warn(
       "[streamHandlers] handleThinkingDelta: thinkingStreamRef missing, dropping delta"
     );
     return;
@@ -131,7 +135,7 @@ export function handleToolCallDelta(
       buffer.toolCallId = incomingId;
       buffer.messageId = toolCallDeltaMessageId(incomingId);
     } else if (buffer.toolCallId !== incomingId) {
-      console.warn(
+      log.warn(
         "[streamHandlers] tool_call_id drift within delta stream — ignoring",
         {
           index: deltaIndex,
@@ -143,7 +147,7 @@ export function handleToolCallDelta(
       return;
     }
   } else if (isNewBuffer) {
-    console.warn(
+    log.warn(
       "[streamHandlers] tool_call delta arrived without tool_call_id — buffering until id lands",
       { index: deltaIndex, sessionId }
     );
@@ -201,7 +205,7 @@ export async function handleStreamingComplete(
     return;
   }
 
-  console.warn("[streamHandlers] unknown streaming_complete stream type", {
+  log.warn("[streamHandlers] unknown streaming_complete stream type", {
     streamType,
   });
 }

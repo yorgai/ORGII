@@ -35,6 +35,7 @@ import {
   createStreamMessageId,
   createStreamThinkingId,
 } from "@src/engines/SessionCore/sync/utils/activityIds";
+import { createLogger } from "@src/hooks/logger";
 import { setSessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 import {
   clearPendingPlanApproval,
@@ -70,6 +71,8 @@ import {
   parsePartialToolArgs,
 } from "./shared/streamingParsers";
 import type { AgentWSEvent } from "./shared/types";
+
+const log = createLogger("CliAdapter");
 
 // ============================================================================
 // Helpers
@@ -239,7 +242,7 @@ function markObservedCliTerminalStatus(
   const store = getInstrumentedStore();
   store.set(setSessionRuntimeStatusAtom, { sessionId, status, source: "sync" });
   void closeObservedCliTerminalEvents(sessionId, status).catch((error) => {
-    console.warn("[cliAdapter] failed to close terminal CLI events:", error);
+    log.warn("[cliAdapter] failed to close terminal CLI events:", error);
   });
 }
 
@@ -361,7 +364,7 @@ export const cliAdapter: SessionAdapter = {
         }
       }
     } catch (err) {
-      console.warn("[CliAdapter] postLoad status fetch failed:", err);
+      log.warn("[CliAdapter] postLoad status fetch failed:", err);
     }
     return result;
   },
@@ -458,7 +461,7 @@ export const cliAdapter: SessionAdapter = {
             callbacks.onAgentComplete?.();
           })
           .catch((error) => {
-            console.warn(
+            log.warn(
               "[CliAdapter] final assistant settle fallback failed:",
               error
             );
@@ -545,7 +548,7 @@ export const cliAdapter: SessionAdapter = {
           eventStoreProxy.upsert(event, sessionId);
         })
         .catch((err) => {
-          console.warn("[CliAdapter] normalizeChunkRust failed:", err);
+          log.warn("[CliAdapter] normalizeChunkRust failed:", err);
         });
       return true;
     }
@@ -715,7 +718,7 @@ export const cliAdapter: SessionAdapter = {
               .then(reconcileAfterFinalEvent);
           })
           .catch((err) => {
-            console.warn("[CliAdapter] normalizeChunkRust failed:", err);
+            log.warn("[CliAdapter] normalizeChunkRust failed:", err);
           });
         return;
       }
@@ -739,7 +742,7 @@ export const cliAdapter: SessionAdapter = {
             .then(reconcileTerminalEventsIfNeeded);
         })
         .catch((err) => {
-          console.warn("[CliAdapter] normalizeChunkRust failed:", err);
+          log.warn("[CliAdapter] normalizeChunkRust failed:", err);
         });
     }
 
@@ -749,7 +752,7 @@ export const cliAdapter: SessionAdapter = {
       const streamType = payload?.streamType as "message" | "thinking";
 
       if (!completeEvent) {
-        console.warn("[CliAdapter] streaming_complete missing event payload");
+        log.warn("[CliAdapter] streaming_complete missing event payload");
         return;
       }
       if (finalizedStreamEventIds.has(completeEvent.id)) return;

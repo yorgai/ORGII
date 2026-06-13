@@ -8,8 +8,11 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useSetAtom } from "jotai";
 import { useState } from "react";
 
+import { createLogger } from "@src/hooks/logger";
 import { spotlightOpenAtom } from "@src/store";
 import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
+
+const log = createLogger("useRepoDropdownActions");
 
 // ============================================
 // Type Definitions
@@ -84,7 +87,7 @@ export function useRepoDropdownActions(): UseRepoDropdownActionsReturn {
         setRepoName(folderName);
       }
     } catch (error) {
-      console.error("[useRepoDropdownActions] Error selecting folder:", error);
+      log.error("[useRepoDropdownActions] Error selecting folder:", error);
       showGitActionDialogSafely("Failed to select folder location", "error");
     }
   };

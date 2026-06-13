@@ -15,10 +15,13 @@ import {
   updateAgentConfig,
 } from "@src/api/tauri/agent";
 import { RUST_AGENT_TYPE } from "@src/api/tauri/agent/types";
+import { createLogger } from "@src/hooks/logger";
 
 import type { CredentialStatus } from "./types";
 import { useAgentConfigBase } from "./useAgentConfigBase";
 import { getNestedString, setNested } from "./utils";
+
+const log = createLogger("OSAgent");
 
 export interface UseOSAgentConfigReturn {
   config: Record<string, unknown>;
@@ -43,7 +46,7 @@ export function useOSAgentConfig(): UseOSAgentConfigReturn {
       checkKeys(model)
         .then((status) => setCredStatus(status as unknown as CredentialStatus))
         .catch((err) => {
-          console.warn("[OSAgent] credential check failed:", err);
+          log.warn("[OSAgent] credential check failed:", err);
           setCredStatus(null);
         });
     }, 300);

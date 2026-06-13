@@ -10,10 +10,14 @@
  *
  * This replaces the unreliable Tauri event system for push notifications.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import {
   type ParsedCodeEditorWebSocketMessage,
   maybeParseCodeEditorWebSocketMessage,
 } from "./websocket/schemas";
+
+const log = createLogger("CodeEditorWS");
 
 export type CodeEditorWebSocketMessage = ParsedCodeEditorWebSocketMessage;
 
@@ -59,7 +63,7 @@ export class CodeEditorWebSocketClient {
             if (data === null) return;
             this.handleMessage(data);
           } catch (err) {
-            console.error("[CodeEditorWS] Failed to parse message:", err);
+            log.error("[CodeEditorWS] Failed to parse message:", err);
           }
         };
 
@@ -77,7 +81,7 @@ export class CodeEditorWebSocketClient {
         };
 
         this.ws.onerror = (error) => {
-          console.error("[CodeEditorWS] WebSocket error:", error);
+          log.error("[CodeEditorWS] WebSocket error:", error);
           reject(error);
         };
       } catch (err) {
@@ -144,7 +148,7 @@ export class CodeEditorWebSocketClient {
         try {
           handler(data as CodeEditorWebSocketMessage);
         } catch (err) {
-          console.error(`[CodeEditorWS] Handler error for ${eventType}:`, err);
+          log.error(`[CodeEditorWS] Handler error for ${eventType}:`, err);
         }
       }
     }
@@ -160,7 +164,7 @@ export class CodeEditorWebSocketClient {
     );
     this.reconnectTimer = setTimeout(() => {
       this.connect().catch((err) => {
-        console.error("[CodeEditorWS] Reconnect failed:", err);
+        log.error("[CodeEditorWS] Reconnect failed:", err);
       });
     }, delay);
   }
@@ -185,7 +189,7 @@ if (typeof window !== "undefined") {
   // Auto-connect when app loads
   wsClientInstance = new CodeEditorWebSocketClient();
   wsClientInstance.connect().catch((err) => {
-    console.error("[CodeEditorWS] Failed to connect on init:", err);
+    log.error("[CodeEditorWS] Failed to connect on init:", err);
   });
 
   // Expose globally for debugging

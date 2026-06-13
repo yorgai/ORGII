@@ -14,6 +14,7 @@ import {
   type SearchResultEvent,
   searchCodeStreaming,
 } from "@src/api/tauri/search";
+import { createLogger } from "@src/hooks/logger";
 import type {
   SearchOptions as StoreSearchOptions,
   SearchResultFile as StoreSearchResultFile,
@@ -40,6 +41,8 @@ import {
   toUIResult,
 } from "./transformers";
 import type { SearchResultActions } from "./types";
+
+const log = createLogger("useSearchResults");
 
 export interface UseSearchResultsReturn {
   /** Search results (UI format) */
@@ -180,7 +183,7 @@ export function useSearchResults(): UseSearchResultsReturn {
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load more";
-        console.error("[useSearchResults] Load more error:", errorMessage);
+        log.error("[useSearchResults] Load more error:", errorMessage);
         setError(errorMessage);
       } finally {
         setLoadingMore(false);

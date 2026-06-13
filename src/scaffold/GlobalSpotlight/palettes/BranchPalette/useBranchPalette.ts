@@ -26,6 +26,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { createLogger } from "@src/hooks/logger";
 import { useFilteredItems } from "@src/hooks/search";
 
 import type { SpotlightItem } from "../../types";
@@ -39,6 +40,8 @@ import type { BranchPaletteMode, UseBranchPaletteOptions } from "./types";
 import { useBranchFetch } from "./useBranchFetch";
 import { useBranchItems } from "./useBranchItems";
 import { useWorktreeMap } from "./useWorktreeMap";
+
+const log = createLogger("useBranchPalette");
 
 export function useBranchPalette(options: UseBranchPaletteOptions) {
   const { t } = useTranslation();
@@ -430,7 +433,7 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
       setActiveMode("checkout");
       onClose();
     } catch (error) {
-      console.error("[useBranchPalette] Failed to create branch:", error);
+      log.error("[useBranchPalette] Failed to create branch:", error);
     } finally {
       setIsCreatingBranch(false);
     }

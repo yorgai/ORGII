@@ -6,6 +6,7 @@
 import { invoke as invokeTauri } from "@tauri-apps/api/core";
 import { atom } from "jotai";
 
+import { createLogger } from "@src/hooks/logger";
 import { isTauriDesktop } from "@src/util/platform/tauri";
 import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 
@@ -27,6 +28,8 @@ import {
   evictOldest,
 } from "./globalTabsTypes";
 import { navigationSidebarTabsAtom } from "./navigationSidebarTabsAtom";
+
+const log = createLogger("GlobalTabs");
 
 // ============================================
 // Browser Tabs
@@ -137,10 +140,7 @@ export const removeTerminalSessionAtom = atom(
       invokeTauri("close_pty", { sessionId: ptySessionId })
         .then(() => {})
         .catch((err) => {
-          console.error(
-            `[GlobalTabs] Failed to close PTY ${ptySessionId}:`,
-            err
-          );
+          log.error(`[GlobalTabs] Failed to close PTY ${ptySessionId}:`, err);
         });
     }
     const state = get(navigationSidebarTabsAtom);

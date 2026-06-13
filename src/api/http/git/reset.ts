@@ -3,8 +3,12 @@
  *
  * HEAD reset operations.
  */
+import { createLogger } from "@src/hooks/logger";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
 import type { ResetMode, ResetResult } from "./types";
+
+const log = createLogger("GitAPI");
 
 /**
  * Reset HEAD to a specific ref
@@ -32,7 +36,7 @@ export const gitReset = async (params: {
     );
     return response.data;
   } catch (error) {
-    console.error("[GitAPI] Failed to reset:", error);
+    log.error("[GitAPI] Failed to reset:", error);
     return undefined;
   }
 };
