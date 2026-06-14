@@ -67,6 +67,17 @@ export interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
+interface ChatHistoryActionsContextType {
+  setIsChatScrolledToBottom: React.Dispatch<React.SetStateAction<boolean>>;
+  chatContainerRef: React.RefObject<HTMLDivElement | null>;
+}
+
+const ChatHistoryActionsContext = createContext<
+  ChatHistoryActionsContextType | undefined
+>(undefined);
+
+const ShowInteractAreaContext = createContext<boolean | undefined>(undefined);
+
 // Generate unique ID for each provider instance
 let providerInstanceId = 0;
 
@@ -105,6 +116,14 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     []
   );
 
+  const historyActionsValue = useMemo(
+    () => ({
+      setIsChatScrolledToBottom,
+      chatContainerRef,
+    }),
+    [setIsChatScrolledToBottom, chatContainerRef]
+  );
+
   // PERFORMANCE: Only re-create value object when actual values change
   // Setters are spread from stable object to avoid recreation
   const value = useMemo(
@@ -126,13 +145,35 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({
     ]
   );
 
-  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+  return (
+    <ShowInteractAreaContext.Provider value={showInteractArea}>
+      <ChatHistoryActionsContext.Provider value={historyActionsValue}>
+        <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
+      </ChatHistoryActionsContext.Provider>
+    </ShowInteractAreaContext.Provider>
+  );
 };
 
 export const useChatContext = () => {
   const context = useContext(ChatContext);
   if (!context) {
     throw new Error("useChatContext must be used within a ChatProvider");
+  }
+  return context;
+};
+
+export const useChatHistoryActions = () => {
+  const context = useContext(ChatHistoryActionsContext);
+  if (!context) {
+    throw new Error("useChatHistoryActions must be used within a ChatProvider");
+  }
+  return context;
+};
+
+export const useShowInteractArea = () => {
+  const context = useContext(ShowInteractAreaContext);
+  if (context === undefined) {
+    throw new Error("useShowInteractArea must be used within a ChatProvider");
   }
   return context;
 };

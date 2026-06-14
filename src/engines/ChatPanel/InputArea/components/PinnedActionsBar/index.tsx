@@ -28,7 +28,7 @@ import {
   workstationPrAtom,
   workstationPrCallbackAtom,
 } from "@src/store/workstation/codeEditor/workstationPrAtom";
-import { workstationLayoutAtom } from "@src/store/workstation/tabs";
+import { mainPaneTabsAtom } from "@src/store/workstation/tabs";
 import {
   createCanvasPreviewTab,
   getCanvasPreviewTabId,
@@ -120,7 +120,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     // ── Canvas pill ───────────────────────────────────────────────────────────
 
     const [canvasEntry, setCanvasEntry] = useAtom(canvasPreviewAtom);
-    const workstationLayout = useAtomValue(workstationLayoutAtom);
+    const mainPaneTabs = useAtomValue(mainPaneTabsAtom);
 
     const showCanvasPill = Boolean(
       sessionId &&
@@ -130,9 +130,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     const isCanvasTabOpen = Boolean(
       sessionId &&
-      workstationLayout?.mainPane?.tabs.some(
-        (tab) => tab.id === getCanvasPreviewTabId(sessionId)
-      )
+      mainPaneTabs.some((tab) => tab.id === getCanvasPreviewTabId(sessionId))
     );
 
     const handleOpenCanvas = useCallback(() => {

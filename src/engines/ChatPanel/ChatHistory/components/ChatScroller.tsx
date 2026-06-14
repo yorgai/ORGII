@@ -3,9 +3,6 @@ import type { Components } from "react-virtuoso";
 
 type ChatScrollerComponent = NonNullable<Components["Scroller"]>;
 
-const MANUAL_SCROLL_DELTA_SCALE = 0.55;
-const WHEEL_LINE_HEIGHT_PX = 16;
-
 interface ChatScrollerProps {
   virtuosoScrollerRef: React.MutableRefObject<HTMLElement | null>;
 }
@@ -21,27 +18,12 @@ export function createChatScroller(
     HTMLDivElement,
     React.ComponentProps<ChatScrollerComponent>
   >(function ChatScrollerInstance(props, forwardedRef) {
-    const { context: _context, onWheel, ...restProps } = props;
-    const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-      onWheel?.(event);
-      if (event.defaultPrevented) return;
-
-      const deltaY =
-        event.deltaMode === WheelEvent.DOM_DELTA_LINE
-          ? event.deltaY * WHEEL_LINE_HEIGHT_PX
-          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
-            ? event.deltaY * event.currentTarget.clientHeight
-            : event.deltaY;
-
-      event.preventDefault();
-      event.currentTarget.scrollTop += deltaY * MANUAL_SCROLL_DELTA_SCALE;
-    };
+    const { context: _context, ...restProps } = props;
 
     return (
       <div
         {...restProps}
         className="scrollbar-hide"
-        onWheel={handleWheel}
         ref={(node) => {
           virtuosoScrollerRef.current = node;
           if (typeof forwardedRef === "function") {

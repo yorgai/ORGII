@@ -11,7 +11,7 @@ import type {
 
 import type { ComposerInputRef } from "@src/components/ComposerInput";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
-import type { MenuItemId, RecentFile } from "@src/scaffold/ContextMenu/config";
+import type { MenuItemId } from "@src/scaffold/ContextMenu/config";
 import type { ChatImageAttachment } from "@src/store/ui/chatImageAtom";
 import type { SlashItem } from "@src/types/extensions/types";
 
@@ -78,7 +78,6 @@ export interface InputAreaState {
   setShowContextMenu: (show: boolean) => void;
   atSearchQuery: string;
   setAtSearchQuery: (query: string) => void;
-  recentFiles: RecentFile[];
 
   // Slash command state
   showSlashMenu: boolean;
@@ -171,7 +170,6 @@ export interface UseInputAreaReturn {
   setShowContextMenu: (show: boolean) => void;
   atSearchQuery: string;
   setAtSearchQuery: (query: string) => void;
-  recentFiles: RecentFile[];
   handleAtSelect: (
     type: MenuItemId,
     value?: string,

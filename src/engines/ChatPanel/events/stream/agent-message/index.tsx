@@ -62,32 +62,34 @@ export interface AgentMessageEventProps extends RawEventInput {
 const InlineThinkingBlock: React.FC<{ content: string }> = ({ content }) => {
   const { t } = useTranslation("sessions");
   const {
-    isCollapsed: isExpanded,
+    isCollapsed,
     isHeaderHovered,
     handleHeaderClick,
     handleHeaderMouseEnter,
     handleHeaderMouseLeave,
-  } = useEventBlockHeader({ defaultCollapsed: true, collapseAllValue: false });
+  } = useEventBlockHeader({ defaultCollapsed: true, collapseAllValue: true });
 
   return (
     <div className={getEventBlockContainerClasses(false)}>
       <EventBlockHeader
-        isCollapsed={isExpanded}
+        isCollapsed={isCollapsed}
         withHover={false}
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
       >
         <EventBlockHeaderIcon
           icon={getEventIcon("agent_message")}
-          isCollapsed={!isExpanded}
+          isCollapsed={isCollapsed}
           isHeaderHovered={isHeaderHovered}
           onToggle={handleHeaderClick}
           hasContent
         />
-        <EventBlockHeaderTitle>{t("chat.thought")}</EventBlockHeaderTitle>
+        <EventBlockHeaderTitle>
+          {t("tools.thinkingRunning")}
+        </EventBlockHeaderTitle>
       </EventBlockHeader>
 
-      {isExpanded && (
+      {!isCollapsed && (
         <div className={getEventBlockContentClasses({ padding: "p-0" })}>
           <div className="activity-thinking activity-thinking--no-style allow-select">
             <div className="activity-thinking__content allow-select">

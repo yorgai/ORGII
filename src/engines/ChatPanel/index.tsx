@@ -16,12 +16,12 @@ import {
 import { ShareSessionDialog } from "@src/features/SessionSharing/ShareSessionDialog";
 import { useDropdownEngine } from "@src/hooks/dropdown";
 import { useShouldOffsetChatPanelHeader } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
-import { useWorkStationTabs } from "@src/hooks/workStation/tabs";
 import { allAgentDefsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAgentsAtom";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { getChatPanelBackgroundStyle } from "@src/modules/shared/layouts/viewContainerTokens";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";
 import { GUIDE_TARGETS } from "@src/scaffold/Tutorials";
+import { EditorTabService } from "@src/services/workStation";
 import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
 import { projectListRefreshAtom } from "@src/store/project/projectAtom";
 import { currentRepoAtom } from "@src/store/repo";
@@ -95,7 +95,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const { currentSessionId, panelTitle, currentSession } = usePanelTitle();
     const activeSession = currentSession ?? undefined;
     const handleReloadSession = useReloadSession(currentSessionId ?? null);
-    const { openTab: openWorkStationTab } = useWorkStationTabs();
 
     const [contentMode, setContentMode] = useAtom(chatPanelContentModeAtom);
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
@@ -331,11 +330,11 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     });
 
     const handleOpenBenchmarkTab = useCallback(() => {
-      openWorkStationTab(createBenchmarkTab());
+      EditorTabService.openTab(createBenchmarkTab());
       if (isChatFocus) {
         toggleChatFocus();
       }
-    }, [isChatFocus, openWorkStationTab, toggleChatFocus]);
+    }, [isChatFocus, toggleChatFocus]);
     const { bodySlot: benchmarkPanel, footerSlot: benchmarkFooter } =
       useBenchmarkSessionCreatorSlots({
         enabled: contentState.isBenchmarkTarget,

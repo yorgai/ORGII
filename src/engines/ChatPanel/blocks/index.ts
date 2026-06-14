@@ -47,7 +47,10 @@ export { default as ListDirBlock } from "./ListDirBlock";
 export type { ListDirBlockProps } from "./ListDirBlock";
 
 // Agent message block (collapsible wrapper for agent messages — excluded from collapse-all)
-export { default as AgentMessageBlock } from "./AgentMessageBlock";
+export {
+  AgentMessageClampProvider,
+  default as AgentMessageBlock,
+} from "./AgentMessageBlock";
 export type { AgentMessageBlockProps } from "./AgentMessageBlock";
 
 // ChatBlock targets (consume UniversalEventProps directly via adapters)

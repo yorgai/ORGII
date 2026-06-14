@@ -68,10 +68,6 @@ export type {
 export { useGroupHeaderRenderer } from "./useGroupHeaderRenderer";
 
 export { useReloadSession } from "./useReloadSession";
-
-export { useFollowAgent } from "./useFollowAgent";
-export type { UseFollowAgentReturn } from "./useFollowAgent";
-
 export {
   useTurnPageNavigation,
   useTurnPageSelectionState,

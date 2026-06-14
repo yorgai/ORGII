@@ -17,7 +17,7 @@
  * // Explicit variant
  * <ThinkingEvent {...props} variant="chat" />
  */
-import React, { Suspense, lazy, useCallback, useEffect } from "react";
+import React, { Suspense, lazy, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import Markdown from "@src/components/MarkDown";
@@ -25,7 +25,6 @@ import { getEventIcon } from "@src/config/toolIcons";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
-  EventBlockHeaderInfo,
   EventBlockHeaderTitle,
   getEventBlockContainerClasses,
   getEventBlockContentClasses,
@@ -58,50 +57,29 @@ export interface ThinkingEventProps extends RawEventInput {
 
 interface ChatVariantProps {
   content?: string;
-  duration?: number;
   isLoading: boolean;
   isStreaming?: boolean;
   eventId?: string;
 }
 
-function formatThoughtDuration(durationMs: number): string | undefined {
-  if (!Number.isFinite(durationMs) || durationMs <= 0) return undefined;
-
-  const totalSeconds = Math.round(durationMs / 1000);
-  if (totalSeconds < 60) return `${totalSeconds}s`;
-
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}m${seconds}s`;
-}
-
 const ChatVariant: React.FC<ChatVariantProps> = ({
   content,
-  duration,
   isLoading,
   isStreaming = false,
   eventId,
 }) => {
   const { t } = useTranslation("sessions");
   const {
-    isCollapsed: isExpanded,
+    isCollapsed,
     isHeaderHovered,
     handleHeaderClick,
     handleHeaderMouseEnter,
     handleHeaderMouseLeave,
-    setIsCollapsed,
   } = useEventBlockHeader({
-    defaultCollapsed: !isLoading,
-    collapseAllValue: false,
+    defaultCollapsed: true,
+    collapseAllValue: true,
   });
 
-  useEffect(() => {
-    setIsCollapsed(isLoading);
-  }, [isLoading, setIsCollapsed]);
-
-  const durationLabel = !isLoading
-    ? formatThoughtDuration(duration ?? 0)
-    : undefined;
   const { replayEventById } = useChatEventReplay();
   const handleLocate = useCallback(() => {
     if (eventId) {
@@ -114,7 +92,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
   return (
     <div className={getEventBlockContainerClasses(false)}>
       <EventBlockHeader
-        isCollapsed={isExpanded}
+        isCollapsed={isCollapsed}
         withHover={false}
         onClick={hasContent ? handleHeaderClick : undefined}
         onNavigate={eventId ? handleLocate : undefined}
@@ -123,23 +101,18 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
       >
         <EventBlockHeaderIcon
           icon={getEventIcon("thinking")}
-          isCollapsed={!isExpanded}
+          isCollapsed={isCollapsed}
           isHeaderHovered={isHeaderHovered}
           onToggle={handleHeaderClick}
           hasContent={hasContent}
           isLoading={isLoading}
         />
         <EventBlockHeaderTitle isLoading={isLoading}>
-          {isLoading ? t("tools.thinkingRunning") : t("tools.thinkingDone")}
+          {t("tools.thinkingRunning")}
         </EventBlockHeaderTitle>
-        {!isLoading && durationLabel && (
-          <EventBlockHeaderInfo>
-            {t("tools.thinkingDuration", { duration: durationLabel })}
-          </EventBlockHeaderInfo>
-        )}
       </EventBlockHeader>
 
-      {isExpanded && (
+      {!isCollapsed && (
         <div className="ml-[14px] border-l border-border-1 py-0.5">
           <div
             className={`pl-3 ${getEventBlockContentClasses({ padding: "p-0" })}`}
@@ -176,7 +149,7 @@ export const ThinkingEvent: React.FC<ThinkingEventProps> = (props) => {
 
   if (!normalizedProps) return null;
 
-  const { content, duration } = extractThinkingData(normalizedProps);
+  const { content } = extractThinkingData(normalizedProps);
   const displayContent = props.streamingContent || content;
   const isLoading = normalizedProps.status === "running";
 
@@ -184,7 +157,6 @@ export const ThinkingEvent: React.FC<ThinkingEventProps> = (props) => {
     return (
       <ChatVariant
         content={displayContent}
-        duration={duration}
         isLoading={isLoading}
         isStreaming={props.isStreaming}
         eventId={normalizedProps.eventId}

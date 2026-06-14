@@ -472,4 +472,4 @@ const UserChatItem = ({
   );
 };
 
-export default UserChatItem;
+export default memo(UserChatItem);

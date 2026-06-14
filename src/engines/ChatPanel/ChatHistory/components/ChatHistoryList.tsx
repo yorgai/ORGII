@@ -102,37 +102,73 @@ function sameChatHistoryListProps(
   previous: ChatHistoryListProps,
   next: ChatHistoryListProps
 ): boolean {
-  return (
-    sameFlatItems(previous.flatItems, next.flatItems) &&
-    sameNumberArray(previous.groupCounts, next.groupCounts) &&
-    previous.totalFlatItems === next.totalFlatItems &&
-    sameNullableNumberArray(
-      previous.lastAssistantFlatIndexPerItem,
-      next.lastAssistantFlatIndexPerItem
-    ) &&
-    previous.codeBlockContainerWidth === next.codeBlockContainerWidth &&
+  const sameFooterSpacer =
     Math.abs(previous.footerSpacerHeight - next.footerSpacerHeight) <
-      CHAT_FOOTER_SPACER.UPDATE_THRESHOLD_PX &&
-    previous.planningIndicatorCount === next.planningIndicatorCount &&
-    previous.planningShowSlowHint === next.planningShowSlowHint &&
-    previous.planningVariantIndex === next.planningVariantIndex &&
-    previous.virtuosoRef === next.virtuosoRef &&
-    previous.virtuosoDataKey === next.virtuosoDataKey &&
-    previous.getIsWpGeneWorking === next.getIsWpGeneWorking &&
-    previous.getIsExploring === next.getIsExploring &&
-    previous.followOutput === next.followOutput &&
-    previous.renderGroupHeader === next.renderGroupHeader &&
-    previous.onAtBottomStateChange === next.onAtBottomStateChange &&
-    previous.onRangeChanged === next.onRangeChanged &&
-    previous.onEndReached === next.onEndReached &&
-    previous.onRegenerate === next.onRegenerate &&
-    previous.onSubmit === next.onSubmit &&
-    previous.onSkip === next.onSkip &&
-    previous.onEditUserMessage === next.onEditUserMessage &&
-    previous.ChatScroller === next.ChatScroller &&
-    previous.staticScrollerRef === next.staticScrollerRef &&
-    previous.newEventDividerLabel === next.newEventDividerLabel
-  );
+    CHAT_FOOTER_SPACER.UPDATE_THRESHOLD_PX;
+  const checks: Array<[string, boolean]> = [
+    ["flatItems", sameFlatItems(previous.flatItems, next.flatItems)],
+    ["groupCounts", sameNumberArray(previous.groupCounts, next.groupCounts)],
+    ["totalFlatItems", previous.totalFlatItems === next.totalFlatItems],
+    [
+      "lastAssistantFlatIndexPerItem",
+      sameNullableNumberArray(
+        previous.lastAssistantFlatIndexPerItem,
+        next.lastAssistantFlatIndexPerItem
+      ),
+    ],
+    [
+      "codeBlockContainerWidth",
+      previous.codeBlockContainerWidth === next.codeBlockContainerWidth,
+    ],
+    ["footerSpacerHeight", sameFooterSpacer],
+    [
+      "planningIndicatorCount",
+      previous.planningIndicatorCount === next.planningIndicatorCount,
+    ],
+    [
+      "planningShowSlowHint",
+      previous.planningShowSlowHint === next.planningShowSlowHint,
+    ],
+    [
+      "planningVariantIndex",
+      previous.planningVariantIndex === next.planningVariantIndex,
+    ],
+    ["virtuosoRef", previous.virtuosoRef === next.virtuosoRef],
+    ["virtuosoDataKey", previous.virtuosoDataKey === next.virtuosoDataKey],
+    [
+      "getIsWpGeneWorking",
+      previous.getIsWpGeneWorking === next.getIsWpGeneWorking,
+    ],
+    ["getIsExploring", previous.getIsExploring === next.getIsExploring],
+    ["followOutput", previous.followOutput === next.followOutput],
+    [
+      "renderGroupHeader",
+      previous.renderGroupHeader === next.renderGroupHeader,
+    ],
+    [
+      "onAtBottomStateChange",
+      previous.onAtBottomStateChange === next.onAtBottomStateChange,
+    ],
+    ["onRangeChanged", previous.onRangeChanged === next.onRangeChanged],
+    ["onEndReached", previous.onEndReached === next.onEndReached],
+    ["onRegenerate", previous.onRegenerate === next.onRegenerate],
+    ["onSubmit", previous.onSubmit === next.onSubmit],
+    ["onSkip", previous.onSkip === next.onSkip],
+    [
+      "onEditUserMessage",
+      previous.onEditUserMessage === next.onEditUserMessage,
+    ],
+    ["ChatScroller", previous.ChatScroller === next.ChatScroller],
+    [
+      "staticScrollerRef",
+      previous.staticScrollerRef === next.staticScrollerRef,
+    ],
+    [
+      "newEventDividerLabel",
+      previous.newEventDividerLabel === next.newEventDividerLabel,
+    ],
+  ];
+  return checks.every(([, same]) => same);
 }
 
 interface ChatHistoryListProps {
@@ -282,6 +318,7 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         if (flatIndex >= flatItems.length) {
           return (
             <PlanningFooter
+              key={`planning-footer-${flatIndex}`}
               count={planningIndicatorCount}
               showSlowHint={planningShowSlowHint}
               variantIndex={planningVariantIndex}
@@ -359,7 +396,7 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
                   if (itemFlatIndex >= flatItems.length) {
                     return (
                       <PlanningFooter
-                        key="planning-footer"
+                        key={`planning-footer-${itemFlatIndex}`}
                         count={planningIndicatorCount}
                         showSlowHint={planningShowSlowHint}
                         variantIndex={planningVariantIndex}
@@ -423,7 +460,7 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         defaultItemHeight={280}
         computeItemKey={(flatIndex) =>
           flatIndex >= flatItems.length
-            ? "planning-footer"
+            ? `planning-footer-${flatIndex}`
             : flatItems[flatIndex]?.chunk_id || `chat-${flatIndex}`
         }
         className="scrollbar-hide"

@@ -192,6 +192,11 @@ simulatorAutoScrollAtom.debugLabel = "simulatorAutoScrollAtom";
 
 const STATION_MODES = ["my-station", "agent-station", "ops-control"] as const;
 export type StationMode = (typeof STATION_MODES)[number];
+export const STATION_MODE = {
+  MY_STATION: "my-station",
+  AGENT_STATION: "agent-station",
+  OPS_CONTROL: "ops-control",
+} as const satisfies Record<string, StationMode>;
 const StationModeSchema = z.enum(STATION_MODES);
 
 export const stationModeAtom = atomWithStorage<StationMode>(

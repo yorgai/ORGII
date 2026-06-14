@@ -61,7 +61,15 @@ export function useChatPagination({
 
   const debouncedSetVisibleRange = useDebouncedCallback(
     (range: { startIndex: number; endIndex: number }) => {
-      setVisibleRange(range);
+      setVisibleRange((previousRange) => {
+        if (
+          previousRange.startIndex === range.startIndex &&
+          previousRange.endIndex === range.endIndex
+        ) {
+          return previousRange;
+        }
+        return range;
+      });
     },
     RANGE_DEBOUNCE_MS
   );

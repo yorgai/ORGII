@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
 import { replayModeAtom } from "@src/engines/SessionCore";
-import { stationModeAtom } from "@src/store/ui/simulatorAtom";
+import { STATION_MODE, stationModeAtom } from "@src/store/ui/simulatorAtom";
 
 const AGENT_STATION_SHORTCUT_ID = "open_agent_station";
 
@@ -32,11 +32,11 @@ export function useFollowAgent(): UseFollowAgentReturn {
   const setReplayMode = useSetAtom(replayModeAtom);
 
   const showFollowAgent =
-    viewMode === "workStation" && stationMode === "my-station";
+    viewMode === "workStation" && stationMode === STATION_MODE.MY_STATION;
   const agentStationLabel = t("common:terminology.agentStation");
 
   const handleFollowAgent = useCallback(() => {
-    setStationMode("agent-station");
+    setStationMode(STATION_MODE.AGENT_STATION);
     setReplayMode("follow");
   }, [setStationMode, setReplayMode]);
 

@@ -23,12 +23,15 @@
  * is always visible (no hover gate) because there is no parent header row
  * to disclose it — the arrow IS the chrome.
  */
-import { useAtomValue } from "jotai";
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import ExpandOverlay from "@src/components/ExpandOverlay";
-import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
-import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 
 import { EventNavigateIcon } from "../primitives";
 import { useBlockHeader } from "../useBlockLocate";
@@ -45,6 +48,10 @@ const CHAT_PANE_FADE_FROM = "from-chat-pane";
 // expand pill is the escape hatch when they want the full message.
 const AGENT_MESSAGE_PREVIEW_MAX_HEIGHT = 240;
 
+const AgentMessageClampContext = createContext(false);
+
+export const AgentMessageClampProvider = AgentMessageClampContext.Provider;
+
 export interface AgentMessageBlockProps {
   children: React.ReactNode;
   /**
@@ -58,9 +65,7 @@ const AgentMessageBlock: React.FC<AgentMessageBlockProps> = ({
   children,
   eventId,
 }) => {
-  const stationMode = useAtomValue(stationModeAtom);
-  const chatPanelMaximized = useAtomValue(chatPanelMaximizedAtom);
-  const clampEligible = stationMode === "agent-station" && !chatPanelMaximized;
+  const clampEligible = useContext(AgentMessageClampContext);
 
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [overflows, setOverflows] = useState(false);

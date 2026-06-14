@@ -14,9 +14,16 @@ import type {
   ContextMenuCustomMentionOption,
   ContextMenuProps,
 } from "@/src/scaffold/ContextMenu/types";
-import React, { useRef } from "react";
+import { useAtomValue } from "jotai";
+import React, { useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
+import {
+  type WorkStationTab,
+  mainPaneTabsAtom,
+} from "@src/store/workstation/tabs";
+
+import { getOpenedTabMentionOptions } from "../openedTabMentionOptions";
 import type { FloatingPlacementStrategy } from "./floatingPlacement";
 import { useFloatingPortalPosition } from "./useFloatingPortalPosition";
 
@@ -30,7 +37,6 @@ interface ContextMenuPortalProps {
   searchQuery: string;
   inlineSearchOnEmpty?: boolean;
   keyboardOpened?: boolean;
-  recentFiles: RecentFile[];
   repoPath?: string;
   keyboardHandlerRef: React.MutableRefObject<
     ((e: React.KeyboardEvent) => boolean) | null
@@ -43,8 +49,23 @@ interface ContextMenuPortalProps {
 
 const ESTIMATED_DROPDOWN_HEIGHT = 260;
 
-const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
-  visible,
+function getOpenedTabRecentFiles(
+  workstationTabs: ReadonlyArray<WorkStationTab>
+): RecentFile[] {
+  return workstationTabs
+    .filter(
+      (tab) => tab.type === "file" && typeof tab.data.filePath === "string"
+    )
+    .map((tab) => ({
+      path: tab.data.filePath as string,
+      name: tab.title,
+      type: "file" as const,
+    }));
+}
+
+const VisibleContextMenuPortal: React.FC<
+  Omit<ContextMenuPortalProps, "visible">
+> = ({
   containerRef,
   onClose,
   onSelect,
@@ -53,7 +74,6 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
   searchQuery,
   inlineSearchOnEmpty,
   keyboardOpened,
-  recentFiles,
   repoPath,
   keyboardHandlerRef,
   treePosition = "left",
@@ -61,9 +81,21 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
   anchorSelector,
 }) => {
   const portalRef = useRef<HTMLDivElement>(null);
+  const workstationTabs = useAtomValue(mainPaneTabsAtom);
+  const recentFiles = useMemo(
+    () => getOpenedTabRecentFiles(workstationTabs),
+    [workstationTabs]
+  );
+  const mergedCustomMentionOptions = useMemo(
+    () => [
+      ...getOpenedTabMentionOptions(workstationTabs),
+      ...(customMentionOptions ?? []),
+    ],
+    [workstationTabs, customMentionOptions]
+  );
   const dropdownWidth = Number.parseFloat(STYLE_CONFIG.dropdownWidth);
   const { portalPosition, isPositioned } = useFloatingPortalPosition({
-    visible,
+    visible: true,
     containerRef,
     floatingRef: portalRef,
     floatingWidth: dropdownWidth,
@@ -73,7 +105,7 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
     updateKey: searchQuery,
   });
 
-  if (!visible || !isPositioned || !portalPosition) return null;
+  if (!isPositioned || !portalPosition) return null;
 
   return createPortal(
     // data-context-menu-portal lets the click-outside handler in
@@ -93,10 +125,10 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
       }}
     >
       <ContextMenu
-        visible={visible}
+        visible
         onClose={onClose}
         onSelect={onSelect}
-        customMentionOptions={customMentionOptions}
+        customMentionOptions={mergedCustomMentionOptions}
         onCustomMentionSelect={onCustomMentionSelect}
         searchQuery={searchQuery}
         inlineSearchOnEmpty={inlineSearchOnEmpty}
@@ -109,6 +141,14 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
     </div>,
     document.body
   );
+};
+
+const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
+  visible,
+  ...props
+}) => {
+  if (!visible) return null;
+  return <VisibleContextMenuPortal {...props} />;
 };
 
 ContextMenuPortal.displayName = "ContextMenuPortal";

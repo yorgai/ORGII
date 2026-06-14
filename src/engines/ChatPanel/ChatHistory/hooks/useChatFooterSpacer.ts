@@ -35,6 +35,8 @@ export interface UseChatFooterSpacerOptions {
   bottomInset?: number;
   /** Reserve enough room for the latest group to pin to the viewport top. */
   reservePinToTop?: boolean;
+  /** Timestamp of the latest user scroll; spacer writes pause briefly during momentum. */
+  manualScrollAtRef?: MutableRefObject<number>;
 }
 
 export interface UseChatFooterSpacerReturn {
@@ -52,12 +54,20 @@ export interface UseChatFooterSpacerReturn {
 /** Tolerance for "content fits" comparison — avoids ping-pong when content
  *  height is within a few sub-pixels of the viewport. */
 const OVERFLOW_SLACK_PX = 8;
+const MANUAL_SCROLL_SPACER_SUPPRESS_MS = 350;
 
 export function useChatFooterSpacer(
   options: UseChatFooterSpacerOptions
 ): UseChatFooterSpacerReturn {
-  const { bottomInset = 0, reservePinToTop = false } = options;
+  const {
+    bottomInset = 0,
+    reservePinToTop = false,
+    manualScrollAtRef,
+  } = options;
   const bottomInsetRef = useRef(bottomInset);
+  const fallbackManualScrollAtRef = useRef(0);
+  const effectiveManualScrollAtRef =
+    manualScrollAtRef ?? fallbackManualScrollAtRef;
   useEffect(() => {
     bottomInsetRef.current = bottomInset;
   }, [bottomInset]);
@@ -149,13 +159,21 @@ export function useChatFooterSpacer(
       })
     );
     if (
+      performance.now() - effectiveManualScrollAtRef.current <
+        MANUAL_SCROLL_SPACER_SUPPRESS_MS &&
+      next > footerSpacerHeightRef.current
+    ) {
+      return;
+    }
+
+    if (
       Math.abs(next - footerSpacerHeightRef.current) >=
       CHAT_FOOTER_SPACER.UPDATE_THRESHOLD_PX
     ) {
       footerSpacerHeightRef.current = next;
       setFooterSpacerHeight(next);
     }
-  }, [reservePinToTop]);
+  }, [effectiveManualScrollAtRef, reservePinToTop]);
 
   useLayoutEffect(() => {
     runRemeasurePass();
@@ -177,7 +195,21 @@ export function useChatFooterSpacer(
     if (!outer) return;
     let roRaf = 0;
     let roDebounce: ReturnType<typeof setTimeout>;
-    const ro = new ResizeObserver(() => {
+    let lastOuterWidth = -1;
+    let lastOuterHeight = -1;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const nextOuterWidth = Math.round(entry?.contentRect.width ?? 0);
+      const nextOuterHeight = Math.round(entry?.contentRect.height ?? 0);
+      if (
+        nextOuterWidth === lastOuterWidth &&
+        nextOuterHeight === lastOuterHeight
+      ) {
+        return;
+      }
+      lastOuterWidth = nextOuterWidth;
+      lastOuterHeight = nextOuterHeight;
+
       cancelAnimationFrame(roRaf);
       clearTimeout(roDebounce);
       roDebounce = setTimeout(() => {
@@ -195,7 +227,7 @@ export function useChatFooterSpacer(
       cancelAnimationFrame(roRaf);
       ro.disconnect();
     };
-  }, [options.scrollAreaRef, runRemeasurePass]);
+  }, [options.scrollAreaRef, reservePinToTop, runRemeasurePass, sessionId]);
 
   return { footerSpacerHeight, virtuosoScrollerRef, isContentOverflowingRef };
 }

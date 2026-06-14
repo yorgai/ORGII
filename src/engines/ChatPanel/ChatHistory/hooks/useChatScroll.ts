@@ -122,12 +122,15 @@ export function useChatScroll({
   }, []);
 
   const debouncedSetAtBottom = useDebouncedCallback((bottom: boolean) => {
-    setAtBottom(bottom);
+    setAtBottom((previousAtBottom) =>
+      previousAtBottom === bottom ? previousAtBottom : bottom
+    );
     setIsChatScrolledToBottom(bottom);
   }, AT_BOTTOM_DEBOUNCE_MS);
 
   const handleAtBottomStateChange = useCallback(
     (bottom: boolean) => {
+      if (atBottomRef.current === bottom) return;
       atBottomRef.current = bottom;
       debouncedSetAtBottom(bottom);
     },

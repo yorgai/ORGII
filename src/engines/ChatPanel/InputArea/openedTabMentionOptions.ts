@@ -86,7 +86,26 @@ export const getOpenedTabMentionOption = (
   return null;
 };
 
+function getMentionOptionTargetKey(option: CustomMentionOption): string {
+  return `${option.selectType}:${option.selectValue}`;
+}
+
 export const getOpenedTabMentionOptions = (
   workstationTabs: ReadonlyArray<WorkStationTab>
-): CustomMentionOption[] =>
-  workstationTabs.map(getOpenedTabMentionOption).filter(isCustomMentionOption);
+): CustomMentionOption[] => {
+  const options: CustomMentionOption[] = [];
+  const seenTargets = new Set<string>();
+
+  for (const tab of workstationTabs) {
+    const option = getOpenedTabMentionOption(tab);
+    if (!isCustomMentionOption(option)) continue;
+
+    const targetKey = getMentionOptionTargetKey(option);
+    if (seenTargets.has(targetKey)) continue;
+
+    seenTargets.add(targetKey);
+    options.push(option);
+  }
+
+  return options;
+};

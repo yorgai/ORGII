@@ -24,9 +24,7 @@ import {
 import type { ExecutionThread } from "@src/engines/ChatPanel/ThreadSelector/types";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { getActionChatBlock } from "@src/engines/SessionCore/rendering/registry/initToolRegistry";
-import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { selectedExecutionThreadAtom } from "@src/store/ui/sessionPaginationAtom";
-import { simulatorEffectiveDockAppAtom } from "@src/store/ui/simulatorAtom";
 
 import { processChatItems } from "../chatItemPipeline";
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
@@ -211,15 +209,11 @@ export interface UseChatHistoryOptimizationReturn {
 // ============================================
 
 export function useChatHistoryOptimization(
-  chatEvents: SessionEvent[]
+  chatEvents: SessionEvent[],
+  options: { skipDiffEvents?: boolean } = {}
 ): UseChatHistoryOptimizationReturn {
   const selectedThreadId = useAtomValue(selectedExecutionThreadAtom);
-  // When the Diff simulator app is active in Agent Desk, the diff cards
-  // already live in the left pane — keeping them inline in the chat
-  // would render the same content twice. This atom is null outside of
-  // Agent Desk, so chat-only surfaces (settings, inbox, …) are unaffected.
-  const effectiveDockApp = useAtomValue(simulatorEffectiveDockAppAtom);
-  const skipDiffEvents = effectiveDockApp === AppType.DIFF;
+  const skipDiffEvents = options.skipDiffEvents === true;
 
   // During active streaming Rust pushes es:changed on every delta, which
   // would trigger a full O(n) pipeline recompute on every token. Deferring

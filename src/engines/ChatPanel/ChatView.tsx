@@ -27,17 +27,17 @@ import React, {
   memo,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useShowInteractArea } from "@src/contexts/workspace/ChatContext";
+import { AgentMessageClampProvider } from "@src/engines/ChatPanel/blocks";
 import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatStatusBanners";
 import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatController";
 import { AgentOrgGroupChatLiveSessions } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatLiveSessions";
-import { useChatPanelState } from "@src/engines/ChatPanel/hooks/useChatPanelState";
 import { replayModeAtom } from "@src/engines/SessionCore";
 import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
 import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/planDisplayEvents";
@@ -62,6 +62,7 @@ import {
   reorderQueueAtom,
 } from "@src/store/ui/messageQueueAtom";
 import {
+  STATION_MODE,
   simulatorSelectedAppAtom,
   stationModeAtom,
 } from "@src/store/ui/simulatorAtom";
@@ -86,6 +87,7 @@ import { deriveGitArtifactStats } from "./InputArea/hooks/gitArtifactStats";
 import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useGitDiffActions } from "./InputArea/hooks/useGitDiffActions";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
+import { useFollowAgent } from "./hooks/useFollowAgent";
 
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
 const FILE_CHANGE_STATS_EMPTY_GRACE_MS = 1200;
@@ -136,9 +138,14 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const rootRef = useRef<HTMLDivElement>(null);
     const floatingComposerRef = useRef<HTMLDivElement>(null);
     const inputBoxRef = useRef<HTMLDivElement>(null);
+    const [pinnedHeaderHost, setPinnedHeaderHost] =
+      useState<HTMLDivElement | null>(null);
     const [viewerMessageText, setViewerMessageText] = useState("");
-    const [floatingComposerInset, setFloatingComposerInset] = useState(
-      CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX
+    const handlePinnedHeaderHostRef = useCallback(
+      (node: HTMLDivElement | null) => {
+        setPinnedHeaderHost(node);
+      },
+      []
     );
 
     useEffect(() => {
@@ -201,34 +208,34 @@ const ChatView: React.FC<ChatViewProps> = memo(
     // component, and `cursorIdeAdapter.sendMessage` runs the probe
     // dispatch).
 
-    const { showInteractArea } = useChatPanelState();
-
-    useLayoutEffect(() => {
-      if (!showInteractArea) {
-        const animationFrameId = window.requestAnimationFrame(() => {
-          setFloatingComposerInset(CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX);
-        });
-        return () => window.cancelAnimationFrame(animationFrameId);
-      }
-      const rootElement = rootRef.current;
-      const inputBoxElement = inputBoxRef.current;
-      if (!rootElement || !inputBoxElement) return;
-
-      const updateInset = () => {
-        const rootRect = rootElement.getBoundingClientRect();
-        const inputBoxRect = inputBoxElement.getBoundingClientRect();
-        const height = Math.ceil(rootRect.bottom - inputBoxRect.top);
-        setFloatingComposerInset((previous) =>
-          Math.abs(previous - height) >= 4 ? height : previous
-        );
-      };
-
-      updateInset();
-      const resizeObserver = new ResizeObserver(updateInset);
-      resizeObserver.observe(rootElement);
-      resizeObserver.observe(inputBoxElement);
-      return () => resizeObserver.disconnect();
-    }, [showInteractArea]);
+    const showInteractArea = useShowInteractArea();
+    const {
+      showFollowAgent,
+      followAgentLabel,
+      followAgentTooltipLabel,
+      followAgentShortcut,
+      handleFollowAgent,
+    } = useFollowAgent();
+    const followAgentNav = useMemo(
+      () => ({
+        showFollowAgent,
+        followAgentLabel,
+        followAgentTooltipLabel,
+        followAgentShortcut,
+        onFollowAgent: handleFollowAgent,
+      }),
+      [
+        showFollowAgent,
+        followAgentLabel,
+        followAgentTooltipLabel,
+        followAgentShortcut,
+        handleFollowAgent,
+      ]
+    );
+    const stationMode = useAtomValue(stationModeAtom);
+    const chatPanelMaximized = useAtomValue(chatPanelMaximizedAtom);
+    const agentMessageClampEligible =
+      stationMode === STATION_MODE.AGENT_STATION && !chatPanelMaximized;
 
     const streamRetryStatus = useAtomValue(streamRetryStatusAtom);
     const streamRetry =
@@ -434,7 +441,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
       // simulator pane entirely (chatPanelFocused guard), so switching to
       // the Diff app would have no visible effect.
       setChatPanelMaximized(false);
-      setStationMode("agent-station");
+      setStationMode(STATION_MODE.AGENT_STATION);
       setSelectedSimulatorApp(AppType.DIFF);
       setReplayMode("replay");
     }, [
@@ -544,6 +551,11 @@ const ChatView: React.FC<ChatViewProps> = memo(
           data-session-id={chatHistorySessionId}
           className="relative flex h-full min-w-0 max-w-full flex-col overflow-hidden"
         >
+          <div
+            ref={handlePinnedHeaderHostRef}
+            className="flex flex-shrink-0 flex-col"
+            data-chat-pinned-header-portal-host
+          />
           {/* Chat history takes full height; input overlaps from below. */}
           <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-hidden">
             <ChatHistoryOverrideContext.Provider
@@ -574,39 +586,43 @@ const ChatView: React.FC<ChatViewProps> = memo(
                         onEvents={handleGroupChatTapEvents}
                       />
                     ))}
-                <ChatHistory
-                  surfaceBgClass={surfaceBgClass}
-                  agentOrgCurrentMemberName={
-                    currentAgentOrgMember?.name ?? null
-                  }
-                  agentOrgCurrentMemberId={
-                    currentAgentOrgMember?.memberId ?? null
-                  }
-                  agentOrgMembers={agentOrgRunView?.members ?? []}
-                  agentOrgOverviewPanel={
-                    agentOrgRunView || agentOrgRunViewError ? (
-                      <AgentOrgOverviewPanel
-                        view={agentOrgRunView}
-                        error={agentOrgRunViewError}
-                        currentSessionId={sessionId}
-                        onRefresh={refreshAgentOrgRunView}
-                      />
-                    ) : null
-                  }
-                  onAgentOrgMemberSelect={handleAgentOrgMemberSessionJump}
-                  onAgentOrgRunViewRefresh={refreshAgentOrgRunView}
-                  onScrollNavChange={handleScrollNavChange}
-                  onRegisterSearchOpen={onRegisterSearchOpen}
-                  turnPaginationEnabled={turnPaginationEnabled}
-                  bottomInset={
-                    showInteractArea && !isReadOnlySurface
-                      ? floatingComposerInset
-                      : 0
-                  }
-                  groupChatViewAvailable={groupChatViewAvailable}
-                  groupChatViewActive={groupChatViewActive}
-                  onGroupChatViewToggle={handleGroupChatViewToggle}
-                />
+                <AgentMessageClampProvider value={agentMessageClampEligible}>
+                  <ChatHistory
+                    surfaceBgClass={surfaceBgClass}
+                    agentOrgCurrentMemberName={
+                      currentAgentOrgMember?.name ?? null
+                    }
+                    agentOrgCurrentMemberId={
+                      currentAgentOrgMember?.memberId ?? null
+                    }
+                    agentOrgMembers={agentOrgRunView?.members ?? []}
+                    agentOrgOverviewPanel={
+                      agentOrgRunView || agentOrgRunViewError ? (
+                        <AgentOrgOverviewPanel
+                          view={agentOrgRunView}
+                          error={agentOrgRunViewError}
+                          currentSessionId={sessionId}
+                          onRefresh={refreshAgentOrgRunView}
+                        />
+                      ) : null
+                    }
+                    onAgentOrgMemberSelect={handleAgentOrgMemberSessionJump}
+                    onAgentOrgRunViewRefresh={refreshAgentOrgRunView}
+                    onScrollNavChange={handleScrollNavChange}
+                    followAgentNav={followAgentNav}
+                    onRegisterSearchOpen={onRegisterSearchOpen}
+                    turnPaginationEnabled={turnPaginationEnabled}
+                    pinnedHeaderPortalHost={pinnedHeaderHost}
+                    bottomInset={
+                      showInteractArea && !isReadOnlySurface
+                        ? CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX
+                        : 0
+                    }
+                    groupChatViewAvailable={groupChatViewAvailable}
+                    groupChatViewActive={groupChatViewActive}
+                    onGroupChatViewToggle={handleGroupChatViewToggle}
+                  />
+                </AgentMessageClampProvider>
               </GroupChatProvider>
             </ChatHistoryOverrideContext.Provider>
           </div>

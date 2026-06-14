@@ -11,7 +11,6 @@ import type {
 import { useSessionDiscovery } from "@src/engines/SessionCore";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import { voiceInputEnabledAtom } from "@src/store/platform/voiceInputAtom";
-import { mainPaneTabsAtom } from "@src/store/workstation/tabs";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
 import CursorModePill from "./components/CursorModePill";
@@ -36,7 +35,7 @@ import { useEditMode } from "./hooks/useEditMode";
 import { useEditorExpansion } from "./hooks/useEditorExpansion";
 import { useInputAreaMenus } from "./hooks/useInputAreaMenus";
 import { useInputAreaVoice } from "./hooks/useInputAreaVoice";
-import { getOpenedTabMentionOptions } from "./openedTabMentionOptions";
+import { openedTabMentionOptionsAtom } from "./openedTabMentionOptionsAtom";
 
 interface InputAreaProps {
   placeholder?: string;
@@ -96,11 +95,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
 
     const { sessionId } = useSessionId({ propSessionId });
     const isCursorIde = sessionId ? isCursorIdeSession(sessionId) : false;
-    const workstationTabs = useAtomValue(mainPaneTabsAtom);
-    const openedTabMentionOptions = useMemo(
-      () => getOpenedTabMentionOptions(workstationTabs),
-      [workstationTabs]
-    );
+    const openedTabMentionOptions = useAtomValue(openedTabMentionOptionsAtom);
     const mergedCustomMentionOptions = useMemo(
       () => [...openedTabMentionOptions, ...(customMentionOptions ?? [])],
       [openedTabMentionOptions, customMentionOptions]

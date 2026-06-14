@@ -481,7 +481,6 @@ export function useInputArea(
     setShowContextMenu: state.setShowContextMenu,
     atSearchQuery: state.atSearchQuery,
     setAtSearchQuery: state.setAtSearchQuery,
-    recentFiles: state.recentFiles,
     handleAtSelect: atMention.handleAtSelect,
     handleCustomMentionSelect: atMention.handleCustomMentionSelect,
     customMentionOptions: customMentionOptions ?? [],

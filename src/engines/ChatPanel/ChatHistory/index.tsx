@@ -17,6 +17,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { GroupedVirtuosoHandle } from "react-virtuoso";
 
@@ -52,11 +53,11 @@ import {
 import type { OptimizedChatItem } from "./chatItemPipeline/types";
 import ChatHistoryEmptyState from "./components/ChatHistoryEmptyState";
 import ChatHistoryList from "./components/ChatHistoryList";
+import ChatPinnedHeaderLayer from "./components/ChatPinnedHeaderLayer";
 import { createChatScroller } from "./components/ChatScroller";
 import ChatSearchBar from "./components/ChatSearchBar";
 import RevertConfirmDialog from "./components/RevertConfirmDialog";
 import TurnPageList from "./components/TurnPageList";
-import TurnPaginationControls from "./components/TurnPaginationControls";
 import {
   useChatEmptyState,
   useChatFooterSpacer,
@@ -69,7 +70,6 @@ import {
   useChatSearchIntegration,
   useChatTurnPagination,
   useEditUserMessage,
-  useFollowAgent,
   useGroupHeaderRenderer,
   useReloadSession,
   useTurnPageNavigation,
@@ -84,16 +84,29 @@ import "./index.scss";
 const renderNoGroupHeader = () => <div aria-hidden style={{ minHeight: 1 }} />;
 const TAIL_TURN_COLLAPSE_IDLE_MS = 60_000;
 const BOTTOM_OVERLAY_FADE_PX = 32;
+const SCROLL_NAV_SPACER_CAP_PX = 160;
+const SCROLL_NAV_SHOW_THRESHOLD_PX = 48;
 
-export interface ScrollNavState {
-  showScrollToBottom: boolean;
-  onScrollToBottom: () => void;
+export interface FollowAgentNavState {
   showFollowAgent: boolean;
   followAgentLabel: string;
   followAgentTooltipLabel: string;
   followAgentShortcut: string;
   onFollowAgent: () => void;
 }
+
+export interface ScrollNavState extends FollowAgentNavState {
+  showScrollToBottom: boolean;
+  onScrollToBottom: () => void;
+}
+
+const EMPTY_FOLLOW_AGENT_NAV: FollowAgentNavState = {
+  showFollowAgent: false,
+  followAgentLabel: "",
+  followAgentTooltipLabel: "",
+  followAgentShortcut: "",
+  onFollowAgent: () => undefined,
+};
 
 interface ChatHistoryProps {
   /** Opaque background class for sticky headers. Must match the container surface. */
@@ -111,8 +124,11 @@ interface ChatHistoryProps {
   onAgentOrgRunViewRefresh?: () => Promise<void>;
   /** Called whenever scroll-nav visibility state changes. Used by ChatView to render buttons in the pill row. */
   onScrollNavChange?: (state: ScrollNavState) => void;
+  followAgentNav?: FollowAgentNavState;
   onRegisterSearchOpen?: (handler: (() => void) | null) => void;
   turnPaginationEnabled?: boolean;
+  /** Optional external host for pinned/pagination chrome, outside the scroll body subtree. */
+  pinnedHeaderPortalHost?: HTMLElement | null;
   /** Height in px of the overlapping input area so the footer spacer keeps the last message reachable. */
   bottomInset?: number;
   /**
@@ -191,8 +207,10 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   onAgentOrgMemberSelect,
   onAgentOrgRunViewRefresh,
   onScrollNavChange,
+  followAgentNav = EMPTY_FOLLOW_AGENT_NAV,
   onRegisterSearchOpen,
   turnPaginationEnabled = true,
+  pinnedHeaderPortalHost = null,
   bottomInset = 0,
   hidePinnedBars = false,
   forceCollapseAllTurns = false,
@@ -212,6 +230,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   // so kanban detail panels don't race with WorkStation's session.
   const contextSessionId = useChatSessionId();
   const activeId = contextSessionId ?? null;
+
   const rawCursorIdeTurnSummaries = useAtomValue(
     cursorIdeTurnSummariesAtomFamily(activeId ?? "")
   );
@@ -224,7 +243,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     chatContainerRef,
     atBottom,
     setAtBottom,
-    visibleRange,
     setVisibleRange,
     virtuosoRef,
     chatFontSize,
@@ -251,8 +269,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     followAgentLabel,
     followAgentTooltipLabel,
     followAgentShortcut,
-    handleFollowAgent,
-  } = useFollowAgent();
+    onFollowAgent,
+  } = followAgentNav;
 
   const { hasPinnedContent: hasPinnedContentRaw } = usePinnedContent();
   // Subagent panes opt out of in-history pinned bars; they surface the same
@@ -522,7 +540,76 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       lastGroupFirstFlatIndex: displayLastGroupFirstFlatIndex,
       bottomInset,
       reservePinToTop,
+      manualScrollAtRef,
     });
+  const [isBottomSentinelVisible, setIsBottomSentinelVisible] = useState(true);
+
+  useEffect(() => {
+    if (displayTotalFlatItems <= 0) {
+      setIsBottomSentinelVisible(true);
+      return;
+    }
+    const root = staticScrollerRef.current ?? virtuosoScrollerRef.current;
+    if (!root) {
+      setIsBottomSentinelVisible(false);
+      return;
+    }
+
+    let rafId = 0;
+    let lastMeasurementKey = "";
+    const updateBottomLineVisibility = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const measurementKey = [
+          root.scrollTop,
+          root.scrollHeight,
+          root.clientHeight,
+          footerSpacerHeight,
+          bottomInset,
+        ].join(":");
+        if (measurementKey === lastMeasurementKey) return;
+        lastMeasurementKey = measurementKey;
+
+        const scrollNavSpacer = Math.min(
+          footerSpacerHeight,
+          Math.max(bottomInset, SCROLL_NAV_SPACER_CAP_PX)
+        );
+        const contentBottom = Math.max(0, root.scrollHeight - scrollNavSpacer);
+        const visibleBottom =
+          root.scrollTop + root.clientHeight - Math.max(0, bottomInset);
+        const nextVisible =
+          contentBottom - visibleBottom <= SCROLL_NAV_SHOW_THRESHOLD_PX;
+        setIsBottomSentinelVisible((previousVisible) =>
+          previousVisible === nextVisible ? previousVisible : nextVisible
+        );
+      });
+    };
+
+    updateBottomLineVisibility();
+    root.addEventListener("scroll", updateBottomLineVisibility, {
+      passive: true,
+    });
+
+    const resizeObserver = new ResizeObserver(updateBottomLineVisibility);
+    resizeObserver.observe(root);
+    if (root.firstElementChild) {
+      resizeObserver.observe(root.firstElementChild);
+    }
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      root.removeEventListener("scroll", updateBottomLineVisibility);
+      resizeObserver.disconnect();
+    };
+  }, [
+    activeId,
+    bottomInset,
+    displayTotalFlatItems,
+    footerSpacerHeight,
+    staticScrollerRef,
+    virtuosoScrollerRef,
+  ]);
+
   // --- Scroll ---
   const { handleAtBottomStateChange, scrollToBottom, followOutput } =
     useChatScroll({
@@ -542,6 +629,39 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       staticScrollerRef,
       alwaysFollowTail: disableTailCollapse,
     });
+  const scrollToBottomSentinel = useCallback(() => {
+    const scrollToBottomLine = () => {
+      const root = staticScrollerRef.current ?? virtuosoScrollerRef.current;
+      if (!root) return false;
+      const scrollNavSpacer = Math.min(
+        footerSpacerHeight,
+        Math.max(bottomInset, SCROLL_NAV_SPACER_CAP_PX)
+      );
+      const contentBottom = Math.max(0, root.scrollHeight - scrollNavSpacer);
+      root.scrollTo({
+        top: Math.max(
+          0,
+          contentBottom - root.clientHeight + Math.max(1, bottomInset)
+        ),
+        behavior: "auto",
+      });
+      return true;
+    };
+
+    if (scrollToBottomLine()) {
+      window.requestAnimationFrame(scrollToBottomLine);
+      return;
+    }
+
+    scrollToBottom();
+    window.requestAnimationFrame(scrollToBottomLine);
+  }, [
+    bottomInset,
+    footerSpacerHeight,
+    scrollToBottom,
+    staticScrollerRef,
+    virtuosoScrollerRef,
+  ]);
 
   // Subagent panes pass `disableTailCollapse` because every paginated page
   // is exactly one turn and the user expects the cell to show the freshest
@@ -596,29 +716,27 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   });
 
   const showScrollToBottom =
-    !atBottom &&
-    displayTotalFlatItems > 0 &&
-    visibleRange.endIndex < displayTotalFlatItems - 1;
+    displayTotalFlatItems > 0 && !isBottomSentinelVisible;
 
   // Notify parent of scroll-nav state changes
   React.useEffect(() => {
     onScrollNavChange?.({
       showScrollToBottom,
-      onScrollToBottom: scrollToBottom,
+      onScrollToBottom: scrollToBottomSentinel,
       showFollowAgent,
       followAgentLabel,
       followAgentTooltipLabel,
       followAgentShortcut,
-      onFollowAgent: handleFollowAgent,
+      onFollowAgent,
     });
   }, [
     showScrollToBottom,
-    scrollToBottom,
+    scrollToBottomSentinel,
     showFollowAgent,
     followAgentLabel,
     followAgentTooltipLabel,
     followAgentShortcut,
-    handleFollowAgent,
+    onFollowAgent,
     onScrollNavChange,
   ]);
 
@@ -640,24 +758,49 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
 
   // --- Stable handlers ---
   const handleEditUserMessage = useEditUserMessage();
-
-  const handleRegenerateGroup = useCallback(
-    (groupIndex: number) => {
-      const sourceGroupIndex =
-        displaySourceGroupIndices[groupIndex] ?? groupIndex;
-      const header = groupHeaders[sourceGroupIndex];
-      if (!header?.event) return;
-      const originalText =
-        typeof header.event.displayText === "string"
-          ? header.event.displayText
-          : "";
-      if (!originalText.trim()) return;
-      const images = (header.event.result as Record<string, unknown>)
-        ?.images as string[] | undefined;
-      void handleEditUserMessage(header, originalText, images);
+  const pinnedEditSubmitRef = useRef(handleEditUserMessage);
+  useEffect(() => {
+    pinnedEditSubmitRef.current = handleEditUserMessage;
+  }, [handleEditUserMessage]);
+  const handlePinnedEditSubmit = useCallback(
+    (header: OptimizedChatItem, newText: string, imageDataUrls?: string[]) => {
+      return pinnedEditSubmitRef.current(header, newText, imageDataUrls);
     },
-    [displaySourceGroupIndices, groupHeaders, handleEditUserMessage]
+    []
   );
+  const regenerateStateRef = useRef({
+    displaySourceGroupIndices,
+    groupHeaders,
+    handleEditUserMessage,
+  });
+  useEffect(() => {
+    regenerateStateRef.current = {
+      displaySourceGroupIndices,
+      groupHeaders,
+      handleEditUserMessage,
+    };
+  }, [displaySourceGroupIndices, groupHeaders, handleEditUserMessage]);
+
+  const handleRegenerateGroup = useCallback((groupIndex: number) => {
+    const {
+      displaySourceGroupIndices: currentSourceGroupIndices,
+      groupHeaders: currentGroupHeaders,
+      handleEditUserMessage: currentHandleEditUserMessage,
+    } = regenerateStateRef.current;
+    const sourceGroupIndex =
+      currentSourceGroupIndices[groupIndex] ?? groupIndex;
+    const header = currentGroupHeaders[sourceGroupIndex];
+    if (!header?.event) return;
+    const originalText =
+      typeof header.event.displayText === "string"
+        ? header.event.displayText
+        : "";
+    if (!originalText.trim()) return;
+    const images = (header.event.result as Record<string, unknown>)?.images as
+      | string[]
+      | undefined;
+    void currentHandleEditUserMessage(header, originalText, images);
+  }, []);
 
   const memoizedSubmit = useCallback(
     (eventId: string, answers: Record<string, string>) => {
@@ -711,21 +854,54 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     turnCollapseInteractionAtRef,
     onEditSubmit: handleEditUserMessage,
   });
-  const pinnedTurnHeader = useMemo(() => {
-    if (!turnPaginationEnabled || turnPageListOpen || agentOrgOverviewOpen) {
-      return null;
-    }
-    return <div className="relative z-[70]">{renderGroupHeader(0)}</div>;
-  }, [
-    agentOrgOverviewOpen,
-    renderGroupHeader,
-    turnPageListOpen,
-    turnPaginationEnabled,
-  ]);
+  const showPinnedTurnHeader =
+    turnPaginationEnabled && !turnPageListOpen && !agentOrgOverviewOpen;
   const showTurnContextRow =
     turnPaginationEnabled ||
     Boolean(agentOrgCurrentMemberName) ||
     Boolean(agentOrgOverviewPanel);
+  const pinnedHeaderLayer = (
+    <ChatPinnedHeaderLayer
+      showTurnContextRow={showTurnContextRow}
+      agentName={agentOrgCurrentMemberName}
+      currentMemberId={agentOrgCurrentMemberId}
+      agentOrgMembers={agentOrgMembers}
+      agentOrgOverviewPanel={agentOrgOverviewPanel}
+      agentOrgOverviewOpen={agentOrgOverviewOpen}
+      setAgentOrgOverviewOpen={setAgentOrgOverviewOpen}
+      onAgentOrgMemberSelect={onAgentOrgMemberSelect}
+      onAgentOrgRunViewRefresh={onAgentOrgRunViewRefresh}
+      turnPaginationEnabled={turnPaginationEnabled}
+      turnPaginationReady={turnPaginationReady}
+      turnPageListOpen={turnPageListOpen}
+      setTurnPageListOpen={setTurnPageListOpen}
+      turnPageSortAscending={turnPageSortAscending}
+      setTurnPageSortAscending={setTurnPageSortAscending}
+      currentTurnPageLabel={currentTurnPageLabel}
+      currentTurnPageTimeLabel={currentTurnPageTimeLabel}
+      currentPageIndex={currentPageIndex}
+      pageCount={pageCount}
+      onPreviousTurnPage={handlePreviousTurnPage}
+      onNextTurnPage={handleNextTurnPage}
+      onLastTurnPage={handleLastTurnPage}
+      trailingActions={paginationTrailingSlot}
+      groupChatViewAvailable={groupChatViewAvailable}
+      groupChatViewActive={groupChatViewActive}
+      onGroupChatViewToggle={onGroupChatViewToggle}
+      showPinnedTurnHeader={showPinnedTurnHeader}
+      sessionId={activeId}
+      sourceGroupIndex={displaySourceGroupIndices[0]}
+      sourceGroupCount={groupCounts.length}
+      header={displayGroupHeaders[0]}
+      meta={displayGroupMeta[0]}
+      hasPinnedContent={hasPinnedContent}
+      collapseLabelVariant={groupChat?.enabled ? "agents" : "agent"}
+      collapseTailWhenIdle={collapseTailWhenIdle}
+      hideUserMessage={hideGroupUserMessage}
+      turnCollapseInteractionAtRef={turnCollapseInteractionAtRef}
+      onEditSubmit={handlePinnedEditSubmit}
+    />
+  );
 
   // ============================================
   // Render
@@ -764,38 +940,9 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
         onClose={handleCloseSearch}
       />
 
-      {showTurnContextRow && (
-        <>
-          <TurnPaginationControls
-            agentName={agentOrgCurrentMemberName}
-            currentMemberId={agentOrgCurrentMemberId}
-            agentOrgMembers={agentOrgMembers}
-            agentOrgOverviewPanel={agentOrgOverviewPanel}
-            agentOrgOverviewOpen={agentOrgOverviewOpen}
-            setAgentOrgOverviewOpen={setAgentOrgOverviewOpen}
-            onAgentOrgMemberSelect={onAgentOrgMemberSelect}
-            onAgentOrgRunViewRefresh={onAgentOrgRunViewRefresh}
-            turnPaginationEnabled={turnPaginationEnabled}
-            turnPaginationReady={turnPaginationReady}
-            turnPageListOpen={turnPageListOpen}
-            setTurnPageListOpen={setTurnPageListOpen}
-            turnPageSortAscending={turnPageSortAscending}
-            setTurnPageSortAscending={setTurnPageSortAscending}
-            currentTurnPageLabel={currentTurnPageLabel}
-            currentTurnPageTimeLabel={currentTurnPageTimeLabel}
-            currentPageIndex={currentPageIndex}
-            pageCount={pageCount}
-            onPreviousTurnPage={handlePreviousTurnPage}
-            onNextTurnPage={handleNextTurnPage}
-            onLastTurnPage={handleLastTurnPage}
-            trailingActions={paginationTrailingSlot}
-            groupChatViewAvailable={groupChatViewAvailable}
-            groupChatViewActive={groupChatViewActive}
-            onGroupChatViewToggle={onGroupChatViewToggle}
-          />
-          {pinnedTurnHeader}
-        </>
-      )}
+      {pinnedHeaderPortalHost
+        ? createPortal(pinnedHeaderLayer, pinnedHeaderPortalHost)
+        : pinnedHeaderLayer}
 
       <div className="flex min-h-0 flex-1 flex-col">
         {agentOrgOverviewOpen && agentOrgOverviewPanel && (
@@ -815,7 +962,16 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
           </div>
         )}
 
-        <div className="relative min-h-0 flex-1">
+        <div
+          className="relative min-h-0 flex-1"
+          style={{
+            backfaceVisibility: "hidden",
+            contain: "layout paint",
+            transform: "translateZ(0)",
+            willChange: "transform",
+          }}
+          data-chat-virtualized-body-layer
+        >
           {turnPageListOpen && turnPaginationReady && (
             <TurnPageList
               surfaceBgClass={surfaceBgClass}

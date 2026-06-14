@@ -2,7 +2,7 @@ import React from "react";
 
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import type { CustomMentionOption } from "@src/engines/ChatPanel/hooks/useInputArea/types";
-import type { MenuItemId, RecentFile } from "@src/scaffold/ContextMenu/config";
+import type { MenuItemId } from "@src/scaffold/ContextMenu/config";
 import type { SlashItem } from "@src/types/extensions";
 
 import ContextMenuPortal from "./ContextMenuPortal";
@@ -17,7 +17,6 @@ interface InputAreaPortalsProps {
   onCustomMentionSelect: (option: CustomMentionOption) => void;
   atSearchQuery: string;
   contextMenuKeyboardOpened: boolean;
-  recentFiles: RecentFile[];
   currentRepoPath?: string;
   contextMenuKeyboardHandlerRef: React.MutableRefObject<
     ((event: React.KeyboardEvent) => boolean) | null
@@ -55,7 +54,6 @@ export const InputAreaPortals: React.FC<InputAreaPortalsProps> = ({
   onCustomMentionSelect,
   atSearchQuery,
   contextMenuKeyboardOpened,
-  recentFiles,
   currentRepoPath,
   contextMenuKeyboardHandlerRef,
   mentionTreePosition,
@@ -93,7 +91,6 @@ export const InputAreaPortals: React.FC<InputAreaPortalsProps> = ({
         onCustomMentionSelect={onCustomMentionSelect}
         searchQuery={atSearchQuery}
         keyboardOpened={contextMenuKeyboardOpened}
-        recentFiles={recentFiles}
         repoPath={currentRepoPath || undefined}
         keyboardHandlerRef={contextMenuKeyboardHandlerRef}
         treePosition={mentionTreePosition}

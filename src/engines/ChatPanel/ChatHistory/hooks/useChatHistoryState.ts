@@ -23,8 +23,8 @@ import {
 import { VirtuosoHandle } from "react-virtuoso";
 
 import {
-  useChatContext,
   useChatHistory,
+  useChatHistoryActions,
 } from "@src/contexts/workspace/ChatContext";
 import { useChatHistoryOverride } from "@src/engines/ChatPanel/ChatHistoryOverrideContext";
 import useReplyQuestion from "@src/engines/ChatPanel/hooks/useReplyQuestion";
@@ -115,7 +115,8 @@ export function useChatHistoryState(
   const { chatHistory: contextChatHistory } = useChatHistory();
   const overrideChatHistory = useChatHistoryOverride();
   const chatHistory = overrideChatHistory ?? contextChatHistory;
-  const { setIsChatScrolledToBottom, chatContainerRef } = useChatContext();
+  const { setIsChatScrolledToBottom, chatContainerRef } =
+    useChatHistoryActions();
 
   const isExploring = useAtomValue(isExploringAtom);
   const sessionLoadStatus = useAtomValue(loadStatusAtom);
