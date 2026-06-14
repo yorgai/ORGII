@@ -225,6 +225,7 @@ export function buildAllModelItems({
           modelId,
           groupModelIds: [modelId],
           rightContent: renderAccountCount(accountCount),
+          showDisclosureChevron: true,
           ...(labelContent ? { labelContent } : {}),
           searchAlias: aliasDisplayName ? modelId : undefined,
         },
@@ -271,6 +272,7 @@ export function buildAllModelItems({
         groupModelIds: sortedVariants,
         labelContent,
         rightContent: renderAccountCount(accountCount),
+        showDisclosureChevron: true,
       },
       action: () =>
         handleModelSelect(

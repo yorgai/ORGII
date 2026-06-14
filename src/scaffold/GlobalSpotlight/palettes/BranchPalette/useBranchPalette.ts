@@ -8,7 +8,6 @@ import {
   Check,
   GitBranchMinus,
   GitBranchPlus,
-  RefreshCw,
   Split,
   Trash2,
 } from "lucide-react";
@@ -29,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import { createLogger } from "@src/hooks/logger";
 import { useFilteredItems } from "@src/hooks/search";
 
+import { ICONS } from "../../config";
 import type { SpotlightItem } from "../../types";
 import {
   BRANCH_PALETTE_CONFIG,
@@ -42,6 +42,7 @@ import { useBranchItems } from "./useBranchItems";
 import { useWorktreeMap } from "./useWorktreeMap";
 
 const log = createLogger("useBranchPalette");
+const REFRESH_SPIN_MIN_MS = 900;
 
 export function useBranchPalette(options: UseBranchPaletteOptions) {
   const { t } = useTranslation();
@@ -68,6 +69,7 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
   const [searchQuery, setSearchQueryState] = useState("");
   const [activeMode, setActiveMode] = useState<BranchPaletteMode>("checkout");
   const [isCreatingBranch, setIsCreatingBranch] = useState(false);
+  const [isRefreshSpinning, setIsRefreshSpinning] = useState(false);
   const [selectedStartPoint, setSelectedStartPoint] = useState<string | null>(
     null
   );
@@ -97,6 +99,18 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
     githubConnectionId,
     githubRepoFullName,
   });
+
+  const handleRefreshBranches = useCallback(async () => {
+    setIsRefreshSpinning(true);
+    const startedAt = Date.now();
+    try {
+      await refreshBranches();
+    } finally {
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, REFRESH_SPIN_MIN_MS - elapsed);
+      window.setTimeout(() => setIsRefreshSpinning(false), remaining);
+    }
+  }, [refreshBranches]);
 
   // ============ FETCH WORKTREES (local repos only) ============
   const worktreeMap = useWorktreeMap({
@@ -281,6 +295,7 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
           label: t("selectors.branch.actions.createNew", "New Branch"),
           icon: GitBranchPlus,
           type: "action",
+          data: { showDisclosureChevron: true },
           action: () => setActiveMode("add"),
         },
         {
@@ -288,6 +303,7 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
           label: t("selectors.branch.actions.createFrom", "New Branch From"),
           icon: Split,
           type: "action",
+          data: { showDisclosureChevron: true },
           action: () => {
             setSelectedStartPoint(null);
             setActiveMode("add-from");
@@ -302,19 +318,27 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
         label: t("selectors.branch.actions.deleteBranch", "Delete Branch"),
         icon: GitBranchMinus,
         type: "action",
+        data: { showDisclosureChevron: true },
         action: () => setActiveMode("remove"),
       });
     }
 
+    const RefreshIcon = (props: { size?: number; className?: string }) =>
+      createElement(ICONS.refresh, {
+        ...props,
+        className:
+          `${props.className ?? ""} ${isRefreshSpinning ? "spotlight-refresh-spin" : ""}`.trim(),
+      });
+
     actions.push({
       id: "pinned-branch-refresh",
       label: t("selectors.branch.actions.refresh", "Refresh"),
-      icon: RefreshCw,
+      icon: RefreshIcon,
       type: "action",
       data: {
         disabled: isLoading,
       },
-      action: refreshBranches,
+      action: () => void handleRefreshBranches(),
     });
 
     return actions;
@@ -325,7 +349,8 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
     onCreateBranch,
     handleDeleteSelectedBranches,
     onDeleteBranch,
-    refreshBranches,
+    handleRefreshBranches,
+    isRefreshSpinning,
     selectedBranchCount,
     t,
   ]);

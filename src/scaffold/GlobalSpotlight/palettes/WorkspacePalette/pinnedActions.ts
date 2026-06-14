@@ -40,9 +40,10 @@ export function buildPinnedWorkspaceActions({
       },
       {
         id: "pinned-add-entry",
-        label: paletteText.addEntryLabel,
+        label: `${paletteText.addEntryLabel}...`,
         icon: ICONS.addWorkspace,
         type: "action",
+        data: { showDisclosureChevron: true },
         action: onOpenAddMenu,
       },
       {
@@ -53,6 +54,7 @@ export function buildPinnedWorkspaceActions({
         ),
         icon: ICONS.workspace,
         type: "action",
+        data: { showDisclosureChevron: true },
         action: onCreateWorkspace,
       }
     );
@@ -76,6 +78,7 @@ export function buildPinnedWorkspaceActions({
       : t("actions.manage", "Manage"),
     icon: isManageMode ? ICONS.done : ICONS.config,
     type: "action",
+    data: isManageMode ? undefined : { showDisclosureChevron: true },
     action: onToggleManageMode,
   });
 

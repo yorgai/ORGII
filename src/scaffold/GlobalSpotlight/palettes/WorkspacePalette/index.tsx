@@ -607,6 +607,7 @@ export const WorkspacePalette: React.FC<WorkspacePaletteProps> = ({
       onItemSelect={kernel.handleItemClick}
       onItemHover={kernel.setSelectedIndex}
       searchQuery={searchQuery}
+      layout="twoColumn"
     />
   );
 

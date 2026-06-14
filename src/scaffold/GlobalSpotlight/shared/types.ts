@@ -48,6 +48,10 @@ export interface SpotlightItemData {
   rightContent?: React.ReactNode;
   /** Tag label to display at the right end */
   tagLabel?: string;
+  /** Shows a reusable right-edge indicator for rows that open another layer or navigate. */
+  showDisclosureChevron?: boolean;
+  /** Indicator icon variant: chevron for nested layers, arrowRight for navigation. */
+  disclosureIcon?: "chevron" | "arrowRight";
   /** Inline tag rendered right after the label text */
   inlineTag?: string;
   /** Prefix text for hint items */

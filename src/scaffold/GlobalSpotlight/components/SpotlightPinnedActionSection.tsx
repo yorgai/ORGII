@@ -12,6 +12,7 @@ export interface SpotlightPinnedActionSectionProps {
   onItemSelect: (item: SpotlightItem) => void;
   onItemHover: (index: number) => void;
   searchQuery: string;
+  layout?: "list" | "twoColumn";
 }
 
 export const SpotlightPinnedActionSection: React.FC<
@@ -23,15 +24,21 @@ export const SpotlightPinnedActionSection: React.FC<
   onItemSelect,
   onItemHover,
   searchQuery,
+  layout = "list",
 }) => {
   const { isKeyboardMode, handleMouseMove, dataKeyboardMode } =
     useKeyboardMouseMode();
 
   if (items.length === 0) return null;
 
+  const layoutClassName =
+    layout === "twoColumn"
+      ? "grid grid-flow-col grid-rows-2 grid-cols-2 gap-x-2 gap-y-0"
+      : "flex flex-col";
+
   return (
     <div
-      className="border-t border-border-2 py-1"
+      className={`border-t border-border-2 py-1 ${layoutClassName}`}
       onMouseMove={handleMouseMove}
       data-keyboard-mode={dataKeyboardMode}
     >

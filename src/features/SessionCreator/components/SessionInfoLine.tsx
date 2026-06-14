@@ -24,6 +24,7 @@ import React, {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import { gitApi } from "@src/api/http/git";
 import PillGroup, { type PillGroupVariant } from "@src/components/PillGroup";
 import RunningLocationDropdownPanel from "@src/components/RunningLocationDropdownPanel";
 import {
@@ -248,6 +249,23 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
     [onBranchChange]
   );
 
+  const handleCreateBranch = useCallback(
+    async (branch: string, startPoint?: string) => {
+      if (!repoId || !repoPath) return;
+      const success = await gitApi.gitCreateBranch({
+        repo_id: repoId,
+        repo_path: repoPath,
+        name: branch,
+        start_point: startPoint ?? null,
+        checkout: true,
+      });
+      if (!success) return;
+      onBranchChange?.(branch);
+      setIsBranchSelectorOpen(false);
+    },
+    [onBranchChange, repoId, repoPath]
+  );
+
   const handleBranchClose = useCallback(() => {
     setIsBranchSelectorOpen(false);
   }, []);
@@ -455,6 +473,7 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
             repoId={repoId}
             repoPath={repoPath}
             currentBranchName={branchName}
+            onCreateBranch={handleCreateBranch}
             variant="create-session"
             hideActionClose
           />

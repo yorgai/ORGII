@@ -118,6 +118,7 @@ export const BranchPalette: React.FC<BranchPaletteProps> = ({
         onItemSelect={kernel.handleItemClick}
         onItemHover={kernel.setSelectedIndex}
         searchQuery={kernel.searchQuery}
+        layout="list"
       />
     ) : undefined;
 
