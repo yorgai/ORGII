@@ -12,7 +12,12 @@ use tracing::{info, warn};
 
 const AGENT_BROWSER_VERSION: &str = "v0.27.2";
 const PEEKABOO_VERSION: &str = "v3.2.3";
-const DUGITE_VERSION: &str = "v2.50.0-2";
+/// Release tag used in the dugite-native download URL path.
+const DUGITE_TAG: &str = "v2.53.0-3";
+/// Asset-name version stem. dugite-native embeds a short git build hash in
+/// every asset name (not the tag suffix), so this must be updated together
+/// with `DUGITE_TAG` whenever the pinned release changes.
+const DUGITE_ASSET_VERSION: &str = "v2.53.0-f49d009";
 
 const PLACEHOLDER_MARKER: &[u8] = b"ORGII_GENERATED_OPTIONAL_SIDECAR_PLACEHOLDER";
 
@@ -182,7 +187,7 @@ async fn install_bundled_git(
 
     let asset = dugite_asset(os, arch)?;
     let url = format!(
-        "https://github.com/desktop/dugite-native/releases/download/{DUGITE_VERSION}/{asset}"
+        "https://github.com/desktop/dugite-native/releases/download/{DUGITE_TAG}/{asset}"
     );
 
     let tmp_dir = temp_dir_in(bin_dir, "git")?;
@@ -205,12 +210,12 @@ async fn install_bundled_git(
 }
 
 fn dugite_asset(os: &str, arch: &str) -> Result<String, String> {
-    let ver = DUGITE_VERSION.trim_start_matches('v');
+    let ver = DUGITE_ASSET_VERSION;
     let asset = match (os, arch) {
-        ("macos", "aarch64") => format!("dugite-native-v{ver}-macOS-arm64.tar.gz"),
-        ("macos", "x86_64") => format!("dugite-native-v{ver}-macOS-x64.tar.gz"),
-        ("linux", "x86_64") => format!("dugite-native-v{ver}-ubuntu-x64.tar.gz"),
-        ("windows", "x86_64") => format!("dugite-native-v{ver}-windows-x64.tar.gz"),
+        ("macos", "aarch64") => format!("dugite-native-{ver}-macOS-arm64.tar.gz"),
+        ("macos", "x86_64") => format!("dugite-native-{ver}-macOS-x64.tar.gz"),
+        ("linux", "x86_64") => format!("dugite-native-{ver}-ubuntu-x64.tar.gz"),
+        ("windows", "x86_64") => format!("dugite-native-{ver}-windows-x64.tar.gz"),
         _ => return Err(format!("dugite: unsupported platform {os}/{arch}")),
     };
     Ok(asset)
