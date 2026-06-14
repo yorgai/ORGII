@@ -101,7 +101,7 @@ fn context_window_hint_gemini() {
 fn context_window_hint_unknown_returns_default() {
     assert_eq!(
         context_window_hint("totally-unknown"),
-        128_000  // ModelCapabilities::unknown().context_window
+        128_000 // ModelCapabilities::unknown().context_window
     );
 }
 
@@ -117,6 +117,12 @@ fn wire_model_name_strips_prefix() {
         wire_model_name(spec, "anthropic/claude-sonnet-4-20250514"),
         "claude-sonnet-4-20250514"
     );
+}
+
+#[test]
+fn deepseek_default_api_base_matches_docs() {
+    let spec = find_by_name("deepseek").unwrap();
+    assert_eq!(spec.default_api_base, Some("https://api.deepseek.com"));
 }
 
 #[test]

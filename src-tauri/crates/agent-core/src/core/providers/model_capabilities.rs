@@ -94,57 +94,229 @@ const FAMILY_RULES: &[FamilyRule] = &[
     // claude-fable-5: thinks by default in non-streaming responses
     // (2026-06-12 incident: thinking-only side-query responses broke
     // compaction + session-memory extraction).
-    FamilyRule { pattern: "claude-fable-5", context_window: 200_000, thinking: ThinkingSupport::AlwaysOn },
-    FamilyRule { pattern: "claude-opus-4", context_window: 200_000, thinking: ThinkingSupport::Optional },
-    FamilyRule { pattern: "claude-sonnet-4", context_window: 200_000, thinking: ThinkingSupport::Optional },
-    FamilyRule { pattern: "claude-haiku-4", context_window: 200_000, thinking: ThinkingSupport::Optional },
-    FamilyRule { pattern: "claude-3-7", context_window: 200_000, thinking: ThinkingSupport::Optional },
-    FamilyRule { pattern: "claude-3-5", context_window: 200_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "claude-3-opus", context_window: 200_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "claude-3-haiku", context_window: 200_000, thinking: ThinkingSupport::No },
+    FamilyRule {
+        pattern: "claude-fable-5",
+        context_window: 200_000,
+        thinking: ThinkingSupport::AlwaysOn,
+    },
+    FamilyRule {
+        pattern: "claude-opus-4",
+        context_window: 200_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    FamilyRule {
+        pattern: "claude-sonnet-4",
+        context_window: 200_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    FamilyRule {
+        pattern: "claude-haiku-4",
+        context_window: 200_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    FamilyRule {
+        pattern: "claude-3-7",
+        context_window: 200_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    FamilyRule {
+        pattern: "claude-3-5",
+        context_window: 200_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "claude-3-opus",
+        context_window: 200_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "claude-3-haiku",
+        context_window: 200_000,
+        thinking: ThinkingSupport::No,
+    },
     // Unknown claude generations (claude-5, claude-6 …): assume always-on
     // thinking — newer Anthropic models default to it, and AlwaysOn is the
     // safe guess (Optional would send `disabled` and risk a 400).
-    FamilyRule { pattern: "claude", context_window: 200_000, thinking: ThinkingSupport::AlwaysOn },
+    FamilyRule {
+        pattern: "claude",
+        context_window: 200_000,
+        thinking: ThinkingSupport::AlwaysOn,
+    },
     // ── OpenAI ──
-    FamilyRule { pattern: "gpt-5", context_window: 1_000_000, thinking: ThinkingSupport::AlwaysOn },
-    FamilyRule { pattern: "gpt-4.1", context_window: 1_000_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "o3", context_window: 200_000, thinking: ThinkingSupport::AlwaysOn },
-    FamilyRule { pattern: "o4", context_window: 200_000, thinking: ThinkingSupport::AlwaysOn },
-    FamilyRule { pattern: "o1", context_window: 200_000, thinking: ThinkingSupport::AlwaysOn },
-    FamilyRule { pattern: "gpt-4o", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "gpt-4-turbo", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "gpt-4", context_window: 128_000, thinking: ThinkingSupport::No },
+    FamilyRule {
+        pattern: "gpt-5",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::AlwaysOn,
+    },
+    FamilyRule {
+        pattern: "gpt-4.1",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "o3",
+        context_window: 200_000,
+        thinking: ThinkingSupport::AlwaysOn,
+    },
+    FamilyRule {
+        pattern: "o4",
+        context_window: 200_000,
+        thinking: ThinkingSupport::AlwaysOn,
+    },
+    FamilyRule {
+        pattern: "o1",
+        context_window: 200_000,
+        thinking: ThinkingSupport::AlwaysOn,
+    },
+    FamilyRule {
+        pattern: "gpt-4o",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "gpt-4-turbo",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "gpt-4",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
     // ── Google ──
-    FamilyRule { pattern: "gemini-2", context_window: 1_000_000, thinking: ThinkingSupport::Optional },
-    FamilyRule { pattern: "gemini-1.5", context_window: 1_000_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "gemini", context_window: 1_000_000, thinking: ThinkingSupport::Optional },
+    FamilyRule {
+        pattern: "gemini-2",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    FamilyRule {
+        pattern: "gemini-1.5",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "gemini",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
     // ── DeepSeek ──
-    FamilyRule { pattern: "deepseek-r1", context_window: 128_000, thinking: ThinkingSupport::AlwaysOn },
-    FamilyRule { pattern: "deepseek-v3", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "deepseek-coder", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "deepseek-chat", context_window: 64_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "deepseek", context_window: 64_000, thinking: ThinkingSupport::No },
+    FamilyRule {
+        pattern: "deepseek-r1",
+        context_window: 128_000,
+        thinking: ThinkingSupport::AlwaysOn,
+    },
+    FamilyRule {
+        pattern: "deepseek-v3",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "deepseek-coder",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "deepseek-chat",
+        context_window: 64_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "deepseek",
+        context_window: 64_000,
+        thinking: ThinkingSupport::No,
+    },
     // ── Alibaba / Moonshot / Zhipu ──
-    FamilyRule { pattern: "qwen-max", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "qwen-plus", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "qwen-turbo", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "qwen", context_window: 32_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "kimi", context_window: 256_000, thinking: ThinkingSupport::Optional },
-    FamilyRule { pattern: "moonshot-v1-128k", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "moonshot-v1-32k", context_window: 32_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "moonshot-v1-8k", context_window: 8_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "moonshot", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "glm-4", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "glm", context_window: 32_000, thinking: ThinkingSupport::No },
+    FamilyRule {
+        pattern: "qwen-max",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "qwen-plus",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "qwen-turbo",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "qwen",
+        context_window: 32_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "kimi",
+        context_window: 256_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    FamilyRule {
+        pattern: "moonshot-v1-128k",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "moonshot-v1-32k",
+        context_window: 32_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "moonshot-v1-8k",
+        context_window: 8_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "moonshot",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "glm-4",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "glm",
+        context_window: 32_000,
+        thinking: ThinkingSupport::No,
+    },
     // ── Meta / Mistral ──
-    FamilyRule { pattern: "llama-4", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "llama-3.3", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "llama-3.1", context_window: 128_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "llama-3", context_window: 8_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "llama", context_window: 8_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "mixtral-8x22b", context_window: 65_000, thinking: ThinkingSupport::No },
-    FamilyRule { pattern: "mixtral", context_window: 32_000, thinking: ThinkingSupport::No },
+    FamilyRule {
+        pattern: "llama-4",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "llama-3.3",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "llama-3.1",
+        context_window: 128_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "llama-3",
+        context_window: 8_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "llama",
+        context_window: 8_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "mixtral-8x22b",
+        context_window: 65_000,
+        thinking: ThinkingSupport::No,
+    },
+    FamilyRule {
+        pattern: "mixtral",
+        context_window: 32_000,
+        thinking: ThinkingSupport::No,
+    },
 ];
 
 /// Resolve capabilities for `model`, optionally consulting the KeyVault
@@ -183,7 +355,10 @@ fn resolve_from_family_table(model: &str) -> ModelCapabilities {
 /// the model as a reasoning model for this account. The writeback in
 /// `side_query.rs` uses the value `"always_on"` to record observed
 /// always-on behavior; any other non-empty value means Optional.
-fn resolve_thinking_from_keyvault(model: &str, account_id: Option<&str>) -> Option<ThinkingSupport> {
+fn resolve_thinking_from_keyvault(
+    model: &str,
+    account_id: Option<&str>,
+) -> Option<ThinkingSupport> {
     let account_id = account_id?;
     let key = KEY_SERVICE.get_key_by_id(account_id)?;
     let variant = key.model_variants.iter().find(|v| v.model == model)?;

@@ -259,7 +259,10 @@ impl Activity {
         let preview = content_preview.map(|s| {
             let s = s.into();
             if s.len() > MAX_PREVIEW_CHARS {
-                format!("{}...", crate::utils::safe_truncate_utf8(&s, MAX_PREVIEW_CHARS))
+                format!(
+                    "{}...",
+                    crate::utils::safe_truncate_utf8(&s, MAX_PREVIEW_CHARS)
+                )
             } else {
                 s
             }
@@ -383,11 +386,8 @@ mod tests {
     use super::*;
 
     fn clipboard_preview(content: &str) -> Option<String> {
-        let activity = Activity::clipboard(
-            ClipboardOp::Copy,
-            Some(content.to_string()),
-            None::<String>,
-        );
+        let activity =
+            Activity::clipboard(ClipboardOp::Copy, Some(content.to_string()), None::<String>);
         match activity.activity_type {
             ActivityType::Clipboard {
                 content_preview, ..

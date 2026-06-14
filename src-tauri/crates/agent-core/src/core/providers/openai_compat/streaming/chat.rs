@@ -9,10 +9,11 @@ use super::super::types::{ChatCompletionRequest, ChatCompletionResponse, Request
 use super::think_split::ThinkTagSplitter;
 use super::translate_tool_choice_for_openai;
 use crate::providers::openai_policy::ChatTokenLimitField;
+use crate::providers::registry::provider_id;
 use crate::providers::safe_truncate::safe_truncate_utf8;
 use crate::providers::traits::{finish_reason as finish, LLMResponse, ProviderError};
 use crate::providers::wire_sanitize::{
-    sanitize_openai_compat_messages, strip_tool_schema_cache_scopes,
+    sanitize_deepseek_messages, sanitize_openai_compat_messages, strip_tool_schema_cache_scopes,
 };
 use crate::utils::http_retry::extract_retry_after_secs;
 
@@ -32,16 +33,12 @@ pub(super) async fn run_chat(
         crate::providers::model_hints::wire_model_name(this.provider_spec, model)
     };
 
-    // Always expand MCP image sidecars into follow-up
-    // `role:"user"` messages with `image_url` content
-    // blocks. We deliberately do not gate on a keyword allow-list:
-    // proxies, custom-named deployments, and private hosts must
-    // not silently drop images. If the model can't accept
-    // `image_url` blocks, the API will return 400 — fail-loud is
-    // strictly better than fail-silent.
     let sanitized_messages = sanitize_openai_compat_messages(messages);
-    let wire_messages =
-        super::super::wire_expand::expand_tool_images_for_openai_wire(&sanitized_messages);
+    let wire_messages = if this.provider_spec.name == provider_id::DEEPSEEK {
+        sanitize_deepseek_messages(&sanitized_messages)
+    } else {
+        super::super::wire_expand::expand_tool_images_for_openai_wire(&sanitized_messages)
+    };
 
     info!(
         "LLM call: provider={}, model={}, messages={} (wire={}), tools={}, azure_gw={}",

@@ -429,7 +429,10 @@ impl AgentAppState {
                 session_id,
                 crate::session::SessionStatus::Failed,
             );
-            warn!("[agent-state] Session not found for cancel, marked as failed: {}", session_id);
+            warn!(
+                "[agent-state] Session not found for cancel, marked as failed: {}",
+                session_id
+            );
             false
         }
     }

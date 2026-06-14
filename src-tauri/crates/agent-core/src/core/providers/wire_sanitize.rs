@@ -18,6 +18,21 @@ pub fn sanitize_openai_compat_messages(messages: &[Value]) -> Vec<Value> {
     messages.iter().map(sanitize_message).collect()
 }
 
+pub fn sanitize_deepseek_messages(messages: &[Value]) -> Vec<Value> {
+    messages
+        .iter()
+        .map(|message| {
+            let mut sanitized = message.clone();
+            if let Some(content) = sanitized.get_mut("content") {
+                if let Some(text) = flatten_text_content_with_image_placeholders(content) {
+                    *content = Value::String(text);
+                }
+            }
+            sanitized
+        })
+        .collect()
+}
+
 fn sanitize_message(message: &Value) -> Value {
     let mut sanitized = message.clone();
     let role = sanitized
@@ -53,6 +68,27 @@ pub fn flatten_text_content(content: &Value) -> Option<String> {
         .collect::<Vec<_>>()
         .join("\n\n");
     Some(text)
+}
+
+fn flatten_text_content_with_image_placeholders(content: &Value) -> Option<String> {
+    if let Some(text) = content.as_str() {
+        return Some(text.to_string());
+    }
+
+    let blocks = content.as_array()?;
+    let parts = blocks
+        .iter()
+        .filter_map(|block| match block.get("type").and_then(Value::as_str) {
+            Some("text") => block.get("text").and_then(Value::as_str).map(str::to_string),
+            Some("image_url") | Some("image") => Some(
+                "[Image omitted: DeepSeek chat completions currently require text-only message content.]"
+                    .to_string(),
+            ),
+            _ => block.get("text").and_then(Value::as_str).map(str::to_string),
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    Some(parts)
 }
 
 fn strip_content_cache_metadata(content: &mut Value) {
@@ -113,6 +149,38 @@ mod tests {
         assert!(sanitized[0]["content"][0]
             .get(ORGII_SYSTEM_CACHE_SCOPE_KEY)
             .is_none());
+    }
+
+    #[test]
+    fn sanitize_deepseek_messages_flattens_multimodal_user_content() {
+        let messages = vec![json!({
+            "role": "user",
+            "content": [
+                { "type": "image_url", "image_url": { "url": "data:image/png;base64,AAAA" } },
+                { "type": "text", "text": "What is in this image?" }
+            ]
+        })];
+
+        let sanitized = sanitize_deepseek_messages(&messages);
+
+        assert_eq!(
+            sanitized[0]["content"],
+            "[Image omitted: DeepSeek chat completions currently require text-only message content.]\n\nWhat is in this image?"
+        );
+    }
+
+    #[test]
+    fn sanitize_deepseek_messages_leaves_string_content_as_string() {
+        let messages = vec![json!({
+            "role": "tool",
+            "content": "plain tool output",
+            "tool_call_id": "call_1"
+        })];
+
+        let sanitized = sanitize_deepseek_messages(&messages);
+
+        assert_eq!(sanitized[0]["content"], "plain tool output");
+        assert_eq!(sanitized[0]["tool_call_id"], "call_1");
     }
 
     #[test]

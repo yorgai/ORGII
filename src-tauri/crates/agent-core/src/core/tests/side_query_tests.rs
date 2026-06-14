@@ -284,18 +284,12 @@ async fn structured_output_extracts_from_tool_call() {
 
     assert!(result.structured.is_some());
     let structured = result.structured.unwrap();
-    assert_eq!(
-        structured["summary"],
-        "Files were changed, tests passed"
-    );
+    assert_eq!(structured["summary"], "Files were changed, tests passed");
 }
 
 #[tokio::test]
 async fn structured_output_sends_tool_with_choice_override() {
-    let provider = MockProvider::with_tool_call(
-        "emit_summary",
-        json!({"summary": "ok"}),
-    );
+    let provider = MockProvider::with_tool_call("emit_summary", json!({"summary": "ok"}));
     let messages = vec![json!({"role": "user", "content": "Summarize"})];
     let config = SideQueryConfig {
         structured: Some(StructuredOutput {
@@ -341,9 +335,7 @@ fn extract_tool_choice_override_strips_sentinel() {
 
 #[test]
 fn extract_tool_choice_override_returns_none_when_no_sentinel() {
-    let tools = vec![
-        json!({"type": "function", "function": {"name": "read_file"}}),
-    ];
+    let tools = vec![json!({"type": "function", "function": {"name": "read_file"}})];
 
     let (override_val, cleaned) = extract_tool_choice_override(&tools);
 

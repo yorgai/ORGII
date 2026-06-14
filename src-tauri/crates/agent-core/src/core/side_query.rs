@@ -202,7 +202,13 @@ pub async fn side_query_typed(
 
     // First attempt
     let response = provider
-        .chat(&messages, tools_ref, model, config.max_tokens, config.temperature)
+        .chat(
+            &messages,
+            tools_ref,
+            model,
+            config.max_tokens,
+            config.temperature,
+        )
         .await;
 
     let result = match response {
@@ -213,9 +219,7 @@ pub async fn side_query_typed(
         {
             // Thinking disabled rejected → model is AlwaysOn. Record and retry.
             observe_always_on_thinking(config, model);
-            warn!(
-                "[side-query] thinking:disabled rejected (400), retrying with padded max_tokens"
-            );
+            warn!("[side-query] thinking:disabled rejected (400), retrying with padded max_tokens");
             None
         }
         Err(err) => return Err(SideQueryError::Provider(err)),
@@ -385,9 +389,11 @@ fn observe_thinking_model(config: &SideQueryConfig, model: &str, response: &LLMR
 fn observe_always_on_thinking(config: &SideQueryConfig, model: &str) {
     if let Some(ref account_id) = config.account_id {
         let reasoning_val = model_capabilities::OBSERVED_ALWAYS_ON_REASONING;
-        if let Err(err) =
-            key_vault::key_store::KEY_SERVICE.record_observed_reasoning(account_id, model, reasoning_val)
-        {
+        if let Err(err) = key_vault::key_store::KEY_SERVICE.record_observed_reasoning(
+            account_id,
+            model,
+            reasoning_val,
+        ) {
             warn!("[side-query] Failed to record always-on thinking for {model}: {err}");
         } else {
             info!("[side-query] Recorded always-on thinking for {model} (400 on disabled)");

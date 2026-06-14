@@ -20,13 +20,14 @@ use super::parse::{build_stream_parse_error_args, parse_streamed_tool_args, Pars
 use super::think_split::ThinkTagSplitter;
 use super::translate_tool_choice_for_openai;
 use crate::providers::openai_policy::ChatTokenLimitField;
+use crate::providers::registry::provider_id;
 use crate::providers::safe_truncate::safe_truncate_utf8;
 use crate::providers::traits::{
     finish_reason as finish, LLMResponse, ProviderError, StreamDelta, StreamErrorKind,
     ToolCallDelta, ToolCallRequest,
 };
 use crate::providers::wire_sanitize::{
-    sanitize_openai_compat_messages, strip_tool_schema_cache_scopes,
+    sanitize_deepseek_messages, sanitize_openai_compat_messages, strip_tool_schema_cache_scopes,
 };
 use crate::utils::http_retry::extract_retry_after_secs;
 
@@ -54,11 +55,12 @@ pub(super) async fn run_chat_streaming(
 
     let url = this.chat_url(&resolved_model);
 
-    // Mirror the non-streaming path: always expand image sidecars;
-    // let the API decide.
     let sanitized_messages = sanitize_openai_compat_messages(messages);
-    let wire_messages =
-        super::super::wire_expand::expand_tool_images_for_openai_wire(&sanitized_messages);
+    let wire_messages = if this.provider_spec.name == provider_id::DEEPSEEK {
+        sanitize_deepseek_messages(&sanitized_messages)
+    } else {
+        super::super::wire_expand::expand_tool_images_for_openai_wire(&sanitized_messages)
+    };
 
     info!(
         "LLM streaming call: provider={}, model={}, url={}, messages={} (wire={}), tools={}, azure_gw={}",

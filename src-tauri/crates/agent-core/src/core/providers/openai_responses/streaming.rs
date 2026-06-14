@@ -91,9 +91,7 @@ impl LLMProvider for OpenAIResponsesClient {
             messages.len()
         );
 
-        let send_future = self
-            .build_request(&url, &request_body)?
-            .send();
+        let send_future = self.build_request(&url, &request_body)?.send();
         let response = if let Some(flag) = cancel_flag {
             tokio::select! {
                 result = send_future => result.map_err(|err| ProviderError::RequestFailed(err.to_string()))?,

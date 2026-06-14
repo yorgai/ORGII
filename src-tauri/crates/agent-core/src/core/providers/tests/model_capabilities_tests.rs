@@ -138,11 +138,11 @@ const CAPABILITY_CHECK_ALLOWLIST: &[&str] = &[
     // keep-with-reason: provider-id routing hints, not capability decisions.
     "core/providers/model_hints.rs",
     // deferred (audit S2): migrate into ModelCapabilities.
-    "core/turn_executor/screenshot.rs", // vision detection
-    "core/model_context/tokenizer.rs",  // tokenizer family
+    "core/turn_executor/screenshot.rs",        // vision detection
+    "core/model_context/tokenizer.rs",         // tokenizer family
     "core/session/prompt/section_builders.rs", // knowledge-cutoff ladder
-    "core/providers/openai_compat/types.rs", // reasoning-param detection
-    "core/providers/openai_responses/mod.rs", // gpt-5 reasoning detection
+    "core/providers/openai_compat/types.rs",   // reasoning-param detection
+    "core/providers/openai_responses/mod.rs",  // gpt-5 reasoning detection
 ];
 
 /// Lowercased model-family id prefixes. A string literal passed to
