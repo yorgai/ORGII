@@ -5,7 +5,7 @@
  * then handles state updates and navigation.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -34,6 +34,7 @@ import {
 } from "@src/store/session";
 import {
   lastUserMessageAtom,
+  sessionRolledBackAtom,
   setSessionRuntimeStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultExecModeAtom } from "@src/store/session/creatorDefaultExecModeAtom";
@@ -99,6 +100,10 @@ export function useSessionLaunch(
 
   const { t } = useTranslation("sessions");
   const [isLoading, setIsLoading] = useState(false);
+  const sessionRolledBack = useAtomValue(sessionRolledBackAtom);
+  useEffect(() => {
+    if (sessionRolledBack) setIsLoading(false);
+  }, [sessionRolledBack]);
   const {
     closeAddFundsModal,
     closeBuyCreditsModal,
