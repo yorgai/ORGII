@@ -3,6 +3,7 @@ import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
+import Modal from "@src/scaffold/ModalSystem";
 import { quitConfirmationModalOpenAtom } from "@src/store/ui/overlayAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
@@ -54,35 +55,35 @@ const QuitConfirmationModal = () => {
     return () => document.removeEventListener("keydown", handleKeyDown, true);
   }, [handleCancel, handleQuit, isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/35 px-4 backdrop-blur-sm">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="quit-confirm-title"
-        className="w-full max-w-[360px] rounded-2xl border border-border-2 bg-bg-1 p-5 text-left shadow-2xl"
-      >
-        <div
-          id="quit-confirm-title"
-          className="text-[15px] font-semibold text-text-1"
-        >
-          {t("quitConfirmation.title")}
-        </div>
-        <div className="mt-2 text-[13px] leading-5 text-text-3">
-          {t("quitConfirmation.subtitle")}
-        </div>
-        <div className="mt-5 flex justify-end gap-2">
+    <Modal
+      visible={isOpen}
+      title={t("quitConfirmation.title")}
+      width={360}
+      closable={false}
+      maskClosable={false}
+      onCancel={handleCancel}
+      bodyClassName="px-5 py-3"
+      footerTopBorder={false}
+      footer={
+        <div className="flex h-12 items-center justify-end gap-2 px-3">
           <Button variant="tertiary" onClick={handleCancel}>
             {t("quitConfirmation.cancel")}
           </Button>
-          <Button variant="secondary" onClick={handleQuit}>
+          <Button
+            variant="secondary"
+            onClick={handleQuit}
+            data-modal-primary-action
+          >
             {t("quitConfirmation.confirm")}
           </Button>
         </div>
+      }
+    >
+      <div className="text-[13px] leading-5 text-text-3">
+        {t("quitConfirmation.subtitle")}
       </div>
-    </div>
+    </Modal>
   );
 };
 

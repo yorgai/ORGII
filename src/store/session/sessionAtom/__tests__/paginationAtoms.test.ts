@@ -34,6 +34,11 @@ describe("session pagination categories", () => {
       hasMore: false,
       loading: false,
     });
+    expect(state["external_history:opencode"]).toEqual({
+      loaded: 0,
+      hasMore: false,
+      loading: false,
+    });
     expect(state["external_history:windsurf"]).toEqual({
       loaded: 0,
       hasMore: false,

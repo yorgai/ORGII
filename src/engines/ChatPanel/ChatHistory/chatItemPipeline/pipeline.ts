@@ -66,6 +66,27 @@ function isFailedToolCall(event: SessionEvent): boolean {
   return getErrorText(result) !== null;
 }
 
+function getEventCallId(event: SessionEvent): string | undefined {
+  return (
+    event.callId ||
+    (event as { call_id?: string }).call_id ||
+    (event.result?.call_id as string | undefined)
+  );
+}
+
+function getStableActivityItemId(event: SessionEvent): string {
+  const callId = getEventCallId(event);
+  if (
+    callId &&
+    (event.actionType === "tool_call" || event.actionType === "tool_result")
+  ) {
+    return event.sessionId
+      ? `tool:${event.sessionId}:${callId}`
+      : `tool:${callId}`;
+  }
+  return event.id;
+}
+
 // ============================================
 // Main Pipeline Function
 // ============================================
@@ -99,7 +120,7 @@ export function processChatItems(
   // Helper: create a simple activity OptimizedChatItem from an event
   // ------------------------------------------
   const eventToItem = (event: SessionEvent): OptimizedChatItem => ({
-    chunk_id: event.id,
+    chunk_id: getStableActivityItemId(event),
     type: "activity",
     event,
   });
@@ -117,7 +138,7 @@ export function processChatItems(
     ) {
       const firstRead = readFileBuffer[0];
       result.push({
-        chunk_id: createReadFileGroupId(firstRead.id),
+        chunk_id: createReadFileGroupId(getStableActivityItemId(firstRead)),
         type: "readFileGroup",
         readFileEvents: [...readFileBuffer],
       });
@@ -154,7 +175,9 @@ export function processChatItems(
 
       const firstEvent = actionSummaryBuffer[0].event;
       result.push({
-        chunk_id: createActionSummaryGroupId(firstEvent.id),
+        chunk_id: createActionSummaryGroupId(
+          getStableActivityItemId(firstEvent)
+        ),
         type: "actionSummaryGroup",
         actionSummaryEntries: entries,
         actionSummaryItems: [...actionSummaryBuffer],

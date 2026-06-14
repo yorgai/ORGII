@@ -1010,9 +1010,19 @@ impl Tool for AgentTool {
         let (run_workspace, final_registry_arc, isolation_workspace_root) =
             match effective_isolation {
                 Some(SubAgentIsolation::Worktree) => {
-                    let (isolated_workspace, worktree_info) = self
+                    let (isolated_workspace, worktree_info) = match self
                         .create_worktree_workspace(&subagent_session_id, workspace.clone())
-                        .await?;
+                        .await
+                    {
+                        Ok(result) => result,
+                        Err(err) => {
+                            let _ = crate::session::persistence::update_status(
+                                &subagent_session_id,
+                                crate::session::SessionStatus::Failed,
+                            );
+                            return Err(err);
+                        }
+                    };
                     if let Err(err) = crate::session::persistence::save_workspace(
                         &subagent_session_id,
                         &isolated_workspace,
@@ -1027,6 +1037,10 @@ impl Tool for AgentTool {
                             )
                         })
                         .await;
+                        let _ = crate::session::persistence::update_status(
+                            &subagent_session_id,
+                            crate::session::SessionStatus::Failed,
+                        );
                         return Err(ToolError::ExecutionFailed(format!(
                             "failed to persist subagent worktree workspace: {err}"
                         )));
@@ -1050,6 +1064,10 @@ impl Tool for AgentTool {
                             .await;
                             let _ = crate::session::persistence::clear_worktree_metadata(
                                 &subagent_session_id,
+                            );
+                            let _ = crate::session::persistence::update_status(
+                                &subagent_session_id,
+                                crate::session::SessionStatus::Failed,
                             );
                             return Err(ToolError::ExecutionFailed(format!(
                                 "failed to persist subagent worktree metadata: {err}"

@@ -46,3 +46,7 @@ export function useShouldOffsetChatPanelHeader(options: {
 
   return options.position === "left";
 }
+
+export function useShouldOffsetMainAppHeader(): boolean {
+  return useAtomValue(sidebarCollapsedAtom);
+}

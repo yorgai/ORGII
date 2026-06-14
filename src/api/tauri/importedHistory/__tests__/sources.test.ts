@@ -12,6 +12,7 @@ describe("imported history source registry", () => {
     expect(IMPORTED_HISTORY_SOURCES.map((source) => source.sourceId)).toEqual([
       "codex_app",
       "claude_code",
+      "opencode",
       "windsurf",
     ]);
     expect(
@@ -19,6 +20,7 @@ describe("imported history source registry", () => {
     ).toEqual([
       "external_history:codex_app",
       "external_history:claude_code",
+      "external_history:opencode",
       "external_history:windsurf",
     ]);
   });
@@ -30,6 +32,9 @@ describe("imported history source registry", () => {
     expect(
       getImportedHistorySourceBySessionId("claudecodeapp-session-1")?.sourceId
     ).toBe("claude_code");
+    expect(
+      getImportedHistorySourceBySessionId("opencodeapp-session-1")?.sourceId
+    ).toBe("opencode");
     expect(
       getImportedHistorySourceBySessionId("windsurfapp-session-1")?.sourceId
     ).toBe("windsurf");
@@ -48,6 +53,10 @@ describe("imported history source registry", () => {
         ?.groupLabel
     ).toBe("Claude Code");
     expect(
+      getImportedHistorySourceByListCategory("external_history:opencode")
+        ?.groupLabel
+    ).toBe("OpenCode");
+    expect(
       getImportedHistorySourceByListCategory("external_history:windsurf")
         ?.groupLabel
     ).toBe("Windsurf");
@@ -58,6 +67,9 @@ describe("imported history source registry", () => {
       true
     );
     expect(isImportedHistoryListCategory("external_history:claude_code")).toBe(
+      true
+    );
+    expect(isImportedHistoryListCategory("external_history:opencode")).toBe(
       true
     );
     expect(isImportedHistoryListCategory("external_history:windsurf")).toBe(

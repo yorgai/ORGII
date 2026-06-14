@@ -31,6 +31,7 @@ import { useLocation } from "react-router-dom";
 
 import { deriveRouteCacheKey } from "@src/config/mainAppPaths";
 import { hasForceVisibleSidebar } from "@src/config/sidebarRegistry";
+import MainAppPageHeader from "@src/modules/MainApp/shared/MainAppPageHeader";
 import ScrollRestorationWrapper from "@src/modules/shared/components/ScrollRestorationWrapper";
 import {
   PAGE_PANEL_BG,
@@ -139,9 +140,10 @@ const MainAppShell: React.FC = () => {
   } as React.CSSProperties;
 
   // relative is needed for pages that use absolute positioning
-  const innerClassName = `relative min-h-0 flex-1 overflow-hidden ${
+  const innerClassName = `relative flex min-h-0 flex-1 flex-col overflow-hidden ${
     isCompact || isEdgeMode ? PAGE_PANEL_BG.flat : PAGE_PANEL_BG.rounded
   }`;
+  const isSettingsRoute = location.pathname.startsWith("/orgii/app/settings");
 
   return (
     <div
@@ -162,13 +164,16 @@ const MainAppShell: React.FC = () => {
         style={innerPanelStyle}
         ref={containerRef}
       >
-        <Suspense fallback={null}>
-          <KeepAliveRouteOutlet
-            max={12}
-            wrapperComponent={ScrollRestorationWrapper}
-            activeCacheKey={currentKey}
-          />
-        </Suspense>
+        {!isSettingsRoute && <MainAppPageHeader style={pageOpacityStyle} />}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <Suspense fallback={null}>
+            <KeepAliveRouteOutlet
+              max={12}
+              wrapperComponent={ScrollRestorationWrapper}
+              activeCacheKey={currentKey}
+            />
+          </Suspense>
+        </div>
       </div>
     </div>
   );

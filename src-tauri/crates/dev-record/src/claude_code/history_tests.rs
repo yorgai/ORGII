@@ -1,6 +1,40 @@
 use super::*;
 
 #[test]
+fn includes_claude_project_dir_candidates() {
+    let home = std::path::Path::new("/Users/example");
+    let paths = claude_projects_dir_candidates(home);
+    let rendered = paths
+        .iter()
+        .map(|path| path.to_string_lossy().to_string())
+        .collect::<Vec<_>>();
+
+    assert!(rendered
+        .iter()
+        .any(|path| path.contains(".claude/projects")));
+
+    #[cfg(target_os = "macos")]
+    {
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("Library/Application Support/Claude Code/projects")));
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("Library/Application Support/claude-code/projects")));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("AppData/Roaming/Claude Code/projects")));
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("AppData/Local/Claude Code/projects")));
+    }
+}
+
+#[test]
 fn parses_claude_jsonl_into_replay_chunks() {
     let temp_dir =
         std::env::temp_dir().join(format!("orgii-claude-history-test-{}", std::process::id()));
@@ -57,7 +91,18 @@ fn parses_claude_session_metadata() {
 "#;
     std::fs::write(&path, content).expect("write fixture");
 
-    let meta = parse_claude_session_meta(&path, "claude-meta")
+    let (source_mtime_ms, source_size_bytes) =
+        imported_paths::file_metadata_signature(&path, "Claude").expect("metadata");
+    let record = ImportedHistoryDiscoveredRecord {
+        source_session_id: "claude-meta".to_string(),
+        source_path: path.clone(),
+        source_record_key: "claude-meta".to_string(),
+        source_mtime_ms,
+        source_size_bytes,
+        source_fingerprint: String::new(),
+        parser_version: CLAUDE_CODE_METADATA_PARSER_VERSION,
+    };
+    let meta = parse_claude_session_meta(&record)
         .expect("parse")
         .expect("session meta");
 

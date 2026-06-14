@@ -19,6 +19,13 @@ use crate::session::turn::streaming::classify_streaming_error_message;
 use crate::tools::impls::orchestration::inbox_wake::AppHandleInboxWakeHook;
 use crate::tools::impls::orchestration::org_send_message::InboxWakeHook;
 
+fn e2e_background_llm_disabled() -> bool {
+    std::env::var("ORGII_E2E_DISABLE_BACKGROUND_LLM")
+        .ok()
+        .as_deref()
+        == Some("1")
+}
+
 /// Wire payload emitted as "session-status-changed" to all Tauri windows so
 /// the frontend can update `sessionsAtom` without waiting for the next full
 /// session-list poll.
@@ -502,7 +509,7 @@ pub async fn finalize_session(
     // Gating (per-agent `learnings.enabled`) lives inside
     // `maybe_reflect_on_session` — see reflection.rs. This keeps the decision
     // close to the `AgentDefinition` resolver and out of the lifecycle path.
-    if final_status == AgentSessionStatus::Completed {
+    if final_status == AgentSessionStatus::Completed && !e2e_background_llm_disabled() {
         let sid = session_id.to_string();
         tokio::spawn(async move {
             match crate::memory::reflection::maybe_reflect_on_session(&sid).await {

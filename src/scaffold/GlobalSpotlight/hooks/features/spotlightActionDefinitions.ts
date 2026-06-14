@@ -134,6 +134,7 @@ export interface SpotlightStaticActionDefinition {
   actionId: ActionId;
   payload: Record<string, unknown>;
   fallback?: SpotlightStaticActionFallback;
+  opensSecondLevel?: boolean;
   closeOnSuccess: boolean;
 }
 
@@ -168,6 +169,7 @@ export const AGENT_SESSION_ACTIONS = [
     actionId: ACTION_ID.SPOTLIGHT_OPEN_AGENT_CONTROL,
     payload: {},
     fallback: "agent-control",
+    opensSecondLevel: true,
     closeOnSuccess: false,
   },
   {
@@ -185,6 +187,7 @@ export const AGENT_SESSION_ACTIONS = [
     actionId: ACTION_ID.SPOTLIGHT_OPEN_SESSION_CREATOR,
     payload: {},
     fallback: "open-session-creator",
+    opensSecondLevel: true,
     closeOnSuccess: false,
   },
   {
@@ -230,6 +233,7 @@ export const AGENT_SESSION_ACTIONS = [
     actionId: ACTION_ID.SPOTLIGHT_OPEN_AGENT_SESSION_SEARCH,
     payload: {},
     fallback: "search-agent-sessions",
+    opensSecondLevel: true,
     closeOnSuccess: false,
   },
 ] satisfies SpotlightStaticActionDefinition[];
@@ -243,6 +247,7 @@ export const WORKSPACE_ACTIONS = [
     actionId: ACTION_ID.SPOTLIGHT_OPEN_WORKSPACE_PICKER,
     payload: { mode: "switch" },
     fallback: "workspace-switch",
+    opensSecondLevel: true,
     closeOnSuccess: false,
   },
   {
@@ -253,6 +258,7 @@ export const WORKSPACE_ACTIONS = [
     actionId: ACTION_ID.SPOTLIGHT_OPEN_BRANCH_PICKER,
     payload: {},
     fallback: "branch-picker",
+    opensSecondLevel: true,
     closeOnSuccess: false,
   },
   {
@@ -263,6 +269,7 @@ export const WORKSPACE_ACTIONS = [
     actionId: ACTION_ID.SPOTLIGHT_OPEN_WORKSPACE_PICKER,
     payload: { mode: "add" },
     fallback: "workspace-add",
+    opensSecondLevel: true,
     closeOnSuccess: false,
   },
   {
@@ -278,6 +285,7 @@ export const WORKSPACE_ACTIONS = [
     actionId: ACTION_ID.SPOTLIGHT_OPEN_WORKSPACE_PICKER,
     payload: { mode: "create" },
     fallback: "workspace-create",
+    opensSecondLevel: true,
     closeOnSuccess: false,
   },
 ] satisfies SpotlightStaticActionDefinition[];

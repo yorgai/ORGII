@@ -159,7 +159,9 @@
     "moreSettings": "更多设置",
     "sort": "排序",
     "openFolder": "打开文件夹",
-    "addWorkspace": "添加工作区"
+    "addWorkspace": "添加工作区",
+    "skipThisVersion": "跳过此版本",
+    "later": "稍后"
   },
   "refreshToast": {
     "successName": "{{name}} 已刷新",
@@ -2128,5 +2130,13 @@
     "subtitle": "正在运行的会话会保留当前状态。你可以稍后重新打开 ORGII。",
     "cancel": "取消",
     "confirm": "退出"
+  },
+  "update": {
+    "downloading": "正在下载更新",
+    "installing": "正在安装更新",
+    "progressPercent": "{{percent}}%",
+    "downloadedOfTotal": "{{downloaded}} / {{total}}",
+    "preparingDownload": "正在准备下载…",
+    "downloadingAndInstalling": "正在下载并安装更新 (v{{version}})…"
   }
 }

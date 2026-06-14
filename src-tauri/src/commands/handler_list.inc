@@ -4,6 +4,11 @@
 //! via `tauri::generate_handler![…]` in `main.rs`. Every Tauri command exposed
 //! to the frontend must appear here; commands not listed are silently unreachable.
 
+// Diagnostics commands
+usage_diagnostics::commands::diagnostics_start,
+usage_diagnostics::commands::diagnostics_configure,
+usage_diagnostics::commands::diagnostics_flush_now,
+usage_diagnostics::commands::diagnostics_record_usage_snapshot,
 // Window commands - Centralized window management
 app_window::commands::create_app_window,
 app_window::commands::show_or_create_app_window,
@@ -949,9 +954,13 @@ dev_record::codex_app_recent_paths,
 dev_record::claude_code_history_chunks,
 dev_record::claude_code_history_list_sessions,
 dev_record::claude_code_recent_paths,
+dev_record::opencode_history_chunks,
+dev_record::opencode_history_list_sessions,
+dev_record::opencode_recent_paths,
 dev_record::external_history_auto_import_recent_paths,
 dev_record::windsurf_history_chunks,
 dev_record::windsurf_history_list_sessions,
+dev_record::windsurf_recent_paths,
 // Cursor IDE control — drive a running Cursor.app via CDP `Input.*`
 // so users can submit prompts (start + follow-up) without leaving ORGII.
 // See `crates/cursor-bridge-app/src/lib.rs` and

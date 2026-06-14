@@ -34,7 +34,6 @@ import {
   getDispatchCategory,
   resolveSessionIconId,
 } from "@src/util/session/sessionDispatch";
-import { sessionLabel } from "@src/util/session/sessionLabel";
 import { formatDuration } from "@src/util/time/formatDuration";
 
 import { HoverCardPanel, HoverCardRow } from "./HoverCardBase";
@@ -157,7 +156,6 @@ export const SessionHoverCardContent: React.FC<SessionHoverCardContentProps> =
     const modelIconAgent = lastModel?.listingModelType || undefined;
     const agentSessionInfo = getAgentSessionInfo(session);
 
-    const title = sessionLabel(session, 160);
     const dateTimeLabelOptions = {
       todayLabel: t("common:relativeDate.today"),
       yesterdayLabel: t("common:relativeDate.yesterday"),
@@ -178,7 +176,7 @@ export const SessionHoverCardContent: React.FC<SessionHoverCardContentProps> =
       : null;
 
     return (
-      <HoverCardPanel title={title}>
+      <HoverCardPanel>
         <HoverCardRow
           icon={agentSessionInfo.icon}
           iconClassName={agentSessionInfo.textClassName}

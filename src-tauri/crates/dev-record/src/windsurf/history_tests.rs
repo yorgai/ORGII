@@ -91,13 +91,42 @@ fn includes_windsurf_candidate_db_paths() {
 }
 
 #[test]
-fn lists_windsurf_sessions_from_state_db() {
+fn maps_windsurf_composer_metadata_to_cache_input() {
     let conn = fixture_conn();
 
-    let page = list_windsurf_history_sessions_from_conn(&conn, 10, 0).expect("list sessions");
+    let metas = list_windsurf_composer_meta_from_conn(
+        &conn,
+        std::path::Path::new("/tmp/state.vscdb"),
+        1770000006000,
+        4096,
+    )
+    .expect("list composer metadata");
+    let inputs = metas
+        .into_iter()
+        .map(composer_meta_to_cache_input)
+        .collect::<Vec<_>>();
 
-    assert_eq!(page.sessions.len(), 1);
-    let row = &page.sessions[0];
+    assert_eq!(inputs.len(), 1);
+    let row = imported_cache::ImportedHistoryCachedSession {
+        source_session_id: inputs[0].source_session_id.clone(),
+        session_id: inputs[0].session_id.clone(),
+        source_path: inputs[0].source_path.clone(),
+        source_record_key: inputs[0].source_record_key.clone(),
+        source_mtime_ms: inputs[0].source_mtime_ms,
+        source_size_bytes: inputs[0].source_size_bytes,
+        source_fingerprint: inputs[0].source_fingerprint.clone(),
+        parser_version: inputs[0].parser_version,
+        name: inputs[0].name.clone(),
+        created_at_ms: inputs[0].created_at_ms,
+        updated_at_ms: inputs[0].updated_at_ms,
+        model: inputs[0].model.clone(),
+        input_tokens: inputs[0].input_tokens,
+        output_tokens: inputs[0].output_tokens,
+        repo_path: inputs[0].repo_path.clone(),
+        branch: inputs[0].branch.clone(),
+        listable: inputs[0].listable,
+    }
+    .to_row();
     assert_eq!(row.session_id, "windsurfapp-composer-1");
     assert_eq!(row.name, "Build Windsurf import");
     assert_eq!(row.category, imported_history::IMPORTED_HISTORY_CATEGORY);

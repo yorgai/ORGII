@@ -181,6 +181,7 @@ export function useListNavigation<T extends ListItem>(
 
   const callbackRef = useRef({
     onSelectedIndexChange,
+    onSelect,
     onClose,
     onBackspace,
     onTab,
@@ -191,6 +192,7 @@ export function useListNavigation<T extends ListItem>(
   useEffect(() => {
     callbackRef.current = {
       onSelectedIndexChange,
+      onSelect,
       onClose,
       onBackspace,
       onTab,
@@ -314,6 +316,29 @@ export function useListNavigation<T extends ListItem>(
         return;
       }
 
+      if (keyboardEvent.key === "ArrowRight") {
+        if (isFormInput && !isOurInput) return;
+
+        const selectedItem = state.items[state.selectedIndex];
+        const itemData = selectedItem?.data as
+          | Record<string, unknown>
+          | undefined;
+        if (
+          selectedItem &&
+          itemData?.showDisclosureChevron === true &&
+          callbacks.isItemSelectable(selectedItem as T, state.selectedIndex)
+        ) {
+          keyboardEvent.preventDefault();
+          keyboardEvent.stopPropagation();
+          if (callbacks.onSelect) {
+            callbacks.onSelect(selectedItem as T, state.selectedIndex);
+          } else if (selectedItem.action) {
+            selectedItem.action();
+          }
+        }
+        return;
+      }
+
       // Tab — always prevent default to keep focus in the spotlight
       if (keyboardEvent.key === "Tab") {
         if (isFormInput && !isOurInput) return;
@@ -405,7 +430,17 @@ export function useListNavigation<T extends ListItem>(
           break;
         }
 
-        case "Enter": {
+        case "Enter":
+        case "ArrowRight": {
+          if (event.key === "ArrowRight") {
+            const itemData = items[selectedIndex]?.data as
+              | Record<string, unknown>
+              | undefined;
+            if (itemData?.showDisclosureChevron !== true) {
+              break;
+            }
+          }
+
           event.preventDefault();
 
           if (selectedIndex < 0 || selectedIndex >= items.length) {

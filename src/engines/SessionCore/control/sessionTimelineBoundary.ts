@@ -23,9 +23,9 @@ import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
 import { streamingDeltaContentAtom } from "../core/atoms";
 
-const log = createLogger("sessionTimelineBoundary");
-
 export type TimelineBoundaryReason = "stop" | "force-send" | "rewind";
+
+const log = createLogger("sessionTimelineBoundary");
 
 const interruptInFlightByBoundary = new Set<string>();
 
@@ -186,6 +186,14 @@ export function isTimelineInterruptInFlight(
   return interruptInFlightByBoundary.has(boundaryKey(sessionId, reason));
 }
 
+/**
+ * Interrupt the current turn for a boundary event and send the IPC cancel.
+ *
+ * INVARIANT: the useQueueDispatch force-send path relies on this function's
+ * sync preamble (beginTurnStopping) running before its own beginTurnDispatch.
+ * See the ordering comment in useQueueDispatch.ts. Do NOT make this function
+ * async-before-return or await anything before the `return` below.
+ */
 export async function cancelTurnForTimelineBoundary(
   sessionId: string,
   reason: TimelineBoundaryReason,

@@ -91,11 +91,26 @@ impl LLMProvider for OpenAIResponsesClient {
             messages.len()
         );
 
-        let response = self
+        let send_future = self
             .build_request(&url, &request_body)?
-            .send()
-            .await
-            .map_err(|err| ProviderError::RequestFailed(err.to_string()))?;
+            .send();
+        let response = if let Some(flag) = cancel_flag {
+            tokio::select! {
+                result = send_future => result.map_err(|err| ProviderError::RequestFailed(err.to_string()))?,
+                _ = async {
+                    while !flag.load(std::sync::atomic::Ordering::Relaxed) {
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                    }
+                } => {
+                    info!("[openai-responses] Request cancelled before stream response (model={})", model);
+                    return Err(ProviderError::Cancelled);
+                }
+            }
+        } else {
+            send_future
+                .await
+                .map_err(|err| ProviderError::RequestFailed(err.to_string()))?
+        };
 
         let status = response.status();
         if !status.is_success() {

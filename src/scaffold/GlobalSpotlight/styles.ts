@@ -15,6 +15,14 @@ export const SPOTLIGHT_STYLES = `
   }
   .spotlight-scrollable::-webkit-scrollbar { display: none; }
 
+  @keyframes spotlight-refresh-rotate {
+    to { transform: rotate(360deg); }
+  }
+
+  .spotlight-refresh-spin {
+    animation: spotlight-refresh-rotate 300ms linear infinite;
+  }
+
   /* ========== HOVER/SELECTION STATES ========== */
   /* 
    * .selected tracks the active item in both modes:
@@ -23,9 +31,23 @@ export const SPOTLIGHT_STYLES = `
    * Single highlight via fill-2 background, no text color changes.
    */
   
-  /* Selected item - always visible regardless of input mode */
-  .spotlight-item.selected,
-  .spotlight-item:hover {
+  .spotlight-item.selected {
     background: var(--color-fill-2);
+  }
+
+  [data-keyboard-mode="false"] .spotlight-item:hover {
+    background: var(--color-fill-2);
+  }
+
+  .spotlight-disclosure-chevron {
+    width: 0;
+    opacity: 0;
+    transition: width 120ms ease, opacity 120ms ease;
+  }
+
+  .spotlight-item.selected .spotlight-disclosure-chevron,
+  [data-keyboard-mode="false"] .spotlight-item:hover .spotlight-disclosure-chevron {
+    width: 1rem;
+    opacity: 1;
   }
 `;

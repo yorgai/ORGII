@@ -157,7 +157,9 @@
     "moreSettings": "더 많은 설정",
     "sort": "정렬",
     "openFolder": "폴더 열기",
-    "addWorkspace": "Workspace 추가"
+    "addWorkspace": "Workspace 추가",
+    "skipThisVersion": "이 버전 건너뛰기",
+    "later": "나중에"
   },
   "refreshToast": {
     "successName": "{{name}} 새로고침됨",
@@ -2113,5 +2115,13 @@
     "closePreview": "미리보기 닫기",
     "copiedToClipboard": "이미지를 클립보드에 복사했습니다",
     "previewAlt": "미리보기"
+  },
+  "update": {
+    "downloading": "업데이트 다운로드 중",
+    "installing": "업데이트 설치 중",
+    "progressPercent": "{{percent}}%",
+    "downloadedOfTotal": "{{downloaded}} / {{total}}",
+    "preparingDownload": "다운로드 준비 중…",
+    "downloadingAndInstalling": "업데이트 다운로드 및 설치 중 (v{{version}})…"
   }
 }

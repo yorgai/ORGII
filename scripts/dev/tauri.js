@@ -13,6 +13,9 @@
 const { spawn, execSync } = require("child_process");
 const path = require("path");
 const { tauriFeatureList } = require("../tauri/features.cjs");
+const {
+  applyDefaultDiagnosticsEndpoint,
+} = require("../tauri/diagnostics-endpoint.cjs");
 const readline = require("readline");
 
 const rootDir = path.join(__dirname, "..", "..");
@@ -328,7 +331,7 @@ function cleanChildEnv() {
       delete env[key];
     }
   }
-  return env;
+  return applyDefaultDiagnosticsEndpoint(env);
 }
 
 function startTauriDev(features) {

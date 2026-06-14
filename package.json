@@ -44,7 +44,8 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "check:unused-exports": "ts-unused-exports tsconfig.json --excludePathsFromReport='src/index.tsx;src/app/;src/i18n/;.test.ts;.test.tsx;/types.ts;/index.ts;src/scaffold/;types/'",
-    "check:unused-exports:all": "ts-unused-exports tsconfig.json"
+    "check:unused-exports:all": "ts-unused-exports tsconfig.json",
+    "check:e2e-oauth-guards": "node scripts/quality/check-e2e-oauth-guards.mjs"
   },
   "keywords": [],
   "author": "",

@@ -157,7 +157,9 @@
     "moreSettings": "その他の設定",
     "sort": "並べ替え",
     "openFolder": "フォルダを開く",
-    "addWorkspace": "Workspace を追加"
+    "addWorkspace": "Workspace を追加",
+    "skipThisVersion": "このバージョンをスキップ",
+    "later": "後で"
   },
   "refreshToast": {
     "successName": "{{name}} を更新しました",
@@ -2115,5 +2117,13 @@
     "closePreview": "プレビューを閉じる",
     "copiedToClipboard": "画像をクリップボードにコピーしました",
     "previewAlt": "プレビュー"
+  },
+  "update": {
+    "downloading": "アップデートをダウンロード中",
+    "installing": "アップデートをインストール中",
+    "progressPercent": "{{percent}}%",
+    "downloadedOfTotal": "{{downloaded}} / {{total}}",
+    "preparingDownload": "ダウンロードを準備中…",
+    "downloadingAndInstalling": "アップデートをダウンロードしてインストール中 (v{{version}})…"
   }
 }

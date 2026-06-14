@@ -122,6 +122,23 @@ function settledToolEvent(id: string): SessionEvent {
   } as unknown as SessionEvent;
 }
 
+function awaitOutputEvent(
+  displayStatus: "running" | "completed"
+): SessionEvent {
+  return {
+    id: `await-${displayStatus}`,
+    sessionId: "session-1",
+    source: "assistant",
+    createdAt: new Date().toISOString(),
+    actionType: "tool_call",
+    functionName: "await_output",
+    uiCanonical: "await_output",
+    displayStatus,
+    displayVariant: "tool_call",
+    args: { command: "wait_for", handles: ["pid-123"] },
+  } as unknown as SessionEvent;
+}
+
 describe("hasLiveRuntimeResourceInLatestTurn", () => {
   it("detects a running event in the latest turn", () => {
     const events = [
@@ -161,6 +178,20 @@ describe("hasLiveRuntimeResourceInLatestTurn", () => {
 
   it("scans the whole array when no user message exists", () => {
     const events = [settledToolEvent("t1"), shellEvent("running")];
+    expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(true);
+  });
+
+  it("exempts running await_output from suppressing the planning footer", () => {
+    const events = [userEvent("u1"), awaitOutputEvent("running")];
+    expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(false);
+  });
+
+  it("still detects other running tools alongside a running await_output", () => {
+    const events = [
+      userEvent("u1"),
+      awaitOutputEvent("running"),
+      shellEvent("running"),
+    ];
     expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(true);
   });
 });

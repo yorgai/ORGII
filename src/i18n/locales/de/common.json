@@ -157,7 +157,9 @@
     "moreSettings": "Weitere Einstellungen",
     "sort": "Sortieren",
     "openFolder": "Ordner öffnen",
-    "addWorkspace": "Workspace hinzufügen"
+    "addWorkspace": "Workspace hinzufügen",
+    "skipThisVersion": "Diese Version überspringen",
+    "later": "Später"
   },
   "refreshToast": {
     "successName": "{{name}} aktualisiert",
@@ -2117,5 +2119,13 @@
     "closePreview": "Vorschau schließen",
     "copiedToClipboard": "Bild in die Zwischenablage kopiert",
     "previewAlt": "Vorschau"
+  },
+  "update": {
+    "downloading": "Update wird heruntergeladen",
+    "installing": "Update wird installiert",
+    "progressPercent": "{{percent}} %",
+    "downloadedOfTotal": "{{downloaded}} von {{total}}",
+    "preparingDownload": "Download wird vorbereitet…",
+    "downloadingAndInstalling": "Update wird heruntergeladen und installiert (v{{version}})…"
   }
 }

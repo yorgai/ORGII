@@ -231,6 +231,86 @@ describe("processChatItems", () => {
       expect(items[0].chunk_id).toBe(completedEvent.id);
     });
 
+    it("uses call id as stable chunk id for visible tool transitions", () => {
+      const runningEvent = makeSessionEvent({
+        id: "tool-call-read-1",
+        action_type: "tool_call",
+        function: "read_file",
+        args: { file_path: "test.ts" },
+        result: { status: "running", call_id: "call-read-1" },
+        callId: "call-read-1",
+      });
+      const completedEvent = makeSessionEvent({
+        id: "tool-result-read-1",
+        action_type: "tool_result",
+        function: "read_file",
+        args: { file_path: "test.ts" },
+        result: {
+          call_id: "call-read-1",
+          output: { success: { content: "done", path: "test.ts" } },
+        },
+        callId: "call-read-1",
+      });
+
+      const runningOnly = processChatItems([runningEvent], {
+        preFilterEmptyActivities: false,
+        groupActionSummaries: false,
+        groupReadFileActivities: false,
+      });
+      const completedOnly = processChatItems([runningEvent, completedEvent], {
+        preFilterEmptyActivities: false,
+        groupActionSummaries: false,
+        groupReadFileActivities: false,
+      });
+
+      expect(runningOnly.items[0].chunk_id).toBe(
+        "tool:session-test-001:call-read-1"
+      );
+      expect(completedOnly.items[0].chunk_id).toBe(
+        "tool:session-test-001:call-read-1"
+      );
+      expect(completedOnly.items[0].event?.id).toBe(completedEvent.id);
+    });
+
+    it("scopes stable tool chunk ids by session", () => {
+      const firstSessionEvent = makeSessionEvent({
+        id: "tool-call-read-session-a",
+        sessionId: "session-a",
+        action_type: "tool_call",
+        function: "read_file",
+        args: { file_path: "a.ts" },
+        result: { status: "running", call_id: "shared-call" },
+        callId: "shared-call",
+      });
+      const secondSessionEvent = makeSessionEvent({
+        id: "tool-call-read-session-b",
+        sessionId: "session-b",
+        action_type: "tool_call",
+        function: "read_file",
+        args: { file_path: "b.ts" },
+        result: { status: "running", call_id: "shared-call" },
+        callId: "shared-call",
+      });
+
+      const firstSessionItems = processChatItems([firstSessionEvent], {
+        preFilterEmptyActivities: false,
+        groupActionSummaries: false,
+        groupReadFileActivities: false,
+      });
+      const secondSessionItems = processChatItems([secondSessionEvent], {
+        preFilterEmptyActivities: false,
+        groupActionSummaries: false,
+        groupReadFileActivities: false,
+      });
+
+      expect(firstSessionItems.items[0].chunk_id).toBe(
+        "tool:session-a:shared-call"
+      );
+      expect(secondSessionItems.items[0].chunk_id).toBe(
+        "tool:session-b:shared-call"
+      );
+    });
+
     it("merges args from running event into completed event with empty args", () => {
       const runningEvent = makeSessionEvent({
         action_type: "tool_call",
@@ -304,6 +384,45 @@ describe("processChatItems", () => {
       expect(summaryItem.actionSummaryEntries).toBeDefined();
       expect(summaryItem.actionSummaryItems?.length).toBe(3);
       expect(summaryItem.actionSummaryClosedByBoundary).toBe(false);
+    });
+
+    it("keeps action summary group key stable when first tool transitions to result", () => {
+      const runningRead = makeSessionEvent({
+        id: "tool-call-read-1",
+        action_type: "tool_call",
+        function: "read_file",
+        args: { file_path: "a.ts" },
+        result: { status: "running", call_id: "call-read-1" },
+        callId: "call-read-1",
+      });
+      const completedRead = makeSessionEvent({
+        id: "tool-result-read-1",
+        action_type: "tool_result",
+        function: "read_file",
+        args: { file_path: "a.ts" },
+        result: { content: "a", call_id: "call-read-1" },
+        callId: "call-read-1",
+      });
+      const searchItem = makeSearchItem("handleClick");
+
+      const runningGroup = processChatItems([runningRead, searchItem], {
+        groupActionSummaries: true,
+        preFilterEmptyActivities: false,
+      });
+      const completedGroup = processChatItems(
+        [runningRead, completedRead, searchItem],
+        {
+          groupActionSummaries: true,
+          preFilterEmptyActivities: false,
+        }
+      );
+
+      expect(runningGroup.items[0].chunk_id).toBe(
+        completedGroup.items[0].chunk_id
+      );
+      expect(completedGroup.items[0].chunk_id).toBe(
+        "group:actionsummary:tool:session-test-001:call-read-1"
+      );
     });
 
     it("marks exploration groups closed when a following event does not fit", () => {

@@ -28,9 +28,14 @@ import { MultiTaskHeader } from "./components/MultiTaskHeader";
 import { useGridLayout } from "./hooks/useGridLayout";
 import type { ActivitySimulatorGridProps } from "./types/gridTypes";
 
-function getEventRenderSignature(
-  event: ActivitySimulatorGridProps["currentEvent"]
-): string {
+type RenderSignatureEvent =
+  | (NonNullable<ActivitySimulatorGridProps["currentEvent"]> & {
+      lastActivityAt?: string;
+    })
+  | null
+  | undefined;
+
+function getEventRenderSignature(event: RenderSignatureEvent): string {
   if (!event) return "";
   return [
     event.id,

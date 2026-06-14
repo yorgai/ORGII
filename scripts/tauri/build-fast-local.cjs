@@ -3,6 +3,9 @@
 const { spawnSync } = require("child_process");
 const path = require("path");
 const { tauriFeatureString } = require("./features.cjs");
+const {
+  applyDefaultDiagnosticsEndpoint,
+} = require("./diagnostics-endpoint.cjs");
 
 const rootDir = path.join(__dirname, "..", "..");
 const includeSemantic = process.argv.includes("--semantic");
@@ -20,7 +23,7 @@ const configOverride = JSON.stringify({
   },
 });
 
-const env = { ...process.env };
+const env = applyDefaultDiagnosticsEndpoint({ ...process.env });
 for (const key of [
   "APPLE_ID",
   "APPLE_PASSWORD",

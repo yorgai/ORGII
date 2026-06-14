@@ -200,6 +200,79 @@ const EXTRACT_HUNK_HEADER_RE =
  * Without this, multi-hunk diffs produce wrong line numbers when the
  * diff viewer re-computes a diff from the old/new values.
  */
+/**
+ * Merge multiple unified-diff strings (each potentially multi-hunk) into a
+ * single unified-diff string whose hunks are sorted by old-file line number.
+ *
+ * Later hunks that overlap with earlier ones win (edit-order semantics).
+ */
+export function mergeUnifiedDiffStrings(diffs: string[]): string {
+  interface Hunk {
+    oldStart: number;
+    oldCount: number;
+    newStart: number;
+    newCount: number;
+    bodyLines: string[];
+  }
+
+  const allHunks: Hunk[] = [];
+
+  for (const diff of diffs) {
+    const lines = diff.split("\n");
+    let current: Hunk | null = null;
+    for (const line of lines) {
+      if (line.startsWith("---") || line.startsWith("+++")) continue;
+      if (line.startsWith("diff ") || line.startsWith("index ")) continue;
+      const hm = EXTRACT_HUNK_HEADER_RE.exec(line);
+      if (hm) {
+        if (current) allHunks.push(current);
+        current = {
+          oldStart: Number.parseInt(hm[1], 10),
+          oldCount: hm[2] ? Number.parseInt(hm[2], 10) : 1,
+          newStart: Number.parseInt(hm[3], 10),
+          newCount: hm[4] ? Number.parseInt(hm[4], 10) : 1,
+          bodyLines: [],
+        };
+        continue;
+      }
+      if (current) {
+        current.bodyLines.push(line);
+      }
+    }
+    if (current) allHunks.push(current);
+  }
+
+  if (allHunks.length === 0) return diffs.join("\n");
+
+  // Sort by old-file start line; later hunks (higher index) win on overlap
+  allHunks.sort((a, b) => a.oldStart - b.oldStart);
+
+  // Deduplicate overlapping hunks: keep the later one (last writer wins)
+  const merged: Hunk[] = [];
+  for (const hunk of allHunks) {
+    // Remove any previously-collected hunks that this one fully overlaps
+    while (merged.length > 0) {
+      const prev = merged[merged.length - 1];
+      const prevEnd = prev.oldStart + prev.oldCount;
+      if (prevEnd > hunk.oldStart) {
+        merged.pop();
+      } else {
+        break;
+      }
+    }
+    merged.push(hunk);
+  }
+
+  const parts: string[] = [];
+  for (const hunk of merged) {
+    parts.push(
+      `@@ -${hunk.oldStart},${hunk.oldCount} +${hunk.newStart},${hunk.newCount} @@`
+    );
+    parts.push(...hunk.bodyLines);
+  }
+  return parts.join("\n");
+}
+
 export function parseUnifiedDiffToOldNew(diffStr: string): {
   oldValue: string;
   newValue: string;

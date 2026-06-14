@@ -421,7 +421,15 @@ impl AgentAppState {
             );
             true
         } else {
-            warn!("[agent-state] Session not found for cancel: {}", session_id);
+            // Neither the live session map nor the job registry knows about
+            // this session. It may be an orphan DB row from a failed spawn
+            // (e.g. worktree creation error after upsert). Mark it as failed
+            // so the frontend stops showing it as running.
+            let _ = crate::session::persistence::update_status(
+                session_id,
+                crate::session::SessionStatus::Failed,
+            );
+            warn!("[agent-state] Session not found for cancel, marked as failed: {}", session_id);
             false
         }
     }

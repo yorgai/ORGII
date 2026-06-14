@@ -68,6 +68,11 @@ export function isLiveRuntimeResourceEvent(event: SessionEvent): boolean {
  *
  * Within the current turn the gate keeps its meaning: a genuinely running
  * row paints its own shimmer, so the footer stays hidden.
+ *
+ * `await_output` is exempt: it polls/blocks waiting for OTHER jobs (shell
+ * processes, subagents) and renders as a subtle TitleOnlyBlock whose
+ * shimmer is too faint to convey activity. The planning footer is a
+ * better signal that the agent is still alive during a long wait_for.
  */
 export function hasLiveRuntimeResourceInLatestTurn(
   events: readonly SessionEvent[]
@@ -75,9 +80,17 @@ export function hasLiveRuntimeResourceInLatestTurn(
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
     if (event.source === "user") return false;
-    if (isLiveRuntimeResourceEvent(event)) return true;
+    if (isLiveRuntimeResourceEvent(event) && !isAwaitOutputEvent(event))
+      return true;
   }
   return false;
+}
+
+function isAwaitOutputEvent(event: SessionEvent): boolean {
+  return (
+    event.functionName === "await_output" ||
+    event.uiCanonical === "await_output"
+  );
 }
 
 export function isTurnBlockingRuntimeEvent(event: SessionEvent): boolean {

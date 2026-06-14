@@ -12,21 +12,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { ROUTES, getIconComponentForPath } from "@src/config/routes";
 import { useRouteLabel } from "@src/hooks/i18n";
+import { ECONOMY_ROUTES } from "@src/modules/MainApp/shared/economyRouteConfig";
 
 import type { PageLevelSidebarItem } from "./PageLevelSidebar";
 import PageLevelSidebar from "./PageLevelSidebar";
-
-const ECONOMY_ROUTES = [
-  ROUTES.app.market.tokenMarket,
-  ROUTES.app.market.agentApps,
-  ROUTES.app.market.serviceMarket,
-  ROUTES.app.market.agentStudio,
-  ROUTES.app.market.wallet,
-  ROUTES.app.market.earnings,
-  ROUTES.app.market.boost,
-  ROUTES.app.market.profile,
-  ROUTES.app.market.delegationHistory,
-] as const;
 
 const EconomySidebar: React.FC = () => {
   const navigate = useNavigate();

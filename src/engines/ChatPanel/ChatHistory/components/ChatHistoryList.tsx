@@ -113,12 +113,27 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
     staticScrollerRef,
     newEventDividerLabel = null,
   }) => {
-    const useStaticRendering = totalFlatItems <= STATIC_RENDER_ITEM_LIMIT;
+    // When the planning indicator is active, inject it as a virtual item
+    // in the last group so it renders under the latest turn's sticky
+    // header — not as the global Virtuoso Footer which visually attaches
+    // to the previous turn when the latest group has 0 body items.
+    const hasPlanningItem =
+      planningIndicatorCount > 0 && groupCounts.length > 0;
+    const effectiveGroupCounts = useMemo(() => {
+      if (!hasPlanningItem) return groupCounts;
+      const adjusted = [...groupCounts];
+      adjusted[adjusted.length - 1] += 1;
+      return adjusted;
+    }, [hasPlanningItem, groupCounts]);
+    const effectiveTotalFlatItems = totalFlatItems + (hasPlanningItem ? 1 : 0);
+
+    const useStaticRendering =
+      effectiveTotalFlatItems <= STATIC_RENDER_ITEM_LIMIT;
 
     const staticGroups = useMemo(() => {
       if (!useStaticRendering) return [];
-      return groupCounts.map((groupItemCount, groupIndex) => {
-        const groupStartFlatIndex = groupCounts
+      return effectiveGroupCounts.map((groupItemCount, groupIndex) => {
+        const groupStartFlatIndex = effectiveGroupCounts
           .slice(0, groupIndex)
           .reduce((sum, count) => sum + count, 0);
         return {
@@ -129,7 +144,7 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
           ),
         };
       });
-    }, [useStaticRendering, groupCounts]);
+    }, [useStaticRendering, effectiveGroupCounts]);
 
     const virtuosoComponents = useMemo(() => {
       const List = React.forwardRef<
@@ -148,46 +163,42 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
       return {
         Scroller: ChatScroller,
         List,
-        Footer: () => (
-          <>
+        Footer: () => <div style={{ height: footerSpacerHeight }} />,
+      };
+    }, [ChatScroller, footerSpacerHeight]);
+
+    const renderGroupItem = React.useCallback(
+      (flatIndex: number, groupIndex: number) => {
+        if (flatIndex >= flatItems.length) {
+          return (
             <PlanningFooter
               count={planningIndicatorCount}
               showSlowHint={planningShowSlowHint}
               variantIndex={planningVariantIndex}
             />
-            <div style={{ height: footerSpacerHeight }} />
-          </>
-        ),
-      };
-    }, [
-      ChatScroller,
-      planningIndicatorCount,
-      planningShowSlowHint,
-      planningVariantIndex,
-      footerSpacerHeight,
-    ]);
-
-    const renderGroupItem = React.useCallback(
-      (flatIndex: number, groupIndex: number) => (
-        <GroupItemRenderer
-          flatIndex={flatIndex}
-          groupIndex={groupIndex}
-          flatItems={flatItems}
-          groupCounts={groupCounts}
-          lastAssistantFlatIndexPerItem={lastAssistantFlatIndexPerItem}
-          isWpGeneWorking={getIsWpGeneWorking()}
-          isExploring={getIsExploring()}
-          codeBlockContainerWidth={codeBlockContainerWidth}
-          onRegenerate={onRegenerate}
-          onSubmit={onSubmit}
-          onSkip={onSkip}
-          onEditUserMessage={onEditUserMessage}
-          newEventDividerLabel={newEventDividerLabel}
-        />
-      ),
+          );
+        }
+        return (
+          <GroupItemRenderer
+            flatIndex={flatIndex}
+            groupIndex={groupIndex}
+            flatItems={flatItems}
+            groupCounts={effectiveGroupCounts}
+            lastAssistantFlatIndexPerItem={lastAssistantFlatIndexPerItem}
+            isWpGeneWorking={getIsWpGeneWorking()}
+            isExploring={getIsExploring()}
+            codeBlockContainerWidth={codeBlockContainerWidth}
+            onRegenerate={onRegenerate}
+            onSubmit={onSubmit}
+            onSkip={onSkip}
+            onEditUserMessage={onEditUserMessage}
+            newEventDividerLabel={newEventDividerLabel}
+          />
+        );
+      },
       [
         flatItems,
-        groupCounts,
+        effectiveGroupCounts,
         lastAssistantFlatIndexPerItem,
         codeBlockContainerWidth,
         getIsWpGeneWorking,
@@ -197,6 +208,9 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         onSkip,
         onEditUserMessage,
         newEventDividerLabel,
+        planningIndicatorCount,
+        planningShowSlowHint,
+        planningVariantIndex,
       ]
     );
 
@@ -228,6 +242,16 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
                   {renderGroupHeaderProp(groupIndex)}
                 </div>
                 {itemIndexes.map((itemFlatIndex) => {
+                  if (itemFlatIndex >= flatItems.length) {
+                    return (
+                      <PlanningFooter
+                        key="planning-footer"
+                        count={planningIndicatorCount}
+                        showSlowHint={planningShowSlowHint}
+                        variantIndex={planningVariantIndex}
+                      />
+                    );
+                  }
                   const itemKey =
                     flatItems[itemFlatIndex]?.chunk_id ??
                     `static-chat-${itemFlatIndex}`;
@@ -237,7 +261,7 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
                       flatIndex={itemFlatIndex}
                       groupIndex={groupIndex}
                       flatItems={flatItems}
-                      groupCounts={groupCounts}
+                      groupCounts={effectiveGroupCounts}
                       lastAssistantFlatIndexPerItem={
                         lastAssistantFlatIndexPerItem
                       }
@@ -254,11 +278,6 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
                 })}
               </div>
             ))}
-            <PlanningFooter
-              count={planningIndicatorCount}
-              showSlowHint={planningShowSlowHint}
-              variantIndex={planningVariantIndex}
-            />
             <div style={{ height: footerSpacerHeight }} />
           </div>
         </div>
@@ -274,7 +293,7 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
           width: "100%",
           overscrollBehavior: "contain",
         }}
-        groupCounts={groupCounts}
+        groupCounts={effectiveGroupCounts}
         groupContent={renderGroupHeader}
         itemContent={renderGroupItem}
         atBottomStateChange={onAtBottomStateChange}
@@ -282,12 +301,16 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         endReached={onEndReached}
         followOutput={handleFollowOutput}
         atBottomThreshold={80}
-        initialTopMostItemIndex={totalFlatItems > 0 ? totalFlatItems - 1 : 0}
+        initialTopMostItemIndex={
+          effectiveTotalFlatItems > 0 ? effectiveTotalFlatItems - 1 : 0
+        }
         overscan={{ main: 1200, reverse: 1200 }}
         increaseViewportBy={{ top: 1000, bottom: 1000 }}
         defaultItemHeight={280}
         computeItemKey={(flatIndex) =>
-          flatItems[flatIndex]?.chunk_id || `chat-${flatIndex}`
+          flatIndex >= flatItems.length
+            ? "planning-footer"
+            : flatItems[flatIndex]?.chunk_id || `chat-${flatIndex}`
         }
         className="scrollbar-hide"
         components={virtuosoComponents}

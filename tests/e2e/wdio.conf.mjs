@@ -6,7 +6,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -43,7 +42,32 @@ const reuseServices = process.env.E2E_REUSE_SERVICES === "1";
 const allowParallel = process.env.E2E_ALLOW_PARALLEL === "1";
 const isolatedRun = process.env.E2E_ISOLATED_RUN === "1";
 const allowPortCleanup = process.env.E2E_ALLOW_PORT_CLEANUP === "1";
-const allowOAuthRotationSeed = process.env.E2E_ALLOW_OAUTH_ROTATION_SEED === "1";
+const providerMode = process.env.E2E_PROVIDER_MODE ?? "mock";
+const oauthLiveMode = providerMode === "oauth-live";
+process.env.ORGII_E2E = "1";
+process.env.ORGII_E2E_DISABLE_BACKGROUND_LLM ??= "1";
+
+if (process.env.E2E_ALLOW_OAUTH_ROTATION_SEED === "1") {
+  throw new Error(
+    "E2E_ALLOW_OAUTH_ROTATION_SEED has been removed because cloning rotating OAuth chains can revoke user accounts. Use E2E_PROVIDER_MODE=mock/api-key, or E2E_PROVIDER_MODE=oauth-live with E2E_OAUTH_TEST_HOME."
+  );
+}
+
+if (oauthLiveMode) {
+  if (!process.env.E2E_OAUTH_TEST_HOME) {
+    throw new Error(
+      "E2E_PROVIDER_MODE=oauth-live requires E2E_OAUTH_TEST_HOME so the test owns a dedicated OAuth home."
+    );
+  }
+  if (allowParallel) {
+    throw new Error(
+      "E2E_ALLOW_PARALLEL=1 is forbidden with E2E_PROVIDER_MODE=oauth-live"
+    );
+  }
+  // Default seed source to real ~/.orgii so credentials are available.
+  process.env.E2E_ORGII_HOME_SEED_SOURCE ??= join(homedir(), ".orgii");
+  process.env.E2E_ORGII_HOME ??= process.env.E2E_OAUTH_TEST_HOME;
+}
 const webDriverPort = Number.parseInt(
   process.env.E2E_WEBDRIVER_PORT ?? "4444",
   10
@@ -81,9 +105,11 @@ if (isolatedRun && !process.env.E2E_ORGII_HOME) {
 }
 const sourceOrgiiHome =
   process.env.E2E_ORGII_HOME_SEED_SOURCE ??
-  (isolatedRun
-    ? join(homedir(), ".orgii")
-    : (process.env.ORGII_HOME ?? join(homedir(), ".orgii")));
+  (oauthLiveMode
+    ? process.env.E2E_OAUTH_TEST_HOME
+    : isolatedRun
+      ? join(homedir(), ".orgii")
+      : (process.env.ORGII_HOME ?? join(homedir(), ".orgii")));
 // Isolation is the DEFAULT: non-isolated runs previously used the real
 // ~/.orgii, which is how "E2E Custom Member Agent" fixtures leaked into
 // the user's actual agent-definitions.json whenever a spec crashed
@@ -98,6 +124,7 @@ const ORGII_HOME_SEED_ENTRIES = [
   "agent-definitions.json",
   "agent-orgs.json",
   "builtin-overrides.json",
+  "credentials.json",
   "data",
   "integrations.json",
   "mcp-servers.json",
@@ -109,25 +136,10 @@ const ORGII_HOME_SEED_ENTRIES = [
   "skills",
   "workspace-memory",
 ];
-const ORGII_HOME_OAUTH_ROTATION_SEED_ENTRIES = [
+const ORGII_HOME_SECRET_SEED_ENTRIES = new Set([
   "auth_tokens.json",
   "claude-code-cli-profiles",
   "codex-cli-profiles",
-  "credentials.json",
-  "cursor-cli-profiles",
-  "gemini-cli-profiles",
-];
-
-// OAuth providers (Anthropic, Google, OpenAI Codex) use rotating refresh
-// tokens. Every successful refresh invalidates the previous token. Seeding
-// these files into E2E homes is disabled by default because any isolated refresh
-// can fork the user's real OAuth chain. Opt in with E2E_ALLOW_OAUTH_ROTATION_SEED=1
-// only for live-provider tests that intentionally exercise token rotation.
-const ORGII_HOME_SEED_PRESERVE_IF_EXISTS = new Set([
-  "auth_tokens.json",
-  "claude-code-cli-profiles",
-  "codex-cli-profiles",
-  "credentials.json",
   "cursor-cli-profiles",
   "gemini-cli-profiles",
 ]);
@@ -158,22 +170,15 @@ function seedOrgiiHomeForParallel(sourceHome, targetHome) {
   if (process.env.E2E_ORGII_HOME && !isolatedRun) return;
   if (resolve(sourceHome) === resolve(targetHome)) return;
   mkdirSync(targetHome, { recursive: true });
-  const seedEntries = allowOAuthRotationSeed
-    ? [...ORGII_HOME_SEED_ENTRIES, ...ORGII_HOME_OAUTH_ROTATION_SEED_ENTRIES]
-    : ORGII_HOME_SEED_ENTRIES;
-  for (const entry of seedEntries) {
+  for (const entry of ORGII_HOME_SEED_ENTRIES) {
+    if (ORGII_HOME_SECRET_SEED_ENTRIES.has(entry)) {
+      throw new Error(
+        `Refusing to seed OAuth/secret ORGII home entry into E2E home: ${entry}`
+      );
+    }
     const sourcePath = join(sourceHome, entry);
     if (!existsSync(sourcePath)) continue;
     const targetPath = join(targetHome, entry);
-    // Preserve OAuth rotation chains: do NOT clobber the iso home's own
-    // copies of credentials.json / *-cli-profiles / auth_tokens.json once
-    // they exist. See ORGII_HOME_SEED_PRESERVE_IF_EXISTS for the rationale.
-    if (
-      ORGII_HOME_SEED_PRESERVE_IF_EXISTS.has(entry) &&
-      existsSync(targetPath)
-    ) {
-      continue;
-    }
     cpSync(sourcePath, targetPath, {
       dereference: false,
       errorOnExist: false,
@@ -193,10 +198,7 @@ function normalizeUiScaleForIsolatedRun(targetHome) {
   const settingsPath = join(targetHome, "settings.jsonc");
   if (!existsSync(settingsPath)) return;
   const raw = readFileSync(settingsPath, "utf8");
-  const patched = raw.replace(
-    /("general\.uiScale"\s*:\s*)\d+/,
-    "$1100"
-  );
+  const patched = raw.replace(/("general\.uiScale"\s*:\s*)\d+/, "$1100");
   if (patched !== raw) writeFileSync(settingsPath, patched);
 }
 
@@ -208,261 +210,9 @@ function resetDerivedProjectDatabaseForIsolatedRun(targetHome) {
   });
 }
 
-// Rotation-only fields we mirror from the iso credentials.json back to the
-// user's source ~/.orgii/credentials.json. When those fields change, the OAuth
-// chain has recovered, so mirror-back also clears derived refresh-failure state.
-// Everything unrelated to OAuth rotation (quota_info, model_aliases, base_url,
-// ...) is owned by the user and must not be clobbered by E2E.
-const ROTATING_OAUTH_MODEL_TYPES = new Set([
-  "claude_code",
-  "codex",
-  "gemini_cli",
-]);
-const OAUTH_ROTATION_FIELDS = ["session_token"];
-const OAUTH_ROTATION_ENV_VAR_PATTERNS = [
-  /_REFRESH_TOKEN$/i,
-  /_EXPIRES_AT$/i,
-  /_EXPIRES_IN$/i,
-  /_TOKEN_TYPE$/i,
-  /_SCOPE$/i,
-];
-
-function isRotationEnvVar(name) {
-  return OAUTH_ROTATION_ENV_VAR_PATTERNS.some((pattern) => pattern.test(name));
-}
-
-function safeReadJson(path) {
-  try {
-    if (!existsSync(path)) return null;
-    const raw = readFileSync(path, "utf8");
-    if (!raw.trim()) return null;
-    return JSON.parse(raw);
-  } catch (error) {
-    console.warn(
-      `[wdio] mirror-back: failed to parse ${path}: ${error?.message ?? error}`
-    );
-    return null;
-  }
-}
-
-function atomicWriteJson(path, value) {
-  const tmpPath = `${path}.wdio-mirror.tmp`;
-  writeFileSync(tmpPath, `${JSON.stringify(value, null, 2)}\n`);
-  renameSync(tmpPath, path);
-}
-
-const SOURCE_OWNED_OAUTH_STATUS_FIELDS = [
-  "enabled",
-  "health_status",
-  "last_validation_error",
-  "last_validated_at",
-  "oauth_refresh_failure_count",
-  "last_oauth_refresh_failed_at",
-];
-
-function oauthExpiryMs(key) {
-  const envVars = key?.env_vars ?? {};
-  const raw = Object.entries(envVars).find(([name]) =>
-    /_EXPIRES_AT$/i.test(name)
-  )?.[1];
-  if (raw === undefined || raw === null || raw === "") return 0;
-  const value = Number.parseInt(String(raw), 10);
-  return Number.isFinite(value) ? value : 0;
-}
-
-function copyOAuthRotationFields(targetKey, sourceKey) {
-  let didChange = false;
-  for (const field of OAUTH_ROTATION_FIELDS) {
-    if (
-      sourceKey[field] !== undefined &&
-      targetKey[field] !== sourceKey[field]
-    ) {
-      targetKey[field] = sourceKey[field];
-      didChange = true;
-    }
-  }
-
-  const sourceEnv = sourceKey.env_vars ?? {};
-  const targetEnv = targetKey.env_vars ?? {};
-  for (const [name, value] of Object.entries(sourceEnv)) {
-    if (!isRotationEnvVar(name)) continue;
-    if (targetEnv[name] !== value) {
-      targetEnv[name] = value;
-      didChange = true;
-    }
-  }
-  if (didChange) targetKey.env_vars = targetEnv;
-  return didChange;
-}
-
-function markOAuthRotationKnownGood(key) {
-  key.enabled = true;
-  key.health_status = "unknown";
-  key.oauth_refresh_failure_count = 0;
-  key.last_oauth_refresh_failed_at = null;
-  key.last_validation_error = null;
-  key.updated_at = new Date().toISOString();
-}
-
-function reconcileOAuthRotationFields(sourceHome, isoHome) {
-  if (!allowOAuthRotationSeed) return;
-  if (!sourceHome || !isoHome) return;
-  if (resolve(sourceHome) === resolve(isoHome)) return;
-
-  const sourcePath = join(sourceHome, "credentials.json");
-  const isoPath = join(isoHome, "credentials.json");
-  const sourceDoc = safeReadJson(sourcePath);
-  const isoDoc = safeReadJson(isoPath);
-  if (!sourceDoc?.credentials || !isoDoc?.credentials) return;
-
-  let sourceChanged = false;
-  let isoChanged = false;
-  const changedNames = [];
-
-  for (const [keyId, sourceKey] of Object.entries(sourceDoc.credentials)) {
-    if (!sourceKey || sourceKey.auth_method !== "oauth") continue;
-    if (!ROTATING_OAUTH_MODEL_TYPES.has(sourceKey.agent_type)) continue;
-
-    const isoKey = isoDoc.credentials[keyId];
-    if (!isoKey || isoKey.auth_method !== "oauth") continue;
-    if (isoKey.agent_type !== sourceKey.agent_type) continue;
-
-    const sourceExpiry = oauthExpiryMs(sourceKey);
-    const isoExpiry = oauthExpiryMs(isoKey);
-    if (sourceExpiry === isoExpiry) continue;
-
-    if (sourceExpiry > isoExpiry) {
-      if (copyOAuthRotationFields(isoKey, sourceKey)) {
-        markOAuthRotationKnownGood(isoKey);
-        isoChanged = true;
-        changedNames.push(`${sourceKey.name ?? keyId}:source-to-iso`);
-      }
-    } else if (copyOAuthRotationFields(sourceKey, isoKey)) {
-      markOAuthRotationKnownGood(sourceKey);
-      sourceChanged = true;
-      changedNames.push(`${sourceKey.name ?? keyId}:iso-to-source`);
-    }
-  }
-
-  if (sourceChanged) {
-    sourceDoc.updated_at = new Date().toISOString();
-    atomicWriteJson(sourcePath, sourceDoc);
-  }
-  if (isoChanged) {
-    isoDoc.updated_at = new Date().toISOString();
-    atomicWriteJson(isoPath, isoDoc);
-  }
-  if (changedNames.length > 0) {
-    console.log(
-      `[wdio] seed: reconciled fresher OAuth rotation field(s): ${changedNames.join(", ")}`
-    );
-  }
-}
-
-function reconcilePreservedOAuthCredentialStatus(sourceHome, isoHome) {
-  if (!allowOAuthRotationSeed) return;
-  if (!sourceHome || !isoHome) return;
-  if (resolve(sourceHome) === resolve(isoHome)) return;
-
-  const sourcePath = join(sourceHome, "credentials.json");
-  const isoPath = join(isoHome, "credentials.json");
-  const sourceDoc = safeReadJson(sourcePath);
-  const isoDoc = safeReadJson(isoPath);
-  if (!sourceDoc?.credentials || !isoDoc?.credentials) return;
-
-  let reconciled = 0;
-  const changedNames = [];
-  for (const [keyId, isoKey] of Object.entries(isoDoc.credentials)) {
-    if (!isoKey || isoKey.auth_method !== "oauth") continue;
-    const sourceKey = sourceDoc.credentials[keyId];
-    if (!sourceKey || sourceKey.auth_method !== "oauth") continue;
-
-    let didChange = false;
-    for (const field of SOURCE_OWNED_OAUTH_STATUS_FIELDS) {
-      if (Object.prototype.hasOwnProperty.call(sourceKey, field)) {
-        if (isoKey[field] !== sourceKey[field]) {
-          isoKey[field] = sourceKey[field];
-          didChange = true;
-        }
-      } else if (Object.prototype.hasOwnProperty.call(isoKey, field)) {
-        delete isoKey[field];
-        didChange = true;
-      }
-    }
-
-    if (didChange) {
-      isoKey.updated_at = new Date().toISOString();
-      reconciled += 1;
-      changedNames.push(isoKey.name ?? keyId);
-    }
-  }
-
-  if (reconciled === 0) return;
-  isoDoc.updated_at = new Date().toISOString();
-  try {
-    atomicWriteJson(isoPath, isoDoc);
-    console.log(
-      `[wdio] seed: reconciled ${reconciled} preserved OAuth account status field(s) in ${isoPath}: ${changedNames.join(", ")}`
-    );
-  } catch (error) {
-    console.warn(
-      `[wdio] seed: failed to reconcile ${isoPath}: ${error?.message ?? error}`
-    );
-  }
-}
-
-// Mirror rotated OAuth tokens from the iso home's credentials.json back to
-// the user's source ~/.orgii/credentials.json. This is disabled unless
-// E2E_ALLOW_OAUTH_ROTATION_SEED=1 because copying real rotating OAuth chains
-// into E2E homes is otherwise forbidden.
-function mirrorRotatedOAuthTokensBack(sourceHome, isoHome) {
-  if (!allowOAuthRotationSeed) return;
-  if (process.env.ORGII_E2E_MIRROR_OAUTH_BACK === "0") return;
-  if (!sourceHome || !isoHome) return;
-  if (resolve(sourceHome) === resolve(isoHome)) return;
-
-  const sourcePath = join(sourceHome, "credentials.json");
-  const isoPath = join(isoHome, "credentials.json");
-  const sourceDoc = safeReadJson(sourcePath);
-  const isoDoc = safeReadJson(isoPath);
-  if (!sourceDoc?.credentials || !isoDoc?.credentials) return;
-
-  let mirrored = 0;
-  const changedNames = [];
-  for (const [keyId, isoKey] of Object.entries(isoDoc.credentials)) {
-    if (!isoKey || isoKey.auth_method !== "oauth") continue;
-    if (!ROTATING_OAUTH_MODEL_TYPES.has(isoKey.agent_type)) continue;
-    const sourceKey = sourceDoc.credentials[keyId];
-    if (!sourceKey) continue;
-    if (sourceKey.agent_type !== isoKey.agent_type) continue;
-
-    if (copyOAuthRotationFields(sourceKey, isoKey)) {
-      markOAuthRotationKnownGood(sourceKey);
-      mirrored += 1;
-      changedNames.push(sourceKey.name ?? keyId);
-    }
-  }
-
-  if (mirrored === 0) return;
-
-  sourceDoc.updated_at = new Date().toISOString();
-  try {
-    atomicWriteJson(sourcePath, sourceDoc);
-    console.log(
-      `[wdio] mirror-back: refreshed ${mirrored} OAuth account(s) in ${sourcePath}: ${changedNames.join(", ")}`
-    );
-  } catch (error) {
-    console.warn(
-      `[wdio] mirror-back: failed to write ${sourcePath}: ${error?.message ?? error}`
-    );
-  }
-}
-
 if (orgiiHome) {
   seedOrgiiHomeForParallel(sourceOrgiiHome, orgiiHome);
   normalizeUiScaleForIsolatedRun(orgiiHome);
-  reconcileOAuthRotationFields(sourceOrgiiHome, orgiiHome);
-  reconcilePreservedOAuthCredentialStatus(sourceOrgiiHome, orgiiHome);
   resetDerivedProjectDatabaseForIsolatedRun(orgiiHome);
   process.env.ORGII_HOME = orgiiHome;
 }
@@ -506,8 +256,16 @@ sys.exit(completed.returncode)
 `,
     "utf8"
   );
-  writeFileSync(join(runScriptsDir, "run_script.sh"), "#!/usr/bin/env bash\necho e2e run script\n", "utf8");
-  writeFileSync(join(runScriptsDir, "parser.py"), "print('e2e parser')\n", "utf8");
+  writeFileSync(
+    join(runScriptsDir, "run_script.sh"),
+    "#!/usr/bin/env bash\necho e2e run script\n",
+    "utf8"
+  );
+  writeFileSync(
+    join(runScriptsDir, "parser.py"),
+    "print('e2e parser')\n",
+    "utf8"
+  );
   process.env.ORGII_SWE_BENCH_PRO_REPO_PATH = fixtureRoot;
 }
 
@@ -524,6 +282,55 @@ const WDIO_PRE_FLIGHT_PROCESS_PATTERNS = [
 ];
 let frontendServerProcess = null;
 let tauriWebDriverProcess = null;
+
+let oauthLiveLeasePath = null;
+
+function acquireOAuthLiveLease() {
+  if (!oauthLiveMode) return;
+  const leaseDir = join(process.env.E2E_OAUTH_TEST_HOME, "e2e-oauth-locks");
+  mkdirSync(leaseDir, { recursive: true });
+  oauthLiveLeasePath = join(leaseDir, "oauth-live.lock");
+  if (existsSync(oauthLiveLeasePath)) {
+    const ownerPid = readFileSync(oauthLiveLeasePath, "utf8").trim();
+    if (ownerPid && runBestEffort("kill", ["-0", ownerPid])) {
+      throw new Error(
+        `OAuth live E2E already owns the lease at ${oauthLiveLeasePath} with pid ${ownerPid}`
+      );
+    }
+    rmSync(oauthLiveLeasePath, { force: true });
+  }
+  writeFileSync(oauthLiveLeasePath, `${process.pid}\n`);
+}
+
+function releaseOAuthLiveLease() {
+  if (oauthLiveLeasePath) rmSync(oauthLiveLeasePath, { force: true });
+}
+
+// Mirror rotated credentials back to the source home so OAuth token
+// rotations that happened during the E2E run are not lost.
+function mirrorCredentialsBackToSource() {
+  if (!orgiiHome || !sourceOrgiiHome) return;
+  if (resolve(orgiiHome) === resolve(sourceOrgiiHome)) return;
+  const isolatedCreds = join(orgiiHome, "credentials.json");
+  const sourceCreds = join(sourceOrgiiHome, "credentials.json");
+  if (!existsSync(isolatedCreds)) return;
+  try {
+    const isolatedRaw = readFileSync(isolatedCreds, "utf8");
+    const sourceRaw = existsSync(sourceCreds)
+      ? readFileSync(sourceCreds, "utf8")
+      : "";
+    if (isolatedRaw !== sourceRaw) {
+      cpSync(isolatedCreds, sourceCreds, { force: true });
+      console.log(
+        `[wdio] mirror-back: credentials.json written back to ${sourceCreds}`
+      );
+    }
+  } catch (error) {
+    console.warn(
+      `[wdio] mirror-back: failed to write credentials back: ${error?.message ?? error}`
+    );
+  }
+}
 
 function runBestEffort(command, args, options = {}) {
   try {
@@ -848,6 +655,7 @@ export const config = {
   automationProtocol: "webdriver",
   injectGlobals: true,
   onPrepare() {
+    acquireOAuthLiveLease();
     if (reuseServices) return;
     assertManagedPortsAvailable();
     cleanWebDriverEnvironment();
@@ -876,14 +684,8 @@ export const config = {
     );
   },
   onComplete() {
-    // Always attempt to mirror rotated OAuth tokens back to the user's source
-    // ~/.orgii so the dev app keeps working after E2E runs. Safe no-op when
-    // iso === source or nothing rotated.
-    try {
-      mirrorRotatedOAuthTokensBack(sourceOrgiiHome, orgiiHome);
-    } catch (error) {
-      console.warn(`[wdio] mirror-back failed: ${error?.message ?? error}`);
-    }
+    mirrorCredentialsBackToSource();
+    releaseOAuthLiveLease();
     if (reuseServices) return;
     stopTauriWebDriver();
     stopFrontendServer();

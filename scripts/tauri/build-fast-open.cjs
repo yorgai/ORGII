@@ -4,6 +4,9 @@ const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { tauriFeatureString } = require("./features.cjs");
+const {
+  applyDefaultDiagnosticsEndpoint,
+} = require("./diagnostics-endpoint.cjs");
 
 const rootDir = path.join(__dirname, "..", "..");
 const includeSemantic = process.argv.includes("--semantic");
@@ -58,10 +61,12 @@ if (featureString.length > 0) {
 }
 args.push("--bundles", "app", "--no-sign", "--config", configOverride, "--", "--profile", "dev-build");
 
+const env = applyDefaultDiagnosticsEndpoint({ ...process.env });
 const tauriBin = path.join(rootDir, "node_modules/.bin/tauri");
 const result = spawnSync(tauriBin, args, {
   stdio: "inherit",
   cwd: rootDir,
+  env,
 });
 
 if (result.status !== 0) {

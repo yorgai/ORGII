@@ -157,7 +157,9 @@
     "moreSettings": "Więcej ustawień",
     "sort": "Sortuj",
     "openFolder": "Otwórz folder",
-    "addWorkspace": "Dodaj workspace"
+    "addWorkspace": "Dodaj workspace",
+    "skipThisVersion": "Pomiń tę wersję",
+    "later": "Później"
   },
   "refreshToast": {
     "successName": "Odświeżono: {{name}}",
@@ -2109,5 +2111,13 @@
     "closePreview": "Zamknij podgląd",
     "copiedToClipboard": "Obraz skopiowano do schowka",
     "previewAlt": "Podgląd"
+  },
+  "update": {
+    "downloading": "Pobieranie aktualizacji",
+    "installing": "Instalowanie aktualizacji",
+    "progressPercent": "{{percent}}%",
+    "downloadedOfTotal": "{{downloaded}} z {{total}}",
+    "preparingDownload": "Przygotowywanie pobierania…",
+    "downloadingAndInstalling": "Pobieranie i instalowanie aktualizacji (v{{version}})…"
   }
 }

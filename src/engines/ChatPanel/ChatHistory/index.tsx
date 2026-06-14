@@ -534,7 +534,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       atBottom,
       setAtBottom,
       setIsChatScrolledToBottom,
-      isWpGeneWorkingRef,
       isPendingCancelRef,
       visibleRangeEndRef,
       pinLastGroupRef,
@@ -542,6 +541,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       isContentOverflowingRef,
       activeSessionId: activeId,
       staticScrollerRef,
+      alwaysFollowTail: disableTailCollapse,
     });
 
   // Subagent panes pass `disableTailCollapse` because every paginated page

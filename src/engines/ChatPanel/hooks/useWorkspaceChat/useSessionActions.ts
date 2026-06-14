@@ -18,13 +18,7 @@ import {
   clearLiveStreamingForSession,
 } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { forceTurnIdle } from "@src/engines/SessionCore/control/turnLifecycle";
-import {
-  clearSessionAtom,
-  pendingSyntheticEventAtom,
-  sortedEventsAtom,
-} from "@src/engines/SessionCore/core/atoms";
-import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { pendingSyntheticEventAtom } from "@src/engines/SessionCore/core/atoms";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { clearSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
 import { createLogger } from "@src/hooks/logger";
@@ -35,12 +29,7 @@ import {
   sessionRolledBackAtom,
   sessionRuntimeStatusAtom,
   setSessionRuntimeStatusAtom,
-  stopEarlyCancelEpochAtom,
 } from "@src/store/session/cliSessionStatusAtom";
-import {
-  activeSessionIdAtom,
-  workstationActiveSessionIdAtom,
-} from "@src/store/session/viewAtom";
 
 import {
   markRestoredStopDraft,
@@ -60,88 +49,6 @@ function readImageDataUrls(value: unknown): string[] | undefined {
     (item): item is string => typeof item === "string"
   );
   return images.length > 0 ? images : undefined;
-}
-
-export function hasCurrentTurnProducedOutput(
-  events: readonly SessionEvent[],
-  sessionId: string
-): boolean {
-  // Walk backwards from the end to find the last user event for this session,
-  // then check if any non-user event follows it.
-  let lastUserIndex = -1;
-  for (let i = events.length - 1; i >= 0; i--) {
-    const event = events[i];
-    if (event.sessionId && event.sessionId !== sessionId) continue;
-    if (event.source === "user") {
-      lastUserIndex = i;
-      break;
-    }
-  }
-  if (lastUserIndex === -1) return false;
-  for (let i = lastUserIndex + 1; i < events.length; i++) {
-    const event = events[i];
-    if (event.sessionId && event.sessionId !== sessionId) continue;
-    if (event.source !== "user") return true;
-  }
-  return false;
-}
-
-/**
- * Returns true when the session has prior completed turns (user events
- * that precede the current/last user event). Used to distinguish
- * "first conversation" from "multi-turn with early cancel on the latest turn".
- */
-export function hasPriorTurns(
-  events: readonly SessionEvent[],
-  sessionId: string
-): boolean {
-  let userCount = 0;
-  for (let i = events.length - 1; i >= 0; i--) {
-    const event = events[i];
-    if (event.sessionId && event.sessionId !== sessionId) continue;
-    if (event.source === "user") {
-      userCount++;
-      if (userCount >= 2) return true;
-    }
-  }
-  return false;
-}
-
-function eventResultObject(event: SessionEvent): Record<string, unknown> {
-  if (!event.result) return {};
-  if (typeof event.result === "string") {
-    try {
-      const parsed = JSON.parse(event.result);
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? (parsed as Record<string, unknown>)
-        : {};
-    } catch {
-      return {};
-    }
-  }
-  return typeof event.result === "object" && !Array.isArray(event.result)
-    ? (event.result as Record<string, unknown>)
-    : {};
-}
-
-function isStopRollbackEligibleUserEvent(event: SessionEvent): boolean {
-  if (event.source !== "user") return false;
-  const result = eventResultObject(event);
-  const turnIntentSource = result.turnIntentSource;
-  return turnIntentSource === undefined || turnIntentSource === "user_submit";
-}
-
-export function getCurrentTurnUserEventId(
-  events: readonly SessionEvent[],
-  sessionId: string
-): string | null {
-  for (let i = events.length - 1; i >= 0; i--) {
-    const event = events[i];
-    if (event.sessionId && event.sessionId !== sessionId) continue;
-    if (isStopRollbackEligibleUserEvent(event)) return event.id;
-    if (event.source === "user") return null;
-  }
-  return null;
 }
 
 export function resolveRestorableUserMessage(options: {
@@ -240,60 +147,32 @@ export function useSessionActions(options: UseSessionActionsOptions) {
     beginStopBoundary(sessionId);
     setSessionRolledBack(false);
 
-    // When the current turn has not produced any assistant/tool output,
-    // discard the user message that started it so the chat rolls back cleanly.
-    const events = store.get(sortedEventsAtom);
-    const currentTurnHasOutput = hasCurrentTurnProducedOutput(
-      events,
-      sessionId
-    );
+    const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
+    const currentUserMessage = resolveRestorableUserMessage({
+      lastUserMessage: store.get(lastUserMessageAtom),
+      pendingDisplayText:
+        pendingSyntheticEvent?.source === "user"
+          ? pendingSyntheticEvent.displayText
+          : undefined,
+      pendingImages: pendingSyntheticEvent?.result?.images,
+    });
 
-    const stopUserEventId = getCurrentTurnUserEventId(events, sessionId);
-
-    // Only restore the draft when the turn has not produced output yet.
-    if (!currentTurnHasOutput) {
-      const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
-      const currentUserMessage = resolveRestorableUserMessage({
-        lastUserMessage: store.get(lastUserMessageAtom),
-        pendingDisplayText:
-          pendingSyntheticEvent?.source === "user"
-            ? pendingSyntheticEvent.displayText
-            : undefined,
-        pendingImages: pendingSyntheticEvent?.result?.images,
+    if (currentUserMessage) {
+      setRestoreToInput({
+        sessionId,
+        displayContent: currentUserMessage.displayContent,
+        imageDataUrls: currentUserMessage.imageDataUrls,
       });
-
-      if (currentUserMessage) {
-        setRestoreToInput({
-          sessionId,
-          displayContent: currentUserMessage.displayContent,
-          imageDataUrls: currentUserMessage.imageDataUrls,
-        });
-        markRestoredStopDraft({
-          sessionId,
-          displayContent: currentUserMessage.displayContent,
-          imageDataUrls: currentUserMessage.imageDataUrls,
-        });
-        suppressRestoredStopSubmit({
-          sessionId,
-          displayContent: currentUserMessage.displayContent,
-          imageDataUrls: currentUserMessage.imageDataUrls,
-        });
-      }
-
-      if (stopUserEventId) {
-        void eventStoreProxy.removeById(stopUserEventId, sessionId);
-      }
-
-      if (hasPriorTurns(events, sessionId)) {
-        // Multi-turn: signal ChatHistory to navigate to the previous page.
-        store.set(stopEarlyCancelEpochAtom, (prev) => prev + 1);
-      } else {
-        setSessionRolledBack(true);
-        // First conversation: clear the session so the creator shows.
-        store.set(clearSessionAtom);
-        store.set(activeSessionIdAtom, null);
-        store.set(workstationActiveSessionIdAtom, null);
-      }
+      markRestoredStopDraft({
+        sessionId,
+        displayContent: currentUserMessage.displayContent,
+        imageDataUrls: currentUserMessage.imageDataUrls,
+      });
+      suppressRestoredStopSubmit({
+        sessionId,
+        displayContent: currentUserMessage.displayContent,
+        imageDataUrls: currentUserMessage.imageDataUrls,
+      });
     }
 
     void (async () => {

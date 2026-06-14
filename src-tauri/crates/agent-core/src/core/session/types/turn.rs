@@ -45,6 +45,12 @@ pub enum DialogTurnState {
     Failed,
 }
 
+impl Default for DialogTurnState {
+    fn default() -> Self {
+        Self::Completed
+    }
+}
+
 // ============================================
 // TurnStats
 // ============================================

@@ -4,7 +4,14 @@
  * Memoized row renderer for spotlight items.
  * Handles icons, labels, status indicators, git badges, and keyboard shortcuts.
  */
-import { Check, CornerDownRight, Diff, Info, Lock } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  CornerDownRight,
+  Diff,
+  Info,
+  Lock,
+} from "lucide-react";
 import React, { memo, useCallback } from "react";
 
 import Checkbox from "@src/components/Checkbox";
@@ -12,6 +19,7 @@ import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import { KeyboardShortcut } from "@src/components/KeyboardShortcut";
 import Tooltip from "@src/components/Tooltip";
 
+import { ICONS } from "../config";
 import { SPOTLIGHT_TOKENS } from "../constants";
 import type { SpotlightItem, SpotlightItemData } from "../types";
 import { HighlightText } from "./highlightUtils";
@@ -178,6 +186,10 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
     const isHeader = data.isHeader;
     const isDisabled = !!data.disabled;
     const isDanger = !!data.isDanger;
+    const hasDisclosureChevron = !!data.showDisclosureChevron && !isDisabled;
+    const ArrowRightIcon = ICONS.arrowRight;
+    const DisclosureIcon =
+      data.disclosureIcon === "arrowRight" ? ArrowRightIcon : ChevronRight;
     const itemTextClassName = isDanger ? "text-danger-6" : "text-text-1";
     const iconTone =
       typeof data.iconTone === "string" ? data.iconTone : undefined;
@@ -256,7 +268,7 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
         data-source-account-id={sourceAccountId}
         data-source-model-type={sourceModelType}
         data-source-type={sourceType}
-        className={`spotlight-item group mx-2 mb-[3px] flex items-center gap-2.5 rounded-lg px-2 ${
+        className={`spotlight-item group relative mx-2 mb-[3px] flex items-center gap-2.5 rounded-lg px-2 ${
           isDisabled
             ? "cursor-not-allowed opacity-50"
             : `cursor-pointer ${isCurrentSelection ? "is-current-selection" : ""} ${isSelected ? "selected" : ""}`
@@ -456,6 +468,16 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
             item.type === "command" ||
             item.type === "hint") &&
             item.shortcut && <KeyboardShortcut shortcut={item.shortcut} />}
+
+          {hasDisclosureChevron && (
+            <span className="spotlight-disclosure-chevron pointer-events-none inline-flex h-5 shrink-0 items-center justify-center overflow-hidden text-primary-6">
+              <DisclosureIcon
+                size={15}
+                strokeWidth={2.25}
+                className="shrink-0"
+              />
+            </span>
+          )}
         </div>
       </div>
     );

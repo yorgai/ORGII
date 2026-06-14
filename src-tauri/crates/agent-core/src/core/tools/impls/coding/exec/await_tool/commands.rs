@@ -206,15 +206,25 @@ impl AwaitTool {
 
         let mut response = build_response(&snapshots, tail_count);
 
-        // Add a hint for single-handle pattern searches that timed out.
+        // Add a hint for single-handle searches that timed out.
         if handles.len() == 1 {
             let snap = &snapshots[0];
-            if let Some(pat) = pattern_str {
-                if snap.status == AWAIT_STATUS_RUNNING && snap.pattern_matched == Some(false) {
-                    response.push_str(&format!(
-                        "\nPattern \"{}\" not matched. To keep waiting:\n  await_output(command=\"wait_for\", handles=[\"{}\"], pattern=\"{}\", block_until_ms={})",
-                        pat, snap.handle, pat, block_ms * 2
-                    ));
+            if snap.status == AWAIT_STATUS_RUNNING {
+                // For subagents: tell the agent to stop polling and proceed.
+                // For shells with pattern: suggest continuing to wait.
+                let is_subagent = matches!(snap.kind, registry::JobKind::Subagent { .. });
+                if is_subagent {
+                    response.push_str(
+                        "\nThe subagent is still working. Do NOT call await_output again to poll — \
+                         proceed with other tasks. You will be notified automatically when it finishes.",
+                    );
+                } else if let Some(pat) = pattern_str {
+                    if snap.pattern_matched == Some(false) {
+                        response.push_str(&format!(
+                            "\nPattern \"{}\" not matched yet. The process is still running.",
+                            pat,
+                        ));
+                    }
                 }
             }
         }

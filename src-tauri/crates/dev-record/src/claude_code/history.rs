@@ -4,7 +4,7 @@
 //! converts them into ORGII's canonical `ActivityChunk` shape for read-only
 //! replay.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -14,12 +14,15 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::imported_history::{
-    self, ImportedHistoryRecentPath, ImportedHistoryRowInput, ImportedHistorySessionPage,
+    self, cache as imported_cache,
+    metadata::{ImportedHistoryCacheInput, ImportedHistoryDiscoveredRecord, SOURCE_CLAUDE_CODE},
+    paths as imported_paths, ImportedHistoryRecentPath, ImportedHistorySessionPage,
     ImportedHistorySessionRow, ImportedToolCall,
 };
 
 const CLAUDE_CODE_SESSION_PREFIX: &str = "claudecodeapp-";
 const CLAUDE_CODE_PROVIDER_SLUG: &str = "claudecode";
+const CLAUDE_CODE_METADATA_PARSER_VERSION: i64 = 1;
 
 pub type ClaudeCodeHistorySessionRow = ImportedHistorySessionRow;
 pub type ClaudeCodeHistorySessionPage = ImportedHistorySessionPage;
@@ -27,7 +30,13 @@ pub type ClaudeCodeRecentPath = ImportedHistoryRecentPath;
 
 #[derive(Debug, Clone)]
 struct ClaudeCodeHistoryMeta {
+    source_session_id: String,
     session_id: String,
+    source_path: String,
+    source_record_key: String,
+    source_mtime_ms: i64,
+    source_size_bytes: i64,
+    source_fingerprint: String,
     name: String,
     created_at_ms: i64,
     updated_at_ms: i64,
@@ -85,21 +94,13 @@ pub fn list_claude_code_history_sessions_paginated(
     limit: usize,
     offset: usize,
 ) -> Result<ClaudeCodeHistorySessionPage, String> {
-    let sessions = scan_claude_code_history_sessions()?;
-    let rows = sessions.into_iter().map(session_meta_to_row).collect();
-    Ok(imported_history::page_from_rows(rows, limit, offset))
+    sync_claude_code_history_cache()?;
+    imported_cache::query_imported_session_page(SOURCE_CLAUDE_CODE, limit, offset)
 }
 
 pub fn list_claude_code_recent_paths(limit: usize) -> Result<Vec<ClaudeCodeRecentPath>, String> {
-    let sessions = scan_claude_code_history_sessions()?;
-    let rows = sessions
-        .into_iter()
-        .map(session_meta_to_row)
-        .collect::<Vec<_>>();
-    Ok(imported_history::recent_paths_from_rows(&rows)
-        .into_iter()
-        .take(imported_history::effective_limit(limit))
-        .collect())
+    sync_claude_code_history_cache()?;
+    imported_cache::query_imported_recent_paths(SOURCE_CLAUDE_CODE, limit)
 }
 
 pub fn load_claude_code_history_for_session(
@@ -110,18 +111,51 @@ pub fn load_claude_code_history_for_session(
     load_claude_code_history_from_path(session_id, &path)
 }
 
-fn scan_claude_code_history_sessions() -> Result<Vec<ClaudeCodeHistoryMeta>, String> {
-    let sessions_dir = claude_projects_dir()?;
-    if !sessions_dir.is_dir() {
-        return Ok(Vec::new());
+fn sync_claude_code_history_cache() -> Result<(), String> {
+    let discovered = discover_claude_code_history_records()?;
+    let signatures = discovered
+        .iter()
+        .map(ImportedHistoryDiscoveredRecord::signature)
+        .collect::<Vec<_>>();
+    let changed = imported_cache::changed_records(SOURCE_CLAUDE_CODE, &discovered, |record| {
+        record.signature()
+    })?;
+    let mut inputs = Vec::new();
+    for record in changed {
+        if let Some(meta) = parse_claude_session_meta(record)? {
+            inputs.push(session_meta_to_cache_input(meta));
+        }
     }
+    imported_cache::sync_source_cache(
+        SOURCE_CLAUDE_CODE,
+        imported_cache::live_ids_from_signatures(&signatures),
+        inputs,
+    )
+}
 
+fn discover_claude_code_history_records() -> Result<Vec<ImportedHistoryDiscoveredRecord>, String> {
     let mut files = Vec::new();
-    collect_claude_session_files(&sessions_dir, &mut files)?;
+    for projects_dir in claude_projects_dirs()? {
+        if projects_dir.is_dir() {
+            collect_claude_session_files(&projects_dir, &mut files)?;
+        }
+    }
     files
         .into_iter()
-        .filter_map(|file| parse_claude_session_meta(&file.path, &file.file_stem).transpose())
-        .collect::<Result<Vec<_>, _>>()
+        .map(|file| {
+            let (source_mtime_ms, source_size_bytes) =
+                imported_paths::file_metadata_signature(&file.path, "Claude")?;
+            Ok(ImportedHistoryDiscoveredRecord {
+                source_session_id: file.file_stem.clone(),
+                source_path: file.path,
+                source_record_key: file.file_stem,
+                source_mtime_ms,
+                source_size_bytes,
+                source_fingerprint: String::new(),
+                parser_version: CLAUDE_CODE_METADATA_PARSER_VERSION,
+            })
+        })
+        .collect()
 }
 
 fn collect_claude_session_files(
@@ -150,12 +184,14 @@ fn collect_claude_session_files(
 }
 
 fn parse_claude_session_meta(
-    path: &Path,
-    file_stem: &str,
+    record: &ImportedHistoryDiscoveredRecord,
 ) -> Result<Option<ClaudeCodeHistoryMeta>, String> {
-    let mtime = file_mtime_ms(path)?;
-    let file = fs::File::open(path)
-        .map_err(|err| format!("Failed to open Claude history {}: {err}", path.display()))?;
+    let file = fs::File::open(&record.source_path).map_err(|err| {
+        format!(
+            "Failed to open Claude history {}: {err}",
+            record.source_path.display()
+        )
+    })?;
     let reader = BufReader::new(file);
 
     let mut created_at_ms = 0;
@@ -216,26 +252,32 @@ fn parse_claude_session_meta(
         }
     }
 
-    if created_at_ms == 0 && mtime == 0 {
+    if created_at_ms == 0 && record.source_mtime_ms == 0 {
         return Ok(None);
     }
 
     Ok(Some(ClaudeCodeHistoryMeta {
-        session_id: format!("{CLAUDE_CODE_SESSION_PREFIX}{file_stem}"),
+        source_session_id: record.source_session_id.clone(),
+        session_id: format!("{CLAUDE_CODE_SESSION_PREFIX}{}", record.source_session_id),
+        source_path: record.source_path.to_string_lossy().to_string(),
+        source_record_key: record.source_record_key.clone(),
+        source_mtime_ms: record.source_mtime_ms,
+        source_size_bytes: record.source_size_bytes,
+        source_fingerprint: record.source_fingerprint.clone(),
         name: if first_prompt.is_empty() {
-            file_stem.to_string()
+            record.source_record_key.clone()
         } else {
             first_prompt
         },
         created_at_ms: if created_at_ms > 0 {
             created_at_ms
         } else {
-            mtime
+            record.source_mtime_ms
         },
         updated_at_ms: if updated_at_ms > 0 {
             updated_at_ms
         } else {
-            mtime
+            record.source_mtime_ms
         },
         model,
         repo_path,
@@ -245,9 +287,17 @@ fn parse_claude_session_meta(
     }))
 }
 
-fn session_meta_to_row(meta: ClaudeCodeHistoryMeta) -> ClaudeCodeHistorySessionRow {
-    imported_history::row_from_input(ImportedHistoryRowInput {
+fn session_meta_to_cache_input(meta: ClaudeCodeHistoryMeta) -> ImportedHistoryCacheInput {
+    ImportedHistoryCacheInput {
+        source: SOURCE_CLAUDE_CODE,
+        source_session_id: meta.source_session_id,
         session_id: meta.session_id,
+        source_path: meta.source_path,
+        source_record_key: meta.source_record_key,
+        source_mtime_ms: meta.source_mtime_ms,
+        source_size_bytes: meta.source_size_bytes,
+        source_fingerprint: meta.source_fingerprint,
+        parser_version: CLAUDE_CODE_METADATA_PARSER_VERSION,
         name: meta.name,
         created_at_ms: meta.created_at_ms,
         updated_at_ms: meta.updated_at_ms,
@@ -256,7 +306,8 @@ fn session_meta_to_row(meta: ClaudeCodeHistoryMeta) -> ClaudeCodeHistorySessionR
         output_tokens: meta.output_tokens,
         repo_path: meta.repo_path,
         branch: meta.branch,
-    })
+        listable: true,
+    }
 }
 
 fn load_claude_code_history_from_path(
@@ -483,9 +534,19 @@ fn claude_file_stem_from_session_id(session_id: &str) -> Result<&str, String> {
 }
 
 fn resolve_claude_session_path(file_stem: &str) -> Result<PathBuf, String> {
-    let projects_dir = claude_projects_dir()?;
+    if let Some(path) = imported_cache::get_cached_source_path(SOURCE_CLAUDE_CODE, file_stem)? {
+        let path = PathBuf::from(path);
+        if path.is_file() {
+            return Ok(path);
+        }
+    }
+
     let mut files = Vec::new();
-    collect_claude_session_files(&projects_dir, &mut files)?;
+    for projects_dir in claude_projects_dirs()? {
+        if projects_dir.is_dir() {
+            collect_claude_session_files(&projects_dir, &mut files)?;
+        }
+    }
     files
         .into_iter()
         .find(|file| file.file_stem == file_stem)
@@ -493,20 +554,56 @@ fn resolve_claude_session_path(file_stem: &str) -> Result<PathBuf, String> {
         .ok_or_else(|| format!("Claude Code history file not found for session: {file_stem}"))
 }
 
-fn claude_projects_dir() -> Result<PathBuf, String> {
+fn claude_projects_dirs() -> Result<Vec<PathBuf>, String> {
     let home = dirs::home_dir().ok_or_else(|| "Home directory not found".to_string())?;
-    Ok(home.join(".claude").join("projects"))
+    Ok(claude_projects_dir_candidates(&home))
 }
 
-fn file_mtime_ms(path: &Path) -> Result<i64, String> {
-    Ok(path
-        .metadata()
-        .map_err(|err| format!("Failed to read Claude file metadata: {err}"))?
-        .modified()
-        .map_err(|err| format!("Failed to read Claude file modified time: {err}"))?
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|err| format!("Claude file modified time is before Unix epoch: {err}"))?
-        .as_millis() as i64)
+fn claude_projects_dir_candidates(home: &Path) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    roots.push(home.join(".claude"));
+
+    #[cfg(target_os = "macos")]
+    {
+        roots.push(
+            home.join("Library")
+                .join("Application Support")
+                .join("Claude Code"),
+        );
+        roots.push(
+            home.join("Library")
+                .join("Application Support")
+                .join("claude-code"),
+        );
+        roots.push(
+            home.join("Library")
+                .join("Application Support")
+                .join("Claude"),
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        roots.push(home.join("AppData").join("Roaming").join("Claude Code"));
+        roots.push(home.join("AppData").join("Roaming").join("claude-code"));
+        roots.push(home.join("AppData").join("Roaming").join("Claude"));
+        roots.push(home.join("AppData").join("Local").join("Claude Code"));
+        roots.push(home.join("AppData").join("Local").join("claude-code"));
+        roots.push(home.join("AppData").join("Local").join("Claude"));
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        roots.push(home.join(".config").join("claude-code"));
+        roots.push(home.join(".local").join("share").join("claude-code"));
+    }
+
+    let mut seen = HashSet::new();
+    roots
+        .into_iter()
+        .filter(|root| seen.insert(root.clone()))
+        .map(|root| root.join("projects"))
+        .collect()
 }
 
 #[cfg(test)]

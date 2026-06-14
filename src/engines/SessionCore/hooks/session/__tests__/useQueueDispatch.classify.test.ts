@@ -8,9 +8,26 @@
  * drain must park ("dead") instead of dispatching; only explicit Send Now
  * may target a terminal session (which lazily re-initializes it).
  */
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { classifyBackendSessionStatus } from "../useQueueDispatch";
+let classifyBackendSessionStatus: typeof import("../useQueueDispatch").classifyBackendSessionStatus;
+
+beforeAll(async () => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+  ({ classifyBackendSessionStatus } = await import("../useQueueDispatch"));
+});
 
 describe("classifyBackendSessionStatus", () => {
   it("classifies executing statuses as busy", () => {

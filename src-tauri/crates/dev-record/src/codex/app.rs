@@ -5,7 +5,7 @@
 //! imported history only: ORGII does not own the Codex process or write back to
 //! Codex's local files.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -15,12 +15,15 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::imported_history::{
-    self, ImportedHistoryRecentPath, ImportedHistoryRowInput, ImportedHistorySessionPage,
+    self, cache as imported_cache,
+    metadata::{ImportedHistoryCacheInput, ImportedHistoryDiscoveredRecord, SOURCE_CODEX_APP},
+    paths as imported_paths, ImportedHistoryRecentPath, ImportedHistorySessionPage,
     ImportedHistorySessionRow, ImportedToolCall,
 };
 
 const CODEX_APP_SESSION_PREFIX: &str = "codexapp-";
 const CODEX_PROVIDER_SLUG: &str = "codex";
+const CODEX_APP_METADATA_PARSER_VERSION: i64 = 1;
 
 pub type CodexAppSessionRow = ImportedHistorySessionRow;
 pub type CodexAppSessionPage = ImportedHistorySessionPage;
@@ -28,7 +31,13 @@ pub type CodexAppRecentPath = ImportedHistoryRecentPath;
 
 #[derive(Debug, Clone)]
 struct CodexAppSessionMeta {
+    source_session_id: String,
     session_id: String,
+    source_path: String,
+    source_record_key: String,
+    source_mtime_ms: i64,
+    source_size_bytes: i64,
+    source_fingerprint: String,
     name: String,
     created_at_ms: i64,
     updated_at_ms: i64,
@@ -58,21 +67,13 @@ pub fn list_codex_app_sessions_paginated(
     limit: usize,
     offset: usize,
 ) -> Result<CodexAppSessionPage, String> {
-    let sessions = scan_codex_app_sessions()?;
-    let rows = sessions.into_iter().map(session_meta_to_row).collect();
-    Ok(imported_history::page_from_rows(rows, limit, offset))
+    sync_codex_app_cache()?;
+    imported_cache::query_imported_session_page(SOURCE_CODEX_APP, limit, offset)
 }
 
 pub fn list_codex_app_recent_paths(limit: usize) -> Result<Vec<CodexAppRecentPath>, String> {
-    let sessions = scan_codex_app_sessions()?;
-    let rows = sessions
-        .into_iter()
-        .map(session_meta_to_row)
-        .collect::<Vec<_>>();
-    Ok(imported_history::recent_paths_from_rows(&rows)
-        .into_iter()
-        .take(imported_history::effective_limit(limit))
-        .collect())
+    sync_codex_app_cache()?;
+    imported_cache::query_imported_recent_paths(SOURCE_CODEX_APP, limit)
 }
 
 pub fn load_codex_app_for_session(session_id: &str) -> Result<Vec<ActivityChunk>, String> {
@@ -81,19 +82,55 @@ pub fn load_codex_app_for_session(session_id: &str) -> Result<Vec<ActivityChunk>
     load_codex_app_from_path(session_id, &path)
 }
 
-fn scan_codex_app_sessions() -> Result<Vec<CodexAppSessionMeta>, String> {
-    let sessions_dir = codex_sessions_dir()?;
-    if !sessions_dir.is_dir() {
-        return Ok(Vec::new());
+fn sync_codex_app_cache() -> Result<(), String> {
+    let discovered = discover_codex_app_records()?;
+    let signatures = discovered
+        .iter()
+        .map(ImportedHistoryDiscoveredRecord::signature)
+        .collect::<Vec<_>>();
+    let changed = imported_cache::changed_records(SOURCE_CODEX_APP, &discovered, |record| {
+        record.signature()
+    })?;
+    let mut inputs = Vec::new();
+    for record in changed {
+        if let Some(meta) = parse_codex_session_meta(record)? {
+            inputs.push(session_meta_to_cache_input(meta));
+        }
     }
+    imported_cache::sync_source_cache(
+        SOURCE_CODEX_APP,
+        imported_cache::live_ids_from_signatures(&signatures),
+        inputs,
+    )
+}
 
+fn discover_codex_app_records() -> Result<Vec<ImportedHistoryDiscoveredRecord>, String> {
     let mut sessions = Vec::new();
-    collect_codex_session_files(&sessions_dir, &mut sessions)?;
-    let parsed = sessions
+    for sessions_dir in codex_sessions_dirs()? {
+        if sessions_dir.is_dir() {
+            collect_codex_session_files(&sessions_dir, &mut sessions)?;
+        }
+    }
+    sessions
         .into_iter()
-        .filter_map(|path| parse_codex_session_meta(&path).transpose())
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(parsed)
+        .filter_map(|path| {
+            let file_stem = path.file_stem()?.to_str()?.to_string();
+            Some((path, file_stem))
+        })
+        .map(|(path, file_stem)| {
+            let (source_mtime_ms, source_size_bytes) =
+                imported_paths::file_metadata_signature(&path, "Codex")?;
+            Ok(ImportedHistoryDiscoveredRecord {
+                source_session_id: file_stem.clone(),
+                source_path: path,
+                source_record_key: file_stem,
+                source_mtime_ms,
+                source_size_bytes,
+                source_fingerprint: String::new(),
+                parser_version: CODEX_APP_METADATA_PARSER_VERSION,
+            })
+        })
+        .collect()
 }
 
 fn collect_codex_session_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
@@ -112,22 +149,15 @@ fn collect_codex_session_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(),
     Ok(())
 }
 
-fn parse_codex_session_meta(path: &Path) -> Result<Option<CodexAppSessionMeta>, String> {
-    let file_stem = path
-        .file_stem()
-        .and_then(|value| value.to_str())
-        .ok_or_else(|| {
-            format!(
-                "Codex session path has no valid file stem: {}",
-                path.display()
-            )
-        })?
-        .to_string();
-    let session_id = format!("{CODEX_APP_SESSION_PREFIX}{file_stem}");
-    let mtime = file_mtime_ms(path)?;
-
-    let file = fs::File::open(path)
-        .map_err(|err| format!("Failed to open Codex history {}: {err}", path.display()))?;
+fn parse_codex_session_meta(
+    record: &ImportedHistoryDiscoveredRecord,
+) -> Result<Option<CodexAppSessionMeta>, String> {
+    let file = fs::File::open(&record.source_path).map_err(|err| {
+        format!(
+            "Failed to open Codex history {}: {err}",
+            record.source_path.display()
+        )
+    })?;
     let reader = BufReader::new(file);
 
     let mut created_at_ms = 0;
@@ -191,27 +221,33 @@ fn parse_codex_session_meta(path: &Path) -> Result<Option<CodexAppSessionMeta>, 
         }
     }
 
-    if created_at_ms == 0 && mtime == 0 {
+    if created_at_ms == 0 && record.source_mtime_ms == 0 {
         return Ok(None);
     }
 
     let name = if first_prompt.is_empty() {
-        file_stem.clone()
+        record.source_record_key.clone()
     } else {
         first_prompt
     };
     Ok(Some(CodexAppSessionMeta {
-        session_id,
+        source_session_id: record.source_session_id.clone(),
+        session_id: format!("{CODEX_APP_SESSION_PREFIX}{}", record.source_session_id),
+        source_path: record.source_path.to_string_lossy().to_string(),
+        source_record_key: record.source_record_key.clone(),
+        source_mtime_ms: record.source_mtime_ms,
+        source_size_bytes: record.source_size_bytes,
+        source_fingerprint: record.source_fingerprint.clone(),
         name,
         created_at_ms: if created_at_ms > 0 {
             created_at_ms
         } else {
-            mtime
+            record.source_mtime_ms
         },
         updated_at_ms: if updated_at_ms > 0 {
             updated_at_ms
         } else {
-            mtime
+            record.source_mtime_ms
         },
         model,
         repo_path,
@@ -220,9 +256,17 @@ fn parse_codex_session_meta(path: &Path) -> Result<Option<CodexAppSessionMeta>, 
     }))
 }
 
-fn session_meta_to_row(meta: CodexAppSessionMeta) -> CodexAppSessionRow {
-    imported_history::row_from_input(ImportedHistoryRowInput {
+fn session_meta_to_cache_input(meta: CodexAppSessionMeta) -> ImportedHistoryCacheInput {
+    ImportedHistoryCacheInput {
+        source: SOURCE_CODEX_APP,
+        source_session_id: meta.source_session_id,
         session_id: meta.session_id,
+        source_path: meta.source_path,
+        source_record_key: meta.source_record_key,
+        source_mtime_ms: meta.source_mtime_ms,
+        source_size_bytes: meta.source_size_bytes,
+        source_fingerprint: meta.source_fingerprint,
+        parser_version: CODEX_APP_METADATA_PARSER_VERSION,
         name: meta.name,
         created_at_ms: meta.created_at_ms,
         updated_at_ms: meta.updated_at_ms,
@@ -231,7 +275,8 @@ fn session_meta_to_row(meta: CodexAppSessionMeta) -> CodexAppSessionRow {
         output_tokens: meta.output_tokens,
         repo_path: meta.repo_path,
         branch: None,
-    })
+        listable: true,
+    }
 }
 
 fn load_codex_app_from_path(session_id: &str, path: &Path) -> Result<Vec<ActivityChunk>, String> {
@@ -506,29 +551,68 @@ fn codex_file_stem_from_session_id(session_id: &str) -> Result<&str, String> {
 }
 
 fn resolve_codex_session_path(file_stem: &str) -> Result<PathBuf, String> {
-    let sessions_dir = codex_sessions_dir()?;
+    if let Some(path) = imported_cache::get_cached_source_path(SOURCE_CODEX_APP, file_stem)? {
+        let path = PathBuf::from(path);
+        if path.is_file() {
+            return Ok(path);
+        }
+    }
+
     let mut files = Vec::new();
-    collect_codex_session_files(&sessions_dir, &mut files)?;
+    for sessions_dir in codex_sessions_dirs()? {
+        if sessions_dir.is_dir() {
+            collect_codex_session_files(&sessions_dir, &mut files)?;
+        }
+    }
     files
         .into_iter()
         .find(|path| path.file_stem().and_then(|value| value.to_str()) == Some(file_stem))
         .ok_or_else(|| format!("Codex app file not found for session: {file_stem}"))
 }
 
-fn codex_sessions_dir() -> Result<PathBuf, String> {
+fn codex_sessions_dirs() -> Result<Vec<PathBuf>, String> {
     let home = dirs::home_dir().ok_or_else(|| "Home directory not found".to_string())?;
-    Ok(home.join(".codex").join("sessions"))
+    Ok(codex_sessions_dir_candidates(&home))
 }
 
-fn file_mtime_ms(path: &Path) -> Result<i64, String> {
-    Ok(path
-        .metadata()
-        .map_err(|err| format!("Failed to read Codex file metadata: {err}"))?
-        .modified()
-        .map_err(|err| format!("Failed to read Codex file modified time: {err}"))?
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|err| format!("Codex file modified time is before Unix epoch: {err}"))?
-        .as_millis() as i64)
+fn codex_sessions_dir_candidates(home: &Path) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    roots.push(home.join(".codex"));
+
+    #[cfg(target_os = "macos")]
+    {
+        roots.push(
+            home.join("Library")
+                .join("Application Support")
+                .join("Codex"),
+        );
+        roots.push(
+            home.join("Library")
+                .join("Application Support")
+                .join("codex"),
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        roots.push(home.join("AppData").join("Roaming").join("Codex"));
+        roots.push(home.join("AppData").join("Roaming").join("codex"));
+        roots.push(home.join("AppData").join("Local").join("Codex"));
+        roots.push(home.join("AppData").join("Local").join("codex"));
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        roots.push(home.join(".config").join("codex"));
+        roots.push(home.join(".local").join("share").join("codex"));
+    }
+
+    let mut seen = HashSet::new();
+    roots
+        .into_iter()
+        .filter(|root| seen.insert(root.clone()))
+        .map(|root| root.join("sessions"))
+        .collect()
 }
 
 #[cfg(test)]

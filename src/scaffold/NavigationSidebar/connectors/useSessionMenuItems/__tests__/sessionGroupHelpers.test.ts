@@ -10,6 +10,9 @@ describe("groupKeyToWireCategory", () => {
     expect(groupKeyToWireCategory("external_history:claude_code")).toBe(
       "external_history:claude_code"
     );
+    expect(groupKeyToWireCategory("external_history:opencode")).toBe(
+      "external_history:opencode"
+    );
     expect(groupKeyToWireCategory("external_history:windsurf")).toBe(
       "external_history:windsurf"
     );

@@ -75,6 +75,9 @@ export function buildActionItems(
     label: resolveActionLabel(action, translate),
     icon: action.icon,
     type: "action" as const,
+    data: {
+      showDisclosureChevron: action.requiredParams.length > 0,
+    },
     action: () => onSelectAction(action),
   }));
 }
@@ -90,6 +93,9 @@ export function buildRepoActionItems(
     label: resolveActionLabel(action, translate),
     icon: action.icon,
     type: "action" as const,
+    data: {
+      showDisclosureChevron: action.requiredParams.length > 0,
+    },
     action: () => onSelectAction(action),
   }));
 }
@@ -105,6 +111,9 @@ export function buildStaticActionItems(
     icon: action.icon,
     type: "action" as const,
     shortcut: action.shortcut,
+    data: {
+      showDisclosureChevron: action.opensSecondLevel === true,
+    },
     action: () => onSelectStaticAction(action),
   }));
 }
@@ -181,6 +190,7 @@ function buildEditorActionItem(
     shortcut: action.shortcut,
     data: {
       prefix: action.prefix,
+      showDisclosureChevron: true,
     },
     action: () => onSelectEditorAction(action.id),
   };
@@ -224,11 +234,6 @@ export function buildGroupedDefaultItems(
     );
   }
 
-  items.push(
-    buildSectionHeader("view", translate("selectors.spotlight.groups.view")),
-    ...namespaceSectionItems("view", viewItems)
-  );
-
   if (navActionItems.length > 0) {
     items.push(
       buildSectionHeader(
@@ -238,6 +243,11 @@ export function buildGroupedDefaultItems(
       ...namespaceSectionItems("actions", navActionItems)
     );
   }
+
+  items.push(
+    buildSectionHeader("view", translate("selectors.spotlight.groups.view")),
+    ...namespaceSectionItems("view", viewItems)
+  );
 
   return items;
 }
@@ -275,6 +285,8 @@ export function buildNavDestinationItem(
     type: "page" as const,
     data: {
       rightLabel: description || dest.path,
+      showDisclosureChevron: true,
+      disclosureIcon: "arrowRight",
     },
     action: () => onSelectPath(dest.path, label, dest.icon),
   };

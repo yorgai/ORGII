@@ -158,6 +158,9 @@ function buildStaticMatches(
         icon: action.icon,
         type: "action" as const,
         shortcut: "shortcut" in action ? action.shortcut : undefined,
+        data: {
+          showDisclosureChevron: action.opensSecondLevel === true,
+        },
         action: () => onSelectStaticAction(action),
       });
     }
@@ -190,6 +193,9 @@ function buildDynamicActionMatches(
         label,
         icon: action.icon,
         type: "action" as const,
+        data: {
+          showDisclosureChevron: action.requiredParams.length > 0,
+        },
         action: () => onSelectAction(action),
       });
     }

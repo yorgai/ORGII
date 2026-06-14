@@ -157,7 +157,9 @@
     "moreSettings": "Больше настроек",
     "sort": "Сортировать",
     "openFolder": "Открыть папку",
-    "addWorkspace": "Добавить workspace"
+    "addWorkspace": "Добавить workspace",
+    "skipThisVersion": "Пропустить эту версию",
+    "later": "Позже"
   },
   "refreshToast": {
     "successName": "{{name}} обновлено",
@@ -2109,5 +2111,13 @@
     "closePreview": "Закрыть предпросмотр",
     "copiedToClipboard": "Изображение скопировано в буфер обмена",
     "previewAlt": "Предпросмотр"
+  },
+  "update": {
+    "downloading": "Загрузка обновления",
+    "installing": "Установка обновления",
+    "progressPercent": "{{percent}} %",
+    "downloadedOfTotal": "{{downloaded}} из {{total}}",
+    "preparingDownload": "Подготовка загрузки…",
+    "downloadingAndInstalling": "Загрузка и установка обновления (v{{version}})…"
   }
 }

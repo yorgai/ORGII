@@ -9,9 +9,9 @@
  *   - "now" priority (Send Now / post-Stop explicit submit):
  *       · session idle      → dispatch immediately.
  *       · session active    → request ONE timeline-boundary interrupt for it,
- *                             then dispatch when the provider terminal lands.
- *       · session stopping  → wait for the terminal (bounded by the FSM
- *                             stopping dead-man).
+ *                             then dispatch immediately.
+ *       · session stopping  → dispatch immediately; the in-flight interrupt
+ *                             owns old-turn cancellation.
  *   - "next" priority (natural follow-ups):
  *       · dispatched FIFO, only when the session FSM is idle and the message
  *         is not held (`requiresExplicitDispatch` — set by a user Stop).
@@ -279,8 +279,12 @@ export function useQueueDispatch(): void {
             turnIntentId: msg.turnIntentId,
             turnIntentSource,
           });
-          // Backend accepted the message — confirm the turn as running.
-          confirmTurnRunning(sessionId);
+          // Rust-agent sends enqueue and return before the provider starts.
+          // For Force Send, keep the FSM in dispatching until a real running
+          // signal arrives so the interrupted turn's late terminal is ignored.
+          if (turnIntentSource !== "force_send") {
+            confirmTurnRunning(sessionId);
+          }
           // Bump activity timestamps so the just-flushed session surfaces in
           // "recent activity" views without waiting for the next refresh.
           markSessionActive(sessionId);
@@ -350,26 +354,20 @@ export function useQueueDispatch(): void {
     const explicitMsg = candidates.find((msg) => msg.priority === "now");
     if (explicitMsg) {
       const phase = getTurnPhase(explicitMsg.sessionId);
-      if (phase === "idle") {
-        dispatchLockRef.current = true;
-        inFlightMessageIdRef.current = explicitMsg.id;
-        dispatchMessage(explicitMsg, () => {
-          if (inFlightMessageIdRef.current === explicitMsg.id) {
-            inFlightMessageIdRef.current = null;
-          }
-          dispatchLockRef.current = false;
-          tryDispatchNextRef.current();
-        });
-        return;
-      }
       if (
-        (phase === "working" || phase === "dispatching") &&
+        phase !== "idle" &&
         !interruptRequestedByMessageIdRef.current.has(explicitMsg.id)
       ) {
-        // Send Now against an active turn: interrupt it once. The provider's
-        // cancelled terminal flips the FSM idle, which re-triggers this pass
-        // and dispatches the message above.
         interruptRequestedByMessageIdRef.current.add(explicitMsg.id);
+        // ORDERING INVARIANT: cancelTurnForTimelineBoundary's sync preamble
+        // (beginTimelineBoundary → beginTurnStopping) MUST run before the
+        // dispatchMessage call below (which calls beginTurnDispatch). Because
+        // the cancel is fire-and-forget (void, not awaited), the sync part
+        // runs immediately in the current microtask. beginTurnDispatch then
+        // overrides the FSM phase to "dispatching" unconditionally. If this
+        // call were ever awaited, beginTurnDispatch would run first and the
+        // subsequent beginTurnStopping would transition dispatching→stopping,
+        // deadlocking the new turn.
         void cancelTurnForTimelineBoundary(
           explicitMsg.sessionId,
           "force-send"
@@ -377,7 +375,15 @@ export function useQueueDispatch(): void {
           log.warn("[useQueueDispatch] force-send interrupt failed:", error);
         });
       }
-      // stopping (or interrupt already requested): wait for the terminal.
+      dispatchLockRef.current = true;
+      inFlightMessageIdRef.current = explicitMsg.id;
+      dispatchMessage(explicitMsg, () => {
+        if (inFlightMessageIdRef.current === explicitMsg.id) {
+          inFlightMessageIdRef.current = null;
+        }
+        dispatchLockRef.current = false;
+        tryDispatchNextRef.current();
+      });
       return;
     }
 

@@ -7,6 +7,9 @@
 const { spawnSync } = require("child_process");
 const path = require("path");
 const { tauriFeatureString } = require("./features.cjs");
+const {
+  applyDefaultDiagnosticsEndpoint,
+} = require("./diagnostics-endpoint.cjs");
 
 require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env") });
 
@@ -31,6 +34,7 @@ const result = spawnSync("tauri", args, {
   stdio: "inherit",
   shell: true,
   cwd: rootDir,
+  env: applyDefaultDiagnosticsEndpoint({ ...process.env }),
 });
 
 process.exit(result.status ?? 1);

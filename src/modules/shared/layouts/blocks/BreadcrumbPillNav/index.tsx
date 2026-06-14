@@ -93,7 +93,7 @@ export const BreadcrumbPillNavTrigger = forwardRef<
     ref
   ) => {
     const textClass = isOpen
-      ? "text-primary-6"
+      ? "font-medium text-primary-6"
       : variant === "primary"
         ? "font-medium text-text-1 hover:text-text-2"
         : "text-text-2";

@@ -27,6 +27,9 @@ const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { tauriFeatureString } = require("./features.cjs");
+const {
+  applyDefaultDiagnosticsEndpoint,
+} = require("./diagnostics-endpoint.cjs");
 
 const rootDir = path.join(__dirname, "..", "..");
 const rawArgs = process.argv.slice(2);
@@ -135,6 +138,7 @@ for (const key of [
   delete env[key];
 }
 env.CODESIGN_IDENTITY = "";
+applyDefaultDiagnosticsEndpoint(env);
 
 // ─── phase 1: webpack + cargo in parallel ─────────────────────────────────────
 

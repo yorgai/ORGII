@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
 import { SESSION_TARGET_KIND } from "@src/store/session";
 
@@ -126,6 +129,19 @@ describe("launchPayload", () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+
+  it("does not block launched-session navigation on workspace-open side effects", () => {
+    const launchHookPath = fileURLToPath(
+      new URL(
+        "../useSessionCreator/useSessionLaunch/index.tsx",
+        import.meta.url
+      )
+    );
+    const source = readFileSync(launchHookPath, "utf8");
+
+    expect(source).toContain("void emitOpenWorkspace(");
+    expect(source).not.toContain("await emitOpenWorkspace(");
   });
 });
 

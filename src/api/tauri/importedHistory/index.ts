@@ -10,6 +10,14 @@ import type {
 } from "../claudeCodeHistory";
 import { codexAppChunks, codexAppListSessions } from "../codexApp";
 import type { CodexAppSessionPage, CodexAppSessionRow } from "../codexApp";
+import {
+  opencodeHistoryChunks,
+  opencodeHistoryListSessions,
+} from "../opencodeHistory";
+import type {
+  OpenCodeHistorySessionPage,
+  OpenCodeHistorySessionRow,
+} from "../opencodeHistory";
 import type { DispatchCategory } from "../session";
 import {
   windsurfHistoryChunks,
@@ -20,7 +28,11 @@ import type {
   WindsurfHistorySessionRow,
 } from "../windsurfHistory";
 
-export type ImportedHistorySourceId = "codex_app" | "claude_code" | "windsurf";
+export type ImportedHistorySourceId =
+  | "codex_app"
+  | "claude_code"
+  | "opencode"
+  | "windsurf";
 
 export type ImportedHistoryListCategory =
   `external_history:${ImportedHistorySourceId}`;
@@ -67,6 +79,7 @@ function asImportedPage(
   page:
     | CodexAppSessionPage
     | ClaudeCodeHistorySessionPage
+    | OpenCodeHistorySessionPage
     | WindsurfHistorySessionPage
 ): ImportedHistorySessionPage {
   return page;
@@ -98,6 +111,19 @@ export const IMPORTED_HISTORY_SOURCES: readonly ImportedHistorySource[] = [
       return asImportedPage(await claudeCodeHistoryListSessions(args));
     },
     loadChunks: claudeCodeHistoryChunks,
+  },
+  {
+    sourceId: "opencode",
+    listCategory: "external_history:opencode",
+    dispatchCategory: "external_history",
+    prefix: "opencodeapp-",
+    iconId: "opencode",
+    displayName: "OpenCode",
+    groupLabel: "OpenCode",
+    async listSessions(args) {
+      return asImportedPage(await opencodeHistoryListSessions(args));
+    },
+    loadChunks: opencodeHistoryChunks,
   },
   {
     sourceId: "windsurf",
@@ -149,5 +175,6 @@ export function isImportedHistorySourceSession(
 export type {
   CodexAppSessionRow,
   ClaudeCodeHistorySessionRow,
+  OpenCodeHistorySessionRow,
   WindsurfHistorySessionRow,
 };

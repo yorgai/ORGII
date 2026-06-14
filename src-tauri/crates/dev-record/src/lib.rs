@@ -15,6 +15,7 @@
 //! - `cursor/` — Cursor IDE session cache + bubble history reader
 //! - `claude_code/` — Claude Code session cache + JSONL history reader
 //! - `codex/` — Codex app JSONL history reader
+//! - `opencode/` — OpenCode SQLite history reader
 //! - `windsurf/` — Windsurf vscdb history reader
 //!
 //! ## Shared modules
@@ -39,6 +40,7 @@ pub mod heartbeat_import;
 pub mod ide_attribution;
 pub mod ide_detector;
 pub mod imported_history;
+pub mod opencode;
 pub mod queries;
 pub mod retroactive;
 pub mod schema;

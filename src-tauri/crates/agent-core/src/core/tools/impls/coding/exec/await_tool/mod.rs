@@ -102,7 +102,10 @@ impl Tool for AwaitTool {
         - { count, items: [{ handle, jobKind, status, waitedMs, patternMatched, exitCode, killed }] }\n\n\
         Single-handle calls still emit items: [one] so the response shape is uniform. \
         The body includes one `--- [<handle>] last N lines ---` block per handle.\n\n\
-        For `list`, returns a table of handles with kind, status, age, and label."
+        For `list`, returns a table of handles with kind, status, age, and label.\n\n\
+        IMPORTANT: Do NOT call this tool repeatedly to poll a running subagent. \
+        The system injects a background-jobs reminder into every turn automatically. \
+        If a subagent is still running after wait_for returns, proceed with other tasks."
     }
 
     fn parameters(&self) -> Value {

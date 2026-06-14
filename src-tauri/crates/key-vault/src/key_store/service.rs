@@ -11,7 +11,7 @@ use core_types::providers::{CODEX_ID_TOKEN_ENV_KEY, CODEX_REFRESH_TOKEN_ENV_KEY}
 use super::store::KeyStore;
 use super::types::{AuthMethod, HealthStatus, ModelKey, ModelType};
 
-const CLAUDE_CODE_TOKEN_URL: &str = "https://console.anthropic.com/v1/oauth/token";
+const CLAUDE_CODE_TOKEN_URL: &str = "https://platform.claude.com/v1/oauth/token";
 const CLAUDE_CODE_REFRESH_TOKEN_URL_OVERRIDE_ENV: &str = "CLAUDE_CODE_REFRESH_TOKEN_URL_OVERRIDE";
 const CLAUDE_CODE_CLIENT_ID: &str = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 const CLAUDE_CODE_REFRESH_TOKEN_ENV: &str = "CLAUDE_CODE_REFRESH_TOKEN";
@@ -650,6 +650,8 @@ impl KeyService {
         key_id: &str,
         rejected_access_token: &str,
     ) -> Result<ModelKey, String> {
+        crate::e2e_guard::ensure_oauth_refresh_allowed()?;
+
         let refresh_lock = self.oauth_refresh_lock_for_key(key_id)?;
         let _refresh_guard = refresh_lock.lock().await;
 
@@ -937,6 +939,8 @@ impl KeyService {
         key_id: &str,
         rejected_access_token: &str,
     ) -> Result<ModelKey, String> {
+        crate::e2e_guard::ensure_oauth_refresh_allowed()?;
+
         let refresh_lock = self.oauth_refresh_lock_for_key(key_id)?;
         let _refresh_guard = refresh_lock.lock().await;
 
@@ -1114,6 +1118,8 @@ impl KeyService {
         key_id: &str,
         rejected_access_token: Option<&str>,
     ) -> Result<ModelKey, String> {
+        crate::e2e_guard::ensure_oauth_refresh_allowed()?;
+
         let refresh_lock = self.oauth_refresh_lock_for_key(key_id)?;
         let _refresh_guard = refresh_lock.lock().await;
 

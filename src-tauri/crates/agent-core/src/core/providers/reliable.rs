@@ -190,7 +190,8 @@ impl ReliableProvider {
                         && (lower.contains("model is not supported")
                             || lower.contains("model_not_found")
                             || lower.contains("unsupported model")
-                            || lower.contains("invalid model")))
+                            || lower.contains("invalid model")
+                            || lower.contains("thinking may not be enabled")))
             }
             // Retryable: server told us to back off, generic transient
             // errors. The frontend / backoff loop handles these.

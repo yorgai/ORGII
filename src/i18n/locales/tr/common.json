@@ -157,7 +157,9 @@
     "moreSettings": "Daha fazla ayar",
     "sort": "Sırala",
     "openFolder": "Klasör aç",
-    "addWorkspace": "Workspace ekle"
+    "addWorkspace": "Workspace ekle",
+    "skipThisVersion": "Bu sürümü atla",
+    "later": "Daha sonra"
   },
   "refreshToast": {
     "successName": "{{name}} yenilendi",
@@ -2114,5 +2116,13 @@
     "closePreview": "Önizlemeyi kapat",
     "copiedToClipboard": "Görsel panoya kopyalandı",
     "previewAlt": "Önizleme"
+  },
+  "update": {
+    "downloading": "Güncelleme indiriliyor",
+    "installing": "Güncelleme yükleniyor",
+    "progressPercent": "%{{percent}}",
+    "downloadedOfTotal": "{{downloaded}} / {{total}}",
+    "preparingDownload": "İndirme hazırlanıyor…",
+    "downloadingAndInstalling": "Güncelleme indiriliyor ve yükleniyor (v{{version}})…"
   }
 }

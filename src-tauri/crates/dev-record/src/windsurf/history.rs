@@ -5,7 +5,7 @@
 //! replay.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use core_types::activity::ActivityChunk;
 use rusqlite::{params_from_iter, Connection, OpenFlags, OptionalExtension};
@@ -13,8 +13,10 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::imported_history::{
-    self, ImportedHistoryRowInput, ImportedHistorySessionPage, ImportedHistorySessionRow,
-    ImportedToolCall,
+    self, cache as imported_cache,
+    metadata::{ImportedHistoryCacheInput, SOURCE_WINDSURF},
+    paths as imported_paths, ImportedHistoryRecentPath, ImportedHistorySessionPage,
+    ImportedHistorySessionRow, ImportedToolCall,
 };
 
 const WINDSURF_SESSION_PREFIX: &str = "windsurfapp-";
@@ -22,9 +24,11 @@ const WINDSURF_PROVIDER_SLUG: &str = "windsurf";
 const SQLITE_IN_QUERY_CHUNK_SIZE: usize = 500;
 const BUBBLE_TYPE_USER: i64 = 1;
 const BUBBLE_TYPE_ASSISTANT: i64 = 2;
+const WINDSURF_METADATA_PARSER_VERSION: i64 = 1;
 
 pub type WindsurfHistorySessionRow = ImportedHistorySessionRow;
 pub type WindsurfHistorySessionPage = ImportedHistorySessionPage;
+pub type WindsurfRecentPath = ImportedHistoryRecentPath;
 
 #[derive(Debug, Clone)]
 struct OrderedBubble {
@@ -117,32 +121,65 @@ struct WorkspaceMetadata {
     branch: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct WindsurfComposerMeta {
+    source_session_id: String,
+    source_path: String,
+    source_record_key: String,
+    source_mtime_ms: i64,
+    source_size_bytes: i64,
+    source_fingerprint: String,
+    composer: RawComposerData,
+    listable: bool,
+}
+
 pub fn list_windsurf_history_sessions_paginated(
     limit: usize,
     offset: usize,
 ) -> Result<WindsurfHistorySessionPage, String> {
-    let Some(conn) = open_windsurf_db() else {
-        return Ok(ImportedHistorySessionPage {
-            sessions: Vec::new(),
-            has_more: false,
-        });
-    };
-    list_windsurf_history_sessions_from_conn(&conn, limit, offset)
+    sync_windsurf_history_cache()?;
+    imported_cache::query_imported_session_page(SOURCE_WINDSURF, limit, offset)
+}
+
+pub fn list_windsurf_recent_paths(limit: usize) -> Result<Vec<WindsurfRecentPath>, String> {
+    sync_windsurf_history_cache()?;
+    imported_cache::query_imported_recent_paths(SOURCE_WINDSURF, limit)
 }
 
 pub fn load_windsurf_history_for_session(session_id: &str) -> Result<Vec<ActivityChunk>, String> {
     let composer_id = windsurf_composer_id_from_session_id(session_id)?;
-    let Some(conn) = open_windsurf_db() else {
+    let Some((conn, _db_path)) = open_windsurf_db() else {
         return Ok(Vec::new());
     };
     load_windsurf_history_from_conn(&conn, session_id, composer_id)
 }
 
-fn list_windsurf_history_sessions_from_conn(
+fn sync_windsurf_history_cache() -> Result<(), String> {
+    let Some((conn, db_path)) = open_windsurf_db() else {
+        imported_cache::sync_source_cache(SOURCE_WINDSURF, Vec::new(), Vec::new())?;
+        return Ok(());
+    };
+    let (source_mtime_ms, source_size_bytes) =
+        imported_paths::file_metadata_signature(&db_path, "Windsurf")?;
+    let metas =
+        list_windsurf_composer_meta_from_conn(&conn, &db_path, source_mtime_ms, source_size_bytes)?;
+    let live_ids = metas
+        .iter()
+        .map(|meta| meta.source_session_id.clone())
+        .collect::<Vec<_>>();
+    let inputs = metas
+        .into_iter()
+        .map(composer_meta_to_cache_input)
+        .collect::<Vec<_>>();
+    imported_cache::sync_source_cache(SOURCE_WINDSURF, live_ids, inputs)
+}
+
+fn list_windsurf_composer_meta_from_conn(
     conn: &Connection,
-    limit: usize,
-    offset: usize,
-) -> Result<WindsurfHistorySessionPage, String> {
+    db_path: &Path,
+    source_mtime_ms: i64,
+    source_size_bytes: i64,
+) -> Result<Vec<WindsurfComposerMeta>, String> {
     let mut stmt = conn
         .prepare("SELECT value FROM cursorDiskKV WHERE key LIKE 'composerData:%'")
         .map_err(|err| format!("Failed to prepare Windsurf composer query: {err}"))?;
@@ -150,23 +187,28 @@ fn list_windsurf_history_sessions_from_conn(
         .query_map([], |row| row.get::<_, String>(0))
         .map_err(|err| format!("Failed to query Windsurf composers: {err}"))?;
 
-    let mut session_rows = Vec::new();
+    let mut metas = Vec::new();
     for row in rows {
         let value = row.map_err(|err| format!("Failed to read Windsurf composer row: {err}"))?;
         let Ok(composer) = serde_json::from_str::<RawComposerData>(&value) else {
             continue;
         };
-        if !is_listable_composer(conn, &composer)? {
+        if composer.composer_id.trim().is_empty() {
             continue;
         }
-        session_rows.push(composer_to_row(composer));
+        let listable = is_listable_composer(conn, &composer)?;
+        metas.push(WindsurfComposerMeta {
+            source_session_id: composer.composer_id.clone(),
+            source_path: db_path.to_string_lossy().to_string(),
+            source_record_key: composer.composer_id.clone(),
+            source_mtime_ms,
+            source_size_bytes,
+            source_fingerprint: source_mtime_ms.to_string(),
+            composer,
+            listable,
+        });
     }
-
-    Ok(imported_history::page_from_rows(
-        session_rows,
-        limit,
-        offset,
-    ))
+    Ok(metas)
 }
 
 fn is_listable_composer(conn: &Connection, composer: &RawComposerData) -> Result<bool, String> {
@@ -189,26 +231,37 @@ fn is_listable_composer(conn: &Connection, composer: &RawComposerData) -> Result
     .is_empty())
 }
 
-fn composer_to_row(composer: RawComposerData) -> WindsurfHistorySessionRow {
-    let metadata = workspace_metadata_from_composer(&composer);
-    let model = composer
+fn composer_meta_to_cache_input(meta: WindsurfComposerMeta) -> ImportedHistoryCacheInput {
+    let metadata = workspace_metadata_from_composer(&meta.composer);
+    let model = meta
+        .composer
         .model_config
         .and_then(|config| (!config.model_name.trim().is_empty()).then_some(config.model_name));
-    imported_history::row_from_input(ImportedHistoryRowInput {
-        session_id: format!("{WINDSURF_SESSION_PREFIX}{}", composer.composer_id),
-        name: imported_history::truncate_name(&composer.name, 200),
-        created_at_ms: composer.created_at,
-        updated_at_ms: if composer.last_updated_at > 0 {
-            composer.last_updated_at
-        } else {
-            composer.created_at
-        },
+    let updated_at_ms = if meta.composer.last_updated_at > 0 {
+        meta.composer.last_updated_at
+    } else {
+        meta.composer.created_at
+    };
+    ImportedHistoryCacheInput {
+        source: SOURCE_WINDSURF,
+        source_session_id: meta.source_session_id.clone(),
+        session_id: format!("{WINDSURF_SESSION_PREFIX}{}", meta.source_session_id),
+        source_path: meta.source_path,
+        source_record_key: meta.source_record_key,
+        source_mtime_ms: meta.source_mtime_ms,
+        source_size_bytes: meta.source_size_bytes,
+        source_fingerprint: meta.source_fingerprint,
+        parser_version: WINDSURF_METADATA_PARSER_VERSION,
+        name: imported_history::truncate_name(&meta.composer.name, 200),
+        created_at_ms: meta.composer.created_at,
+        updated_at_ms,
         model,
-        input_tokens: composer.context_tokens_used.round() as i64,
+        input_tokens: meta.composer.context_tokens_used.round() as i64,
         output_tokens: 0,
         repo_path: metadata.repo_path,
         branch: metadata.branch,
-    })
+        listable: meta.listable,
+    }
 }
 
 fn workspace_metadata_from_composer(composer: &RawComposerData) -> WorkspaceMetadata {
@@ -556,13 +609,14 @@ fn windsurf_composer_id_from_session_id(session_id: &str) -> Result<&str, String
     Ok(composer_id)
 }
 
-fn open_windsurf_db() -> Option<Connection> {
+fn open_windsurf_db() -> Option<(Connection, PathBuf)> {
     let path = windsurf_db_path()?;
-    Connection::open_with_flags(
+    let conn = Connection::open_with_flags(
         &path,
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )
-    .ok()
+    .ok()?;
+    Some((conn, path))
 }
 
 fn windsurf_db_path() -> Option<PathBuf> {
@@ -597,7 +651,7 @@ fn windsurf_db_candidate_paths() -> Vec<PathBuf> {
     }
 
     paths.push(windsurf_profile_db_path(home.join(".windsurf")));
-    paths
+    imported_paths::dedupe_paths(paths)
 }
 
 fn windsurf_profile_db_path(root: PathBuf) -> PathBuf {

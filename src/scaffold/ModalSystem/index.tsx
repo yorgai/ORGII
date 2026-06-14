@@ -41,6 +41,8 @@ export interface ModalProps {
   children?: React.ReactNode;
   /** Footer content (buttons, etc) */
   footer?: React.ReactNode;
+  /** Show the default footer top border. */
+  footerTopBorder?: boolean;
 
   okText?: string;
 
@@ -93,6 +95,7 @@ const Modal: React.FC<ModalProps> = ({
   title,
   children,
   footer,
+  footerTopBorder = true,
   okText = "OK",
   cancelText = "Cancel",
   secondaryButtonSize = "small",
@@ -183,6 +186,7 @@ const Modal: React.FC<ModalProps> = ({
         <PanelFooter
           secondaryButtonSize={secondaryButtonSize}
           primaryButtonSize={primaryButtonSize}
+          noBorder={!footerTopBorder}
           secondaryActions={
             cancelText
               ? [
@@ -241,10 +245,14 @@ const Modal: React.FC<ModalProps> = ({
     const focusableElements = modal.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
+    const primaryElement = modal.querySelector(
+      "[data-modal-primary-action]"
+    ) as HTMLElement | null;
     const firstElement = focusableElements[0] as HTMLElement;
     const lastElement = focusableElements[
       focusableElements.length - 1
     ] as HTMLElement;
+    const initialFocusElement = primaryElement ?? firstElement;
 
     const handleTab = (event: KeyboardEvent) => {
       if (event.key !== "Tab") return;
@@ -264,9 +272,9 @@ const Modal: React.FC<ModalProps> = ({
 
     modal.addEventListener("keydown", handleTab as EventListener);
 
-    // Auto-focus first focusable element
+    // Auto-focus the primary action when provided, otherwise the first focusable element.
     setTimeout(() => {
-      firstElement?.focus();
+      initialFocusElement?.focus();
     }, 100);
 
     return () => {

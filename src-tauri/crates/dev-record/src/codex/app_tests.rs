@@ -1,6 +1,38 @@
 use super::*;
 
 #[test]
+fn includes_codex_session_dir_candidates() {
+    let home = std::path::Path::new("/Users/example");
+    let paths = codex_sessions_dir_candidates(home);
+    let rendered = paths
+        .iter()
+        .map(|path| path.to_string_lossy().to_string())
+        .collect::<Vec<_>>();
+
+    assert!(rendered.iter().any(|path| path.contains(".codex/sessions")));
+
+    #[cfg(target_os = "macos")]
+    {
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("Library/Application Support/Codex/sessions")));
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("Library/Application Support/codex/sessions")));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("AppData/Roaming/Codex/sessions")));
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("AppData/Local/Codex/sessions")));
+    }
+}
+
+#[test]
 fn parses_codex_jsonl_into_replay_chunks() {
     let temp_dir =
         std::env::temp_dir().join(format!("orgii-codex-history-test-{}", std::process::id()));
@@ -59,7 +91,18 @@ fn parses_codex_session_metadata() {
 "#;
     std::fs::write(&path, content).expect("write fixture");
 
-    let meta = parse_codex_session_meta(&path)
+    let (source_mtime_ms, source_size_bytes) =
+        imported_paths::file_metadata_signature(&path, "Codex").expect("metadata");
+    let record = ImportedHistoryDiscoveredRecord {
+        source_session_id: "rollout-meta".to_string(),
+        source_path: path.clone(),
+        source_record_key: "rollout-meta".to_string(),
+        source_mtime_ms,
+        source_size_bytes,
+        source_fingerprint: String::new(),
+        parser_version: CODEX_APP_METADATA_PARSER_VERSION,
+    };
+    let meta = parse_codex_session_meta(&record)
         .expect("parse")
         .expect("session meta");
 

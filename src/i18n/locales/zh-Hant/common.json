@@ -159,7 +159,9 @@
     "moreSettings": "更多設定",
     "sort": "排序",
     "openFolder": "開啟資料夾",
-    "addWorkspace": "新增工作區"
+    "addWorkspace": "新增工作區",
+    "skipThisVersion": "跳過此版本",
+    "later": "稍後"
   },
   "refreshToast": {
     "successName": "{{name}} 已刷新",
@@ -2127,5 +2129,13 @@
     "closePreview": "關閉預覽",
     "copiedToClipboard": "圖片已複製到剪貼簿",
     "previewAlt": "預覽"
+  },
+  "update": {
+    "downloading": "正在下載更新",
+    "installing": "正在安裝更新",
+    "progressPercent": "{{percent}}%",
+    "downloadedOfTotal": "{{downloaded}} / {{total}}",
+    "preparingDownload": "正在準備下載…",
+    "downloadingAndInstalling": "正在下載並安裝更新 (v{{version}})…"
   }
 }

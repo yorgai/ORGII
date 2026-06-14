@@ -6,20 +6,39 @@
  * Used in split panel headers.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { ArrowLeftRight } from "lucide-react";
-import React, { useCallback, useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { ArrowLeftRight, Check, ChevronRight } from "lucide-react";
+import React, { useCallback, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
-  findRouteByPath,
-  getIconComponentForPath,
-  getLabelForPath,
-} from "@src/config/routes";
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+  DROPDOWN_PANEL,
+} from "@src/components/Dropdown/tokens";
+import { deriveBreadcrumbKeys, getPathIcon } from "@src/config/mainAppPaths";
+import { findRouteByPath, getLabelForPath } from "@src/config/routes";
+import { ROUTES, getIconComponentForPath } from "@src/config/routes";
+import { useDropdownEngine } from "@src/hooks/dropdown";
 import { useRouteLabel } from "@src/hooks/i18n";
 import { useSafeHover } from "@src/hooks/ui/useSafeHover";
+import {
+  DEV_RECORD_VIEW_ITEMS,
+  getDevRecordViewConfig,
+} from "@src/modules/MainApp/DevRecord/devRecordViewConfig";
+import {
+  ECONOMY_ROOT_PATH,
+  ECONOMY_ROUTES,
+} from "@src/modules/MainApp/shared/economyRouteConfig";
+import {
+  type DevRecordView,
+  devRecordActiveViewAtom,
+} from "@src/store/ui/devRecordToolbarAtom";
 import { hoverSidebarOpenAtom } from "@src/store/ui/hoverSidebarAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
 
+import { BreadcrumbPillNavTrigger } from "../BreadcrumbPillNav";
 import { PANEL_HEADER_TOKENS } from "../PanelHeader";
 
 // ============================================
@@ -31,27 +50,134 @@ export interface PageBreadcrumbProps {
   className?: string;
 }
 
+interface BreadcrumbSelectorItem {
+  key: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }> | null;
+}
+
+function getActiveSelectableItem(
+  items: readonly BreadcrumbSelectorItem[],
+  pathname: string
+): BreadcrumbSelectorItem | null {
+  return (
+    [...items]
+      .sort((leftItem, rightItem) => rightItem.key.length - leftItem.key.length)
+      .find((item) => pathname.startsWith(item.key)) ??
+    items[0] ??
+    null
+  );
+}
+
+const Separator: React.FC = () => (
+  <ChevronRight size={13} className="shrink-0 text-text-3" />
+);
+
 const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({ className = "" }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isSidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
+  const activeDevRecordView = useAtomValue(devRecordActiveViewAtom);
+  const setActiveDevRecordView = useSetAtom(devRecordActiveViewAtom);
   const setIsHoverSidebarOpen = useSetAtom(hoverSidebarOpenAtom);
   const [ref, isHovered] = useSafeHover<HTMLDivElement>();
-  const { getTranslatedLabelForPath } = useRouteLabel();
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const { t } = useTranslation();
+  const { getTranslatedRouteLabel, getTranslatedLabelForPath } =
+    useRouteLabel();
 
-  // Get current route info
   const currentRoute = useMemo(() => {
     const path = location.pathname;
-
-    // Use route config
     const routeInfo = findRouteByPath(path);
     if (!routeInfo) return null;
 
-    const staticLabel = getLabelForPath(path);
-    const label = getTranslatedLabelForPath(staticLabel);
-    const IconComponent = getIconComponentForPath(path);
+    const icon = getPathIcon(path);
+    const keys = deriveBreadcrumbKeys(path);
+    const labels = keys.map((key) => t(key));
+    let selectorItems: BreadcrumbSelectorItem[] = [];
+    let activeSelectorItem: BreadcrumbSelectorItem | null = null;
+    let selectorReplacesLeaf = false;
 
-    return { label, IconComponent };
-  }, [location.pathname, getTranslatedLabelForPath]);
+    if (path.startsWith(ROUTES.app.journey.record.path)) {
+      selectorItems = DEV_RECORD_VIEW_ITEMS.map((item) => ({
+        key: item.key,
+        label: t(item.labelKey),
+        icon: item.icon,
+      }));
+      const activeViewConfig = getDevRecordViewConfig(activeDevRecordView);
+      activeSelectorItem = activeViewConfig
+        ? {
+            key: activeViewConfig.key,
+            label: t(activeViewConfig.labelKey),
+            icon: activeViewConfig.icon,
+          }
+        : null;
+    } else if (path.startsWith(ECONOMY_ROOT_PATH)) {
+      selectorItems = ECONOMY_ROUTES.map((route) => ({
+        key: route.path,
+        label: getTranslatedRouteLabel(route),
+        icon: getIconComponentForPath(route.path),
+      }));
+      activeSelectorItem = getActiveSelectableItem(selectorItems, path);
+      selectorReplacesLeaf = true;
+    }
+
+    if (activeSelectorItem) {
+      if (selectorReplacesLeaf && labels.length > 0) {
+        labels[labels.length - 1] = activeSelectorItem.label;
+      } else {
+        labels.push(activeSelectorItem.label);
+      }
+    }
+
+    if (labels.length === 0) {
+      labels.push(getTranslatedLabelForPath(getLabelForPath(path)));
+    }
+
+    return { labels, IconComponent: icon, selectorItems, activeSelectorItem };
+  }, [
+    activeDevRecordView,
+    getTranslatedLabelForPath,
+    getTranslatedRouteLabel,
+    location.pathname,
+    t,
+  ]);
+
+  const selectorItems = currentRoute?.selectorItems ?? [];
+
+  const handleSelectorSelect = useCallback(
+    (item: BreadcrumbSelectorItem) => {
+      if (location.pathname.startsWith(ROUTES.app.journey.record.path)) {
+        setActiveDevRecordView(item.key as DevRecordView);
+      } else {
+        navigate(item.key, { replace: false });
+      }
+      setSelectorOpen(false);
+    },
+    [location.pathname, navigate, setActiveDevRecordView]
+  );
+
+  const {
+    isOpen,
+    isPositioned,
+    toggle,
+    triggerRef,
+    panelRef,
+    panelPosition,
+    keyboard,
+  } = useDropdownEngine<HTMLButtonElement, BreadcrumbSelectorItem>({
+    open: selectorOpen,
+    onOpenChange: setSelectorOpen,
+    disabled: selectorItems.length === 0,
+    gap: DROPDOWN_PANEL.triggerGapTight,
+    placement: "bottom",
+    align: "left",
+    listNavigation: {
+      disableGlobalListener: true,
+      items: selectorItems,
+      onSelect: handleSelectorSelect,
+    },
+  });
 
   // Handle click - trigger floating sidebar when collapsed
   const handleClick = useCallback(() => {
@@ -69,28 +195,122 @@ const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({ className = "" }) => {
     isSidebarCollapsed && isHovered
       ? ArrowLeftRight
       : currentRoute.IconComponent;
+  const selectorLabel = currentRoute.activeSelectorItem?.label;
+  const dropdown =
+    isOpen && isPositioned
+      ? createPortal(
+          <div
+            ref={panelRef}
+            className={`${DROPDOWN_CLASSES.panel} fixed flex min-w-[220px] flex-col p-1`}
+            onKeyDown={keyboard.handleKeyDown}
+            style={{
+              top: panelPosition.top,
+              bottom: panelPosition.bottom,
+              left: panelPosition.left,
+              right: panelPosition.right,
+              minWidth: Math.max(panelPosition.width, 220),
+            }}
+          >
+            <div className={DROPDOWN_CLASSES.itemsColumn}>
+              {selectorItems.map((item, index) => {
+                const ItemIcon = item.icon;
+                const isSelected =
+                  item.key === currentRoute.activeSelectorItem?.key;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    {...keyboard.getItemProps(index)}
+                    className={`${DROPDOWN_CLASSES.item} w-full justify-start text-left ${
+                      isSelected
+                        ? DROPDOWN_CLASSES.itemSelected
+                        : DROPDOWN_CLASSES.itemHover
+                    }`}
+                  >
+                    {ItemIcon ? (
+                      <ItemIcon
+                        size={DROPDOWN_ITEM.iconSize}
+                        className={`shrink-0 ${
+                          isSelected ? "text-primary-6" : "text-text-2"
+                        }`}
+                      />
+                    ) : null}
+                    <span className="min-w-0 flex-1 truncate">
+                      {item.label}
+                    </span>
+                    {isSelected ? (
+                      <Check
+                        size={DROPDOWN_ITEM.iconSize}
+                        className="shrink-0 text-primary-6"
+                      />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
 
   return (
-    <div
-      ref={ref}
-      className={`flex h-7 items-center gap-2 rounded-full px-2 transition-colors ${
-        isSidebarCollapsed ? "active:bg-bg-4 cursor-pointer hover:bg-bg-3" : ""
-      } ${className}`}
-      onClick={handleClick}
-    >
-      {IconComponent && (
-        <IconComponent
-          size={PANEL_HEADER_TOKENS.iconSize}
-          className="text-text-2"
-        />
-      )}
-      <span
-        className="font-medium text-text-1"
-        style={{ fontSize: PANEL_HEADER_TOKENS.fontSize }}
+    <>
+      <div
+        ref={ref}
+        className={`flex h-7 min-w-0 items-center gap-1.5 rounded-full px-2 transition-colors ${
+          isSidebarCollapsed
+            ? "active:bg-bg-4 cursor-pointer hover:bg-bg-3"
+            : ""
+        } ${className}`}
+        onClick={handleClick}
       >
-        {currentRoute.label}
-      </span>
-    </div>
+        {IconComponent && (
+          <IconComponent
+            size={PANEL_HEADER_TOKENS.iconSize}
+            className="shrink-0 text-text-2"
+          />
+        )}
+        <div
+          className="flex min-w-0 items-center gap-1"
+          style={{ fontSize: PANEL_HEADER_TOKENS.fontSize }}
+        >
+          {currentRoute.labels.map((label, index) => {
+            const isLast = index === currentRoute.labels.length - 1;
+            const shouldRenderSelector = isLast && selectorLabel;
+            return (
+              <React.Fragment key={`${label}-${index}`}>
+                {index > 0 ? <Separator /> : null}
+                {shouldRenderSelector ? (
+                  <BreadcrumbPillNavTrigger
+                    ref={triggerRef}
+                    isOpen={isOpen}
+                    variant="primary"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggle();
+                    }}
+                    aria-haspopup="listbox"
+                    aria-expanded={isOpen}
+                    className="min-w-0"
+                  >
+                    <span className="min-w-0 truncate">{selectorLabel}</span>
+                  </BreadcrumbPillNavTrigger>
+                ) : (
+                  <span
+                    className={`min-w-0 truncate ${
+                      isLast ? "font-medium text-text-1" : "text-text-2"
+                    }`}
+                  >
+                    {label}
+                  </span>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+      {dropdown}
+    </>
   );
 };
 

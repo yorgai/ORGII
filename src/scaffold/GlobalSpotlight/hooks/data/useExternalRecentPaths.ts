@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { claudeCodeRecentPaths } from "@src/api/tauri/claudeCodeHistory";
 import { codexAppRecentPaths } from "@src/api/tauri/codexApp";
+import { opencodeRecentPaths } from "@src/api/tauri/opencodeHistory";
+import { windsurfRecentPaths } from "@src/api/tauri/windsurfHistory";
 import type { RepoItem } from "@src/scaffold/GlobalSpotlight/types";
 import { REPO_KIND } from "@src/store/repo";
 
@@ -78,9 +80,18 @@ export function useExternalRecentPaths({
     Promise.all([
       codexAppRecentPaths({ limit: EXTERNAL_RECENT_PATH_LIMIT }),
       claudeCodeRecentPaths({ limit: EXTERNAL_RECENT_PATH_LIMIT }),
-    ]).then(([codexPaths, claudePaths]) => {
+      opencodeRecentPaths({ limit: EXTERNAL_RECENT_PATH_LIMIT }),
+      windsurfRecentPaths({ limit: EXTERNAL_RECENT_PATH_LIMIT }),
+    ]).then(([codexPaths, claudePaths, opencodePaths, windsurfPaths]) => {
       if (!cancelled) {
-        setPaths(mergeRecentPaths([...codexPaths, ...claudePaths]));
+        setPaths(
+          mergeRecentPaths([
+            ...codexPaths,
+            ...claudePaths,
+            ...opencodePaths,
+            ...windsurfPaths,
+          ])
+        );
       }
     });
 

@@ -111,6 +111,13 @@ export const SESSION_PREFIX_REGISTRY: readonly SessionPrefixConfig[] = [
     externalHistorySourceId: "claude_code",
   },
   {
+    prefix: "opencodeapp-",
+    category: "external_history",
+    variant: undefined,
+    iconId: "opencode",
+    externalHistorySourceId: "opencode",
+  },
+  {
     prefix: "windsurfapp-",
     category: "external_history",
     variant: undefined,
@@ -151,6 +158,9 @@ export const CODEX_APP_SESSION_PREFIX = "codexapp-";
 
 /** Prefix for imported Claude Code event session IDs. */
 export const CLAUDE_CODE_HISTORY_SESSION_PREFIX = "claudecodeapp-";
+
+/** Prefix for imported OpenCode event session IDs. */
+export const OPENCODE_HISTORY_SESSION_PREFIX = "opencodeapp-";
 
 /** Prefix for imported Windsurf event session IDs. */
 export const WINDSURF_HISTORY_SESSION_PREFIX = "windsurfapp-";
@@ -248,6 +258,12 @@ export function isClaudeCodeHistorySession(
   sessionId: string | null | undefined
 ): boolean {
   return getExternalHistorySourceId(sessionId) === "claude_code";
+}
+
+export function isOpenCodeHistorySession(
+  sessionId: string | null | undefined
+): boolean {
+  return getExternalHistorySourceId(sessionId) === "opencode";
 }
 
 export function isWindsurfHistorySession(

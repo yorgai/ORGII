@@ -12,9 +12,12 @@ import type { SessionEvent } from "@src/engines/SessionCore";
 import SimulatorContentArea from "../../SimulatorMainPane";
 import type { GridCellProps } from "../../types/gridTypes";
 
-function getEventRenderSignature(
-  event: SessionEvent | null | undefined
-): string {
+type RenderSignatureEvent =
+  | (SessionEvent & { lastActivityAt?: string })
+  | null
+  | undefined;
+
+function getEventRenderSignature(event: RenderSignatureEvent): string {
   if (!event) return "";
   return [
     event.id,

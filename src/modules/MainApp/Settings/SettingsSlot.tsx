@@ -51,20 +51,16 @@ import { getSettingsSectionById } from "@src/config/settingsUiManifest";
 // Reuse ChatPanel's resize wiring so the seam between the slot and the
 // workbench surface behaves identically across both slot occupants.
 import { useChatPanelResize } from "@src/engines/ChatPanel/hooks/useChatPanelResize";
-import {
-  COLLAPSED_SIDEBAR_CHROME_OFFSET,
-  useShouldOffsetChatPanelHeader,
-} from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
+import { useShouldOffsetChatPanelHeader } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import IntegrationsDetailPanel from "@src/modules/MainApp/Integrations/IntegrationsDetailPanel";
 import { IntegrationsPageListColumn } from "@src/modules/MainApp/Integrations/IntegrationsPageListColumn";
 import { useIntegrationsPage } from "@src/modules/MainApp/Integrations/useIntegrationsPage";
+import MainAppPageHeader from "@src/modules/MainApp/shared/MainAppPageHeader";
 import SplitViewLayout from "@src/modules/shared/layouts/SplitViewLayout";
 // AGENT_ORGS and MY_ROLE roots host larger surfaces that already exist
 // as full-page modules; the slot lazy-loads them on demand.
-import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { getPagePanelBackgroundStyle } from "@src/modules/shared/layouts/viewContainerTokens";
 import { AgentOrgsPage, MyRolePage } from "@src/router/lazy/pages";
-import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";
 import { resolvedBackgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import { toggleChatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
@@ -261,12 +257,10 @@ const SettingsSlot: React.FC<SettingsSlotProps> = ({
   const pageOpacityStyle = getPagePanelBackgroundStyle(
     backgroundConfig.pageOpacity
   );
-  const isCompactLayout = useIsCompactLayout();
-  const shouldOffsetHeaderForCollapsedSidebar = useShouldOffsetChatPanelHeader({
+  const offsetForCollapsedSidebar = useShouldOffsetChatPanelHeader({
     position,
     useExternalWidth: maximized,
   });
-
   const { isDragging, panelRef, handleMouseDown } = useChatPanelResize({
     useExternalWidth: maximized,
     embedded,
@@ -335,90 +329,56 @@ const SettingsSlot: React.FC<SettingsSlotProps> = ({
           } as React.CSSProperties
         }
       >
-        {/* Header chrome — mirrors ChatPanel's `headerSection`: same
-            height tokens, same pt-2 nudge in compact (modern) layout to
-            clear the macOS traffic-light region, same workspace-header
-            classes so the Tauri drag region behaves identically. The
-            title slot renders a `Settings > <Section>` breadcrumb that
-            tracks the active route (non-interactive — the "Settings"
-            crumb is a static label), and the only right-side affordance
-            is the maximize toggle — closing is handled by the global
-            navigation back-button, not a panel-local X. */}
-        <div
-          className={`workspace-header header-tab-group relative z-30 flex flex-shrink-0 items-center gap-1.5 px-2 ${
-            isCompactLayout ? "h-11 min-h-11 pt-2" : "h-9 min-h-9"
-          }`}
-          data-tauri-drag-region
-          style={
-            {
-              ...pageOpacityStyle,
-              paddingLeft: shouldOffsetHeaderForCollapsedSidebar
-                ? COLLAPSED_SIDEBAR_CHROME_OFFSET
-                : undefined,
-              WebkitAppRegion: "drag",
-            } as React.CSSProperties
-          }
-        >
-          {shouldOffsetHeaderForCollapsedSidebar ? (
-            <div style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-              <CollapsedSidebarButton />
-            </div>
-          ) : null}
-          <div
-            className="flex h-9 min-w-0 shrink items-center gap-1"
-            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-          >
-            {sidebarCollapsed ? (
-              <Button
-                htmlType="button"
-                variant="tertiary"
-                size="small"
-                iconOnly
-                onClick={handleBack}
-                aria-label={tCommon("actions.back")}
-                title={tCommon("actions.back")}
-                icon={<ChevronLeft size={16} strokeWidth={2} />}
-              />
-            ) : null}
-            <SettingsBreadcrumb />
-          </div>
-          <div
-            className="min-w-0 flex-1"
-            aria-hidden
-            data-tauri-drag-region
-            style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
-          />
-          <div
-            className="flex flex-shrink-0 items-center gap-px self-stretch"
-            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-          >
-            <SettingsHeaderActions />
-            <Tooltip
-              content={maximizeTooltip}
-              position="bottom-end"
-              mouseEnterDelay={200}
-              framedPanel
-            >
-              <span className="inline-flex">
+        <MainAppPageHeader
+          style={pageOpacityStyle}
+          offsetForCollapsedSidebar={offsetForCollapsedSidebar}
+          breadcrumb={
+            <>
+              {sidebarCollapsed ? (
                 <Button
                   htmlType="button"
                   variant="tertiary"
                   size="small"
                   iconOnly
-                  onClick={() => toggleMaximized()}
-                  aria-label={maximizeLabel}
-                  icon={
-                    maximized ? (
-                      <GalleryThumbnails size={14} strokeWidth={2} />
-                    ) : (
-                      <Maximize2 size={14} strokeWidth={2} />
-                    )
-                  }
+                  onClick={handleBack}
+                  aria-label={tCommon("actions.back")}
+                  title={tCommon("actions.back")}
+                  icon={<ChevronLeft size={16} strokeWidth={2} />}
                 />
-              </span>
-            </Tooltip>
-          </div>
-        </div>
+              ) : null}
+              <SettingsBreadcrumb />
+            </>
+          }
+          actions={
+            <>
+              <SettingsHeaderActions />
+              <Tooltip
+                content={maximizeTooltip}
+                position="bottom-end"
+                mouseEnterDelay={200}
+                framedPanel
+              >
+                <span className="inline-flex">
+                  <Button
+                    htmlType="button"
+                    variant="tertiary"
+                    size="small"
+                    iconOnly
+                    onClick={() => toggleMaximized()}
+                    aria-label={maximizeLabel}
+                    icon={
+                      maximized ? (
+                        <GalleryThumbnails size={14} strokeWidth={2} />
+                      ) : (
+                        <Maximize2 size={14} strokeWidth={2} />
+                      )
+                    }
+                  />
+                </span>
+              </Tooltip>
+            </>
+          }
+        />
 
         <div
           className="flex min-h-0 flex-1 flex-col"

@@ -27,6 +27,7 @@ import {
   Lock,
   MessageSquare,
   Pencil,
+  RefreshCw,
   Rocket,
   Search,
   Settings,
@@ -89,6 +90,7 @@ export const ICONS = {
   tabAgent: Sparkles,
 
   // Misc
+  refresh: RefreshCw,
   search: Search,
   branch: GitBranch,
   close: X,

@@ -132,11 +132,27 @@ pub(super) async fn run_chat_streaming(
             .header("anthropic-version", "2023-06-01");
     }
 
-    let response = request
-        .json(&request_body)
-        .send()
-        .await
-        .map_err(|err| ProviderError::RequestFailed(err.to_string()))?;
+    let send_future = request.json(&request_body).send();
+    let response = if let Some(flag) = cancel_flag {
+        tokio::select! {
+            result = send_future => result.map_err(|err| ProviderError::RequestFailed(err.to_string()))?,
+            _ = async {
+                while !flag.load(std::sync::atomic::Ordering::Relaxed) {
+                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                }
+            } => {
+                tracing::info!(
+                    "[openai-compat] Request cancelled before stream response (model={})",
+                    resolved_model
+                );
+                return Err(ProviderError::Cancelled);
+            }
+        }
+    } else {
+        send_future
+            .await
+            .map_err(|err| ProviderError::RequestFailed(err.to_string()))?
+    };
 
     let status = response.status().as_u16();
     if status != 200 {

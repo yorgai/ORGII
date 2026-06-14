@@ -42,7 +42,7 @@ import {
 export interface UseKeyboardMouseModeOptions {
   /**
    * Movement threshold in pixels to switch from keyboard to mouse mode
-   * @default 15
+   * @default 8
    */
   threshold?: number;
 
@@ -88,7 +88,7 @@ export interface UseKeyboardMouseModeReturn {
 // ============================================
 
 const DEFAULT_OPTIONS: Required<UseKeyboardMouseModeOptions> = {
-  threshold: 15,
+  threshold: 8,
   triggerKeys: ["ArrowUp", "ArrowDown"],
   enabled: true,
   initialKeyboardMode: true,
@@ -110,7 +110,7 @@ export function useKeyboardMouseMode(
   const [isKeyboardMode, setIsKeyboardMode] = useState(
     opts.initialKeyboardMode
   );
-  const mousePosRef = useRef({ x: 0, y: 0 });
+  const mousePosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Listen for keyboard navigation - switch to keyboard mode
   useEffect(() => {
@@ -131,13 +131,16 @@ export function useKeyboardMouseMode(
     (event: MouseEvent) => {
       if (!opts.enabled || !isKeyboardMode) return;
 
+      if (!mousePosRef.current) {
+        mousePosRef.current = { x: event.clientX, y: event.clientY };
+        return;
+      }
+
       const dx = Math.abs(event.clientX - mousePosRef.current.x);
       const dy = Math.abs(event.clientY - mousePosRef.current.y);
 
-      // Update position
       mousePosRef.current = { x: event.clientX, y: event.clientY };
 
-      // If mouse moved significantly, switch back to mouse mode
       if (dx > opts.threshold || dy > opts.threshold) {
         setIsKeyboardMode(false);
       }

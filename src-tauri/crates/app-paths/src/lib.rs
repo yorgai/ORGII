@@ -125,6 +125,11 @@ pub fn provider_capabilities_cache() -> PathBuf {
     orgii_root().join("provider-capabilities.json")
 }
 
+/// Usage diagnostics directory: `~/.orgii/diagnostics/`.
+pub fn diagnostics_dir() -> PathBuf {
+    orgii_root().join("diagnostics")
+}
+
 /// LSP server binaries installed by auto-install: `~/.orgii/lsp-bin/`.
 pub fn lsp_bin_dir() -> PathBuf {
     orgii_root().join("lsp-bin")

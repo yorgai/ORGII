@@ -3,6 +3,7 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
+import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import Tooltip from "@src/components/Tooltip";
 import {
   installAvailableAppUpdate,
@@ -26,7 +27,12 @@ const SidebarUpdateButton: React.FC = React.memo(() => {
   });
 
   return (
-    <Tooltip content={label} position="top" mouseEnterDelay={200}>
+    <Tooltip
+      content={<KeyboardShortcutTooltipContent label={label} />}
+      position="top"
+      mouseEnterDelay={200}
+      framedPanel
+    >
       <Button
         aria-label={label}
         variant="primary"

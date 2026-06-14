@@ -198,6 +198,36 @@ pub fn init_tables(conn: &Connection) -> SqliteResult<()> {
             ON cli_session_cache(created_at);
         CREATE INDEX IF NOT EXISTS idx_cli_cache_tool
             ON cli_session_cache(tool);
+
+        CREATE TABLE IF NOT EXISTS imported_history_session_cache (
+            source              TEXT NOT NULL,
+            source_session_id   TEXT NOT NULL,
+            session_id          TEXT NOT NULL,
+            source_path         TEXT NOT NULL DEFAULT '',
+            source_record_key   TEXT NOT NULL DEFAULT '',
+            source_mtime_ms     INTEGER NOT NULL DEFAULT 0,
+            source_size_bytes   INTEGER NOT NULL DEFAULT 0,
+            source_fingerprint  TEXT NOT NULL DEFAULT '',
+            parser_version      INTEGER NOT NULL DEFAULT 0,
+            name                TEXT NOT NULL DEFAULT '',
+            created_at_ms       INTEGER NOT NULL DEFAULT 0,
+            updated_at_ms       INTEGER NOT NULL DEFAULT 0,
+            model               TEXT NOT NULL DEFAULT '',
+            input_tokens        INTEGER NOT NULL DEFAULT 0,
+            output_tokens       INTEGER NOT NULL DEFAULT 0,
+            repo_path           TEXT NOT NULL DEFAULT '',
+            branch              TEXT NOT NULL DEFAULT '',
+            listable            INTEGER NOT NULL DEFAULT 1,
+            updated_at          TEXT NOT NULL DEFAULT '',
+            PRIMARY KEY (source, source_session_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_imported_history_source_updated
+            ON imported_history_session_cache(source, updated_at_ms DESC);
+        CREATE INDEX IF NOT EXISTS idx_imported_history_source_repo
+            ON imported_history_session_cache(source, repo_path);
+        CREATE INDEX IF NOT EXISTS idx_imported_history_source_path
+            ON imported_history_session_cache(source, source_path);
         ",
     )?;
 

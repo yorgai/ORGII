@@ -157,7 +157,9 @@
     "moreSettings": "Cài đặt khác",
     "sort": "Sắp xếp",
     "openFolder": "Mở thư mục",
-    "addWorkspace": "Thêm Workspace"
+    "addWorkspace": "Thêm Workspace",
+    "skipThisVersion": "Bỏ qua phiên bản này",
+    "later": "Để sau"
   },
   "refreshToast": {
     "successName": "Đã làm mới {{name}}",
@@ -2110,5 +2112,13 @@
     "closePreview": "Đóng xem trước",
     "copiedToClipboard": "Đã sao chép hình ảnh vào bảng nhớ tạm",
     "previewAlt": "Xem trước"
+  },
+  "update": {
+    "downloading": "Đang tải bản cập nhật",
+    "installing": "Đang cài đặt bản cập nhật",
+    "progressPercent": "{{percent}}%",
+    "downloadedOfTotal": "{{downloaded}} trên {{total}}",
+    "preparingDownload": "Đang chuẩn bị tải xuống…",
+    "downloadingAndInstalling": "Đang tải và cài đặt bản cập nhật (v{{version}})…"
   }
 }

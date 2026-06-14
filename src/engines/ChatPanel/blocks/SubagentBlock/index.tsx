@@ -51,6 +51,9 @@ export interface SubagentBlockProps {
   success?: boolean;
   errorMessage?: string;
   eventId?: string;
+  /** Called when the user clicks the navigate icon — locates the subagent
+   *  cell in the right-side monitor panel. */
+  onNavigate?: () => void;
 }
 
 // ============================================
@@ -69,6 +72,7 @@ const SubagentBlock: React.FC<SubagentBlockProps> = memo(
     status,
     success,
     errorMessage,
+    onNavigate,
   }) => {
     const { t } = useTranslation("sessions");
     const { t: tCommon } = useTranslation();
@@ -168,6 +172,7 @@ const SubagentBlock: React.FC<SubagentBlockProps> = memo(
         <EventBlockHeader
           isCollapsed={false}
           withHover
+          onNavigate={onNavigate}
           className={
             hasBody
               ? "border-b border-solid border-border-1"

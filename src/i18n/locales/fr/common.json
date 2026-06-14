@@ -157,7 +157,9 @@
     "moreSettings": "Plus de paramètres",
     "sort": "Trier",
     "openFolder": "Ouvrir un dossier",
-    "addWorkspace": "Ajouter un espace de travail"
+    "addWorkspace": "Ajouter un espace de travail",
+    "skipThisVersion": "Ignorer cette version",
+    "later": "Plus tard"
   },
   "refreshToast": {
     "successName": "{{name}} actualisé",
@@ -2112,5 +2114,13 @@
     "closePreview": "Fermer l’aperçu",
     "copiedToClipboard": "Image copiée dans le presse-papiers",
     "previewAlt": "Aperçu"
+  },
+  "update": {
+    "downloading": "Téléchargement de la mise à jour",
+    "installing": "Installation de la mise à jour",
+    "progressPercent": "{{percent}} %",
+    "downloadedOfTotal": "{{downloaded}} sur {{total}}",
+    "preparingDownload": "Préparation du téléchargement…",
+    "downloadingAndInstalling": "Téléchargement et installation de la mise à jour (v{{version}})…"
   }
 }

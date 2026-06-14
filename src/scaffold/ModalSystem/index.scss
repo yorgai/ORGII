@@ -73,20 +73,21 @@
   max-width: 90vw;
   max-height: 90vh;
   background: var(--color-bg-2);
+  border: 1px solid var(--color-border-2);
   border-radius: 16px;
   overflow: hidden;
   animation: modal-scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
   // Shadow for depth
   box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.2),
-    0 5px 15px rgba(0, 0, 0, 0.15);
+    0 28px 80px rgba(0, 0, 0, 0.28),
+    0 10px 28px rgba(0, 0, 0, 0.18);
 
   // Dark theme - deeper shadows
   [data-theme="dark"] & {
     box-shadow:
-      0 25px 70px rgba(0, 0, 0, 0.5),
-      0 8px 20px rgba(0, 0, 0, 0.4);
+      0 30px 90px rgba(0, 0, 0, 0.65),
+      0 12px 32px rgba(0, 0, 0, 0.5);
   }
 }
 

@@ -2,6 +2,7 @@ import {
   CLAUDE_CODE_HISTORY_SESSION_PREFIX,
   CLI_SESSION_PREFIX,
   CODEX_APP_SESSION_PREFIX,
+  OPENCODE_HISTORY_SESSION_PREFIX,
   OS_AGENT_SESSION_PREFIX,
   SDE_AGENT_SESSION_PREFIX,
   WINDSURF_HISTORY_SESSION_PREFIX,
@@ -13,6 +14,7 @@ import {
   isCliSession,
   isCodexAppSession,
   isExternalHistorySession,
+  isOpenCodeHistorySession,
   isWindsurfHistorySession,
 } from "../sessionDispatch";
 
@@ -23,6 +25,7 @@ describe("sessionDispatch constants", () => {
     expect(CLI_SESSION_PREFIX).toBe("cliagent-");
     expect(CODEX_APP_SESSION_PREFIX).toBe("codexapp-");
     expect(CLAUDE_CODE_HISTORY_SESSION_PREFIX).toBe("claudecodeapp-");
+    expect(OPENCODE_HISTORY_SESSION_PREFIX).toBe("opencodeapp-");
     expect(WINDSURF_HISTORY_SESSION_PREFIX).toBe("windsurfapp-");
   });
 });
@@ -68,6 +71,7 @@ describe("getDispatchCategory", () => {
     expect(getDispatchCategory("cliagent-x")).toBe("cli_agent");
     expect(getDispatchCategory("codexapp-x")).toBe("external_history");
     expect(getDispatchCategory("claudecodeapp-x")).toBe("external_history");
+    expect(getDispatchCategory("opencodeapp-x")).toBe("external_history");
     expect(getDispatchCategory("windsurfapp-x")).toBe("external_history");
   });
 
@@ -90,6 +94,14 @@ describe("external history source detection", () => {
     expect(isClaudeCodeHistorySession("claudecodeapp-session-1")).toBe(true);
     expect(getExternalHistorySourceId("claudecodeapp-session-1")).toBe(
       "claude_code"
+    );
+  });
+
+  it("recognizes OpenCode imported history sessions", () => {
+    expect(isExternalHistorySession("opencodeapp-session-1")).toBe(true);
+    expect(isOpenCodeHistorySession("opencodeapp-session-1")).toBe(true);
+    expect(getExternalHistorySourceId("opencodeapp-session-1")).toBe(
+      "opencode"
     );
   });
 

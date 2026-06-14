@@ -164,7 +164,9 @@
     "reopenIssue": "Reopen issue",
     "addComment": "Add comment",
     "editIssue": "Edit issue",
-    "openInApp": "Open in App"
+    "openInApp": "Open in App",
+    "skipThisVersion": "Skip this version",
+    "later": "Later"
   },
   "refreshToast": {
     "successName": "{{name}} refreshed",
@@ -2187,5 +2189,13 @@
     "subtitle": "Any running sessions will keep their current state. You can reopen ORGII later.",
     "cancel": "Cancel",
     "confirm": "Quit"
+  },
+  "update": {
+    "downloading": "Downloading update",
+    "installing": "Installing update",
+    "progressPercent": "{{percent}}%",
+    "downloadedOfTotal": "{{downloaded}} of {{total}}",
+    "preparingDownload": "Preparing download…",
+    "downloadingAndInstalling": "Downloading and installing update (v{{version}})…"
   }
 }

@@ -24,6 +24,13 @@ export interface WindsurfHistorySessionPage {
   hasMore: boolean;
 }
 
+export interface WindsurfRecentPath {
+  path: string;
+  name?: string;
+  lastUsedAt: string;
+  sessionCount: number;
+}
+
 export async function windsurfHistoryListSessions(args?: {
   limit?: number;
   offset?: number;
@@ -31,6 +38,14 @@ export async function windsurfHistoryListSessions(args?: {
   return invoke<WindsurfHistorySessionPage>("windsurf_history_list_sessions", {
     limit: args?.limit,
     offset: args?.offset,
+  });
+}
+
+export async function windsurfRecentPaths(args?: {
+  limit?: number;
+}): Promise<WindsurfRecentPath[]> {
+  return invoke<WindsurfRecentPath[]>("windsurf_recent_paths", {
+    limit: args?.limit,
   });
 }
 

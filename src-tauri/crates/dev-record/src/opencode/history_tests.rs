@@ -1,0 +1,317 @@
+use super::*;
+use rusqlite::Connection;
+use serde_json::Value;
+
+fn fixture_conn() -> Connection {
+    let conn = Connection::open_in_memory().expect("open in-memory db");
+    conn.execute(
+        "CREATE TABLE session (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            directory TEXT NOT NULL,
+            model TEXT,
+            tokens_input INTEGER NOT NULL,
+            tokens_output INTEGER NOT NULL,
+            tokens_reasoning INTEGER NOT NULL,
+            tokens_cache_read INTEGER NOT NULL,
+            tokens_cache_write INTEGER NOT NULL,
+            time_created INTEGER NOT NULL,
+            time_updated INTEGER NOT NULL,
+            time_archived INTEGER
+        )",
+        [],
+    )
+    .expect("create session");
+    conn.execute(
+        "CREATE TABLE message (
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            data TEXT NOT NULL
+        )",
+        [],
+    )
+    .expect("create message");
+    conn.execute(
+        "CREATE TABLE part (
+            id TEXT PRIMARY KEY,
+            message_id TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            data TEXT NOT NULL,
+            time_created INTEGER NOT NULL
+        )",
+        [],
+    )
+    .expect("create part");
+
+    conn.execute(
+        "INSERT INTO session (
+            id, title, directory, model, tokens_input, tokens_output,
+            tokens_reasoning, tokens_cache_read, tokens_cache_write,
+            time_created, time_updated, time_archived
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL)",
+        (
+            "ses_1",
+            "Check npm status",
+            "/tmp/opencode-repo",
+            r#"{"id":"deepseek-v4-pro","providerID":"deepseek","variant":"default"}"#,
+            10_i64,
+            20_i64,
+            3_i64,
+            4_i64,
+            5_i64,
+            1770000000000_i64,
+            1770000005000_i64,
+        ),
+    )
+    .expect("insert session");
+    conn.execute(
+        "INSERT INTO message (id, session_id, data) VALUES (?1, ?2, ?3)",
+        (
+            "msg_user",
+            "ses_1",
+            r#"{"role":"user","time":{"created":1770000000000}}"#,
+        ),
+    )
+    .expect("insert user message");
+    conn.execute(
+        "INSERT INTO message (id, session_id, data) VALUES (?1, ?2, ?3)",
+        (
+            "msg_assistant",
+            "ses_1",
+            r#"{"role":"assistant","modelID":"deepseek-v4-pro"}"#,
+        ),
+    )
+    .expect("insert assistant message");
+
+    conn.execute(
+        "INSERT INTO part (id, message_id, session_id, data, time_created) VALUES (?1, ?2, ?3, ?4, ?5)",
+        (
+            "prt_user",
+            "msg_user",
+            "ses_1",
+            r#"{"type":"text","text":"check my npm status"}"#,
+            1770000000001_i64,
+        ),
+    )
+    .expect("insert user part");
+    conn.execute(
+        "INSERT INTO part (id, message_id, session_id, data, time_created) VALUES (?1, ?2, ?3, ?4, ?5)",
+        (
+            "prt_tool",
+            "msg_assistant",
+            "ses_1",
+            r#"{"type":"tool","tool":"bash","callID":"call_1","state":{"status":"completed","input":{"command":"npm --version"},"output":"11.15.0\n","title":"Check npm"},"time":{"start":1770000001000,"end":1770000001100}}"#,
+            1770000001000_i64,
+        ),
+    )
+    .expect("insert tool part");
+    conn.execute(
+        "INSERT INTO part (id, message_id, session_id, data, time_created) VALUES (?1, ?2, ?3, ?4, ?5)",
+        (
+            "prt_reasoning",
+            "msg_assistant",
+            "ses_1",
+            r#"{"type":"reasoning","text":"I should summarize npm status."}"#,
+            1770000002000_i64,
+        ),
+    )
+    .expect("insert reasoning part");
+    conn.execute(
+        "INSERT INTO part (id, message_id, session_id, data, time_created) VALUES (?1, ?2, ?3, ?4, ?5)",
+        (
+            "prt_text",
+            "msg_assistant",
+            "ses_1",
+            r#"{"type":"text","text":"npm is installed."}"#,
+            1770000003000_i64,
+        ),
+    )
+    .expect("insert assistant text part");
+
+    conn
+}
+
+#[test]
+fn includes_opencode_candidate_db_paths() {
+    let home = std::path::Path::new("/Users/example");
+    let paths = opencode_db_candidate_paths_for_home(home);
+    let rendered = paths
+        .iter()
+        .map(|path| path.to_string_lossy().to_string())
+        .collect::<Vec<_>>();
+
+    assert!(rendered
+        .iter()
+        .any(|path| path.contains(".local/share/opencode/opencode.db")));
+    assert!(rendered.iter().all(|path| path.ends_with("opencode.db")));
+
+    #[cfg(target_os = "macos")]
+    {
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("Library/Application Support/opencode/opencode.db")));
+        assert!(rendered.iter().any(
+            |path| path.contains("Library/Application Support/ai.opencode.desktop/opencode.db")
+        ));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("AppData/Roaming/opencode/opencode.db")));
+        assert!(rendered
+            .iter()
+            .any(|path| path.contains("AppData/Local/opencode/opencode.db")));
+    }
+}
+
+#[test]
+fn maps_opencode_session_metadata_to_cache_input() {
+    let conn = fixture_conn();
+
+    let metas = list_all_opencode_session_meta_from_conn(
+        &conn,
+        std::path::Path::new("/tmp/opencode.db"),
+        1770000006000,
+        4096,
+    )
+    .expect("list session metadata");
+    let inputs = metas
+        .into_iter()
+        .map(session_meta_to_cache_input)
+        .collect::<Vec<_>>();
+
+    assert_eq!(inputs.len(), 1);
+    let row = imported_cache::ImportedHistoryCachedSession {
+        source_session_id: inputs[0].source_session_id.clone(),
+        session_id: inputs[0].session_id.clone(),
+        source_path: inputs[0].source_path.clone(),
+        source_record_key: inputs[0].source_record_key.clone(),
+        source_mtime_ms: inputs[0].source_mtime_ms,
+        source_size_bytes: inputs[0].source_size_bytes,
+        source_fingerprint: inputs[0].source_fingerprint.clone(),
+        parser_version: inputs[0].parser_version,
+        name: inputs[0].name.clone(),
+        created_at_ms: inputs[0].created_at_ms,
+        updated_at_ms: inputs[0].updated_at_ms,
+        model: inputs[0].model.clone(),
+        input_tokens: inputs[0].input_tokens,
+        output_tokens: inputs[0].output_tokens,
+        repo_path: inputs[0].repo_path.clone(),
+        branch: inputs[0].branch.clone(),
+        listable: inputs[0].listable,
+    }
+    .to_row();
+    assert_eq!(row.session_id, "opencodeapp-ses_1");
+    assert_eq!(row.name, "Check npm status");
+    assert_eq!(row.category, imported_history::IMPORTED_HISTORY_CATEGORY);
+    assert!(row.read_only);
+    assert_eq!(row.model.as_deref(), Some("deepseek-v4-pro"));
+    assert_eq!(row.total_tokens, 42);
+    assert_eq!(row.repo_path.as_deref(), Some("/tmp/opencode-repo"));
+    assert_eq!(row.repo_name.as_deref(), Some("opencode-repo"));
+}
+
+#[test]
+fn opencode_recent_paths_use_all_sessions_before_limiting() {
+    let conn = fixture_conn();
+    conn.execute(
+        "INSERT INTO session (
+            id, title, directory, model, tokens_input, tokens_output,
+            tokens_reasoning, tokens_cache_read, tokens_cache_write,
+            time_created, time_updated, time_archived
+        ) VALUES (?1, ?2, ?3, ?4, 0, 0, 0, 0, 0, ?5, ?6, NULL)",
+        (
+            "ses_2",
+            "Newer repo",
+            "/tmp/newer-opencode-repo",
+            "gpt-5",
+            1770000010000_i64,
+            1770000015000_i64,
+        ),
+    )
+    .expect("insert newer session");
+
+    let rows = list_all_opencode_session_meta_from_conn(&conn, std::path::Path::new(""), 0, 0)
+        .expect("list all sessions")
+        .into_iter()
+        .map(session_meta_to_cache_input)
+        .map(|input| {
+            imported_cache::ImportedHistoryCachedSession {
+                source_session_id: input.source_session_id,
+                session_id: input.session_id,
+                source_path: input.source_path,
+                source_record_key: input.source_record_key,
+                source_mtime_ms: input.source_mtime_ms,
+                source_size_bytes: input.source_size_bytes,
+                source_fingerprint: input.source_fingerprint,
+                parser_version: input.parser_version,
+                name: input.name,
+                created_at_ms: input.created_at_ms,
+                updated_at_ms: input.updated_at_ms,
+                model: input.model,
+                input_tokens: input.input_tokens,
+                output_tokens: input.output_tokens,
+                repo_path: input.repo_path,
+                branch: input.branch,
+                listable: input.listable,
+            }
+            .to_row()
+        })
+        .collect::<Vec<_>>();
+    let paths = imported_history::recent_paths_from_rows(&rows)
+        .into_iter()
+        .take(imported_history::effective_limit(1))
+        .collect::<Vec<_>>();
+
+    assert_eq!(paths.len(), 1);
+    assert_eq!(paths[0].path, "/tmp/newer-opencode-repo");
+}
+
+#[test]
+fn parses_opencode_parts_into_replay_chunks() {
+    let conn = fixture_conn();
+
+    let chunks =
+        load_opencode_history_from_conn(&conn, "opencodeapp-ses_1", "ses_1").expect("load chunks");
+
+    assert_eq!(chunks.len(), 4);
+    assert_eq!(chunks[0].action_type, imported_history::ACTION_TYPE_RAW);
+    assert_eq!(chunks[0].function, imported_history::FUNCTION_USER_MESSAGE);
+    assert_eq!(
+        chunks[1].action_type,
+        imported_history::ACTION_TYPE_TOOL_CALL
+    );
+    assert_eq!(
+        chunks[1].function,
+        imported_history::FUNCTION_RUN_COMMAND_LINE
+    );
+    assert_eq!(
+        chunks[1].args.get("command").and_then(Value::as_str),
+        Some("npm --version")
+    );
+    assert_eq!(
+        chunks[1].result.get("output").and_then(Value::as_str),
+        Some("11.15.0\n")
+    );
+    assert_eq!(
+        chunks[2].action_type,
+        imported_history::ACTION_TYPE_THINKING
+    );
+    assert_eq!(
+        chunks[3].action_type,
+        imported_history::ACTION_TYPE_ASSISTANT
+    );
+    assert_eq!(chunks[3].function, imported_history::FUNCTION_ASSISTANT);
+}
+
+#[test]
+fn rejects_invalid_opencode_prefixed_ids() {
+    assert!(opencode_source_id_from_session_id("codexapp-ses_1").is_err());
+    assert!(opencode_source_id_from_session_id("opencodeapp-").is_err());
+    assert_eq!(
+        opencode_source_id_from_session_id("opencodeapp-ses_1").expect("source id"),
+        "ses_1"
+    );
+}
