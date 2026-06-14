@@ -25,6 +25,7 @@ export interface UseGitWorktreesOptions {
 export interface UseGitWorktreesResult {
   worktrees: GitWorktreeEntry[];
   hasWorktrees: boolean;
+  loading: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -34,12 +35,15 @@ export function useGitWorktrees({
   enabled = true,
 }: UseGitWorktreesOptions): UseGitWorktreesResult {
   const [worktrees, setWorktrees] = useState<GitWorktreeEntry[]>([]);
+  const [loading, setLoading] = useState(enabled);
+  const loadedRef = useRef(false);
   const mountedRef = useRef(true);
   useMountedCleanup(mountedRef);
 
   const fetchWorktrees = useCallback(async () => {
     if (!enabled) return;
 
+    if (!loadedRef.current) setLoading(true);
     try {
       const entries = await getGitWorktrees({
         repo_id: repoId,
@@ -49,6 +53,11 @@ export function useGitWorktrees({
       setWorktrees(entries.filter((entry) => !entry.is_main));
     } catch {
       if (mountedRef.current) setWorktrees([]);
+    } finally {
+      if (mountedRef.current) {
+        loadedRef.current = true;
+        setLoading(false);
+      }
     }
   }, [enabled, repoId, repoPath, mountedRef]);
 
@@ -58,29 +67,15 @@ export function useGitWorktrees({
   );
 
   useEffect(() => {
-    if (!enabled) return;
+    loadedRef.current = false;
+    setLoading(enabled);
+    if (!enabled) {
+      setWorktrees([]);
+      return;
+    }
 
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        const entries = await getGitWorktrees({
-          repo_id: repoId,
-          repo_path: repoPath,
-        });
-        if (!cancelled) {
-          setWorktrees(entries.filter((entry) => !entry.is_main));
-        }
-      } catch {
-        if (!cancelled) setWorktrees([]);
-      }
-    };
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, repoId, repoPath]);
+    void fetchWorktrees();
+  }, [enabled, fetchWorktrees]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -109,6 +104,7 @@ export function useGitWorktrees({
   return {
     worktrees: visibleWorktrees,
     hasWorktrees: visibleWorktrees.length > 0,
+    loading,
     refresh: fetchWorktrees,
   };
 }

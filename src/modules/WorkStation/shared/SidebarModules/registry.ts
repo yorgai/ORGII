@@ -57,6 +57,7 @@ export type TabSidebarComponent = ComponentType<TabSidebarProps>;
 export interface TabSidebarDescriptor {
   component: TabSidebarComponent;
   keepAlive?: boolean;
+  keepAliveInitialTab?: WorkStationTab;
 }
 
 const REGISTRY = new Map<WorkStationTabType, TabSidebarDescriptor>();
@@ -85,6 +86,20 @@ export function getTabSidebarDescriptor(
   tabType: WorkStationTabType
 ): TabSidebarDescriptor | undefined {
   return REGISTRY.get(tabType);
+}
+
+export function getInitialKeepAliveTabsByType(): Partial<
+  Record<WorkStationTabType, WorkStationTab>
+> {
+  const result: Partial<Record<WorkStationTabType, WorkStationTab>> = {};
+
+  for (const [tabType, descriptor] of REGISTRY.entries()) {
+    if (descriptor.keepAlive && descriptor.keepAliveInitialTab) {
+      result[tabType] = descriptor.keepAliveInitialTab;
+    }
+  }
+
+  return result;
 }
 
 /**

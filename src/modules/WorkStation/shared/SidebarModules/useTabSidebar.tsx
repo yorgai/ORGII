@@ -16,6 +16,7 @@ import type { GitFile } from "@src/types/git/types";
 
 import {
   type TabSidebarRuntimeContext,
+  getInitialKeepAliveTabsByType,
   getTabSidebarDescriptor,
   hasTabSidebar,
 } from "./registry";
@@ -127,9 +128,24 @@ export const SidebarSlot: React.FC<SidebarSlotProps> = memo(
     extraContext,
     defaultSidebar,
   }) => {
+    const initialWarmTabsByType = useMemo(() => {
+      const entries = Object.entries(getInitialKeepAliveTabsByType()) as Array<
+        [WorkStationTabType, WorkStationTab]
+      >;
+
+      return entries.reduce<
+        Partial<Record<WorkStationTabType, WorkStationTab>>
+      >((accumulator, [tabType, tab]) => {
+        if (shouldRenderSidebar(tab)) {
+          accumulator[tabType] = tab;
+        }
+        return accumulator;
+      }, {});
+    }, []);
+
     const [warmTabsByType, setWarmTabsByType] = useState<
       Partial<Record<WorkStationTabType, WorkStationTab>>
-    >({});
+    >(initialWarmTabsByType);
 
     const activeDescriptor = activeTab
       ? getTabSidebarDescriptor(activeTab.type)
@@ -181,23 +197,28 @@ export const SidebarSlot: React.FC<SidebarSlotProps> = memo(
       repoPath,
     ]);
 
-    const activeSidebar =
-      activeTab && context && activeSidebarRenderable ? (
-        <TabSidebarRenderer tab={activeTab} context={context} />
-      ) : null;
+    const activeWarmTab = activeKeepAlive
+      ? warmTabsByType[activeTab.type]
+      : undefined;
+    const shouldRenderDirectActiveSidebar =
+      activeTab && context && activeSidebarRenderable && !activeWarmTab;
+
+    const activeSidebar = shouldRenderDirectActiveSidebar ? (
+      <TabSidebarRenderer tab={activeTab} context={context} />
+    ) : null;
 
     const warmSidebars = context
       ? Object.entries(warmTabsByType).flatMap(([tabType, warmTab]) => {
-          if (!warmTab || (activeKeepAlive && activeTab?.type === tabType)) {
-            return [];
-          }
+          if (!warmTab) return [];
           const descriptor = getTabSidebarDescriptor(warmTab.type);
           if (!descriptor?.keepAlive) return [];
+          const isActiveWarmSidebar =
+            activeKeepAlive && activeTab?.type === tabType;
           return [
             <div
               key={warmTab.type}
-              className="absolute inset-0"
-              style={{ display: "none" }}
+              className="absolute inset-0 flex min-h-0 flex-col"
+              style={{ display: isActiveWarmSidebar ? undefined : "none" }}
             >
               <TabSidebarRenderer tab={warmTab} context={context} />
             </div>,
@@ -215,7 +236,7 @@ export const SidebarSlot: React.FC<SidebarSlotProps> = memo(
           <div className="absolute inset-0 flex min-h-0 flex-col">
             {activeSidebar}
           </div>
-        ) : (
+        ) : activeWarmTab ? null : (
           <div className="absolute inset-0 flex min-h-0 flex-col">
             {defaultSidebar}
           </div>

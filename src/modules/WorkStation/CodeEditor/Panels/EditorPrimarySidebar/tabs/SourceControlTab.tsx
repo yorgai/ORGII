@@ -108,6 +108,7 @@ export function useSourceControlTabConfig({
   const {
     worktrees,
     hasWorktrees,
+    loading: worktreesLoading,
     refresh: refreshWorktrees,
   } = useGitWorktrees({
     repoId,
@@ -143,6 +144,10 @@ export function useSourceControlTabConfig({
           onInitialized={handleGitInitialized}
         />
       );
+    }
+
+    if (worktreesLoading) {
+      return <div className="flex h-full min-h-0 flex-col" />;
     }
 
     if (isMultiRoot && workspaceFolders.length > 1) {
@@ -204,6 +209,7 @@ export function useSourceControlTabConfig({
   }, [
     isGitInitialized,
     handleGitInitialized,
+    worktreesLoading,
     isMultiRoot,
     workspaceFolders,
     repoPath,

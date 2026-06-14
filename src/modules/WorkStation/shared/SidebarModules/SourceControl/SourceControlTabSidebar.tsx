@@ -14,6 +14,7 @@
 import { useCallback, useState } from "react";
 
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
+import { sourceControlTabFactory } from "@src/store/workstation/tabs";
 
 import { PrimarySidebarLayoutWithSections } from "../../PrimarySidebarLayout";
 import {
@@ -76,6 +77,13 @@ SourceControlTabSidebar.displayName = "SourceControlTabSidebar";
 registerTabSidebar("source-control", {
   component: SourceControlTabSidebar,
   keepAlive: true,
+  keepAliveInitialTab: sourceControlTabFactory({
+    mode: "focus",
+    staged: false,
+    fileCount: 0,
+    focusPath: null,
+    historySelection: null,
+  }),
 });
 
 // Keep the Source Control sidebar (Issues view) visible when a
