@@ -367,8 +367,8 @@ impl LLMProvider for AnthropicClient {
                         stream_done = true;
                         break;
                     }
-                    EventOutcome::HardError(msg) => {
-                        return Err(ProviderError::RequestFailed(msg));
+                    EventOutcome::HardError(err) => {
+                        return Err(err);
                     }
                 }
             }

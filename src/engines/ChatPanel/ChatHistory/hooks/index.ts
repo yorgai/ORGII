@@ -53,6 +53,8 @@ export type {
 
 export { useEditUserMessage } from "./useEditUserMessage";
 
+export { useRestoreCheckpoint } from "./useRestoreCheckpoint";
+
 export { useChatEmptyState } from "./useChatEmptyState";
 export type {
   UseChatEmptyStateOptions,

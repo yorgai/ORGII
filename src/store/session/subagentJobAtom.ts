@@ -89,3 +89,25 @@ export const updateSubagentJobAtom = atom(
   }
 );
 updateSubagentJobAtom.debugLabel = "updateSubagentJob";
+
+/**
+ * Whether a given parent session currently has at least one live
+ * (status === "running") background subagent job.
+ *
+ * Pure read over `subagentJobMapAtom`: terminal jobs are dropped from the
+ * map the instant their `agent:subagent_job_changed` arrives, and the map
+ * is reseeded at startup by `useProcessReconciliation`, so a non-empty
+ * per-session bucket means a worker is genuinely still running.
+ *
+ * This is the event-driven signal that lets the main composer stay in Stop
+ * state (and the planning footer stay visible) during the gap between the
+ * parent turn ending and the next `await_output` — see
+ * `isSessionActiveAtom`. Returns false for a null/empty session id.
+ */
+export function hasLiveSubagentJobs(
+  map: SubagentJobMap,
+  parentSessionId: string | null
+): boolean {
+  if (!parentSessionId) return false;
+  return (map.get(parentSessionId)?.size ?? 0) > 0;
+}

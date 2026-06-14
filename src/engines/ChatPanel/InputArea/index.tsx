@@ -61,6 +61,11 @@ interface InputAreaProps {
   statusBanners?: React.ReactNode;
   composerShellRef?: React.Ref<HTMLDivElement>;
   disableStopWhenEmpty?: boolean;
+  /**
+   * Set by the bottom-anchored floating composer so its + / slash / @ menus
+   * open upward even in queue-edit mode (there is no room beneath it).
+   */
+  bottomAnchored?: boolean;
 }
 
 const InputArea: React.FC<InputAreaProps> = memo(
@@ -88,6 +93,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
     statusBanners,
     composerShellRef,
     disableStopWhenEmpty = false,
+    bottomAnchored = false,
   }) => {
     const { t } = useTranslation("sessions");
 
@@ -117,7 +123,6 @@ const InputArea: React.FC<InputAreaProps> = memo(
       setShowContextMenu,
       atSearchQuery,
       setAtSearchQuery,
-      recentFiles,
       handleAtSelect,
       handleCustomMentionSelect,
       customMentionOptions: activeCustomMentionOptions,
@@ -304,6 +309,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
         ref={containerRef}
         data-chat-input-shell
         data-testid="chat-input"
+        data-image-owner-id={dropTargetId}
         className="flex w-full flex-col"
         onKeyDown={isEditMode ? handleEditKeyDown : undefined}
         onDragOver={handleContainerDragOver}
@@ -474,7 +480,6 @@ const InputArea: React.FC<InputAreaProps> = memo(
           onCustomMentionSelect={handleCustomMentionSelect}
           atSearchQuery={atSearchQuery}
           contextMenuKeyboardOpened={contextMenuKeyboardOpened}
-          recentFiles={recentFiles}
           currentRepoPath={currentRepoPath}
           contextMenuKeyboardHandlerRef={contextMenuKeyboardHandlerRef}
           mentionTreePosition={mentionTreePosition}
@@ -497,6 +502,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
             plusSlashCommandKeyboardHandlerRef
           }
           onPlusSlashQueryChange={handlePlusSlashQueryChange}
+          bottomAnchored={bottomAnchored}
         />
 
         <input

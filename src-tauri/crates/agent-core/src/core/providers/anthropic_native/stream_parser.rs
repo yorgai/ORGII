@@ -18,8 +18,8 @@ use tracing::warn;
 use super::types::StreamEvent;
 use super::usage;
 use crate::providers::traits::{
-    finish_reason as finish, AssistantBlock, StreamDelta, StreamErrorKind, ToolCallDelta,
-    ToolCallRequest,
+    finish_reason as finish, AssistantBlock, ProviderError, StreamDelta, StreamErrorKind,
+    ToolCallDelta, ToolCallRequest,
 };
 
 // Anthropic API protocol `stop_reason` values. Mapped to the unified
@@ -107,8 +107,13 @@ pub(super) enum EventOutcome {
     /// Stream is done — drain any remaining events and exit the read loop.
     StreamDone,
     /// Hard error — the connection is fine but Anthropic told us we have
-    /// no recoverable state. Caller surfaces as a `ProviderError`.
-    HardError(String),
+    /// no recoverable state. Carries a typed `ProviderError` so the caller
+    /// preserves the error class (rate-limit / overloaded vs generic) all
+    /// the way to `reliable.rs`, where rate-limit cooldowns are keyed off
+    /// `ProviderError::RateLimited`. A bare string here would collapse a
+    /// `rate_limit_error` frame into an opaque `RequestFailed`, defeating
+    /// the shared cross-session cooldown.
+    HardError(ProviderError),
 }
 
 /// Dispatch a single parsed `StreamEvent`, mutating `state` and emitting
@@ -329,10 +334,20 @@ fn handle_error_event(
         resolved_model, error_type, msg
     );
 
+    let lower_msg = msg.to_lowercase();
+    let is_overloaded = error_type == "overloaded_error" || lower_msg.contains("overloaded");
+    // `rate_limit_error` frames MUST stay classified as rate-limit all the
+    // way to `reliable.rs` so the shared `RATE_LIMIT_COOLDOWNS` map kicks in
+    // — that is what makes one session's 429 throttle the OTHER concurrent
+    // sessions hammering the same account, instead of each retrying blindly.
+    let is_rate_limited = error_type == "rate_limit_error" || lower_msg.contains("rate limit");
+
     if state.has_partial_data() {
-        let is_overloaded =
-            error_type == "overloaded_error" || msg.to_lowercase().contains("overloaded");
-        let kind = if is_overloaded {
+        // Partial output already streamed: we can't surface a typed
+        // ProviderError without discarding it, so mark a recoverable stream
+        // error and let the turn executor's retry loop take over. Rate-limit
+        // and overload both map to the short Overloaded budget here.
+        let kind = if is_overloaded || is_rate_limited {
             StreamErrorKind::Overloaded
         } else {
             StreamErrorKind::ProviderError
@@ -340,7 +355,22 @@ fn handle_error_event(
         state.mark_stream_error(kind);
         return EventOutcome::StreamDone;
     }
-    EventOutcome::HardError(msg.to_string())
+
+    // No partial output: surface a typed error so the retry/cooldown layer
+    // can branch on the exact class.
+    if is_rate_limited {
+        return EventOutcome::HardError(ProviderError::RateLimited {
+            message: msg.to_string(),
+            retry_after_secs: None,
+        });
+    }
+    if is_overloaded {
+        return EventOutcome::HardError(ProviderError::Overloaded {
+            message: msg.to_string(),
+            retry_after_secs: None,
+        });
+    }
+    EventOutcome::HardError(ProviderError::RequestFailed(msg.to_string()))
 }
 
 /// Collapse per-index accumulators into ordered `(blocks, tool_calls)`.
@@ -403,4 +433,62 @@ pub(super) fn finalize_blocks(
         }
     }
     (blocks, tool_calls)
+}
+
+#[cfg(test)]
+mod error_event_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn rate_limit_frame_without_partial_maps_to_rate_limited() {
+        let mut state = StreamState::default();
+        let err = json!({ "type": "rate_limit_error", "message": "Rate limited" });
+        match handle_error_event(&mut state, &err, "claude-opus-4-8") {
+            EventOutcome::HardError(ProviderError::RateLimited { .. }) => {}
+            other => panic!("expected RateLimited, got {:?}", debug_outcome(&other)),
+        }
+    }
+
+    #[test]
+    fn overloaded_frame_without_partial_maps_to_overloaded() {
+        let mut state = StreamState::default();
+        let err = json!({ "type": "overloaded_error", "message": "Overloaded" });
+        match handle_error_event(&mut state, &err, "claude-opus-4-8") {
+            EventOutcome::HardError(ProviderError::Overloaded { .. }) => {}
+            other => panic!("expected Overloaded, got {:?}", debug_outcome(&other)),
+        }
+    }
+
+    #[test]
+    fn generic_frame_without_partial_maps_to_request_failed() {
+        let mut state = StreamState::default();
+        let err = json!({ "type": "api_error", "message": "boom" });
+        match handle_error_event(&mut state, &err, "claude-opus-4-8") {
+            EventOutcome::HardError(ProviderError::RequestFailed(_)) => {}
+            other => panic!("expected RequestFailed, got {:?}", debug_outcome(&other)),
+        }
+    }
+
+    #[test]
+    fn rate_limit_frame_with_partial_becomes_recoverable_stream_error() {
+        let mut state = StreamState::default();
+        state.accumulated_content.push_str("partial answer");
+        let err = json!({ "type": "rate_limit_error", "message": "Rate limited" });
+        match handle_error_event(&mut state, &err, "claude-opus-4-8") {
+            EventOutcome::StreamDone => {
+                assert_eq!(state.finish_reason, finish::STREAM_ERROR);
+                assert_eq!(state.stream_error_kind, Some(StreamErrorKind::Overloaded));
+            }
+            other => panic!("expected StreamDone, got {:?}", debug_outcome(&other)),
+        }
+    }
+
+    fn debug_outcome(outcome: &EventOutcome) -> &'static str {
+        match outcome {
+            EventOutcome::Continue => "Continue",
+            EventOutcome::StreamDone => "StreamDone",
+            EventOutcome::HardError(_) => "HardError",
+        }
+    }
 }

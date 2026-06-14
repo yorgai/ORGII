@@ -66,7 +66,12 @@ export function createInspectChatStateHelper(store: E2EStore) {
       turnPhase: string;
       turnGeneration: number;
       queueFlushRequest: number;
-      queuedMessages: Array<{ id: string; sessionId: string; content: string }>;
+      queuedMessages: Array<{
+        id: string;
+        sessionId: string;
+        content: string;
+        imageCount: number;
+      }>;
       forceSendPendingMessages: Array<{
         id: string;
         sessionId: string;
@@ -140,6 +145,7 @@ export function createInspectChatStateHelper(store: E2EStore) {
         priority: message.priority,
         requiresExplicitDispatch: message.requiresExplicitDispatch ?? false,
         createdAt: message.createdAt,
+        imageCount: message.imageDataUrls?.length ?? 0,
       });
       const queue = store.get(messageQueueAtom);
       const queuedMessages = queue.map(serializeQueuedMessage);

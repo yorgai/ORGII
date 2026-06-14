@@ -12,6 +12,8 @@ import {
 } from "@src/engines/SessionCore";
 import { resetTurnLifecycleForTests } from "@src/engines/SessionCore/control/turnLifecycle";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { isVisibleInChat } from "@src/engines/SessionCore/ingestion/visibilityFilters";
 import {
   loadEvents,
   loadInitialTurnWindow,
@@ -367,19 +369,66 @@ export function createSessionHelpers(store: E2EStore) {
       store.set(sessionIdAtom, sessionId);
       store.set(sessionRuntimeStatusAtom, "idle");
       await eventStoreProxy.switchSession(sessionId);
-      const initialWindow = await loadInitialTurnWindow(sessionId);
-      let events =
-        initialWindow.turns.length > 0
-          ? initialWindow.events
-          : await loadEvents(sessionId);
-      if (events.length === 0) {
-        const adapter = isCliSession(sessionId)
-          ? cliAdapter
-          : getAdapterForSession(sessionId);
-        const controller = new AbortController();
-        events = adapter
-          ? await adapter.loadHistory(sessionId, controller.signal)
-          : [];
+
+      // CLI sessions: the authoritative post-restore history lives in
+      // `code_session_chunks`, read via the adapter. The session-persistence
+      // turn-index / events cache can survive a restore-to-checkpoint in an
+      // inconsistent state (a turn_count that no longer matches the truncated
+      // chunks, e.g. cursor-cli's double session_end inflating the count), so
+      // `loadInitialTurnWindow` may return a window that renders nothing even
+      // though stale rows are present. Always reload CLI history straight from
+      // the adapter (the chunk read can briefly lag the post-restore DB commit
+      // on a fresh page load, so retry a few times) rather than trusting the
+      // cached turn window.
+      let events: SessionEvent[] = [];
+      if (isCliSession(sessionId)) {
+        const ADAPTER_LOAD_ATTEMPTS = 5;
+        for (let attempt = 1; attempt <= ADAPTER_LOAD_ATTEMPTS; attempt++) {
+          const controller = new AbortController();
+          const loaded = await cliAdapter.loadHistory(
+            sessionId,
+            controller.signal
+          );
+          if (loaded.length > 0) {
+            events = loaded;
+            break;
+          }
+          if (attempt < ADAPTER_LOAD_ATTEMPTS) {
+            await new Promise((resolve) => window.setTimeout(resolve, 400));
+          }
+        }
+      } else {
+        const initialWindow = await loadInitialTurnWindow(sessionId);
+        events =
+          initialWindow.turns.length > 0
+            ? initialWindow.events
+            : await loadEvents(sessionId);
+        // Mirror the production reload guard (`handleCacheHit` in
+        // sessionSwitchOrchestrator): fall back to a fresh adapter load
+        // whenever the cached events are empty OR contain nothing renderable
+        // in chat, instead of only when the array is strictly length 0.
+        const cachedEventsRenderable =
+          events.length > 0 && events.some(isVisibleInChat);
+        if (!cachedEventsRenderable) {
+          const adapter = getAdapterForSession(sessionId);
+          if (adapter) {
+            const ADAPTER_LOAD_ATTEMPTS = 5;
+            for (let attempt = 1; attempt <= ADAPTER_LOAD_ATTEMPTS; attempt++) {
+              const controller = new AbortController();
+              const loaded = await adapter.loadHistory(
+                sessionId,
+                controller.signal
+              );
+              if (loaded.length > 0) {
+                events = loaded;
+                break;
+              }
+              if (attempt < ADAPTER_LOAD_ATTEMPTS) {
+                await new Promise((resolve) => window.setTimeout(resolve, 400));
+              }
+            }
+          }
+        }
       }
       if (events.length > 0) {
         await eventStoreProxy.set(events, sessionId);

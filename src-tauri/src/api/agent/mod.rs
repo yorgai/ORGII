@@ -80,6 +80,10 @@ pub fn create_routes() -> Router {
         )
         .route("/test/sde", post(test::sde::test_sde_message))
         .route(
+            "/test/file-history/restore",
+            post(test::file_history::test_restore_checkpoint),
+        )
+        .route(
             "/test/tool/code-search",
             post(test::sde::test_code_search_tool),
         )

@@ -4,7 +4,7 @@
 //! same-`call_id` sibling events (e.g. JS placeholder events).
 
 use super::EventStore;
-use crate::agent_sessions::event_pipeline::types::EventDisplayStatus;
+use crate::agent_sessions::event_pipeline::types::{ActivityStatus, EventDisplayStatus};
 
 impl EventStore {
     /// Find the index of the last tool_call matching any of the given function names.
@@ -165,5 +165,45 @@ impl EventStore {
         }
         self.version += 1;
         Some(primary_id)
+    }
+
+    /// Flip a still-running spawning tool_call (matched by `call_id`) to a
+    /// terminal `display_status`. Used when a background subagent finishes:
+    /// its parent `agent` tool_call never receives a `tool_result` (the launch
+    /// message returned synchronously at spawn), so without this its
+    /// `display_status` stays `Running` forever — stranding the SubagentBlock
+    /// spinner and leaving the Stop button live on a finished card.
+    ///
+    /// Only transitions events still in `Running` (idempotent / safe against a
+    /// later real tool_result merge). `success = false` maps to `Failed`,
+    /// otherwise `Completed`. Returns the event IDs of updated tool_calls.
+    pub fn complete_tool_call_by_call_id(&mut self, call_id: &str, success: bool) -> Vec<String> {
+        let mut changed_ids = Vec::new();
+        for event in self.events.iter_mut() {
+            let matches = event.action_type == "tool_call"
+                && event.display_status == EventDisplayStatus::Running
+                && event.call_id.as_deref() == Some(call_id);
+            if !matches {
+                continue;
+            }
+
+            event.display_status = if success {
+                EventDisplayStatus::Completed
+            } else {
+                EventDisplayStatus::Failed
+            };
+            event.activity_status = ActivityStatus::Processed;
+            event.recompute_extracted();
+            changed_ids.push(event.id.clone());
+        }
+
+        if changed_ids.is_empty() {
+            return changed_ids;
+        }
+        for event_id in &changed_ids {
+            self.mark_changed(event_id.clone());
+        }
+        self.version += 1;
+        changed_ids
     }
 }

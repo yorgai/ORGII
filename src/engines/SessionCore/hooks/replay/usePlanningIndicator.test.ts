@@ -11,6 +11,7 @@ const baseInput = {
   coldStartVisible: false,
   idleAfterVersion: 10,
   version: 10,
+  hasLiveSubagent: false,
 };
 
 describe("shouldShowPlanningIndicator", () => {
@@ -51,6 +52,29 @@ describe("shouldShowPlanningIndicator", () => {
     expect(
       shouldShowPlanningIndicator({
         ...baseInput,
+        anyRunning: true,
+      })
+    ).toBe(false);
+  });
+
+  it("shows during the parent gap when a background subagent is still running", () => {
+    // Parent turn mechanically ended (runtimeStatus idle) but a
+    // background subagent keeps the session alive — footer must stay up.
+    expect(
+      shouldShowPlanningIndicator({
+        ...baseInput,
+        runtimeStatus: "idle",
+        hasLiveSubagent: true,
+      })
+    ).toBe(true);
+  });
+
+  it("does not show on a live subagent if a visible running row is already painted", () => {
+    expect(
+      shouldShowPlanningIndicator({
+        ...baseInput,
+        runtimeStatus: "idle",
+        hasLiveSubagent: true,
         anyRunning: true,
       })
     ).toBe(false);

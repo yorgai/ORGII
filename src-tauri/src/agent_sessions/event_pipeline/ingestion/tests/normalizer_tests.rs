@@ -123,6 +123,35 @@ fn test_normalize_user_message() {
 }
 
 #[test]
+fn test_raw_tool_use_message_is_not_user_message() {
+    let chunk = RawActivityChunk {
+        chunk_id: Some("chunk-tool-use-only".to_string()),
+        action_type: Some("raw".to_string()),
+        function: Some("call_2x9j".to_string()),
+        result: Some(serde_json::json!({
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "call_2x9j",
+                        "name": "run_shell",
+                        "input": {"command": "pwd"}
+                    }
+                ]
+            }
+        })),
+        created_at: Some("2025-01-15T10:30:03.500Z".to_string()),
+        ..Default::default()
+    };
+
+    let event = normalize_chunk(&chunk, "sess-1");
+    assert_eq!(event.source, EventSource::Assistant);
+    assert_eq!(event.display_variant, EventDisplayVariant::ToolCall);
+    assert_eq!(event.display_text, "Activity");
+}
+
+#[test]
 fn test_normalize_shell_command() {
     let chunk = RawActivityChunk {
         chunk_id: Some("chunk-5".to_string()),

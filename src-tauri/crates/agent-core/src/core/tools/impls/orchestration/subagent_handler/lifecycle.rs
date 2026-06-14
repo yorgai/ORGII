@@ -14,6 +14,7 @@ impl UnifiedSubagentHandler {
             self.set_child_streaming(handle, false);
         }
         self.stamp_elapsed_on_parent();
+        self.complete_parent_tool_call(true);
         self.update_child_session_status(crate::session::SessionStatus::Completed);
         self.persist_child_session_to_cache();
         self.unpin_child_session();
@@ -26,6 +27,7 @@ impl UnifiedSubagentHandler {
             self.set_child_streaming(handle, false);
         }
         self.stamp_elapsed_on_parent();
+        self.complete_parent_tool_call(false);
         self.update_child_session_status(crate::session::SessionStatus::Failed);
         self.persist_child_session_to_cache();
         self.unpin_child_session();

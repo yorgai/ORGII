@@ -144,12 +144,8 @@ fn infer_display_variant(
 ) -> EventDisplayVariant {
     // User messages
     if action_type == "raw" || action_type == "raw_event" {
-        if let Some(obj) = result.as_object() {
-            if obj.get("type").and_then(|v| v.as_str()) == Some("user")
-                || obj.contains_key("message")
-            {
-                return EventDisplayVariant::Message;
-            }
+        if raw_message_text(result).is_some() {
+            return EventDisplayVariant::Message;
         }
     }
 
@@ -410,14 +406,8 @@ fn infer_activity_status(action_type: &str, result: &serde_json::Value) -> Activ
 // ============================================================================
 
 fn infer_source(action_type: &str, result: &serde_json::Value) -> EventSource {
-    if action_type == "raw" || action_type == "raw_event" {
-        if let Some(obj) = result.as_object() {
-            if obj.get("type").and_then(|v| v.as_str()) == Some("user")
-                || obj.contains_key("message")
-            {
-                return EventSource::User;
-            }
-        }
+    if (action_type == "raw" || action_type == "raw_event") && raw_message_text(result).is_some() {
+        return EventSource::User;
     }
     EventSource::Assistant
 }
@@ -436,38 +426,7 @@ fn infer_display_text(
     let result_obj = result.as_object();
 
     match action_type {
-        "raw" | "raw_event" => {
-            if let Some(robj) = result_obj {
-                if let Some(message) = robj.get("message").and_then(|v| v.as_object()) {
-                    if let Some(content) = message.get("content") {
-                        if let Some(arr) = content.as_array() {
-                            let texts: Vec<&str> = arr
-                                .iter()
-                                .filter_map(|part| {
-                                    let pobj = part.as_object()?;
-                                    if pobj.get("type")?.as_str()? == "text" {
-                                        pobj.get("text")?.as_str()
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect();
-                            if !texts.is_empty() {
-                                return strip_terminal_code_blocks(&texts.join("\n"));
-                            }
-                        }
-                        if let Some(s) = content.as_str() {
-                            return strip_terminal_code_blocks(s);
-                        }
-                    }
-                }
-                str_field(robj, "observation")
-                    .or_else(|| Some(function_name.to_string()))
-                    .unwrap_or_else(|| "User message".to_string())
-            } else {
-                "User message".to_string()
-            }
-        }
+        "raw" | "raw_event" => raw_message_text(result).unwrap_or_else(|| "Activity".to_string()),
 
         "assistant" | "assistant_delta" | "message" | "message_delta" => result_obj
             .and_then(|o| str_field(o, "observation").or_else(|| str_field(o, "content")))
@@ -551,6 +510,53 @@ fn infer_display_text(
                 "Activity".to_string()
             }
         }
+    }
+}
+
+fn raw_message_text(result: &serde_json::Value) -> Option<String> {
+    let obj = result.as_object()?;
+    if obj.get("type").and_then(|v| v.as_str()) != Some("user") && !obj.contains_key("message") {
+        return None;
+    }
+
+    let text = obj
+        .get("message")
+        .and_then(extract_text_content)
+        .or_else(|| obj.get("content").and_then(extract_text_content))?;
+    let text = strip_terminal_code_blocks(&text);
+    if text.trim().is_empty() {
+        None
+    } else {
+        Some(text)
+    }
+}
+
+fn extract_text_content(value: &serde_json::Value) -> Option<String> {
+    if let Some(s) = value.as_str() {
+        return Some(s.to_string());
+    }
+
+    if let Some(obj) = value.as_object() {
+        return obj.get("content").and_then(extract_text_content);
+    }
+
+    let parts = value.as_array()?;
+    let texts: Vec<&str> = parts
+        .iter()
+        .filter_map(|part| {
+            let obj = part.as_object()?;
+            if obj.get("type")?.as_str()? == "text" {
+                obj.get("text")?.as_str()
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if texts.is_empty() {
+        None
+    } else {
+        Some(texts.join("\n"))
     }
 }
 

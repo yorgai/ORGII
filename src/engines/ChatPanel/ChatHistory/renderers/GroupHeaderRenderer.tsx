@@ -83,6 +83,7 @@ function sameGroupHeaderProps(
     previous.turnCollapseInteractionAtRef ===
       next.turnCollapseInteractionAtRef &&
     previous.onEditSubmit === next.onEditSubmit &&
+    previous.onRestoreCheckpoint === next.onRestoreCheckpoint &&
     sameHeader(previousHeader, nextHeader) &&
     sameMeta(previousMeta, nextMeta)
   );
@@ -119,6 +120,7 @@ export interface GroupHeaderRendererProps {
     newText: string,
     imageDataUrls?: string[]
   ) => Promise<void> | void;
+  onRestoreCheckpoint?: (header: OptimizedChatItem) => Promise<void> | void;
 }
 
 /**
@@ -144,6 +146,7 @@ export const GroupHeaderRenderer: React.FC<GroupHeaderRendererProps> = memo(
     hideUserMessage = false,
     turnCollapseInteractionAtRef,
     onEditSubmit,
+    onRestoreCheckpoint,
   }) => {
     const header = groupHeaders[groupIndex];
     const meta = groupMeta[groupIndex];
@@ -180,6 +183,10 @@ export const GroupHeaderRenderer: React.FC<GroupHeaderRendererProps> = memo(
       },
       [onEditSubmit, header]
     );
+    const handleRestoreCheckpoint = useCallback(() => {
+      if (!onRestoreCheckpoint || !header) return;
+      return onRestoreCheckpoint(header);
+    }, [onRestoreCheckpoint, header]);
 
     if (!header) return <div />;
 
@@ -225,6 +232,9 @@ export const GroupHeaderRenderer: React.FC<GroupHeaderRendererProps> = memo(
             <UserChatItem
               chatItem={header}
               onEditSubmit={onEditSubmit ? handleEdit : undefined}
+              onRestoreCheckpoint={
+                onRestoreCheckpoint ? handleRestoreCheckpoint : undefined
+              }
               onEditingChange={
                 isLastGroup && hasPinnedContent ? setIsEditing : undefined
               }

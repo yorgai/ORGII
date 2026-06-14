@@ -1,6 +1,7 @@
 import {
   ClipboardCheck,
   File,
+  History,
   Image,
   PencilLine,
   Sparkles,
@@ -92,6 +93,12 @@ interface UserChatItemProps {
   chatItem: OptimizedChatItem;
   onEditSubmit?: (newText: string, imageDataUrls?: string[]) => void;
   /**
+   * Restore the session to this message's checkpoint WITHOUT re-sending it
+   * (Cursor-style restore). When provided, a restore button is shown next to
+   * the edit button.
+   */
+  onRestoreCheckpoint?: () => void;
+  /**
    * Notifies the parent when this message enters / leaves edit mode.
    * Used by `GroupHeaderRenderer` to hide the attached pinned bar (and
    * the wrapper shell) while the editor is open.
@@ -180,6 +187,7 @@ const DISPLAY_CONTAINER_BASE =
 const UserChatItem = ({
   chatItem,
   onEditSubmit,
+  onRestoreCheckpoint,
   onEditingChange,
 }: UserChatItemProps) => {
   const { t } = useTranslation("sessions");
@@ -357,9 +365,23 @@ const UserChatItem = ({
         data-testid="chat-message-user-editable"
         onClick={isEditableDisplay ? handleEditClick : undefined}
       >
-        {/* Edit button — visible on hover */}
+        {/* Edit + Restore buttons — visible on hover */}
         {isEditableDisplay && (
           <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+            {onRestoreCheckpoint && (
+              <button
+                type="button"
+                data-testid="chat-message-restore-checkpoint"
+                title={t("chat.restoreCheckpoint", "Restore checkpoint")}
+                className="flex cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0.5 text-text-3 hover:text-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-6/30"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRestoreCheckpoint();
+                }}
+              >
+                <History size={14} strokeWidth={1.75} />
+              </button>
+            )}
             <button
               type="button"
               data-testid="chat-message-user-edit-button"

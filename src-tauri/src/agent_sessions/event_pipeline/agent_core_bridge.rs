@@ -54,6 +54,73 @@ fn update_tool_args_by_call_id_adapter(
     update_tool_args_by_call_id_with_persist(handle, &state, session_id, call_id, merge_args)
 }
 
+fn complete_tool_call_by_call_id_adapter(
+    handle: &AppHandle,
+    session_id: &str,
+    call_id: &str,
+    success: bool,
+) {
+    let state = handle.state::<EventStoreState>();
+
+    // In-memory: flip the still-running parent tool_call and collect it for
+    // the SQLite write-through.
+    let patched: Vec<SessionEvent> = state.with_store_mut(session_id, |store| {
+        let ids = store.complete_tool_call_by_call_id(call_id, success);
+        if ids.is_empty() {
+            return Vec::new();
+        }
+        store
+            .events()
+            .iter()
+            .filter(|event| ids.contains(&event.id))
+            .cloned()
+            .collect()
+    });
+
+    if !patched.is_empty() {
+        schedule_notify(handle, &state, session_id);
+        let cached: Vec<_> = patched.iter().map(session_event_to_cached_event).collect();
+        let sid = session_id.to_string();
+        tokio::task::spawn_blocking(move || {
+            let _ = save_events_retry(
+                "complete_parent_tool_call",
+                &sid,
+                &cached,
+                BULK_WRITE_MAX_RETRIES,
+            );
+        });
+        return;
+    }
+
+    // Store not loaded (restart / GC path): patch SQLite directly so the next
+    // es_load_from_cache hydrates a terminal event instead of a stuck spinner.
+    // The Rust-authoritative tool_call row id is `tool-call-{call_id}`.
+    let sid = session_id.to_string();
+    let event_id = format!("tool-call-{call_id}");
+    tokio::task::spawn_blocking(move || {
+        if let Ok(Some(cached)) = session_persistence::get_event(&sid, &event_id) {
+            let mut event = cached_event_to_session_event(&cached);
+            if event.display_status != EventDisplayStatus::Running {
+                return;
+            }
+            event.display_status = if success {
+                EventDisplayStatus::Completed
+            } else {
+                EventDisplayStatus::Failed
+            };
+            event.activity_status = ActivityStatus::Processed;
+            event.recompute_extracted();
+            let updated = session_event_to_cached_event(&event);
+            let _ = save_events_retry(
+                "complete_parent_tool_call_cold",
+                &sid,
+                &[updated],
+                BULK_WRITE_MAX_RETRIES,
+            );
+        }
+    });
+}
+
 fn finalize_streaming_adapter(handle: &AppHandle, session_id: &str) {
     let state = handle.state::<EventStoreState>();
     let changed = state.with_store_mut(session_id, |store| store.finalize_streaming_events());
@@ -395,6 +462,7 @@ pub fn register() {
         schedule_notify_adapter,
         update_spawning_tool_args_adapter,
         update_tool_args_by_call_id_adapter,
+        complete_tool_call_by_call_id_adapter,
         finalize_streaming_adapter,
         set_session_streaming_adapter,
         replace_streaming_event_adapter,

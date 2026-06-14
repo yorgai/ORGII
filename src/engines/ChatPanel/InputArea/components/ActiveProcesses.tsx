@@ -11,7 +11,7 @@
  */
 import { useAtomValue } from "jotai";
 import { Bot, SquareTerminal, Trash2 } from "lucide-react";
-import React, { memo, useCallback, useEffect, useMemo } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
@@ -97,8 +97,8 @@ ProcessRow.displayName = "ProcessRow";
 // Subagent worker row
 // ============================================
 
-function formatElapsed(startedAt: number): string {
-  const totalSec = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+function formatElapsed(startedAt: number, now: number): string {
+  const totalSec = Math.max(0, Math.floor((now - startedAt) / 1000));
   if (totalSec < 60) return `${totalSec}s`;
   const min = Math.floor(totalSec / 60);
   if (min < 60) return `${min}m`;
@@ -107,10 +107,11 @@ function formatElapsed(startedAt: number): string {
 
 interface SubagentRowProps {
   job: SubagentJobState;
+  now: number;
   onStop: (handle: string) => void;
 }
 
-const SubagentRow: React.FC<SubagentRowProps> = memo(({ job, onStop }) => {
+const SubagentRow: React.FC<SubagentRowProps> = memo(({ job, now, onStop }) => {
   const { t } = useTranslation("common");
   const handleStop = useCallback(
     () => onStop(job.handle),
@@ -125,7 +126,7 @@ const SubagentRow: React.FC<SubagentRowProps> = memo(({ job, onStop }) => {
       <span className={COMPOSER_STACK_ROW_LABEL}>
         {job.agentName}
         <span className="ml-1.5 text-text-3">
-          {job.subagentType} · {formatElapsed(job.startedAt)}
+          {job.subagentType} · {formatElapsed(job.startedAt, now)}
         </span>
       </span>
       <span className={COMPOSER_STACK_ROW_ACTIONS}>
@@ -187,6 +188,17 @@ const ActiveProcesses: React.FC<ActiveProcessesProps> = memo(
       onVisibleCountChange?.(count);
     }, [count, onVisibleCountChange]);
 
+    // Tick once a second only while subagent rows (the only elapsed-time
+    // display) are visible, so their timer counts up live instead of
+    // freezing at the value captured on the last atom change.
+    const [now, setNow] = useState(() => Date.now());
+    const hasSubagents = activeSubagents.length > 0;
+    useEffect(() => {
+      if (!hasSubagents) return;
+      const interval = setInterval(() => setNow(Date.now()), 1000);
+      return () => clearInterval(interval);
+    }, [hasSubagents]);
+
     const handleStop = useCallback(
       async (pid: number) => {
         try {
@@ -228,6 +240,7 @@ const ActiveProcesses: React.FC<ActiveProcessesProps> = memo(
             <SubagentRow
               key={job.handle}
               job={job}
+              now={now}
               onStop={handleStopSubagent}
             />
           ))}

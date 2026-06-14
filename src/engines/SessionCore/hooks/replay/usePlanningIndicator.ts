@@ -66,6 +66,10 @@ import {
   sessionRuntimeStatusAtom,
   setSessionRuntimeStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
+import {
+  hasLiveSubagentJobs,
+  subagentJobMapAtom,
+} from "@src/store/session/subagentJobAtom";
 
 const log = createLogger("usePlanningIndicator");
 
@@ -92,6 +96,13 @@ export interface PlanningIndicatorVisibilityInput {
   coldStartVisible: boolean;
   idleAfterVersion: number | null;
   version: number;
+  /**
+   * True when the (global) session has a still-running background subagent.
+   * The parent turn can mechanically end (runtimeStatus → idle) while a
+   * `agent(background: true)` worker keeps running; without this the footer
+   * would vanish during that gap even though work is clearly ongoing.
+   */
+  hasLiveSubagent: boolean;
 }
 
 export function shouldShowPlanningIndicator({
@@ -103,12 +114,14 @@ export function shouldShowPlanningIndicator({
   coldStartVisible,
   idleAfterVersion,
   version,
+  hasLiveSubagent,
 }: PlanningIndicatorVisibilityInput): boolean {
   const runtimeCanShowPlanning =
     runtimeStatus === "running" ||
     runtimeStatus === "installing" ||
     runtimeStatus === "waiting_for_user" ||
-    runtimeStatus === "waiting_for_funds";
+    runtimeStatus === "waiting_for_funds" ||
+    hasLiveSubagent;
   return (
     runtimeCanShowPlanning &&
     isSessionActive &&
@@ -165,6 +178,7 @@ export function usePlanningIndicator(
   const snapshot = useAtomValue(derivedSnapshotAtom);
   const globalVersion = useAtomValue(eventStoreVersionAtom);
   const sessionId = useAtomValue(sessionIdAtom);
+  const subagentJobMap = useAtomValue(subagentJobMapAtom);
   const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
   const scopedMeta = useAtomValue(
     scope
@@ -307,6 +321,11 @@ export function usePlanningIndicator(
   // session active while waiting for a click. That is not planning.
   const coldStartVisible =
     activationVersion !== null && activationVersion === version;
+  // Scoped surfaces (subagent monitor cell) fold liveness into `isLive`
+  // already; the live-subagent gap only applies to the global composer.
+  const hasLiveSubagent = scoped
+    ? false
+    : hasLiveSubagentJobs(subagentJobMap, sessionId);
   const visible = shouldShowPlanningIndicator({
     runtimeStatus,
     isSessionActive,
@@ -316,6 +335,7 @@ export function usePlanningIndicator(
     coldStartVisible,
     idleAfterVersion,
     version,
+    hasLiveSubagent,
   });
 
   const [showSlowHint, setShowSlowHint] = useState(false);
@@ -350,8 +370,15 @@ export function usePlanningIndicator(
   // Scoped instances skip the watchdog entirely: they don't own the global
   // runtime-status mirror, and their liveness comes from the monitor
   // strip's backend-authoritative status, which self-corrects.
+  //
+  // hasLiveSubagent guard: when a background subagent is still running the
+  // footer is legitimately visible for as long as the child takes (often
+  // minutes). Tripping the watchdog there would spam the warning and force
+  // the parent status to "completed" mid-wait — the child's
+  // `agent:subagent_job_changed` terminal event is the real completion
+  // signal, not a 60s wall clock.
   useEffect(() => {
-    if (scoped || !visible || !sessionId) return;
+    if (scoped || !visible || !sessionId || hasLiveSubagent) return;
     const timerId = window.setTimeout(() => {
       log.warn(
         `[usePlanningIndicator] watchdog: planning indicator stuck for ${PLANNING_WATCHDOG_MS}ms — ` +
@@ -367,7 +394,7 @@ export function usePlanningIndicator(
     return () => {
       window.clearTimeout(timerId);
     };
-  }, [scoped, visible, sessionId, setSessionRuntimeStatus]);
+  }, [scoped, visible, sessionId, hasLiveSubagent, setSessionRuntimeStatus]);
 
   // Re-roll the variant index on every hidden → visible transition.
   // Using a large random integer and letting the consumer mod by the

@@ -51,6 +51,16 @@ pub type UpdateSpawningToolArgsFn = fn(
 pub type UpdateToolArgsByCallIdFn =
     fn(handle: &AppHandle, session_id: &str, call_id: &str, merge_args: Value) -> Option<String>;
 
+/// Flip a still-running spawning tool_call (matched by `call_id`) to a
+/// terminal `display_status` and write-through to SQLite. Used when a
+/// background subagent finishes: its parent `agent` tool_call never receives
+/// a `tool_result` (the launch message returned synchronously at spawn), so
+/// without this its `display_status` stays `running` forever — stranding the
+/// SubagentBlock spinner and leaving the Stop button live on a finished card.
+/// `success = false` maps to `Failed`, otherwise `Completed`.
+pub type CompleteToolCallByCallIdFn =
+    fn(handle: &AppHandle, session_id: &str, call_id: &str, success: bool);
+
 /// Flip `is_delta=false` on every TS-side streaming placeholder for
 /// `session_id` and emit a notification when the flag flipped on at least
 /// one event.
@@ -134,6 +144,7 @@ static PUSH_EVENTS: OnceLock<PushEventsFn> = OnceLock::new();
 static SCHEDULE_NOTIFY: OnceLock<ScheduleNotifyFn> = OnceLock::new();
 static UPDATE_SPAWNING_TOOL_ARGS: OnceLock<UpdateSpawningToolArgsFn> = OnceLock::new();
 static UPDATE_TOOL_ARGS_BY_CALL_ID: OnceLock<UpdateToolArgsByCallIdFn> = OnceLock::new();
+static COMPLETE_TOOL_CALL_BY_CALL_ID: OnceLock<CompleteToolCallByCallIdFn> = OnceLock::new();
 static FINALIZE_STREAMING: OnceLock<FinalizeStreamingFn> = OnceLock::new();
 static SET_SESSION_STREAMING: OnceLock<SetSessionStreamingFn> = OnceLock::new();
 static REPLACE_STREAMING_EVENT: OnceLock<ReplaceStreamingEventFn> = OnceLock::new();
@@ -158,6 +169,7 @@ pub fn register(
     schedule_notify: ScheduleNotifyFn,
     update_spawning_tool_args: UpdateSpawningToolArgsFn,
     update_tool_args_by_call_id: UpdateToolArgsByCallIdFn,
+    complete_tool_call_by_call_id: CompleteToolCallByCallIdFn,
     finalize_streaming: FinalizeStreamingFn,
     set_session_streaming: SetSessionStreamingFn,
     replace_streaming_event: ReplaceStreamingEventFn,
@@ -173,6 +185,7 @@ pub fn register(
     let _ = SCHEDULE_NOTIFY.set(schedule_notify);
     let _ = UPDATE_SPAWNING_TOOL_ARGS.set(update_spawning_tool_args);
     let _ = UPDATE_TOOL_ARGS_BY_CALL_ID.set(update_tool_args_by_call_id);
+    let _ = COMPLETE_TOOL_CALL_BY_CALL_ID.set(complete_tool_call_by_call_id);
     let _ = FINALIZE_STREAMING.set(finalize_streaming);
     let _ = SET_SESSION_STREAMING.set(set_session_streaming);
     let _ = REPLACE_STREAMING_EVENT.set(replace_streaming_event);
@@ -250,6 +263,22 @@ pub fn update_tool_args_by_call_id(
             );
             None
         }
+    }
+}
+
+pub fn complete_tool_call_by_call_id(
+    handle: &AppHandle,
+    session_id: &str,
+    call_id: &str,
+    success: bool,
+) {
+    if let Some(f) = COMPLETE_TOOL_CALL_BY_CALL_ID.get() {
+        f(handle, session_id, call_id, success);
+    } else {
+        tracing::warn!(
+            "[event-pipeline-bridge] complete_tool_call_by_call_id called before register for {}",
+            session_id
+        );
     }
 }
 

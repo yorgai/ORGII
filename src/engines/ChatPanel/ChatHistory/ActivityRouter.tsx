@@ -143,10 +143,27 @@ function getAssistantMessageContent(event: SessionEvent): string | null {
   return text?.trim() ? text : null;
 }
 
+/**
+ * uiCanonical values that carry their own dedicated chat renderer AND are
+ * NOT assistant prose, even though the producing event is stamped
+ * `source: "assistant"` / `displayVariant: "message"` for activity-status
+ * purposes. Without this guard the broad heuristic below swallows them and
+ * renders their raw `result.observation` (e.g. the literal string
+ * `rate_limit_hint`) as an assistant message instead of routing to the
+ * registered card component.
+ */
+const DEDICATED_NON_MESSAGE_CANONICALS = new Set(["rate_limit_hint"]);
+
 function isAssistantMessageLikeEvent(
   event: SessionEvent,
   eventType: string
 ): boolean {
+  if (
+    event.uiCanonical &&
+    DEDICATED_NON_MESSAGE_CANONICALS.has(event.uiCanonical)
+  ) {
+    return false;
+  }
   if (eventType === "agent_message") return true;
   if (event.uiCanonical === "assistant_message") return true;
   if (event.functionName === "assistant_message") return true;

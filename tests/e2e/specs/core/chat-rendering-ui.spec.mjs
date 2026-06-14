@@ -1091,7 +1091,16 @@ async function assertBackgroundSubagentPinnedToChatSession() {
  * through the same Tauri command the Stop button invokes, and the
  * resulting "killed" broadcast must remove the row.
  */
-function makeRunningSubagentEvent({ sessionId, eventId, subagentSessionId, agentName, prompt }) {
+function makeSubagentEvent({
+  sessionId,
+  eventId,
+  subagentSessionId,
+  agentName,
+  prompt,
+  displayStatus = "running",
+  activityStatus = "agent",
+  result = { success: false, status: "running", is_delta: false },
+}) {
   return {
     id: eventId,
     chunk_id: eventId,
@@ -1106,20 +1115,172 @@ function makeRunningSubagentEvent({ sessionId, eventId, subagentSessionId, agent
       subagentSessionId,
       prompt,
     },
-    result: {
-      success: false,
-      status: "running",
-      is_delta: false,
-    },
+    result,
     source: "assistant",
     displayText: prompt,
-    displayStatus: "running",
+    displayStatus,
     displayVariant: "tool_call",
-    activityStatus: "agent",
+    activityStatus,
     isDelta: false,
   };
 }
 
+function makeRunningSubagentEvent({ sessionId, eventId, subagentSessionId, agentName, prompt }) {
+  return makeSubagentEvent({
+    sessionId,
+    eventId,
+    subagentSessionId,
+    agentName,
+    prompt,
+  });
+}
+
+async function assertCompletedSubagentCardIsTerminal() {
+  const sessionId = `sdeagent-e2e-subagent-card-terminal-${Date.now()}`;
+  const agentName = `E2E Terminal Worker ${RUN_ID}`;
+  const subagentSessionId = `agent-builtin:general-card-terminal-${RUN_ID}`;
+  const prompt = `Terminal subagent should not keep Stop ${subagentSessionId}`;
+  const userEvent = {
+    id: "subagent-card-terminal-user",
+    chunk_id: "subagent-card-terminal-user",
+    sessionId,
+    createdAt: new Date().toISOString(),
+    functionName: "user_message",
+    uiCanonical: "user_message",
+    actionType: "raw",
+    args: {},
+    result: {
+      type: "user",
+      message: "Launch a worker and let it finish",
+      is_delta: false,
+    },
+    source: "user",
+    displayText: "Launch a worker and let it finish",
+    displayStatus: "completed",
+    displayVariant: "message",
+    activityStatus: "processed",
+    isDelta: false,
+  };
+  const subagentEventId = "subagent-card-terminal-event";
+
+  const seedRunning = await invokeE2E(
+    "seedChatEvents",
+    sessionId,
+    [
+      userEvent,
+      makeRunningSubagentEvent({
+        sessionId,
+        eventId: subagentEventId,
+        subagentSessionId,
+        agentName,
+        prompt,
+      }),
+    ],
+    {
+      chatPanelMaximized: true,
+      runtimeStatus: "running",
+      stationMode: "my-station",
+    }
+  );
+  if (!seedRunning || seedRunning.ok !== true) {
+    throw new Error(
+      `seedChatEvents failed for running terminal fixture: ${seedRunning?.error ?? "unknown"}`
+    );
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const state = await execJS(`
+        const body = document.body.innerText || "";
+        const card = document.querySelector('[data-tool-call-event-id=${JSON.stringify(subagentEventId)}]');
+        const stopButton = card?.querySelector('[data-testid="subagent-card-stop-button"]');
+        return {
+          hasPrompt: body.includes(${JSON.stringify(prompt)}),
+          hasStopButton: Boolean(stopButton),
+          stopDisabled: stopButton ? stopButton.disabled : null,
+          cardText: card?.textContent || "",
+        };
+      `);
+      return state.hasPrompt && state.hasStopButton && state.stopDisabled === false;
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `running subagent card did not expose Stop: ${JSON.stringify(
+        await execJS(`return { body: (document.body.innerText || "").slice(0, 3000) };`)
+      )}`,
+    }
+  );
+
+  const seedCompleted = await invokeE2E(
+    "seedChatEvents",
+    sessionId,
+    [
+      userEvent,
+      makeSubagentEvent({
+        sessionId,
+        eventId: subagentEventId,
+        subagentSessionId,
+        agentName,
+        prompt,
+        displayStatus: "completed",
+        activityStatus: "processed",
+        result: {
+          success: true,
+          status: "completed",
+          summary: "Terminal worker completed",
+          is_delta: false,
+        },
+      }),
+    ],
+    {
+      chatPanelMaximized: true,
+      runtimeStatus: "idle",
+      stationMode: "my-station",
+    }
+  );
+  if (!seedCompleted || seedCompleted.ok !== true) {
+    throw new Error(
+      `seedChatEvents failed for completed terminal fixture: ${seedCompleted?.error ?? "unknown"}`
+    );
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const state = await execJS(`
+        const card = document.querySelector('[data-tool-call-event-id=${JSON.stringify(subagentEventId)}]');
+        const stopButton = card?.querySelector('[data-testid="subagent-card-stop-button"]');
+        const text = card?.textContent || "";
+        return {
+          hasCard: Boolean(card),
+          hasStopButton: Boolean(stopButton),
+          text,
+          hasRunningText: text.toLowerCase().includes("running"),
+          hasSpinClass: Boolean(card?.querySelector('.animate-spin')),
+        };
+      `);
+      return (
+        state.hasCard &&
+        !state.hasStopButton &&
+        !state.hasRunningText &&
+        !state.hasSpinClass
+      );
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `completed subagent card still looked active: ${JSON.stringify(
+        await execJS(`
+          const card = document.querySelector('[data-tool-call-event-id=${JSON.stringify(subagentEventId)}]');
+          return {
+            body: (document.body.innerText || "").slice(0, 3000),
+            cardText: card?.textContent || null,
+            hasStopButton: Boolean(card?.querySelector('[data-testid="subagent-card-stop-button"]')),
+            hasSpinClass: Boolean(card?.querySelector('.animate-spin')),
+          };
+        `)
+      )}`,
+    }
+  );
+}
 async function assertSubagentCardStopUsesJobRegistryFallback() {
   const sessionId = `sdeagent-e2e-subagent-card-stop-${Date.now()}`;
   const agentName = `E2E Card Stop Worker ${RUN_ID}`;
@@ -1919,6 +2080,15 @@ describe("Core chat rendering UI", () => {
     }
 
     await assertBackgroundSubagentWirePath();
+  });
+
+  it("does not show Stop or loading chrome for completed subagent cards", async function () {
+    if (!shouldRunScenario("subagent-card-terminal")) {
+      this.skip();
+      return;
+    }
+
+    await assertCompletedSubagentCardIsTerminal();
   });
 
   it("cancels a running subagent from the rendered card Stop button", async function () {

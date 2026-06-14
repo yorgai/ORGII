@@ -303,6 +303,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
             }
             composerShellRef={inputBoxRef}
             disableStopWhenEmpty={disableStopWhenEmpty}
+            bottomAnchored
             {...queueEditProps}
           />
           {isCursorIdeSession(sessionId) && (

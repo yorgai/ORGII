@@ -282,10 +282,30 @@ isSessionEngineActiveAtom.debugLabel = "isSessionEngineActive";
 /**
  * Universal "is any session actively working?" signal.
  *
- * Derives entirely from sessionRuntimeStatusAtom (Rust-pushed).
- * Replaces the old triple-atom approach (manual toggle + event heuristic + engine status).
+ * Derives from `sessionRuntimeStatusAtom` (Rust-pushed) OR the injected
+ * live-subagent signal. The latter covers the gap where the parent turn
+ * has mechanically ended (runtime status = idle) but a background subagent
+ * spawned via `agent(background: true)` is still running — without it the
+ * composer would drop to Send state and the planning footer would vanish
+ * while a child worker is clearly still alive.
+ *
+ * The live-subagent signal is injected by `viewAtom.ts` (which can read
+ * both the pipeline `sessionIdAtom` and `subagentJobMapAtom`) via
+ * `registerLiveSubagentSignalAtom`, mirroring the gate-atom registration
+ * pattern above. Importing those atoms directly here would create an
+ * import cycle. Before registration (tests, early startup) the signal is
+ * absent and behavior degrades to the pure runtime-status read.
  */
+let liveSubagentSignalAtom: Atom<boolean> | null = null;
+
+export function registerLiveSubagentSignalAtom(
+  signalAtom: Atom<boolean>
+): void {
+  liveSubagentSignalAtom = signalAtom;
+}
+
 export const isSessionActiveAtom = atom<boolean>((get) => {
-  return get(isSessionEngineActiveAtom);
+  if (get(isSessionEngineActiveAtom)) return true;
+  return liveSubagentSignalAtom ? get(liveSubagentSignalAtom) : false;
 });
 isSessionActiveAtom.debugLabel = "isSessionActive";

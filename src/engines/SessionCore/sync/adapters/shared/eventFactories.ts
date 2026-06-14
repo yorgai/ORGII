@@ -233,10 +233,17 @@ export function makeRateLimitHintEvent(sessionId: string): SessionEvent {
     createdAt: new Date().toISOString(),
     functionName: "system",
     uiCanonical: "rate_limit_hint",
-    actionType: "assistant",
+    // NOT "assistant": this is a system info card, not assistant prose.
+    // Marking it assistant made both the chat filter (willEventRenderContent)
+    // and ActivityRouter treat it as an agent message — the filter then
+    // required a text body and the router rendered the raw observation string
+    // ("rate_limit_hint") as a chat bubble. A neutral actionType routes it
+    // through the dedicated RateLimitHintEvent renderer via its uiCanonical.
+    actionType: "system",
     args: {},
-    result: { observation: "rate_limit_hint" },
-    source: "assistant",
+    // Empty on purpose: the dedicated renderer supplies its own i18n copy.
+    result: {},
+    source: "system",
     displayText: "",
     displayStatus: "completed",
     displayVariant: "message",

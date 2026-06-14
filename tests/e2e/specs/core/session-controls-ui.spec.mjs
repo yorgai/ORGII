@@ -29,6 +29,8 @@ import {
   runPlanWriteBeforeBuildDeniedScenario,
   runQueueAutodispatchesAfterNaturalCompletionScenario,
   runQueueDoesNotAutoflushWhileActiveScenario,
+  runQueueEditImageUploadScenario,
+  runRestoreCheckpointScenario,
   runRewindScenario,
   runSendAfterIdleDoesNotQueueScenario,
   runStopDoubleClickDoesNotResubmitScenario,
@@ -146,9 +148,11 @@ const CONTROL_SCENARIO_NAMES = [
   "queue-autodispatch-after-natural-completion",
   "send-after-idle-does-not-queue",
   "queue-does-not-autoflush-while-active",
+  "queue-edit-image-upload",
   "stop-double-click-no-resubmit",
   "force-send",
   "rewind",
+  "restore-checkpoint",
   "plan-build-direct",
   "plan-update",
   "plan-edit-resend",
@@ -162,6 +166,7 @@ const CONTROL_SCENARIO_NAMES = [
 const RUST_AGENT_EXEC_MODE_SCENARIOS = new Set([
   "fresh-stop",
   "fresh-stop-image",
+  "queue-edit-image-upload",
   "plan-build-direct",
   "plan-update",
   "plan-edit-resend",
@@ -292,6 +297,15 @@ describe("ORGII force-send queued follow-up behavior", function () {
     );
   });
 
+  it("uploads an image into a queued message via the + menu without collapsing queue-edit mode", async function () {
+    this.timeout(1_200_000);
+    await runScenario(
+      "queue-edit-image-upload",
+      runQueueEditImageUploadScenario,
+      this
+    );
+  });
+
   it("keeps burst queued siblings parked when the user force-sends the middle item then Stops and resends", async function () {
     this.timeout(1_200_000);
     await runScenario(
@@ -321,6 +335,15 @@ describe("ORGII force-send queued follow-up behavior", function () {
   it("rewinds agent file edits through the rendered Undo All control across Rust and CLI agents", async function () {
     this.timeout(1_200_000);
     await runScenario("rewind", runRewindScenario, this);
+  });
+
+  it("restores the session to a prior checkpoint without re-sending across Rust and CLI agents", async function () {
+    this.timeout(1_200_000);
+    await runScenario(
+      "restore-checkpoint",
+      runRestoreCheckpointScenario,
+      this
+    );
   });
 
   it("runs Plan mode direct Build and clears stale plan UI across Rust AgentExecMode sessions", async function () {

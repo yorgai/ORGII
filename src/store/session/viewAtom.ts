@@ -46,8 +46,15 @@ import {
   matchRepoByPath,
   normalizeRepoPath,
 } from "@src/store/repo/matchRepoByPath";
-import { registerRuntimeStatusGateSessionAtoms } from "@src/store/session/cliSessionStatusAtom";
+import {
+  registerLiveSubagentSignalAtom,
+  registerRuntimeStatusGateSessionAtoms,
+} from "@src/store/session/cliSessionStatusAtom";
 import { sessionsAtom } from "@src/store/session/sessionAtom/atoms";
+import {
+  hasLiveSubagentJobs,
+  subagentJobMapAtom,
+} from "@src/store/session/subagentJobAtom";
 import {
   activeFolderIdAtom,
   workspaceFoldersAtom,
@@ -155,6 +162,17 @@ activeSessionIdAtom.debugLabel = "activeSessionIdAtom";
 // is for a session the user can see. Registered here (not imported by the
 // status atom module) to avoid an import cycle through SessionCore actions.
 registerRuntimeStatusGateSessionAtoms([activeSessionIdAtom, sessionIdAtom]);
+
+// Live-subagent signal for `isSessionActiveAtom`: true when the pipeline
+// session (what the composer + planning footer read) has a still-running
+// background subagent. Registered here — not imported by the status atom
+// module — because reading `sessionIdAtom` there would create an import
+// cycle through SessionCore actions (same reason as the gate atoms above).
+const liveSubagentSignalAtom = atom<boolean>((get) =>
+  hasLiveSubagentJobs(get(subagentJobMapAtom), get(sessionIdAtom))
+);
+liveSubagentSignalAtom.debugLabel = "liveSubagentSignal";
+registerLiveSubagentSignalAtom(liveSubagentSignalAtom);
 
 /**
  * Is a session currently active?

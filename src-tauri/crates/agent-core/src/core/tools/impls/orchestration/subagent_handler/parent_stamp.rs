@@ -119,4 +119,34 @@ impl UnifiedSubagentHandler {
             );
         }
     }
+
+    /// Flip the parent session's spawning `agent` tool_call from `running` to
+    /// a terminal `display_status` when a **background** subagent finishes.
+    ///
+    /// A foreground subagent's parent tool_call is closed naturally by the
+    /// turn executor merging its inline `tool_result`. But a background spawn
+    /// returns its launch message synchronously at spawn time, so the parent
+    /// `agent` tool_call never receives a `tool_result` — its `display_status`
+    /// would stay `running` forever, leaving the SubagentBlock spinner turning
+    /// and the Stop button live on a finished card (and re-arming on history
+    /// re-render). This is the missing terminal write that pairs with
+    /// `stamp_elapsed_on_parent`.
+    ///
+    /// Requires `parent_call_id`: without it we cannot target the exact event
+    /// among possibly-many parallel background launches, and flipping "the last
+    /// running agent tool_call" would race sibling spawns.
+    pub(super) fn complete_parent_tool_call(&self, success: bool) {
+        let Some(ref handle) = self.app_handle else {
+            return;
+        };
+        let Some(ref call_id) = self.config.parent_call_id else {
+            return;
+        };
+        event_pipeline_bridge::complete_tool_call_by_call_id(
+            handle,
+            &self.config.parent_session_id,
+            call_id,
+            success,
+        );
+    }
 }
