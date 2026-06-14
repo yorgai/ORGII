@@ -244,9 +244,6 @@ export function useSessionActions(options: UseSessionActionsOptions) {
       // normally reset them.
       store.set(isPendingCancelAtom, false);
       store.set(userInitiatedCancelAtom, false);
-      // Force false→true transition so useEffect dependants re-fire even
-      // when sessionRolledBack was already true from a prior Stop.
-      setSessionRolledBack(false);
       setSessionRolledBack(true);
       store.set(clearSessionAtom);
       store.set(activeSessionIdAtom, null);
