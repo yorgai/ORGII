@@ -5,14 +5,11 @@
  * label + pattern). The result body is not
  * surfaced in chat — users inspect matches in the simulator.
  */
-import { SearchX } from "lucide-react";
 import React from "react";
-import { useTranslation } from "react-i18next";
 
 import { getToolIcon } from "@src/config/toolIcons";
 
 import {
-  EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES,
   EventBlockHeader,
   EventBlockHeaderIcon,
   EventBlockHeaderSubtitle,
@@ -35,19 +32,10 @@ export interface SearchBlockProps {
    * `useLifecycleLabels("code_search", action)` and picks running/done/failed.
    */
   title: string;
-  showNoMatch?: boolean;
 }
 
 const SearchBlock: React.FC<SearchBlockProps> = React.memo(
-  ({
-    pattern,
-    isLoading = false,
-    eventId,
-    action,
-    title,
-    showNoMatch = false,
-  }) => {
-    const { t } = useTranslation("sessions");
+  ({ pattern, isLoading = false, eventId, action, title }) => {
     const {
       isHeaderHovered,
       handleHeaderMouseEnter,
@@ -80,7 +68,7 @@ const SearchBlock: React.FC<SearchBlockProps> = React.memo(
             icon={toolIcon}
             isCollapsed
             isHeaderHovered={isHeaderHovered}
-            hasContent={showNoMatch}
+            hasContent={false}
             revealChevronOnIconHoverOnly={Boolean(eventId)}
             isLoading={isLoading}
           />
@@ -97,16 +85,6 @@ const SearchBlock: React.FC<SearchBlockProps> = React.memo(
             </EventBlockHeaderSubtitle>
           )}
         </EventBlockHeader>
-        {showNoMatch && !isLoading && (
-          <div className="animate-fade-in overflow-hidden">
-            <div className={EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES}>
-              <div className="chat-block-content flex items-center gap-2 px-3 py-2 text-text-3">
-                <SearchX size={13} className="shrink-0 text-text-4" />
-                <span>{t("tools.noMatch")}</span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

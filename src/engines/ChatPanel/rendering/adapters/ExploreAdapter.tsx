@@ -306,11 +306,7 @@ export const ExploreAdapter: React.FC<UniversalEventProps> = (props) => {
   // `list_dir` renders as a single header row (like Search / Glob). The
   // expanded directory listing is reachable in the simulator's Files tab.
   if (props.eventType === "list_dir" || props.eventType === "tool_search") {
-    const { directory, entries } = extractListDirData(props);
-    const showNoMatch = state === "done" && !isLoading && entries.length === 0;
-    const listDirTitle = showNoMatch
-      ? getToolDisplayLabelFromRegistry(props.eventType, exploreAction)
-      : title;
+    const { directory } = extractListDirData(props);
     const targetLabel =
       props.eventType === "tool_search"
         ? (props.args?.query as string) || undefined
@@ -334,9 +330,8 @@ export const ExploreAdapter: React.FC<UniversalEventProps> = (props) => {
           dirPath={directory}
           isLoading={isLoading}
           eventId={props.eventId}
-          title={listDirTitle}
+          title={title}
           targetPath={targetLabel}
-          showNoMatch={showNoMatch}
         />
       </div>
     );

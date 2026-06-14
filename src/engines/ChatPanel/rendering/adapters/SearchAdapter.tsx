@@ -23,14 +23,12 @@ export const SearchAdapter: React.FC<UniversalEventProps> = (props) => {
   // Failed searches have no useful output for the user — suppress the row.
   if (state === "failed") return null;
 
-  const { query, totalMatches } = extractSearchData(props);
+  const { query } = extractSearchData(props);
   const isLoading =
     props.status === "running" && props.showActiveEventPainting === true;
-  const showNoMatch = state === "done" && !isLoading && totalMatches === 0;
-  const title = showNoMatch
-    ? getToolDisplayLabelFromRegistry(props.eventType, searchAction)
-    : labels[state] ||
-      getToolDisplayLabelFromRegistry(props.eventType, searchAction);
+  const title =
+    labels[state] ||
+    getToolDisplayLabelFromRegistry(props.eventType, searchAction);
   const toolName = props.functionName || props.eventType;
 
   return (
@@ -41,7 +39,6 @@ export const SearchAdapter: React.FC<UniversalEventProps> = (props) => {
         eventId={props.eventId}
         action={searchAction}
         title={title}
-        showNoMatch={showNoMatch}
       />
     </div>
   );
