@@ -32,6 +32,7 @@ import {
   runQueueDoesNotAutoflushWhileActiveScenario,
   runRewindScenario,
   runSendAfterIdleDoesNotQueueScenario,
+  runStopAfterOutputTruncatesTurnScenario,
   runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
   rustAgentConfigs,
@@ -148,6 +149,7 @@ const CONTROL_SCENARIO_NAMES = [
   "send-after-idle-does-not-queue",
   "queue-does-not-autoflush-while-active",
   "stop-double-click-no-resubmit",
+  "stop-after-output-truncates-turn",
   "force-send",
   "force-send-stop-keeps-turn",
   "rewind",
@@ -313,6 +315,11 @@ describe("ORGII force-send queued follow-up behavior", function () {
 
   it("restores the in-flight prompt on Stop without consuming queued follow-ups across Rust and CLI agents", async function () {
     await runScenario("stop-restore", runStopRestoresInFlightScenario, this);
+  });
+
+  it("truncates the stopped turn's events when Stop is clicked after output has started across Rust and CLI agents", async function () {
+    this.timeout(1_200_000);
+    await runScenario("stop-after-output-truncates-turn", runStopAfterOutputTruncatesTurnScenario, this);
   });
 
   it("force-sends coherent follow-ups through Rust and CLI agents", async function () {

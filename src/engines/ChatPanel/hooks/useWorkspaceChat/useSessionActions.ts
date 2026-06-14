@@ -23,7 +23,6 @@ import {
   pendingSyntheticEventAtom,
   sortedEventsAtom,
 } from "@src/engines/SessionCore/core/atoms";
-import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { clearSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
@@ -105,43 +104,6 @@ export function hasPriorTurns(
     }
   }
   return false;
-}
-
-function eventResultObject(event: SessionEvent): Record<string, unknown> {
-  if (!event.result) return {};
-  if (typeof event.result === "string") {
-    try {
-      const parsed = JSON.parse(event.result);
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? (parsed as Record<string, unknown>)
-        : {};
-    } catch {
-      return {};
-    }
-  }
-  return typeof event.result === "object" && !Array.isArray(event.result)
-    ? (event.result as Record<string, unknown>)
-    : {};
-}
-
-function isStopRollbackEligibleUserEvent(event: SessionEvent): boolean {
-  if (event.source !== "user") return false;
-  const result = eventResultObject(event);
-  const turnIntentSource = result.turnIntentSource;
-  return turnIntentSource === undefined || turnIntentSource === "user_submit";
-}
-
-export function getCurrentTurnUserEventId(
-  events: readonly SessionEvent[],
-  sessionId: string
-): string | null {
-  for (let i = events.length - 1; i >= 0; i--) {
-    const event = events[i];
-    if (event.sessionId && event.sessionId !== sessionId) continue;
-    if (isStopRollbackEligibleUserEvent(event)) return event.id;
-    if (event.source === "user") return null;
-  }
-  return null;
 }
 
 export function resolveRestorableUserMessage(options: {
@@ -227,8 +189,9 @@ export function useSessionActions(options: UseSessionActionsOptions) {
    * own "force-send" timeline boundary.
    *
    * Stop is an O(1) timeline boundary: it updates local runtime state, restores
-   * the click-time prompt to the composer, and signals Rust cancellation. It
-   * must not read/repair DB history or scan/mutate the EventStore.
+   * the click-time prompt to the composer when no output was produced, and
+   * signals Rust cancellation. Transcript/round visibility is owned by the
+   * backend turn lifecycle and materialized round index.
    */
   const interruptSession = useCallback(async () => {
     const sessionId = getSessionId();
@@ -241,17 +204,15 @@ export function useSessionActions(options: UseSessionActionsOptions) {
     setSessionRolledBack(false);
 
     // When the current turn has not produced any assistant/tool output,
-    // discard the user message that started it so the chat rolls back cleanly.
+    // restore the user message that started it so the chat rolls back cleanly.
     const events = store.get(sortedEventsAtom);
     const currentTurnHasOutput = hasCurrentTurnProducedOutput(
       events,
       sessionId
     );
 
-    const stopUserEventId = getCurrentTurnUserEventId(events, sessionId);
-
-    // Only restore the draft when the turn has not produced output yet.
     if (!currentTurnHasOutput) {
+      // No output yet: restore the draft to the composer.
       const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
       const currentUserMessage = resolveRestorableUserMessage({
         lastUserMessage: store.get(lastUserMessageAtom),
@@ -279,21 +240,20 @@ export function useSessionActions(options: UseSessionActionsOptions) {
           imageDataUrls: currentUserMessage.imageDataUrls,
         });
       }
+    }
 
-      if (stopUserEventId) {
-        void eventStoreProxy.removeById(stopUserEventId, sessionId);
-      }
+    setPendingCancel(false);
+    forceTurnIdle(sessionId);
 
-      if (hasPriorTurns(events, sessionId)) {
-        // Multi-turn: signal ChatHistory to navigate to the previous page.
-        store.set(stopEarlyCancelEpochAtom, (prev) => prev + 1);
-      } else {
-        setSessionRolledBack(true);
-        // First conversation: clear the session so the creator shows.
-        store.set(clearSessionAtom);
-        store.set(activeSessionIdAtom, null);
-        store.set(workstationActiveSessionIdAtom, null);
-      }
+    if (hasPriorTurns(events, sessionId)) {
+      // Multi-turn: signal ChatHistory to navigate to the previous page.
+      store.set(stopEarlyCancelEpochAtom, (prev) => prev + 1);
+    } else {
+      setSessionRolledBack(true);
+      // First conversation: clear the session so the creator shows.
+      store.set(clearSessionAtom);
+      store.set(activeSessionIdAtom, null);
+      store.set(workstationActiveSessionIdAtom, null);
     }
 
     void (async () => {

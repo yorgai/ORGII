@@ -27,6 +27,7 @@ export {
   runQueueAutodispatchesAfterNaturalCompletionScenario,
   runQueueDoesNotAutoflushWhileActiveScenario,
   runSendAfterIdleDoesNotQueueScenario,
+  runStopAfterOutputTruncatesTurnScenario,
   runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
 } from "./agentQueuedControlScenarios.mjs";

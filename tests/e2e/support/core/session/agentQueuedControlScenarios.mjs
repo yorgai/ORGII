@@ -887,6 +887,15 @@ function longRunningPromptForConfig(config, waitSeconds = 20) {
   ].join(" ");
 }
 
+function outputThenWaitPromptForConfig(config, waitSeconds = 30) {
+  return [
+    `Start a stoppable turn for ${config.label}.`,
+    "Immediately write one short sentence saying OUTPUT_STARTED, then keep the turn active.",
+    `Use a harmless waiting mechanism for about ${waitSeconds} seconds before the final answer.`,
+    "After the wait completes, reply with a short confirmation.",
+  ].join(" ");
+}
+
 function repoExplorationPromptForConfig(config, waitSeconds = 20) {
   return [
     `Explore the current fixture repo for ${config.label} before answering.`,
@@ -1697,6 +1706,66 @@ async function runForceSendScenario(config) {
   );
 }
 
+async function runStopAfterOutputTruncatesTurnScenario(config) {
+  const prompt = outputThenWaitPromptForConfig(config, 30);
+
+  await configureScenario(config);
+  const inputSelector = await waitForChatInput();
+  await typeAndClickSend(inputSelector, prompt);
+  await waitForChatLaunched(prompt);
+  await waitForWorkingTurn(`${config.label}-stop-truncate-working`);
+
+  await browser.waitUntil(
+    async () => {
+      const state = await inspectChatState(`${config.label}-stop-truncate-output`);
+      const rawEvents = state.rawEvents ?? [];
+      const sendState = await execJS(js.sendState);
+      const lastUserIndex = rawEvents.findLastIndex(
+        (event) => event.source === "user"
+      );
+      if (lastUserIndex < 0 || sendState?.state !== "stop") return false;
+      return rawEvents.slice(lastUserIndex + 1).some(
+        (event) => event.source !== "user"
+      );
+    },
+    {
+      timeout: 90_000,
+      interval: 500,
+      timeoutMsg: `${config.label} stop-truncate turn did not produce output while Stop was available; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}`,
+    }
+  );
+
+  await clickMainAction("stop", `${config.label}-stop-truncate-stop`);
+
+  await browser.waitUntil(
+    async () => {
+      const state = await inspectChatState(
+        `${config.label}-stop-truncate-post-stop`
+      );
+      return !hasAuthoritativeRunningTurn(state) && !state.isPendingCancel;
+    },
+    {
+      timeout: 90_000,
+      interval: 1_000,
+      timeoutMsg: `${config.label} Stop did not settle to idle; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} rawEvents=${JSON.stringify((unwrap(await invokeE2E("inspectChatState"), "inspectChatState").rawEvents ?? []).map((e) => ({ id: e.id, fn: e.functionName, displayStatus: e.displayStatus, resultStatus: e.resultStatus, args: e.args })))}`,
+    }
+  );
+
+  const postStop = await inspectChatState(
+    `${config.label}-stop-truncate-final`
+  );
+  const visibleAssistantTexts = await execJS(js.assistantTexts);
+  const mode = await execJS(js.mode);
+  if (mode !== "creator" || visibleAssistantTexts.length !== 0) {
+    throw new Error(
+      `${config.label} stop-after-output left a rendered stopped turn; ` +
+        `assistantTexts=${JSON.stringify(visibleAssistantTexts)} ` +
+        `rawEvents=${JSON.stringify((postStop.rawEvents ?? []).map((e) => ({ id: e.id, source: e.source, fn: e.functionName })))} ` +
+        `mode=${JSON.stringify(mode)}`
+    );
+  }
+}
+
 export {
   assertStationSurfacesConsistent,
   clickMainAction,
@@ -1710,6 +1779,7 @@ export {
   runQueueAutodispatchesAfterNaturalCompletionScenario,
   runQueueDoesNotAutoflushWhileActiveScenario,
   runSendAfterIdleDoesNotQueueScenario,
+  runStopAfterOutputTruncatesTurnScenario,
   runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
   waitForIdleSendButton,

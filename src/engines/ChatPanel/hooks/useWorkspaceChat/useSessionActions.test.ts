@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 
 import {
-  getCurrentTurnUserEventId,
   hasCurrentTurnProducedOutput,
   hasPriorTurns,
   resolveRestorableUserMessage,
@@ -192,66 +191,5 @@ describe("hasPriorTurns", () => {
         "session-1"
       )
     ).toBe(false);
-  });
-});
-
-describe("getCurrentTurnUserEventId", () => {
-  function event(overrides: Partial<SessionEvent>): SessionEvent {
-    return {
-      id: "event-1",
-      sessionId: "session-1",
-      source: "user",
-      createdAt: new Date().toISOString(),
-      actionType: "raw",
-      functionName: "user_message",
-      displayVariant: "message",
-      ...overrides,
-    } as SessionEvent;
-  }
-
-  it("returns the current session's latest user event id from the Stop snapshot", () => {
-    expect(
-      getCurrentTurnUserEventId(
-        [
-          event({ id: "t1-user", source: "user" }),
-          event({ id: "t1-assist", source: "assistant" }),
-          event({ id: "other-user", source: "user", sessionId: "other" }),
-          event({ id: "t2-user", source: "user" }),
-        ],
-        "session-1"
-      )
-    ).toBe("t2-user");
-  });
-
-  it("returns null when the Stop snapshot has no user event", () => {
-    expect(
-      getCurrentTurnUserEventId([event({ source: "assistant" })], "session-1")
-    ).toBeNull();
-  });
-
-  it("does not return a force-send user event for Stop rollback", () => {
-    expect(
-      getCurrentTurnUserEventId(
-        [
-          event({ id: "direct-user", source: "user" }),
-          event({ id: "direct-assist", source: "assistant" }),
-          event({
-            id: "force-send-user",
-            source: "user",
-            result: { turnIntentSource: "force_send" },
-          }),
-        ],
-        "session-1"
-      )
-    ).toBeNull();
-  });
-
-  it("keeps legacy user events eligible when no source is stamped", () => {
-    expect(
-      getCurrentTurnUserEventId(
-        [event({ id: "legacy-user", source: "user" })],
-        "session-1"
-      )
-    ).toBe("legacy-user");
   });
 });

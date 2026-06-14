@@ -355,6 +355,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
                 variant="tertiary"
                 size="small"
                 iconOnly
+                data-testid="file-changes-undo-all"
                 className="flex-shrink-0"
                 onClick={handleUndoAll}
                 title={tCommon("actions.undoAll")}

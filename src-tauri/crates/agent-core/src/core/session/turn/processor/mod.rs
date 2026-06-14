@@ -728,6 +728,7 @@ impl UnifiedMessageProcessor {
             completion_tokens: result.completion_tokens,
             tool_calls_count,
             truncated: false,
+            final_turn_state,
             turn_summary: None,
             fork_redirect: None,
         })
