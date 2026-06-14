@@ -33,7 +33,47 @@
 //! table in `model_hints`). Migrating one of those into [`ModelCapabilities`]
 //! should delete its allowlist entry, tightening the ratchet.
 
+use std::collections::HashSet;
+use std::sync::RwLock;
+
 use key_vault::key_store::KEY_SERVICE;
+
+/// Process-level set of models observed to REJECT the `temperature` request
+/// param outright (Anthropic's newer models — e.g. `claude-opus-4-8` — return
+/// HTTP 400 `temperature is deprecated for this model`).
+///
+/// This is a self-healing learning cache: the first request that trips the
+/// 400 records the wire model id here, and every subsequent `prepare_request`
+/// for that model omits `temperature` entirely. No KeyVault schema change is
+/// needed because the fact is provider-deterministic (true for every account
+/// that touches the model) and cheap to relearn after a restart.
+///
+/// Keyed by the wire model id (post `wire_model_name` normalization) so the
+/// lookup in `prepare_request` matches exactly what gets sent on the wire.
+static TEMPERATURE_UNSUPPORTED: RwLock<Option<HashSet<String>>> = RwLock::new(None);
+
+/// Returns true when `wire_model` has been observed to reject `temperature`.
+pub fn temperature_unsupported(wire_model: &str) -> bool {
+    TEMPERATURE_UNSUPPORTED
+        .read()
+        .ok()
+        .and_then(|guard| guard.as_ref().map(|set| set.contains(wire_model)))
+        .unwrap_or(false)
+}
+
+/// Record that `wire_model` rejected the `temperature` param. Idempotent.
+/// Returns true if this was a newly-learned fact (first observation).
+pub fn mark_temperature_unsupported(wire_model: &str) -> bool {
+    if temperature_unsupported(wire_model) {
+        return false;
+    }
+    if let Ok(mut guard) = TEMPERATURE_UNSUPPORTED.write() {
+        return guard
+            .get_or_insert_with(HashSet::new)
+            .insert(wire_model.to_string());
+    }
+    false
+}
 
 /// How a model handles extended thinking / reasoning output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

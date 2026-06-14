@@ -39,7 +39,7 @@ impl LLMProvider for AnthropicClient {
         max_tokens: u32,
         temperature: f32,
     ) -> Result<LLMResponse, ProviderError> {
-        let prepared =
+        let mut prepared =
             prepare_request(self, messages, tools, model, max_tokens, temperature, false);
 
         info!(
@@ -51,6 +51,7 @@ impl LLMProvider for AnthropicClient {
         );
 
         let mut auth_retry_used = false;
+        let mut temp_retry_used = false;
         let body = loop {
             let req = apply_headers(self, self.client.post(&prepared.url));
             let response = req
@@ -81,6 +82,24 @@ impl LLMProvider for AnthropicClient {
 
             if status != 200 {
                 let classification = classify_error(status, &body, Some(&headers), retry_after);
+
+                // Self-healing temperature deprecation: the model rejected the
+                // `temperature` param. Record it so all future requests omit it,
+                // then retry THIS request once without temperature — the user
+                // never sees a reconnect for a deterministic, fixable 400.
+                if super::errors::is_temperature_rejected(status, &body) && !temp_retry_used {
+                    crate::providers::model_capabilities::mark_temperature_unsupported(
+                        &prepared.resolved_model,
+                    );
+                    warn!(
+                        "[anthropic] model={} rejected temperature; retrying once without it (learned for this process)",
+                        prepared.resolved_model
+                    );
+                    prepared.body.temperature = None;
+                    temp_retry_used = true;
+                    continue;
+                }
+
                 if classification.mark_temporary_unavailable {
                     self.mark_claude_oauth_upstream_health(
                         status,
@@ -125,7 +144,7 @@ impl LLMProvider for AnthropicClient {
     ) -> Result<LLMResponse, ProviderError> {
         use futures_util::StreamExt;
 
-        let prepared = prepare_request(self, messages, tools, model, max_tokens, temperature, true);
+        let mut prepared = prepare_request(self, messages, tools, model, max_tokens, temperature, true);
 
         info!(
             "Anthropic streaming: model={}, url={}, messages={}, tools={}",
@@ -136,6 +155,7 @@ impl LLMProvider for AnthropicClient {
         );
 
         let mut auth_retry_used = false;
+        let mut temp_retry_used = false;
         let response = loop {
             let req = apply_headers(self, self.client.post(&prepared.url));
             let send_future = req.json(&prepared.body).send();
@@ -182,6 +202,23 @@ impl LLMProvider for AnthropicClient {
                 let headers = response.headers().clone();
                 let body = crate::utils::response_text_or_read_error(response).await;
                 let classification = classify_error(status, &body, Some(&headers), retry_after);
+
+                // Self-healing temperature deprecation: learn it and retry this
+                // stream once without `temperature` so the user never sees a
+                // reconnect for a deterministic, fixable 400.
+                if super::errors::is_temperature_rejected(status, &body) && !temp_retry_used {
+                    crate::providers::model_capabilities::mark_temperature_unsupported(
+                        &prepared.resolved_model,
+                    );
+                    warn!(
+                        "[anthropic] model={} rejected temperature; retrying stream once without it (learned for this process)",
+                        prepared.resolved_model
+                    );
+                    prepared.body.temperature = None;
+                    temp_retry_used = true;
+                    continue;
+                }
+
                 if classification.mark_temporary_unavailable {
                     self.mark_claude_oauth_upstream_health(
                         status,

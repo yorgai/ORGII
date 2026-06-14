@@ -62,8 +62,16 @@ pub(super) fn prepare_request(
         // Plain side queries: suppress thinking when possible.
         crate::providers::anthropic_native::thinking::ThinkingDirective::PlainText
     };
-    let (thinking, effective_temp, effective_max_tokens) =
+    let (thinking, mut effective_temp, effective_max_tokens) =
         build_thinking_params(&caps, directive, max_tokens, temperature);
+
+    // Self-healing: once a model has rejected `temperature` with a 400
+    // (`temperature is deprecated for this model`), never send it again —
+    // for this model, for the rest of the process. See
+    // `model_capabilities::temperature_unsupported`.
+    if crate::providers::model_capabilities::temperature_unsupported(&resolved_model) {
+        effective_temp = None;
+    }
 
     let tool_choice = if let Some(ovr) = tool_choice_override {
         // Forced tool_choice from structured output

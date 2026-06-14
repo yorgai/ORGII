@@ -18,6 +18,22 @@ pub(super) struct AnthropicErrorClassification {
     pub mark_temporary_unavailable: bool,
 }
 
+/// True when a 400 body indicates the model rejected the `temperature`
+/// request param (Anthropic's newer models deprecate it). The fix is to
+/// resend without `temperature` — see
+/// `model_capabilities::mark_temperature_unsupported` and the in-request
+/// retry in `streaming.rs`.
+pub(super) fn is_temperature_rejected(status: u16, body: &str) -> bool {
+    if status != 400 {
+        return false;
+    }
+    let lower = extract_error_message(body)
+        .unwrap_or_default()
+        .to_lowercase();
+    lower.contains("temperature")
+        && (lower.contains("deprecated") || lower.contains("not supported"))
+}
+
 pub(super) fn classify_error(
     status: u16,
     body: &str,
@@ -162,5 +178,16 @@ mod tests {
 
         assert_eq!(classification.error_type, "extra_usage_required");
         assert!(!classification.mark_temporary_unavailable);
+    }
+
+    #[test]
+    fn detects_temperature_deprecated_400() {
+        let body = r#"{"type":"error","error":{"type":"invalid_request_error","message":"`temperature` is deprecated for this model."}}"#;
+        assert!(is_temperature_rejected(400, body));
+        // Wrong status: not our case.
+        assert!(!is_temperature_rejected(200, body));
+        // Unrelated 400: must not match.
+        let other = r#"{"error":{"type":"invalid_request_error","message":"messages: at least one message is required"}}"#;
+        assert!(!is_temperature_rejected(400, other));
     }
 }
