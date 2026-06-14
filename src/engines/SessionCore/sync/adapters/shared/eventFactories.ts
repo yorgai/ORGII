@@ -256,12 +256,6 @@ export function mintTurnIntentId(): string {
     : `tii-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
 }
 
-export type UserTurnIntentSource =
-  | "user_submit"
-  | "queue"
-  | "force_send"
-  | "resume";
-
 export function createSyntheticUserEvent(
   sessionId: string,
   content: string,
@@ -277,7 +271,6 @@ export function createSyntheticUserEvent(
      * Send Now).
      */
     turnIntentId?: string;
-    turnIntentSource?: UserTurnIntentSource;
   }
 ): SessionEvent {
   // Synthetic user placeholders are distinguished by their frontend-only
@@ -286,7 +279,6 @@ export function createSyntheticUserEvent(
   const id = `${ID_PREFIX.USER_INPUT}${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const images = options?.imageDataUrls;
   const turnIntentId = options?.turnIntentId;
-  const turnIntentSource = options?.turnIntentSource;
   return {
     id,
     chunk_id: null,
@@ -303,7 +295,6 @@ export function createSyntheticUserEvent(
       syntheticUserInput: true,
       ...(images && images.length > 0 ? { images } : {}),
       ...(turnIntentId ? { turnIntentId } : {}),
-      ...(turnIntentSource ? { turnIntentSource } : {}),
     },
     displayText: content,
     displayStatus: "completed",

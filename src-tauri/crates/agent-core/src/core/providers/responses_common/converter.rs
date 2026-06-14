@@ -80,7 +80,7 @@ pub fn convert_messages(messages: &[Value]) -> (Option<String>, Vec<Value>) {
                 }
             }
             "user" => {
-                input.push(convert_user_message(msg));
+                input.push(msg.clone());
             }
             "assistant" => {
                 if let Some(content) = msg.get("content").and_then(|c| c.as_str()) {
@@ -139,41 +139,6 @@ pub fn convert_messages(messages: &[Value]) -> (Option<String>, Vec<Value>) {
     }
 
     (instructions, input)
-}
-
-fn convert_user_message(msg: &Value) -> Value {
-    let mut converted = msg.clone();
-    let Some(content) = converted.get_mut("content") else {
-        return converted;
-    };
-    let Some(blocks) = content.as_array_mut() else {
-        return converted;
-    };
-
-    for block in blocks {
-        let Some(object) = block.as_object_mut() else {
-            continue;
-        };
-        let block_type = object.get("type").and_then(Value::as_str);
-        if block_type == Some("text") {
-            object.insert("type".to_string(), Value::String("input_text".to_string()));
-            continue;
-        }
-        if block_type != Some("image_url") {
-            continue;
-        }
-        let image_url = object
-            .get("image_url")
-            .and_then(|value| value.get("url"))
-            .and_then(Value::as_str)
-            .map(str::to_string);
-        object.insert("type".to_string(), Value::String("input_image".to_string()));
-        if let Some(url) = image_url {
-            object.insert("image_url".to_string(), Value::String(url));
-        }
-    }
-
-    converted
 }
 
 /// Build a Responses API `user` message with `input_image` blocks from
@@ -280,25 +245,6 @@ mod tests {
         assert_eq!(instructions, Some("You are helpful.".to_string()));
         assert_eq!(input.len(), 1);
         assert_eq!(input[0]["role"], "user");
-    }
-
-    #[test]
-    fn convert_messages_converts_user_image_url_blocks_to_input_image() {
-        let messages = vec![serde_json::json!({
-            "role": "user",
-            "content": [
-                {"type": "text", "text": "look"},
-                {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}}
-            ]
-        })];
-        let (_, input) = convert_messages(&messages);
-
-        let content = input[0]["content"].as_array().expect("array content");
-        assert_eq!(content[0]["type"], "input_text");
-        assert_eq!(content[0]["text"], "look");
-        assert_eq!(content[1]["type"], "input_image");
-        assert_eq!(content[1]["image_url"], "data:image/png;base64,AAAA");
-        assert!(content[1]["image_url"].as_object().is_none());
     }
 
     #[test]

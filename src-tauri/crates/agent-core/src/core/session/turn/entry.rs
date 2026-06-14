@@ -199,7 +199,6 @@ pub async fn process_message(
         display_text: input.display_text,
         turn_id: input.turn_id,
         turn_intent_id: input.turn_intent_id,
-        turn_intent_source: input.turn_intent_source,
     };
 
     let content = expand_skill_slash_command(&input.content, Some(workspace_path.as_path()));

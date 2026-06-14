@@ -263,14 +263,6 @@ lastUserMessageAtom.debugLabel = "lastUserMessage";
 export const sessionRolledBackAtom = atom<boolean>(false);
 sessionRolledBackAtom.debugLabel = "sessionRolledBack";
 
-/**
- * Monotonic epoch bumped by every early-cancel Stop (no assistant output yet).
- * ChatHistory watches for changes and navigates to the previous turn page
- * when turn pagination is active and there are prior pages to return to.
- */
-export const stopEarlyCancelEpochAtom = atom<number>(0);
-stopEarlyCancelEpochAtom.debugLabel = "stopEarlyCancelEpoch";
-
 // ============================================
 // Derived Status Atoms
 // ============================================

@@ -275,7 +275,6 @@ pub(crate) async fn send_message_impl(
     let display_text_for_closure = display_text;
     let workspace_root_for_closure = effective_workspace_root.clone();
     let turn_intent_id_for_closure = effective_turn_intent_id.clone();
-    let source_for_closure = source;
     // If the coordinator queued an `ExecModeSetRequest` override on
     // this member, consume it now (before defaulting to the
     // wire-supplied mode). The override is one-shot — `take` clears
@@ -312,7 +311,6 @@ pub(crate) async fn send_message_impl(
         let workspace_root = workspace_root_for_closure;
         let session = session_for_closure;
         let turn_intent_id = turn_intent_id_for_closure;
-        let turn_intent_source = source_for_closure;
 
         Box::pin(async move {
             let turn_id = session.begin_turn(content.clone()).await;
@@ -328,7 +326,6 @@ pub(crate) async fn send_message_impl(
                 chat_id: None,
                 turn_id: Some(turn_id.clone()),
                 turn_intent_id,
-                turn_intent_source: Some(turn_intent_source),
             };
 
             let response =

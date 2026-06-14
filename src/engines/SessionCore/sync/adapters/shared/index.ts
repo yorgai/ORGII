@@ -20,7 +20,6 @@ export type {
 } from "./types";
 
 // Event factories
-export type { UserTurnIntentSource } from "./eventBuilders";
 export {
   makeAssistantEvent,
   makeErrorEvent,

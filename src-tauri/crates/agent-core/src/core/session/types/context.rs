@@ -42,7 +42,6 @@ pub struct ProcessingContext {
     /// persistence call site treats an empty id as "no canonical id
     /// available, fall back to per-row identity".
     pub turn_intent_id: String,
-    pub turn_intent_source: Option<crate::foundation::session_bridge::TurnIntentBridgeSource>,
 }
 
 /// Behavior stance — the closed set of runtime semantics a presence mode

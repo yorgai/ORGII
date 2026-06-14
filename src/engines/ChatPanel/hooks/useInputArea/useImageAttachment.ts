@@ -14,15 +14,12 @@ import { useAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import Message from "@src/components/Message";
-import { createLogger } from "@src/hooks/logger";
 import {
   type ChatImageAttachment,
   MAX_CHAT_IMAGES,
   chatImageAttachmentsAtom,
 } from "@src/store/ui/chatImageAtom";
 import { optimizeImage } from "@src/util/optimization/imageOptimizer";
-
-const log = createLogger("ImageAttachment");
 
 /** Accepted image MIME types */
 const ACCEPTED_IMAGE_TYPES = new Set([
@@ -54,11 +51,7 @@ function mimeFromPath(path: string): string | undefined {
   return EXTENSION_MIME[match[1]];
 }
 
-export function useImageAttachment(
-  ownerId?: string,
-  options: { listenForE2EEvents?: boolean } = {}
-) {
-  const listenForE2EEvents = options.listenForE2EEvents !== false;
+export function useImageAttachment(ownerId?: string) {
   const [images, setImages] = useAtom(chatImageAttachmentsAtom);
 
   const ownerImages = useMemo(
@@ -119,7 +112,7 @@ export function useImageAttachment(
             ownerId,
           });
         } catch (error) {
-          log.error("[ImageAttachment] Failed to optimize image:", error);
+          console.error("[ImageAttachment] Failed to optimize image:", error);
           Message.error("Failed to process image");
         }
       }
@@ -142,34 +135,15 @@ export function useImageAttachment(
   );
 
   useEffect(() => {
-    if (!listenForE2EEvents) return;
-
     const handleE2EImageAttachment = (event: Event) => {
       const detail = (
         event as CustomEvent<{
           eventId?: string;
           fileName?: string;
           dataUrl?: string;
-          ownerId?: string;
         }>
       ).detail;
       if (!detail?.dataUrl?.startsWith("data:image/")) return;
-      if (detail.ownerId && detail.ownerId !== ownerId) return;
-      if (!detail.ownerId) {
-        const activeElement = document.activeElement;
-        if (!ownerId) {
-          if (activeElement?.closest("[data-chat-drop-target-id]")) return;
-        } else {
-          const target = Array.from(
-            document.querySelectorAll<HTMLElement>("[data-chat-drop-target-id]")
-          ).find(
-            (element) =>
-              element.getAttribute("data-chat-drop-target-id") === ownerId
-          );
-          if (target && activeElement && !target.contains(activeElement))
-            return;
-        }
-      }
 
       const e2eWindow = window as Window & {
         __orgiiE2EImageAttachLast?: Record<string, unknown>;
@@ -190,7 +164,6 @@ export function useImageAttachment(
       e2eWindow.__orgiiE2EImageAttachLast = {
         eventId,
         fileName: detail.fileName,
-        ownerId: detail.ownerId,
         received: true,
         mime,
         size: file.size,
@@ -209,7 +182,7 @@ export function useImageAttachment(
         handleE2EImageAttachment
       );
     };
-  }, [handleImagePaste, listenForE2EEvents, ownerId]);
+  }, [handleImagePaste]);
 
   /**
    * Add an image by absolute filesystem path.  Used by the Tauri drag-drop
@@ -232,7 +205,7 @@ export function useImageAttachment(
         const file = new File([bytes as BlobPart], name, { type: mime });
         await ingestFiles([file]);
       } catch (error) {
-        log.error(
+        console.error(
           "[ImageAttachment] Failed to read image from path:",
           path,
           error

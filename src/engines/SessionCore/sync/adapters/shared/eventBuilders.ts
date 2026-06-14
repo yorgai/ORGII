@@ -5,7 +5,7 @@
  * Streaming deltas for Rust agent sessions are intentionally ephemeral and
  * must not be routed through this durable EventStore factory layer.
  */
-export type { ErrorEventOptions, UserTurnIntentSource } from "./eventFactories";
+export type { ErrorEventOptions } from "./eventFactories";
 export {
   createSyntheticUserEvent,
   makeAssistantEvent,

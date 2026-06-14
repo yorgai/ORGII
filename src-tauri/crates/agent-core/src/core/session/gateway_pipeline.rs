@@ -127,7 +127,6 @@ pub async fn process_gateway_message(
         // gateway message as a distinct round even if multiple share
         // the same channel/chat.
         turn_intent_id: uuid::Uuid::new_v4().to_string(),
-        turn_intent_source: None,
     };
 
     let result =

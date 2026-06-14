@@ -139,7 +139,6 @@ pub async fn channel_process_message(
         turn_id: None,
         // Channel/admin synthetic turns (debug tooling) mint their own id.
         turn_intent_id: uuid::Uuid::new_v4().to_string(),
-        turn_intent_source: None,
     };
 
     const CALLER_TIMEOUT_SECS: u64 = 180;

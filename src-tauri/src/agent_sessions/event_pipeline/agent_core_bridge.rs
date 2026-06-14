@@ -239,7 +239,6 @@ fn persist_user_message_event_adapter(
     images: Option<&[String]>,
     source: bridge::PersistedUserMessageSource,
     turn_intent_id: &str,
-    turn_intent_source: Option<&str>,
 ) {
     let mut result = serde_json::json!({
         "type": "user",
@@ -257,14 +256,6 @@ fn persist_user_message_event_adapter(
             obj.insert(
                 "turnIntentId".to_string(),
                 serde_json::json!(turn_intent_id),
-            );
-        }
-    }
-    if let Some(turn_intent_source) = turn_intent_source.filter(|value| !value.is_empty()) {
-        if let Some(obj) = result.as_object_mut() {
-            obj.insert(
-                "turnIntentSource".to_string(),
-                serde_json::json!(turn_intent_source),
             );
         }
     }

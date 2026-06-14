@@ -468,7 +468,6 @@ class EventStoreProxyImpl {
     try {
       return await rpc.sessionCore.eventStore.saveToCache({ sessionId });
     } catch (error) {
-      // Raw console.warn kept intentionally: asserted by EventStoreProxy.test.ts.
       console.warn(
         `[EventStoreProxy] saveToCache failed for ${sessionId}; continuing with in-memory EventStore`,
         error
@@ -498,14 +497,6 @@ class EventStoreProxyImpl {
     return rpc.sessionCore.eventStore.patchByIds({
       ids,
       patch,
-      sessionId: sessionId ?? null,
-    });
-  }
-
-  /** Remove one event by exact ID. */
-  async removeById(id: string, sessionId?: string): Promise<boolean> {
-    return rpc.sessionCore.eventStore.removeById({
-      id,
       sessionId: sessionId ?? null,
     });
   }

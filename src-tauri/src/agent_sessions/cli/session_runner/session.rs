@@ -1,10 +1,10 @@
 //! Core session execution — spawns CLI agent, parses stdout, broadcasts events.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
 use agent_core::session::AgentExecMode;
 use tokio::io::BufReader;
@@ -37,25 +37,6 @@ use super::plan_approval::{
 };
 use super::proxy_release::release_proxy_token_for_session;
 use super::token_sync::{sync_codex_cli_auth_to_key_vault, sync_gemini_cli_auth_to_key_vault};
-
-static PENDING_TURN_INTENT_SOURCE_BY_SESSION: LazyLock<Mutex<HashMap<String, String>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
-
-pub async fn set_next_turn_intent_source(session_id: &str, source: Option<String>) {
-    let mut sources = PENDING_TURN_INTENT_SOURCE_BY_SESSION.lock().await;
-    if let Some(source) = source.filter(|value| !value.trim().is_empty()) {
-        sources.insert(session_id.to_string(), source);
-    } else {
-        sources.remove(session_id);
-    }
-}
-
-async fn take_next_turn_intent_source(session_id: &str) -> Option<String> {
-    PENDING_TURN_INTENT_SOURCE_BY_SESSION
-        .lock()
-        .await
-        .remove(session_id)
-}
 
 const SPAWN_RETRY_ATTEMPTS: usize = 3;
 const SPAWN_RETRY_BASE_DELAY_MS: u64 = 250;
@@ -786,7 +767,6 @@ pub async fn run_session(
     const OVERLOAD_RETRY_BASE_DELAY_SECS: u64 = 2;
 
     let base_sequence: i64 = persistence::max_chunk_sequence(&session_id).unwrap_or(-1) + 1;
-    let turn_intent_source = take_next_turn_intent_source(&session_id).await;
 
     // Emit user_message chunk
     {
@@ -805,9 +785,6 @@ pub async fn run_session(
                 });
                 if !image_paths.is_empty() {
                     res["images"] = serde_json::json!(image_paths);
-                }
-                if let Some(source) = turn_intent_source.filter(|value| !value.is_empty()) {
-                    res["turnIntentSource"] = serde_json::json!(source);
                 }
                 res
             },

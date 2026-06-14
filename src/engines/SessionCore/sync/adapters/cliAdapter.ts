@@ -922,7 +922,6 @@ export const cliAdapter: SessionAdapter = {
       imageDataUrls,
       ideContext,
       isResume,
-      turnIntentSource,
     } = input;
     if (!isResume && content.trim()) {
       await enterAgentOrgSessionIntervention(sessionId);
@@ -944,7 +943,6 @@ export const cliAdapter: SessionAdapter = {
           ? { images: imageDataUrls }
           : {}),
         ...(ideContext ? { ideContext } : {}),
-        ...(turnIntentSource ? { turnIntentSource } : {}),
       });
     } catch (error) {
       protectedRunningTurnBySession.delete(sessionId);

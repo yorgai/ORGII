@@ -31,7 +31,7 @@ pub use lifecycle::{
     cancel_session, cleanup_cursor_config_dir, kill_running_agent, terminate_process_tree,
 };
 pub use proxy_release::release_proxy_token_for_session_pub;
-pub use session::{run_session, set_next_turn_intent_source};
+pub use session::run_session;
 
 #[cfg(test)]
 #[path = "../tests/runner_tests.rs"]

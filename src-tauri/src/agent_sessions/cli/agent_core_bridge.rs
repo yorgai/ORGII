@@ -183,7 +183,6 @@ fn respond_plan_approval(
             None,
             Some(AgentExecMode::Build.as_str().to_string()),
             None,
-            None,
         )
         .await
     })

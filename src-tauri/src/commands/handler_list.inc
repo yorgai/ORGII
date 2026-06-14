@@ -1066,7 +1066,6 @@ agent_sessions::event_pipeline::commands::es_get_distinct_functions,
 // Batch update commands
 agent_sessions::event_pipeline::commands::es_complete_last_running,
 agent_sessions::event_pipeline::commands::es_patch_by_ids,
-agent_sessions::event_pipeline::commands::es_remove_by_id,
 agent_sessions::event_pipeline::commands::es_remove_by_id_prefix,
 agent_sessions::event_pipeline::commands::es_remove_synthetic_user_inputs,
 agent_sessions::event_pipeline::commands::es_replace_and_remove,

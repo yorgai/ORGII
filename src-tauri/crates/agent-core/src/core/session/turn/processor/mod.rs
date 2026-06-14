@@ -101,7 +101,6 @@ pub struct TurnInput {
     /// the field is carried on `TurnInput` so the entry layer (which
     /// constructs `ProcessingContext`) can forward it without re-deriving.
     pub turn_intent_id: String,
-    pub turn_intent_source: Option<crate::foundation::session_bridge::TurnIntentBridgeSource>,
 }
 
 // ============================================
@@ -439,7 +438,6 @@ impl UnifiedMessageProcessor {
                         context.images.as_deref(),
                         crate::bus::event_pipeline_bridge::PersistedUserMessageSource::User,
                         context.turn_intent_id.as_str(),
-                        context.turn_intent_source.map(|source| source.as_str()),
                     );
                 });
             }
@@ -603,7 +601,6 @@ impl UnifiedMessageProcessor {
                                 None,
                                 crate::bus::event_pipeline_bridge::PersistedUserMessageSource::AgentOrgInboxTranscript,
                                 &transcript_intent_id,
-                                Some("agent_org"),
                             );
                         });
                     }

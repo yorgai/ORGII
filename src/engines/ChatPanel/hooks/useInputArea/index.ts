@@ -243,7 +243,6 @@ export function useInputArea(
   // effects below only re-run when draftSessionId changes, not on every render
   // (useImageAttachment returns a new object literal each call).
   const { restoreImages, images: attachmentImages } = imageAttachment;
-  const { handleImagePaste, handleImagePath } = imageAttachment;
 
   useEffect(() => {
     if (!draftSessionId) {
@@ -316,8 +315,6 @@ export function useInputArea(
     selectedCiteRange: citeCode.selectedCiteRange,
     citeFileName: citeCode.citeFileName,
     currentRepoPath,
-    handleImagePaste,
-    handleImagePath,
     withProgrammaticInputMutation,
     onRestoreInputContent: handleRestoreInputContent,
   });
@@ -450,7 +447,7 @@ export function useInputArea(
       if (!draftSessionId) return;
       if (!next.isReply && replyTargetEventId) {
         void clearReplyTarget().catch((err: unknown) => {
-          logger.warn("[useInputArea] clearReplyTarget(bridge) failed:", err);
+          console.warn("[useInputArea] clearReplyTarget(bridge) failed:", err);
         });
       }
     },

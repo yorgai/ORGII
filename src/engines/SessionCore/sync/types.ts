@@ -15,7 +15,6 @@
  * all session types through a single code path.
  */
 import type { CancelReason } from "@src/api/tauri/agent/session";
-import { createLogger } from "@src/hooks/logger";
 import type { WorkspaceSnapshot } from "@src/services/context/workspaceSnapshot";
 import {
   isAgentSession,
@@ -26,9 +25,6 @@ import {
 } from "@src/util/session/sessionDispatch";
 
 import type { SessionEvent } from "../core/types";
-import type { UserTurnIntentSource } from "./adapters/shared/eventFactories";
-
-const log = createLogger("SessionCore");
 
 // ============================================================================
 // Raw event from Tauri Channel / WebSocket
@@ -156,7 +152,6 @@ export interface AdapterSendInput {
    * `QueuedMessage.turnIntentId` for the propagation contract.
    */
   turnIntentId?: string;
-  turnIntentSource?: UserTurnIntentSource;
   /**
    * When `true`, this is a user-initiated Resume after a failed turn.
    * The backend runs deletion-based orphan tool-use filter instead of
@@ -312,7 +307,7 @@ export function getAdapterForSession(
   sessionId: string
 ): SessionAdapter | undefined {
   if (adapterRegistry.size === 0) {
-    log.warn(
+    console.warn(
       "[SessionCore] getAdapterForSession called before adapters were registered"
     );
   }

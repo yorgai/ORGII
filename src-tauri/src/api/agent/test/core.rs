@@ -176,7 +176,6 @@ pub async fn test_send_message(Json(request): Json<TestMessageRequest>) -> Json<
         chat_id: Some(session_id.clone()),
         turn_id: None,
         turn_intent_id: uuid::Uuid::new_v4().to_string(),
-        turn_intent_source: None,
     };
 
     const CALLER_TIMEOUT_SECS: u64 = 180;

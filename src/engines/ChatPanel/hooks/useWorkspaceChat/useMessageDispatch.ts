@@ -21,10 +21,7 @@ import {
 } from "@src/engines/SessionCore/control/turnLifecycle";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
-import {
-  type UserTurnIntentSource,
-  createSyntheticUserEvent,
-} from "@src/engines/SessionCore/sync/adapters/shared";
+import { createSyntheticUserEvent } from "@src/engines/SessionCore/sync/adapters/shared";
 import { markSessionActive } from "@src/store/session";
 import {
   lastUserMessageAtom,
@@ -54,8 +51,7 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
     async (
       content: string,
       imageDataUrls?: string[],
-      turnIntentId?: string,
-      turnIntentSource: UserTurnIntentSource = "user_submit"
+      turnIntentId?: string
     ): Promise<void> => {
       const sessionId = getSessionId();
       if (!sessionId) {
@@ -66,7 +62,6 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
       const userEvent = createSyntheticUserEvent(sessionId, content, {
         imageDataUrls,
         turnIntentId,
-        turnIntentSource,
       });
       await eventStoreProxy.append([userEvent], sessionId);
 
