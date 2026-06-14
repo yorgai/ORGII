@@ -359,6 +359,15 @@ export function useQueueDispatch(): void {
         !interruptRequestedByMessageIdRef.current.has(explicitMsg.id)
       ) {
         interruptRequestedByMessageIdRef.current.add(explicitMsg.id);
+        // ORDERING INVARIANT: cancelTurnForTimelineBoundary's sync preamble
+        // (beginTimelineBoundary → beginTurnStopping) MUST run before the
+        // dispatchMessage call below (which calls beginTurnDispatch). Because
+        // the cancel is fire-and-forget (void, not awaited), the sync part
+        // runs immediately in the current microtask. beginTurnDispatch then
+        // overrides the FSM phase to "dispatching" unconditionally. If this
+        // call were ever awaited, beginTurnDispatch would run first and the
+        // subsequent beginTurnStopping would transition dispatching→stopping,
+        // deadlocking the new turn.
         void cancelTurnForTimelineBoundary(
           explicitMsg.sessionId,
           "force-send"

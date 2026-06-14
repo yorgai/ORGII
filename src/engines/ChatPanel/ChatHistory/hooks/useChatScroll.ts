@@ -62,6 +62,9 @@ export interface UseChatScrollOptions {
   activeSessionId: string | null | undefined;
   /** Static renderer scroll root used when Virtuoso is not mounted. */
   staticScrollerRef?: MutableRefObject<HTMLDivElement | null>;
+  /** When true, bypass the `isContentOverflowingRef` guard so auto-scroll
+   *  engages even in small viewports (subagent monitor cells). */
+  alwaysFollowTail?: boolean;
 }
 
 export interface UseChatScrollReturn {
@@ -96,6 +99,7 @@ export function useChatScroll({
   isContentOverflowingRef,
   activeSessionId,
   staticScrollerRef,
+  alwaysFollowTail = false,
 }: UseChatScrollOptions): UseChatScrollReturn {
   const atBottomRef = useRef(true);
 
@@ -174,15 +178,22 @@ export function useChatScroll({
 
     if (pinLastGroupRef.current) return;
     if (shouldSuppressTurnCollapseFollow()) return;
-    if (!isContentOverflowingRef.current) return;
+    if (!alwaysFollowTail && !isContentOverflowingRef.current) return;
 
     const isNearContentBottom = visibleRangeEndRef.current >= currentCount - 2;
 
-    if (currentCount > prevCount && (atBottom || isNearContentBottom)) {
+    if (
+      currentCount > prevCount &&
+      (alwaysFollowTail || atBottom || isNearContentBottom)
+    ) {
       const timer = setTimeout(() => {
         if (pinLastGroupRef.current) return;
         if (shouldSuppressTurnCollapseFollow()) return;
-        if (!isContentOverflowingRef.current && !staticScrollerRef?.current) {
+        if (
+          !alwaysFollowTail &&
+          !isContentOverflowingRef.current &&
+          !staticScrollerRef?.current
+        ) {
           return;
         }
         scrollToBottom();
@@ -198,6 +209,7 @@ export function useChatScroll({
     shouldSuppressTurnCollapseFollow,
     isContentOverflowingRef,
     staticScrollerRef,
+    alwaysFollowTail,
   ]);
 
   const scrollStaticToEndGap = useCallback(() => {
@@ -225,13 +237,14 @@ export function useChatScroll({
     (isAtBottom: boolean): "smooth" | false => {
       if (pinLastGroupRef.current) return false;
       if (shouldSuppressTurnCollapseFollow()) return false;
-      if (!isContentOverflowingRef.current) return false;
+      if (!alwaysFollowTail && !isContentOverflowingRef.current) return false;
       if (isPendingCancelRef.current) return false;
 
       const length = chatHistoryLengthRef.current;
       const isNearContentBottom = visibleRangeEndRef.current >= length - 2;
 
       if (
+        alwaysFollowTail ||
         isAtBottom ||
         atBottomRef.current ||
         isNearContentBottom ||
@@ -241,7 +254,7 @@ export function useChatScroll({
         scrollRafRef.current = requestAnimationFrame(() => {
           if (pinLastGroupRef.current) return;
           if (shouldSuppressTurnCollapseFollow()) return;
-          if (!isContentOverflowingRef.current) return;
+          if (!alwaysFollowTail && !isContentOverflowingRef.current) return;
           if (isPendingCancelRef.current) return;
           if (scrollStaticToEndGap()) return;
           const len = chatHistoryLengthRef.current;
@@ -265,6 +278,7 @@ export function useChatScroll({
       shouldSuppressTurnCollapseFollow,
       isContentOverflowingRef,
       scrollStaticToEndGap,
+      alwaysFollowTail,
     ]
   );
 

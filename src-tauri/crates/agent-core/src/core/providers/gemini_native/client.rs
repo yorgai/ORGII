@@ -228,7 +228,21 @@ impl LLMProvider for GeminiNativeClient {
         }
         let body = self.request_body(messages, tools, model, max_tokens, temperature);
         let mut token = self.fresh_access_token(None).await?;
-        let mut response = self.send_once(&token, &body, true).await?;
+        let mut response = if let Some(flag) = cancel_flag {
+            tokio::select! {
+                result = self.send_once(&token, &body, true) => result?,
+                _ = async {
+                    while !flag.load(Ordering::Relaxed) {
+                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                    }
+                } => {
+                    tracing::info!("[gemini_native] Request cancelled before stream response (model={})", model);
+                    return Err(ProviderError::Cancelled);
+                }
+            }
+        } else {
+            self.send_once(&token, &body, true).await?
+        };
         if matches!(response.status().as_u16(), 401 | 403) {
             token = self.fresh_access_token(Some(&token)).await?;
             response = self.send_once(&token, &body, true).await?;

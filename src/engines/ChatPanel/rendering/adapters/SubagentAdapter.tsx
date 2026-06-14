@@ -13,12 +13,16 @@
  * `SubagentBlock` falls back to showing the pinned prompt + error text as
  * its expandable payload.
  */
-import { useAtomValue } from "jotai";
-import React, { useMemo } from "react";
+import { useAtomValue, useSetAtom } from "jotai";
+import React, { useCallback, useMemo } from "react";
 
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
+import {
+  focusedSubagentCellAtom,
+  subagentPanelRevealRequestAtom,
+} from "@src/store/ui/simulatorAtom";
 
 import SubagentBlock from "../../blocks/SubagentBlock";
 
@@ -136,6 +140,14 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
   );
   const prompt = data.prompt ?? childPrompt;
 
+  const setFocusedCell = useSetAtom(focusedSubagentCellAtom);
+  const setPanelReveal = useSetAtom(subagentPanelRevealRequestAtom);
+  const handleNavigate = useCallback(() => {
+    if (!data.subagentSessionId) return;
+    setFocusedCell(data.subagentSessionId);
+    setPanelReveal((prev) => prev + 1);
+  }, [data.subagentSessionId, setFocusedCell, setPanelReveal]);
+
   return (
     <div data-tool-call-event-id={props.eventId} data-tool-call-name="agent">
       <SubagentBlock
@@ -154,6 +166,7 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
         success={data.success}
         errorMessage={data.errorMessage}
         eventId={props.eventId}
+        onNavigate={data.subagentSessionId ? handleNavigate : undefined}
       />
     </div>
   );

@@ -166,6 +166,11 @@ export function beginTimelineBoundary(
     // `idle` here blanked the planning footer for the whole interrupt window
     // (the "force-send looks stuck" bug); keep the status mirror `running`
     // and let the redispatch / terminal own the next transition.
+    //
+    // INVARIANT: the useQueueDispatch force-send path relies on this function's
+    // sync preamble (beginTurnStopping) running before its own beginTurnDispatch.
+    // See the ordering comment in useQueueDispatch.ts. Do NOT make this function
+    // async-before-return or await anything before the `return` below.
     return;
   }
   store.set(setSessionRuntimeStatusAtom, {

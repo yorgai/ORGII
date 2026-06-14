@@ -1007,9 +1007,9 @@ function isRotatingOAuthCliAccount(account) {
 
 function assertE2EOAuthAccountAllowed(account, label) {
   if (!isRotatingOAuthCliAccount(account)) return;
-  if (OAUTH_LIVE_MODE && (account.name ?? "").startsWith("e2e-")) return;
+  if (OAUTH_LIVE_MODE) return;
   throw new Error(
-    `Refusing OAuth account ${accountDisplayName(account)} for ${label} in E2E_PROVIDER_MODE=${E2E_PROVIDER_MODE}. Use E2E_PROVIDER_MODE=oauth-live with an e2e-* account in E2E_OAUTH_TEST_HOME.`
+    `Refusing OAuth account ${accountDisplayName(account)} for ${label} in E2E_PROVIDER_MODE=${E2E_PROVIDER_MODE}. Use E2E_PROVIDER_MODE=oauth-live.`
   );
 }
 

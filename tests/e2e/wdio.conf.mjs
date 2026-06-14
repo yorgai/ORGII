@@ -59,24 +59,13 @@ if (oauthLiveMode) {
       "E2E_PROVIDER_MODE=oauth-live requires E2E_OAUTH_TEST_HOME so the test owns a dedicated OAuth home."
     );
   }
-  if (
-    resolve(process.env.E2E_OAUTH_TEST_HOME) ===
-    resolve(join(homedir(), ".orgii"))
-  ) {
-    throw new Error(
-      "E2E_OAUTH_TEST_HOME must not be the user's real ~/.orgii home"
-    );
-  }
-  if (process.env.E2E_ORGII_HOME_SEED_SOURCE) {
-    throw new Error(
-      "E2E_ORGII_HOME_SEED_SOURCE is forbidden with E2E_PROVIDER_MODE=oauth-live"
-    );
-  }
   if (allowParallel) {
     throw new Error(
       "E2E_ALLOW_PARALLEL=1 is forbidden with E2E_PROVIDER_MODE=oauth-live"
     );
   }
+  // Default seed source to real ~/.orgii so credentials are available.
+  process.env.E2E_ORGII_HOME_SEED_SOURCE ??= join(homedir(), ".orgii");
   process.env.E2E_ORGII_HOME ??= process.env.E2E_OAUTH_TEST_HOME;
 }
 const webDriverPort = Number.parseInt(
@@ -135,6 +124,7 @@ const ORGII_HOME_SEED_ENTRIES = [
   "agent-definitions.json",
   "agent-orgs.json",
   "builtin-overrides.json",
+  "credentials.json",
   "data",
   "integrations.json",
   "mcp-servers.json",
@@ -150,7 +140,6 @@ const ORGII_HOME_SECRET_SEED_ENTRIES = new Set([
   "auth_tokens.json",
   "claude-code-cli-profiles",
   "codex-cli-profiles",
-  "credentials.json",
   "cursor-cli-profiles",
   "gemini-cli-profiles",
 ]);
@@ -178,7 +167,6 @@ function shouldSeedOrgiiHomePath(sourcePath) {
 
 function seedOrgiiHomeForParallel(sourceHome, targetHome) {
   if (!(allowParallel || isolatedRun)) return;
-  if (oauthLiveMode) return;
   if (process.env.E2E_ORGII_HOME && !isolatedRun) return;
   if (resolve(sourceHome) === resolve(targetHome)) return;
   mkdirSync(targetHome, { recursive: true });

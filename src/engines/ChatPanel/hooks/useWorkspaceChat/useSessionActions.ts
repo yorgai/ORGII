@@ -12,12 +12,7 @@ import {
   beginOptimisticTurn,
   failOptimisticTurn,
 } from "@src/engines/SessionCore/control/optimisticTurnStatus";
-import {
-  beginStopBoundary,
-  cancelTurnForTimelineBoundary,
-  clearLiveStreamingForSession,
-} from "@src/engines/SessionCore/control/sessionTimelineBoundary";
-import { forceTurnIdle } from "@src/engines/SessionCore/control/turnLifecycle";
+import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import {
   clearSessionAtom,
   pendingSyntheticEventAtom,
@@ -32,8 +27,6 @@ import {
   lastUserMessageAtom,
   restoreToInputAtom,
   sessionRolledBackAtom,
-  sessionRuntimeStatusAtom,
-  setSessionRuntimeStatusAtom,
   stopEarlyCancelEpochAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import {
@@ -152,10 +145,6 @@ export function useSessionActions(options: UseSessionActionsOptions) {
   const setPendingCancel = useSetAtom(isPendingCancelAtom);
   const setRestoreToInput = useSetAtom(restoreToInputAtom);
   const setSessionRolledBack = useSetAtom(sessionRolledBackAtom);
-  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
-  const stopVisibleStreaming = useCallback((sessionId: string) => {
-    clearLiveStreamingForSession(sessionId);
-  }, []);
 
   const resumeSession = useCallback(async () => {
     const sessionId = getSessionId();
@@ -188,10 +177,16 @@ export function useSessionActions(options: UseSessionActionsOptions) {
    * Send Now interrupts are NOT routed here — the queue dispatcher issues its
    * own "force-send" timeline boundary.
    *
-   * Stop is an O(1) timeline boundary: it updates local runtime state, restores
-   * the click-time prompt to the composer when no output was produced, and
-   * signals Rust cancellation. Transcript/round visibility is owned by the
-   * backend turn lifecycle and materialized round index.
+   * Single entry point: `cancelTurnForTimelineBoundary("stop")` owns ALL
+   * boundary side effects (FSM transition to "stopping", atom writes, streaming
+   * clear, shell kills, running-event close, IPC interrupt). The FSM returns to
+   * "idle" when the backend delivers a cancelled/failed terminal, or when the
+   * 10s stopping deadman fires — no separate timer or forceTurnIdle needed here.
+   *
+   * Three strictly-ordered phases:
+   *   A. Snapshot: read events, compute output/prior-turn state, capture draft.
+   *   B. Boundary: single call to cancelTurnForTimelineBoundary.
+   *   C. UI: draft restore / page navigate / session clear based on A's snapshot.
    */
   const interruptSession = useCallback(async () => {
     const sessionId = getSessionId();
@@ -200,21 +195,18 @@ export function useSessionActions(options: UseSessionActionsOptions) {
       return;
     }
 
-    beginStopBoundary(sessionId);
-    setSessionRolledBack(false);
-
-    // When the current turn has not produced any assistant/tool output,
-    // restore the user message that started it so the chat rolls back cleanly.
+    // ── Phase A: snapshot ────────────────────────────────────────────────────
     const events = store.get(sortedEventsAtom);
     const currentTurnHasOutput = hasCurrentTurnProducedOutput(
       events,
       sessionId
     );
+    const priorTurnsExist = hasPriorTurns(events, sessionId);
 
+    let restorable: ReturnType<typeof resolveRestorableUserMessage> = null;
     if (!currentTurnHasOutput) {
-      // No output yet: restore the draft to the composer.
       const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
-      const currentUserMessage = resolveRestorableUserMessage({
+      restorable = resolveRestorableUserMessage({
         lastUserMessage: store.get(lastUserMessageAtom),
         pendingDisplayText:
           pendingSyntheticEvent?.source === "user"
@@ -222,80 +214,58 @@ export function useSessionActions(options: UseSessionActionsOptions) {
             : undefined,
         pendingImages: pendingSyntheticEvent?.result?.images,
       });
-
-      if (currentUserMessage) {
-        setRestoreToInput({
-          sessionId,
-          displayContent: currentUserMessage.displayContent,
-          imageDataUrls: currentUserMessage.imageDataUrls,
-        });
-        markRestoredStopDraft({
-          sessionId,
-          displayContent: currentUserMessage.displayContent,
-          imageDataUrls: currentUserMessage.imageDataUrls,
-        });
-        suppressRestoredStopSubmit({
-          sessionId,
-          displayContent: currentUserMessage.displayContent,
-          imageDataUrls: currentUserMessage.imageDataUrls,
-        });
-      }
     }
 
+    // ── Phase B: boundary ────────────────────────────────────────────────────
+    // This is the ONLY Stop boundary call. It synchronously drives the FSM
+    // (beginTurnStopping), sets isPendingCancel/userInitiatedCancel atoms,
+    // clears streaming, kills shells, closes running events, and writes
+    // sessionRuntimeStatus = "idle". The async tail sends the IPC interrupt.
     setPendingCancel(false);
-    forceTurnIdle(sessionId);
+    setSessionRolledBack(false);
 
-    if (hasPriorTurns(events, sessionId)) {
+    void cancelTurnForTimelineBoundary(sessionId, "stop", {
+      onError: (msg: string) => {
+        Message.error(t(msg));
+      },
+    });
+
+    // ── Phase C: UI side effects based on Phase A snapshot ───────────────────
+    if (restorable) {
+      setRestoreToInput({
+        sessionId,
+        displayContent: restorable.displayContent,
+        imageDataUrls: restorable.imageDataUrls,
+      });
+      markRestoredStopDraft({
+        sessionId,
+        displayContent: restorable.displayContent,
+        imageDataUrls: restorable.imageDataUrls,
+      });
+      suppressRestoredStopSubmit({
+        sessionId,
+        displayContent: restorable.displayContent,
+        imageDataUrls: restorable.imageDataUrls,
+      });
+    }
+
+    if (priorTurnsExist) {
       // Multi-turn: signal ChatHistory to navigate to the previous page.
       store.set(stopEarlyCancelEpochAtom, (prev) => prev + 1);
     } else {
+      // First conversation: always clear the session so the creator shows.
+      // The backend turn_index handles visibility — cancelled intents are
+      // excluded from the materialized round index.
       setSessionRolledBack(true);
-      // First conversation: clear the session so the creator shows.
       store.set(clearSessionAtom);
       store.set(activeSessionIdAtom, null);
       store.set(workstationActiveSessionIdAtom, null);
     }
-
-    void (async () => {
-      window.setTimeout(() => {
-        const latestStatus = store.get(sessionRuntimeStatusAtom);
-        const runtimeStartedAnotherTurn =
-          latestStatus === "running" ||
-          latestStatus === "installing" ||
-          latestStatus === "waiting_for_user" ||
-          latestStatus === "waiting_for_funds";
-        if (runtimeStartedAnotherTurn) return;
-        setPendingCancel(false);
-        setSessionRuntimeStatus({
-          sessionId,
-          status: "idle",
-          source: "timeline-boundary",
-        });
-        stopVisibleStreaming(sessionId);
-      }, 10_000);
-
-      await cancelTurnForTimelineBoundary(sessionId, "stop", {
-        onError: (msg: string) => {
-          Message.error(t(msg));
-          setPendingCancel(false);
-          setSessionRuntimeStatus({
-            sessionId,
-            status: "idle",
-            source: "timeline-boundary",
-          });
-          stopVisibleStreaming(sessionId);
-          // Interrupt RPC failed — no terminal will arrive, unlock now.
-          forceTurnIdle(sessionId);
-        },
-      });
-    })();
   }, [
     getSessionId,
     setPendingCancel,
     setRestoreToInput,
     setSessionRolledBack,
-    setSessionRuntimeStatus,
-    stopVisibleStreaming,
     store,
     t,
   ]);
