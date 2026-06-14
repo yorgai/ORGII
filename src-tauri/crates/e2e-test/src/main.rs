@@ -491,6 +491,11 @@ fn all_scenarios() -> Vec<ScenarioDef> {
             "dispatch-subagent-cannot-spawn-subagent",
             subagent::dispatch_subagent_cannot_spawn_subagent
         ),
+        scenario!(
+            "subagent",
+            "background-launch-msg-no-poll",
+            subagent::background_launch_msg_no_poll
+        ),
         // Housekeeping (deferred disk cleanup)
         scenario!(
             "housekeeping",

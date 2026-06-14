@@ -226,8 +226,9 @@ mod tests;
 // documented public API.
 #[doc(hidden)]
 pub use helpers::{
-    looks_like_valid_subagent_session_id, org_roster_spawn_rejection, resolve_agent_id_for_execute,
-    subagent_of_subagent_rejection, subagent_type_label, ResolvedAgentId,
+    background_launch_message, looks_like_valid_subagent_session_id, org_roster_spawn_rejection,
+    resolve_agent_id_for_execute, subagent_of_subagent_rejection, subagent_type_label,
+    ResolvedAgentId,
 };
 
 #[doc(hidden)]

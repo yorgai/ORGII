@@ -257,3 +257,53 @@ pub async fn dispatch_subagent_cannot_spawn_subagent(cfg: &Config) -> bool {
         ],
     )
 }
+
+/// Background-launch message contract: when a subagent is launched with
+/// `background:true`, the tool_result handed back to the parent agent must
+/// (a) carry the subagent's session_id (the DB key), (b) hand the parent a
+/// ready-made `sqlite3 ... agent_messages` query for progress, and (c) NOT
+/// push the parent toward `await_output` polling. Pins the 2026-06-14 fix
+/// that replaced "Use await_output(handle=...) to monitor progress" with
+/// session-DB browsing guidance to stop the infinite-poll loop.
+pub async fn background_launch_msg_no_poll(cfg: &Config) -> bool {
+    let session_id = "agent-builtin:general-launchmsg-fixture";
+    let params = serde_json::json!({
+        "prompt": "explore the codebase in the background",
+        "launch_agent_name": "Explore",
+        "launch_session_id": session_id,
+    });
+    match dispatch_check(cfg, params).await {
+        Err(err) => harness::print_error("Dispatch: background launch message no-poll", &err),
+        Ok(json) => {
+            let msg = json
+                .get("launch_message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let lower = msg.to_lowercase();
+            harness::print_result(
+                "Dispatch: background launch message no-poll",
+                &msg,
+                &[
+                    ("Message carries the subagent session_id", msg.contains(session_id)),
+                    (
+                        "Tells the parent NOT to poll with await_output",
+                        lower.contains("do not call await_output"),
+                    ),
+                    (
+                        "Hands the parent a sqlite3 agent_messages query",
+                        msg.contains("sqlite3") && msg.contains("agent_messages"),
+                    ),
+                    (
+                        "Promises automatic completion notification",
+                        lower.contains("notified automatically"),
+                    ),
+                    (
+                        "Does NOT tell the parent to monitor via await_output handle",
+                        !lower.contains("await_output(handle"),
+                    ),
+                ],
+            )
+        }
+    }
+}

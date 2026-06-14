@@ -215,6 +215,30 @@ pub fn subagent_of_subagent_rejection(delegation_chain: &[String]) -> Option<Too
     )))
 }
 
+/// Build the tool_result message returned to the parent agent when a
+/// background subagent is launched.
+///
+/// Pure function of `agent_name` + `session_id` so it can be unit/e2e
+/// tested without standing up a full background spawn. The contract this
+/// message must honour (pinned by `subagent-launch-msg-no-poll`):
+///   - includes the subagent's session_id (the DB key the parent queries)
+///   - tells the parent it will be notified automatically + NOT to poll
+///   - hands the parent a ready-made sqlite3 query over `agent_messages`
+///     instead of pointing it at `await_output` for progress checks
+pub fn background_launch_message(agent_name: &str, session_id: &str) -> String {
+    format!(
+        "Subagent '{}' launched in background.\n\
+         Session ID: {}\n\
+         You will be notified automatically when it finishes (via the Background Jobs system reminder).\n\
+         Do NOT call await_output repeatedly to poll.\n\
+         Proceed with other work. If you want to check the subagent's progress, \
+         you can query its session data:\n  \
+         sqlite3 ~/.orgii/sessions.db \"SELECT role, substr(content,1,200), tool_name \
+         FROM agent_messages WHERE session_id='{}' ORDER BY sequence DESC LIMIT 10\"",
+        agent_name, session_id, session_id
+    )
+}
+
 /// Resolve the model + reliability bundle a sub-agent should run with.
 ///
 /// Precedence:

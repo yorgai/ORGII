@@ -274,16 +274,6 @@ impl AgentTool {
         // Store JoinHandle so registry::kill_subagent can abort it
         job_registry::set_join_handle(&registry_handle, join_handle);
 
-        format!(
-            "Subagent '{}' launched in background.\n\
-             Session ID: {}\n\
-             You will be notified automatically when it finishes (via the Background Jobs system reminder).\n\
-             Do NOT call await_output repeatedly to poll.\n\
-             Proceed with other work. If you want to check the subagent's progress, \
-             you can query its session data:\n  \
-             sqlite3 ~/.orgii/sessions.db \"SELECT role, substr(content,1,200), tool_name \
-             FROM agent_messages WHERE session_id='{}' ORDER BY sequence DESC LIMIT 10\"",
-            agent.name, subagent_session_id, subagent_session_id
-        )
+        super::helpers::background_launch_message(&agent.name, &subagent_session_id)
     }
 }

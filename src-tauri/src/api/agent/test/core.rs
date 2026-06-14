@@ -627,8 +627,8 @@ pub async fn test_subagent_dispatch_check(
     Json(params): Json<serde_json::Value>,
 ) -> Json<serde_json::Value> {
     use agent_core::tools::impls::orchestration::agent::{
-        looks_like_valid_subagent_session_id, resolve_agent_id_for_execute,
-        subagent_of_subagent_rejection,
+        background_launch_message, looks_like_valid_subagent_session_id,
+        resolve_agent_id_for_execute, subagent_of_subagent_rejection,
     };
 
     let resolved = resolve_agent_id_for_execute(&params);
@@ -655,6 +655,20 @@ pub async fn test_subagent_dispatch_check(
     let guard_rejected = guard_result.is_some();
     let guard_message = guard_result.map(|err| err.to_string());
 
+    // Background-launch message contract (pinned by subagent-launch-msg-no-poll).
+    // Built from a stable synthetic session id so the e2e runner can assert
+    // the message carries the session id + DB query and does NOT push the
+    // parent toward await_output polling.
+    let launch_session_id = params
+        .get("launch_session_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("agent-builtin:general-launchmsg-fixture");
+    let launch_agent_name = params
+        .get("launch_agent_name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Explore");
+    let launch_message = background_launch_message(launch_agent_name, launch_session_id);
+
     Json(serde_json::json!({
         "ok": true,
         "resolved_agent_id": resolved.agent_id,
@@ -662,6 +676,8 @@ pub async fn test_subagent_dispatch_check(
         "resume_shape_valid": resume_shape_valid,
         "subagent_recursion_rejected": guard_rejected,
         "subagent_recursion_message": guard_message,
+        "launch_message": launch_message,
+        "launch_session_id": launch_session_id,
     }))
 }
 
