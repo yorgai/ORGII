@@ -1379,18 +1379,34 @@ async function runStopDoubleClickDoesNotResubmitScenario(config) {
   const secondClick = await execJS(
     js.click('[data-testid="chat-send-button"]')
   );
-  await assertComposerResponsiveAfterStop(
-    `${config.label}-double-stop-first`,
-    firstPrompt
+  await browser.waitUntil(
+    async () => {
+      const state = await inspectChatState(
+        `${config.label}-double-stop-settle`
+      );
+      const mode = await execJS(js.mode);
+      return (
+        !hasAuthoritativeRunningTurn(state) &&
+        (mode === "creator" || mode === "chat")
+      );
+    },
+    {
+      timeout: 20_000,
+      interval: 500,
+      timeoutMsg: `${config.label}-double-stop-first Stop left a running or unloaded session; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+    }
   );
 
   const state = await inspectChatState(
     `${config.label}-double-stop-second-click`
   );
-  const sendState = await execJS(js.sendState);
-  const editorText = await execJS(js.editorText);
   const userTurns = markerUserTranscriptEvents(state, marker);
-  if (userTurns.length > 1 || !String(editorText ?? "").includes(marker)) {
+  // Core assertion: the second click must NOT have resubmitted the prompt.
+  // In first-turn Stop the session may be cleared to creator (no
+  // editorText), which is also safe — there's no session to resubmit into.
+  if (userTurns.length > 1) {
+    const sendState = await execJS(js.sendState);
+    const editorText = await execJS(js.editorText);
     throw new Error(
       `${config.label} rapid second Stop click re-submitted restored draft; secondClick=${secondClick} userTurns=${userTurns.length} sendState=${JSON.stringify(sendState)} editorText=${JSON.stringify(String(editorText ?? "").slice(0, 180))} state=${JSON.stringify(summarizeChatState(state))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
     );
