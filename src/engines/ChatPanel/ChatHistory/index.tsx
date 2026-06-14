@@ -130,8 +130,6 @@ interface ChatHistoryProps {
   onRegisterSearchOpen?: (handler: (() => void) | null) => void;
   displayMode?: ChatHistoryDisplayMode;
   turnPaginationEnabled?: boolean;
-  /** Called when the current paginated page is the overall final round. */
-  onPaginationLastPageChange?: (isLastPage: boolean) => void;
   /** Optional external host for pinned/pagination chrome, outside the scroll body subtree. */
   pinnedHeaderPortalHost?: HTMLElement | null;
   /** Height in px of the overlapping input area so the footer spacer keeps the last message reachable. */
@@ -216,7 +214,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   onRegisterSearchOpen,
   displayMode = "full",
   turnPaginationEnabled = true,
-  onPaginationLastPageChange,
   pinnedHeaderPortalHost = null,
   bottomInset = 0,
   hidePinnedBars = false,
@@ -383,7 +380,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     isAgentWorking,
     collapseTailWhenIdle,
     forceCollapseAllTurns,
-    collapseOnlyTailTurn: turnPaginationEnabled,
+    disableTurnCollapse: turnPaginationEnabled,
     allTurnsCollapsed:
       collapseAllCommand.epoch > 0 && collapseAllCommand.collapsed
         ? true
@@ -485,16 +482,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     // dead subagent session).
     mergeUserOnlyPages: hideGroupUserMessage,
   });
-  const paginationOnLastPage =
-    turnPaginationEnabled &&
-    pageCount > 0 &&
-    currentPageIndex === pageCount - 1;
-
-  useEffect(() => {
-    onPaginationLastPageChange?.(paginationOnLastPage);
-    return () => onPaginationLastPageChange?.(false);
-  }, [onPaginationLastPageChange, paginationOnLastPage]);
-
   const virtuosoDataKey = `${activeId ?? "no-session"}:${turnPaginationEnabled ? `page-${currentPageIndex}` : "all"}`;
 
   // --- Empty-state grace period ---
@@ -906,7 +893,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       groupChatViewAvailable={groupChatViewAvailable}
       groupChatViewActive={groupChatViewActive}
       onGroupChatViewToggle={onGroupChatViewToggle}
-      paginationOnLastPage={paginationOnLastPage}
       showPinnedTurnHeader={showPinnedTurnHeader}
       sessionId={activeId}
       sourceGroupIndex={displaySourceGroupIndices[0]}

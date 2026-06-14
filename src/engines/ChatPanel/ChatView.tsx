@@ -144,7 +144,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const [pinnedHeaderHost, setPinnedHeaderHost] =
       useState<HTMLDivElement | null>(null);
     const [viewerMessageText, setViewerMessageText] = useState("");
-    const [paginationOnLastPage, setPaginationOnLastPage] = useState(false);
     const handlePinnedHeaderHostRef = useCallback(
       (node: HTMLDivElement | null) => {
         setPinnedHeaderHost(node);
@@ -591,10 +590,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
                       />
                     ))}
                 <AgentMessageClampProvider
-                  value={
-                    agentMessageClampEligible &&
-                    (!turnPaginationEnabled || paginationOnLastPage)
-                  }
+                  value={agentMessageClampEligible && !turnPaginationEnabled}
                 >
                   <ChatHistory
                     surfaceBgClass={surfaceBgClass}
@@ -622,7 +618,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
                     onRegisterSearchOpen={onRegisterSearchOpen}
                     displayMode={displayMode}
                     turnPaginationEnabled={turnPaginationEnabled}
-                    onPaginationLastPageChange={setPaginationOnLastPage}
                     pinnedHeaderPortalHost={pinnedHeaderHost}
                     bottomInset={
                       showInteractArea && !isReadOnlySurface
