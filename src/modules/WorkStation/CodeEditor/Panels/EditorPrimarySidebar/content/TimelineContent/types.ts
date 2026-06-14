@@ -20,6 +20,8 @@ export interface TimelineContentProps {
   repoId: string;
   /** Currently selected file path */
   filePath: string | null;
+  /** Repository file system path for repo-local `.orgtrack` data */
+  repoPath?: string;
   /** Selected commit SHA (from active timeline diff tab) */
   selectedCommitSha?: string | null;
   /** Callback when a commit is clicked - opens diff view */

@@ -269,16 +269,9 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
             <p className={`${TYPOGRAPHY.secondary} text-text-2`}>
               {t(
                 "labels.noPullRequestForBranch",
-                "There is no pull request for this branch yet."
+                "There is no pull request for this branch yet"
               )}
             </p>
-            {branchName && (
-              <code
-                className={`mt-1 block truncate ${TYPOGRAPHY.secondary} text-text-3`}
-              >
-                {branchName}
-              </code>
-            )}
           </div>
           {prCreating ? (
             <div

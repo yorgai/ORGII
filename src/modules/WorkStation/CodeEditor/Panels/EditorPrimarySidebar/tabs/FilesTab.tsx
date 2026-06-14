@@ -92,6 +92,7 @@ export function useFilesTabConfig({
           content: (
             <TimelineContent
               repoId={repoId || repoPath}
+              repoPath={repoPath}
               filePath={selectedFilePath}
               selectedCommitSha={selectedCommitSha ?? null}
               onCommitClick={onTimelineCommitClick}
