@@ -126,7 +126,7 @@ export function buildSessionInfoSegments({
     segments.push({
       id: "branch",
       icon: <GitBranch size={14} strokeWidth={1.75} className="text-text-1" />,
-      label: branchLoading ? t("status.loading") : branchName || "main",
+      label: branchLoading ? t("status.loading") : branchName || "",
       maxLabelWidth: 180,
       active: isBranchSelectorOpen,
       tooltip: disabled ? undefined : (

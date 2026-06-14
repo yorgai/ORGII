@@ -42,7 +42,6 @@ interface UseSessionCreatorHandlersOptions {
     fs_uri?: string;
     kind?: string;
   }>;
-  currentBranch: string | undefined;
   effectiveSource: {
     branch?: string;
     repoId?: string;
@@ -58,7 +57,6 @@ interface UseSessionCreatorHandlersOptions {
 
 export function useSessionCreatorChatPanelHandlers({
   reposList,
-  currentBranch,
   effectiveSource,
   advancedConfig,
   setAdvancedConfig,
@@ -96,7 +94,8 @@ export function useSessionCreatorChatPanelHandlers({
   // ── Repo / branch selection ───────────────────────────────────────────────
 
   // Updates the global repo selection and keeps the session draft aligned.
-  // Branch is preserved from the last used / checked-out branch.
+  // The checked-out branch is loaded asynchronously by useRepoSelection and
+  // mirrored into the session source once it belongs to the selected repo.
   const handleRepoChange = useCallback(
     (repoId: string, options?: { repoKind?: RepoKind }) => {
       selectRepo(repoId);
@@ -109,21 +108,23 @@ export function useSessionCreatorChatPanelHandlers({
         repoId,
         repoName: repo?.name,
         repoPath: repo?.path || repo?.fs_uri,
-        branch: isFolder
-          ? undefined
-          : (effectiveSource?.branch ?? currentBranch),
+        branch:
+          isFolder || effectiveSource?.repoId !== repoId
+            ? undefined
+            : effectiveSource?.branch,
       });
     },
     [
       selectRepo,
       reposList,
-      currentBranch,
+      effectiveSource?.repoId,
       effectiveSource?.branch,
       setSessionSource,
     ]
   );
 
-  // Updates session source for the new repo; branch falls back to current.
+  // Updates session source for the new repo; branch is intentionally left empty
+  // until the repo-selection store reports that repo's checked-out branch.
   const handleRepoSelectForSession = useCallback(
     (selectedRepoId: string, repo: RepoItem) => {
       if (isSystemPathSourceId(repo.id)) {
@@ -139,16 +140,15 @@ export function useSessionCreatorChatPanelHandlers({
         return;
       }
 
-      const isFolder = repo.kind === REPO_KIND.FOLDER;
       setSessionSource({
         type: "local",
         repoId: selectedRepoId,
         repoName: repo.name,
         repoPath: repo.fs_uri,
-        branch: isFolder ? undefined : currentBranch,
+        branch: undefined,
       });
     },
-    [currentBranch, setSessionSource, t]
+    [setSessionSource, t]
   );
 
   // ── Agent category selection ──────────────────────────────────────────────

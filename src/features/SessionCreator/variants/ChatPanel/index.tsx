@@ -50,6 +50,7 @@ import {
   selectedAgentDefinitionIdAtom,
   selectedAgentOrgIdAtom,
   sessionCreatorStateAtom,
+  sessionSourceAtom,
   sessionTargetKindAtom,
 } from "@src/store/session";
 import { restoreToInputAtom } from "@src/store/session/cliSessionStatusAtom";
@@ -138,6 +139,7 @@ const SessionCreatorChatPanelSingle: React.FC<
     selectRepo,
     currentRepo,
     currentBranch,
+    branchLoading,
     loadBranchList,
   } = useRepoSelection({ autoLoad: true });
 
@@ -220,6 +222,7 @@ const SessionCreatorChatPanelSingle: React.FC<
 
   const [isCategorySelectorOpen, setIsCategorySelectorOpen] = useState(false);
   const agentHeroRef = useRef<HTMLButtonElement>(null);
+  const setSessionSource = useSetAtom(sessionSourceAtom);
   const [isAttachmentPanelOpen, setIsAttachmentPanelOpen] = useState(false);
   const handleToggleAttachment = useCallback(() => {
     setIsAttachmentPanelOpen((prev) => !prev);
@@ -252,7 +255,6 @@ const SessionCreatorChatPanelSingle: React.FC<
     handleCategorySelect,
   } = useSessionCreatorChatPanelHandlers({
     reposList,
-    currentBranch,
     effectiveSource,
     advancedConfig,
     setAdvancedConfig,
@@ -265,6 +267,27 @@ const SessionCreatorChatPanelSingle: React.FC<
     },
     [setAdvancedConfig]
   );
+
+  useEffect(() => {
+    if (!effectiveSource) return;
+    if (effectiveSource.type !== "local") return;
+    if (!effectiveSource.repoId) return;
+    if (effectiveSource.repoId !== selectedRepoId) return;
+    if (currentRepo?.kind === REPO_KIND.FOLDER) return;
+    if (!currentBranch) return;
+    if (effectiveSource.branch) return;
+
+    setSessionSource({
+      ...effectiveSource,
+      branch: currentBranch,
+    });
+  }, [
+    currentBranch,
+    currentRepo?.kind,
+    effectiveSource,
+    selectedRepoId,
+    setSessionSource,
+  ]);
 
   // ── Restore text ──────────────────────────────────────────────────────────
 
@@ -346,7 +369,7 @@ const SessionCreatorChatPanelSingle: React.FC<
     [repos, sessionRepoId]
   );
   const repoDisplayName = effectiveSource?.repoName ?? sessionRepo?.name;
-  const effectiveBranchName = effectiveSource?.branch || "main";
+  const effectiveBranchName = effectiveSource?.branch;
   const sessionRepoKind = sessionRepo?.kind ?? currentRepo?.kind;
   const currentRepoPath = effectiveSource?.repoPath ?? "";
 
@@ -547,6 +570,7 @@ const SessionCreatorChatPanelSingle: React.FC<
       repoKind={sessionRepoKind}
       includeSystemPaths={isOSMode || isSDEMode}
       branchName={isOSMode && !sessionRepoId ? undefined : effectiveBranchName}
+      branchLoading={branchLoading && !effectiveBranchName}
       onBranchChange={handleBranchChange}
       worktreeLocation={isDisplayedSystemPath ? undefined : runningLocation}
       onWorktreeLocationChange={handleWorktreeLocationChange}
