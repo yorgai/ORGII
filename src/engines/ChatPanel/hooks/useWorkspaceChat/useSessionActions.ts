@@ -256,22 +256,24 @@ export function useSessionActions(options: UseSessionActionsOptions) {
     }
 
     // Restore the draft AFTER the session/page transition above so the
-    // creator InputArea (if we just cleared) picks up the atom write.
-    // Defer to next microtask so React commits the clear/navigation first.
+    // creator InputArea picks up the atom write. The creator's useEffect
+    // retries if the editor ref isn't mounted yet.
     if (restorable) {
-      const restorePayload = {
+      setRestoreToInput({
         sessionId,
         displayContent: restorable.displayContent,
         imageDataUrls: restorable.imageDataUrls,
-      };
-      // Use setTimeout(0) instead of queueMicrotask — microtasks run before
-      // React commits, so the creator's composerInputRef may still be null.
-      // setTimeout(0) defers past the React commit so the editor is mounted.
-      setTimeout(() => {
-        setRestoreToInput(restorePayload);
-        markRestoredStopDraft(restorePayload);
-        suppressRestoredStopSubmit(restorePayload);
-      }, 0);
+      });
+      markRestoredStopDraft({
+        sessionId,
+        displayContent: restorable.displayContent,
+        imageDataUrls: restorable.imageDataUrls,
+      });
+      suppressRestoredStopSubmit({
+        sessionId,
+        displayContent: restorable.displayContent,
+        imageDataUrls: restorable.imageDataUrls,
+      });
     }
   }, [getSessionId, setRestoreToInput, setSessionRolledBack, store, t]);
 

@@ -69,11 +69,20 @@ pub fn build_background_jobs_reminder(jobs: &[JobSnapshot]) -> String {
     }
 
     lines.push(String::new());
-    lines.push(
-        "Use `await_output` (command: monitor/wait_for) to check output, \
-         or `run_shell` with `kill_handle` to terminate."
-            .to_string(),
-    );
+
+    if !unread_completed.is_empty() && running.is_empty() {
+        lines.push(
+            "Use `await_output(command=\"monitor\", handles=[...])` to read their output."
+                .to_string(),
+        );
+    } else if !running.is_empty() {
+        lines.push(
+            "Do NOT call `await_output` repeatedly to poll — the system will notify you \
+             automatically when jobs finish. Continue with other work; you will see their \
+             results in the next turn's reminder once they complete."
+                .to_string(),
+        );
+    }
 
     lines.join("\n")
 }

@@ -289,29 +289,38 @@ const SessionCreatorChatPanelSingle: React.FC<
 
   useEffect(() => {
     if (!restoreToInput?.displayContent) return;
-    const editor = composerInputRef.current;
-    if (!editor) return;
-    const restoredText = restoreToInput.displayContent;
-    editor.setContent(restoredText);
-    editor.focus();
-    handleContentChangeWithTracking(restoredText);
-    if (restoreToInput.imageDataUrls?.length) {
-      const restoredImages: ChatImageAttachment[] =
-        restoreToInput.imageDataUrls.map((dataUrl, idx) => ({
-          id: `restored_${Date.now()}_${idx}`,
-          dataUrl,
-          fileName: `restored-image-${idx + 1}.png`,
-          size: 0,
-          width: 0,
-          height: 0,
-        }));
-      setImageAttachments((prev) => [
-        ...prev.filter((image) => image.ownerId),
-        ...restoredImages,
-      ]);
-    }
-    store.set(restoreToInputAtom, null);
-    store.set(draftHasContentAtom, restoredText.trim().length > 0);
+
+    const applyRestore = () => {
+      const editor = composerInputRef.current;
+      if (!editor) return false;
+      const restoredText = restoreToInput.displayContent;
+      editor.setContent(restoredText);
+      editor.focus();
+      handleContentChangeWithTracking(restoredText);
+      if (restoreToInput.imageDataUrls?.length) {
+        const restoredImages: ChatImageAttachment[] =
+          restoreToInput.imageDataUrls.map((dataUrl, idx) => ({
+            id: `restored_${Date.now()}_${idx}`,
+            dataUrl,
+            fileName: `restored-image-${idx + 1}.png`,
+            size: 0,
+            width: 0,
+            height: 0,
+          }));
+        setImageAttachments((prev) => [
+          ...prev.filter((image) => image.ownerId),
+          ...restoredImages,
+        ]);
+      }
+      store.set(restoreToInputAtom, null);
+      store.set(draftHasContentAtom, restoredText.trim().length > 0);
+      return true;
+    };
+
+    if (applyRestore()) return;
+    // Editor ref may not be available yet on first mount; retry briefly.
+    const timer = setTimeout(applyRestore, 100);
+    return () => clearTimeout(timer);
   }, [
     restoreToInput,
     composerInputRef,

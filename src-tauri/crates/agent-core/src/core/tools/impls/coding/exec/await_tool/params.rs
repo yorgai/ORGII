@@ -5,7 +5,7 @@ use serde_json::Value;
 use super::super::registry;
 use crate::tools::traits::ToolError;
 
-pub(super) const DEFAULT_BLOCK_MS: u64 = 30_000;
+pub(super) const DEFAULT_BLOCK_MS: u64 = 120_000;
 pub(super) const DEFAULT_TAIL_LINES: usize = 50;
 pub(super) const POLL_INTERVAL_MS: u64 = 250;
 /// Maximum number of handles accepted in a single `wait_for` / `monitor` call.
