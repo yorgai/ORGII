@@ -102,6 +102,22 @@ fn session_branch_name_empty_suffix_uses_full() {
     assert_eq!(session_branch_name("cliagent-"), "agent/cliagent-");
 }
 
+#[test]
+fn session_branch_name_sanitizes_colon() {
+    assert_eq!(
+        session_branch_name("agent-builtin:explore-abc123"),
+        "agent/agent-builtin-explore-abc123"
+    );
+}
+
+#[test]
+fn session_branch_name_sanitizes_multiple_invalid_chars() {
+    assert_eq!(
+        session_branch_name("shadow-builtin:general-x y~z"),
+        "agent/shadow-builtin-general-x-y-z"
+    );
+}
+
 // ============================================
 // MergeStrategy::parse
 // ============================================

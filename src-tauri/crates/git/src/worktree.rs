@@ -171,15 +171,40 @@ fn session_worktree_dir(repo_path: &str, session_id: &str) -> PathBuf {
     agent_worktrees_root().join(hash).join(session_id)
 }
 
-/// Branch name for a session. Strips known prefixes to keep branch names concise.
+/// Branch name for a session. Strips known prefixes to keep branch names
+/// concise, and sanitizes characters that are invalid in git ref names
+/// (e.g. `:` from builtin agent IDs like `builtin:explore`).
 pub(crate) fn session_branch_name(session_id: &str) -> String {
     let suffix = session_id
         .strip_prefix(CLI_SESSION_PREFIX)
         .unwrap_or(session_id);
     if suffix.is_empty() {
-        return format!("agent/{}", session_id);
+        return format!("agent/{}", sanitize_branch_chars(session_id));
     }
-    format!("agent/{}", suffix)
+    format!("agent/{}", sanitize_branch_chars(suffix))
+}
+
+/// Replace characters that are invalid in git branch names with `-`.
+/// Git ref format rules (git-check-ref-format): no `:`  ` ` `~` `^` `?` `*` `[` `\` + control chars.
+fn sanitize_branch_chars(s: &str) -> String {
+    s.chars()
+        .map(|ch| {
+            if ch == ':'
+                || ch == ' '
+                || ch == '~'
+                || ch == '^'
+                || ch == '?'
+                || ch == '*'
+                || ch == '['
+                || ch == '\\'
+                || ch.is_ascii_control()
+            {
+                '-'
+            } else {
+                ch
+            }
+        })
+        .collect()
 }
 
 /// Check that a repo working directory is clean (no uncommitted changes).
