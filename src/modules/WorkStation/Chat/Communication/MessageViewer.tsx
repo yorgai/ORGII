@@ -329,10 +329,9 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
           {visibleMessages.map((message, index) => {
             const isLastVisibleMessage = index === totalVisibleMessages - 1;
             const previousMessage = visibleMessages[index - 1];
-            const showChrome = !shouldGroupWithPreviousMessage(
-              message,
-              previousMessage
-            );
+            const showChrome =
+              isLastVisibleMessage ||
+              !shouldGroupWithPreviousMessage(message, previousMessage);
             return (
               <React.Fragment key={message.eventId}>
                 {showNewMessageDivider && isLastVisibleMessage && (
