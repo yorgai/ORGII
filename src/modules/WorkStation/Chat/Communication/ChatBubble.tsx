@@ -6,9 +6,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useAtomValue } from "jotai";
 import {
+  Check,
   ChevronDown,
   ChevronRight,
   ClipboardCheck,
+  Lock,
   Terminal,
   Toolbox,
   User,
@@ -30,9 +32,9 @@ import { TerminalOutput } from "@src/components/TerminalDisplay";
 import { PILL_REGEX, PILL_TYPES, type PillType } from "@src/config/pillTokens";
 import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/UserMessageContent";
 import { stripExpandedPillContent } from "@src/engines/ChatPanel/InputArea/utils/pillContentParser";
-import TodoBlock from "@src/engines/ChatPanel/blocks/TodoBlock";
 import { SESSION_UI_TOKENS } from "@src/engines/ChatPanel/blocks/primitives/config";
 import { extractTodoData } from "@src/engines/SessionCore/rendering/props";
+import type { ExtractedTodoData } from "@src/engines/SessionCore/rendering/types/universalProps";
 import { normalizeActivity } from "@src/lib/activityData";
 import { installedSkillsAtom } from "@src/store/skills/installedSkillsAtom";
 import type { InstalledSkill } from "@src/types/extensions";
@@ -60,10 +62,54 @@ interface SkillPillData {
   skillName: string;
 }
 
+type CommunicationTodoItem = ExtractedTodoData["todos"][number];
+
 const TERMINAL_PREVIEW_MAX_HEIGHT = 160;
 const SKILL_PREVIEW_MAX_HEIGHT = 160;
 const AVATAR_ICON_SIZE = COMMUNICATION_AVATAR_ICON_SIZE;
 const PLAN_APPROVED_PREFIX = "[Plan approved";
+
+const normalizeTodoStatus = (status: string): string =>
+  (status || "").toLowerCase();
+
+const isTodoCompleted = (status: string): boolean => {
+  const statusNorm = normalizeTodoStatus(status);
+  return statusNorm.includes("completed") || statusNorm === "completed";
+};
+
+const isTodoInProgress = (status: string): boolean =>
+  normalizeTodoStatus(status) === "in_progress";
+
+function renderCommunicationTodoLabel(todo: CommunicationTodoItem): string {
+  if (
+    isTodoInProgress(todo.status) &&
+    todo.activeForm &&
+    todo.activeForm.trim()
+  ) {
+    return todo.activeForm;
+  }
+  return todo.content;
+}
+
+function hasOpenCommunicationTodoBlockers(
+  todo: CommunicationTodoItem,
+  allTodos: CommunicationTodoItem[]
+): boolean {
+  if (!todo.blockedBy || todo.blockedBy.length === 0) return false;
+  return todo.blockedBy.some((blockerIndex) => {
+    const blocker = allTodos.find(
+      (todoItem, index) =>
+        index === blockerIndex || Number(todoItem.id) === blockerIndex
+    );
+    if (!blocker) return false;
+    const statusNorm = normalizeTodoStatus(blocker.status);
+    return statusNorm !== "completed" && statusNorm !== "cancelled";
+  });
+}
+
+function communicationTodoRowKey(todoId: string, index: number): string {
+  return `communication-todo:${todoId || "missing"}:${index}`;
+}
 
 const ReplayMarkdown: React.FC<{ content: string }> = memo(({ content }) => (
   <Markdown
@@ -74,6 +120,77 @@ const ReplayMarkdown: React.FC<{ content: string }> = memo(({ content }) => (
   />
 ));
 ReplayMarkdown.displayName = "ReplayMarkdown";
+
+const CommunicationTodoCheckbox: React.FC<{
+  status: string;
+  blocked?: boolean;
+}> = ({ status, blocked }) => {
+  if (isTodoCompleted(status)) {
+    return (
+      <div className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full bg-green-600/80">
+        <Check size={8} strokeWidth={3} className="text-white" />
+      </div>
+    );
+  }
+  if (blocked) {
+    return (
+      <div className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-dashed border-text-3/40">
+        <Lock size={6} strokeWidth={2.5} className="text-text-3/60" />
+      </div>
+    );
+  }
+  return (
+    <div className="h-3.5 w-3.5 flex-shrink-0 rounded-full border-[1.5px] border-text-3/50" />
+  );
+};
+
+const CommunicationTodoList: React.FC<{ todos: CommunicationTodoItem[] }> =
+  memo(({ todos }) => {
+    if (todos.length === 0) return null;
+
+    return (
+      <div className="rounded-lg border border-border-2 bg-transparent p-1">
+        {todos.map((todo, index) => {
+          const done = isTodoCompleted(todo.status);
+          const inProgress = isTodoInProgress(todo.status);
+          const blocked = hasOpenCommunicationTodoBlockers(todo, todos);
+          return (
+            <div
+              key={communicationTodoRowKey(todo.id, index)}
+              className={`group flex h-6 cursor-default items-center gap-1.5 rounded px-1.5 transition-colors hover:bg-fill-2 ${blocked ? "opacity-50" : ""}`}
+            >
+              <div className="flex shrink-0 items-center justify-center self-center">
+                <CommunicationTodoCheckbox
+                  status={todo.status}
+                  blocked={blocked}
+                />
+              </div>
+              <span
+                className={`min-w-0 flex-1 truncate text-[13px] ${
+                  done
+                    ? "text-text-3 line-through"
+                    : inProgress
+                      ? "text-primary-6"
+                      : "text-text-1"
+                }`}
+              >
+                {renderCommunicationTodoLabel(todo)}
+              </span>
+              {blocked && todo.blockedBy && (
+                <span className="ml-auto flex shrink-0 items-center gap-0.5 text-[10px] text-text-3/70">
+                  <Lock size={8} strokeWidth={2} />
+                  {todo.blockedBy
+                    .map((blockerIndex) => `#${blockerIndex}`)
+                    .join(", ")}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  });
+CommunicationTodoList.displayName = "CommunicationTodoList";
 
 function extractCodeBlock(text: string): string | undefined {
   const match = text.match(/```\n?([\s\S]*?)```/);
@@ -484,7 +601,7 @@ export const TodoBubble: React.FC<{
   onClick?: () => void;
   orgMembers?: ReadonlyArray<AgentOrgRunMemberView>;
 }> = memo(({ message, onClick, orgMembers }) => {
-  const { todos, wasMerge } = useMemo(() => {
+  const todos = useMemo(() => {
     const normalized = normalizeActivity(
       message.event as unknown as Record<string, unknown>
     );
@@ -498,7 +615,7 @@ export const TodoBubble: React.FC<{
       variant: "simulator",
       context: "simulator",
       rustExtracted: message.event.extracted,
-    });
+    }).todos;
   }, [message.event, message.eventId]);
 
   return (
@@ -509,7 +626,7 @@ export const TodoBubble: React.FC<{
       titleKind="todo"
       orgMembers={orgMembers}
     >
-      <TodoBlock todos={todos} wasMerge={wasMerge} defaultCollapsed />
+      <CommunicationTodoList todos={todos} />
     </AgentFramedBubble>
   );
 });
