@@ -171,7 +171,7 @@ export function useEditMode({
         target instanceof Element ? target : target.parentElement;
       if (
         targetElement?.closest(
-          "[data-spotlight-container], [data-dropdown-main-panel-anchor], [data-dropdown-side-panel-anchor], [data-context-menu-portal]"
+          "[data-spotlight-container], [data-dropdown-main-panel-anchor], [data-dropdown-side-panel-anchor], [data-context-menu-portal], [data-slash-portal]"
         )
       ) {
         return;

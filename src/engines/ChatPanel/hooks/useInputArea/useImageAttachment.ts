@@ -141,14 +141,31 @@ export function useImageAttachment(ownerId?: string) {
           eventId?: string;
           fileName?: string;
           dataUrl?: string;
+          ownerId?: string;
         }>
       ).detail;
       if (!detail?.dataUrl?.startsWith("data:image/")) return;
 
+      // `useImageAttachment` is mounted by several composers at once (main
+      // ChatPanel input, its effects hook, SessionCreator, …) and each
+      // registers this listener. A single dispatched event would otherwise be
+      // ingested once per mounted instance, attaching the image to every
+      // composer. Scope by ownerId so only the intended composer reacts, and
+      // dedup by eventId across the duplicate listeners that share one owner.
+      if (detail.ownerId !== undefined && detail.ownerId !== (ownerId ?? "")) {
+        return;
+      }
+
       const e2eWindow = window as Window & {
         __orgiiE2EImageAttachLast?: Record<string, unknown>;
+        __orgiiE2EImageAttachHandled?: Set<string>;
       };
       const eventId = detail.eventId ?? `${detail.fileName}:${detail.dataUrl}`;
+      const handled =
+        e2eWindow.__orgiiE2EImageAttachHandled ??
+        (e2eWindow.__orgiiE2EImageAttachHandled = new Set());
+      if (handled.has(eventId)) return;
+      handled.add(eventId);
 
       const [header, base64 = ""] = detail.dataUrl.split(",");
       const mimeMatch = header.match(/^data:([^;]+);base64$/);
@@ -182,7 +199,7 @@ export function useImageAttachment(ownerId?: string) {
         handleE2EImageAttachment
       );
     };
-  }, [handleImagePaste]);
+  }, [handleImagePaste, ownerId]);
 
   /**
    * Add an image by absolute filesystem path.  Used by the Tauri drag-drop

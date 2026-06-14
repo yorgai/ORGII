@@ -29,6 +29,7 @@ import {
   runPlanWriteBeforeBuildDeniedScenario,
   runQueueAutodispatchesAfterNaturalCompletionScenario,
   runQueueDoesNotAutoflushWhileActiveScenario,
+  runQueueEditImageUploadScenario,
   runRewindScenario,
   runSendAfterIdleDoesNotQueueScenario,
   runStopDoubleClickDoesNotResubmitScenario,
@@ -146,6 +147,7 @@ const CONTROL_SCENARIO_NAMES = [
   "queue-autodispatch-after-natural-completion",
   "send-after-idle-does-not-queue",
   "queue-does-not-autoflush-while-active",
+  "queue-edit-image-upload",
   "stop-double-click-no-resubmit",
   "force-send",
   "rewind",
@@ -162,6 +164,7 @@ const CONTROL_SCENARIO_NAMES = [
 const RUST_AGENT_EXEC_MODE_SCENARIOS = new Set([
   "fresh-stop",
   "fresh-stop-image",
+  "queue-edit-image-upload",
   "plan-build-direct",
   "plan-update",
   "plan-edit-resend",
@@ -288,6 +291,15 @@ describe("ORGII force-send queued follow-up behavior", function () {
     await runScenario(
       "queue-does-not-autoflush-while-active",
       runQueueDoesNotAutoflushWhileActiveScenario,
+      this
+    );
+  });
+
+  it("uploads an image into a queued message via the + menu without collapsing queue-edit mode", async function () {
+    this.timeout(1_200_000);
+    await runScenario(
+      "queue-edit-image-upload",
+      runQueueEditImageUploadScenario,
       this
     );
   });

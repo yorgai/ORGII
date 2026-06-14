@@ -224,6 +224,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   return createPortal(
     <div
       ref={portalContainerRef}
+      data-slash-portal
       className="fixed z-[99999] flex flex-col gap-2"
       style={portalStyle}
     >

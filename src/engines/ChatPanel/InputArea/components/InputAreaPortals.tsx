@@ -43,6 +43,13 @@ interface InputAreaPortalsProps {
     ((event: KeyboardEvent) => boolean) | null
   >;
   onPlusSlashQueryChange: (query: string) => void;
+  /**
+   * When true, the composer is anchored to the bottom of the viewport (the
+   * floating chat composer), so its menus must open upward even in edit mode —
+   * the default edit-mode "down" placement only works for the message-edit
+   * composer that lives mid-history with room beneath it.
+   */
+  bottomAnchored?: boolean;
 }
 
 export const InputAreaPortals: React.FC<InputAreaPortalsProps> = ({
@@ -74,8 +81,9 @@ export const InputAreaPortals: React.FC<InputAreaPortalsProps> = ({
   onSlashAppendSelect,
   plusSlashCommandKeyboardHandlerRef,
   onPlusSlashQueryChange,
+  bottomAnchored = false,
 }) => {
-  const portalPlacement = isEditMode ? "down" : "prefer-up";
+  const portalPlacement = isEditMode && !bottomAnchored ? "down" : "prefer-up";
   const menuAnchorSelector = isEditMode
     ? "[data-editor-slot]"
     : "[data-composer-menu-anchor]";

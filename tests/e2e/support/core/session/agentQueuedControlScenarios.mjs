@@ -344,6 +344,43 @@ async function assertRealPlusImageUploadPathOpensFilePicker(label) {
       timeoutMsg: `${label} real + image path did not render Image row/input; dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );
+
+  // The bottom-anchored floating composer must open this menu UPWARD — the
+  // panel has to sit fully above the composer shell and stay within the
+  // viewport. Regression guard for the queue-edit "+" menu rendering off the
+  // bottom edge (placement was hardcoded "down" for every edit-mode composer).
+  const menuGeometry = await execJS(`
+    const menu = document.querySelector('[data-testid="slash-command-menu"]');
+    const shell = document.querySelector('[data-testid="chat-input"]');
+    if (!menu || !shell) return { ok: false, reason: "missing-menu-or-shell" };
+    const menuRect = menu.getBoundingClientRect();
+    const shellRect = shell.getBoundingClientRect();
+    return {
+      ok: true,
+      menuTop: menuRect.top,
+      menuBottom: menuRect.bottom,
+      shellTop: shellRect.top,
+      viewportHeight: window.innerHeight,
+    };
+  `);
+  if (!menuGeometry?.ok) {
+    throw new Error(
+      `${label} could not measure + menu geometry: ${JSON.stringify(menuGeometry)}; dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
+    );
+  }
+  // Allow a small overlap tolerance for the trigger-gap rounding, but the menu
+  // must clearly open upward (its bottom near/above the composer top) and must
+  // not be clipped by the viewport bottom.
+  const opensUpward = menuGeometry.menuBottom <= menuGeometry.shellTop + 8;
+  const withinViewport =
+    menuGeometry.menuBottom <= menuGeometry.viewportHeight + 1 &&
+    menuGeometry.menuTop >= -1;
+  if (!opensUpward || !withinViewport) {
+    throw new Error(
+      `${label} + menu did not open upward within the viewport (off-bottom regression); geometry=${JSON.stringify(menuGeometry)}; dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
+    );
+  }
+
   const patchResult = await execJS(`
     const input = document.querySelector('[data-testid="chat-file-upload-input"]');
     if (!input) return { ok: false, reason: "missing-upload-input" };
@@ -387,8 +424,13 @@ async function attachTestImageToComposer(
   fileName = "orgii-e2e-cancel-image.png"
 ) {
   const result = await execJS(`
-    const editor = document.querySelector('[data-testid="chat-input"] [contenteditable="true"]');
+    const shell = document.querySelector('[data-testid="chat-input"]');
+    const editor = shell && shell.querySelector('[contenteditable="true"]');
     if (!editor) return { ok: false, reason: "missing-editor" };
+    // The image-attach hook is mounted by multiple composers at once; scope the
+    // injected event to THIS composer's owner so the image lands on exactly one
+    // attachment strip (mirrors how a real file picker is scoped to its input).
+    const ownerId = shell.getAttribute("data-image-owner-id") || "";
     const canvas = document.createElement("canvas");
     canvas.width = 16;
     canvas.height = 16;
@@ -405,9 +447,10 @@ async function attachTestImageToComposer(
         eventId: "e2e-image-" + Date.now() + "-" + Math.random().toString(16).slice(2),
         fileName: ${JSON.stringify(fileName)},
         dataUrl,
+        ownerId,
       },
     }));
-    return { ok: true, fileName: ${JSON.stringify(fileName)}, dataUrlLength: dataUrl.length };
+    return { ok: true, fileName: ${JSON.stringify(fileName)}, dataUrlLength: dataUrl.length, ownerId };
   `);
   if (!result?.ok) {
     throw new Error(
@@ -994,6 +1037,173 @@ async function runFreshStopImageRestoreScenario(config) {
   await assertComposerResponsiveAfterStop(
     `${config.label}-image-stop`,
     imagePrompt
+  );
+}
+
+async function openQueuedMessageEditComposer(label, marker) {
+  // Click the pencil (edit) button on the queued item matching `marker`. The
+  // queued row has no dedicated edit testid — the first action button is Edit.
+  const opened = await execJS(`
+    const marker = ${JSON.stringify(marker)};
+    const rows = Array.from(document.querySelectorAll('[data-testid="queued-message-item"]'));
+    const row = rows.find((node) =>
+      ((node.getAttribute("data-queued-message-content") || node.textContent || "")).includes(marker)
+    );
+    if (!row) return { ok: false, reason: "missing-row", rowCount: rows.length };
+    const editButton = row.querySelector('button[title="Edit"]')
+      || row.querySelector("button");
+    if (!editButton) return { ok: false, reason: "missing-edit-button" };
+    editButton.click();
+    return { ok: true };
+  `);
+  if (!opened?.ok) {
+    throw new Error(
+      `${label} could not open queued-message edit composer: ${JSON.stringify(opened)} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
+    );
+  }
+  await browser.waitUntil(
+    async () => {
+      const state = await inspectChatState(`${label}-queue-edit-open`);
+      const cardVisible = await execJS(
+        js.exists('[data-testid="queue-edit-mode-card"]')
+      );
+      return state.isQueueEditing === true && cardVisible;
+    },
+    {
+      timeout: 10_000,
+      interval: 250,
+      timeoutMsg: `${label} queue-edit mode did not activate after clicking Edit; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+    }
+  );
+}
+
+async function clickQueueEditSave(label) {
+  const clicked = await execJS(`
+    const card = document.querySelector('[data-testid="queue-edit-mode-card"]');
+    const shell = document.querySelector('[data-testid="chat-input"]');
+    const scope = shell || document;
+    const buttons = Array.from(scope.querySelectorAll('button'));
+    const save = buttons.find((button) => (button.textContent || "").trim() === "Save");
+    if (!save) {
+      return { ok: false, reason: "missing-save", labels: buttons.map((b) => (b.textContent || "").trim()).filter(Boolean) };
+    }
+    save.click();
+    return { ok: true, hadCard: !!card };
+  `);
+  if (!clicked?.ok) {
+    throw new Error(
+      `${label} could not click Save in queue-edit composer: ${JSON.stringify(clicked)} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
+    );
+  }
+}
+
+// Regression: uploading an image via the "+" menu while editing a QUEUED
+// message used to collapse queue-edit mode (the slash/+ menu portal renders to
+// document.body, outside the edit container, so its mousedown tripped the
+// edit-mode click-outside guard). The picked image then landed in the main
+// composer's attachment strip above the input instead of the queued message.
+// This scenario proves: (1) opening the + menu's Upload Image row keeps
+// queue-edit mode open, and (2) the attached image folds into the queued
+// message on Save.
+async function runQueueEditImageUploadScenario(config) {
+  const marker = `QUEUE_EDIT_IMAGE_${config.label.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
+  // Use the repo-exploration prompt (real multi-step tool calls) rather than a
+  // "wait N seconds" prompt — fast non-reasoning relay models ignore the wait
+  // and complete instantly, leaving no working window to queue a follow-up.
+  const firstPrompt = repoExplorationPromptForConfig(config, 12);
+  const followupPrompt = `Queued follow-up to edit with an image: ${marker}`;
+  const imageFileName = `${marker}.png`;
+
+  await configureScenario(config);
+  const inputSelector = await waitForChatInput();
+  await typeAndClickSend(inputSelector, firstPrompt);
+  await waitForChatLaunched(firstPrompt);
+  await waitForWorkingTurn(`${config.label}-queue-edit-image`);
+
+  const chatInputSelector = await waitForChatInput();
+  await typeAndSubmitWithShortcut(chatInputSelector, followupPrompt);
+  await waitForQueuedFollowup(marker);
+
+  // Enter queue-edit mode for the parked follow-up.
+  await openQueuedMessageEditComposer(
+    `${config.label}-queue-edit-image`,
+    marker
+  );
+
+  // Drive the REAL "+" menu → Upload image path. This patches the hidden file
+  // input's click(), opens the menu, and clicks the Image row. The key
+  // assertion is inside: after the row's mousedown, queue-edit mode must NOT
+  // collapse (the bug closed it here).
+  await assertRealPlusImageUploadPathOpensFilePicker(
+    `${config.label}-queue-edit-image-plus-path`
+  );
+
+  // The + menu closed but queue-edit mode must still be active. Before the fix
+  // the click-outside guard fired and dropped us back to the normal composer.
+  const afterMenu = await inspectChatState(
+    `${config.label}-queue-edit-image-after-menu`
+  );
+  const editCardStillVisible = await execJS(
+    js.exists('[data-testid="queue-edit-mode-card"]')
+  );
+  if (!afterMenu.isQueueEditing || !editCardStillVisible) {
+    throw new Error(
+      `${config.label} opening the + menu Upload-Image row collapsed queue-edit mode (regression); isQueueEditing=${afterMenu.isQueueEditing} editCardStillVisible=${editCardStillVisible} state=${JSON.stringify(summarizeChatState(afterMenu))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
+    );
+  }
+
+  // Now actually attach an image (the real OS picker can't be driven in
+  // WebDriver, so we inject the file the same way the picker would) and ensure
+  // it lands on the edit composer's attachment strip, not a stale main one.
+  // Exactly one image must appear — the E2E inject event is scoped to this
+  // composer's owner, so it must not multicast onto other mounted composers.
+  await attachTestImageToComposer(imageFileName);
+  await waitForImageAttachmentCount(
+    1,
+    `${config.label}-queue-edit-image-before-save`
+  );
+  const stillEditingAfterAttach = await inspectChatState(
+    `${config.label}-queue-edit-image-after-attach`
+  );
+  if (!stillEditingAfterAttach.isQueueEditing) {
+    throw new Error(
+      `${config.label} attaching an image dropped queue-edit mode (image leaked to the main composer); state=${JSON.stringify(summarizeChatState(stillEditingAfterAttach))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
+    );
+  }
+
+  // Save the edit. The image must fold into the queued message, and queue-edit
+  // mode must close. We assert on the queued message still carrying the image
+  // (imageCount>=1) the moment the edit commits — this is the core proof that
+  // the upload landed on the queued message and not the main composer. We do
+  // NOT assert it stays parked afterwards: the active exploration turn may
+  // naturally complete and auto-dispatch the (still "next" priority) follow-up,
+  // which is correct queue behaviour and orthogonal to this regression.
+  await clickQueueEditSave(`${config.label}-queue-edit-image`);
+  await browser.waitUntil(
+    async () => {
+      const state = await inspectChatState(
+        `${config.label}-queue-edit-image-saved`
+      );
+      if (state.isQueueEditing) return false;
+      const queued = state.queuedMessages.find((item) =>
+        item.content.includes(marker)
+      );
+      // Either the edit just committed with the image folded in (still queued),
+      // or the turn completed and it already auto-dispatched as a user turn —
+      // both are acceptable terminal states. The regression we guard against is
+      // the image NOT reaching the queued message at all.
+      if (queued) return (queued.imageCount ?? 0) >= 1;
+      return markerUserTranscriptEvents(state, marker).length > 0;
+    },
+    {
+      timeout: 15_000,
+      interval: 300,
+      timeoutMsg: `${config.label} queued message did not receive the uploaded image after Save (image leaked to the main composer or edit never committed); state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+    }
+  );
+
+  console.log(
+    `[queue-edit-image] ${config.label} marker=${marker} image folded into queued message`
   );
 }
 
@@ -1680,6 +1890,7 @@ export {
   runFreshStopRollbackScenario,
   runQueueAutodispatchesAfterNaturalCompletionScenario,
   runQueueDoesNotAutoflushWhileActiveScenario,
+  runQueueEditImageUploadScenario,
   runSendAfterIdleDoesNotQueueScenario,
   runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
