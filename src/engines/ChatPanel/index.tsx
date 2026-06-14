@@ -397,6 +397,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         : "";
     const dragHandle = showResizeHandle && (
       <VerticalResizeHandle
+        key="chat-panel-resize-handle"
         onMouseDown={handleMouseDown}
         variant={embedded ? "border" : "transparent"}
         noAccent={!embedded}
@@ -555,6 +556,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const mainPanel = (
       <div
+        key="chat-panel-main"
         ref={panelRef}
         data-chat-panel
         data-testid="chat-panel"
@@ -577,13 +579,16 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       </div>
     );
 
+    const panelChildren = isLeftPosition
+      ? [mainPanel, dragHandle]
+      : [dragHandle, mainPanel];
+
     return (
       <>
         <div
-          className={`relative flex h-full ${isLeftPosition ? "flex-row-reverse" : "flex-row"} ${useExternalWidth ? "w-full min-w-0" : "flex-shrink-0"}`}
+          className={`relative flex h-full flex-row ${useExternalWidth ? "w-full min-w-0" : "flex-shrink-0"}`}
         >
-          {dragHandle}
-          {mainPanel}
+          {panelChildren}
         </div>
         {sessionModals}
         {shareDialogSessionId && (
