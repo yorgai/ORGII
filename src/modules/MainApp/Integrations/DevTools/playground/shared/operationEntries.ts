@@ -184,6 +184,23 @@ export function eventToExploreOperation(
     }
   }
 
+  if (exploreType === "tool_search" && files.length === 0) {
+    const content =
+      (result?.output as string) ||
+      (result?.content as string) ||
+      (result?.observation as string) ||
+      "";
+    files = content
+      .split("\n")
+      .map((line) =>
+        line
+          .trim()
+          .match(/^\*\*([^*]+)\*\*/)?.[1]
+          ?.trim()
+      )
+      .filter((toolName): toolName is string => Boolean(toolName));
+  }
+
   // manage_workspace: parse "[git] name → path" lines from content string
   // (shared across list / add / remove actions)
   if (exploreType === "manage_workspace" && files.length === 0) {

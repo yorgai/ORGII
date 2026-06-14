@@ -79,6 +79,7 @@ export const COMPONENT_LOADERS: ComponentLoaderMap = {
   edit_file: chatBlockLoader,
   delete_file: chatBlockLoader,
   list_dir: chatBlockLoader,
+  tool_search: chatBlockLoader,
   run_shell: chatBlockLoader,
   await_output: chatBlockLoader,
   inspect_terminals: chatBlockLoader,

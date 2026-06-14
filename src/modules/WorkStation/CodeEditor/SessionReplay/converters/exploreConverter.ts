@@ -71,6 +71,32 @@ function hasResultPayload(result: Record<string, unknown>): boolean {
   return Object.keys(result).length > 0;
 }
 
+function extractToolSearchResults(result: Record<string, unknown>): string[] {
+  const textSources = [
+    result.output,
+    result.content,
+    result.observation,
+  ].filter(
+    (source): source is string =>
+      typeof source === "string" && source.trim().length > 0
+  );
+
+  for (const text of textSources) {
+    const toolNames = text
+      .split("\n")
+      .map((line) =>
+        line
+          .trim()
+          .match(/^\*\*([^*]+)\*\*/)?.[1]
+          ?.trim()
+      )
+      .filter((toolName): toolName is string => Boolean(toolName));
+    if (toolNames.length > 0) return toolNames;
+  }
+
+  return [];
+}
+
 function toSlimExploreEvent(event: SessionEvent): SessionEvent {
   const argsCallId =
     typeof event.args?.call_id === "string" ? event.args.call_id : undefined;
@@ -100,6 +126,13 @@ function extractQueryAndDirectory(
   result: Record<string, unknown>
 ): { query: string; directory: string | undefined } {
   const argSources = nestedArgSources(args, result);
+
+  if (exploreType === "tool_search") {
+    return {
+      query: firstStringFromSources(argSources, ["query"]),
+      directory: undefined,
+    };
+  }
 
   if (exploreType === "list_dir") {
     const directory =
@@ -228,6 +261,9 @@ export function convertToExploreOperation(
     listDirDisplayTruncated = listDirData.listDirDisplayTruncated;
     listDirTotalListedCount = listDirData.listDirTotalListedCount;
     listDirParseSafetyCapped = listDirData.listDirParseSafetyCapped;
+  } else if (exploreType === "tool_search") {
+    files = extractToolSearchResults(result);
+    totalMatches = files.length;
   } else if (exploreType === "manage_workspace") {
     const workspacesData = extractManageWorkspaceResults(result);
     files = workspacesData.files;

@@ -148,13 +148,16 @@ export const UnifiedModelPalette: React.FC<UnifiedModelPaletteProps> = ({
 
   // ============ RIGHT-COLUMN NAVIGATION ============
   const activateSource = useCallback(() => {
-    const source = sourceItems[selectedSourceIndex];
+    const sourceIndex = selectedSourceIndex >= 0 ? selectedSourceIndex : 0;
+    const source = sourceItems[sourceIndex];
     source?.action?.();
   }, [sourceItems, selectedSourceIndex]);
 
   const focusSourcesColumn = useCallback(() => {
     if (sourceItems.length === 0) return;
-    setSelectedSourceIndex((prev) => (prev < sourceItems.length ? prev : 0));
+    setSelectedSourceIndex((prev) =>
+      prev >= 0 && prev < sourceItems.length ? prev : -1
+    );
     setActiveColumn("sources");
   }, [sourceItems.length, setActiveColumn, setSelectedSourceIndex]);
 
@@ -174,12 +177,16 @@ export const UnifiedModelPalette: React.FC<UnifiedModelPaletteProps> = ({
           case "ArrowDown":
             event.preventDefault();
             setSelectedSourceIndex((prev) =>
-              Math.min(prev + 1, Math.max(sourceItems.length - 1, 0))
+              prev < 0 ? 0 : Math.min(prev + 1, sourceItems.length - 1)
             );
             return;
           case "ArrowUp":
             event.preventDefault();
-            setSelectedSourceIndex((prev) => Math.max(prev - 1, 0));
+            setSelectedSourceIndex((prev) =>
+              prev < 0
+                ? Math.max(sourceItems.length - 1, 0)
+                : Math.max(prev - 1, 0)
+            );
             return;
           case "Enter":
             event.preventDefault();

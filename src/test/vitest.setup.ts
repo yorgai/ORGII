@@ -153,7 +153,7 @@ const BUILTIN_SUBTOOL_FIXTURE: Map<string, AppSubtool> = new Map([
   ["manage_agent_def", "message"],
   ["submit_output", "message"],
   ["worktree", "other_tool"],
-  ["tool_search", "other_tool"],
+  ["tool_search", "explore"],
   ["mcp_tool", "other_tool"],
   ["tool_call", "other_tool"],
 
@@ -454,7 +454,7 @@ const BUILTIN_ICON_ID_FIXTURE: Map<string, string> = new Map([
   ["send_to_inbox", "inbox"],
   ["agent", "arrow-right-left"],
   ["worktree", "git-branch"],
-  ["tool_search", "search"],
+  ["tool_search", "book-search"],
   ["manage_story", "layout-list"],
   ["manage_work_item", "layout-list"],
 ]);

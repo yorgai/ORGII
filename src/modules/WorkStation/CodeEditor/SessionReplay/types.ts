@@ -163,6 +163,7 @@ export type ExploreType =
   | "glob"
   | "file_search"
   | "list_dir"
+  | "tool_search"
   | "cat"
   | "manage_workspace"
   | "query_lsp";
@@ -172,6 +173,7 @@ export const EXPLORE_TYPE: Record<Uppercase<ExploreType>, ExploreType> = {
   GLOB: "glob",
   FILE_SEARCH: "file_search",
   LIST_DIR: "list_dir",
+  TOOL_SEARCH: "tool_search",
   CAT: "cat",
   MANAGE_WORKSPACE: "manage_workspace",
   QUERY_LSP: "query_lsp",
@@ -179,7 +181,7 @@ export const EXPLORE_TYPE: Record<Uppercase<ExploreType>, ExploreType> = {
 
 /** Explore operation entry */
 export interface ExploreOperationEntry {
-  /** Search query/pattern (or command for list_dir/cat) */
+  /** Search query/pattern, command, or tool-search query */
   query: string;
   /** Explore type */
   exploreType: ExploreType;

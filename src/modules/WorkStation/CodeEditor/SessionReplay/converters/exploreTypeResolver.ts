@@ -16,6 +16,7 @@ import { EXPLORE_TYPE, type ExploreType } from "../types";
 const EXPLORE_TYPE_FOR_TOOL: Record<string, ExploreType> = {
   list_dir: EXPLORE_TYPE.LIST_DIR,
   list_directory: EXPLORE_TYPE.LIST_DIR,
+  tool_search: EXPLORE_TYPE.TOOL_SEARCH,
   manage_workspace: EXPLORE_TYPE.MANAGE_WORKSPACE,
   query_lsp: EXPLORE_TYPE.QUERY_LSP,
   read_lints: EXPLORE_TYPE.QUERY_LSP,

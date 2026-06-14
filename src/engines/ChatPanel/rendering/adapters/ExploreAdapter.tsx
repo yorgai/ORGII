@@ -133,7 +133,39 @@ function parseTextEntries(text: string): DirEntry[] {
   return entries;
 }
 
+function parseToolSearchEntries(text: string): DirEntry[] {
+  return text
+    .split("\n")
+    .map((line) =>
+      line
+        .trim()
+        .match(/^\*\*([^*]+)\*\*/)?.[1]
+        ?.trim()
+    )
+    .filter((name): name is string => Boolean(name))
+    .map((name) => ({ name, isDirectory: false }));
+}
+
 function extractListDirData(props: UniversalEventProps) {
+  const { args, result } = props;
+
+  if (props.eventType === "tool_search") {
+    const textSources = [
+      result?.output,
+      result?.content,
+      result?.observation,
+    ].filter(
+      (source): source is string =>
+        typeof source === "string" && source.trim().length > 0
+    );
+    const entries = textSources.flatMap(parseToolSearchEntries);
+    return {
+      directory: (args?.query as string) || ".",
+      entries,
+      contentSummary: undefined,
+    };
+  }
+
   if (props.rustExtracted?.kind === "listDir") {
     const extracted = props.rustExtracted;
     return {
@@ -145,8 +177,6 @@ function extractListDirData(props: UniversalEventProps) {
       contentSummary: extracted.contentSummary,
     };
   }
-
-  const { args, result } = props;
 
   const directory =
     (args?.target_directory as string) ||
@@ -275,23 +305,26 @@ export const ExploreAdapter: React.FC<UniversalEventProps> = (props) => {
 
   // `list_dir` renders as a single header row (like Search / Glob). The
   // expanded directory listing is reachable in the simulator's Files tab.
-  if (props.eventType === "list_dir") {
+  if (props.eventType === "list_dir" || props.eventType === "tool_search") {
     const { directory, entries } = extractListDirData(props);
     const showNoMatch = state === "done" && !isLoading && entries.length === 0;
     const listDirTitle = showNoMatch
       ? getToolDisplayLabelFromRegistry(props.eventType, exploreAction)
       : title;
-    const targetLabel = formatToolTargetPath({
-      args: props.args,
-      repoPath: props.repoPath,
-      pathKeys: [
-        "target_directory",
-        "targetDirectory",
-        "dir",
-        "dir_path",
-        "path",
-      ],
-    });
+    const targetLabel =
+      props.eventType === "tool_search"
+        ? (props.args?.query as string) || undefined
+        : formatToolTargetPath({
+            args: props.args,
+            repoPath: props.repoPath,
+            pathKeys: [
+              "target_directory",
+              "targetDirectory",
+              "dir",
+              "dir_path",
+              "path",
+            ],
+          });
     return (
       <div
         data-tool-call-event-id={props.eventId}

@@ -429,6 +429,17 @@ impl AliasEntry {
         )
     }
 
+    /// CODE_EDITOR + Explore → ToolSearch UI
+    const fn tool_search(storage: &'static str) -> Self {
+        Self::new(
+            storage,
+            UiCanonical::ToolCall,
+            SimApp::CodeEditor,
+            AppSubtool::Explore,
+            ChatBlock::Explore,
+        )
+    }
+
     /// CHANNELS + Message → ToolCall UI
     const fn tool_call_msg(storage: &'static str) -> Self {
         Self::new(
@@ -864,8 +875,8 @@ static CLI_ALIAS_MAP: LazyLock<HashMap<&'static str, AliasEntry>> = LazyLock::ne
         "read_mcp_resource",
         AliasEntry::tool_call_other("read_mcp_resource"),
     );
-    m.insert("ToolSearch", AliasEntry::tool_call_other("tool_search"));
-    m.insert("tool_search", AliasEntry::tool_call_other("tool_search"));
+    m.insert("ToolSearch", AliasEntry::tool_search("tool_search"));
+    m.insert("tool_search", AliasEntry::tool_search("tool_search"));
     // Notification / remote tools → Fallback UI
     m.insert(
         "PushNotification",

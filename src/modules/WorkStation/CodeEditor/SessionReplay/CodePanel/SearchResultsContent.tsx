@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import FileTypeIcon from "@src/components/FileTypeIcon";
+import { getToolIcon } from "@src/config/toolIcons";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { getToolDisplayLabelFromRegistry } from "@src/util/ui/rendering/registryToolLabel";
 
@@ -230,6 +231,60 @@ export const SearchResultsContent: React.FC<{
           content={content}
           filePath={filePath}
           language="text"
+        />
+      </div>
+    );
+  }
+
+  if (exploreType === "tool_search") {
+    const toolList = files ?? [];
+    const visibleTools = toolList.slice(0, visibleExploreResultCount);
+    const hiddenToolCount = Math.max(0, toolList.length - visibleTools.length);
+    const toolCount = totalMatches > 0 ? totalMatches : toolList.length;
+    const hasVisibleBody = visibleTools.length > 0 || hiddenToolCount > 0;
+
+    if (hasResultPayload && !hasVisibleBody) {
+      return <NoMatchPlaceholder />;
+    }
+
+    return (
+      <div className="flex w-full min-w-0 flex-col">
+        <SearchSummaryHeader
+          query={_query}
+          directory={workspaceDirectoryHint}
+          toolLabel={getToolDisplayLabelFromRegistry("tool_search")}
+          countLabel={
+            hasResultPayload && hasVisibleBody
+              ? tSessions("simulator.replay.ide.codePanel.resultCount", {
+                  count: toolCount,
+                })
+              : undefined
+          }
+        />
+        {visibleTools.length > 0 ? (
+          <div className="flex w-full min-w-0 flex-col gap-0.5 p-2">
+            {visibleTools.map((toolName, idx) => (
+              <div
+                key={`${toolName}-${idx}`}
+                className="flex w-full min-w-0 max-w-full items-center gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-fill-2"
+              >
+                {getToolIcon(toolName, {
+                  size: 14,
+                  className: SEARCH_ROW_ICON_CLASS,
+                })}
+                <span
+                  className="min-w-0 flex-1 truncate text-text-1"
+                  title={toolName}
+                >
+                  {toolName}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <LoadMoreResultsButton
+          hiddenCount={hiddenToolCount}
+          onClick={handleLoadMoreResults}
         />
       </div>
     );

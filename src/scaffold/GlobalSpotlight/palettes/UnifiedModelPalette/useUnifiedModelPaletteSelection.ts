@@ -43,7 +43,7 @@ export function useUnifiedModelPaletteSelection({
   const [selectedGroupModelIds, setSelectedGroupModelIds] = useState<string[]>(
     []
   );
-  const [selectedSourceIndex, setSelectedSourceIndex] = useState(0);
+  const [selectedSourceIndex, setSelectedSourceIndex] = useState(-1);
 
   const sourceOptions = useMemo(() => {
     if (selectedModelId === null) return [];
@@ -58,7 +58,7 @@ export function useUnifiedModelPaletteSelection({
     if (!isOpen) return;
 
     const frameId = requestAnimationFrame(() => {
-      setSelectedSourceIndex(0);
+      setSelectedSourceIndex(-1);
       if (isCliAgent && accountLookupSize === 0) {
         setActiveColumn("sources");
         setSelectedModelId("");
@@ -105,7 +105,7 @@ export function useUnifiedModelPaletteSelection({
       setSelectedModelId(modelId);
       setSelectedModelLabel(modelId ? modelLabel : "");
       setSelectedGroupModelIds(modelId ? groupModelIds : []);
-      setSelectedSourceIndex(0);
+      setSelectedSourceIndex(-1);
     },
     []
   );

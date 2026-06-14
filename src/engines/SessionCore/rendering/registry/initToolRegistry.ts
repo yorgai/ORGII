@@ -102,6 +102,7 @@ const BASELINE_CHAT_BLOCKS = new Map<string, ChatBlock>([
   ["delete_file", "diff"],
   ["apply_patch", "diff"],
   ["list_dir", "explore"],
+  ["tool_search", "explore"],
   ["run_shell", "shell"],
   ["run_command_line", "shell"],
   ["await_output", "title_only"],
