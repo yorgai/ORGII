@@ -10,6 +10,7 @@ pub mod agent_org;
 pub mod cli;
 pub mod core;
 pub mod desktop;
+pub mod file_history;
 pub mod gateway;
 pub mod housekeeping;
 pub mod learning;

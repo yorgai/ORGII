@@ -668,6 +668,7 @@
   "chat": {
     "planApprovedLabel": "执行已批准的计划",
     "planApprovedEditedLabel": "执行已批准的计划（已编辑）",
+    "restoreCheckpoint": "恢复到此检查点",
     "sessionStarted": "Session 已开始",
     "contentCopied": "内容复制！",
     "failedToCopyContent": "复制内容失败",

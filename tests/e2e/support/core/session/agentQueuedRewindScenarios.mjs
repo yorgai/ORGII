@@ -86,10 +86,16 @@ async function reloadAndOpenActiveSession(sessionId, label) {
   await waitForApp();
   // CLI sessions may need a moment for the adapter to settle after page
   // reload before openSession can locate the session in the store. Retry
-  // the openSession call up to 3 times with a short delay if chatEventCount
-  // is still 0 — this is a known race on reload for CLI sessions where the
+  // the openSession call with a short delay if chatEventCount is still 0 —
+  // this is a known race on reload for CLI sessions where the
   // session-persistence cache eviction races against the initial history load.
-  const MAX_OPEN_ATTEMPTS = 3;
+  //
+  // Restore-to-checkpoint truncates to a very short history (often a single
+  // turn) with no follow-up resend, which widens this race versus edit-resend
+  // (whose fresh resend turn re-primes the live store). The chunk table is
+  // already authoritative-correct at this point; we just need the live CLI
+  // adapter to finish its async re-load, so give it extra attempts.
+  const MAX_OPEN_ATTEMPTS = 6;
   for (let attempt = 1; attempt <= MAX_OPEN_ATTEMPTS; attempt++) {
     unwrap(
       await invokeE2E("openSession", sessionId),
@@ -178,6 +184,163 @@ async function clickEditResendWithRevertDialog(label, originalPrompt, editedProm
   const revertClicked = await execJS(js.click('[data-testid="rewind-file-changes-revert"]'));
   if (revertClicked !== "clicked") {
     throw new Error(`${label} could not click Revert changes: ${revertClicked}`);
+  }
+}
+
+async function clickRestoreCheckpointWithRevertDialog(label, targetPrompt) {
+  const restoreClicked = await execJS(`
+    const targetText = ${JSON.stringify(targetPrompt.slice(0, 120))};
+    const cards = Array.from(document.querySelectorAll('[data-testid="chat-message-user-editable"]'));
+    const card = cards.find((node) => (node.textContent || '').includes(targetText));
+    if (!card) return { clicked: false, reason: 'missing-card', count: cards.length };
+    const button = card.querySelector('[data-testid="chat-message-restore-checkpoint"]');
+    if (!button) return { clicked: false, reason: 'missing-restore-button' };
+    button.click();
+    return { clicked: true };
+  `);
+  if (!restoreClicked?.clicked) {
+    throw new Error(
+      `${label} could not click Restore checkpoint: ${JSON.stringify(restoreClicked)}`
+    );
+  }
+
+  await browser.waitUntil(
+    async () =>
+      (await execJS(js.exists('[data-testid="rewind-file-changes-revert"]'))) &&
+      (await execJS(js.exists('[data-testid="rewind-file-changes-keep"]'))),
+    {
+      timeout: 10_000,
+      interval: 500,
+      timeoutMsg: `${label} revert/keep dialog did not appear after restore checkpoint; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+    }
+  );
+
+  const revertClicked = await execJS(
+    js.click('[data-testid="rewind-file-changes-revert"]')
+  );
+  if (revertClicked !== "clicked") {
+    throw new Error(`${label} could not click Revert changes: ${revertClicked}`);
+  }
+}
+
+/**
+ * Restore-to-checkpoint scenario (Cursor-style restore, NO resend).
+ *
+ * 1. Send message A → creates fileA.
+ * 2. Send message B → creates fileB.
+ * 3. Restore the session to message B's checkpoint, choosing "Revert changes".
+ *    Asserts: fileB reverted, message B + assistant turn removed, fileA + msg A
+ *    preserved, NO new message is re-sent (runtime stays idle, no fileB resend).
+ * 4. Reload + reopen: history shows exactly message A; message B is gone.
+ */
+async function runRestoreCheckpointScenario(config) {
+  const repoPath = createTempRepo(config.label);
+  const safe = config.label.replace(/[^a-zA-Z0-9]/g, "-");
+  const safeU = config.label.replace(/[^a-zA-Z0-9]/g, "_");
+  const stamp = Date.now();
+  const markerFileA = `orgii-restore-a-${safe}-${stamp}.md`;
+  const markerTextA = `ORGII_RESTORE_A_${safeU}_${stamp}`;
+  const markerFileB = `orgii-restore-b-${safe}-${stamp}.md`;
+  const markerTextB = `ORGII_RESTORE_B_${safeU}_${stamp}`;
+  const promptA = rewindPromptForConfig(config, markerFileA, markerTextA);
+  const promptB = rewindPromptForConfig(config, markerFileB, markerTextB);
+
+  const fileA = path.join(repoPath, markerFileA);
+  const fileB = path.join(repoPath, markerFileB);
+
+  try {
+    await configureScenario(config, { repoPath });
+    const inputSelector = await waitForChatInput();
+
+    // --- Turn A ---
+    await typeAndClickSend(inputSelector, promptA);
+    await waitForChatLaunched(promptA);
+    await ensureMarkerFileCreated(config, fileA, markerTextA);
+    await waitForRuntimeIdle(`${config.label}-restore-after-a`);
+
+    // --- Turn B (the checkpoint we will restore to) ---
+    await typeAndClickSend(inputSelector, promptB);
+    await waitForChatLaunched(promptB);
+    await ensureMarkerFileCreated(config, fileB, markerTextB);
+    await waitForRuntimeIdle(`${config.label}-restore-after-b`);
+    await waitForFileChangesPanel(`${config.label}-restore`);
+
+    // --- Restore to checkpoint B, reverting files ---
+    await clickRestoreCheckpointWithRevertDialog(
+      `${config.label}-restore-checkpoint`,
+      promptB
+    );
+
+    // fileB reverted (gone), fileA preserved.
+    await browser.waitUntil(
+      async () => {
+        const fileBGone =
+          !fs.existsSync(fileB) ||
+          !fs.readFileSync(fileB, "utf8").includes(markerTextB);
+        const fileAKept =
+          fs.existsSync(fileA) &&
+          fs.readFileSync(fileA, "utf8").includes(markerTextA);
+        return fileBGone && fileAKept;
+      },
+      {
+        timeout: 60_000,
+        interval: 1_000,
+        timeoutMsg: `${config.label} restore-checkpoint did not revert fileB while keeping fileA; fileBExists=${fs.existsSync(fileB)} fileB=${fs.existsSync(fileB) ? JSON.stringify(fs.readFileSync(fileB, "utf8")) : "<missing>"} fileAExists=${fs.existsSync(fileA)} fileA=${fs.existsSync(fileA) ? JSON.stringify(fs.readFileSync(fileA, "utf8")) : "<missing>"} state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}`,
+      }
+    );
+
+    // No resend: turn must land idle and message B's file must NOT be
+    // re-created. A resend would have re-run turn B and rewritten fileB, so a
+    // permanently-reverted fileB is the strongest live signal of "no resend".
+    // (Live EventStore history for agent sessions can lag the truncate RPC, so
+    // the authoritative message-history assertion runs after reload below —
+    // matching the edit-resend scenario's reload-then-verify pattern.)
+    await waitForRuntimeIdle(`${config.label}-restore-after-restore`);
+    // Give a brief window to prove fileB is NOT resurrected by a stray resend.
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
+    if (
+      fs.existsSync(fileB) &&
+      fs.readFileSync(fileB, "utf8").includes(markerTextB)
+    ) {
+      throw new Error(
+        `${config.label} restore-checkpoint re-created fileB (unexpected resend); fileB=${JSON.stringify(fs.readFileSync(fileB, "utf8"))}`
+      );
+    }
+    await assertCliHistoryMutationIfApplicable(
+      `${config.label}-after-restore-checkpoint`,
+      "file_rewind",
+      1
+    );
+    await assertStationSurfacesConsistent(`${config.label}-restore-checkpoint`);
+
+    // --- Reload + reopen: only message A survives ---
+    const sessionId = await activeSessionId(`${config.label}-restore-reload`);
+    await reloadAndOpenActiveSession(
+      sessionId,
+      `${config.label}-reload-after-restore`
+    );
+    await browser.waitUntil(
+      async () => {
+        const state = await invokeE2E("inspectChatState");
+        const userTexts = (state.chatEvents ?? [])
+          .filter((event) => event.source === "user")
+          .map((event) => String(event.displayText ?? ""));
+        const aMatches = userTexts.filter((text) => text.includes(markerTextA));
+        const bMatches = userTexts.filter((text) => text.includes(markerTextB));
+        return aMatches.length === 1 && bMatches.length === 0;
+      },
+      {
+        timeout: 30_000,
+        interval: 1_000,
+        timeoutMsg: `${config.label} reload history after restore-checkpoint was inconsistent; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}`,
+      }
+    );
+    await assertStationSurfacesConsistent(`${config.label}-restore-reload`);
+  } finally {
+    await execJS(
+      `window.__orgiiE2EAutoConfirmDestructive = false; return true;`
+    ).catch(() => undefined);
+    fs.rmSync(repoPath, { recursive: true, force: true });
   }
 }
 
@@ -332,4 +495,4 @@ async function runRewindScenario(config) {
   }
 }
 
-export { runRewindScenario };
+export { runRestoreCheckpointScenario, runRewindScenario };
