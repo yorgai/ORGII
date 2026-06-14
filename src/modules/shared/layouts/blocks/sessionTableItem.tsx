@@ -3,7 +3,7 @@ import React from "react";
 import ModelIcon from "@src/components/ModelIcon";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import type { KanbanTask } from "@src/features/KanbanBoard";
-import { KANBAN_RESULT_STATUS } from "@src/features/KanbanBoard";
+import { KANBAN_RESULT_STATUS } from "@src/features/KanbanBoard/types";
 import { formatSmartDateTime } from "@src/util/data/formatters/date";
 import { formatModelNameFull } from "@src/util/formatModelName";
 
