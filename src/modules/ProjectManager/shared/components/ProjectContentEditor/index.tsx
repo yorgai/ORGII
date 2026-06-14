@@ -327,7 +327,6 @@ const ProjectContentEditor = forwardRef<
               searchQuery={atSearchQuery}
               inlineSearchOnEmpty
               keyboardOpened={contextMenuKeyboardOpened}
-              recentFiles={[]}
               repoPath={repoPath ?? undefined}
               keyboardHandlerRef={contextMenuKeyboardHandlerRef}
               placement="down"

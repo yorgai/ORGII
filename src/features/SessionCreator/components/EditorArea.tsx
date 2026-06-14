@@ -522,7 +522,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           onSelect={onAtSelect}
           searchQuery={atSearchQuery}
           keyboardOpened={contextMenuKeyboardOpened}
-          recentFiles={[]}
           repoPath={repoPath}
           keyboardHandlerRef={contextMenuFunctionRef}
           placement={resolvedDropdownDirection}
