@@ -20,10 +20,15 @@
 .codemirror-diff-wrapper--auto-height {
   height: auto;
   overflow: visible;
+  // Constrain to the parent width so a single long code line scrolls
+  // horizontally inside the editor instead of stretching the whole diff
+  // section (the "over-wide line" artifact).
+  max-width: 100%;
 
   .codemirror-diff {
     height: auto;
     overflow: visible;
+    max-width: 100%;
 
     :global {
       .cm-mergeView,
@@ -32,11 +37,16 @@
       }
 
       .cm-editor {
-        overflow: visible;
+        overflow: hidden;
+        max-width: 100%;
       }
 
+      // Keep vertical auto-height (no internal vertical scrollbar) but let
+      // long lines scroll horizontally rather than widen the layout.
       .cm-scroller {
-        overflow: visible !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        max-width: 100%;
       }
     }
   }

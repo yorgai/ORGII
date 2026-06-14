@@ -2,6 +2,7 @@ import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import {
   extractEditData,
   mergeUnifiedDiffStrings,
+  parseUnifiedDiffToHunks,
   parseUnifiedDiffToOldNew,
 } from "@src/engines/SessionCore/rendering/props/propsDataExtractors";
 import { normalizeEventProps } from "@src/engines/SessionCore/rendering/props/propsNormalizer";
@@ -65,6 +66,11 @@ export function buildSessionReplayDiffSectionItems(
     const parsed = segment.diff
       ? parseUnifiedDiffToOldNew(segment.diff)
       : undefined;
+    // Per-hunk pairs so multi-hunk diffs render as separate adjacent
+    // regions instead of one editor padded with fabricated blank gap lines.
+    const hunks = segment.diff
+      ? parseUnifiedDiffToHunks(segment.diff)
+      : undefined;
     const isDeleted = segment.isDeleted;
     const oldContent = isDeleted
       ? (parsed?.oldValue ?? segment.oldContent ?? segment.content ?? "")
@@ -90,6 +96,7 @@ export function buildSessionReplayDiffSectionItems(
         oldStartLine: segment.oldStartLine ?? parsed?.oldStartLine,
         newStartLine: segment.newStartLine ?? parsed?.newStartLine,
         isUnavailable: contentUnavailable || undefined,
+        hunks: isDeleted ? undefined : hunks,
       },
       entryIds: [entry.entryId],
       rawDiffs: segment.diff ? [segment.diff] : [],
@@ -156,11 +163,13 @@ export function buildConsolidatedSessionReplayDiffSectionItems<
         existing.file.newContent = parsed.newValue;
         existing.file.oldStartLine = parsed.oldStartLine;
         existing.file.newStartLine = parsed.newStartLine;
+        existing.file.hunks = parseUnifiedDiffToHunks(merged);
       } else {
         // Fallback: keep first old, last new (imperfect but better than nothing)
         existing.file.newContent = section.file.newContent;
         existing.file.newStartLine =
           section.file.newStartLine ?? existing.file.newStartLine;
+        existing.file.hunks = undefined;
       }
     }
   }

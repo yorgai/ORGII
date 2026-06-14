@@ -74,6 +74,20 @@ export interface DiffFileSectionData {
   isBinary?: boolean;
   /** True when the file was edited but content could not be retrieved (e.g. Cursor IDE blob pruned). */
   isUnavailable?: boolean;
+  /**
+   * Per-hunk old/new pairs for multi-hunk diffs. When present and longer
+   * than one entry, the section renders one CodeMirrorDiff per hunk so
+   * distant hunks are not joined by fabricated blank gap lines (which
+   * collapse into a bogus "N unchanged lines" band that expands to
+   * nothing). Single-hunk files leave this undefined and use
+   * oldContent/newContent.
+   */
+  hunks?: Array<{
+    oldValue: string;
+    newValue: string;
+    oldStartLine: number;
+    newStartLine: number;
+  }>;
 }
 
 export interface DiffFileSectionProps {
@@ -194,6 +208,8 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
     !file.isUnavailable &&
     (file.oldContent !== undefined || file.newContent !== undefined);
 
+  const hasMultipleHunks = (file.hunks?.length ?? 0) > 1;
+
   const isBinary =
     file.isBinary === true ||
     isBinaryByExtension(file.path) ||
@@ -280,20 +296,42 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
           subtitle={displayPath}
         />
       ) : hasContent ? (
-        <CodeMirrorDiff
-          oldValue={file.oldContent || ""}
-          newValue={file.newContent || ""}
-          filePath={file.path}
-          changeType={file.status}
-          oldStartLine={file.oldStartLine}
-          newStartLine={file.newStartLine}
-          viewMode="unified"
-          readOnly={true}
-          mergeControls={false}
-          collapseUnchanged={true}
-          noBottomPadding={noBottomPadding}
-          autoHeight
-        />
+        hasMultipleHunks ? (
+          <div className="flex flex-col">
+            {file.hunks!.map((hunk, hunkIndex) => (
+              <CodeMirrorDiff
+                key={`${file.path}:hunk:${hunkIndex}:${hunk.oldStartLine}:${hunk.newStartLine}`}
+                oldValue={hunk.oldValue}
+                newValue={hunk.newValue}
+                filePath={file.path}
+                changeType={file.status}
+                oldStartLine={hunk.oldStartLine}
+                newStartLine={hunk.newStartLine}
+                viewMode="unified"
+                readOnly={true}
+                mergeControls={false}
+                collapseUnchanged={true}
+                noBottomPadding={noBottomPadding}
+                autoHeight
+              />
+            ))}
+          </div>
+        ) : (
+          <CodeMirrorDiff
+            oldValue={file.oldContent || ""}
+            newValue={file.newContent || ""}
+            filePath={file.path}
+            changeType={file.status}
+            oldStartLine={file.oldStartLine}
+            newStartLine={file.newStartLine}
+            viewMode="unified"
+            readOnly={true}
+            mergeControls={false}
+            collapseUnchanged={true}
+            noBottomPadding={noBottomPadding}
+            autoHeight
+          />
+        )
       ) : file.isUnavailable ? (
         <Placeholder
           variant="empty"

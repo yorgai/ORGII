@@ -102,4 +102,45 @@ describe("session replay diff sections", () => {
 
     expect(sections).toEqual([]);
   });
+
+  it("splits distant hunks into per-hunk pairs without phantom gap lines", () => {
+    const sections = buildSessionReplayDiffSectionItems(
+      diffEntry(
+        "edit-1",
+        "@@ -42,2 +42,2 @@\n context\n-old\n+new\n@@ -180,2 +180,2 @@\n tail\n-foo\n+bar"
+      )
+    );
+
+    expect(sections).toHaveLength(1);
+    const { hunks } = sections[0].file;
+    expect(hunks).toHaveLength(2);
+    expect(hunks?.[0]).toMatchObject({
+      oldStartLine: 42,
+      newStartLine: 42,
+      oldValue: "context\nold",
+      newValue: "context\nnew",
+    });
+    expect(hunks?.[1]).toMatchObject({
+      oldStartLine: 180,
+      newStartLine: 180,
+      oldValue: "tail\nfoo",
+      newValue: "tail\nbar",
+    });
+    // No fabricated blank gap lines between the two hunks.
+    expect(hunks?.[0].oldValue).not.toContain("\n\n");
+    expect(hunks?.[1].oldValue).not.toContain("\n\n");
+  });
+
+  it("recomputes per-hunk pairs when consolidating multi-hunk edits", () => {
+    const sections = buildConsolidatedSessionReplayDiffSectionItems([
+      diffEntry("edit-1", "@@ -42,1 +42,1 @@\n-old\n+new"),
+      diffEntry("edit-2", "@@ -180,1 +180,1 @@\n-before\n+after"),
+    ]);
+
+    expect(sections).toHaveLength(1);
+    const { hunks } = sections[0].file;
+    expect(hunks).toHaveLength(2);
+    expect(hunks?.[0].oldStartLine).toBe(42);
+    expect(hunks?.[1].oldStartLine).toBe(180);
+  });
 });

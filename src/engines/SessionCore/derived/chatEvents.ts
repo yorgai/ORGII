@@ -26,18 +26,6 @@ import {
   planEventContentSignature,
 } from "./planDisplayEvents";
 
-function deduplicateById(events: SessionEvent[]): SessionEvent[] {
-  const seen = new Set<string>();
-  const result: SessionEvent[] = [];
-  for (const event of events) {
-    if (!seen.has(event.id)) {
-      seen.add(event.id);
-      result.push(event);
-    }
-  }
-  return result.length === events.length ? events : result;
-}
-
 function isStreamingSnap(snap: Snapshot): boolean {
   return "streaming" in snap && (snap as { streaming: boolean }).streaming;
 }
@@ -194,12 +182,9 @@ export const chatEventsAtom = atom((get) => {
   const queuedMessages = get(messageQueueAtom);
 
   if (snap && "chatEvents" in snap) {
-    // Defensive: drop events with duplicate IDs that can appear after a
-    // streaming→derived snapshot merge race.
-    const dedupedChatEvents = deduplicateById(snap.chatEvents);
     const next = appendLiveAssistantEvent(
       derivePlanDisplayEvents(
-        filterQueuedSyntheticUserEvents(dedupedChatEvents, queuedMessages)
+        filterQueuedSyntheticUserEvents(snap.chatEvents, queuedMessages)
       ),
       sessionId,
       liveContent
