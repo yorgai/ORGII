@@ -6,7 +6,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use code_map::{CodeMapAction, CodeMapLanguage, CodeMapNodeKind, CodeMapQueryRequest, CodeMapService};
+use code_map::{
+    CodeMapAction, CodeMapLanguage, CodeMapNodeKind, CodeMapQueryRequest, CodeMapService,
+};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
@@ -274,8 +276,10 @@ impl Tool for CodeMapTool {
                         kind,
                         language,
                         path_prefix,
-                        include_source: include_source.unwrap_or(matches!(params.action, CodeMapToolAction::Explore)),
-                        include_relationships: include_relationships.unwrap_or(matches!(params.action, CodeMapToolAction::Explore)),
+                        include_source: include_source
+                            .unwrap_or(matches!(params.action, CodeMapToolAction::Explore)),
+                        include_relationships: include_relationships
+                            .unwrap_or(matches!(params.action, CodeMapToolAction::Explore)),
                         max_results,
                         max_depth,
                     },
@@ -302,7 +306,8 @@ impl Tool for CodeMapTool {
                         kind,
                         language,
                         path_prefix,
-                        include_source: include_source.unwrap_or(matches!(params.action, CodeMapToolAction::Node)),
+                        include_source: include_source
+                            .unwrap_or(matches!(params.action, CodeMapToolAction::Node)),
                         include_relationships: include_relationships.unwrap_or(true),
                         max_results,
                         max_depth,

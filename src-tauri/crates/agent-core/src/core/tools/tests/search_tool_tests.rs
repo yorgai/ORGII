@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use tempfile::TempDir;
 
 use crate::tools::impls::coding::code_search::SearchTool;
 use crate::tools::traits::Tool;
@@ -25,6 +26,17 @@ fn parameters_has_action_enum() {
     assert!(variants.contains(&"glob"));
     assert!(variants.contains(&"symbols"));
     assert!(variants.contains(&"check_status"));
+}
+
+#[test]
+fn parameters_supports_multi_repo_paths() {
+    let tool = make_tool("/tmp/repo");
+    let params = tool.parameters();
+    let repo_paths = &params["properties"]["repo_paths"];
+
+    assert_eq!(repo_paths["type"], "array");
+    assert_eq!(repo_paths["items"]["type"], "string");
+    assert_eq!(repo_paths["minItems"], 1);
 }
 
 #[test]
@@ -180,6 +192,91 @@ async fn explicit_repo_path_overrides_default() {
     assert!(
         err.contains("/explicit/override/path"),
         "Should use explicit path in error: {err}"
+    );
+}
+
+#[tokio::test]
+async fn repo_paths_rejects_empty_array() {
+    let tool = make_tool("/tmp");
+    let result = tool
+        .execute(
+            serde_json::json!({
+                "action": "grep",
+                "pattern": "test",
+                "repo_paths": []
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await;
+    assert!(result.is_err());
+    let err = format!("{}", result.unwrap_err());
+    assert!(
+        err.contains("repo_paths"),
+        "Should mention repo_paths: {err}"
+    );
+}
+
+#[tokio::test]
+async fn repo_path_and_repo_paths_conflict_returns_error() {
+    let tool = make_tool("/tmp");
+    let result = tool
+        .execute(
+            serde_json::json!({
+                "action": "grep",
+                "pattern": "test",
+                "repo_path": "/tmp",
+                "repo_paths": ["/tmp"]
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await;
+    assert!(result.is_err());
+    let err = format!("{}", result.unwrap_err());
+    assert!(
+        err.contains("repo_path") && err.contains("repo_paths"),
+        "Should mention conflicting repo path fields: {err}"
+    );
+}
+
+#[tokio::test]
+async fn grep_searches_multiple_repo_paths() {
+    let first = TempDir::new().expect("temp dir must be created");
+    let second = TempDir::new().expect("temp dir must be created");
+    std::fs::write(
+        first.path().join("first.rs"),
+        "fn first() { let marker = 1; }\n",
+    )
+    .expect("first file must be written");
+    std::fs::write(
+        second.path().join("second.rs"),
+        "fn second() { let marker = 2; }\n",
+    )
+    .expect("second file must be written");
+
+    let tool = make_tool("/unused/default");
+    let result = tool
+        .execute(
+            serde_json::json!({
+                "action": "grep",
+                "pattern": "marker",
+                "repo_paths": [
+                    first.path().to_string_lossy(),
+                    second.path().to_string_lossy()
+                ],
+                "max_results": 10
+            }),
+            &crate::tools::call_context::CallContext::default(),
+        )
+        .await
+        .expect("multi-root grep should succeed");
+    let text = result.text;
+    assert!(
+        text.contains("first.rs"),
+        "Should include first root result: {text}"
+    );
+    assert!(
+        text.contains("second.rs"),
+        "Should include second root result: {text}"
     );
 }
 

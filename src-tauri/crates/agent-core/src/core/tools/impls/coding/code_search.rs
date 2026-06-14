@@ -17,6 +17,33 @@ use crate::session::workspace::SessionWorkspace;
 use crate::tools::names as tool_names;
 use crate::tools::traits::{optional_int, optional_string, required_string, Tool, ToolError};
 
+fn optional_string_array(params: &Value, key: &str) -> Result<Option<Vec<String>>, ToolError> {
+    let Some(value) = params.get(key) else {
+        return Ok(None);
+    };
+    let Some(array) = value.as_array() else {
+        return Err(ToolError::InvalidParams(format!(
+            "parameter '{}' must be an array of strings",
+            key
+        )));
+    };
+    let mut paths = Vec::with_capacity(array.len());
+    for item in array {
+        let Some(path) = item.as_str() else {
+            return Err(ToolError::InvalidParams(format!(
+                "parameter '{}' must contain only strings",
+                key
+            )));
+        };
+        paths.push(path.to_string());
+    }
+    Ok(Some(paths))
+}
+
+fn has_explicit_repo_scope(params: &Value) -> bool {
+    params.get("repo_path").is_some() || params.get("repo_paths").is_some()
+}
+
 /// Code and file search tool.
 pub struct SearchTool {
     /// Default repo path to search in (config workspace).
@@ -62,35 +89,55 @@ impl SearchTool {
         self
     }
 
-    /// Resolve the repo path: explicit param > active IDE repo > current workspace.
+    /// Resolve repo paths: explicit `repo_paths`/`repo_path` > active IDE repo > current workspace.
     ///
-    /// An explicit `repo_path` is validated against the live session
-    /// workspace only when the agent policy sets `workspace_only`
-    /// (threaded via [`Self::with_restrict_to_workspace`]). Search is
-    /// read-only; under the default-open policy any local path is fair
-    /// game, same as `read_file`.
-    async fn resolve_repo(&self, params: &Value) -> Result<PathBuf, ToolError> {
-        if let Some(explicit) = optional_string(params, "repo_path") {
-            let path = PathBuf::from(explicit);
-            if self.restrict_to_workspace {
-                if let Some(ref workspace) = self.workspace_state {
-                    let extra: Vec<PathBuf> =
-                        self.active_repo.lock().await.clone().into_iter().collect();
+    /// Explicit paths are validated against the live session workspace only
+    /// when the agent policy sets `workspace_only` (threaded via
+    /// [`Self::with_restrict_to_workspace`]). Search is read-only; under the
+    /// default-open policy any local path is fair game, same as `read_file`.
+    async fn resolve_repos(&self, params: &Value) -> Result<Vec<PathBuf>, ToolError> {
+        let explicit_repo_path = optional_string(params, "repo_path");
+        let explicit_repo_paths = optional_string_array(params, "repo_paths")?;
+        if explicit_repo_path.is_some() && explicit_repo_paths.is_some() {
+            return Err(ToolError::InvalidParams(
+                "Use either 'repo_path' for one root or 'repo_paths' for multiple roots, not both."
+                    .to_string(),
+            ));
+        }
+
+        let paths = if let Some(explicit_paths) = explicit_repo_paths {
+            if explicit_paths.is_empty() {
+                return Err(ToolError::InvalidParams(
+                    "parameter 'repo_paths' must contain at least one path".to_string(),
+                ));
+            }
+            explicit_paths.into_iter().map(PathBuf::from).collect()
+        } else if let Some(explicit_path) = explicit_repo_path {
+            vec![PathBuf::from(explicit_path)]
+        } else {
+            let active = self.active_repo.lock().await;
+            vec![active.clone().unwrap_or_else(|| {
+                self.workspace_state
+                    .as_ref()
+                    .map(|workspace| workspace.read().working_dir().to_path_buf())
+                    .unwrap_or_else(|| self.default_repo.clone())
+            })]
+        };
+
+        if self.restrict_to_workspace {
+            if let Some(ref workspace) = self.workspace_state {
+                let extra: Vec<PathBuf> =
+                    self.active_repo.lock().await.clone().into_iter().collect();
+                for path in &paths {
                     workspace
                         .read()
-                        .is_path_allowed(&path, &extra)
+                        .is_path_allowed(path, &extra)
                         .map_err(ToolError::PermissionDenied)?;
                 }
             }
-            return Ok(path);
         }
-        let active = self.active_repo.lock().await;
-        Ok(active.clone().unwrap_or_else(|| {
-            self.workspace_state
-                .as_ref()
-                .map(|workspace| workspace.read().working_dir().to_path_buf())
-                .unwrap_or_else(|| self.default_repo.clone())
-        }))
+
+        Ok(paths)
     }
 }
 
@@ -113,14 +160,14 @@ impl Tool for SearchTool {
     }
 
     fn description(&self) -> &str {
-        "Search code, files, and symbols in a repository.\n\
+        "Search code, files, and symbols in one or more repositories/folders.\n\
          Actions:\n\
          - grep: regex search in file contents (ripgrep)\n\
          - find_files: find files by name pattern (fuzzy)\n\
          - glob: find files by glob pattern (e.g. src/**/*.ts, *.{rs,toml})\n\
          - symbols: find functions/classes/types by name (tree-sitter)\n\
          - check_status: check search status\n\
-         Always set max_results. For 'find_files', use specific name patterns. For 'glob', use standard glob syntax."
+         Use repo_path for one root or repo_paths for multiple roots. Always set max_results. For 'find_files', use specific name patterns. For 'glob', use standard glob syntax."
     }
 
     fn llm_description(&self) -> Option<String> {
@@ -137,14 +184,14 @@ impl Tool for SearchTool {
             });
 
         Some(format!(
-            "Search code, files, and symbols in {repo}.\n\
+            "Search code, files, and symbols in {repo}, or across multiple roots with repo_paths.\n\
              Actions:\n\
              - grep: regex search in file contents (ripgrep)\n\
              - find_files: find files by name pattern (fuzzy)\n\
              - glob: find files by glob pattern (e.g. src/**/*.ts, *.{{rs,toml}})\n\
              - symbols: find functions/classes/types by name (tree-sitter)\n\
              - check_status: check search status\n\
-             Always set max_results. For 'find_files', use specific name patterns. For 'glob', use standard glob syntax."
+             Use repo_path for one root or repo_paths for multiple roots. Always set max_results. For 'find_files', use specific name patterns. For 'glob', use standard glob syntax."
         ))
     }
 
@@ -169,7 +216,13 @@ impl Tool for SearchTool {
                 },
                 "repo_path": {
                     "type": "string",
-                    "description": "Repository path to search in (defaults to workspace)"
+                    "description": "Single repository or folder path to search in (defaults to workspace). Use repo_paths for multiple roots."
+                },
+                "repo_paths": {
+                    "type": "array",
+                    "description": "Multiple repository or folder paths to search in. Use this instead of repo_path for multi-root search.",
+                    "items": { "type": "string" },
+                    "minItems": 1
                 },
                 "context_lines": {
                     "type": "integer",
@@ -199,11 +252,12 @@ impl Tool for SearchTool {
             .map(|val| val as usize)
             .unwrap_or(20)
             .clamp(1, 100);
-        let repo_path = self.resolve_repo(&params).await?;
+        let repo_paths = self.resolve_repos(&params).await?;
+        let explicit_repo_scope = has_explicit_repo_scope(&params);
 
         // Workstation routing: route "grep" searches through ActionSystem.
         // Falls back to direct search on timeout (e.g. after hot reload).
-        if action == "grep" {
+        if action == "grep" && !explicit_repo_scope {
             if let Some(ref router) = self.router {
                 if router.should_route() {
                     let pattern = required_string(&params, "pattern")?;
@@ -232,43 +286,48 @@ impl Tool for SearchTool {
                 // All other actions require a pattern
                 let pattern = required_string(&params, "pattern")?;
 
-                if !repo_path.exists() {
-                    return Err(ToolError::ExecutionFailed(format!(
-                        "Path does not exist: {}",
-                        repo_path.display()
-                    )));
+                for repo_path in &repo_paths {
+                    if !repo_path.exists() {
+                        return Err(ToolError::ExecutionFailed(format!(
+                            "Path does not exist: {}",
+                            repo_path.display()
+                        )));
+                    }
                 }
 
                 match action.as_str() {
                     "grep" => {
                         let context_lines = optional_int(&params, "context_lines")
                             .map(|v| (v as usize).clamp(0, 10));
-                        crate::tool_infra::search::code_search_formatted(
+                        crate::tool_infra::search::code_search_multi_formatted(
                             &pattern,
-                            &repo_path,
+                            &repo_paths,
                             max_results,
                             context_lines,
                         )
                         .await
                         .map_err(ToolError::ExecutionFailed)
                     }
-                    "find_files" => crate::tool_infra::search::file_search_formatted(
+                    "find_files" => crate::tool_infra::search::file_search_multi_formatted(
                         &pattern,
-                        &repo_path,
+                        &repo_paths,
                         max_results,
                     )
                     .await
                     .map_err(ToolError::ExecutionFailed),
-                    "glob" => crate::tool_infra::search::glob_search_formatted(
+                    "glob" => crate::tool_infra::search::glob_search_multi_formatted(
                         &pattern,
-                        &repo_path,
+                        &repo_paths,
                         max_results,
                     )
                     .await
                     .map_err(ToolError::ExecutionFailed),
                     "symbols" => crate::tool_infra::search::symbol_search_formatted(
                         &pattern,
-                        vec![repo_path.to_string_lossy().to_string()],
+                        repo_paths
+                            .iter()
+                            .map(|path| path.to_string_lossy().to_string())
+                            .collect(),
                         max_results,
                     )
                     .await

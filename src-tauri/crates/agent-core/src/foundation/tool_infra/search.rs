@@ -11,7 +11,7 @@
 #[path = "tests/search_tests.rs"]
 mod tests;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::SEARCH_TIMEOUT;
 
@@ -103,6 +103,34 @@ pub async fn code_search_formatted(
 
     let formatted = lines.join("\n");
     Ok(truncate_output(formatted, 20_000))
+}
+
+pub async fn code_search_multi_formatted(
+    pattern: &str,
+    search_paths: &[PathBuf],
+    max_results: usize,
+    context_lines: Option<usize>,
+) -> Result<String, String> {
+    let mut sections = Vec::new();
+    let mut remaining = max_results;
+
+    for search_path in search_paths {
+        if remaining == 0 {
+            break;
+        }
+        let result = code_search_formatted(pattern, search_path, remaining, context_lines).await?;
+        if result == "No matches found." {
+            continue;
+        }
+        sections.push(format!("## {}\n{}", search_path.display(), result));
+        remaining = remaining.saturating_sub(count_grep_matches(&result));
+    }
+
+    if sections.is_empty() {
+        return Ok("No matches found.".to_string());
+    }
+
+    Ok(truncate_output(sections.join("\n\n"), 20_000))
 }
 
 fn read_file_lines_cached(path: &str) -> Vec<String> {
@@ -197,6 +225,33 @@ pub async fn file_search_formatted(
         .join("\n"))
 }
 
+pub async fn file_search_multi_formatted(
+    pattern: &str,
+    search_paths: &[PathBuf],
+    max_results: usize,
+) -> Result<String, String> {
+    let mut sections = Vec::new();
+    let mut remaining = max_results;
+
+    for search_path in search_paths {
+        if remaining == 0 {
+            break;
+        }
+        let result = file_search_formatted(pattern, search_path, remaining).await?;
+        if result == "No files found." {
+            continue;
+        }
+        sections.push(format!("## {}\n{}", search_path.display(), result));
+        remaining = remaining.saturating_sub(count_non_empty_lines(&result));
+    }
+
+    if sections.is_empty() {
+        return Ok("No files found.".to_string());
+    }
+
+    Ok(truncate_output(sections.join("\n\n"), 20_000))
+}
+
 // ============================================
 // Glob Search (true glob pattern matching)
 // ============================================
@@ -250,6 +305,33 @@ pub async fn glob_search_formatted(
     })
     .await
     .map_err(|err| format!("Task join error: {err}"))?
+}
+
+pub async fn glob_search_multi_formatted(
+    pattern: &str,
+    search_paths: &[PathBuf],
+    max_results: usize,
+) -> Result<String, String> {
+    let mut sections = Vec::new();
+    let mut remaining = max_results;
+
+    for search_path in search_paths {
+        if remaining == 0 {
+            break;
+        }
+        let result = glob_search_formatted(pattern, search_path, remaining).await?;
+        if result == "No files matched." {
+            continue;
+        }
+        sections.push(format!("## {}\n{}", search_path.display(), result));
+        remaining = remaining.saturating_sub(count_non_empty_lines(&result));
+    }
+
+    if sections.is_empty() {
+        return Ok("No files matched.".to_string());
+    }
+
+    Ok(truncate_output(sections.join("\n\n"), 20_000))
 }
 
 // ============================================
@@ -307,6 +389,20 @@ pub async fn index_status_formatted() -> Result<String, String> {
 // ============================================
 // Helpers
 // ============================================
+
+fn count_non_empty_lines(text: &str) -> usize {
+    text.lines().filter(|line| !line.trim().is_empty()).count()
+}
+
+fn count_grep_matches(text: &str) -> usize {
+    text.lines()
+        .filter(|line| {
+            line.split_once(':')
+                .and_then(|(_, rest)| rest.split_once(':'))
+                .is_some_and(|(line_number, _)| line_number.chars().all(|ch| ch.is_ascii_digit()))
+        })
+        .count()
+}
 
 fn truncate_output(text: String, max_chars: usize) -> String {
     if text.len() > max_chars {
