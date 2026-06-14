@@ -23,7 +23,6 @@ import { SessionService } from "@src/engines/SessionCore/services/SessionService
 import { clearSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
 import { createLogger } from "@src/hooks/logger";
 import {
-  isPendingCancelAtom,
   lastUserMessageAtom,
   restoreToInputAtom,
   sessionRolledBackAtom,
@@ -142,7 +141,6 @@ export function useSessionActions(options: UseSessionActionsOptions) {
   const { getSessionId } = options;
   const { t } = useTranslation("sessions");
   const store = useStore();
-  const setPendingCancel = useSetAtom(isPendingCancelAtom);
   const setRestoreToInput = useSetAtom(restoreToInputAtom);
   const setSessionRolledBack = useSetAtom(sessionRolledBackAtom);
 
@@ -221,7 +219,6 @@ export function useSessionActions(options: UseSessionActionsOptions) {
     // (beginTurnStopping), sets isPendingCancel/userInitiatedCancel atoms,
     // clears streaming, kills shells, closes running events, and writes
     // sessionRuntimeStatus = "idle". The async tail sends the IPC interrupt.
-    setPendingCancel(false);
     setSessionRolledBack(false);
 
     void cancelTurnForTimelineBoundary(sessionId, "stop", {
@@ -252,23 +249,17 @@ export function useSessionActions(options: UseSessionActionsOptions) {
     if (priorTurnsExist) {
       // Multi-turn: signal ChatHistory to navigate to the previous page.
       store.set(stopEarlyCancelEpochAtom, (prev) => prev + 1);
-    } else {
-      // First conversation: always clear the session so the creator shows.
-      // The backend turn_index handles visibility — cancelled intents are
-      // excluded from the materialized round index.
+    } else if (!currentTurnHasOutput) {
+      // First conversation with no output: clear the session so the creator
+      // shows. When output exists the session stays visible so the user can
+      // see what the agent already produced; the backend turn_index handles
+      // round visibility for cancelled intents.
       setSessionRolledBack(true);
       store.set(clearSessionAtom);
       store.set(activeSessionIdAtom, null);
       store.set(workstationActiveSessionIdAtom, null);
     }
-  }, [
-    getSessionId,
-    setPendingCancel,
-    setRestoreToInput,
-    setSessionRolledBack,
-    store,
-    t,
-  ]);
+  }, [getSessionId, setRestoreToInput, setSessionRolledBack, store, t]);
 
   /** User-initiated stop entrypoint kept separate for call-site clarity. */
   const stopSession = interruptSession;

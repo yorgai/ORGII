@@ -306,6 +306,32 @@ function releaseOAuthLiveLease() {
   if (oauthLiveLeasePath) rmSync(oauthLiveLeasePath, { force: true });
 }
 
+// Mirror rotated credentials back to the source home so OAuth token
+// rotations that happened during the E2E run are not lost.
+function mirrorCredentialsBackToSource() {
+  if (!orgiiHome || !sourceOrgiiHome) return;
+  if (resolve(orgiiHome) === resolve(sourceOrgiiHome)) return;
+  const isolatedCreds = join(orgiiHome, "credentials.json");
+  const sourceCreds = join(sourceOrgiiHome, "credentials.json");
+  if (!existsSync(isolatedCreds)) return;
+  try {
+    const isolatedRaw = readFileSync(isolatedCreds, "utf8");
+    const sourceRaw = existsSync(sourceCreds)
+      ? readFileSync(sourceCreds, "utf8")
+      : "";
+    if (isolatedRaw !== sourceRaw) {
+      cpSync(isolatedCreds, sourceCreds, { force: true });
+      console.log(
+        `[wdio] mirror-back: credentials.json written back to ${sourceCreds}`
+      );
+    }
+  } catch (error) {
+    console.warn(
+      `[wdio] mirror-back: failed to write credentials back: ${error?.message ?? error}`
+    );
+  }
+}
+
 function runBestEffort(command, args, options = {}) {
   try {
     return execFileSync(command, args, {
@@ -658,6 +684,7 @@ export const config = {
     );
   },
   onComplete() {
+    mirrorCredentialsBackToSource();
     releaseOAuthLiveLease();
     if (reuseServices) return;
     stopTauriWebDriver();
