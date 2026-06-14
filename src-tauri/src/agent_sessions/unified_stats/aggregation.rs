@@ -113,6 +113,10 @@ pub fn list_all_sessions(filter: Option<&SessionFilter>) -> Result<SessionListRe
         }
     }
 
+    if let Err(err) = super::orgtrack_adapter::upsert_aggregate_sessions(&all_sessions) {
+        tracing::warn!(error = %err, "unified_stats: failed to upsert orgtrack core sessions");
+    }
+
     // Apply filters
     if let Some(filter) = filter {
         apply_filters(&mut all_sessions, filter)?;

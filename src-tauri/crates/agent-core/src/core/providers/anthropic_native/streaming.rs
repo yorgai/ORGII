@@ -144,7 +144,8 @@ impl LLMProvider for AnthropicClient {
     ) -> Result<LLMResponse, ProviderError> {
         use futures_util::StreamExt;
 
-        let mut prepared = prepare_request(self, messages, tools, model, max_tokens, temperature, true);
+        let mut prepared =
+            prepare_request(self, messages, tools, model, max_tokens, temperature, true);
 
         info!(
             "Anthropic streaming: model={}, url={}, messages={}, tools={}",

@@ -36,6 +36,30 @@ struct SessionStatusChangedPayload<'a> {
     status: &'a str,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SessionRenamedPayload<'a> {
+    session_id: &'a str,
+    name: &'a str,
+}
+
+pub fn emit_session_renamed(app_handle: Option<&tauri::AppHandle>, session_id: &str, name: &str) {
+    let Some(handle) = app_handle else {
+        return;
+    };
+
+    if let Err(err) = handle.emit(
+        "session-renamed",
+        SessionRenamedPayload { session_id, name },
+    ) {
+        tracing::warn!(
+            "[lifecycle] Failed to emit session-renamed for {}: {}",
+            session_id,
+            err
+        );
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TurnTerminalStatus {
     Completed,

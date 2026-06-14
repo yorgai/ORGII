@@ -21,6 +21,7 @@ pub mod commands;
 pub mod conversion;
 pub mod display;
 pub mod history;
+pub mod orgtrack_adapter;
 pub mod patch;
 pub mod stats;
 pub mod status;

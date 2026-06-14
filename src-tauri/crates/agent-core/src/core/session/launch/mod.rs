@@ -21,6 +21,7 @@ use crate::coordination::agent_org_runs::{
     COORDINATOR_MEMBER_ID,
 };
 use crate::definitions::orgs::{AgentOrgsStore, OrgMemberLaunchOverride};
+use crate::init::launch_spec::AgentLaunchSpec;
 use crate::session::persistence;
 use crate::session::IdeContext;
 use crate::state::AgentAppState;
@@ -130,6 +131,64 @@ pub(crate) struct AgentRunLaunchResult {
     pub worktree_path: Option<String>,
     pub agent_org_id: Option<String>,
     pub agent_org_run_id: Option<String>,
+}
+
+async fn generate_title_before_first_turn(
+    state: &AgentAppState,
+    session_id: &str,
+    workspace_path: std::path::PathBuf,
+    account_id: Option<String>,
+    model: Option<String>,
+    native_harness_type: Option<core_types::providers::NativeHarnessType>,
+    content: &str,
+) {
+    if content.trim().is_empty() {
+        return;
+    }
+
+    let launch_spec = match AgentLaunchSpec::from_session_sources(
+        state,
+        session_id,
+        workspace_path,
+        account_id,
+        model,
+        native_harness_type,
+    )
+    .await
+    {
+        Ok(spec) => spec,
+        Err(err) => {
+            tracing::warn!(
+                session_id = %session_id,
+                error = %err,
+                "[session_title] failed to resolve launch spec before first turn"
+            );
+            return;
+        }
+    };
+
+    let runtime = match crate::init::init_session(state, launch_spec).await {
+        Ok(runtime) => runtime,
+        Err(err) => {
+            tracing::warn!(
+                session_id = %session_id,
+                error = %err,
+                "[session_title] failed to initialize runtime before first turn"
+            );
+            return;
+        }
+    };
+
+    let title = crate::session::title::generate_and_persist_session_title(
+        session_id,
+        runtime.provider.as_ref(),
+        &runtime.model,
+        runtime.account_id.as_deref(),
+        content,
+    )
+    .await;
+
+    crate::lifecycle::emit_session_renamed(state.app_handle.as_ref(), session_id, &title);
 }
 
 /// Create and start an agent session linked to a work item.
@@ -494,6 +553,16 @@ pub(crate) async fn launch_rust_agent_run(
             let workspace_path_for_send = prepared_worktree_path
                 .clone()
                 .unwrap_or_else(|| workspace_path_for_background.clone());
+            generate_title_before_first_turn(
+                &state_for_background,
+                &session_id_for_background,
+                std::path::PathBuf::from(&workspace_path_for_send),
+                account_id_for_send.clone(),
+                model_for_send.clone(),
+                native_harness_type_for_send.clone(),
+                &content_for_send,
+            )
+            .await;
             let send_result = send_initial_turn(
                 &state_for_background,
                 &session_id_for_background,
@@ -588,6 +657,17 @@ pub(crate) async fn launch_rust_agent_run(
         let app_handle_for_send = state.app_handle.clone();
 
         tokio::spawn(async move {
+            generate_title_before_first_turn(
+                &state_for_send,
+                &session_id_for_send,
+                std::path::PathBuf::from(&workspace_path_for_send),
+                account_id_for_send.clone(),
+                model_for_send.clone(),
+                native_harness_type_for_send.clone(),
+                &content_for_send,
+            )
+            .await;
+
             // A plain (non-org) launch's first message IS the user's real
             // request — UserSubmit so downstream consumers (goal loop,
             // org-task resume) treat it as user intent. Org-run launches

@@ -35,11 +35,9 @@ mod tests {
         std::env::set_var("E2E_PROVIDER_MODE", "api-key");
 
         assert!(!oauth_refresh_allowed());
-        assert!(
-            ensure_oauth_refresh_allowed()
-                .unwrap_err()
-                .contains("OAuth refresh is disabled in E2E isolated runs")
-        );
+        assert!(ensure_oauth_refresh_allowed()
+            .unwrap_err()
+            .contains("OAuth refresh is disabled in E2E isolated runs"));
 
         std::env::remove_var("ORGII_E2E");
         std::env::remove_var("E2E_PROVIDER_MODE");

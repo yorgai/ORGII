@@ -113,4 +113,3 @@ pub async fn stop_embedder() -> Result<(), String> {
 pub async fn debug_qdrant_collection_info() -> Result<String, String> {
     Ok(NOT_ENABLED.to_string())
 }
-

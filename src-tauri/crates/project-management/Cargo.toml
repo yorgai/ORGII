@@ -3,7 +3,7 @@ name = "project_management"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.85.0"
-description = "Projects, orchestrator, lineage, and sync domain. Owns the projects.db SQLite store, the workflow state machine, code-lineage tracking, and the pluggable outbox-based sync framework. Keeps its `#[tauri::command]` macros in-crate (key-vault / git pattern); the `app` crate just re-registers them in `commands/handler_list.inc`."
+description = "Projects, work items, orchestrator, lineage, and sync domain. Owns the projects.db SQLite store, workflow state machine, code-lineage tracking, and pluggable outbox-based sync framework. Keeps its `#[tauri::command]` macros in-crate (key-vault / git pattern); the `app` crate just re-registers them in `commands/handler_list.inc`."
 publish = false
 
 [lib]

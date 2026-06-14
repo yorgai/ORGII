@@ -190,7 +190,6 @@ pub fn code_map_root() -> PathBuf {
     orgii_root().join("code-map")
 }
 
-
 /// Semantic-search USearch index: `~/.orgii/semantic_index/`.
 pub fn semantic_index_dir() -> PathBuf {
     orgii_root().join("semantic_index")

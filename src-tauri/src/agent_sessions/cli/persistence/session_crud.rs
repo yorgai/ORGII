@@ -370,6 +370,17 @@ fn mapped_cli_session_id_for_account_with_conn(
     .optional()
 }
 
+/// Update the display name for a CLI session.
+/// Metadata write — does not bump `updated_at`.
+pub fn update_name(session_id: &str, name: &str) -> SqliteResult<bool> {
+    let conn = get_connection()?;
+    let affected = conn.execute(
+        "UPDATE code_sessions SET name = ?2 WHERE session_id = ?1",
+        params![session_id, name],
+    )?;
+    Ok(affected > 0)
+}
+
 /// Update the model and/or account_id for mid-session switching.
 /// Config write — does not bump `updated_at`.
 ///

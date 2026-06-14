@@ -32,7 +32,10 @@ pub fn resolve_files(files: &mut [ExtractedFile]) {
             match unresolved.kind {
                 CodeMapEdgeKind::Calls | CodeMapEdgeKind::References => {
                     let key = (unresolved.file_path.clone(), unresolved.name.clone());
-                    let candidates = symbols_by_file_and_name.get(&key).cloned().unwrap_or_default();
+                    let candidates = symbols_by_file_and_name
+                        .get(&key)
+                        .cloned()
+                        .unwrap_or_default();
                     unresolved.candidates = candidates.clone();
                     if candidates.len() == 1 {
                         let source = unresolved

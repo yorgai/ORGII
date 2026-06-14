@@ -7,10 +7,10 @@ use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::paths::{canonical_workspace, db_path_for_workspace};
 use crate::types::{
-    CodeMapConfidence, CodeMapEdge, CodeMapEdgeKind, CodeMapExtractionMethod,
-    CodeMapFreshnessKind, CodeMapLanguage, CodeMapNode, CodeMapNodeKind, CodeMapRelationship,
-    CodeMapResolutionStatus, CodeMapSearchResult, CodeMapStatus, CodeMapStatusKind, ExtractedFile,
-    EXTRACTOR_VERSION, SCHEMA_VERSION,
+    CodeMapConfidence, CodeMapEdge, CodeMapEdgeKind, CodeMapExtractionMethod, CodeMapFreshnessKind,
+    CodeMapLanguage, CodeMapNode, CodeMapNodeKind, CodeMapRelationship, CodeMapResolutionStatus,
+    CodeMapSearchResult, CodeMapStatus, CodeMapStatusKind, ExtractedFile, EXTRACTOR_VERSION,
+    SCHEMA_VERSION,
 };
 use crate::Result;
 
@@ -156,7 +156,11 @@ impl CodeMapDb {
         )?;
         self.ensure_column("files", "stale", "INTEGER NOT NULL DEFAULT 0")?;
         self.ensure_column("nodes", "confidence", "TEXT NOT NULL DEFAULT 'heuristic'")?;
-        self.ensure_column("nodes", "extraction_method", "TEXT NOT NULL DEFAULT 'regex'")?;
+        self.ensure_column(
+            "nodes",
+            "extraction_method",
+            "TEXT NOT NULL DEFAULT 'regex'",
+        )?;
         self.ensure_column("nodes", "parent_id", "TEXT")?;
         self.ensure_column("edges", "confidence", "TEXT NOT NULL DEFAULT 'heuristic'")?;
         self.ensure_column(
@@ -190,8 +194,10 @@ impl CodeMapDb {
                 return Ok(());
             }
         }
-        self.conn
-            .execute(&format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"), [])?;
+        self.conn.execute(
+            &format!("ALTER TABLE {table} ADD COLUMN {column} {definition}"),
+            [],
+        )?;
         Ok(())
     }
 
@@ -227,8 +233,14 @@ impl CodeMapDb {
         }
 
         for extracted in extracted_files {
-            transaction.execute("DELETE FROM unresolved_refs WHERE file_path = ?1", params![extracted.record.path])?;
-            transaction.execute("DELETE FROM files WHERE path = ?1", params![extracted.record.path])?;
+            transaction.execute(
+                "DELETE FROM unresolved_refs WHERE file_path = ?1",
+                params![extracted.record.path],
+            )?;
+            transaction.execute(
+                "DELETE FROM files WHERE path = ?1",
+                params![extracted.record.path],
+            )?;
 
             let errors_json = serde_json::to_string(&extracted.record.errors)
                 .unwrap_or_else(|_| String::from("[]"));
@@ -379,9 +391,11 @@ impl CodeMapDb {
     }
 
     fn count_stale_files(&self) -> Result<u32> {
-        let count: i64 = self
-            .conn
-            .query_row("SELECT COUNT(*) FROM files WHERE stale = 1", [], |row| row.get(0))?;
+        let count: i64 =
+            self.conn
+                .query_row("SELECT COUNT(*) FROM files WHERE stale = 1", [], |row| {
+                    row.get(0)
+                })?;
         Ok(u32::try_from(count).unwrap_or(u32::MAX))
     }
 
@@ -443,10 +457,8 @@ impl CodeMapDb {
             .metadata("schema_version")?
             .and_then(|value| value.parse::<i64>().ok())
             == Some(SCHEMA_VERSION);
-        let extractor_version_matches = self
-            .metadata("extractor_version")?
-            .as_deref()
-            == Some(EXTRACTOR_VERSION);
+        let extractor_version_matches =
+            self.metadata("extractor_version")?.as_deref() == Some(EXTRACTOR_VERSION);
         Ok(!schema_version_matches || !extractor_version_matches)
     }
 
@@ -585,7 +597,11 @@ impl CodeMapDb {
             .map_err(Into::into)
     }
 
-    pub fn node_by_file_path(&self, file_path: &str, max_results: usize) -> Result<Vec<CodeMapNode>> {
+    pub fn node_by_file_path(
+        &self,
+        file_path: &str,
+        max_results: usize,
+    ) -> Result<Vec<CodeMapNode>> {
         let mut statement = self.conn.prepare(&format!(
             "SELECT {NODE_SELECT_COLUMNS}
              FROM nodes WHERE file_path = ?1 ORDER BY start_line, start_column LIMIT ?2"
@@ -625,7 +641,12 @@ impl CodeMapDb {
         collect_rows(rows)
     }
 
-    pub fn impact(&self, node_id: &str, max_depth: usize, max_results: usize) -> Result<Vec<CodeMapNode>> {
+    pub fn impact(
+        &self,
+        node_id: &str,
+        max_depth: usize,
+        max_results: usize,
+    ) -> Result<Vec<CodeMapNode>> {
         let mut visited = HashSet::new();
         let mut queue = VecDeque::new();
         let mut results = Vec::new();
@@ -651,7 +672,6 @@ impl CodeMapDb {
         }
         Ok(results)
     }
-
 }
 
 fn rebuild_fts(transaction: &rusqlite::Transaction<'_>) -> rusqlite::Result<()> {
@@ -701,7 +721,11 @@ fn remove_database_file(path: &Path) -> Result<()> {
 }
 
 fn bool_to_int(value: bool) -> i64 {
-    if value { 1 } else { 0 }
+    if value {
+        1
+    } else {
+        0
+    }
 }
 
 fn format_fts_query(query: &str) -> String {
@@ -709,7 +733,9 @@ fn format_fts_query(query: &str) -> String {
         .split_whitespace()
         .map(|term| {
             term.chars()
-                .filter(|character| character.is_alphanumeric() || *character == '_' || *character == '-')
+                .filter(|character| {
+                    character.is_alphanumeric() || *character == '_' || *character == '-'
+                })
                 .collect::<String>()
         })
         .filter(|term| !term.is_empty())

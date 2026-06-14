@@ -285,7 +285,10 @@ pub async fn background_launch_msg_no_poll(cfg: &Config) -> bool {
                 "Dispatch: background launch message no-poll",
                 &msg,
                 &[
-                    ("Message carries the subagent session_id", msg.contains(session_id)),
+                    (
+                        "Message carries the subagent session_id",
+                        msg.contains(session_id),
+                    ),
                     (
                         "Tells the parent NOT to poll with await_output",
                         lower.contains("do not call await_output"),

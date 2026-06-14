@@ -796,9 +796,11 @@ mod tests {
 
         // Existing rows survive the migration with the default sync_kind.
         let kind: String = conn
-            .query_row("SELECT sync_kind FROM projects WHERE id = 'p1'", [], |row| {
-                row.get(0)
-            })
+            .query_row(
+                "SELECT sync_kind FROM projects WHERE id = 'p1'",
+                [],
+                |row| row.get(0),
+            )
             .expect("row survives");
         assert_eq!(kind, "none");
     }

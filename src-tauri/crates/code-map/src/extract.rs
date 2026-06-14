@@ -20,33 +20,58 @@ static TS_FUNCTION_RE: Lazy<Regex> = Lazy::new(|| {
 static TS_CLASS_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^\s*(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)").unwrap()
 });
-static TS_INTERFACE_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^\s*(?:export\s+)?interface\s+([A-Za-z_$][\w$]*)").unwrap()
-});
-static TS_TYPE_RE: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^\s*(?:export\s+)?type\s+([A-Za-z_$][\w$]*)").unwrap()
-});
+static TS_INTERFACE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*(?:export\s+)?interface\s+([A-Za-z_$][\w$]*)").unwrap());
+static TS_TYPE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*(?:export\s+)?type\s+([A-Za-z_$][\w$]*)").unwrap());
 static TS_CONST_RE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"^\s*(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=").unwrap()
 });
 static PY_DEF_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*def\s+([A-Za-z_]\w*)").unwrap());
 static PY_CLASS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*class\s+([A-Za-z_]\w*)").unwrap());
-static GO_FUNC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*func\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)").unwrap());
-static GO_TYPE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*type\s+([A-Za-z_]\w*)\s+(?:struct|interface)").unwrap());
-static RUST_FN_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_]\w*)").unwrap());
-static RUST_TYPE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:pub\s+)?(struct|enum|trait|mod)\s+([A-Za-z_]\w*)").unwrap());
-static JVM_CLASS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:public\s+|private\s+|protected\s+|internal\s+|final\s+|open\s+|abstract\s+|data\s+|sealed\s+)*(class|interface|enum)\s+([A-Za-z_]\w*)").unwrap());
-static JVM_METHOD_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:public\s+|private\s+|protected\s+|static\s+|final\s+|open\s+|override\s+|suspend\s+)*(?:fun\s+)?(?:[A-Za-z_][\w<>\[\],.?]*\s+)+([A-Za-z_]\w*)\s*\(").unwrap());
-static C_FUNC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:[A-Za-z_][\w:*<>~&\s]+\s+)+([A-Za-z_]\w*)\s*\([^;]*\)\s*\{?").unwrap());
-static C_TYPE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:typedef\s+)?(struct|enum|class|union)\s+([A-Za-z_]\w*)").unwrap());
-static CSHARP_TYPE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:public\s+|private\s+|protected\s+|internal\s+|static\s+|abstract\s+|sealed\s+)*(class|interface|struct|enum)\s+([A-Za-z_]\w*)").unwrap());
-static PHP_FUNC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:public\s+|private\s+|protected\s+|static\s+)?function\s+([A-Za-z_]\w*)").unwrap());
-static PHP_CLASS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:abstract\s+|final\s+)?(?:class|interface|trait)\s+([A-Za-z_]\w*)").unwrap());
-static RUBY_DEF_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*def\s+([A-Za-z_]\w*[!?=]?)").unwrap());
-static RUBY_CLASS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(class|module)\s+([A-Z]\w*)").unwrap());
-static SWIFT_TYPE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:public\s+|private\s+|internal\s+|open\s+)?(class|struct|enum|protocol)\s+([A-Za-z_]\w*)").unwrap());
-static SWIFT_FUNC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:public\s+|private\s+|internal\s+|open\s+)?func\s+([A-Za-z_]\w*)").unwrap());
-static IMPORT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^\s*(?:import\s+|from\s+|use\s+|#include\s+|require\s+|include\s+)([\"'<]?[A-Za-z0-9_./:@+-]+)"#).unwrap());
+static GO_FUNC_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*func\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)").unwrap());
+static GO_TYPE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*type\s+([A-Za-z_]\w*)\s+(?:struct|interface)").unwrap());
+static RUST_FN_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+([A-Za-z_]\w*)").unwrap());
+static RUST_TYPE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*(?:pub\s+)?(struct|enum|trait|mod)\s+([A-Za-z_]\w*)").unwrap());
+static JVM_CLASS_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:public\s+|private\s+|protected\s+|internal\s+|final\s+|open\s+|abstract\s+|data\s+|sealed\s+)*(class|interface|enum)\s+([A-Za-z_]\w*)").unwrap()
+});
+static JVM_METHOD_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:public\s+|private\s+|protected\s+|static\s+|final\s+|open\s+|override\s+|suspend\s+)*(?:fun\s+)?(?:[A-Za-z_][\w<>\[\],.?]*\s+)+([A-Za-z_]\w*)\s*\(").unwrap()
+});
+static C_FUNC_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:[A-Za-z_][\w:*<>~&\s]+\s+)+([A-Za-z_]\w*)\s*\([^;]*\)\s*\{?").unwrap()
+});
+static C_TYPE_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:typedef\s+)?(struct|enum|class|union)\s+([A-Za-z_]\w*)").unwrap()
+});
+static CSHARP_TYPE_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:public\s+|private\s+|protected\s+|internal\s+|static\s+|abstract\s+|sealed\s+)*(class|interface|struct|enum)\s+([A-Za-z_]\w*)").unwrap()
+});
+static PHP_FUNC_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:public\s+|private\s+|protected\s+|static\s+)?function\s+([A-Za-z_]\w*)")
+        .unwrap()
+});
+static PHP_CLASS_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:abstract\s+|final\s+)?(?:class|interface|trait)\s+([A-Za-z_]\w*)").unwrap()
+});
+static RUBY_DEF_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*def\s+([A-Za-z_]\w*[!?=]?)").unwrap());
+static RUBY_CLASS_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*(class|module)\s+([A-Z]\w*)").unwrap());
+static SWIFT_TYPE_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:public\s+|private\s+|internal\s+|open\s+)?(class|struct|enum|protocol)\s+([A-Za-z_]\w*)").unwrap()
+});
+static SWIFT_FUNC_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:public\s+|private\s+|internal\s+|open\s+)?func\s+([A-Za-z_]\w*)").unwrap()
+});
+static IMPORT_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r#"^\s*(?:import\s+|from\s+|use\s+|#include\s+|require\s+|include\s+)([\"'<]?[A-Za-z0-9_./:@+-]+)"#).unwrap()
+});
 static CALL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b([A-Za-z_$][\w$]*)\s*\(").unwrap());
 
 #[derive(Debug, Clone)]
@@ -95,7 +120,12 @@ pub fn extract_file(workspace_root: &Path, path: &Path) -> Option<ExtractedFile>
         .unwrap_or_else(|| extract_symbols_regex(language, &content));
 
     for symbol in symbols {
-        let id = node_id(&relative, symbol.kind.as_str(), &symbol.name, symbol.start_line);
+        let id = node_id(
+            &relative,
+            symbol.kind.as_str(),
+            &symbol.name,
+            symbol.start_line,
+        );
         let node = CodeMapNode {
             id: id.clone(),
             kind: symbol.kind,
@@ -221,7 +251,11 @@ pub fn extract_file(workspace_root: &Path, path: &Path) -> Option<ExtractedFile>
     })
 }
 
-fn extract_symbols_ast(language: CodeMapLanguage, path: &Path, content: &str) -> Option<Vec<SymbolMatch>> {
+fn extract_symbols_ast(
+    language: CodeMapLanguage,
+    path: &Path,
+    content: &str,
+) -> Option<Vec<SymbolMatch>> {
     if !matches!(
         language,
         CodeMapLanguage::Rust
@@ -280,14 +314,25 @@ fn symbol_from_ast_node(
         | CodeMapLanguage::Tsx
         | CodeMapLanguage::JavaScript
         | CodeMapLanguage::Jsx => match node_kind {
-            "function_declaration" => (CodeMapNodeKind::Function, node.child_by_field_name("name")?),
+            "function_declaration" => {
+                (CodeMapNodeKind::Function, node.child_by_field_name("name")?)
+            }
             "class_declaration" => (CodeMapNodeKind::Class, node.child_by_field_name("name")?),
-            "interface_declaration" => (CodeMapNodeKind::Interface, node.child_by_field_name("name")?),
-            "type_alias_declaration" => (CodeMapNodeKind::TypeAlias, node.child_by_field_name("name")?),
+            "interface_declaration" => (
+                CodeMapNodeKind::Interface,
+                node.child_by_field_name("name")?,
+            ),
+            "type_alias_declaration" => (
+                CodeMapNodeKind::TypeAlias,
+                node.child_by_field_name("name")?,
+            ),
             "method_definition" => (CodeMapNodeKind::Method, node.child_by_field_name("name")?),
             "lexical_declaration" | "variable_declaration" => {
                 let declarator = find_child_kind(node, "variable_declarator")?;
-                (CodeMapNodeKind::Constant, declarator.child_by_field_name("name")?)
+                (
+                    CodeMapNodeKind::Constant,
+                    declarator.child_by_field_name("name")?,
+                )
             }
             _ => return None,
         },
@@ -314,7 +359,9 @@ fn symbol_from_ast_node(
 
 fn find_child_kind<'tree>(node: Node<'tree>, kind: &str) -> Option<Node<'tree>> {
     let mut cursor = node.walk();
-    let child = node.children(&mut cursor).find(|child| child.kind() == kind);
+    let child = node
+        .children(&mut cursor)
+        .find(|child| child.kind() == kind);
     child
 }
 
@@ -349,73 +396,133 @@ fn extract_symbols_regex(language: CodeMapLanguage, content: &str) -> Vec<Symbol
 
 fn detect_symbol(language: CodeMapLanguage, line: &str) -> Option<(CodeMapNodeKind, String)> {
     match language {
-        CodeMapLanguage::TypeScript | CodeMapLanguage::Tsx | CodeMapLanguage::JavaScript | CodeMapLanguage::Jsx => {
-            first_capture(&TS_FUNCTION_RE, line).map(|name| (CodeMapNodeKind::Function, name))
-                .or_else(|| first_capture(&TS_CLASS_RE, line).map(|name| (CodeMapNodeKind::Class, name)))
-                .or_else(|| first_capture(&TS_INTERFACE_RE, line).map(|name| (CodeMapNodeKind::Interface, name)))
-                .or_else(|| first_capture(&TS_TYPE_RE, line).map(|name| (CodeMapNodeKind::TypeAlias, name)))
-                .or_else(|| first_capture(&TS_CONST_RE, line).map(|name| (CodeMapNodeKind::Constant, name)))
-        }
-        CodeMapLanguage::Python => first_capture(&PY_DEF_RE, line).map(|name| (CodeMapNodeKind::Function, name))
-            .or_else(|| first_capture(&PY_CLASS_RE, line).map(|name| (CodeMapNodeKind::Class, name))),
-        CodeMapLanguage::Go => first_capture(&GO_FUNC_RE, line).map(|name| (CodeMapNodeKind::Function, name))
-            .or_else(|| first_capture(&GO_TYPE_RE, line).map(|name| (CodeMapNodeKind::Struct, name))),
-        CodeMapLanguage::Rust => first_capture(&RUST_FN_RE, line).map(|name| (CodeMapNodeKind::Function, name)).or_else(|| {
-            RUST_TYPE_RE.captures(line).and_then(|captures| {
+        CodeMapLanguage::TypeScript
+        | CodeMapLanguage::Tsx
+        | CodeMapLanguage::JavaScript
+        | CodeMapLanguage::Jsx => first_capture(&TS_FUNCTION_RE, line)
+            .map(|name| (CodeMapNodeKind::Function, name))
+            .or_else(|| {
+                first_capture(&TS_CLASS_RE, line).map(|name| (CodeMapNodeKind::Class, name))
+            })
+            .or_else(|| {
+                first_capture(&TS_INTERFACE_RE, line).map(|name| (CodeMapNodeKind::Interface, name))
+            })
+            .or_else(|| {
+                first_capture(&TS_TYPE_RE, line).map(|name| (CodeMapNodeKind::TypeAlias, name))
+            })
+            .or_else(|| {
+                first_capture(&TS_CONST_RE, line).map(|name| (CodeMapNodeKind::Constant, name))
+            }),
+        CodeMapLanguage::Python => first_capture(&PY_DEF_RE, line)
+            .map(|name| (CodeMapNodeKind::Function, name))
+            .or_else(|| {
+                first_capture(&PY_CLASS_RE, line).map(|name| (CodeMapNodeKind::Class, name))
+            }),
+        CodeMapLanguage::Go => first_capture(&GO_FUNC_RE, line)
+            .map(|name| (CodeMapNodeKind::Function, name))
+            .or_else(|| {
+                first_capture(&GO_TYPE_RE, line).map(|name| (CodeMapNodeKind::Struct, name))
+            }),
+        CodeMapLanguage::Rust => first_capture(&RUST_FN_RE, line)
+            .map(|name| (CodeMapNodeKind::Function, name))
+            .or_else(|| {
+                RUST_TYPE_RE.captures(line).and_then(|captures| {
+                    let keyword = captures.get(1)?.as_str();
+                    let name = captures.get(2)?.as_str().to_string();
+                    let kind = match keyword {
+                        "struct" => CodeMapNodeKind::Struct,
+                        "enum" => CodeMapNodeKind::Enum,
+                        "trait" => CodeMapNodeKind::Trait,
+                        "mod" => CodeMapNodeKind::Module,
+                        _ => CodeMapNodeKind::TypeAlias,
+                    };
+                    Some((kind, name))
+                })
+            }),
+        CodeMapLanguage::Java | CodeMapLanguage::Kotlin => JVM_CLASS_RE
+            .captures(line)
+            .and_then(|captures| {
+                let keyword = captures.get(1)?.as_str();
+                let name = captures.get(2)?.as_str().to_string();
+                let kind = if keyword == "interface" {
+                    CodeMapNodeKind::Interface
+                } else if keyword == "enum" {
+                    CodeMapNodeKind::Enum
+                } else {
+                    CodeMapNodeKind::Class
+                };
+                Some((kind, name))
+            })
+            .or_else(|| {
+                first_capture(&JVM_METHOD_RE, line).map(|name| (CodeMapNodeKind::Method, name))
+            }),
+        CodeMapLanguage::C | CodeMapLanguage::Cpp => C_TYPE_RE
+            .captures(line)
+            .and_then(|captures| {
+                let keyword = captures.get(1)?.as_str();
+                let name = captures.get(2)?.as_str().to_string();
+                let kind = if keyword == "enum" {
+                    CodeMapNodeKind::Enum
+                } else {
+                    CodeMapNodeKind::Struct
+                };
+                Some((kind, name))
+            })
+            .or_else(|| {
+                first_capture(&C_FUNC_RE, line).map(|name| (CodeMapNodeKind::Function, name))
+            }),
+        CodeMapLanguage::CSharp => CSHARP_TYPE_RE
+            .captures(line)
+            .and_then(|captures| {
+                let keyword = captures.get(1)?.as_str();
+                let name = captures.get(2)?.as_str().to_string();
+                let kind = match keyword {
+                    "interface" => CodeMapNodeKind::Interface,
+                    "struct" => CodeMapNodeKind::Struct,
+                    "enum" => CodeMapNodeKind::Enum,
+                    _ => CodeMapNodeKind::Class,
+                };
+                Some((kind, name))
+            })
+            .or_else(|| {
+                first_capture(&JVM_METHOD_RE, line).map(|name| (CodeMapNodeKind::Method, name))
+            }),
+        CodeMapLanguage::Php => first_capture(&PHP_CLASS_RE, line)
+            .map(|name| (CodeMapNodeKind::Class, name))
+            .or_else(|| {
+                first_capture(&PHP_FUNC_RE, line).map(|name| (CodeMapNodeKind::Function, name))
+            }),
+        CodeMapLanguage::Ruby => RUBY_CLASS_RE
+            .captures(line)
+            .and_then(|captures| {
+                let keyword = captures.get(1)?.as_str();
+                let name = captures.get(2)?.as_str().to_string();
+                let kind = if keyword == "module" {
+                    CodeMapNodeKind::Module
+                } else {
+                    CodeMapNodeKind::Class
+                };
+                Some((kind, name))
+            })
+            .or_else(|| {
+                first_capture(&RUBY_DEF_RE, line).map(|name| (CodeMapNodeKind::Method, name))
+            }),
+        CodeMapLanguage::Swift => SWIFT_TYPE_RE
+            .captures(line)
+            .and_then(|captures| {
                 let keyword = captures.get(1)?.as_str();
                 let name = captures.get(2)?.as_str().to_string();
                 let kind = match keyword {
                     "struct" => CodeMapNodeKind::Struct,
                     "enum" => CodeMapNodeKind::Enum,
-                    "trait" => CodeMapNodeKind::Trait,
-                    "mod" => CodeMapNodeKind::Module,
-                    _ => CodeMapNodeKind::TypeAlias,
+                    "protocol" => CodeMapNodeKind::Trait,
+                    _ => CodeMapNodeKind::Class,
                 };
                 Some((kind, name))
             })
-        }),
-        CodeMapLanguage::Java | CodeMapLanguage::Kotlin => JVM_CLASS_RE.captures(line).and_then(|captures| {
-            let keyword = captures.get(1)?.as_str();
-            let name = captures.get(2)?.as_str().to_string();
-            let kind = if keyword == "interface" { CodeMapNodeKind::Interface } else if keyword == "enum" { CodeMapNodeKind::Enum } else { CodeMapNodeKind::Class };
-            Some((kind, name))
-        }).or_else(|| first_capture(&JVM_METHOD_RE, line).map(|name| (CodeMapNodeKind::Method, name))),
-        CodeMapLanguage::C | CodeMapLanguage::Cpp => C_TYPE_RE.captures(line).and_then(|captures| {
-            let keyword = captures.get(1)?.as_str();
-            let name = captures.get(2)?.as_str().to_string();
-            let kind = if keyword == "enum" { CodeMapNodeKind::Enum } else { CodeMapNodeKind::Struct };
-            Some((kind, name))
-        }).or_else(|| first_capture(&C_FUNC_RE, line).map(|name| (CodeMapNodeKind::Function, name))),
-        CodeMapLanguage::CSharp => CSHARP_TYPE_RE.captures(line).and_then(|captures| {
-            let keyword = captures.get(1)?.as_str();
-            let name = captures.get(2)?.as_str().to_string();
-            let kind = match keyword {
-                "interface" => CodeMapNodeKind::Interface,
-                "struct" => CodeMapNodeKind::Struct,
-                "enum" => CodeMapNodeKind::Enum,
-                _ => CodeMapNodeKind::Class,
-            };
-            Some((kind, name))
-        }).or_else(|| first_capture(&JVM_METHOD_RE, line).map(|name| (CodeMapNodeKind::Method, name))),
-        CodeMapLanguage::Php => first_capture(&PHP_CLASS_RE, line).map(|name| (CodeMapNodeKind::Class, name))
-            .or_else(|| first_capture(&PHP_FUNC_RE, line).map(|name| (CodeMapNodeKind::Function, name))),
-        CodeMapLanguage::Ruby => RUBY_CLASS_RE.captures(line).and_then(|captures| {
-            let keyword = captures.get(1)?.as_str();
-            let name = captures.get(2)?.as_str().to_string();
-            let kind = if keyword == "module" { CodeMapNodeKind::Module } else { CodeMapNodeKind::Class };
-            Some((kind, name))
-        }).or_else(|| first_capture(&RUBY_DEF_RE, line).map(|name| (CodeMapNodeKind::Method, name))),
-        CodeMapLanguage::Swift => SWIFT_TYPE_RE.captures(line).and_then(|captures| {
-            let keyword = captures.get(1)?.as_str();
-            let name = captures.get(2)?.as_str().to_string();
-            let kind = match keyword {
-                "struct" => CodeMapNodeKind::Struct,
-                "enum" => CodeMapNodeKind::Enum,
-                "protocol" => CodeMapNodeKind::Trait,
-                _ => CodeMapNodeKind::Class,
-            };
-            Some((kind, name))
-        }).or_else(|| first_capture(&SWIFT_FUNC_RE, line).map(|name| (CodeMapNodeKind::Function, name))),
+            .or_else(|| {
+                first_capture(&SWIFT_FUNC_RE, line).map(|name| (CodeMapNodeKind::Function, name))
+            }),
     }
 }
 

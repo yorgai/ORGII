@@ -37,6 +37,7 @@ pub mod recovery;
 pub mod prompt;
 pub(crate) mod scheduler;
 pub mod session_id;
+pub(crate) mod title;
 pub mod turn;
 mod types;
 // `wingman` is genuine public surface — `app::run` calls

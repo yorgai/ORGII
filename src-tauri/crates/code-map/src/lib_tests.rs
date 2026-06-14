@@ -38,16 +38,31 @@ fn extracts_ast_and_regex_symbols_with_confidence() {
     let rust_path = dir.path().join("lib.rs");
     let ts_path = dir.path().join("App.tsx");
     let go_path = dir.path().join("main.go");
-    fs::write(&rust_path, "pub struct Widget {}\npub fn build_widget() {}\n").unwrap();
-    fs::write(&ts_path, "export interface Props {}\nexport function App() { return null; }\n").unwrap();
+    fs::write(
+        &rust_path,
+        "pub struct Widget {}\npub fn build_widget() {}\n",
+    )
+    .unwrap();
+    fs::write(
+        &ts_path,
+        "export interface Props {}\nexport function App() { return null; }\n",
+    )
+    .unwrap();
     fs::write(&go_path, "package main\nfunc main() {}\n").unwrap();
 
     let rust = extract_file(dir.path(), &rust_path).unwrap();
     let typescript = extract_file(dir.path(), &ts_path).unwrap();
     let go = extract_file(dir.path(), &go_path).unwrap();
 
-    let rust_widget = rust.nodes.iter().find(|node| node.name == "Widget").unwrap();
-    assert_eq!(rust_widget.extraction_method, CodeMapExtractionMethod::TreeSitter);
+    let rust_widget = rust
+        .nodes
+        .iter()
+        .find(|node| node.name == "Widget")
+        .unwrap();
+    assert_eq!(
+        rust_widget.extraction_method,
+        CodeMapExtractionMethod::TreeSitter
+    );
     assert_eq!(rust_widget.confidence, CodeMapConfidence::High);
     assert!(rust.nodes.iter().any(|node| node.name == "build_widget"));
     assert!(typescript.nodes.iter().any(|node| node.name == "Props"));
@@ -66,7 +81,11 @@ fn extracts_ast_and_regex_symbols_with_confidence() {
 fn db_stores_searches_and_migrates_metadata() {
     let dir = tempdir().unwrap();
     let source_path = dir.path().join("main.go");
-    fs::write(&source_path, "package main\nfunc main() {}\ntype Server struct {}\n").unwrap();
+    fs::write(
+        &source_path,
+        "package main\nfunc main() {}\ntype Server struct {}\n",
+    )
+    .unwrap();
     let extracted = extract_file(dir.path(), &source_path).unwrap();
 
     let mut db = CodeMapDb::open(dir.path()).unwrap();

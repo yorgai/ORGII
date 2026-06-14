@@ -391,6 +391,19 @@ pub fn update_org_member_id(session_id: &str, org_member_id: &str) -> SqliteResu
 // send-message flow, etc.). Same posture is mirrored in
 // `agent_sessions/cli/persistence.rs` for `code_sessions`.
 
+/// Update the display name for a session. Does not bump `updated_at` —
+/// renaming is metadata, not conversation activity.
+pub fn update_name(session_id: &str, name: &str) -> SqliteResult<bool> {
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let affected = conn.execute(
+            "UPDATE agent_sessions SET name = ?2 WHERE session_id = ?1",
+            params![session_id, name],
+        )?;
+        Ok(affected > 0)
+    })
+}
+
 /// Update the model for a session. Does not bump `updated_at` —
 /// switching models is config, not activity.
 pub fn update_model(session_id: &str, model: &str) -> SqliteResult<()> {

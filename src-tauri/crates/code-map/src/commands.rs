@@ -2,7 +2,10 @@ use std::path::PathBuf;
 
 use tauri::AppHandle;
 
-use crate::types::{CodeMapNodeDetails, CodeMapQueryRequest, CodeMapSearchResponse, CodeMapStatus, CodeMapWorkspaceSummary};
+use crate::types::{
+    CodeMapNodeDetails, CodeMapQueryRequest, CodeMapSearchResponse, CodeMapStatus,
+    CodeMapWorkspaceSummary,
+};
 use crate::Result;
 
 #[tauri::command]

@@ -60,7 +60,9 @@ pub async fn get_status(workspace_path: PathBuf) -> Result<CodeMapStatus> {
     .map_err(|err| CodeMapError::Join(err.to_string()))?
 }
 
-pub async fn get_many_statuses(workspace_paths: Vec<PathBuf>) -> Result<Vec<CodeMapWorkspaceSummary>> {
+pub async fn get_many_statuses(
+    workspace_paths: Vec<PathBuf>,
+) -> Result<Vec<CodeMapWorkspaceSummary>> {
     let mut summaries = Vec::new();
     for workspace_path in workspace_paths {
         let status = get_status(workspace_path).await?;
@@ -81,7 +83,11 @@ pub async fn get_many_statuses(workspace_paths: Vec<PathBuf>) -> Result<Vec<Code
     Ok(summaries)
 }
 
-pub async fn start_index(app: Option<AppHandle>, workspace_path: PathBuf, force: bool) -> Result<CodeMapStatus> {
+pub async fn start_index(
+    app: Option<AppHandle>,
+    workspace_path: PathBuf,
+    force: bool,
+) -> Result<CodeMapStatus> {
     let canonical = canonical_workspace(&workspace_path)?;
     let key = canonical.to_string_lossy().to_string();
     let cancellation = Arc::new(AtomicBool::new(false));
@@ -152,7 +158,11 @@ pub async fn start_index(app: Option<AppHandle>, workspace_path: PathBuf, force:
             let files_to_index = if requires_full_rebuild {
                 collect_supported_files(&canonical)
             } else {
-                scan.added.iter().chain(scan.modified.iter()).cloned().collect()
+                scan.added
+                    .iter()
+                    .chain(scan.modified.iter())
+                    .cloned()
+                    .collect()
             };
             let deleted_files = if requires_full_rebuild {
                 db.stored_file_paths()?
@@ -267,13 +277,19 @@ pub async fn clear_index(workspace_path: PathBuf) -> Result<CodeMapStatus> {
     .map_err(|err| CodeMapError::Join(err.to_string()))?
 }
 
-pub async fn search(workspace_path: PathBuf, request: CodeMapQueryRequest) -> Result<CodeMapSearchResponse> {
+pub async fn search(
+    workspace_path: PathBuf,
+    request: CodeMapQueryRequest,
+) -> Result<CodeMapSearchResponse> {
     tokio::task::spawn_blocking(move || search_blocking(workspace_path, request))
         .await
         .map_err(|err| CodeMapError::Join(err.to_string()))?
 }
 
-pub async fn node_details(workspace_path: PathBuf, request: CodeMapQueryRequest) -> Result<CodeMapNodeDetails> {
+pub async fn node_details(
+    workspace_path: PathBuf,
+    request: CodeMapQueryRequest,
+) -> Result<CodeMapNodeDetails> {
     tokio::task::spawn_blocking(move || node_details_blocking(workspace_path, request))
         .await
         .map_err(|err| CodeMapError::Join(err.to_string()))?
@@ -294,7 +310,11 @@ fn refresh_staleness(db: &mut CodeMapDb, workspace_root: &Path) -> Result<()> {
     db.mark_stale_files(&stale_files)
 }
 
-fn query_blocking(action: CodeMapAction, request: CodeMapQueryRequest, workspace_path: PathBuf) -> Result<String> {
+fn query_blocking(
+    action: CodeMapAction,
+    request: CodeMapQueryRequest,
+    workspace_path: PathBuf,
+) -> Result<String> {
     let canonical = canonical_workspace(&workspace_path)?;
     let max_results = request.max_results.clamp(1, MAX_RESULTS_CAP);
     match action {
@@ -338,13 +358,20 @@ fn query_blocking(action: CodeMapAction, request: CodeMapQueryRequest, workspace
         CodeMapAction::Impact => {
             let db = CodeMapDb::open(&canonical)?;
             let node = resolve_node(&db, &canonical, &request)?;
-            let nodes = db.impact(&node.id, request.max_depth.clamp(1, MAX_DEPTH_CAP), max_results)?;
+            let nodes = db.impact(
+                &node.id,
+                request.max_depth.clamp(1, MAX_DEPTH_CAP),
+                max_results,
+            )?;
             Ok(related_text("impact", &nodes))
         }
     }
 }
 
-fn search_blocking(workspace_path: PathBuf, request: CodeMapQueryRequest) -> Result<CodeMapSearchResponse> {
+fn search_blocking(
+    workspace_path: PathBuf,
+    request: CodeMapQueryRequest,
+) -> Result<CodeMapSearchResponse> {
     let canonical = canonical_workspace(&workspace_path)?;
     let mut db = CodeMapDb::open(&canonical)?;
     refresh_staleness(&mut db, &canonical)?;
@@ -378,7 +405,10 @@ fn search_blocking(workspace_path: PathBuf, request: CodeMapQueryRequest) -> Res
     })
 }
 
-fn node_details_blocking(workspace_path: PathBuf, request: CodeMapQueryRequest) -> Result<CodeMapNodeDetails> {
+fn node_details_blocking(
+    workspace_path: PathBuf,
+    request: CodeMapQueryRequest,
+) -> Result<CodeMapNodeDetails> {
     let canonical = canonical_workspace(&workspace_path)?;
     let db = CodeMapDb::open(&canonical)?;
     let node = resolve_node(&db, &canonical, &request)?;
@@ -405,7 +435,11 @@ fn node_details_blocking(workspace_path: PathBuf, request: CodeMapQueryRequest) 
     })
 }
 
-fn resolve_node(db: &CodeMapDb, workspace_root: &Path, request: &CodeMapQueryRequest) -> Result<CodeMapNode> {
+fn resolve_node(
+    db: &CodeMapDb,
+    workspace_root: &Path,
+    request: &CodeMapQueryRequest,
+) -> Result<CodeMapNode> {
     if let Some(node_id) = &request.node_id {
         return db
             .node_by_id(node_id)?
@@ -441,7 +475,11 @@ fn resolve_node(db: &CodeMapDb, workspace_root: &Path, request: &CodeMapQueryReq
     ))
 }
 
-fn source_window(workspace_root: &Path, node: &CodeMapNode, context: u32) -> Option<CodeMapSourceWindow> {
+fn source_window(
+    workspace_root: &Path,
+    node: &CodeMapNode,
+    context: u32,
+) -> Option<CodeMapSourceWindow> {
     let path = workspace_root.join(&node.file_path);
     let Ok(content) = std::fs::read_to_string(path) else {
         return None;

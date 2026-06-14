@@ -186,9 +186,8 @@ async fn install_bundled_git(
     }
 
     let asset = dugite_asset(os, arch)?;
-    let url = format!(
-        "https://github.com/desktop/dugite-native/releases/download/{DUGITE_TAG}/{asset}"
-    );
+    let url =
+        format!("https://github.com/desktop/dugite-native/releases/download/{DUGITE_TAG}/{asset}");
 
     let tmp_dir = temp_dir_in(bin_dir, "git")?;
     let archive = tmp_dir.join("dugite.tar.gz");

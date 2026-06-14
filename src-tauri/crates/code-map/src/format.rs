@@ -39,7 +39,11 @@ pub fn search_text(response: &CodeMapSearchResponse) -> String {
         "Code Map symbol matches for `{}` ({} shown{}):\n",
         response.query,
         response.results.len().min(MAX_TEXT_RESULTS),
-        if response.truncated { ", truncated" } else { "" }
+        if response.truncated {
+            ", truncated"
+        } else {
+            ""
+        }
     );
     append_honesty_note(&mut output, response.unresolved_count, response.stale_files);
     for result in response.results.iter().take(MAX_TEXT_RESULTS) {
