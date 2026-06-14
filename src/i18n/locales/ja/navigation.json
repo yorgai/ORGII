@@ -45,7 +45,8 @@
     "projects": "Projects",
     "projectManager": "Project マネージャー",
     "diff": "Diff",
-    "opsControl": "Ops Control"
+    "opsControl": "Ops Control",
+    "colleagues": "同僚"
   },
   "trajectoryPanel": {
     "title": "トラジェクトリ",
@@ -139,7 +140,8 @@
     "search": {
       "folders": "ワークスペースを検索...",
       "sessions": "セッションを検索...",
-      "projects": "プロジェクトを検索..."
+      "projects": "プロジェクトを検索...",
+      "colleagues": "同僚を検索..."
     },
     "folderCounts": {
       "repo": "{{count}} Repo",
@@ -370,5 +372,11 @@
     "details": "詳細",
     "frontend": "Frontend",
     "backend": "Backend"
+  },
+  "collaboration": {
+    "addOrg": "Org を追加",
+    "unknownOrg": "不明な Org",
+    "emptyColleagues": "同僚のアクティビティはまだありません",
+    "emptyColleaguesDesc": "Org を追加すると、チームと Session メタデータを共有できます。"
   }
 }

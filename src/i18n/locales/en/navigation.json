@@ -35,6 +35,7 @@
     "workflow": "Workflow",
     "agent": "Agent",
     "session": "Session",
+    "colleagues": "Colleagues",
     "folders": "Folders",
     "inbox": "Inbox",
     "issues": "Work Items",
@@ -167,6 +168,7 @@
     "search": {
       "folders": "Search Workspace...",
       "sessions": "Search Sessions...",
+      "colleagues": "Search colleagues...",
       "projects": "Search projects..."
     },
     "folderCounts": {
@@ -211,6 +213,12 @@
       "duration2h": "2 hours",
       "durationTomorrow": "Tomorrow"
     }
+  },
+  "collaboration": {
+    "addOrg": "Add Org",
+    "unknownOrg": "Unknown org",
+    "emptyColleagues": "No colleague activity yet",
+    "emptyColleaguesDesc": "Add an org to start sharing session metadata with teammates."
   },
   "myRole": {
     "tabs": {

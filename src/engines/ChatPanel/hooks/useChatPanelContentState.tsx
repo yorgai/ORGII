@@ -186,9 +186,11 @@ export function useChatPanelContentState({
             ? t("navigation:launchpad.dashboard")
             : showExploreContent
               ? t("navigation:explore.title", { defaultValue: "Explore" })
-              : selectedWorkspace
-                ? workspaceTitle
-                : panelTitle;
+              : createTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG
+                ? t("navigation:collaboration.addOrg")
+                : selectedWorkspace
+                  ? workspaceTitle
+                  : panelTitle;
 
   const handleBenchmarkSessionGroupHeaderClick = useCallback(() => {
     if (!benchmarkMasterSessionId) return;
@@ -240,6 +242,8 @@ export function useChatPanelContentState({
   const isBenchmarkTarget = createTarget === CHAT_PANEL_CREATE_TARGET.BENCHMARK;
   const isProjectTarget = createTarget === CHAT_PANEL_CREATE_TARGET.PROJECT;
   const isWorkItemTarget = createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM;
+  const isCollabOrgTarget =
+    createTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG;
   const showCreatorPresenceInHeader =
     !showBenchmarkSessionGroupContent &&
     !showSessionContent &&
@@ -249,7 +253,8 @@ export function useChatPanelContentState({
     !showExploreContent &&
     !isBenchmarkTarget &&
     !isProjectTarget &&
-    !isWorkItemTarget;
+    !isWorkItemTarget &&
+    !isCollabOrgTarget;
   const showWorkItemAgentSwitchInHeader =
     showNonSessionContent &&
     !selectedWorkItem &&

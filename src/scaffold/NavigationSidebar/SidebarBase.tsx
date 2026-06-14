@@ -22,7 +22,7 @@ import {
 import i18next from "i18next";
 import { useAtomValue, useSetAtom } from "jotai";
 import { PanelLeft, Plus, X } from "lucide-react";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import Tooltip from "@src/components/Tooltip";
@@ -57,6 +57,15 @@ const PLATFORM_SIDEBAR_RADIUS =
 const IDLE_SIDEBAR_RESIZE_HANDLE_CLASS_NAME =
   "h-full [&>div:first-child]:origin-right [&>div:first-child]:scale-x-50 [&>div:first-child]:transition-transform hover:[&>div:first-child]:scale-x-100";
 
+const SIDEBAR_TOP_CHROME_TRANSITION_CLASS_NAME =
+  "transition-opacity duration-150";
+
+function getSidebarTopChromeVisibilityClassName(visible: boolean): string {
+  return visible
+    ? "pointer-events-auto opacity-100"
+    : "pointer-events-none opacity-0";
+}
+
 // ============================================
 // SidebarBase Component
 // ============================================
@@ -90,6 +99,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
       setWidth,
     } = useSidebarState();
 
+    const [sidebarChromeVisible, setSidebarChromeVisible] = useState(false);
     const isMacOS = isTauriDesktop();
     const hideSidebarShortcut = getShortcutKeys("toggle_sidebar");
     const isFullscreen = useAtomValue(windowFullscreenAtom);
@@ -220,6 +230,8 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
       return null;
     }
 
+    const sidebarTopChromeClassName = `${SIDEBAR_TOP_CHROME_TRANSITION_CLASS_NAME} ${getSidebarTopChromeVisibilityClassName(sidebarChromeVisible)}`;
+
     // Traffic lights section
     const renderTrafficLightsSpace = () => {
       if (!includeTrafficLightSpace) return null;
@@ -241,111 +253,79 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
             } as React.CSSProperties
           }
         >
-          {beforeAddNewActions ? (
-            <div style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-              {beforeAddNewActions}
-            </div>
-          ) : null}
-
-          {/* Top action button */}
-          {onAddNew && (
-            <div
-              className="shrink-0"
-              style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-            >
-              <Tooltip
-                content={
-                  addTooltipContent ||
-                  addLabel ||
-                  i18next.t("navigation:sidebar.actions.addNew")
-                }
-                position="bottom"
-                showArrow={false}
-                framedPanel={!!addTooltipContent}
-              >
-                <div
-                  className="h-[28px] w-[28px]"
-                  onClick={onAddNew}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onAddNew();
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] transition-colors duration-150 hover:bg-fill-2">
-                    <AddIcon
-                      size={16}
-                      strokeWidth={2}
-                      className="text-text-2"
-                      style={iconThemeStyle}
-                    />
-                  </div>
-                </div>
-              </Tooltip>
-            </div>
-          )}
-
-          {headerActions ? (
-            <div style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-              {headerActions}
-            </div>
-          ) : null}
-
-          {/* Collapse/Expand buttons */}
           <div
-            className="flex shrink-0 items-center gap-1"
-            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+            className={`flex items-center gap-1 ${sidebarTopChromeClassName}`}
           >
-            {isMacOS && showCollapseButton ? (
-              isHoverSidebarOpen ? (
-                <>
-                  {/* Expand sidebar permanently button */}
-                  <button
-                    type="button"
-                    className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
-                    onClick={handleExpand}
-                  >
-                    <PanelLeft
-                      size={16}
-                      strokeWidth={2}
-                      className="text-text-2"
-                      style={iconThemeStyle}
-                    />
-                  </button>
-                  {/* Close floating sidebar button */}
-                  <button
-                    type="button"
-                    className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
-                    onClick={handleCollapse}
-                  >
-                    <X
-                      size={16}
-                      strokeWidth={2}
-                      className="text-text-2"
-                      style={iconThemeStyle}
-                    />
-                  </button>
-                </>
-              ) : (
+            {beforeAddNewActions ? (
+              <div
+                style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+              >
+                {beforeAddNewActions}
+              </div>
+            ) : null}
+
+            {/* Top action button */}
+            {onAddNew && (
+              <div
+                className="shrink-0"
+                style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+              >
                 <Tooltip
                   content={
-                    <KeyboardShortcutTooltipContent
-                      label={i18next.t("common:tooltips.hideSidebar")}
-                      shortcut={hideSidebarShortcut}
-                    />
+                    addTooltipContent ||
+                    addLabel ||
+                    i18next.t("navigation:sidebar.actions.addNew")
                   }
                   position="bottom"
-                  mouseEnterDelay={200}
-                  framedPanel
+                  showArrow={false}
+                  framedPanel={!!addTooltipContent}
                 >
-                  <div className="inline-flex">
+                  <div
+                    className="h-[28px] w-[28px]"
+                    onClick={onAddNew}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onAddNew();
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] transition-colors duration-150 hover:bg-fill-2">
+                      <AddIcon
+                        size={16}
+                        strokeWidth={2}
+                        className="text-text-2"
+                        style={iconThemeStyle}
+                      />
+                    </div>
+                  </div>
+                </Tooltip>
+              </div>
+            )}
+
+            {headerActions ? (
+              <div
+                style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+              >
+                {headerActions}
+              </div>
+            ) : null}
+
+            {/* Collapse/Expand buttons */}
+            <div
+              className="flex shrink-0 items-center gap-1"
+              style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+            >
+              {isMacOS && showCollapseButton ? (
+                isHoverSidebarOpen ? (
+                  <>
+                    {/* Expand sidebar permanently button */}
                     <button
                       type="button"
                       className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
-                      onClick={handleCollapse}
+                      onClick={handleExpand}
                     >
                       <PanelLeft
                         size={16}
@@ -354,12 +334,52 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
                         style={iconThemeStyle}
                       />
                     </button>
-                  </div>
-                </Tooltip>
-              )
-            ) : (
-              <div className="h-[28px] w-[28px]" />
-            )}
+                    {/* Close floating sidebar button */}
+                    <button
+                      type="button"
+                      className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
+                      onClick={handleCollapse}
+                    >
+                      <X
+                        size={16}
+                        strokeWidth={2}
+                        className="text-text-2"
+                        style={iconThemeStyle}
+                      />
+                    </button>
+                  </>
+                ) : (
+                  <Tooltip
+                    content={
+                      <KeyboardShortcutTooltipContent
+                        label={i18next.t("common:tooltips.hideSidebar")}
+                        shortcut={hideSidebarShortcut}
+                      />
+                    }
+                    position="bottom"
+                    mouseEnterDelay={200}
+                    framedPanel
+                  >
+                    <div className="inline-flex">
+                      <button
+                        type="button"
+                        className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
+                        onClick={handleCollapse}
+                      >
+                        <PanelLeft
+                          size={16}
+                          strokeWidth={2}
+                          className="text-text-2"
+                          style={iconThemeStyle}
+                        />
+                      </button>
+                    </div>
+                  </Tooltip>
+                )
+              ) : (
+                <div className="h-[28px] w-[28px]" />
+              )}
+            </div>
           </div>
         </div>
       );
@@ -499,10 +519,12 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
 
     return (
       <div
-        className={`relative flex h-full flex-shrink-0 ${
+        className={`group/sidebar relative flex h-full flex-shrink-0 ${
           isDragging ? "" : "transition-[width] duration-150"
         } ${className}`}
         style={containerStyle}
+        onMouseEnter={() => setSidebarChromeVisible(true)}
+        onMouseLeave={() => setSidebarChromeVisible(false)}
         onContextMenu={handleResizeContextMenu}
       >
         {wrappedContent}

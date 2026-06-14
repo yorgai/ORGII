@@ -45,7 +45,8 @@
     "projects": "Projects",
     "projectManager": "Project Manager",
     "diff": "Diff",
-    "opsControl": "Ops Control"
+    "opsControl": "Ops Control",
+    "colleagues": "Коллеги"
   },
   "trajectoryPanel": {
     "title": "Траектория",
@@ -139,7 +140,8 @@
     "search": {
       "folders": "Искать в рабочей области...",
       "sessions": "Искать сессии...",
-      "projects": "Искать проекты..."
+      "projects": "Искать проекты...",
+      "colleagues": "Поиск коллег..."
     },
     "folderCounts": {
       "repo": "{{count}} репо",
@@ -370,5 +372,11 @@
     "details": "Подробности",
     "frontend": "Frontend",
     "backend": "Backend"
+  },
+  "collaboration": {
+    "addOrg": "Добавить org",
+    "unknownOrg": "Неизвестная org",
+    "emptyColleagues": "Активности коллег пока нет",
+    "emptyColleaguesDesc": "Добавьте org, чтобы начать делиться метаданными сессий с командой."
   }
 }

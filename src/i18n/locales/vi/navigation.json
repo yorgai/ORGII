@@ -45,7 +45,8 @@
     "projects": "Project",
     "projectManager": "Project Manager",
     "diff": "Diff",
-    "opsControl": "Ops Control"
+    "opsControl": "Ops Control",
+    "colleagues": "Đồng nghiệp"
   },
   "trajectoryPanel": {
     "title": "Quỹ đạo",
@@ -139,7 +140,8 @@
     "search": {
       "folders": "Tìm kiếm Workspace...",
       "sessions": "Tìm kiếm phiên...",
-      "projects": "Tìm kiếm dự án..."
+      "projects": "Tìm kiếm dự án...",
+      "colleagues": "Tìm đồng nghiệp..."
     },
     "folderCounts": {
       "repo": "{{count}} Repo",
@@ -370,5 +372,11 @@
     "details": "Chi tiết",
     "frontend": "Frontend",
     "backend": "Backend"
+  },
+  "collaboration": {
+    "addOrg": "Thêm org",
+    "unknownOrg": "Org không xác định",
+    "emptyColleagues": "Chưa có hoạt động của đồng nghiệp",
+    "emptyColleaguesDesc": "Thêm org để bắt đầu chia sẻ metadata session với nhóm."
   }
 }

@@ -15,6 +15,7 @@ import type { Repo } from "@src/store/repo";
 import type { SessionCreatorDraft } from "@src/store/session";
 
 import {
+  buildColleaguesPinnedMenuItems,
   buildDraftMenuItems,
   buildFoldersPinnedMenuItems,
   buildPinnedMenuItems,
@@ -31,6 +32,7 @@ type TCommon = (key: string, defaultValue?: string) => string;
 
 interface UsePinnedMenuItemsParams {
   activeSidebarKey: WorkstationSidebarKey;
+  addOrgLabel: string;
   createProjectLabel: string;
   createWorkItemLabel: string;
   newSessionLabel: string;
@@ -44,6 +46,7 @@ interface UsePinnedMenuItemsResult {
 
 export function usePinnedMenuItems({
   activeSidebarKey,
+  addOrgLabel,
   createProjectLabel,
   createWorkItemLabel,
   newSessionLabel,
@@ -75,12 +78,18 @@ export function usePinnedMenuItems({
       }),
     [t]
   );
+  const colleaguesPinnedMenuItems = useMemo<NavigationMenuItem[]>(
+    () => buildColleaguesPinnedMenuItems({ addOrgLabel }),
+    [addOrgLabel]
+  );
   const pinnedMenuItems =
     activeSidebarKey === "projects"
       ? projectsPinnedMenuItems
       : activeSidebarKey === "folders"
         ? foldersPinnedMenuItems
-        : sessionPinnedMenuItems;
+        : activeSidebarKey === "colleagues"
+          ? colleaguesPinnedMenuItems
+          : sessionPinnedMenuItems;
 
   return { pinnedMenuItems, sessionPinnedMenuItems };
 }

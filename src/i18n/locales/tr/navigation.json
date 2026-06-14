@@ -45,7 +45,8 @@
     "projects": "Projects",
     "projectManager": "Project Manager",
     "diff": "Diff",
-    "opsControl": "Ops Control"
+    "opsControl": "Ops Control",
+    "colleagues": "Ekip arkadaşları"
   },
   "trajectoryPanel": {
     "title": "Yörünge",
@@ -139,7 +140,8 @@
     "search": {
       "folders": "Çalışma alanında ara...",
       "sessions": "Oturum ara...",
-      "projects": "Projelerde ara..."
+      "projects": "Projelerde ara...",
+      "colleagues": "Ekip arkadaşlarını ara..."
     },
     "folderCounts": {
       "repo": "{{count}} Repo",
@@ -370,5 +372,11 @@
     "details": "Ayrıntılar",
     "frontend": "Frontend",
     "backend": "Backend"
+  },
+  "collaboration": {
+    "addOrg": "Org ekle",
+    "unknownOrg": "Bilinmeyen org",
+    "emptyColleagues": "Henüz ekip arkadaşı aktivitesi yok",
+    "emptyColleaguesDesc": "Ekip ile session metadata paylaşmaya başlamak için bir org ekleyin."
   }
 }

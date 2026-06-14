@@ -70,6 +70,8 @@ const PRESENCE_COLOR: Record<BuiltInPresenceMode, string> = {
 // Custom roles all render in the same neutral accent so they read as
 // "user-defined" without competing with the built-ins' semantic colors.
 const CUSTOM_ROLE_COLOR_CLASS = "text-primary-6";
+const SIDEBAR_BOTTOM_HOVER_ACTION_CLASS =
+  "pointer-events-none opacity-0 transition-opacity duration-150 group-hover/sidebar:pointer-events-auto group-hover/sidebar:opacity-100";
 
 function formatBackAt(backAtMs: number): string {
   const now = Date.now();
@@ -376,8 +378,12 @@ const SidebarBottomBar: React.FC<SidebarBottomBarProps> = React.memo(
           <PresenceMenuButton />
         </div>
         <div className="flex items-center gap-1">
-          {rightActions}
-          {!hideSettings && <SidebarSettingsMenuButton />}
+          <div
+            className={`flex items-center gap-1 ${SIDEBAR_BOTTOM_HOVER_ACTION_CLASS}`}
+          >
+            {rightActions}
+            {!hideSettings && <SidebarSettingsMenuButton />}
+          </div>
           <SidebarUpdateButton />
         </div>
       </div>

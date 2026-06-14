@@ -69,6 +69,11 @@ export function reduceChatPanelSurfaceCommand(
         createTarget: CHAT_PANEL_CREATE_TARGET.WORK_ITEM,
         createProjectContext: command.createProjectContext ?? null,
       };
+    case CHAT_PANEL_SURFACE_KIND.NEW_COLLAB_ORG:
+      return {
+        ...next,
+        createTarget: CHAT_PANEL_CREATE_TARGET.COLLAB_ORG,
+      };
     case CHAT_PANEL_SURFACE_KIND.PROJECT:
       return {
         ...next,

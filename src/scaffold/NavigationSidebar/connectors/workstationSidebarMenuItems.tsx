@@ -1,5 +1,6 @@
 import {
   Box,
+  Building2,
   Compass,
   LayoutDashboard,
   Plus,
@@ -14,6 +15,7 @@ import { resolveSessionRowIcon } from "@src/util/session/sessionSidebarRow";
 import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import {
+  COLLAB_ADD_ORG_MENU_ITEM_ID,
   NEW_SESSION_MENU_ITEM_ID,
   OPS_CONTROL_MENU_ITEM_ID,
   PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
@@ -88,6 +90,24 @@ export function buildProjectsPinnedMenuItems({
       label: createProjectLabel,
       icon: Box,
       iconName: "box",
+    },
+  ];
+}
+
+interface BuildColleaguesPinnedMenuItemsParams {
+  addOrgLabel: string;
+}
+
+export function buildColleaguesPinnedMenuItems({
+  addOrgLabel,
+}: BuildColleaguesPinnedMenuItemsParams): NavigationMenuItem[] {
+  return [
+    {
+      id: COLLAB_ADD_ORG_MENU_ITEM_ID,
+      key: COLLAB_ADD_ORG_MENU_ITEM_ID,
+      label: addOrgLabel,
+      icon: Building2,
+      iconName: "building-2",
     },
   ];
 }

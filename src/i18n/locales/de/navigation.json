@@ -45,7 +45,8 @@
     "projects": "Projects",
     "projectManager": "Project Manager",
     "diff": "Diff",
-    "opsControl": "Ops Control"
+    "opsControl": "Ops Control",
+    "colleagues": "Kolleg:innen"
   },
   "trajectoryPanel": {
     "title": "Trajektorie",
@@ -139,7 +140,8 @@
     "search": {
       "folders": "Workspace suchen...",
       "sessions": "Sitzungen suchen...",
-      "projects": "Projekte suchen..."
+      "projects": "Projekte suchen...",
+      "colleagues": "Kolleg:innen suchen..."
     },
     "folderCounts": {
       "repo": "{{count}} Repo",
@@ -372,5 +374,11 @@
     "details": "Details",
     "frontend": "Frontend",
     "backend": "Backend"
+  },
+  "collaboration": {
+    "addOrg": "Org hinzufügen",
+    "unknownOrg": "Unbekannte Org",
+    "emptyColleagues": "Noch keine Kolleg:innen-Aktivität",
+    "emptyColleaguesDesc": "Füge eine Org hinzu, um Session-Metadaten im Team zu teilen."
   }
 }

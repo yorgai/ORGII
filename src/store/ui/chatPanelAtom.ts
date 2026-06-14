@@ -242,6 +242,7 @@ export const CHAT_PANEL_CREATE_TARGET = {
   CREATE_AGENT: "createAgent",
   PROJECT: "project",
   WORK_ITEM: "workItem",
+  COLLAB_ORG: "collabOrg",
   BENCHMARK: "benchmark",
 } as const;
 
@@ -365,6 +366,7 @@ export const CHAT_PANEL_SURFACE_KIND = {
   BENCHMARK_SESSION_GROUP: "benchmarkSessionGroup",
   NEW_PROJECT: "newProject",
   NEW_WORK_ITEM: "newWorkItem",
+  NEW_COLLAB_ORG: "newCollabOrg",
   PROJECT: "project",
   WORK_ITEM: "workItem",
   WORKSPACE_DASHBOARD: "workspaceDashboard",
@@ -380,6 +382,7 @@ export type ChatPanelSurfaceState =
   | { kind: typeof CHAT_PANEL_SURFACE_KIND.BENCHMARK_SESSION_GROUP }
   | { kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_PROJECT }
   | { kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM }
+  | { kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_COLLAB_ORG }
   | {
       kind: typeof CHAT_PANEL_SURFACE_KIND.PROJECT;
       project: ChatPanelSelectedProject;
@@ -407,6 +410,7 @@ export type ChatPanelNavigateCommand =
       kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM;
       createProjectContext?: ChatPanelCreateProjectContext | null;
     }
+  | { kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_COLLAB_ORG }
   | {
       kind: typeof CHAT_PANEL_SURFACE_KIND.PROJECT;
       project: ChatPanelSelectedProject;
@@ -469,6 +473,10 @@ export const chatPanelNavigateAtom = atom(
           chatPanelCreateProjectContextAtom,
           command.createProjectContext ?? null
         );
+        return;
+      case CHAT_PANEL_SURFACE_KIND.NEW_COLLAB_ORG:
+        set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        set(chatPanelCreateTargetAtom, CHAT_PANEL_CREATE_TARGET.COLLAB_ORG);
         return;
       case CHAT_PANEL_SURFACE_KIND.PROJECT:
         set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.NON_SESSION);
@@ -547,6 +555,12 @@ export const activeChatPanelSurfaceAtom = atom<ChatPanelSurfaceState>((get) => {
     createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM
   ) {
     return { kind: CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM };
+  }
+  if (
+    contentMode === CHAT_PANEL_CONTENT_MODE.NON_SESSION &&
+    createTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG
+  ) {
+    return { kind: CHAT_PANEL_SURFACE_KIND.NEW_COLLAB_ORG };
   }
 
   return { kind: CHAT_PANEL_SURFACE_KIND.SESSION };

@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { Folders, House, ListTodo, MessageCircle } from "lucide-react";
+import { Folders, House, ListTodo, MessageCircle, Users } from "lucide-react";
 import React, { useMemo } from "react";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
@@ -11,7 +11,12 @@ import type { WorkstationSidebarKey } from "./types";
 export function isWorkstationSidebarKey(
   key: string
 ): key is WorkstationSidebarKey {
-  return key === "folders" || key === "workstation" || key === "projects";
+  return (
+    key === "folders" ||
+    key === "workstation" ||
+    key === "colleagues" ||
+    key === "projects"
+  );
 }
 
 export function useWorkstationSidebarTabs(t: TFunction<"navigation">) {
@@ -28,6 +33,12 @@ export function useWorkstationSidebarTabs(t: TFunction<"navigation">) {
         label: t("labels.session"),
         icon: MessageCircle,
         iconName: "message-circle",
+      },
+      {
+        key: "colleagues",
+        label: t("labels.colleagues"),
+        icon: Users,
+        iconName: "users",
       },
       {
         key: "projects",

@@ -53,7 +53,9 @@ export const SidebarTabButton: React.FC<{
           <div
             className={cn(
               "flex flex-shrink-0 items-center justify-center transition-colors duration-150 group-hover:text-text-1",
-              isActive ? "text-text-1" : "text-text-2"
+              isActive
+                ? "text-primary-6 group-hover:text-primary-6"
+                : "text-text-2"
             )}
           >
             {tab.icon}

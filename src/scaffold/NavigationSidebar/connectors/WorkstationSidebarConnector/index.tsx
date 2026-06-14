@@ -24,6 +24,10 @@ import { useLaunchpadAgentCatalog } from "@src/modules/shared/launchpad/hooks";
 import { openWorkspaceSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
+import {
+  collabOrgsAtom,
+  remoteTeammateSessionsAtom,
+} from "@src/store/collaboration/collabOrgsAtom";
 import type { Repo } from "@src/store/repo";
 import { repoMapAtom, reposAtom } from "@src/store/repo";
 import {
@@ -39,6 +43,7 @@ import {
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
 import {
+  CHAT_PANEL_SURFACE_KIND,
   activeStationChatVisibleAtom,
   chatPanelContentModeAtom,
   chatPanelCreateTargetAtom,
@@ -64,6 +69,7 @@ import {
 
 import { SidebarBottomBar } from "../../blocks";
 import NavigationSidebar from "../../variants/NavigationSidebar";
+import { COLLAB_ADD_ORG_MENU_ITEM_ID } from "../sidebarConnectorUtils";
 import {
   projectsSidebarGroupByAtom,
   sidebarGroupByAtom,
@@ -83,6 +89,7 @@ import {
   sortSessionsByActivity,
 } from "../workstationSidebarData";
 import { useSidebarBottomRightActions } from "./bottomActions";
+import { buildColleaguesSidebarMenuItems } from "./colleaguesSidebarMenuItems";
 import {
   FOLDERS_MY_AGENTS_COLLAPSE_SECTION_ID,
   FOLDERS_MY_AGENT_ORGS_COLLAPSE_SECTION_ID,
@@ -170,9 +177,11 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const [activeFolderMoreMenuId, setActiveFolderMoreMenuId] = useState("");
   const [projectsSelectedMenuItemId, setProjectsSelectedMenuItemId] =
     useState("");
+  const [colleaguesSelectedMenuItemId, setColleaguesSelectedMenuItemId] =
+    useState("");
   const [sidebarSearchQueries, setSidebarSearchQueries] = useState<
     Record<WorkstationSidebarKey, string>
-  >({ folders: "", workstation: "", projects: "" });
+  >({ folders: "", workstation: "", colleagues: "", projects: "" });
   const [, setFoldersDashboardSelected] = useState(false);
   const [, setFoldersExploreSelected] = useState(false);
   const tabs = useWorkstationSidebarTabs(t);
@@ -248,6 +257,8 @@ export const WorkstationSidebarConnector: React.FC = () => {
   );
   const [projectsCollapsedSectionIds, setProjectsCollapsedSectionIds] =
     useState<Set<string>>(() => new Set());
+  const [colleaguesCollapsedSectionIds, setColleaguesCollapsedSectionIds] =
+    useState<Set<string>>(() => new Set());
   const defaultedProjectsLinearSectionIdsRef = useRef<Set<string>>(new Set());
 
   const untitledSession = t("sidebar.defaults.untitledSession");
@@ -256,13 +267,16 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const unpinFolderLabel = tCommon("sessions:chat.unpinSession", "Unpin");
   const createProjectLabel = tProjects("projects.createProject");
   const createWorkItemLabel = tProjects("workItems.createWorkItem");
+  const addOrgLabel = t("collaboration.addOrg");
   const homeLabel = t("sidebar.tabs.build");
   const searchPlaceholder =
     activeSidebarKey === "projects"
       ? t("sidebar.search.projects")
       : activeSidebarKey === "folders"
         ? t("sidebar.search.folders")
-        : t("sidebar.search.sessions");
+        : activeSidebarKey === "colleagues"
+          ? t("sidebar.search.colleagues")
+          : t("sidebar.search.sessions");
   const noSearchResultsTitle = t("sidebar.empty.noSearchResults");
 
   const { menuItems, sessionMap, isLoadMoreId, getLoadMoreGroupId } =
@@ -301,8 +315,12 @@ export const WorkstationSidebarConnector: React.FC = () => {
     ? benchmarkBatchStatus.masterSessionId
     : activeSessionId;
 
+  const collabOrgs = useAtomValue(collabOrgsAtom);
+  const remoteTeammateSessions = useAtomValue(remoteTeammateSessionsAtom);
+
   const { pinnedMenuItems } = usePinnedMenuItems({
     activeSidebarKey,
+    addOrgLabel,
     createProjectLabel,
     createWorkItemLabel,
     newSessionLabel,
@@ -313,6 +331,16 @@ export const WorkstationSidebarConnector: React.FC = () => {
     sessionCreatorDrafts,
     t,
   });
+  const colleaguesSidebarMenuItems = useMemo(
+    () =>
+      buildColleaguesSidebarMenuItems({
+        orgs: collabOrgs,
+        remoteSessions: remoteTeammateSessions,
+        searchQuery: sidebarSearchQueries.colleagues,
+        unknownOrgLabel: t("collaboration.unknownOrg"),
+      }),
+    [collabOrgs, remoteTeammateSessions, sidebarSearchQueries.colleagues, t]
+  );
   const clearActiveWorkspace = useCallback(() => {
     dispatchSetWorkspaceFolders([], null);
     setActiveWorkspaceName(null);
@@ -472,6 +500,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
       opsControlRoutePath: ROUTES.workStation.opsControl.path,
       pathname: location.pathname,
       projectsSelectedMenuItemId,
+      colleaguesSelectedMenuItemId,
       sessionCreatorDrafts,
     });
   const resolvedCollapsedSectionIds =
@@ -479,13 +508,17 @@ export const WorkstationSidebarConnector: React.FC = () => {
       ? projectsCollapsedSectionIds
       : activeSidebarKey === "folders"
         ? foldersCollapsedSectionIds
-        : collapsedSectionIds;
+        : activeSidebarKey === "colleagues"
+          ? colleaguesCollapsedSectionIds
+          : collapsedSectionIds;
   const resolvedSetCollapsedSectionIds =
     activeSidebarKey === "projects"
       ? setProjectsCollapsedSectionIds
       : activeSidebarKey === "folders"
         ? setFoldersCollapsedSectionIds
-        : setCollapsedSectionIds;
+        : activeSidebarKey === "colleagues"
+          ? setColleaguesCollapsedSectionIds
+          : setCollapsedSectionIds;
 
   const activateMyStationRouteForProjectsContent = useCallback(() => {
     const targetRoute = ROUTES.workStation.code.path;
@@ -559,7 +592,21 @@ export const WorkstationSidebarConnector: React.FC = () => {
       ? projectsSidebarMenuItems
       : activeSidebarKey === "folders"
         ? foldersSidebarMenuItems
-        : decoratedSessionSidebarMenuItems;
+        : activeSidebarKey === "colleagues"
+          ? colleaguesSidebarMenuItems
+          : decoratedSessionSidebarMenuItems;
+
+  const handleColleaguesMenuItemClick = useCallback(
+    (_key: string, item: NavigationMenuItem) => {
+      if (item.id === COLLAB_ADD_ORG_MENU_ITEM_ID) {
+        setColleaguesSelectedMenuItemId(COLLAB_ADD_ORG_MENU_ITEM_ID);
+        navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_COLLAB_ORG });
+        return;
+      }
+      setColleaguesSelectedMenuItemId(item.id);
+    },
+    [navigateChatPanel]
+  );
 
   const handleFoldersMenuItemClick = useFoldersMenuItemClick({
     navigate,
@@ -601,7 +648,9 @@ export const WorkstationSidebarConnector: React.FC = () => {
       ? handleProjectsMenuItemClick
       : activeSidebarKey === "folders"
         ? handleFoldersMenuItemClick
-        : handleMenuItemClick;
+        : activeSidebarKey === "colleagues"
+          ? handleColleaguesMenuItemClick
+          : handleMenuItemClick;
 
   const handleFoldersMenuItemContextMenu = useCallback(
     (event: React.MouseEvent, _key: string, item: NavigationMenuItem) => {
@@ -723,7 +772,8 @@ export const WorkstationSidebarConnector: React.FC = () => {
         search={{
           value: sidebarSearchQueries[activeSidebarKey],
           filterValue:
-            activeSidebarKey === "workstation"
+            activeSidebarKey === "workstation" ||
+            activeSidebarKey === "colleagues"
               ? ""
               : sidebarSearchQueries[activeSidebarKey],
           onChange: handleSidebarSearchChange,

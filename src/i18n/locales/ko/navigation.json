@@ -45,7 +45,8 @@
     "projects": "Projects",
     "projectManager": "Project 관리자",
     "diff": "Diff",
-    "opsControl": "Ops Control"
+    "opsControl": "Ops Control",
+    "colleagues": "Colleagues"
   },
   "trajectoryPanel": {
     "title": "트래젝터리",
@@ -139,7 +140,8 @@
     "search": {
       "folders": "워크스페이스 검색...",
       "sessions": "세션 검색...",
-      "projects": "프로젝트 검색..."
+      "projects": "프로젝트 검색...",
+      "colleagues": "Search colleagues..."
     },
     "folderCounts": {
       "repo": "{{count}}개 Repo",
@@ -370,5 +372,11 @@
     "details": "세부 정보",
     "frontend": "Frontend",
     "backend": "Backend"
+  },
+  "collaboration": {
+    "addOrg": "Add Org",
+    "unknownOrg": "Unknown org",
+    "emptyColleagues": "No colleague activity yet",
+    "emptyColleaguesDesc": "Add an org to start sharing session metadata with teammates."
   }
 }

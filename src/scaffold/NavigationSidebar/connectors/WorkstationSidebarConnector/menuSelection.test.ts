@@ -32,6 +32,7 @@ function resolveFoldersSelection(overrides: {
     opsControlRoutePath: "/ops-control",
     pathname: "/workstation/code",
     projectsSelectedMenuItemId: "",
+    colleaguesSelectedMenuItemId: "",
     sessionCreatorDrafts: [],
   }).selectedMenuItemId;
 }

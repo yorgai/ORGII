@@ -45,7 +45,8 @@
     "projects": "项目",
     "projectManager": "项目管理器",
     "diff": "Diff",
-    "opsControl": "Ops Control"
+    "opsControl": "Ops Control",
+    "colleagues": "同事"
   },
   "trajectoryPanel": {
     "title": "轨迹",
@@ -139,7 +140,8 @@
     "search": {
       "folders": "搜索工作区...",
       "sessions": "搜索会话...",
-      "projects": "搜索项目..."
+      "projects": "搜索项目...",
+      "colleagues": "搜索同事..."
     },
     "folderCounts": {
       "repo": "{{count}}个仓库",
@@ -461,5 +463,11 @@
     "details": "详情",
     "frontend": "Frontend",
     "backend": "Backend"
+  },
+  "collaboration": {
+    "addOrg": "添加 Org",
+    "unknownOrg": "未知 Org",
+    "emptyColleagues": "暂无同事活动",
+    "emptyColleaguesDesc": "添加 Org 后即可与队友共享 Session 元数据。"
   }
 }

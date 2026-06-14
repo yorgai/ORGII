@@ -77,6 +77,11 @@ export function useProjectWorkItemHandlers({
     setWorkItemCreateDraft,
   ]);
 
+  const handleCancelCollabOrgCreate = useCallback(() => {
+    setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+    handleNewSession();
+  }, [handleNewSession, setCreateTarget]);
+
   const handleWorkItemAgentCreatorToggle = useCallback(
     (enabled: boolean) => {
       setShowWorkItemAgentCreator(sessionCreatorAvailable && enabled);
@@ -251,6 +256,7 @@ export function useProjectWorkItemHandlers({
   );
 
   return {
+    handleCancelCollabOrgCreate,
     handleCancelWorkItemCreate,
     handleChatPanelProjectCreated,
     handleChatPanelWorkItemCreated,

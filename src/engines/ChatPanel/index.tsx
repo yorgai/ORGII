@@ -351,6 +351,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       });
 
     const {
+      handleCancelCollabOrgCreate,
       handleCancelWorkItemCreate,
       handleChatPanelProjectCreated,
       handleChatPanelWorkItemCreated,
@@ -432,6 +433,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         defaultAiWorkItemAssignee={defaultAiWorkItemAssignee}
         handleAiWorkItemSessionStart={handleAiWorkItemSessionStart}
         handleCancelWorkItemCreate={handleCancelWorkItemCreate}
+        handleCancelCollabOrgCreate={handleCancelCollabOrgCreate}
         handleChatPanelProjectCreated={handleChatPanelProjectCreated}
         handleChatPanelWorkItemCreated={handleChatPanelWorkItemCreated}
         handleRegionNoticeChange={handleRegionNoticeChange}

@@ -33,7 +33,9 @@ export function useWorkstationSidebarMemory({
         ? "Projects sidebar"
         : activeSidebarKey === "folders"
           ? "Folders sidebar"
-          : "Session sidebar",
+          : activeSidebarKey === "colleagues"
+            ? "Colleagues sidebar"
+            : "Session sidebar",
     items: pinnedMenuItems.length + sidebarMenuItems.length,
     sections: allSectionIds.length,
     tabs: tabCount,

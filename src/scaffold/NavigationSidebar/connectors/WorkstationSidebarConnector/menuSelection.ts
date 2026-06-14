@@ -9,6 +9,7 @@ import {
   type ChatPanelSelectedWorkspace,
 } from "@src/store/ui/chatPanelAtom";
 
+import { COLLAB_ADD_ORG_MENU_ITEM_ID } from "../sidebarConnectorUtils";
 import {
   getSelectedDraftMenuItemId,
   getSelectedMenuItemId,
@@ -35,6 +36,7 @@ interface ResolveSelectedMenuItemIdParams {
   opsControlRoutePath: string;
   pathname: string;
   projectsSelectedMenuItemId: string;
+  colleaguesSelectedMenuItemId: string;
   sessionCreatorDrafts: readonly SessionCreatorDraft[];
 }
 
@@ -57,6 +59,7 @@ export function resolveSelectedMenuItemIds({
   opsControlRoutePath,
   pathname,
   projectsSelectedMenuItemId,
+  colleaguesSelectedMenuItemId,
   sessionCreatorDrafts,
 }: ResolveSelectedMenuItemIdParams): ResolvedSelectedMenuItemIds {
   const selectedDraftMenuItemId = getSelectedDraftMenuItemId(
@@ -74,6 +77,7 @@ export function resolveSelectedMenuItemIds({
   const sessionSelectedMenuItemId =
     chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.PROJECT ||
     chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
+    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG ||
     isChatPanelProjectsContentSelected
       ? ""
       : getSelectedMenuItemId({
@@ -95,12 +99,18 @@ export function resolveSelectedMenuItemIds({
       : chatPanelWorkspaceDashboardOpen
         ? FOLDERS_DASHBOARD_ITEM_ID
         : "";
+  const resolvedColleaguesSelectedMenuItemId =
+    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG
+      ? colleaguesSelectedMenuItemId || COLLAB_ADD_ORG_MENU_ITEM_ID
+      : "";
   const selectedMenuItemId =
     activeSidebarKey === "projects"
       ? resolvedProjectsSelectedMenuItemId
       : activeSidebarKey === "folders"
         ? foldersSelectedMenuItemId
-        : sessionSelectedMenuItemId;
+        : activeSidebarKey === "colleagues"
+          ? resolvedColleaguesSelectedMenuItemId
+          : sessionSelectedMenuItemId;
 
   return { selectedMenuItemId, sessionSelectedMenuItemId };
 }

@@ -15,6 +15,7 @@ export const NEW_SESSION_MENU_ITEM_ID = "new-session";
 export const PROJECTS_NEW_PROJECT_MENU_ITEM_ID = "projects-new-project";
 export const PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID = "projects-new-work-item";
 export const OPS_CONTROL_MENU_ITEM_ID = "ops-control";
+export const COLLAB_ADD_ORG_MENU_ITEM_ID = "colleagues-add-org";
 export const SESSION_CREATOR_DRAFT_MENU_PREFIX = "session-creator-draft:";
 
 // ── Draft helpers ─────────────────────────────────────────────────────────────
