@@ -3,7 +3,6 @@
 use serde::{Deserialize, Serialize};
 
 use super::enums::AgentExecMode;
-use super::turn::DialogTurnState;
 use crate::core::session::workspace::SessionWorkspace;
 
 // ============================================
@@ -237,9 +236,6 @@ pub struct ProcessingResult {
     /// Whether the response was truncated.
     #[serde(default)]
     pub truncated: bool,
-    /// Final lifecycle state of the turn that produced this result.
-    #[serde(default)]
-    pub final_turn_state: DialogTurnState,
     /// Deprecated legacy turn completion summary. New Rust turns no longer populate this.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub turn_summary: Option<String>,

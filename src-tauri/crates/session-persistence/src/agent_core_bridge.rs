@@ -83,8 +83,9 @@ fn update_turn_intent_status_adapter(
     turn_intent_id: &str,
     new_status: session_bridge::TurnIntentBridgeStatus,
 ) {
-    let mapped_status = map_bridge_status(new_status);
-    if let Err(err) = turn_intents::update_status(session_id, turn_intent_id, mapped_status) {
+    if let Err(err) =
+        turn_intents::update_status(session_id, turn_intent_id, map_bridge_status(new_status))
+    {
         // Illegal transitions are expected when, e.g., the scheduler
         // tries to mark a turn `running` after it was already `stale`d by
         // an invalidate_pending bump. Log at debug so the noise doesn't
@@ -95,41 +96,16 @@ fn update_turn_intent_status_adapter(
             error = ?err,
             "turn_intents.update_status rejected"
         );
-        return;
-    }
-
-    if mapped_status.is_pre_durable_terminal() {
-        if let Err(err) = super::turn_index::rebuild_turn_index(session_id) {
-            tracing::warn!(
-                session_id = %session_id,
-                turn_intent_id = %turn_intent_id,
-                error = ?err,
-                "turn_index.rebuild_after_pre_durable_intent failed"
-            );
-        }
     }
 }
 
 fn mark_pending_turn_intents_stale_adapter(session_id: &str) {
-    match turn_intents::mark_pending_stale(session_id) {
-        Ok(stale_count) => {
-            if stale_count > 0 {
-                if let Err(err) = super::turn_index::rebuild_turn_index(session_id) {
-                    tracing::warn!(
-                        session_id = %session_id,
-                        error = ?err,
-                        "turn_index.rebuild_after_stale_intents failed"
-                    );
-                }
-            }
-        }
-        Err(err) => {
-            tracing::warn!(
-                session_id = %session_id,
-                error = ?err,
-                "turn_intents.mark_pending_stale failed"
-            );
-        }
+    if let Err(err) = turn_intents::mark_pending_stale(session_id) {
+        tracing::warn!(
+            session_id = %session_id,
+            error = ?err,
+            "turn_intents.mark_pending_stale failed"
+        );
     }
 }
 

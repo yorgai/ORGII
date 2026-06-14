@@ -46,7 +46,6 @@ use tracing::{error, info, warn};
 
 use super::turn::streaming::{
     broadcast_agent_error_structured, classify_streaming_error_message, StreamingError,
-    StreamingErrorCode,
 };
 use crate::bus::broadcast_event;
 
@@ -90,16 +89,6 @@ fn panic_payload_to_string(payload: &(dyn Any + Send)) -> String {
         return (*message).to_string();
     }
     "non-string panic payload".to_string()
-}
-
-fn turn_intent_terminal_status_for_error(
-    error_code: StreamingErrorCode,
-) -> crate::foundation::session_bridge::TurnIntentBridgeStatus {
-    if error_code == StreamingErrorCode::Cancelled {
-        crate::foundation::session_bridge::TurnIntentBridgeStatus::Cancelled
-    } else {
-        crate::foundation::session_bridge::TurnIntentBridgeStatus::Failed
-    }
 }
 
 impl std::fmt::Debug for ScheduledMessage {
@@ -441,12 +430,17 @@ impl WorkerTask {
                         "[scheduler] Message {} failed for session {}: {}",
                         msg.message_id, self.session_id, err
                     );
-                    let error_code = classify_streaming_error_message(err);
+                    // Lifecycle: running → failed. Cancelled turns walk
+                    // here too (the executor returns Err on user stop); a
+                    // future commit can distinguish via the cancel_flag
+                    // probe if we need a separate `cancelled` bucket on
+                    // the round renderer.
                     crate::foundation::session_bridge::update_turn_intent_status(
                         &self.session_id,
                         &turn_intent_id,
-                        turn_intent_terminal_status_for_error(error_code),
+                        crate::foundation::session_bridge::TurnIntentBridgeStatus::Failed,
                     );
+                    let error_code = classify_streaming_error_message(err);
                     let streaming_error = StreamingError::new(err.clone(), error_code)
                         .with_details(serde_json::json!({
                             "messageId": msg.message_id
@@ -574,18 +568,6 @@ mod tests {
         assert!(second.duplicate);
         assert_eq!(second.message_id, "second");
         release_running.notify_one();
-    }
-
-    #[test]
-    fn cancel_error_maps_turn_intent_to_cancelled() {
-        assert!(matches!(
-            turn_intent_terminal_status_for_error(StreamingErrorCode::Cancelled),
-            crate::foundation::session_bridge::TurnIntentBridgeStatus::Cancelled
-        ));
-        assert!(matches!(
-            turn_intent_terminal_status_for_error(StreamingErrorCode::Unknown),
-            crate::foundation::session_bridge::TurnIntentBridgeStatus::Failed
-        ));
     }
 
     #[tokio::test]

@@ -144,9 +144,11 @@ impl TurnIntentStatus {
         )
     }
 
-    /// True when the intent will never produce a durable round.
+    /// True when the intent will never produce a durable round
+    /// (currently only `Stale`). Cancelled is NOT in this set — a
+    /// cancelled turn still has user-visible intent and gets a round.
     pub fn is_pre_durable_terminal(self) -> bool {
-        matches!(self, Self::Cancelled | Self::Stale)
+        matches!(self, Self::Stale)
     }
 }
 

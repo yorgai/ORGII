@@ -26,7 +26,7 @@ use tracing::{info, warn};
 use super::super::streaming::broadcast_agent_warning;
 use super::UnifiedMessageProcessor;
 use crate::core::session::prompt::cache::ORGII_SYSTEM_CACHE_SCOPE_KEY;
-use crate::core::session::types::{DialogTurnState, ProcessingResult};
+use crate::core::session::types::ProcessingResult;
 use crate::model_context::compaction::{CompactionOutcome, ContextCompactor};
 use crate::model_context::microcompact::ReplacementState;
 use crate::model_context::session_memory;
@@ -284,7 +284,6 @@ impl UnifiedMessageProcessor {
                         completion_tokens: 0,
                         tool_calls_count: 0,
                         truncated: false,
-                        final_turn_state: DialogTurnState::Completed,
                         turn_summary: None,
                         fork_redirect: Some(new_session_id),
                     });

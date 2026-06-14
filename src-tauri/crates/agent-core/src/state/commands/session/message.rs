@@ -393,11 +393,7 @@ pub(crate) async fn send_message_impl(
 
             cancel_flag.store(false, std::sync::atomic::Ordering::SeqCst);
 
-            if final_turn_state == crate::session::DialogTurnState::Cancelled {
-                Err("Cancelled".to_string())
-            } else {
-                content_result
-            }
+            content_result
         })
     });
 
