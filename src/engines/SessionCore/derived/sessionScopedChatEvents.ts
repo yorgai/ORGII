@@ -25,7 +25,7 @@
  *   own LRU cache; we only mirror what is currently mounted.
  */
 import { atom } from "jotai";
-import { atomFamily } from "jotai/utils";
+import { atomFamily } from "jotai-family";
 
 import { createLogger } from "@src/hooks/logger";
 
