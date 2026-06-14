@@ -23,6 +23,7 @@ import { SessionService } from "@src/engines/SessionCore/services/SessionService
 import { clearSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
 import { createLogger } from "@src/hooks/logger";
 import {
+  isPendingCancelAtom,
   lastUserMessageAtom,
   restoreToInputAtom,
   sessionRolledBackAtom,
@@ -254,6 +255,10 @@ export function useSessionActions(options: UseSessionActionsOptions) {
       // shows. When output exists the session stays visible so the user can
       // see what the agent already produced; the backend turn_index handles
       // round visibility for cancelled intents.
+      //
+      // Clear isPendingCancel here because clearing the session unsubscribes
+      // from the backend terminal event that would normally reset it.
+      store.set(isPendingCancelAtom, false);
       setSessionRolledBack(true);
       store.set(clearSessionAtom);
       store.set(activeSessionIdAtom, null);
