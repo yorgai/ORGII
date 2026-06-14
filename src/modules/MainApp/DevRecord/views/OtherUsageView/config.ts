@@ -1,4 +1,4 @@
-import type { CursorSession } from "@src/api/tauri/devRecord/types";
+import type { CursorSession } from "@src/api/tauri/orgtrackHistory/types";
 
 // ============================================
 // Tab config

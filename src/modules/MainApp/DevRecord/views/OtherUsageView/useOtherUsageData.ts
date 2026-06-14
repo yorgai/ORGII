@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getCursorSessions } from "@src/api/tauri/devRecord";
-import type { CursorSession } from "@src/api/tauri/devRecord/types";
+import { getOrgtrackCursorSessions } from "@src/api/tauri/orgtrackHistory";
+import type { CursorSession } from "@src/api/tauri/orgtrackHistory/types";
 
 import {
   DATE_RANGE_OPTIONS,
@@ -96,7 +96,8 @@ export function useOtherUsageData(): UseOtherUsageDataReturn {
   );
 
   const fetcher = useMemo(
-    () => () => getCursorSessions(dateRange.startDate, dateRange.endDate),
+    () => () =>
+      getOrgtrackCursorSessions(dateRange.startDate, dateRange.endDate),
     [dateRange.startDate, dateRange.endDate]
   );
 

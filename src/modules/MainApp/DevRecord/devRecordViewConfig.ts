@@ -1,4 +1,4 @@
-import { BarChart3, GitCommit, History, Sparkles } from "lucide-react";
+import { GitCommit, History, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import type { DevRecordView } from "@src/store/ui/devRecordToolbarAtom";
@@ -14,11 +14,6 @@ export const DEV_RECORD_VIEW_ITEMS: readonly DevRecordViewConfig[] = [
     key: "git-dashboard",
     labelKey: "navigation:routes.gitDashboard",
     icon: GitCommit,
-  },
-  {
-    key: "coding-profile",
-    labelKey: "navigation:routes.devActivity",
-    icon: BarChart3,
   },
   { key: "sessions", labelKey: "sessions.title", icon: History },
   { key: "other-usage", labelKey: "otherUsage.title", icon: Sparkles },

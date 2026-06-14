@@ -16,12 +16,12 @@ import type { TabPillItem } from "@src/components/TabPill";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import WorkItemContentStack from "@src/modules/ProjectManager/WorkItems/components/WorkItemContentStack";
 import { RepoDetailPage } from "@src/modules/shared/launchpad/components";
-import { CodeMapExplorePanel } from "@src/modules/shared/launchpad/components/CodeMapExplorePanel";
 import { CodeMapWorkspaceStatusPanel } from "@src/modules/shared/launchpad/components/CodeMapWorkspaceStatus";
 import RepoActionButtons from "@src/modules/shared/launchpad/components/RepoActionButtons";
 import { WorkspaceToolsReadiness } from "@src/modules/shared/launchpad/components/WorkspaceToolsReadiness";
 import { useRepoDetection } from "@src/modules/shared/launchpad/hooks";
 import {
+  DETAIL_PANEL_TOKENS,
   DetailPanelContainer,
   PanelFooter,
 } from "@src/modules/shared/layouts/blocks";
@@ -32,6 +32,9 @@ import {
   type WorkspaceOverviewTab,
   chatPanelWorkspaceOverviewTabAtom,
 } from "@src/store/ui/chatPanelAtom";
+
+import AgentBlamePanelView from "./AgentBlamePanelView";
+import RecentSessionsPanelView from "./RecentSessionsPanelView";
 
 interface WorkspaceOverviewPanelViewProps {
   selectedWorkspace: ChatPanelSelectedWorkspace;
@@ -65,7 +68,9 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
     useEffect(() => {
       if (
         !detailsTabAvailable &&
-        activeTab === WORKSPACE_OVERVIEW_TAB.DETAILS
+        (activeTab === WORKSPACE_OVERVIEW_TAB.DETAILS ||
+          activeTab === WORKSPACE_OVERVIEW_TAB.RECENT_SESSION ||
+          activeTab === WORKSPACE_OVERVIEW_TAB.AGENT_BLAME)
       ) {
         setActiveTab(WORKSPACE_OVERVIEW_TAB.OVERVIEW);
       }
@@ -94,10 +99,20 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
         },
       ];
       if (detailsTabAvailable) {
-        items.push({
-          key: WORKSPACE_OVERVIEW_TAB.DETAILS,
-          label: t("common:labels.details"),
-        });
+        items.push(
+          {
+            key: WORKSPACE_OVERVIEW_TAB.DETAILS,
+            label: t("common:labels.details"),
+          },
+          {
+            key: WORKSPACE_OVERVIEW_TAB.RECENT_SESSION,
+            label: t("sessions:controlTower.recentSessions"),
+          },
+          {
+            key: WORKSPACE_OVERVIEW_TAB.AGENT_BLAME,
+            label: t("common:labels.agentBlame"),
+          }
+        );
       }
       return items;
     }, [detailsTabAvailable, t]);
@@ -214,11 +229,25 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
         <RepoDetailPage repo={selectedRepo} />
       ) : null;
 
+    const recentSessionBody =
+      resolvedActiveTab === WORKSPACE_OVERVIEW_TAB.RECENT_SESSION &&
+      selectedRepo ? (
+        <RecentSessionsPanelView
+          repoPath={selectedRepo.path}
+          repoName={selectedRepo.name}
+        />
+      ) : null;
+
+    const agentBlameBody =
+      resolvedActiveTab === WORKSPACE_OVERVIEW_TAB.AGENT_BLAME &&
+      selectedRepo ? (
+        <AgentBlamePanelView repoPath={selectedRepo.path} />
+      ) : null;
+
     const overviewBody =
       resolvedActiveTab === WORKSPACE_OVERVIEW_TAB.OVERVIEW && selectedRepo ? (
         <>
           <CodeMapWorkspaceStatusPanel workspacePath={selectedRepo.path} />
-          <CodeMapExplorePanel workspacePath={selectedRepo.path} />
           <WorkspaceToolsReadiness
             workspacePath={selectedRepo.path}
             repoType={repoType}
@@ -247,7 +276,7 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
 
     const descriptionContent = (
       <section
-        className="flex flex-col"
+        className={`${DETAIL_PANEL_TOKENS.contentWidth} flex flex-col`}
         data-testid="chat-panel-workspace-overview-section"
       >
         <div className="mb-4 flex items-center justify-start">
@@ -262,6 +291,8 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
         </div>
         {overviewBody}
         {detailsBody}
+        {recentSessionBody}
+        {agentBlameBody}
       </section>
     );
 

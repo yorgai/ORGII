@@ -16,7 +16,6 @@ import { currentRepoAtom } from "@src/store/repo/derived";
 import { devRecordActiveViewAtom } from "@src/store/ui/devRecordToolbarAtom";
 
 const GitDashboardView = React.lazy(() => import("./views/GitDashboardView"));
-const CodingProfileView = React.lazy(() => import("./views/CodingProfileView"));
 const SessionsView = React.lazy(() => import("./views/SessionsView"));
 const OtherUsageView = React.lazy(() => import("./views/OtherUsageView"));
 
@@ -46,11 +45,6 @@ const DevRecordPage: React.FC = () => {
             subtitle={t("devRecord.noRepoSubtitle")}
           />
         )}
-      </div>
-      <div className={activeView === "coding-profile" ? "h-full" : "hidden"}>
-        <Suspense fallback={SUSPENSE_FALLBACK}>
-          <CodingProfileView />
-        </Suspense>
       </div>
       <div className={activeView === "sessions" ? "h-full" : "hidden"}>
         <Suspense fallback={SUSPENSE_FALLBACK}>

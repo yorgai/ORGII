@@ -1,3 +1,13 @@
+.ops-control-workstation.work-station-shell--comfort {
+  // Ops Control home (kanban/list/diary) mounts a collapsed zero-width sidebar.
+  // Comfort padding on that shell slot still reserves a left gutter even with
+  // no visible sidebar — flush the content edge instead.
+  .work-station-shell__side-panel--comfort.work-station-shell__side-panel--collapsed {
+    padding: 0;
+    background: transparent;
+  }
+}
+
 .ops-control-page {
   .kanban-board.kanban-board--linear {
     .kanban-board__columns {

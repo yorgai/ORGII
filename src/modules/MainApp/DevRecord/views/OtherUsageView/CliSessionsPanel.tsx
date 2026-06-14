@@ -3,14 +3,14 @@ import React, { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  getClaudeCodeSessions,
-  getCliSessions,
-} from "@src/api/tauri/devRecord";
+  getOrgtrackClaudeCodeSessions,
+  getOrgtrackCliSessions,
+} from "@src/api/tauri/orgtrackHistory";
 import type {
   ClaudeCodeSession,
   CliSession,
-} from "@src/api/tauri/devRecord/types";
-import { CLI_TOOL_LABELS } from "@src/api/tauri/devRecord/types";
+} from "@src/api/tauri/orgtrackHistory/types";
+import { CLI_TOOL_LABELS } from "@src/api/tauri/orgtrackHistory/types";
 import { CLI_AGENT } from "@src/api/tauri/rpc/schemas/validation";
 import ModelIcon from "@src/components/ModelIcon";
 import SettingsTable, {
@@ -120,10 +120,12 @@ const CliSessionsPanel: React.FC<CliSessionsPanelProps> = memo(
     const fetcher = useMemo(
       () => async (): Promise<UnifiedCliRow[]> => {
         const [claudeSessions, cliSessions] = await Promise.all([
-          getClaudeCodeSessions(startDate, endDate).catch(
+          getOrgtrackClaudeCodeSessions(startDate, endDate).catch(
             () => [] as ClaudeCodeSession[]
           ),
-          getCliSessions(startDate, endDate).catch(() => [] as CliSession[]),
+          getOrgtrackCliSessions(startDate, endDate).catch(
+            () => [] as CliSession[]
+          ),
         ]);
         const claudeRows = claudeSessions.map(claudeToRow);
         const cliRows = cliSessions.map(cliToRow);

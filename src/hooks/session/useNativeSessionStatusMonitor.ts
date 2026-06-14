@@ -43,6 +43,11 @@ interface SessionAccountSwitchedPayload {
   model: string | null;
 }
 
+interface SessionRenamedPayload {
+  sessionId: string;
+  name: string;
+}
+
 export function useNativeSessionStatusMonitor(): void {
   useEffect(() => {
     const unlistenPromise = listen<SessionStatusChangedPayload>(
@@ -55,6 +60,24 @@ export function useNativeSessionStatusMonitor(): void {
           markTurnRunning(sessionId);
         }
         updateSessionStatus(sessionId, status as SessionStatus);
+      }
+    );
+
+    const unlistenRenamePromise = listen<SessionRenamedPayload>(
+      "session-renamed",
+      (event) => {
+        const { sessionId, name } = event.payload;
+        void (async () => {
+          const [{ getInstrumentedStore }, { sessionByIdAtom, upsertSession }] =
+            await Promise.all([
+              import("@src/util/core/state/instrumentedStore"),
+              import("@src/store/session"),
+            ]);
+          const store = getInstrumentedStore();
+          const before = store.get(sessionByIdAtom(sessionId));
+          if (!before || before.name === name) return;
+          upsertSession({ ...before, name });
+        })();
       }
     );
 
@@ -89,6 +112,7 @@ export function useNativeSessionStatusMonitor(): void {
 
     return () => {
       unlistenPromise.then((unlisten) => unlisten());
+      unlistenRenamePromise.then((unlisten) => unlisten());
       unlistenAccountPromise.then((unlisten) => unlisten());
     };
   }, []);

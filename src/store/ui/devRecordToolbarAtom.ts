@@ -11,11 +11,7 @@
  */
 import { atom } from "jotai";
 
-export type DevRecordView =
-  | "git-dashboard"
-  | "coding-profile"
-  | "sessions"
-  | "other-usage";
+export type DevRecordView = "git-dashboard" | "sessions" | "other-usage";
 
 export interface DevRecordToolbarEntry {
   onRefresh?: () => void;

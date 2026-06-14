@@ -74,6 +74,7 @@ export const SessionGetAggregateStatsInput = z.object({
  * routing rules.
  *
  * Allowed fields are deliberately limited:
+ *  - `name` — session display title, including generated Rust-agent titles.
  *  - `model` + optional `accountId` — atomic model+key swap (one user pick).
  *  - `agentExecMode` — ModePill click; legal for Rust-agent and CLI-agent sessions.
  *  - `draftText` (P3) — per-session unsent composer text. `null` = clear,
@@ -96,6 +97,7 @@ export const SessionPatchInput = z.object({
   sessionId: z.string().min(1),
   patch: z
     .object({
+      name: z.string().trim().min(1).optional(),
       model: z.string().optional(),
       accountId: z.string().optional(),
       agentExecMode: z.string().optional(),
@@ -114,6 +116,7 @@ export const SessionPatchInput = z.object({
     })
     .refine(
       (p) =>
+        p.name !== undefined ||
         p.model !== undefined ||
         p.agentExecMode !== undefined ||
         p.draftText !== undefined ||

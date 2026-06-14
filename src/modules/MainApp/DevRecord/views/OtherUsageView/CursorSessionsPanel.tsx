@@ -2,8 +2,8 @@ import { CheckCircle2, Clock, Code2, History, XCircle } from "lucide-react";
 import React, { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getCursorSessions } from "@src/api/tauri/devRecord";
-import type { CursorSession } from "@src/api/tauri/devRecord/types";
+import { getOrgtrackCursorSessions } from "@src/api/tauri/orgtrackHistory";
+import type { CursorSession } from "@src/api/tauri/orgtrackHistory/types";
 import ModelIcon from "@src/components/ModelIcon";
 import SettingsTable, {
   SETTINGS_TABLE_CELL,
@@ -39,7 +39,7 @@ const CursorSessionsPanel: React.FC<CursorSessionsPanelProps> = memo(
     const { t } = useTranslation();
 
     const fetcher = useMemo(
-      () => () => getCursorSessions(startDate, endDate),
+      () => () => getOrgtrackCursorSessions(startDate, endDate),
       [startDate, endDate]
     );
 

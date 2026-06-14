@@ -13,7 +13,7 @@ import {
   YAxis,
 } from "recharts";
 
-import type { CursorSession } from "@src/api/tauri/devRecord/types";
+import type { CursorSession } from "@src/api/tauri/orgtrackHistory/types";
 import {
   CHART_AXIS_TICK,
   CHART_MARGIN,

@@ -39,6 +39,7 @@ import {
 } from "@src/store/session";
 
 interface PatchOptions {
+  name?: string;
   model?: string;
   accountId?: string;
   agentExecMode?: string;
@@ -74,6 +75,7 @@ function patchWouldChangeSession(
   before: Session,
   options: PatchOptions
 ): boolean {
+  if (options.name !== undefined && before.name !== options.name) return true;
   if (options.model !== undefined && before.model !== options.model)
     return true;
   if (options.accountId !== undefined && before.accountId !== options.accountId)
@@ -151,6 +153,7 @@ function usePatchSession(): {
       }
 
       const optimistic: Session = { ...before };
+      if (options.name !== undefined) optimistic.name = options.name;
       if (options.model !== undefined) optimistic.model = options.model;
       if (options.accountId !== undefined)
         optimistic.accountId = options.accountId;
@@ -172,6 +175,7 @@ function usePatchSession(): {
         await rpc.sessionAggregate.patch({
           sessionId,
           patch: {
+            name: options.name,
             model: options.model,
             accountId: options.accountId,
             agentExecMode: options.agentExecMode,
@@ -203,6 +207,26 @@ function usePatchSession(): {
   );
 
   return { patch, ...state };
+}
+
+/**
+ * Read+write the per-session display title.
+ */
+export function useSessionNameField(sessionId: string) {
+  const session = useAtomValue(sessionByIdAtom(sessionId));
+  const { patch, isPatching, error } = usePatchSession();
+
+  const setName = useCallback(
+    (name: string) => patch(sessionId, { name }),
+    [patch, sessionId]
+  );
+
+  return {
+    name: session?.name,
+    setName,
+    isPatching,
+    error,
+  };
 }
 
 /**
