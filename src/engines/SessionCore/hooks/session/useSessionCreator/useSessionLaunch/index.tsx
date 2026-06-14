@@ -101,9 +101,15 @@ export function useSessionLaunch(
   const { t } = useTranslation("sessions");
   const [isLoading, setIsLoading] = useState(false);
   const sessionRolledBack = useAtomValue(sessionRolledBackAtom);
+  const activeSessionId = useAtomValue(activeSessionIdAtom);
   useEffect(() => {
-    if (sessionRolledBack) setIsLoading(false);
-  }, [sessionRolledBack]);
+    // Reset loading when the session is cleared (first-turn Stop rolls
+    // back to creator). Both signals are needed: sessionRolledBack gates
+    // the reset so a normal session-switch (activeSessionId → null → new)
+    // doesn't flicker, and activeSessionId=null triggers re-evaluation
+    // even when sessionRolledBack was already true from a prior Stop.
+    if (sessionRolledBack && !activeSessionId) setIsLoading(false);
+  }, [sessionRolledBack, activeSessionId]);
   const {
     closeAddFundsModal,
     closeBuyCreditsModal,
