@@ -1,6 +1,7 @@
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import {
   extractEditData,
+  mergeUnifiedDiffStrings,
   parseUnifiedDiffToOldNew,
 } from "@src/engines/SessionCore/rendering/props/propsDataExtractors";
 import { normalizeEventProps } from "@src/engines/SessionCore/rendering/props/propsNormalizer";
@@ -18,6 +19,8 @@ export interface SessionReplayDiffEntryLike {
 
 export interface SessionReplayDiffSectionItem extends DiffSectionListItem<DiffFileSectionData> {
   entryIds: string[];
+  /** Raw compact diff strings from each edit, used for multi-hunk merge during consolidation. */
+  rawDiffs: string[];
 }
 
 function getDiffStatus(
@@ -89,6 +92,7 @@ export function buildSessionReplayDiffSectionItems(
         isUnavailable: contentUnavailable || undefined,
       },
       entryIds: [entry.entryId],
+      rawDiffs: segment.diff ? [segment.diff] : [],
     };
   });
 }
@@ -116,10 +120,15 @@ export function buildConsolidatedSessionReplayDiffSectionItems<
           key: path,
           file: { ...section.file },
           entryIds: [...section.entryIds],
+          rawDiffs: [...section.rawDiffs],
         });
         continue;
       }
 
+      existing.entryIds.push(...section.entryIds);
+      existing.rawDiffs.push(...section.rawDiffs);
+
+      // Merge stats and status
       existing.file = {
         ...existing.file,
         status: mergeStatus(existing.file.status, section.file.status),
@@ -133,12 +142,26 @@ export function buildConsolidatedSessionReplayDiffSectionItems<
           section.file.deletions !== undefined
             ? (existing.file.deletions ?? 0) + (section.file.deletions ?? 0)
             : undefined,
-        oldContent: existing.file.oldContent,
-        newContent: section.file.newContent,
-        oldStartLine: existing.file.oldStartLine,
-        newStartLine: section.file.newStartLine ?? existing.file.newStartLine,
       };
-      existing.entryIds.push(...section.entryIds);
+
+      // Re-derive old/new content from the accumulated raw diffs.
+      // When all edits carry compact diff strings, merge them into one
+      // multi-hunk diff and re-parse so CodeMirror sees a coherent old/new
+      // pair. Fall back to the last edit's newContent when any edit lacks
+      // a raw diff (e.g. create / fullContent overwrites).
+      if (existing.rawDiffs.length > 0 && section.rawDiffs.length > 0) {
+        const merged = mergeUnifiedDiffStrings(existing.rawDiffs);
+        const parsed = parseUnifiedDiffToOldNew(merged);
+        existing.file.oldContent = parsed.oldValue;
+        existing.file.newContent = parsed.newValue;
+        existing.file.oldStartLine = parsed.oldStartLine;
+        existing.file.newStartLine = parsed.newStartLine;
+      } else {
+        // Fallback: keep first old, last new (imperfect but better than nothing)
+        existing.file.newContent = section.file.newContent;
+        existing.file.newStartLine =
+          section.file.newStartLine ?? existing.file.newStartLine;
+      }
     }
   }
 

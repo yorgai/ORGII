@@ -11,6 +11,7 @@ export {
   extractSuccessData,
   extractFailureData,
   stripLineNumberPrefixes,
+  mergeUnifiedDiffStrings,
   parseUnifiedDiffToOldNew,
 } from "./extractorShared";
 
