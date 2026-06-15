@@ -201,6 +201,7 @@ function buildEditorActionItem(
 // ============================================
 
 export function buildGroupedDefaultItems(
+  recentItems: SpotlightItem[],
   agentSessionItems: SpotlightItem[],
   workspaceItems: SpotlightItem[],
   quickNavigationItems: SpotlightItem[],
@@ -209,7 +210,21 @@ export function buildGroupedDefaultItems(
   navActionItems: SpotlightItem[],
   translate: Translator
 ): SpotlightItem[] {
-  const items = [
+  const items: SpotlightItem[] = [];
+
+  // Omit the group entirely when there are no recent commands so an empty
+  // header never renders.
+  if (recentItems.length > 0) {
+    items.push(
+      buildSectionHeader(
+        "recent",
+        translate("common:spotlightActions.recentlyUsed")
+      ),
+      ...namespaceSectionItems("recent", recentItems)
+    );
+  }
+
+  items.push(
     buildSectionHeader(
       "agent-session",
       translate("selectors.spotlight.groups.agentSession")
@@ -219,8 +234,8 @@ export function buildGroupedDefaultItems(
       "workspace",
       translate("selectors.spotlight.groups.workspace")
     ),
-    ...namespaceSectionItems("workspace", workspaceItems),
-  ];
+    ...namespaceSectionItems("workspace", workspaceItems)
+  );
 
   const quickNavigationGroupItems = [...quickNavigationItems, ...editorItems];
 

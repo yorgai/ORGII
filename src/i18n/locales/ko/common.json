@@ -1605,7 +1605,8 @@
     "openAgentStation": "Agent Station으로 이동",
     "openOpsControl": "Ops Control로 이동",
     "changeLanguage": "언어 변경",
-    "switchToSystemTheme": "시스템 테마 따르기"
+    "switchToSystemTheme": "시스템 테마 따르기",
+    "recentlyUsed": "최근 사용"
   },
   "commands": {
     "showBottomPanel": "하단 패널 표시",

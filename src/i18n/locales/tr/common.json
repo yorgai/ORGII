@@ -1606,7 +1606,8 @@
     "openAgentStation": "Agent Station'a git",
     "openOpsControl": "Ops Control'e git",
     "changeLanguage": "Dili değiştir",
-    "switchToSystemTheme": "Sistem temasını izle"
+    "switchToSystemTheme": "Sistem temasını izle",
+    "recentlyUsed": "Son kullanılanlar"
   },
   "commands": {
     "showBottomPanel": "Alt paneli göster",

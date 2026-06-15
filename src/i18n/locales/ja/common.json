@@ -1607,7 +1607,8 @@
     "openAgentStation": "Agent Station に移動",
     "openOpsControl": "Ops Control に移動",
     "changeLanguage": "言語を変更",
-    "switchToSystemTheme": "システムテーマに従う"
+    "switchToSystemTheme": "システムテーマに従う",
+    "recentlyUsed": "最近使用した項目"
   },
   "commands": {
     "showBottomPanel": "ボトムパネルを表示",

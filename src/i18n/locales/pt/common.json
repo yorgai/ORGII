@@ -1601,7 +1601,8 @@
     "openAgentStation": "Ir para Agent Station",
     "openOpsControl": "Ir para Ops Control",
     "changeLanguage": "Alterar idioma",
-    "switchToSystemTheme": "Seguir o tema do sistema"
+    "switchToSystemTheme": "Seguir o tema do sistema",
+    "recentlyUsed": "Usados recentemente"
   },
   "commands": {
     "showBottomPanel": "Mostrar painel inferior",

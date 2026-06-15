@@ -1619,7 +1619,8 @@
     "openAgentStation": "前往 Agent 工作站",
     "openOpsControl": "前往 Ops Control",
     "changeLanguage": "變更語言",
-    "switchToSystemTheme": "跟隨系統主題"
+    "switchToSystemTheme": "跟隨系統主題",
+    "recentlyUsed": "最近使用"
   },
   "commands": {
     "showBottomPanel": "顯示底部面板",

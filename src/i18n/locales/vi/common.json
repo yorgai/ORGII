@@ -1602,7 +1602,8 @@
     "openAgentStation": "Đi tới Agent Station",
     "openOpsControl": "Đi tới Ops Control",
     "changeLanguage": "Thay đổi ngôn ngữ",
-    "switchToSystemTheme": "Theo chủ đề hệ thống"
+    "switchToSystemTheme": "Theo chủ đề hệ thống",
+    "recentlyUsed": "Đã dùng gần đây"
   },
   "commands": {
     "showBottomPanel": "Hiện bảng dưới",
