@@ -1,7 +1,7 @@
 {
-  "name": "com.soyd.app",
+  "name": "orgii",
   "version": "1.0.1",
-  "description": "",
+  "description": "Self-evolving agentic development framework — ORGII desktop app",
   "main": "src/index.tsx",
   "scripts": {
     "prepare": "husky install",
@@ -47,8 +47,13 @@
     "check:unused-exports:all": "ts-unused-exports tsconfig.json",
     "check:e2e-oauth-guards": "node scripts/quality/check-e2e-oauth-guards.mjs"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "orgii",
+    "agent",
+    "tauri",
+    "desktop"
+  ],
+  "author": "YORG-AI",
   "license": "AGPL-3.0-or-later",
   "dependencies": {
     "@a2ui/react": "^0.10.0",
