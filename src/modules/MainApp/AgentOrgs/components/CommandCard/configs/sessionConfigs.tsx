@@ -12,6 +12,7 @@
  */
 import { Bot, Brain } from "lucide-react";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import InlineDropdown from "@src/components/InlineDropdown";
 
@@ -38,35 +39,38 @@ const MODEL_ICON = Brain as React.ComponentType<{
 
 /** Inner component so we can call hooks per render (reads live registries). */
 const WorkflowStepTemplate: React.FC<InlineTemplateProps> = (props) => {
+  const { t } = useTranslation("integrations");
   const agentOptions = useWorkflowAgentOptions();
   const modelOptions = useWorkflowModelOptions();
 
   return (
     <>
-      <span className="text-text-1">Run with</span>
+      <span className="text-text-1">{t("workflowActions.inline.runWith")}</span>
       <InlineDropdown
         value={props.getValue(2) as string}
         onChange={(val) => props.onChange(2, val)}
         options={agentOptions.map((opt) => ({ ...opt, icon: AGENT_ICON }))}
-        placeholder="agent"
+        placeholder={t("workflowActions.inline.agentPlaceholder")}
       />
-      <span className="text-text-1">using</span>
+      <span className="text-text-1">{t("workflowActions.inline.using")}</span>
       <InlineDropdown
         value={props.getValue(1) as string}
         onChange={(val) => props.onChange(1, val)}
         options={modelOptions.map((opt) => ({ ...opt, icon: MODEL_ICON }))}
-        placeholder="model"
+        placeholder={t("workflowActions.inline.modelPlaceholder")}
         showSearch
       />
-      <span className="text-text-1">retry max</span>
+      <span className="text-text-1">
+        {t("workflowActions.inline.retryMax")}
+      </span>
       <InlineNumberInput
         value={props.getValue(4) as number}
         onChange={(val) => props.onChange(4, val)}
         min={0}
         max={10}
       />
-      <span className="text-text-1">times</span>
-      <span className="text-text-1">timeout</span>
+      <span className="text-text-1">{t("workflowActions.inline.times")}</span>
+      <span className="text-text-1">{t("workflowActions.inline.timeout")}</span>
       <InlineNumberInput
         value={props.getValue(3) as number}
         onChange={(val) => props.onChange(3, val)}
@@ -105,22 +109,30 @@ export const stageMergeConfig = createWorkflowStepTemplate("merge");
 // ============================================
 
 // Stage transition
-export const stageTransitionConfig: InlineActionConfig = {
-  showInlineInHeader: true,
-  template: (props: InlineTemplateProps) => (
+const StageTransitionTemplate: React.FC<InlineTemplateProps> = (props) => {
+  const { t } = useTranslation("integrations");
+
+  return (
     <>
       <span className="whitespace-nowrap font-semibold text-text-1">
-        Transition to
+        {t("workflowActions.inline.transitionTo")}
       </span>
       <InlineDropdown
         value={props.getValue(1) as string}
         onChange={(val) => props.onChange(1, val)}
         options={SESSION_STAGE_OPTIONS}
-        placeholder="stage"
+        placeholder={t("workflowActions.inline.stagePlaceholder")}
       />
-      <span className="whitespace-nowrap text-text-1">stage</span>
+      <span className="whitespace-nowrap text-text-1">
+        {t("workflowActions.inline.stage")}
+      </span>
     </>
-  ),
+  );
+};
+
+export const stageTransitionConfig: InlineActionConfig = {
+  showInlineInHeader: true,
+  template: (props) => <StageTransitionTemplate {...props} />,
 };
 
 // Start session
@@ -129,35 +141,53 @@ export const startSessionConfig: InlineActionConfig = {
 };
 
 // Workflow config
-export const workflowConfigConfig: InlineActionConfig = {
-  template: (props: InlineTemplateProps) => (
+const WorkflowConfigTemplate: React.FC<InlineTemplateProps> = (props) => {
+  const { t } = useTranslation("integrations");
+
+  return (
     <>
-      <span className="text-text-1">Configure workflow: auto-approve</span>
+      <span className="text-text-1">
+        {t("workflowActions.inline.configureAutoApprove")}
+      </span>
       <InlineDropdown
         value={props.getValue(0) as string}
         onChange={(val) => props.onChange(0, val)}
         options={[
-          { label: "None (manual)", value: "none" },
-          { label: "Intake only", value: "intake" },
-          { label: "Intake + Spec", value: "intake-spec" },
-          { label: "All except Review", value: "all-except-review" },
-          { label: "All (automated)", value: "all" },
+          { label: t("workflowActions.inline.autoApproveNone"), value: "none" },
+          {
+            label: t("workflowActions.inline.autoApproveIntake"),
+            value: "intake",
+          },
+          {
+            label: t("workflowActions.inline.autoApproveIntakeSpec"),
+            value: "intake-spec",
+          },
+          {
+            label: t("workflowActions.inline.autoApproveExceptReview"),
+            value: "all-except-review",
+          },
+          { label: t("workflowActions.inline.autoApproveAll"), value: "all" },
         ]}
-        placeholder="stages"
+        placeholder={t("workflowActions.inline.stagesPlaceholder")}
       />
-      <span className="text-text-1">on failure</span>
+      <span className="text-text-1">
+        {t("workflowActions.inline.onFailure")}
+      </span>
       <InlineDropdown
         value={props.getValue(1) as string}
         onChange={(val) => props.onChange(1, val)}
         options={[
-          { label: "Pause", value: "pause" },
-          { label: "Retry", value: "retry" },
-          { label: "Rollback", value: "rollback" },
-          { label: "Skip", value: "skip" },
+          { label: t("workflowActions.inline.failurePause"), value: "pause" },
+          { label: t("workflowActions.inline.failureRetry"), value: "retry" },
+          {
+            label: t("workflowActions.inline.failureRollback"),
+            value: "rollback",
+          },
+          { label: t("workflowActions.inline.failureSkip"), value: "skip" },
         ]}
-        placeholder="action"
+        placeholder={t("workflowActions.inline.actionPlaceholder")}
       />
-      <span className="text-text-1">timeout</span>
+      <span className="text-text-1">{t("workflowActions.inline.timeout")}</span>
       <InlineNumberInput
         value={props.getValue(2) as number}
         onChange={(val) => props.onChange(2, val)}
@@ -165,5 +195,9 @@ export const workflowConfigConfig: InlineActionConfig = {
         unit="s"
       />
     </>
-  ),
+  );
+};
+
+export const workflowConfigConfig: InlineActionConfig = {
+  template: (props) => <WorkflowConfigTemplate {...props} />,
 };

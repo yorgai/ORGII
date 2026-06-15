@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
@@ -7,12 +8,14 @@ interface EmptyWorkflowStateProps {
 }
 
 export const EmptyWorkflowState: React.FC<EmptyWorkflowStateProps> = () => {
+  const { t } = useTranslation("integrations");
+
   return (
     <Placeholder
       variant="empty"
       placement="detail-panel"
-      title="No actions yet"
-      subtitle="Select an action from the panel to get started."
+      title={t("workflowActions.inline.emptyTitle")}
+      subtitle={t("workflowActions.inline.emptySubtitle")}
     />
   );
 };
