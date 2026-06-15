@@ -1607,7 +1607,9 @@
     "openAgentStation": "Agent Station に移動",
     "openOpsControl": "Ops Control に移動",
     "changeLanguage": "言語を変更",
-    "switchToSystemTheme": "システムテーマに従う"
+    "switchToSystemTheme": "システムテーマに従う",
+    "recentlyUsed": "最近使用した項目",
+    "detectUpdate": "アップデートを確認"
   },
   "commands": {
     "showBottomPanel": "ボトムパネルを表示",
@@ -2160,5 +2162,47 @@
     "downloadedOfTotal": "{{downloaded}} / {{total}}",
     "preparingDownload": "ダウンロードを準備中…",
     "downloadingAndInstalling": "アップデートをダウンロードしてインストール中 (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "返信を入力してください",
+    "sessionNotFound": "セッションが見つかりません",
+    "answerSubmitted": "回答を送信しました",
+    "answerFailed": "回答の送信に失敗しました。もう一度お試しください。",
+    "replyError": "返信の送信中にエラーが発生しました",
+    "questionIgnored": "質問を無視しました",
+    "addedAsContext": "{{name}} をコンテキストに追加しました",
+    "addedFilesAsContext": "{{count}} 個のファイルをコンテキストに追加しました",
+    "chooseAgentAssigneeAi": "AI で作成する前に担当エージェントを選択してください。",
+    "autoExecuteRequiresAgent": "自動実行には担当エージェントが必要です。",
+    "openSessionBeforeLinking": "作業項目をリンクする前にセッションを開いてください。",
+    "sessionLinkedToWorkItem": "セッションを作業項目にリンクしました。",
+    "sessionLinkFailed": "セッションのリンクに失敗しました：{{message}}",
+    "chooseFolderNewWorkspace": "ワークスペースを作成するフォルダーを選択",
+    "chooseExistingWorkspace": "既存のワークスペースを選択",
+    "selectDirectoryFailed": "ディレクトリの選択に失敗しました",
+    "workspaceCreated": "ワークスペースを作成しました",
+    "workspaceCreateFailed": "ワークスペースの作成に失敗しました",
+    "workspaceImported": "ワークスペースをインポートしました",
+    "workspaceImportFailed": "ワークスペースのインポートに失敗しました",
+    "chooseFolderCloneRepo": "リポジトリをクローンするフォルダーを選択",
+    "repositoryCloned": "リポジトリをクローンしました",
+    "repositoryCloneFailed": "リポジトリのクローンに失敗しました"
+  },
+  "previews": {
+    "noCanvasAvailable": "キャンバスがありません",
+    "canvas": "キャンバス",
+    "openInBrowser": "ブラウザーで開く",
+    "closeCanvas": "キャンバスを閉じる",
+    "generatingCanvas": "キャンバスを生成中…",
+    "noContent": "コンテンツがありません",
+    "noIssueSelected": "Issue が選択されていません",
+    "selectIssueHint": "サイドバーの Issues パネルから Issue を選択してください。",
+    "reload": "再読み込み",
+    "urlPreviewRequiresTauri": "URL プレビューには Tauri が必要です",
+    "openInExternalBrowser": "代わりに外部ブラウザーで開いてください",
+    "loadPresentationFailed": "プレゼンテーションの読み込みに失敗しました",
+    "slideNumber": "スライド {{index}}",
+    "noTextContent": "テキストコンテンツがありません",
+    "noSlidesFound": "スライドが見つかりません"
   }
 }

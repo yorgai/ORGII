@@ -1619,7 +1619,9 @@
     "openAgentStation": "前往 Agent 工作站",
     "openOpsControl": "前往 Ops Control",
     "changeLanguage": "變更語言",
-    "switchToSystemTheme": "跟隨系統主題"
+    "switchToSystemTheme": "跟隨系統主題",
+    "recentlyUsed": "最近使用",
+    "detectUpdate": "檢查更新"
   },
   "commands": {
     "showBottomPanel": "顯示底部面板",
@@ -2172,5 +2174,47 @@
     "downloadedOfTotal": "{{downloaded}} / {{total}}",
     "preparingDownload": "正在準備下載…",
     "downloadingAndInstalling": "正在下載並安裝更新 (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "回覆不能為空",
+    "sessionNotFound": "找不到 Session",
+    "answerSubmitted": "回答提交成功",
+    "answerFailed": "提交回答失敗，請重試。",
+    "replyError": "傳送回覆時發生錯誤",
+    "questionIgnored": "已忽略該問題",
+    "addedAsContext": "已將 {{name}} 加入為上下文",
+    "addedFilesAsContext": "已加入 {{count}} 個檔案作為上下文",
+    "chooseAgentAssigneeAi": "使用 AI 建立前請先選擇一個 Agent 負責人。",
+    "autoExecuteRequiresAgent": "自動執行需要指定一個 Agent 負責人。",
+    "openSessionBeforeLinking": "請先開啟一個 Session 再連結工作項。",
+    "sessionLinkedToWorkItem": "Session 已連結至工作項。",
+    "sessionLinkFailed": "連結 Session 失敗：{{message}}",
+    "chooseFolderNewWorkspace": "選擇用於建立工作區的資料夾",
+    "chooseExistingWorkspace": "選擇現有工作區",
+    "selectDirectoryFailed": "選擇目錄失敗",
+    "workspaceCreated": "工作區已建立",
+    "workspaceCreateFailed": "建立工作區失敗",
+    "workspaceImported": "工作區已匯入",
+    "workspaceImportFailed": "匯入工作區失敗",
+    "chooseFolderCloneRepo": "選擇用於複製儲存庫的資料夾",
+    "repositoryCloned": "儲存庫已複製",
+    "repositoryCloneFailed": "複製儲存庫失敗"
+  },
+  "previews": {
+    "noCanvasAvailable": "暫無畫布",
+    "canvas": "畫布",
+    "openInBrowser": "在瀏覽器中開啟",
+    "closeCanvas": "關閉畫布",
+    "generatingCanvas": "正在產生畫布…",
+    "noContent": "暫無內容",
+    "noIssueSelected": "未選擇 Issue",
+    "selectIssueHint": "請從側邊欄的 Issues 面板中選擇一個 Issue。",
+    "reload": "重新載入",
+    "urlPreviewRequiresTauri": "URL 預覽需要 Tauri",
+    "openInExternalBrowser": "請改用外部瀏覽器開啟",
+    "loadPresentationFailed": "載入簡報失敗",
+    "slideNumber": "第 {{index}} 張投影片",
+    "noTextContent": "暫無文字內容",
+    "noSlidesFound": "找不到投影片"
   }
 }

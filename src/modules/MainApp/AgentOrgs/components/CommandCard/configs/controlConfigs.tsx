@@ -4,6 +4,7 @@
  * Inline templates for control flow actions (wait, if, loop)
  */
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import InlineDropdown from "@src/components/InlineDropdown";
 
@@ -15,63 +16,75 @@ import type { InlineActionConfig, InlineTemplateProps } from "../types";
 // ============================================
 
 // Wait: "Wait for [5] [seconds]"
+const WaitTemplate: React.FC<InlineTemplateProps> = (props) => {
+  const { t } = useTranslation("integrations");
+
+  return (
+    <>
+      <span className="whitespace-nowrap font-semibold text-text-1">
+        {t("workflowActions.inline.waitFor")}
+      </span>
+      <InlineNumberInput
+        value={props.getValue(0) as number}
+        onChange={(val) => props.onChange(0, val)}
+        min={0}
+        unit={props.getUnit(0)}
+      />
+    </>
+  );
+};
+
 export const waitConfig: InlineActionConfig = {
   showInlineInHeader: true,
-  template: (props: InlineTemplateProps) =>
-    React.createElement(
-      React.Fragment,
-      null,
-      React.createElement(
-        "span",
-        { className: "text-text-1 whitespace-nowrap font-semibold" },
-        "Wait for"
-      ),
-      React.createElement(InlineNumberInput, {
-        value: props.getValue(0) as number,
-        onChange: (val) => props.onChange(0, val),
-        min: 0,
-        unit: props.getUnit(0),
-      })
-    ),
+  template: (props) => <WaitTemplate {...props} />,
 };
 
 // If (conditional)
+const IfTemplate: React.FC<InlineTemplateProps> = (props) => {
+  const { t } = useTranslation("integrations");
+  const condition = props.getValue(0) as string;
+  const needsValue = ["equals", "not-equals", "contains"].includes(condition);
+
+  return (
+    <>
+      <span className="whitespace-nowrap font-semibold text-text-1">
+        {t("workflowActions.inline.ifOutput")}
+      </span>
+      <InlineDropdown
+        value={condition}
+        onChange={(val) => props.onChange(0, val)}
+        options={[
+          { label: t("workflowActions.inline.condEquals"), value: "equals" },
+          {
+            label: t("workflowActions.inline.condNotEquals"),
+            value: "not-equals",
+          },
+          {
+            label: t("workflowActions.inline.condContains"),
+            value: "contains",
+          },
+          { label: t("workflowActions.inline.condIsEmpty"), value: "is-empty" },
+          {
+            label: t("workflowActions.inline.condIsNotEmpty"),
+            value: "is-not-empty",
+          },
+        ]}
+        placeholder={t("workflowActions.inline.conditionPlaceholder")}
+      />
+      {needsValue && (
+        <input
+          type="text"
+          value={(props.getValue(1) as string) || ""}
+          onChange={(e) => props.onChange(1, e.target.value)}
+          placeholder={t("workflowActions.inline.valuePlaceholder")}
+          className="min-w-[80px] rounded bg-bg-2 px-2 py-0.5 text-text-1 outline-none"
+        />
+      )}
+    </>
+  );
+};
+
 export const ifConfig: InlineActionConfig = {
   showInlineInHeader: true,
-  template: (props: InlineTemplateProps) => {
-    const condition = props.getValue(0) as string;
-    const needsValue = ["equals", "not-equals", "contains"].includes(condition);
-
-    return React.createElement(
-      React.Fragment,
-      null,
-      React.createElement(
-        "span",
-        { className: "text-text-1 whitespace-nowrap font-semibold" },
-        "If output"
-      ),
-      React.createElement(InlineDropdown, {
-        value: condition,
-        onChange: (val) => props.onChange(0, val),
-        options: [
-          { label: "equals", value: "equals" },
-          { label: "not equals", value: "not-equals" },
-          { label: "contains", value: "contains" },
-          { label: "is empty", value: "is-empty" },
-          { label: "is not empty", value: "is-not-empty" },
-        ],
-        placeholder: "condition",
-      }),
-      needsValue &&
-        React.createElement("input", {
-          type: "text",
-          value: (props.getValue(1) as string) || "",
-          onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-            props.onChange(1, e.target.value),
-          placeholder: "value",
-          className:
-            "rounded bg-bg-2 px-2 py-0.5 text-text-1 outline-none min-w-[80px]",
-        })
-    );
-  },
+  template: (props) => <IfTemplate {...props} />,
 };

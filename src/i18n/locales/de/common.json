@@ -1609,7 +1609,9 @@
     "openAgentStation": "Zu Agent Station wechseln",
     "openOpsControl": "Zu Ops Control wechseln",
     "changeLanguage": "Sprache ändern",
-    "switchToSystemTheme": "Systemdesign folgen"
+    "switchToSystemTheme": "Systemdesign folgen",
+    "recentlyUsed": "Zuletzt verwendet",
+    "detectUpdate": "Nach Updates suchen"
   },
   "commands": {
     "showBottomPanel": "Unteres Panel anzeigen",
@@ -2162,5 +2164,47 @@
     "downloadedOfTotal": "{{downloaded}} von {{total}}",
     "preparingDownload": "Download wird vorbereitet…",
     "downloadingAndInstalling": "Update wird heruntergeladen und installiert (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "Antwort darf nicht leer sein",
+    "sessionNotFound": "Sitzung nicht gefunden",
+    "answerSubmitted": "Antwort erfolgreich übermittelt",
+    "answerFailed": "Antwort konnte nicht übermittelt werden. Bitte erneut versuchen.",
+    "replyError": "Beim Senden der Antwort ist ein Fehler aufgetreten",
+    "questionIgnored": "Frage ignoriert",
+    "addedAsContext": "{{name}} als Kontext hinzugefügt",
+    "addedFilesAsContext": "{{count}} Datei(en) als Kontext hinzugefügt",
+    "chooseAgentAssigneeAi": "Wählen Sie einen zuständigen Agenten, bevor Sie mit KI erstellen.",
+    "autoExecuteRequiresAgent": "Die automatische Ausführung erfordert einen zuständigen Agenten.",
+    "openSessionBeforeLinking": "Öffnen Sie eine Sitzung, bevor Sie ein Arbeitselement verknüpfen.",
+    "sessionLinkedToWorkItem": "Sitzung mit Arbeitselement verknüpft.",
+    "sessionLinkFailed": "Sitzung konnte nicht verknüpft werden: {{message}}",
+    "chooseFolderNewWorkspace": "Ordner zum Erstellen des Arbeitsbereichs wählen",
+    "chooseExistingWorkspace": "Vorhandenen Arbeitsbereich wählen",
+    "selectDirectoryFailed": "Verzeichnis konnte nicht ausgewählt werden",
+    "workspaceCreated": "Arbeitsbereich erstellt",
+    "workspaceCreateFailed": "Arbeitsbereich konnte nicht erstellt werden",
+    "workspaceImported": "Arbeitsbereich importiert",
+    "workspaceImportFailed": "Arbeitsbereich konnte nicht importiert werden",
+    "chooseFolderCloneRepo": "Ordner zum Klonen des Repositorys wählen",
+    "repositoryCloned": "Repository geklont",
+    "repositoryCloneFailed": "Repository konnte nicht geklont werden"
+  },
+  "previews": {
+    "noCanvasAvailable": "Kein Canvas verfügbar",
+    "canvas": "Canvas",
+    "openInBrowser": "Im Browser öffnen",
+    "closeCanvas": "Canvas schließen",
+    "generatingCanvas": "Canvas wird generiert…",
+    "noContent": "Kein Inhalt",
+    "noIssueSelected": "Kein Issue ausgewählt",
+    "selectIssueHint": "Wählen Sie ein Issue im Issues-Bereich der Seitenleiste aus.",
+    "reload": "Neu laden",
+    "urlPreviewRequiresTauri": "URL-Vorschau erfordert Tauri",
+    "openInExternalBrowser": "Stattdessen im externen Browser öffnen",
+    "loadPresentationFailed": "Präsentation konnte nicht geladen werden",
+    "slideNumber": "Folie {{index}}",
+    "noTextContent": "Kein Textinhalt",
+    "noSlidesFound": "Keine Folien gefunden"
   }
 }

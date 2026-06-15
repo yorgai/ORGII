@@ -54,7 +54,7 @@ const LineConfig: React.FC<ChannelConfigProps> = ({
             update(`${pathPrefix}.channelAccessToken`, val)
           }
           style={SECTION_CONTROL_STYLE}
-          placeholder="Channel access token..."
+          placeholder={t("channels.lineTokenPlaceholder")}
         />
       </SectionRow>
       <SectionRow

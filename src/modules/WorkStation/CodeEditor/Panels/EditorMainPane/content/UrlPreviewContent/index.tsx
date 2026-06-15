@@ -9,6 +9,7 @@
  */
 import { ExternalLink, RefreshCw } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import { useInlineWebview } from "@src/hooks/platform/useInlineWebview";
@@ -30,6 +31,7 @@ function getNextLabel(): string {
 
 const UrlPreviewContent: React.FC<UrlPreviewContentProps> = memo(
   ({ url, title }) => {
+    const { t } = useTranslation();
     const containerRef = useRef<HTMLDivElement>(null);
     const isTauri = isTauriDesktop();
 
@@ -98,7 +100,7 @@ const UrlPreviewContent: React.FC<UrlPreviewContentProps> = memo(
               size="small"
               onClick={handleRefreshClick}
               icon={<RefreshCw size={14} className={spinClass} />}
-              title="Reload"
+              title={t("previews.reload")}
             />
           )}
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -112,7 +114,7 @@ const UrlPreviewContent: React.FC<UrlPreviewContentProps> = memo(
             size="small"
             onClick={handleOpenExternal}
             icon={<ExternalLink size={14} />}
-            title="Open in browser"
+            title={t("previews.openInBrowser")}
           />
         </div>
       ),
@@ -124,6 +126,7 @@ const UrlPreviewContent: React.FC<UrlPreviewContentProps> = memo(
         hostname,
         url,
         handleOpenExternal,
+        t,
       ]
     );
 
@@ -137,8 +140,8 @@ const UrlPreviewContent: React.FC<UrlPreviewContentProps> = memo(
             <Placeholder
               variant="empty"
               placement="detail-panel"
-              title="URL Preview requires Tauri"
-              subtitle="Open in external browser instead"
+              title={t("previews.urlPreviewRequiresTauri")}
+              subtitle={t("previews.openInExternalBrowser")}
               fillParentHeight
             />
           </div>

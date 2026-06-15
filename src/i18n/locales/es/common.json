@@ -1601,7 +1601,9 @@
     "openAgentStation": "Ir a Agent Station",
     "openOpsControl": "Ir a Ops Control",
     "changeLanguage": "Cambiar idioma",
-    "switchToSystemTheme": "Seguir el tema del sistema"
+    "switchToSystemTheme": "Seguir el tema del sistema",
+    "recentlyUsed": "Usados recientemente",
+    "detectUpdate": "Buscar actualizaciones"
   },
   "commands": {
     "showBottomPanel": "Mostrar panel inferior",
@@ -2154,5 +2156,47 @@
     "downloadedOfTotal": "{{downloaded}} de {{total}}",
     "preparingDownload": "Preparando descarga…",
     "downloadingAndInstalling": "Descargando e instalando actualización (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "La respuesta no puede estar vacía",
+    "sessionNotFound": "Sesión no encontrada",
+    "answerSubmitted": "Respuesta enviada correctamente",
+    "answerFailed": "No se pudo enviar la respuesta. Inténtalo de nuevo.",
+    "replyError": "Se produjo un error al enviar la respuesta",
+    "questionIgnored": "Pregunta ignorada",
+    "addedAsContext": "{{name}} añadido como contexto",
+    "addedFilesAsContext": "{{count}} archivo(s) añadido(s) como contexto",
+    "chooseAgentAssigneeAi": "Elige un agente responsable antes de crear con IA.",
+    "autoExecuteRequiresAgent": "La ejecución automática requiere un agente responsable.",
+    "openSessionBeforeLinking": "Abre una sesión antes de vincular un elemento de trabajo.",
+    "sessionLinkedToWorkItem": "Sesión vinculada al elemento de trabajo.",
+    "sessionLinkFailed": "No se pudo vincular la sesión: {{message}}",
+    "chooseFolderNewWorkspace": "Elegir carpeta para crear el espacio de trabajo",
+    "chooseExistingWorkspace": "Elegir un espacio de trabajo existente",
+    "selectDirectoryFailed": "No se pudo seleccionar el directorio",
+    "workspaceCreated": "Espacio de trabajo creado",
+    "workspaceCreateFailed": "No se pudo crear el espacio de trabajo",
+    "workspaceImported": "Espacio de trabajo importado",
+    "workspaceImportFailed": "No se pudo importar el espacio de trabajo",
+    "chooseFolderCloneRepo": "Elegir carpeta para clonar el repositorio",
+    "repositoryCloned": "Repositorio clonado",
+    "repositoryCloneFailed": "No se pudo clonar el repositorio"
+  },
+  "previews": {
+    "noCanvasAvailable": "No hay lienzo disponible",
+    "canvas": "Lienzo",
+    "openInBrowser": "Abrir en el navegador",
+    "closeCanvas": "Cerrar lienzo",
+    "generatingCanvas": "Generando lienzo…",
+    "noContent": "Sin contenido",
+    "noIssueSelected": "Ningún issue seleccionado",
+    "selectIssueHint": "Selecciona un issue en el panel Issues de la barra lateral.",
+    "reload": "Recargar",
+    "urlPreviewRequiresTauri": "La vista previa de URL requiere Tauri",
+    "openInExternalBrowser": "Ábrelo en un navegador externo",
+    "loadPresentationFailed": "Error al cargar la presentación",
+    "slideNumber": "Diapositiva {{index}}",
+    "noTextContent": "Sin contenido de texto",
+    "noSlidesFound": "No se encontraron diapositivas"
   }
 }

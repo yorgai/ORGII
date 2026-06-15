@@ -31,14 +31,14 @@ pub(super) fn tool_status_preview_from_args(tool_name: &str, args: &Value) -> St
                 .and_then(|value| value.as_str())
                 .unwrap_or("");
             if !command.is_empty() {
-                command.chars().take(60).collect()
+                crate::utils::safe_truncate_chars_to_string(&command, 60)
             } else {
                 other.to_string()
             }
         }
     };
 
-    raw.chars().take(80).collect()
+    crate::utils::safe_truncate_chars_to_string(&raw, 80)
 }
 
 /// Structured decision from a PreToolUse hook's stdout.

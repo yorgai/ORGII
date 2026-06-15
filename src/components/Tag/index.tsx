@@ -35,6 +35,10 @@
 import { X } from "lucide-react";
 import React, { useState } from "react";
 
+import {
+  createKeyboardActivationHandler,
+  getInteractiveTabIndex,
+} from "@src/util/dom/keyboardActivation";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import "./index.scss";
@@ -171,17 +175,24 @@ const Tag: React.FC<TagProps> = ({
     "processing",
   ].includes(color);
 
-  const handleClose = (e: React.MouseEvent) => {
-    e.stopPropagation();
-
+  const dismissTag = () => {
     if (controlledVisible === undefined) {
       setInternalVisible(false);
     }
+  };
 
+  const handleClose = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    dismissTag();
     onClose?.(e);
   };
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleCloseKeyboard = () => {
+    dismissTag();
+    onClose?.({ stopPropagation: () => undefined } as React.MouseEvent);
+  };
+
+  const activateTag = () => {
     if (checkable) {
       const newChecked = !checked;
       if (controlledChecked === undefined) {
@@ -189,12 +200,18 @@ const Tag: React.FC<TagProps> = ({
       }
       onCheck?.(newChecked);
     }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    activateTag();
     onClick?.(e);
   };
 
   if (!visible) {
     return null;
   }
+
+  const isInteractive = Boolean(onClick || checkable);
 
   const tagClasses = [
     "tag",
@@ -220,11 +237,42 @@ const Tag: React.FC<TagProps> = ({
     }),
   };
 
-  return (
-    <span className={tagClasses} style={tagStyle} onClick={handleClick}>
+  const tagBody = (
+    <>
       {icon && <span className="tag-icon">{icon}</span>}
       <span className="tag-content">{children}</span>
-      {closable && <X className="tag-close" size={14} onClick={handleClose} />}
+    </>
+  );
+
+  return (
+    <span className={tagClasses} style={tagStyle}>
+      {isInteractive ? (
+        <span
+          className="tag-body"
+          role="button"
+          tabIndex={getInteractiveTabIndex(false)}
+          onClick={handleClick}
+          onKeyDown={createKeyboardActivationHandler(() => {
+            activateTag();
+          })}
+        >
+          {tagBody}
+        </span>
+      ) : (
+        tagBody
+      )}
+      {closable && (
+        <span
+          className="tag-close"
+          role="button"
+          tabIndex={getInteractiveTabIndex(false)}
+          aria-label="Close"
+          onClick={handleClose}
+          onKeyDown={createKeyboardActivationHandler(handleCloseKeyboard)}
+        >
+          <X size={14} />
+        </span>
+      )}
     </span>
   );
 };

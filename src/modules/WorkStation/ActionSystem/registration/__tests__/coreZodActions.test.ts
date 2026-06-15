@@ -17,6 +17,7 @@ import {
 import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
 import {
   AGENT_SESSION_ACTIONS,
+  APP_ACTIONS,
   EDITOR_ACTIONS,
   QUICK_NAVIGATION_ACTIONS,
   STATION_MODE_ACTIONS,
@@ -64,6 +65,7 @@ function getRepresentativeSpotlightActionIds(): Set<string> {
     }).map((action) => action.actionId),
     ...STATION_MODE_ACTIONS.map((action) => action.actionId),
     ...QUICK_NAVIGATION_ACTIONS.map((action) => action.actionId),
+    ...APP_ACTIONS.map((action) => action.actionId),
     ...buildViewActions(true, true, true, true, true, true, true, true).map(
       (action) => action.actionId
     ),
@@ -133,6 +135,7 @@ describe("collectAppZodActions", () => {
     expect(ids.has(ACTION_ID.SIDEBAR_TOGGLE)).toBe(true);
     expect(ids.has(ACTION_ID.SPOTLIGHT_OPEN)).toBe(true);
     expect(ids.has(ACTION_ID.APP_ZOOM_IN)).toBe(true);
+    expect(ids.has(ACTION_ID.APP_CHECK_FOR_UPDATES)).toBe(true);
     expect(ids.has(ACTION_ID.SETTINGS_SET_LANGUAGE)).toBe(true);
   });
 });

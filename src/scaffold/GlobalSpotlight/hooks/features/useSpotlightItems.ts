@@ -25,6 +25,7 @@ import {
 } from "@src/store/ui/chatPanelAtom";
 import { languageAtom } from "@src/store/ui/languageAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
+import { spotlightRecentActionsAtom } from "@src/store/ui/spotlightRecentActionsAtom";
 import { globalThemeIdAtom } from "@src/store/ui/uiAtom";
 import {
   sessionChatPositionAtom,
@@ -51,8 +52,10 @@ import type {
 } from "../../types";
 import { useSpotlightState } from "../core";
 import type { UseSpotlightItemsReturn } from "../core/types";
+import { resolveRecentDefinitions } from "./recentSpotlightActions";
 import {
   AGENT_SESSION_ACTIONS,
+  APP_ACTIONS,
   QUICK_NAVIGATION_ACTIONS,
   STATION_MODE_ACTIONS,
   type SpotlightEditorActionId,
@@ -138,6 +141,7 @@ export function useSpotlightItems(
   const workstationSidebarPosition = useAtomValue(workStationLayoutModeAtom);
   const dockAutoHide = useAtomValue(workStationDockAutoHideAtom);
   const currentLanguage = useAtomValue(languageAtom);
+  const recentActionIds = useAtomValue(spotlightRecentActionsAtom);
   const { t } = useTranslation();
   const translate: Translator = t;
 
@@ -204,6 +208,7 @@ export function useSpotlightItems(
           ...chatPanelSettingsActions,
           ...quickNavigationActions,
           ...viewActions,
+          ...APP_ACTIONS,
         ],
         onSelectAction,
         onSelectStaticAction,
@@ -274,7 +279,12 @@ export function useSpotlightItems(
       ? buildEditorActionItems(onSelectEditorAction, translate)
       : [];
     const viewItems = buildStaticActionItems(
-      [...themeActions, ...chatPanelSettingsActions, ...viewActions],
+      [
+        ...themeActions,
+        ...chatPanelSettingsActions,
+        ...viewActions,
+        ...APP_ACTIONS,
+      ],
       onSelectStaticAction,
       translate
     );
@@ -284,7 +294,26 @@ export function useSpotlightItems(
       buildNavDestinationItem(destination, onSelectPath, translate)
     );
 
+    // Recently used: resolve persisted ids back to whichever static command
+    // definitions are currently available (state-dependent toggles like theme
+    // or chat-panel actions only exist when applicable). Unknown ids are
+    // dropped so stale entries never render.
+    const recentItems = buildStaticActionItems(
+      resolveRecentDefinitions(recentActionIds, [
+        ...AGENT_SESSION_ACTIONS,
+        ...WORKSPACE_ACTIONS,
+        ...themeActions,
+        ...chatPanelSettingsActions,
+        ...quickNavigationActions,
+        ...viewActions,
+        ...APP_ACTIONS,
+      ]),
+      onSelectStaticAction,
+      translate
+    );
+
     return buildGroupedDefaultItems(
+      recentItems,
       agentSessionItems,
       workspaceItems,
       quickNavigationItems,
@@ -314,6 +343,7 @@ export function useSpotlightItems(
     workstationSidebarPosition,
     dockAutoHide,
     currentLanguage,
+    recentActionIds,
     isEditorRoute,
     isWorkStationRoute,
     filteredRepos,

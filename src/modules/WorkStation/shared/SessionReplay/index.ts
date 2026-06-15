@@ -30,3 +30,21 @@ export {
   mergeNewestFirstByTimestamp,
   type TimestampedReplayTab,
 } from "./replayTabHelpers";
+
+export {
+  buildSimulatorReplayPrimarySidebarConfig,
+  resolveReplayShellLayoutMode,
+  type ReplayShellLayoutMode,
+  type SimulatorReplaySidebarState,
+} from "./replayShellHelpers";
+
+export { useReplayShell, type UseReplayShellResult } from "./useReplayShell";
+export type { UseReplayShellOptions } from "./useReplayShell";
+
+export {
+  ReplayShellLayout,
+  ReplayShellPlaceholder,
+  type ReplayShellLayoutProps,
+  type ReplayShellPlaceholderProps,
+  type ReplayShellWorkstationConfig,
+} from "./ReplayShellLayout";

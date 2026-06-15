@@ -1,7 +1,7 @@
 /**
  * WorkspaceService
  *
- * Handles .soyd-workspace file import/export:
+ * Handles .orgii-workspace file import/export:
  * - Save/load workspace configurations to/from files
  * - "Save Workspace As..." to user-chosen location
  * - Recent workspace tracking (localStorage)
@@ -17,7 +17,9 @@ import { WORKSPACE_FILE_EXTENSION } from "@src/types/workspace";
 
 const log = createLogger("WorkspaceService");
 
-const RECENT_WORKSPACES_KEY = "soyd_recent_workspaces";
+const LEGACY_RECENT_WORKSPACES_KEY = "soyd_recent_workspaces";
+const RECENT_WORKSPACES_KEY = "orgii_recent_workspaces";
+const RECENT_WORKSPACES_CHANGED_EVENT = "orgii:recent-workspaces-changed";
 const AUTO_WORKSPACE_FILE_NAME = "last-workspace.orgii-workspace";
 const MAX_RECENT_WORKSPACES = 7;
 
@@ -76,7 +78,7 @@ export async function saveWorkspaceAs(
   const filePath = await save({
     filters: [
       {
-        name: "SOYD Workspace",
+        name: "ORGII Workspace",
         extensions: [WORKSPACE_FILE_EXTENSION.replace(".", "")],
       },
     ],
@@ -109,7 +111,7 @@ export async function openWorkspaceFile(): Promise<{
   const filePath = await open({
     filters: [
       {
-        name: "SOYD Workspace",
+        name: "ORGII Workspace",
         extensions: [WORKSPACE_FILE_EXTENSION.replace(".", "")],
       },
     ],
@@ -125,9 +127,21 @@ export async function openWorkspaceFile(): Promise<{
 // Recent Workspaces (top-N persisted to localStorage)
 // ============================================
 
+function migrateLegacyRecentWorkspaces(): string | null {
+  const legacy = localStorage.getItem(LEGACY_RECENT_WORKSPACES_KEY);
+  if (!legacy) return null;
+
+  localStorage.setItem(RECENT_WORKSPACES_KEY, legacy);
+  localStorage.removeItem(LEGACY_RECENT_WORKSPACES_KEY);
+  return legacy;
+}
+
 function readRecentWorkspaces(): RecentWorkspace[] {
   try {
-    const stored = localStorage.getItem(RECENT_WORKSPACES_KEY);
+    let stored = localStorage.getItem(RECENT_WORKSPACES_KEY);
+    if (!stored) {
+      stored = migrateLegacyRecentWorkspaces();
+    }
     if (!stored) return [];
     const parsed = JSON.parse(stored) as RecentWorkspace[];
     if (!Array.isArray(parsed)) return [];
@@ -150,6 +164,18 @@ function writeRecentWorkspaces(entries: RecentWorkspace[]): void {
   }
 }
 
+function workspaceDisplayNameFromPath(filePath: string): string {
+  const filename = filePath.split("/").pop() ?? filePath;
+  if (filename.endsWith(WORKSPACE_FILE_EXTENSION)) {
+    return filename.slice(0, -WORKSPACE_FILE_EXTENSION.length);
+  }
+  return filename;
+}
+
+function notifyRecentWorkspacesChanged(): void {
+  window.dispatchEvent(new CustomEvent(RECENT_WORKSPACES_CHANGED_EVENT));
+}
+
 /**
  * Record that a workspace file was opened. Bumps it to the top of the
  * recent list and trims to MAX_RECENT_WORKSPACES.
@@ -158,11 +184,9 @@ export function recordRecentWorkspace(
   filePath: string,
   folders: WorkspaceFolder[]
 ): void {
-  const filename = filePath.split("/").pop() ?? filePath;
-  const name = filename.replace(/\.soyd-workspace$/, "");
   const entry: RecentWorkspace = {
     path: filePath,
-    name,
+    name: workspaceDisplayNameFromPath(filePath),
     folderCount: folders.length,
     lastOpened: Date.now(),
   };
@@ -171,13 +195,13 @@ export function recordRecentWorkspace(
   );
   const updated = [entry, ...existing].slice(0, MAX_RECENT_WORKSPACES);
   writeRecentWorkspaces(updated);
-  window.dispatchEvent(new CustomEvent("soyd:recent-workspaces-changed"));
+  notifyRecentWorkspacesChanged();
 }
 
 /**
  * List recent workspace files (most-recent-first). Cheap synchronous read
- * from localStorage; consumers that want fresh data should call this on
- * the soyd:recent-workspaces-changed event.
+ * from localStorage; consumers that want fresh data should listen for
+ * orgii:recent-workspaces-changed.
  */
 export function listRecentWorkspaces(): RecentWorkspace[] {
   return readRecentWorkspaces();
@@ -192,7 +216,7 @@ export function removeRecentWorkspace(filePath: string): void {
     (entry) => entry.path !== filePath
   );
   writeRecentWorkspaces(remaining);
-  window.dispatchEvent(new CustomEvent("soyd:recent-workspaces-changed"));
+  notifyRecentWorkspacesChanged();
 }
 
 /**

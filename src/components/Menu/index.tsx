@@ -31,6 +31,11 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import React, { createContext, useCallback, useContext, useState } from "react";
 
+import {
+  createKeyboardActivationHandler,
+  getInteractiveTabIndex,
+} from "@src/util/dom/keyboardActivation";
+
 import "./index.scss";
 
 // Menu context for managing state
@@ -201,7 +206,15 @@ const MenuItem: React.FC<MenuItemProps> = ({
     .join(" ");
 
   return (
-    <div className={itemClasses} style={style} onClick={handleClick}>
+    <div
+      className={itemClasses}
+      style={style}
+      role="menuitem"
+      tabIndex={getInteractiveTabIndex(disabled)}
+      aria-disabled={disabled}
+      onClick={handleClick}
+      onKeyDown={createKeyboardActivationHandler(handleClick)}
+    >
       {children}
     </div>
   );
@@ -236,7 +249,15 @@ const SubMenu: React.FC<SubMenuProps> = ({
 
   return (
     <div className={subMenuClasses} style={style}>
-      <div className="menu-submenu-title" onClick={handleToggle}>
+      <div
+        className="menu-submenu-title"
+        role="menuitem"
+        tabIndex={getInteractiveTabIndex(disabled)}
+        aria-disabled={disabled}
+        aria-expanded={isOpen}
+        onClick={handleToggle}
+        onKeyDown={createKeyboardActivationHandler(handleToggle)}
+      >
         <span>{title}</span>
         {isOpen ? (
           <ChevronDown size={16} className="menu-submenu-arrow" />
@@ -314,7 +335,7 @@ const Menu: React.FC<MenuProps> & {
 
   return (
     <MenuContext.Provider value={contextValue}>
-      <div className={menuClasses} style={style}>
+      <div className={menuClasses} style={style} role="menu">
         {children}
       </div>
     </MenuContext.Provider>

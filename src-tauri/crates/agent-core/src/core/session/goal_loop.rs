@@ -132,7 +132,7 @@ pub fn on_user_message(session_id: &str, content: &str) {
     }
     save_state(&GoalState {
         session_id: session_id.to_string(),
-        goal_text: trimmed.chars().take(8_000).collect(),
+        goal_text: crate::utils::safe_truncate_chars_to_string(&trimmed, 8_000),
         turns_used: 0,
         status: "active".to_string(),
     });

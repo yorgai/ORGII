@@ -1601,7 +1601,9 @@
     "openAgentStation": "Ir para Agent Station",
     "openOpsControl": "Ir para Ops Control",
     "changeLanguage": "Alterar idioma",
-    "switchToSystemTheme": "Seguir o tema do sistema"
+    "switchToSystemTheme": "Seguir o tema do sistema",
+    "recentlyUsed": "Usados recentemente",
+    "detectUpdate": "Procurar atualizações"
   },
   "commands": {
     "showBottomPanel": "Mostrar painel inferior",
@@ -2154,5 +2156,47 @@
     "downloadedOfTotal": "{{downloaded}} de {{total}}",
     "preparingDownload": "Preparando download…",
     "downloadingAndInstalling": "Baixando e instalando atualização (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "A resposta não pode estar vazia",
+    "sessionNotFound": "Sessão não encontrada",
+    "answerSubmitted": "Resposta enviada com sucesso",
+    "answerFailed": "Falha ao enviar a resposta. Tente novamente.",
+    "replyError": "Ocorreu um erro ao enviar a resposta",
+    "questionIgnored": "Pergunta ignorada",
+    "addedAsContext": "{{name}} adicionado como contexto",
+    "addedFilesAsContext": "{{count}} arquivo(s) adicionado(s) como contexto",
+    "chooseAgentAssigneeAi": "Escolha um agente responsável antes de criar com IA.",
+    "autoExecuteRequiresAgent": "A execução automática requer um agente responsável.",
+    "openSessionBeforeLinking": "Abra uma sessão antes de vincular um item de trabalho.",
+    "sessionLinkedToWorkItem": "Sessão vinculada ao item de trabalho.",
+    "sessionLinkFailed": "Falha ao vincular a sessão: {{message}}",
+    "chooseFolderNewWorkspace": "Escolher pasta para criar a área de trabalho",
+    "chooseExistingWorkspace": "Escolher uma área de trabalho existente",
+    "selectDirectoryFailed": "Falha ao selecionar o diretório",
+    "workspaceCreated": "Área de trabalho criada",
+    "workspaceCreateFailed": "Falha ao criar a área de trabalho",
+    "workspaceImported": "Área de trabalho importada",
+    "workspaceImportFailed": "Falha ao importar a área de trabalho",
+    "chooseFolderCloneRepo": "Escolher pasta para clonar o repositório",
+    "repositoryCloned": "Repositório clonado",
+    "repositoryCloneFailed": "Falha ao clonar o repositório"
+  },
+  "previews": {
+    "noCanvasAvailable": "Nenhum canvas disponível",
+    "canvas": "Canvas",
+    "openInBrowser": "Abrir no navegador",
+    "closeCanvas": "Fechar canvas",
+    "generatingCanvas": "Gerando canvas…",
+    "noContent": "Sem conteúdo",
+    "noIssueSelected": "Nenhum issue selecionado",
+    "selectIssueHint": "Selecione um issue no painel Issues da barra lateral.",
+    "reload": "Recarregar",
+    "urlPreviewRequiresTauri": "A visualização de URL requer Tauri",
+    "openInExternalBrowser": "Abra em um navegador externo",
+    "loadPresentationFailed": "Falha ao carregar a apresentação",
+    "slideNumber": "Slide {{index}}",
+    "noTextContent": "Sem conteúdo de texto",
+    "noSlidesFound": "Nenhum slide encontrado"
   }
 }

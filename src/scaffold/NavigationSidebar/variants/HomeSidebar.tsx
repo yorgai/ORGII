@@ -57,7 +57,7 @@ const MARKET_ROOT_PATH = ROUTES.app.market.tokenMarket.path.slice(
   ROUTES.app.market.tokenMarket.path.lastIndexOf("/")
 );
 
-const ORGII_GITHUB_URL = "https://github.com/yorg-ai/orgii";
+const ORGII_GITHUB_URL = "https://github.com/YORG-AI/ORGII";
 const GITHUB_MENU_ITEM_KEY = "external-github";
 
 // ============================================

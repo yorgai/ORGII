@@ -903,7 +903,16 @@
     "diskCategory_screenshots": "Browser Screenshots",
     "diskCategory_agentWorktrees": "Agent Session Worktrees",
     "diskCategory_lspBin": "LSP Server Binaries",
-    "loadZeroRows": "Click to load {{count}} more"
+    "loadZeroRows": "Click to load {{count}} more",
+    "categoryTerminal": "Terminal/tool process",
+    "categoryWebview": "WebView renderer",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit networking",
+    "categoryOther": "Helper process",
+    "breakdownBackendRss": "Backend process RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView helpers",
+    "breakdownToolHelpers": "Terminal & tool helpers",
+    "breakdownFileCache": "Backend file cache"
   },
   "dependencies": {
     "systemDependencies": "System Dependencies",
@@ -1281,5 +1290,14 @@
     "searchActions": "Search actions...",
     "noActionsFound": "No actions found",
     "noConfigurableProperties": "No configurable properties"
+  },
+  "toasts": {
+    "loginFailed": "Login failed. Please try again.",
+    "signedOut": "Signed out successfully",
+    "logoutFailed": "Logout failed. Please try again.",
+    "customCommandUpdated": "Custom command updated",
+    "shellSettingUpdated": "Shell setting updated",
+    "idesDetected": "Detected {{count}} IDE(s)",
+    "ideDetectFailed": "Unable to detect IDEs. Please ensure your IDE is installed and try again."
   }
 }

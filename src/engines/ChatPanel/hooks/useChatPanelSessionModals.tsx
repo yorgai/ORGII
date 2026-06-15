@@ -38,12 +38,12 @@ export function useChatPanelSessionModals({
 
   const handleOpenLinkWorkItem = useCallback(() => {
     if (!currentSessionId) {
-      Message.warning("Open a session before linking a Work Item.");
+      Message.warning(t("common:toasts.openSessionBeforeLinking"));
       return;
     }
     setLinkWorkItemModalOpen(true);
     closeHeaderActionsMenu();
-  }, [closeHeaderActionsMenu, currentSessionId]);
+  }, [closeHeaderActionsMenu, currentSessionId, t]);
 
   const handleCloseLinkWorkItem = useCallback(() => {
     setLinkWorkItemModalOpen(false);

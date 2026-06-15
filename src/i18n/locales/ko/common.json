@@ -1605,7 +1605,9 @@
     "openAgentStation": "Agent Station으로 이동",
     "openOpsControl": "Ops Control로 이동",
     "changeLanguage": "언어 변경",
-    "switchToSystemTheme": "시스템 테마 따르기"
+    "switchToSystemTheme": "시스템 테마 따르기",
+    "recentlyUsed": "최근 사용",
+    "detectUpdate": "업데이트 확인"
   },
   "commands": {
     "showBottomPanel": "하단 패널 표시",
@@ -2158,5 +2160,47 @@
     "downloadedOfTotal": "{{downloaded}} / {{total}}",
     "preparingDownload": "다운로드 준비 중…",
     "downloadingAndInstalling": "업데이트 다운로드 및 설치 중 (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "답장을 입력하세요",
+    "sessionNotFound": "세션을 찾을 수 없습니다",
+    "answerSubmitted": "답변을 제출했습니다",
+    "answerFailed": "답변 제출에 실패했습니다. 다시 시도하세요.",
+    "replyError": "답장을 보내는 중 오류가 발생했습니다",
+    "questionIgnored": "질문을 무시했습니다",
+    "addedAsContext": "{{name}}을(를) 컨텍스트로 추가했습니다",
+    "addedFilesAsContext": "{{count}}개의 파일을 컨텍스트로 추가했습니다",
+    "chooseAgentAssigneeAi": "AI로 생성하기 전에 담당 에이전트를 선택하세요.",
+    "autoExecuteRequiresAgent": "자동 실행에는 담당 에이전트가 필요합니다.",
+    "openSessionBeforeLinking": "작업 항목을 연결하기 전에 세션을 여세요.",
+    "sessionLinkedToWorkItem": "세션을 작업 항목에 연결했습니다.",
+    "sessionLinkFailed": "세션 연결에 실패했습니다: {{message}}",
+    "chooseFolderNewWorkspace": "작업 공간을 만들 폴더 선택",
+    "chooseExistingWorkspace": "기존 작업 공간 선택",
+    "selectDirectoryFailed": "디렉터리 선택에 실패했습니다",
+    "workspaceCreated": "작업 공간을 만들었습니다",
+    "workspaceCreateFailed": "작업 공간 생성에 실패했습니다",
+    "workspaceImported": "작업 공간을 가져왔습니다",
+    "workspaceImportFailed": "작업 공간 가져오기에 실패했습니다",
+    "chooseFolderCloneRepo": "리포지토리를 클론할 폴더 선택",
+    "repositoryCloned": "리포지토리를 클론했습니다",
+    "repositoryCloneFailed": "리포지토리 클론에 실패했습니다"
+  },
+  "previews": {
+    "noCanvasAvailable": "사용 가능한 캔버스가 없습니다",
+    "canvas": "캔버스",
+    "openInBrowser": "브라우저에서 열기",
+    "closeCanvas": "캔버스 닫기",
+    "generatingCanvas": "캔버스 생성 중…",
+    "noContent": "콘텐츠 없음",
+    "noIssueSelected": "선택된 이슈 없음",
+    "selectIssueHint": "사이드바의 Issues 패널에서 이슈를 선택하세요.",
+    "reload": "새로 고침",
+    "urlPreviewRequiresTauri": "URL 미리보기에는 Tauri가 필요합니다",
+    "openInExternalBrowser": "대신 외부 브라우저에서 여세요",
+    "loadPresentationFailed": "프레젠테이션을 불러오지 못했습니다",
+    "slideNumber": "슬라이드 {{index}}",
+    "noTextContent": "텍스트 콘텐츠 없음",
+    "noSlidesFound": "슬라이드를 찾을 수 없습니다"
   }
 }

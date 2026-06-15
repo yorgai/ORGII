@@ -113,7 +113,9 @@ const AgentMessageBlock: React.FC<AgentMessageBlockProps> = ({
 
   if (!clampEligible) {
     return (
-      <div className="w-full min-w-0 overflow-hidden px-2 py-1">{children}</div>
+      <div className="w-full min-w-0 overflow-hidden px-2 py-0.5">
+        {children}
+      </div>
     );
   }
 
@@ -124,7 +126,7 @@ const AgentMessageBlock: React.FC<AgentMessageBlockProps> = ({
   // the simulator is visible side-by-side.
   const showLocateArrow = Boolean(eventId);
   return (
-    <div className="w-full min-w-0 overflow-hidden px-2 py-1">
+    <div className="w-full min-w-0 overflow-hidden px-2 py-0.5">
       <div
         ref={viewportRef}
         className="group/expand relative scrollbar-hide"

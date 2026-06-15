@@ -4,7 +4,7 @@
  * Orchestrates all spotlight functionality with the new reducer architecture.
  * This is the single hook that components use to access all spotlight features.
  */
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   type ComponentType,
   useCallback,
@@ -22,6 +22,7 @@ import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 import { showScaleMessage } from "@src/hooks/navigation/useGlobalShortcuts/types";
 import { useFilteredItems } from "@src/hooks/search";
 import type { LanguagePreference } from "@src/i18n";
+import { checkForUpdatesManually } from "@src/scaffold/AppUpdater";
 import {
   openAgentControlSpotlight,
   openSessionCreatorSpotlight,
@@ -31,6 +32,7 @@ import { PanelService } from "@src/services/panel";
 import { WorkStationViewService } from "@src/services/workStation";
 import { currentRepoAtom } from "@src/store/repo/derived";
 import { REPO_KIND } from "@src/store/repo/types";
+import { spotlightRecentActionsAtom } from "@src/store/ui/spotlightRecentActionsAtom";
 import { UI_SCALE_CONFIG, uiScaleAtom } from "@src/store/ui/uiAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 import { showInFinder } from "@src/util/platform/ipcRenderer";
@@ -45,6 +47,7 @@ import type {
 import { useSpotlightDispatch, useSpotlightState } from "./core";
 import { useBranches, useSharedRepoList } from "./data";
 import { useConfirmationPage, useSpotlightItems } from "./features";
+import { addRecentActionId } from "./features/recentSpotlightActions";
 import type {
   SpotlightEditorActionId,
   SpotlightStaticActionDefinition,
@@ -94,6 +97,7 @@ export function useSpotlight(
   const { navigateTo } = useAppNavigation();
   const actionSystem = useActionSystemOptional();
   const dispatch = useSpotlightDispatch();
+  const setRecentActionIds = useSetAtom(spotlightRecentActionsAtom);
 
   // Shared repo list is only needed for action flows that ask the user to
   // choose a repo. The default Spotlight view no longer renders the repo list;
@@ -240,6 +244,9 @@ export function useSpotlight(
         "open-terminal-tab": () => {
           void WorkStationViewService.openTerminalTab();
         },
+        "detect-update": () => {
+          checkForUpdatesManually();
+        },
       };
 
       fallbackHandlers[fallback]();
@@ -260,13 +267,22 @@ export function useSpotlight(
           : undefined
       );
 
+      // Recent action tracking
+      setRecentActionIds((current) => addRecentActionId(current, action.id));
+
       if (action.closeOnSuccess) {
         closeModal?.();
       }
 
       dispatch({ type: "RESET_TO_IDLE" });
     },
-    [closeModal, dispatch, dispatchActionOrFallback, runStaticActionFallback]
+    [
+      closeModal,
+      dispatch,
+      dispatchActionOrFallback,
+      runStaticActionFallback,
+      setRecentActionIds,
+    ]
   );
 
   const handleSelectEditorAction = useCallback(

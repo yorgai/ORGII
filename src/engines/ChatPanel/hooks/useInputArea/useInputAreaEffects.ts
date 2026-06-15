@@ -9,6 +9,7 @@ import { type MutableRefObject, type RefObject, useEffect } from "react";
 import type { ComposerInputRef } from "@src/components/ComposerInput";
 import Message from "@src/components/Message";
 import { useAddToAgentInsertion } from "@src/hooks/input/useAddToAgentInsertion";
+import i18n from "@src/i18n";
 import {
   restoreToInputAtom,
   sessionRolledBackAtom,
@@ -264,7 +265,9 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
           isFolder,
           isFolder ? "folder" : "file"
         );
-        Message.success(`Added ${fileRef.name} as context`);
+        Message.success(
+          i18n.t("toasts.addedAsContext", { name: fileRef.name })
+        );
       };
 
       insertPill();
@@ -344,7 +347,9 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
             );
           });
           hasContentRef.current = true;
-          Message.success(`Added ${otherFiles.length} file(s) as context`);
+          Message.success(
+            i18n.t("toasts.addedFilesAsContext", { count: otherFiles.length })
+          );
         } else {
           const timer = setTimeout(insertPills, 100);
           retryTimers.push(timer);

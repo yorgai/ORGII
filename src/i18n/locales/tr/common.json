@@ -1606,7 +1606,9 @@
     "openAgentStation": "Agent Station'a git",
     "openOpsControl": "Ops Control'e git",
     "changeLanguage": "Dili değiştir",
-    "switchToSystemTheme": "Sistem temasını izle"
+    "switchToSystemTheme": "Sistem temasını izle",
+    "recentlyUsed": "Son kullanılanlar",
+    "detectUpdate": "Güncellemeleri denetle"
   },
   "commands": {
     "showBottomPanel": "Alt paneli göster",
@@ -2159,5 +2161,47 @@
     "downloadedOfTotal": "{{downloaded}} / {{total}}",
     "preparingDownload": "İndirme hazırlanıyor…",
     "downloadingAndInstalling": "Güncelleme indiriliyor ve yükleniyor (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "Yanıt boş olamaz",
+    "sessionNotFound": "Oturum bulunamadı",
+    "answerSubmitted": "Yanıt başarıyla gönderildi",
+    "answerFailed": "Yanıt gönderilemedi. Lütfen tekrar deneyin.",
+    "replyError": "Yanıt gönderilirken bir hata oluştu",
+    "questionIgnored": "Soru yoksayıldı",
+    "addedAsContext": "{{name}} bağlam olarak eklendi",
+    "addedFilesAsContext": "{{count}} dosya bağlam olarak eklendi",
+    "chooseAgentAssigneeAi": "Yapay zeka ile oluşturmadan önce sorumlu bir aracı seçin.",
+    "autoExecuteRequiresAgent": "Otomatik yürütme için sorumlu bir aracı gerekir.",
+    "openSessionBeforeLinking": "Bir iş öğesini bağlamadan önce bir oturum açın.",
+    "sessionLinkedToWorkItem": "Oturum iş öğesine bağlandı.",
+    "sessionLinkFailed": "Oturum bağlanamadı: {{message}}",
+    "chooseFolderNewWorkspace": "Çalışma alanı oluşturmak için klasör seçin",
+    "chooseExistingWorkspace": "Mevcut çalışma alanını seçin",
+    "selectDirectoryFailed": "Dizin seçilemedi",
+    "workspaceCreated": "Çalışma alanı oluşturuldu",
+    "workspaceCreateFailed": "Çalışma alanı oluşturulamadı",
+    "workspaceImported": "Çalışma alanı içe aktarıldı",
+    "workspaceImportFailed": "Çalışma alanı içe aktarılamadı",
+    "chooseFolderCloneRepo": "Depoyu klonlamak için klasör seçin",
+    "repositoryCloned": "Depo klonlandı",
+    "repositoryCloneFailed": "Depo klonlanamadı"
+  },
+  "previews": {
+    "noCanvasAvailable": "Kullanılabilir tuval yok",
+    "canvas": "Tuval",
+    "openInBrowser": "Tarayıcıda aç",
+    "closeCanvas": "Tuvali kapat",
+    "generatingCanvas": "Tuval oluşturuluyor…",
+    "noContent": "İçerik yok",
+    "noIssueSelected": "Seçili sorun yok",
+    "selectIssueHint": "Kenar çubuğundaki Issues panelinden bir sorun seçin.",
+    "reload": "Yeniden yükle",
+    "urlPreviewRequiresTauri": "URL önizlemesi Tauri gerektirir",
+    "openInExternalBrowser": "Bunun yerine harici tarayıcıda açın",
+    "loadPresentationFailed": "Sunum yüklenemedi",
+    "slideNumber": "Slayt {{index}}",
+    "noTextContent": "Metin içeriği yok",
+    "noSlidesFound": "Slayt bulunamadı"
   }
 }

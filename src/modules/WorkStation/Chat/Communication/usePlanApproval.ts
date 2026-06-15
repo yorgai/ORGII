@@ -207,12 +207,11 @@ export function usePlanApproval({
   );
   const isPlanPending =
     matchesCurrentPendingPlan && planViewState.currentSurfaceVisible;
-  const pendingPlanId =
-    isPlanPending && approvalState?.current
-      ? approvalState.current.planRevisionId ||
-        approvalState.current.toolCallId ||
-        "pending-plan"
-      : null;
+  const pendingPlanId = currentPendingPlan
+    ? currentPendingPlan.planRevisionId ||
+      currentPendingPlan.toolCallId ||
+      "pending-plan"
+    : null;
   const sessionIsWorking =
     planSessionId === activeSessionId &&
     (runtimeStatus === "running" || runtimeStatus === "installing");

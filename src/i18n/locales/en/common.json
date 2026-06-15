@@ -1679,7 +1679,9 @@
     "openAgentStation": "Go to Agent Station",
     "openOpsControl": "Go to Ops Control",
     "changeLanguage": "Change language",
-    "switchToSystemTheme": "Follow system theme"
+    "switchToSystemTheme": "Follow system theme",
+    "recentlyUsed": "Recently used",
+    "detectUpdate": "Detect update"
   },
   "commands": {
     "showBottomPanel": "Show Bottom Panel",
@@ -2232,5 +2234,73 @@
     "downloadedOfTotal": "{{downloaded}} of {{total}}",
     "preparingDownload": "Preparing download…",
     "downloadingAndInstalling": "Downloading and installing update (v{{version}})…"
+  },
+  "sqlEditor": {
+    "placeholder": "Enter SQL query...",
+    "format": "Format",
+    "runQueryToSeeResults": "Run a query to see results",
+    "executingQuery": "Executing query...",
+    "queryFailed": "Query failed",
+    "queryCompleted": "Query completed",
+    "noResults": "Query returned no results",
+    "rowCount_one": "{{count}} row",
+    "rowCount_other": "{{count}} rows",
+    "press": "Press",
+    "toRun": "to run",
+    "nullValue": "NULL",
+    "booleanTrue": "true",
+    "booleanFalse": "false"
+  },
+  "uploadZone": {
+    "clickOrDrag": "Click or drag file to this area to upload",
+    "supportFormats": "Support: {{accept}}"
+  },
+  "chatImage": {
+    "maxReached": "Maximum {{max}} images allowed",
+    "remainingWarning": "Only {{remaining}} more image(s) can be added (max {{max}})",
+    "processFailed": "Failed to process image",
+    "loadFailed": "Failed to load image: {{fileName}}"
+  },
+  "toasts": {
+    "replyEmpty": "Reply cannot be empty",
+    "sessionNotFound": "Session not found",
+    "answerSubmitted": "Answer submitted successfully",
+    "answerFailed": "Failed to submit answer. Please try again.",
+    "replyError": "An error occurred while sending the reply",
+    "questionIgnored": "Question ignored",
+    "addedAsContext": "Added {{name}} as context",
+    "addedFilesAsContext": "Added {{count}} file(s) as context",
+    "chooseAgentAssigneeAi": "Choose an agent assignee before creating with AI.",
+    "autoExecuteRequiresAgent": "Auto execute requires an agent assignee.",
+    "openSessionBeforeLinking": "Open a session before linking a Work Item.",
+    "sessionLinkedToWorkItem": "Session linked to Work Item.",
+    "sessionLinkFailed": "Failed to link session: {{message}}",
+    "chooseFolderNewWorkspace": "Choose folder to create workspace",
+    "chooseExistingWorkspace": "Choose existing workspace",
+    "selectDirectoryFailed": "Failed to select directory",
+    "workspaceCreated": "Workspace created",
+    "workspaceCreateFailed": "Failed to create workspace",
+    "workspaceImported": "Workspace imported",
+    "workspaceImportFailed": "Failed to import workspace",
+    "chooseFolderCloneRepo": "Choose folder to clone repo",
+    "repositoryCloned": "Repository cloned",
+    "repositoryCloneFailed": "Failed to clone repository"
+  },
+  "previews": {
+    "noCanvasAvailable": "No canvas available",
+    "canvas": "Canvas",
+    "openInBrowser": "Open in browser",
+    "closeCanvas": "Close canvas",
+    "generatingCanvas": "Generating canvas…",
+    "noContent": "No content",
+    "noIssueSelected": "No issue selected",
+    "selectIssueHint": "Select an issue from the Issues panel in the sidebar.",
+    "reload": "Reload",
+    "urlPreviewRequiresTauri": "URL Preview requires Tauri",
+    "openInExternalBrowser": "Open in external browser instead",
+    "loadPresentationFailed": "Failed to load presentation",
+    "slideNumber": "Slide {{index}}",
+    "noTextContent": "No text content",
+    "noSlidesFound": "No slides found"
   }
 }

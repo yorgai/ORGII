@@ -903,7 +903,16 @@
     "diskCategory_screenshots": "ブラウザスクリーンショット",
     "diskCategory_agentWorktrees": "Agent Session Worktrees",
     "diskCategory_lspBin": "LSP Server バイナリ",
-    "loadZeroRows": "クリックしてさらに {{count}} 件を読み込む"
+    "loadZeroRows": "クリックしてさらに {{count}} 件を読み込む",
+    "categoryTerminal": "ターミナル/ツールプロセス",
+    "categoryWebview": "WebView レンダラー",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit ネットワーク",
+    "categoryOther": "ヘルパープロセス",
+    "breakdownBackendRss": "バックエンドプロセス RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView ヘルパー",
+    "breakdownToolHelpers": "ターミナルとツールのヘルパー",
+    "breakdownFileCache": "バックエンドファイルキャッシュ"
   },
   "dependencies": {
     "systemDependencies": "システム Dependencies",
@@ -1281,5 +1290,14 @@
     "searchActions": "アクションを検索...",
     "noActionsFound": "アクションが見つかりません",
     "noConfigurableProperties": "設定可能なプロパティはありません"
+  },
+  "toasts": {
+    "loginFailed": "ログインに失敗しました。もう一度お試しください。",
+    "signedOut": "ログアウトしました",
+    "logoutFailed": "ログアウトに失敗しました。もう一度お試しください。",
+    "customCommandUpdated": "カスタムコマンドを更新しました",
+    "shellSettingUpdated": "シェル設定を更新しました",
+    "idesDetected": "{{count}} 個の IDE を検出しました",
+    "ideDetectFailed": "IDE を検出できませんでした。IDE がインストールされていることを確認して、もう一度お試しください。"
   }
 }

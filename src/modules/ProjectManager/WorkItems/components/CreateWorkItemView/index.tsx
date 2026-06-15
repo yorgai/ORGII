@@ -547,12 +547,12 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   const handleAutoExecuteChange = useCallback(
     (checked: boolean) => {
       if (checked && autoExecuteBlocked) {
-        Message.warning("Auto execute requires an agent assignee.");
+        Message.warning(t("common:toasts.autoExecuteRequiresAgent"));
         return;
       }
       setCreateMore(checked);
     },
-    [autoExecuteBlocked]
+    [autoExecuteBlocked, t]
   );
 
   const handleToggleProperties = useCallback(() => {

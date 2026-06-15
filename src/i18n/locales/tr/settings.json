@@ -903,7 +903,16 @@
     "diskCategory_screenshots": "Tarayıcı Ekran Görüntüleri",
     "diskCategory_agentWorktrees": "Agent Session Worktrees",
     "diskCategory_lspBin": "LSP Server İkili Dosyaları",
-    "loadZeroRows": "Click to load {{count}} more"
+    "loadZeroRows": "Click to load {{count}} more",
+    "categoryTerminal": "Terminal/araç süreci",
+    "categoryWebview": "WebView işleyici",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit ağ",
+    "categoryOther": "Yardımcı süreç",
+    "breakdownBackendRss": "Arka uç süreci RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView yardımcıları",
+    "breakdownToolHelpers": "Terminal ve araç yardımcıları",
+    "breakdownFileCache": "Arka uç dosya önbelleği"
   },
   "storage": {
     "dataDirectory": "Veri Dizini",
@@ -1281,5 +1290,14 @@
     "searchActions": "Eylem ara...",
     "noActionsFound": "Eylem bulunamadı",
     "noConfigurableProperties": "Yapılandırılabilir özellik yok"
+  },
+  "toasts": {
+    "loginFailed": "Giriş başarısız. Lütfen tekrar deneyin.",
+    "signedOut": "Başarıyla çıkış yapıldı",
+    "logoutFailed": "Çıkış başarısız. Lütfen tekrar deneyin.",
+    "customCommandUpdated": "Özel komut güncellendi",
+    "shellSettingUpdated": "Shell ayarı güncellendi",
+    "idesDetected": "{{count}} IDE algılandı",
+    "ideDetectFailed": "IDE algılanamadı. Lütfen IDE'nizin yüklü olduğundan emin olup tekrar deneyin."
   }
 }

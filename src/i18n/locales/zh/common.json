@@ -1620,7 +1620,9 @@
     "openAgentStation": "前往 Agent 工作站",
     "openOpsControl": "前往 Ops Control",
     "changeLanguage": "更改语言",
-    "switchToSystemTheme": "跟随系统主题"
+    "switchToSystemTheme": "跟随系统主题",
+    "recentlyUsed": "最近使用",
+    "detectUpdate": "检查更新"
   },
   "commands": {
     "showBottomPanel": "显示底部面板",
@@ -2173,5 +2175,47 @@
     "downloadedOfTotal": "{{downloaded}} / {{total}}",
     "preparingDownload": "正在准备下载…",
     "downloadingAndInstalling": "正在下载并安装更新 (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "回复不能为空",
+    "sessionNotFound": "未找到会话",
+    "answerSubmitted": "回答提交成功",
+    "answerFailed": "提交回答失败，请重试。",
+    "replyError": "发送回复时出错",
+    "questionIgnored": "已忽略该问题",
+    "addedAsContext": "已将 {{name}} 添加为上下文",
+    "addedFilesAsContext": "已添加 {{count}} 个文件作为上下文",
+    "chooseAgentAssigneeAi": "使用 AI 创建前请先选择一个 Agent 负责人。",
+    "autoExecuteRequiresAgent": "自动执行需要指定一个 Agent 负责人。",
+    "openSessionBeforeLinking": "请先打开一个会话再关联工作项。",
+    "sessionLinkedToWorkItem": "会话已关联到工作项。",
+    "sessionLinkFailed": "关联会话失败：{{message}}",
+    "chooseFolderNewWorkspace": "选择用于创建工作区的文件夹",
+    "chooseExistingWorkspace": "选择已有工作区",
+    "selectDirectoryFailed": "选择目录失败",
+    "workspaceCreated": "工作区已创建",
+    "workspaceCreateFailed": "创建工作区失败",
+    "workspaceImported": "工作区已导入",
+    "workspaceImportFailed": "导入工作区失败",
+    "chooseFolderCloneRepo": "选择用于克隆仓库的文件夹",
+    "repositoryCloned": "仓库已克隆",
+    "repositoryCloneFailed": "克隆仓库失败"
+  },
+  "previews": {
+    "noCanvasAvailable": "暂无画布",
+    "canvas": "画布",
+    "openInBrowser": "在浏览器中打开",
+    "closeCanvas": "关闭画布",
+    "generatingCanvas": "正在生成画布…",
+    "noContent": "暂无内容",
+    "noIssueSelected": "未选择 Issue",
+    "selectIssueHint": "请从侧边栏的 Issues 面板中选择一个 Issue。",
+    "reload": "重新加载",
+    "urlPreviewRequiresTauri": "URL 预览需要 Tauri",
+    "openInExternalBrowser": "请改用外部浏览器打开",
+    "loadPresentationFailed": "加载演示文稿失败",
+    "slideNumber": "第 {{index}} 张幻灯片",
+    "noTextContent": "暂无文本内容",
+    "noSlidesFound": "未找到幻灯片"
   }
 }

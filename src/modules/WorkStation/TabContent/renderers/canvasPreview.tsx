@@ -8,6 +8,7 @@
 import { useAtom } from "jotai";
 import { ExternalLink, Layout } from "lucide-react";
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import A2UIRenderer from "@src/engines/ChatPanel/blocks/CanvasInlineCard/A2UIRenderer";
 import { buildHtmlDocument } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/canvasBuilder";
@@ -19,6 +20,7 @@ import type { UnifiedTabContentProps } from "../types";
 
 const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
   ({ tab }) => {
+    const { t } = useTranslation();
     const sessionId = String(tab.data.sessionId ?? "");
     const [entry, setEntry] = useAtom(canvasPreviewAtom);
 
@@ -61,7 +63,7 @@ const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
       return (
         <div className="flex h-full flex-col items-center justify-center gap-3 text-text-4">
           <Layout size={32} strokeWidth={1} />
-          <span className="text-sm">No canvas available</span>
+          <span className="text-sm">{t("previews.noCanvasAvailable")}</span>
         </div>
       );
     }
@@ -73,7 +75,7 @@ const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
           <div className="flex min-w-0 items-center gap-2">
             <Layout size={13} className="shrink-0 text-primary-6" />
             <span className="truncate text-xs font-medium text-text-2">
-              {payload.title ?? "Canvas"}
+              {payload.title ?? t("previews.canvas")}
             </span>
             {payload.mode === "url" && payload.url && (
               <span className="max-w-[200px] truncate text-xs text-text-4">
@@ -92,7 +94,7 @@ const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
               type="button"
               onClick={handleOpenExternal}
               className="rounded p-1 text-text-4 transition-colors hover:bg-fill-3 hover:text-text-2"
-              title="Open in browser"
+              title={t("previews.openInBrowser")}
             >
               <ExternalLink size={12} />
             </button>
@@ -100,7 +102,7 @@ const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
               type="button"
               onClick={handleDismiss}
               className="rounded p-1 text-sm text-text-4 transition-colors hover:bg-fill-3 hover:text-text-2"
-              title="Close canvas"
+              title={t("previews.closeCanvas")}
             >
               ✕
             </button>
@@ -114,7 +116,7 @@ const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
               src={payload.url}
               className="h-full w-full border-0"
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-              title={payload.title ?? "Canvas"}
+              title={payload.title ?? t("previews.canvas")}
             />
           ) : payload.mode === "a2ui" && a2uiLines.length > 0 ? (
             <A2UIRenderer lines={a2uiLines} className="h-full" />
@@ -123,12 +125,14 @@ const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
               srcDoc={srcDoc}
               className="h-full w-full border-0"
               sandbox="allow-scripts"
-              title={payload.title ?? "Canvas"}
+              title={payload.title ?? t("previews.canvas")}
             />
           ) : (
             <div className="flex h-full items-center justify-center">
               <span className="text-xs text-text-4">
-                {payload.streaming ? "Generating canvas…" : "No content"}
+                {payload.streaming
+                  ? t("previews.generatingCanvas")
+                  : t("previews.noContent")}
               </span>
             </div>
           )}

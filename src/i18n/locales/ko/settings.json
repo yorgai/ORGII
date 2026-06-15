@@ -903,7 +903,16 @@
     "diskCategory_screenshots": "브라우저 스크린샷",
     "diskCategory_agentWorktrees": "Agent Session Worktrees",
     "diskCategory_lspBin": "LSP Server 바이너리",
-    "loadZeroRows": "Click to load {{count}} more"
+    "loadZeroRows": "Click to load {{count}} more",
+    "categoryTerminal": "터미널/도구 프로세스",
+    "categoryWebview": "WebView 렌더러",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit 네트워킹",
+    "categoryOther": "헬퍼 프로세스",
+    "breakdownBackendRss": "백엔드 프로세스 RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView 헬퍼",
+    "breakdownToolHelpers": "터미널 및 도구 헬퍼",
+    "breakdownFileCache": "백엔드 파일 캐시"
   },
   "storage": {
     "dataDirectory": "데이터 디렉토리",
@@ -1281,5 +1290,14 @@
     "searchActions": "액션 검색...",
     "noActionsFound": "액션을 찾을 수 없음",
     "noConfigurableProperties": "설정 가능한 속성 없음"
+  },
+  "toasts": {
+    "loginFailed": "로그인에 실패했습니다. 다시 시도하세요.",
+    "signedOut": "로그아웃되었습니다",
+    "logoutFailed": "로그아웃에 실패했습니다. 다시 시도하세요.",
+    "customCommandUpdated": "사용자 지정 명령이 업데이트되었습니다",
+    "shellSettingUpdated": "셸 설정이 업데이트되었습니다",
+    "idesDetected": "{{count}}개의 IDE를 감지했습니다",
+    "ideDetectFailed": "IDE를 감지할 수 없습니다. IDE가 설치되어 있는지 확인한 후 다시 시도하세요."
   }
 }

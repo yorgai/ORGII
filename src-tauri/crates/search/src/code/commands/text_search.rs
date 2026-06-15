@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use grep_regex::RegexMatcherBuilder;
 use grep_searcher::{Searcher, SearcherBuilder, Sink, SinkMatch};
 use tauri::Emitter;
+use tracing::{debug, info};
 
 use super::cache::{self, SearchCacheKey};
 use super::helpers::{
@@ -133,11 +134,11 @@ fn search_code_regex_inner(
 
     let total_matches = match_count.load(Ordering::Relaxed);
     let duration = start.elapsed();
-    println!(
-        "🔍 [CodeSearch] Found {} matches in {} files ({:?}) [parallel]",
-        total_matches,
-        results.len(),
-        duration
+    info!(
+        matches = total_matches,
+        files = results.len(),
+        ?duration,
+        "search::text: parallel search complete"
     );
 
     Ok(results)
@@ -348,9 +349,12 @@ pub async fn search_code_streaming(
     } else {
         ""
     };
-    println!(
-        "🔍 [StreamingSearch] Completed: {} matches in {} files ({:?}) [parallel]{}",
-        final_actual_matches, final_actual_files, duration, status_msg
+    info!(
+        matches = final_actual_matches,
+        files = final_actual_files,
+        ?duration,
+        status = %status_msg,
+        "search::text: streaming search complete"
     );
 
     Ok(())
@@ -588,9 +592,9 @@ pub async fn search_code_fast(
 
     let cache_key = SearchCacheKey::new(&query, &repo_path, &filters);
     if let Some(cached) = cache::get_cached_result(&cache_key) {
-        println!(
-            "⚡ [FastSearch] Cache hit! Returning {} results instantly",
-            cached.results.len()
+        debug!(
+            results = cached.results.len(),
+            "search::text: fast search cache hit"
         );
 
         let _ = window.emit(
@@ -684,9 +688,9 @@ pub async fn search_code_fast(
             outcome.total_files,
             outcome.limit_hit,
         );
-        println!(
-            "💾 [FastSearch] Cached {} results for future queries",
-            outcome.total_files
+        debug!(
+            files = outcome.total_files,
+            "search::text: cached fast search results"
         );
     }
 
@@ -712,12 +716,12 @@ pub async fn search_code_fast(
     } else {
         "OK"
     };
-    println!(
-        "🚀 [FastSearch] {} matches in {} files ({:?}) [grep-searcher] [{}]",
-        outcome.total_matches,
-        outcome.total_files,
-        start.elapsed(),
-        status
+    info!(
+        matches = outcome.total_matches,
+        files = outcome.total_files,
+        duration = ?start.elapsed(),
+        status = %status,
+        "search::text: fast search complete"
     );
 
     Ok(())

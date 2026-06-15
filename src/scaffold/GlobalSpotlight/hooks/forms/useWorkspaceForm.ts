@@ -112,18 +112,18 @@ export function useWorkspaceForm(
           multiple: false,
           title:
             mode === "new"
-              ? "Choose folder to create workspace"
-              : "Choose existing workspace",
+              ? t("toasts.chooseFolderNewWorkspace")
+              : t("toasts.chooseExistingWorkspace"),
         });
 
         return selected && typeof selected === "string" ? selected : null;
       } catch (error) {
         logger.error("Failed to open folder picker:", error);
-        Message.error("Failed to select directory");
+        Message.error(t("toasts.selectDirectoryFailed"));
         return null;
       }
     },
-    []
+    [t]
   );
 
   const shouldInitializeGit = useCallback(
@@ -175,18 +175,20 @@ export function useWorkspaceForm(
         if (result.success) {
           const workspaceId = (result.data as { repo_id?: string } | undefined)
             ?.repo_id;
-          Message.success("Workspace created");
+          Message.success(t("toasts.workspaceCreated"));
           resetForm();
           onClose?.();
           await onSuccess?.(workspaceId);
           return workspaceId;
         }
 
-        Message.error(result.message || "Failed to create workspace");
+        Message.error(result.message || t("toasts.workspaceCreateFailed"));
         return undefined;
       } catch (error) {
         Message.error(
-          error instanceof Error ? error.message : "Failed to create workspace"
+          error instanceof Error
+            ? error.message
+            : t("toasts.workspaceCreateFailed")
         );
         return undefined;
       } finally {
@@ -200,6 +202,7 @@ export function useWorkspaceForm(
       onClose,
       onSuccess,
       shouldInitializeGit,
+      t,
     ]
   );
 
@@ -218,21 +221,23 @@ export function useWorkspaceForm(
           ? await repoApi.importLocalRepo({ fs_path: fsPath })
           : await repoApi.importWorkFolder({ fs_path: fsPath });
         const workspaceId = result.data.repo_id;
-        Message.success("Workspace imported");
+        Message.success(t("toasts.workspaceImported"));
         resetForm();
         onClose?.();
         await onSuccess?.(workspaceId);
         return workspaceId;
       } catch (error) {
         Message.error(
-          error instanceof Error ? error.message : "Failed to import workspace"
+          error instanceof Error
+            ? error.message
+            : t("toasts.workspaceImportFailed")
         );
         return undefined;
       } finally {
         setLoading(false);
       }
     },
-    [resetForm, onClose, onSuccess, shouldInitializeGit]
+    [resetForm, onClose, onSuccess, shouldInitializeGit, t]
   );
 
   const handleOpenLocalWorkspace = useCallback(

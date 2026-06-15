@@ -903,7 +903,16 @@
     "diskCategory_screenshots": "Скриншоты браузера",
     "diskCategory_agentWorktrees": "Worktree Session Agent",
     "diskCategory_lspBin": "Бинарники LSP Server",
-    "loadZeroRows": "Click to load {{count}} more"
+    "loadZeroRows": "Click to load {{count}} more",
+    "categoryTerminal": "Процесс терминала/инструмента",
+    "categoryWebview": "Отрисовщик WebView",
+    "categoryGpu": "GPU WebKit",
+    "categoryNetwork": "Сеть WebKit",
+    "categoryOther": "Вспомогательный процесс",
+    "breakdownBackendRss": "RSS процесса бэкенда",
+    "breakdownWebkitHelpers": "Вспомогательные WebKit / WebView",
+    "breakdownToolHelpers": "Вспомогательные терминала и инструментов",
+    "breakdownFileCache": "Файловый кеш бэкенда"
   },
   "dependencies": {
     "systemDependencies": "Системные Dependencies",
@@ -1282,5 +1291,14 @@
     "searchActions": "Поиск действий...",
     "noActionsFound": "Действия не найдены",
     "noConfigurableProperties": "Нет настраиваемых свойств"
+  },
+  "toasts": {
+    "loginFailed": "Не удалось войти. Повторите попытку.",
+    "signedOut": "Выход выполнен успешно",
+    "logoutFailed": "Не удалось выйти. Повторите попытку.",
+    "customCommandUpdated": "Пользовательская команда обновлена",
+    "shellSettingUpdated": "Настройка оболочки обновлена",
+    "idesDetected": "Обнаружено IDE: {{count}}",
+    "ideDetectFailed": "Не удалось обнаружить IDE. Убедитесь, что IDE установлена, и повторите попытку."
   }
 }

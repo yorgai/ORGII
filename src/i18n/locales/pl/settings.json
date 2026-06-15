@@ -903,7 +903,16 @@
     "diskCategory_screenshots": "Zrzuty ekranu przeglądarki",
     "diskCategory_agentWorktrees": "Worktree sesji Agent",
     "diskCategory_lspBin": "Pliki binarne LSP Server",
-    "loadZeroRows": "Kliknij, aby wczytać jeszcze {{count}}"
+    "loadZeroRows": "Kliknij, aby wczytać jeszcze {{count}}",
+    "categoryTerminal": "Proces terminala/narzędzia",
+    "categoryWebview": "Renderer WebView",
+    "categoryGpu": "GPU WebKit",
+    "categoryNetwork": "Sieć WebKit",
+    "categoryOther": "Proces pomocniczy",
+    "breakdownBackendRss": "RSS procesu backendu",
+    "breakdownWebkitHelpers": "Pomocnicy WebKit / WebView",
+    "breakdownToolHelpers": "Pomocnicy terminala i narzędzi",
+    "breakdownFileCache": "Pamięć podręczna plików backendu"
   },
   "dependencies": {
     "systemDependencies": "Zależności systemowe",
@@ -1281,5 +1290,14 @@
     "searchActions": "Szukaj akcji...",
     "noActionsFound": "Nie znaleziono akcji",
     "noConfigurableProperties": "Brak konfigurowalnych właściwości"
+  },
+  "toasts": {
+    "loginFailed": "Logowanie nie powiodło się. Spróbuj ponownie.",
+    "signedOut": "Wylogowano pomyślnie",
+    "logoutFailed": "Wylogowanie nie powiodło się. Spróbuj ponownie.",
+    "customCommandUpdated": "Zaktualizowano polecenie niestandardowe",
+    "shellSettingUpdated": "Zaktualizowano ustawienie powłoki",
+    "idesDetected": "Wykryto {{count}} IDE",
+    "ideDetectFailed": "Nie można wykryć IDE. Upewnij się, że IDE jest zainstalowane, i spróbuj ponownie."
   }
 }

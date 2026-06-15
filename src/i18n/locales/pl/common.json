@@ -1601,7 +1601,9 @@
     "openAgentStation": "Przejdź do Agent Station",
     "openOpsControl": "Przejdź do Ops Control",
     "changeLanguage": "Zmień język",
-    "switchToSystemTheme": "Zgodnie z motywem systemu"
+    "switchToSystemTheme": "Zgodnie z motywem systemu",
+    "recentlyUsed": "Ostatnio używane",
+    "detectUpdate": "Sprawdź aktualizacje"
   },
   "commands": {
     "showBottomPanel": "Pokaż dolny panel",
@@ -2154,5 +2156,47 @@
     "downloadedOfTotal": "{{downloaded}} z {{total}}",
     "preparingDownload": "Przygotowywanie pobierania…",
     "downloadingAndInstalling": "Pobieranie i instalowanie aktualizacji (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "Odpowiedź nie może być pusta",
+    "sessionNotFound": "Nie znaleziono sesji",
+    "answerSubmitted": "Odpowiedź wysłana pomyślnie",
+    "answerFailed": "Nie udało się wysłać odpowiedzi. Spróbuj ponownie.",
+    "replyError": "Wystąpił błąd podczas wysyłania odpowiedzi",
+    "questionIgnored": "Pytanie zignorowane",
+    "addedAsContext": "Dodano {{name}} jako kontekst",
+    "addedFilesAsContext": "Dodano {{count}} plik(ów) jako kontekst",
+    "chooseAgentAssigneeAi": "Wybierz odpowiedzialnego agenta przed utworzeniem z użyciem AI.",
+    "autoExecuteRequiresAgent": "Automatyczne wykonanie wymaga odpowiedzialnego agenta.",
+    "openSessionBeforeLinking": "Otwórz sesję przed powiązaniem elementu pracy.",
+    "sessionLinkedToWorkItem": "Sesja powiązana z elementem pracy.",
+    "sessionLinkFailed": "Nie udało się powiązać sesji: {{message}}",
+    "chooseFolderNewWorkspace": "Wybierz folder, aby utworzyć obszar roboczy",
+    "chooseExistingWorkspace": "Wybierz istniejący obszar roboczy",
+    "selectDirectoryFailed": "Nie udało się wybrać katalogu",
+    "workspaceCreated": "Obszar roboczy utworzony",
+    "workspaceCreateFailed": "Nie udało się utworzyć obszaru roboczego",
+    "workspaceImported": "Obszar roboczy zaimportowany",
+    "workspaceImportFailed": "Nie udało się zaimportować obszaru roboczego",
+    "chooseFolderCloneRepo": "Wybierz folder, aby sklonować repozytorium",
+    "repositoryCloned": "Repozytorium sklonowane",
+    "repositoryCloneFailed": "Nie udało się sklonować repozytorium"
+  },
+  "previews": {
+    "noCanvasAvailable": "Brak dostępnego płótna",
+    "canvas": "Płótno",
+    "openInBrowser": "Otwórz w przeglądarce",
+    "closeCanvas": "Zamknij płótno",
+    "generatingCanvas": "Generowanie płótna…",
+    "noContent": "Brak treści",
+    "noIssueSelected": "Nie wybrano zgłoszenia",
+    "selectIssueHint": "Wybierz zgłoszenie w panelu Issues na pasku bocznym.",
+    "reload": "Odśwież",
+    "urlPreviewRequiresTauri": "Podgląd URL wymaga Tauri",
+    "openInExternalBrowser": "Otwórz w zewnętrznej przeglądarce",
+    "loadPresentationFailed": "Nie udało się załadować prezentacji",
+    "slideNumber": "Slajd {{index}}",
+    "noTextContent": "Brak treści tekstowej",
+    "noSlidesFound": "Nie znaleziono slajdów"
   }
 }

@@ -1601,7 +1601,9 @@
     "openAgentStation": "Перейти в Agent Station",
     "openOpsControl": "Перейти в Ops Control",
     "changeLanguage": "Изменить язык",
-    "switchToSystemTheme": "Следовать системной теме"
+    "switchToSystemTheme": "Следовать системной теме",
+    "recentlyUsed": "Недавно использованные",
+    "detectUpdate": "Проверить обновления"
   },
   "commands": {
     "showBottomPanel": "Показать нижнюю панель",
@@ -2154,5 +2156,47 @@
     "downloadedOfTotal": "{{downloaded}} из {{total}}",
     "preparingDownload": "Подготовка загрузки…",
     "downloadingAndInstalling": "Загрузка и установка обновления (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "Ответ не может быть пустым",
+    "sessionNotFound": "Сессия не найдена",
+    "answerSubmitted": "Ответ успешно отправлен",
+    "answerFailed": "Не удалось отправить ответ. Повторите попытку.",
+    "replyError": "Произошла ошибка при отправке ответа",
+    "questionIgnored": "Вопрос пропущен",
+    "addedAsContext": "{{name}} добавлен в контекст",
+    "addedFilesAsContext": "Добавлено файлов в контекст: {{count}}",
+    "chooseAgentAssigneeAi": "Выберите ответственного агента перед созданием с помощью ИИ.",
+    "autoExecuteRequiresAgent": "Для автоматического выполнения требуется ответственный агент.",
+    "openSessionBeforeLinking": "Откройте сессию перед привязкой рабочего элемента.",
+    "sessionLinkedToWorkItem": "Сессия привязана к рабочему элементу.",
+    "sessionLinkFailed": "Не удалось привязать сессию: {{message}}",
+    "chooseFolderNewWorkspace": "Выберите папку для создания рабочей области",
+    "chooseExistingWorkspace": "Выберите существующую рабочую область",
+    "selectDirectoryFailed": "Не удалось выбрать каталог",
+    "workspaceCreated": "Рабочая область создана",
+    "workspaceCreateFailed": "Не удалось создать рабочую область",
+    "workspaceImported": "Рабочая область импортирована",
+    "workspaceImportFailed": "Не удалось импортировать рабочую область",
+    "chooseFolderCloneRepo": "Выберите папку для клонирования репозитория",
+    "repositoryCloned": "Репозиторий клонирован",
+    "repositoryCloneFailed": "Не удалось клонировать репозиторий"
+  },
+  "previews": {
+    "noCanvasAvailable": "Холст недоступен",
+    "canvas": "Холст",
+    "openInBrowser": "Открыть в браузере",
+    "closeCanvas": "Закрыть холст",
+    "generatingCanvas": "Создание холста…",
+    "noContent": "Нет содержимого",
+    "noIssueSelected": "Issue не выбран",
+    "selectIssueHint": "Выберите issue на панели Issues в боковой панели.",
+    "reload": "Перезагрузить",
+    "urlPreviewRequiresTauri": "Для предпросмотра URL требуется Tauri",
+    "openInExternalBrowser": "Откройте во внешнем браузере",
+    "loadPresentationFailed": "Не удалось загрузить презентацию",
+    "slideNumber": "Слайд {{index}}",
+    "noTextContent": "Нет текстового содержимого",
+    "noSlidesFound": "Слайды не найдены"
   }
 }

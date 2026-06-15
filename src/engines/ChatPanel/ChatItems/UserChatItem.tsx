@@ -19,7 +19,6 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ChatImageThumbnailRow } from "@src/components/ChatImageThumbnail";
 import ExpandOverlay from "@src/components/ExpandOverlay";
 import { INPUT_AREA } from "@src/config/inputAreaTokens";
 import { readPillText } from "@src/config/pillTokens";
@@ -418,12 +417,10 @@ const UserChatItem = ({
             </div>
           ) : (
             <>
-              {messageImages && messageImages.length > 0 && (
-                <ChatImageThumbnailRow images={messageImages} />
-              )}
-
-              {fullContent && fullContent !== "(image)" && (
-                <div className="group/expand relative w-full pr-6">
+              {(fullContent || (messageImages && messageImages.length > 0)) && (
+                <div
+                  className={`group/expand relative w-full ${fullContent && fullContent !== "(image)" ? "pr-6" : ""}`}
+                >
                   <div
                     ref={messageContentRef}
                     className={`allow-select ${isExpanded && displayNeedsTruncation ? "scrollbar-hide" : ""}`}
@@ -439,7 +436,10 @@ const UserChatItem = ({
                           : undefined
                     }
                   >
-                    <UserMessageContent text={fullContent} />
+                    <UserMessageContent
+                      text={fullContent}
+                      images={messageImages}
+                    />
 
                     {displayNeedsTruncation && isExpanded && (
                       <ExpandOverlay

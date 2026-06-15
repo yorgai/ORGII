@@ -855,6 +855,24 @@ if (typeof globalThis.window === "undefined") {
   });
 }
 
+if (typeof globalThis.matchMedia === "undefined") {
+  Object.defineProperty(globalThis, "matchMedia", {
+    value: (query: string): MediaQueryList =>
+      ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false),
+      }) as unknown as MediaQueryList,
+    configurable: true,
+    writable: true,
+  });
+}
+
 // ============================================================================
 // Inject fixtures immediately at module load (before any tests import modules)
 // ============================================================================

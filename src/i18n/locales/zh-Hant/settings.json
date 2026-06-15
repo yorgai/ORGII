@@ -903,7 +903,16 @@
     "diskCategory_screenshots": "瀏覽器截圖",
     "diskCategory_agentWorktrees": "Agent Session Worktrees",
     "diskCategory_lspBin": "LSP Server 二進位",
-    "loadZeroRows": "點擊載入另外 {{count}} 項"
+    "loadZeroRows": "點擊載入另外 {{count}} 項",
+    "categoryTerminal": "終端機/工具程序",
+    "categoryWebview": "WebView 轉譯器",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit 網路",
+    "categoryOther": "輔助程序",
+    "breakdownBackendRss": "後端程序 RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView 輔助程序",
+    "breakdownToolHelpers": "終端機與工具輔助程序",
+    "breakdownFileCache": "後端檔案快取"
   },
   "storage": {
     "dataDirectory": "數據目錄",
@@ -1281,5 +1290,14 @@
     "searchActions": "搜索動作...",
     "noActionsFound": "未找到動作",
     "noConfigurableProperties": "無可配置屬性"
+  },
+  "toasts": {
+    "loginFailed": "登入失敗，請重試。",
+    "signedOut": "已成功登出",
+    "logoutFailed": "登出失敗，請重試。",
+    "customCommandUpdated": "自訂命令已更新",
+    "shellSettingUpdated": "Shell 設定已更新",
+    "idesDetected": "偵測到 {{count}} 個 IDE",
+    "ideDetectFailed": "無法偵測到 IDE。請確認已安裝 IDE 後再試一次。"
   }
 }

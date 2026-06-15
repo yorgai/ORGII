@@ -2,11 +2,11 @@ blank_issues_enabled: false
 
 contact_links:
   - name: Documentation
-    url: https://github.com/soyd-app/ORGII/wiki
+    url: https://github.com/YORG-AI/ORGII/wiki
     about: Check the docs before opening an issue.
   - name: Discussions
-    url: https://github.com/soyd-app/ORGII/discussions
+    url: https://github.com/YORG-AI/ORGII/discussions
     about: Ask questions and share ideas in Discussions.
   - name: Security Vulnerability (Private)
-    url: https://github.com/soyd-app/ORGII/security/advisories/new
+    url: https://github.com/YORG-AI/ORGII/security/advisories/new
     about: Report sensitive security issues privately via GitHub Security Advisories.

@@ -99,7 +99,7 @@ const GoogleChatConfig: React.FC<ChannelConfigProps> = ({
           value={audience}
           onChange={(val: string) => update(`${pathPrefix}.audience`, val)}
           style={SECTION_CONTROL_STYLE}
-          placeholder="Project number or app URL"
+          placeholder={t("channels.googlechatAudiencePlaceholder")}
         />
       </SectionRow>
       <SectionRow

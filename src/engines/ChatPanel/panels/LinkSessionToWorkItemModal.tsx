@@ -1,6 +1,7 @@
 import { Link2, Search, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   type EnrichedWorkItem,
@@ -34,6 +35,7 @@ const LinkSessionToWorkItemModal: React.FC<LinkSessionToWorkItemModalProps> = ({
   onClose,
   onLinked,
 }) => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [linkingId, setLinkingId] = useState<string | null>(null);
@@ -108,7 +110,7 @@ const LinkSessionToWorkItemModal: React.FC<LinkSessionToWorkItemModalProps> = ({
         workItemId: option.item.shortId,
         agentRole: "custom",
       });
-      Message.success("Session linked to Work Item.");
+      Message.success(t("toasts.sessionLinkedToWorkItem"));
       onLinked?.({
         projectSlug: option.project.slug,
         workItemId: option.item.shortId,
@@ -117,7 +119,7 @@ const LinkSessionToWorkItemModal: React.FC<LinkSessionToWorkItemModalProps> = ({
       onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      Message.error(`Failed to link session: ${message}`);
+      Message.error(t("toasts.sessionLinkFailed", { message }));
     } finally {
       setLinkingId(null);
     }

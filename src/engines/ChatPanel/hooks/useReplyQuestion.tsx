@@ -1,6 +1,7 @@
 import { useSetAtom } from "jotai";
 import { throttle } from "lodash";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
 import {
@@ -32,6 +33,7 @@ const log = createLogger("useReplyQuestion");
  * through here.
  */
 const useReplyQuestion = () => {
+  const { t } = useTranslation();
   const updateEventById = useSetAtom(updateEventByIdAtom);
   const { setIsStepWaiting } = useStepState();
 
@@ -50,12 +52,12 @@ const useReplyQuestion = () => {
     async ({ reply, chunk_id }: { reply: string; chunk_id: string }) => {
       try {
         if (!reply.trim()) {
-          Message.error("Reply cannot be empty");
+          Message.error(t("toasts.replyEmpty"));
           return;
         }
 
         if (!sessionId) {
-          Message.error("Session not found");
+          Message.error(t("toasts.sessionNotFound"));
           return;
         }
 
@@ -71,7 +73,7 @@ const useReplyQuestion = () => {
             }),
           });
           setIsStepWaiting(false);
-          Message.success("Answer submitted successfully");
+          Message.success(t("toasts.answerSubmitted"));
           return;
         }
 
@@ -94,13 +96,13 @@ const useReplyQuestion = () => {
             }),
           });
           setIsStepWaiting(false);
-          Message.success("Answer submitted successfully");
+          Message.success(t("toasts.answerSubmitted"));
         } else {
-          Message.error("Failed to submit answer. Please try again.");
+          Message.error(t("toasts.answerFailed"));
         }
       } catch (error) {
         log.error("Error replying to question:", error);
-        Message.error("An error occurred while sending the reply");
+        Message.error(t("toasts.replyError"));
       }
     },
     1000
@@ -120,7 +122,7 @@ const useReplyQuestion = () => {
       }),
     });
 
-    Message.info("Question ignored");
+    Message.info(t("toasts.questionIgnored"));
   };
 
   return {

@@ -7,6 +7,7 @@ import { type DragEvent, type RefObject, useCallback } from "react";
 
 import type { ComposerInputRef } from "@src/components/ComposerInput";
 import Message from "@src/components/Message";
+import i18n from "@src/i18n";
 
 import type { DragDropHandlers } from "./types";
 
@@ -129,7 +130,7 @@ export function useDragDrop(options: UseDragDropOptions): DragDropHandlers {
         isFolder,
         isFolder ? "folder" : "file"
       );
-      Message.success(`Added ${fileRef.name} as context`);
+      Message.success(i18n.t("toasts.addedAsContext", { name: fileRef.name }));
     },
     [composerInputRef]
   );

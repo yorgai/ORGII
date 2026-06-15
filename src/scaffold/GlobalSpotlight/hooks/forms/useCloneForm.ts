@@ -7,6 +7,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
 import type { GitHubRepo } from "@src/api/http/github/types";
@@ -68,6 +69,7 @@ export interface UseCloneFormReturn {
 export function useCloneForm(
   options: UseCloneFormOptions = {}
 ): UseCloneFormReturn {
+  const { t } = useTranslation();
   const { onSuccess, onClose } = options;
   const defaultRepoLocation = useAtomValue(
     effectiveWorkspaceDefaultRepoLocationAtom
@@ -185,7 +187,7 @@ export function useCloneForm(
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Choose folder to clone repo",
+        title: t("toasts.chooseFolderCloneRepo"),
       });
 
       if (selected && typeof selected === "string") {
@@ -194,10 +196,10 @@ export function useCloneForm(
       return null;
     } catch (error) {
       log.error("Failed to open folder picker:", error);
-      Message.error("Failed to select directory");
+      Message.error(t("toasts.selectDirectoryFailed"));
       return null;
     }
-  }, []);
+  }, [t]);
 
   // Fetch repos for all connections when needed
   useEffect(() => {
@@ -247,25 +249,34 @@ export function useCloneForm(
         if (result.success) {
           const repoId = (result.data as { repo_id?: string } | undefined)
             ?.repo_id;
-          Message.success("Repository cloned");
+          Message.success(t("toasts.repositoryCloned"));
           resetForm();
           onClose?.();
           await onSuccess?.(repoId);
           return repoId;
         }
 
-        Message.error(result.message || "Failed to clone repository");
+        Message.error(result.message || t("toasts.repositoryCloneFailed"));
         return undefined;
       } catch (error) {
         Message.error(
-          error instanceof Error ? error.message : "Failed to clone repository"
+          error instanceof Error
+            ? error.message
+            : t("toasts.repositoryCloneFailed")
         );
         return undefined;
       } finally {
         setLoading(false);
       }
     },
-    [customDefaultRepoPath, defaultRepoLocation, resetForm, onClose, onSuccess]
+    [
+      customDefaultRepoPath,
+      defaultRepoLocation,
+      resetForm,
+      onClose,
+      onSuccess,
+      t,
+    ]
   );
 
   return {

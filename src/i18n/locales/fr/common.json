@@ -1604,7 +1604,9 @@
     "openAgentStation": "Aller à Agent Station",
     "openOpsControl": "Aller à Ops Control",
     "changeLanguage": "Changer la langue",
-    "switchToSystemTheme": "Suivre le thème du système"
+    "switchToSystemTheme": "Suivre le thème du système",
+    "recentlyUsed": "Récemment utilisés",
+    "detectUpdate": "Rechercher des mises à jour"
   },
   "commands": {
     "showBottomPanel": "Afficher le panneau inférieur",
@@ -2157,5 +2159,47 @@
     "downloadedOfTotal": "{{downloaded}} sur {{total}}",
     "preparingDownload": "Préparation du téléchargement…",
     "downloadingAndInstalling": "Téléchargement et installation de la mise à jour (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "La réponse ne peut pas être vide",
+    "sessionNotFound": "Session introuvable",
+    "answerSubmitted": "Réponse envoyée avec succès",
+    "answerFailed": "Échec de l'envoi de la réponse. Veuillez réessayer.",
+    "replyError": "Une erreur s'est produite lors de l'envoi de la réponse",
+    "questionIgnored": "Question ignorée",
+    "addedAsContext": "{{name}} ajouté au contexte",
+    "addedFilesAsContext": "{{count}} fichier(s) ajouté(s) au contexte",
+    "chooseAgentAssigneeAi": "Choisissez un agent responsable avant de créer avec l'IA.",
+    "autoExecuteRequiresAgent": "L'exécution automatique nécessite un agent responsable.",
+    "openSessionBeforeLinking": "Ouvrez une session avant de lier un élément de travail.",
+    "sessionLinkedToWorkItem": "Session liée à l'élément de travail.",
+    "sessionLinkFailed": "Échec de la liaison de la session : {{message}}",
+    "chooseFolderNewWorkspace": "Choisir un dossier pour créer l'espace de travail",
+    "chooseExistingWorkspace": "Choisir un espace de travail existant",
+    "selectDirectoryFailed": "Échec de la sélection du répertoire",
+    "workspaceCreated": "Espace de travail créé",
+    "workspaceCreateFailed": "Échec de la création de l'espace de travail",
+    "workspaceImported": "Espace de travail importé",
+    "workspaceImportFailed": "Échec de l'importation de l'espace de travail",
+    "chooseFolderCloneRepo": "Choisir un dossier pour cloner le dépôt",
+    "repositoryCloned": "Dépôt cloné",
+    "repositoryCloneFailed": "Échec du clonage du dépôt"
+  },
+  "previews": {
+    "noCanvasAvailable": "Aucun canevas disponible",
+    "canvas": "Canevas",
+    "openInBrowser": "Ouvrir dans le navigateur",
+    "closeCanvas": "Fermer le canevas",
+    "generatingCanvas": "Génération du canevas…",
+    "noContent": "Aucun contenu",
+    "noIssueSelected": "Aucun ticket sélectionné",
+    "selectIssueHint": "Sélectionnez un ticket dans le panneau Issues de la barre latérale.",
+    "reload": "Recharger",
+    "urlPreviewRequiresTauri": "L'aperçu d'URL nécessite Tauri",
+    "openInExternalBrowser": "Ouvrez plutôt dans un navigateur externe",
+    "loadPresentationFailed": "Échec du chargement de la présentation",
+    "slideNumber": "Diapositive {{index}}",
+    "noTextContent": "Aucun contenu textuel",
+    "noSlidesFound": "Aucune diapositive trouvée"
   }
 }

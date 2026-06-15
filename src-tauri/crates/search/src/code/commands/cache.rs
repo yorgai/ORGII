@@ -6,6 +6,7 @@ use std::num::NonZeroUsize;
 use std::sync::RwLock;
 
 use lru::LruCache;
+use tracing::info;
 
 use super::types::CodeSearchResult;
 
@@ -86,5 +87,5 @@ pub(super) fn cache_result(
 #[tauri::command]
 pub fn clear_search_cache() {
     SEARCH_CACHE.write().unwrap().clear();
-    println!("🗑️ [SearchCache] Cache cleared");
+    info!("search::cache: cache cleared");
 }

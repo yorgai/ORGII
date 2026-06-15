@@ -8,7 +8,9 @@
 import { readFile } from "@tauri-apps/plugin-fs";
 import JSZip from "jszip";
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
+import i18n from "@src/i18n";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { getFileName } from "@src/util/file/pathUtils";
 
@@ -78,6 +80,7 @@ export const PptxPreview: React.FC<PptxPreviewProps> = ({
   filePath,
   className = "",
 }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [slides, setSlides] = useState<SlideContent[]>([]);
@@ -123,7 +126,9 @@ export const PptxPreview: React.FC<PptxPreviewProps> = ({
       .catch((err) => {
         if (cancelled) return;
         setError(
-          err instanceof Error ? err.message : "Failed to load presentation"
+          err instanceof Error
+            ? err.message
+            : i18n.t("previews.loadPresentationFailed")
         );
         setLoading(false);
       });
@@ -165,7 +170,7 @@ export const PptxPreview: React.FC<PptxPreviewProps> = ({
               className="w-full max-w-[800px] rounded-lg border border-border-2 bg-fill-1 p-6"
             >
               <div className="mb-3 text-[11px] text-text-3">
-                Slide {slide.index}
+                {t("previews.slideNumber", { index: slide.index })}
               </div>
               {slide.texts.length > 0 ? (
                 <div className="space-y-2">
@@ -184,7 +189,7 @@ export const PptxPreview: React.FC<PptxPreviewProps> = ({
                 </div>
               ) : (
                 <p className="text-[13px] italic text-text-3">
-                  No text content
+                  {t("previews.noTextContent")}
                 </p>
               )}
             </div>
@@ -196,7 +201,7 @@ export const PptxPreview: React.FC<PptxPreviewProps> = ({
         <Placeholder
           variant="empty"
           placement="detail-panel"
-          title="No slides found"
+          title={t("previews.noSlidesFound")}
           subtitle={fileName}
           fillParentHeight
         />

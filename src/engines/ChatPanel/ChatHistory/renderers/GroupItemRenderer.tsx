@@ -267,7 +267,7 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
       ? (lastAssistantFlatIndexPerItem[flatIndex] ?? null)
       : null;
 
-    // Trailing-item turn gap. Placing the 40px gap on the LAST item of
+    // Trailing-item turn gap. Placing the 24px gap on the LAST item of
     // each non-final group keeps the next group's sticky header free of
     // top padding — so pinned headers stay flush at the top of the
     // viewport, while the visual turn boundary scrolls away with the
@@ -279,7 +279,7 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
         .reduce((sum, count) => sum + count, 0) - 1;
     const isLastItemInGroup = flatIndex === groupEndFlatIndex;
     const isLastGroup = groupIndex === groupCounts.length - 1;
-    const turnGapClass = isLastItemInGroup && !isLastGroup ? "pb-25" : "";
+    const turnGapClass = isLastItemInGroup && !isLastGroup ? "pb-6" : "";
 
     // Memoize the context value so consumers of `AgentTurnContext`
     // (e.g. `RegenerateButton`, `AgentErrorChatItem`) don't re-render

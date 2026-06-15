@@ -447,7 +447,7 @@ export function useInputArea(
       if (!draftSessionId) return;
       if (!next.isReply && replyTargetEventId) {
         void clearReplyTarget().catch((err: unknown) => {
-          console.warn("[useInputArea] clearReplyTarget(bridge) failed:", err);
+          logger.warn("clearReplyTarget(bridge) failed", err);
         });
       }
     },

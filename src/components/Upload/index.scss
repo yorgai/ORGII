@@ -2,18 +2,35 @@
 .upload {
   font-size: 14px;
 
+  &-trigger-custom {
+    display: inline-flex;
+    height: auto !important;
+    min-height: 0;
+    padding: 0 !important;
+    border: none;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
   // Drag area
   &-drag-area {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    width: 100%;
     padding: 40px;
     border: 2px dashed var(--color-border-2);
     border-radius: 6px;
     background: var(--color-bg-1);
     cursor: pointer;
     transition: all 0.2s ease;
+
+    &:focus-visible {
+      outline: 2px solid
+        color-mix(in srgb, var(--color-primary-6) 35%, transparent);
+      outline-offset: 2px;
+    }
 
     svg {
       font-size: 48px;
@@ -60,6 +77,13 @@
     background: var(--color-fill-1);
     cursor: pointer;
     transition: all 0.2s ease;
+    padding: 0;
+
+    &:focus-visible {
+      outline: 2px solid
+        color-mix(in srgb, var(--color-primary-6) 35%, transparent);
+      outline-offset: 2px;
+    }
 
     svg {
       font-size: 24px;

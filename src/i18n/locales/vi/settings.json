@@ -903,7 +903,16 @@
     "diskCategory_screenshots": "Ảnh chụp trình duyệt",
     "diskCategory_agentWorktrees": "Agent Session Worktrees",
     "diskCategory_lspBin": "Nhị phân LSP Server",
-    "loadZeroRows": "Click to load {{count}} more"
+    "loadZeroRows": "Click to load {{count}} more",
+    "categoryTerminal": "Tiến trình terminal/công cụ",
+    "categoryWebview": "Trình kết xuất WebView",
+    "categoryGpu": "GPU WebKit",
+    "categoryNetwork": "Mạng WebKit",
+    "categoryOther": "Tiến trình trợ giúp",
+    "breakdownBackendRss": "RSS tiến trình backend",
+    "breakdownWebkitHelpers": "Trình trợ giúp WebKit / WebView",
+    "breakdownToolHelpers": "Trình trợ giúp terminal và công cụ",
+    "breakdownFileCache": "Bộ nhớ đệm tệp backend"
   },
   "storage": {
     "dataDirectory": "Thư mục dữ liệu",
@@ -1281,5 +1290,14 @@
     "searchActions": "Tìm kiếm hành động...",
     "noActionsFound": "Không tìm thấy hành động",
     "noConfigurableProperties": "Không có thuộc tính có thể cấu hình"
+  },
+  "toasts": {
+    "loginFailed": "Đăng nhập thất bại. Vui lòng thử lại.",
+    "signedOut": "Đã đăng xuất thành công",
+    "logoutFailed": "Đăng xuất thất bại. Vui lòng thử lại.",
+    "customCommandUpdated": "Đã cập nhật lệnh tùy chỉnh",
+    "shellSettingUpdated": "Đã cập nhật cài đặt shell",
+    "idesDetected": "Đã phát hiện {{count}} IDE",
+    "ideDetectFailed": "Không thể phát hiện IDE. Vui lòng đảm bảo IDE của bạn đã được cài đặt và thử lại."
   }
 }

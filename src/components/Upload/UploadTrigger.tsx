@@ -6,8 +6,13 @@
  */
 import { Plus, UploadCloud, Upload as UploadIcon } from "lucide-react";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
+import {
+  createKeyboardActivationHandler,
+  getInteractiveTabIndex,
+} from "@src/util/dom/keyboardActivation";
 
 interface UploadTriggerProps {
   children?: React.ReactNode;
@@ -34,34 +39,63 @@ export function UploadTrigger({
   onDrop,
   onClick,
 }: UploadTriggerProps) {
+  const { t } = useTranslation("common");
+
   if (children) {
-    return <div onClick={onClick}>{children}</div>;
+    return (
+      <Button
+        appearance="ghost"
+        variant="tertiary"
+        className="upload-trigger-custom"
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {children}
+      </Button>
+    );
   }
 
   if (drag) {
     return (
       <div
         className="upload-drag-area"
-        onClick={onClick}
+        role="button"
+        tabIndex={getInteractiveTabIndex(Boolean(disabled))}
+        aria-disabled={disabled}
+        onClick={disabled ? undefined : onClick}
+        onKeyDown={
+          disabled ? undefined : createKeyboardActivationHandler(onClick)
+        }
         onDragEnter={onDragEnter}
         onDragLeave={onDragLeave}
         onDragOver={onDragOver}
         onDrop={onDrop}
       >
         <UploadCloud size={24} />
-        <p className="upload-drag-text">
-          Click or drag file to this area to upload
-        </p>
-        {accept && <p className="upload-drag-hint">Support: {accept}</p>}
+        <p className="upload-drag-text">{t("uploadZone.clickOrDrag")}</p>
+        {accept && (
+          <p className="upload-drag-hint">
+            {t("uploadZone.supportFormats", { accept })}
+          </p>
+        )}
       </div>
     );
   }
 
   if (listType === "picture-card") {
     return (
-      <div className="upload-picture-card-trigger" onClick={onClick}>
+      <div
+        className="upload-picture-card-trigger"
+        role="button"
+        tabIndex={getInteractiveTabIndex(Boolean(disabled))}
+        aria-disabled={disabled}
+        onClick={disabled ? undefined : onClick}
+        onKeyDown={
+          disabled ? undefined : createKeyboardActivationHandler(onClick)
+        }
+      >
         <Plus size={24} />
-        <div>Upload</div>
+        <div>{t("actions.upload")}</div>
       </div>
     );
   }
@@ -72,7 +106,7 @@ export function UploadTrigger({
       disabled={disabled}
       icon={<UploadIcon size={16} />}
     >
-      Upload
+      {t("actions.upload")}
     </Button>
   );
 }

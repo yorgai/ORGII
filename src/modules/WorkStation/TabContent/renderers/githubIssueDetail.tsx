@@ -7,6 +7,7 @@
  */
 import { useAtomValue } from "jotai";
 import React, { memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useWorkStationTabs } from "@src/hooks/workStation/tabs/useWorkStationTabs";
 import { IssueDetailPanel } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/content/IssuesContent/IssueDetailPanel";
@@ -20,6 +21,7 @@ import type { UnifiedTabContentProps } from "../types";
 
 const GitHubIssueDetailTabRenderer: React.FC<UnifiedTabContentProps> = memo(
   ({ tab }) => {
+    const { t } = useTranslation();
     const selectedState = useAtomValue(workstationSelectedIssueAtom);
     const callbacks = useAtomValue(workstationIssueCallbackAtom);
     const { closeTab } = useWorkStationTabs();
@@ -54,8 +56,8 @@ const GitHubIssueDetailTabRenderer: React.FC<UnifiedTabContentProps> = memo(
         <Placeholder
           variant="empty"
           placement="detail-panel"
-          title="No issue selected"
-          subtitle="Select an issue from the Issues panel in the sidebar."
+          title={t("previews.noIssueSelected")}
+          subtitle={t("previews.selectIssueHint")}
         />
       );
     }

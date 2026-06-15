@@ -3,6 +3,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use tracing::{debug, info, warn};
+
 use super::super::intelligence::{TreeSitterFile, ALL_LANGUAGES};
 use super::helpers::{collect_files, read_file_content};
 use super::types::{CodeLocation, CodeSymbolInfo, SearchFilters, SymbolSearchResult};
@@ -101,11 +103,11 @@ fn search_symbols_inner(
 
     let duration = start.elapsed();
     let total_symbols: usize = results.iter().map(|r| r.symbols.len()).sum();
-    println!(
-        "🔍 [SymbolSearch] Found {} symbols in {} files ({:?})",
-        total_symbols,
-        results.len(),
-        duration
+    info!(
+        symbols = total_symbols,
+        files = results.len(),
+        ?duration,
+        "search::symbol: search complete"
     );
 
     Ok(results)
@@ -116,28 +118,28 @@ fn search_symbols_inner(
 pub fn get_file_symbols(file_path: String) -> Result<Vec<CodeSymbolInfo>, String> {
     let path = PathBuf::from(&file_path);
 
-    println!("📋 [Symbols] Parsing: {}", file_path);
+    debug!(file_path = %file_path, "search::symbol: parsing file");
 
     let content = std::fs::read_to_string(&path).map_err(|e| {
-        println!("   ❌ Failed to read file: {}", e);
+        warn!(file_path = %file_path, error = %e, "search::symbol: failed to read file");
         format!("Failed to read file: {}", e)
     })?;
 
     let ext = path.extension().and_then(|e| e.to_str()).ok_or_else(|| {
-        println!("   ❌ Unknown file extension for: {}", file_path);
+        warn!(file_path = %file_path, "search::symbol: unknown file extension");
         "Unknown file extension".to_string()
     })?;
 
-    println!("   📄 Extension: {}, Size: {} bytes", ext, content.len());
+    debug!(ext = %ext, size = content.len(), "search::symbol: file metadata");
 
     let ts_file =
         TreeSitterFile::try_build_from_extension(content.as_bytes(), ext).map_err(|e| {
-            println!("   ❌ TreeSitter build failed: {:?}", e);
+            warn!(file_path = %file_path, error = ?e, "search::symbol: tree-sitter build failed");
             format!("Unsupported language or parse error: {:?}", e)
         })?;
 
     let scope_graph = ts_file.scope_graph().map_err(|e| {
-        println!("   ❌ Scope graph failed: {:?}", e);
+        warn!(file_path = %file_path, error = ?e, "search::symbol: scope graph failed");
         format!("Failed to build scope graph: {:?}", e)
     })?;
 
@@ -158,7 +160,7 @@ pub fn get_file_symbols(file_path: String) -> Result<Vec<CodeSymbolInfo>, String
         })
         .collect();
 
-    println!("   ✅ Found {} symbols", result.len());
+    debug!(symbols = result.len(), "search::symbol: symbols extracted");
 
     Ok(result)
 }

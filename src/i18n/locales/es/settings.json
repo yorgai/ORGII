@@ -903,7 +903,16 @@
     "diskCategory_screenshots": "Capturas del navegador",
     "diskCategory_agentWorktrees": "Worktrees de Session Agent",
     "diskCategory_lspBin": "Binarios de LSP Server",
-    "loadZeroRows": "Haz clic para cargar {{count}} más"
+    "loadZeroRows": "Haz clic para cargar {{count}} más",
+    "categoryTerminal": "Proceso de terminal/herramienta",
+    "categoryWebview": "Renderizador de WebView",
+    "categoryGpu": "GPU de WebKit",
+    "categoryNetwork": "Red de WebKit",
+    "categoryOther": "Proceso auxiliar",
+    "breakdownBackendRss": "RSS del proceso backend",
+    "breakdownWebkitHelpers": "Auxiliares de WebKit / WebView",
+    "breakdownToolHelpers": "Auxiliares de terminal y herramientas",
+    "breakdownFileCache": "Caché de archivos del backend"
   },
   "storage": {
     "dataDirectory": "Directorio de datos",
@@ -1281,5 +1290,14 @@
     "searchActions": "Buscar acciones...",
     "noActionsFound": "No se encontraron acciones",
     "noConfigurableProperties": "Sin propiedades configurables"
+  },
+  "toasts": {
+    "loginFailed": "Error al iniciar sesión. Inténtalo de nuevo.",
+    "signedOut": "Sesión cerrada correctamente",
+    "logoutFailed": "Error al cerrar sesión. Inténtalo de nuevo.",
+    "customCommandUpdated": "Comando personalizado actualizado",
+    "shellSettingUpdated": "Configuración del shell actualizada",
+    "idesDetected": "{{count}} IDE detectado(s)",
+    "ideDetectFailed": "No se pudieron detectar IDE. Asegúrate de que tu IDE esté instalado e inténtalo de nuevo."
   }
 }

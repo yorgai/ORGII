@@ -5,6 +5,7 @@ import type {
   PillIconType,
 } from "@src/components/ComposerInput";
 import Message from "@src/components/Message";
+import i18n from "@src/i18n";
 import { loadWorkItemPillContent } from "@src/util/contextPillContent";
 
 export const CHAT_DROP_TARGET_SELECTOR = "[data-chat-drop-target]";
@@ -80,7 +81,7 @@ export function insertPillFromTabPayload(
       displayName
     );
     loadWorkItemPillContent(payload.path, pillPath);
-    Message.success(`Added ${displayName} as context`);
+    Message.success(i18n.t("toasts.addedAsContext", { name: displayName }));
     return;
   }
 
@@ -90,7 +91,7 @@ export function insertPillFromTabPayload(
     iconType,
     displayName
   );
-  Message.success(`Added ${displayName} as context`);
+  Message.success(i18n.t("toasts.addedAsContext", { name: displayName }));
 }
 
 export function insertTabAsPill(

@@ -40,7 +40,7 @@ const TerminalSection: React.FC = () => {
   const debouncedSaveShellPath = useDebouncedCallback((path: string) => {
     setCustomShellPath(path);
     if (shellType === "custom") {
-      Message.success("Custom command updated");
+      Message.success(t("toasts.customCommandUpdated"));
     }
   }, CUSTOM_SHELL_DEBOUNCE_MS);
 
@@ -52,9 +52,9 @@ const TerminalSection: React.FC = () => {
   const handleShellTypeChange = useCallback(
     (value: ShellType) => {
       setShellType(value);
-      Message.success("Shell setting updated");
+      Message.success(t("toasts.shellSettingUpdated"));
     },
-    [setShellType]
+    [setShellType, t]
   );
 
   return (

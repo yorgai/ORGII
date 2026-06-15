@@ -20,6 +20,7 @@ use std::sync::{Mutex, OnceLock};
 use tauri::webview::WebviewBuilder;
 use tauri::WebviewUrl;
 use tauri::{AppHandle, Emitter, Manager};
+use tracing::{debug, warn};
 
 use super::scripts::{
     ANTI_BOT_DETECTION_SCRIPT, CONSOLE_CAPTURE_SCRIPT, ELEMENT_INSPECTOR_SCRIPT,
@@ -186,19 +187,17 @@ pub async fn create_inline_webview(
     visible: bool,
 ) -> Result<(), String> {
     let (x, y, width, height) = frame_from_corners(x, y, a, b, width, height);
-    println!(
-        "[InlineWebview] Creating webview: {} at ({}, {}) size {}x{}",
-        label, x, y, width, height
-    );
-    println!(
-        "[InlineWebview] Looking for parent window: {}",
-        parent_window
+    debug!(
+        label = %label,
+        x, y, width, height,
+        parent_window = %parent_window,
+        "browser::inline: creating webview"
     );
 
     // Get the parent window
     let window = app.get_window(&parent_window).ok_or_else(|| {
         let windows: Vec<_> = app.windows().keys().cloned().collect();
-        println!("[InlineWebview] Available windows: {:?}", windows);
+        debug!(windows = ?windows, "browser::inline: parent window not found");
         format!(
             "Parent window '{}' not found. Available: {:?}",
             parent_window, windows
@@ -212,19 +211,18 @@ pub async fn create_inline_webview(
     // Increment ref count. Under the single-owner model only My Station calls
     // this, but the count guards against double-create races on fast navigation.
     let ref_count = increment_ref(&label);
-    println!(
-        "[InlineWebview] Ref count for {} is now {}",
-        label, ref_count
-    );
+    debug!(label = %label, ref_count, "browser::inline: ref count incremented");
 
     // When a webview with this label already exists, reuse it. Respect the
     // caller's initial visibility so inactive restored tabs stay offscreen
     // instead of covering an active empty tab.
     if let Some(existing) = app.get_webview(&label) {
         let should_show = visible;
-        println!(
-            "[InlineWebview] Webview {} already exists (ref={}), reusing with visible={}",
-            label, ref_count, should_show
+        debug!(
+            label = %label,
+            ref_count,
+            visible = should_show,
+            "browser::inline: reusing existing webview"
         );
         let (target_x, target_y, target_width, target_height) = if should_show {
             (x, y, width, height)
@@ -270,7 +268,7 @@ pub async fn create_inline_webview(
     .initialization_script(SHORTCUT_FORWARDING_SCRIPT)
     .on_new_window(move |new_window_url, _cookies| {
         let url_str = new_window_url.to_string();
-        println!("[InlineWebview] New window requested: {}", url_str);
+        debug!(url = %url_str, "browser::inline: new window requested");
 
         if new_window_url.scheme() == "orgii-shortcut" {
             if let Some(shortcut) = new_window_url.host_str() {
@@ -330,9 +328,10 @@ pub async fn create_inline_webview(
         if is_generation_cancelled(&label, generation)
             || !is_current_generation(&label, Some(generation))
         {
-            println!(
-                "[InlineWebview] Create finished after cancel for {} generation {}; closing offscreen webview",
-                label, generation
+            debug!(
+                label = %label,
+                generation,
+                "browser::inline: create finished after cancel; closing offscreen webview"
             );
             decrement_ref(&label);
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| webview.close()));
@@ -340,9 +339,9 @@ pub async fn create_inline_webview(
         }
     }
 
-    println!(
-        "[InlineWebview] Successfully created webview: {} (offscreen until frontend shows it)",
-        webview.label()
+    debug!(
+        label = %webview.label(),
+        "browser::inline: successfully created webview (offscreen until frontend shows it)"
     );
 
     Ok(())
@@ -414,9 +413,9 @@ pub fn set_inline_webview_visibility(
             Ok(Err(e)) => Err(format!("Failed to set visibility: {}", e)),
             Err(_) => {
                 // Caught panic from wry - webview is likely in invalid state
-                println!(
-                    "[InlineWebview] Warning: visibility change panicked for {}, webview may be invalid",
-                    label
+                warn!(
+                    label = %label,
+                    "browser::inline: visibility change panicked; webview may be invalid"
                 );
                 Ok(())
             }
@@ -487,15 +486,17 @@ pub fn close_inline_webview(
 ) -> Result<(), String> {
     cancel_generation(&label, generation);
     let remaining = decrement_ref(&label);
-    println!(
-        "[InlineWebview] close_inline_webview: {} — ref count now {}",
-        label, remaining
+    debug!(
+        label = %label,
+        remaining,
+        "browser::inline: close_inline_webview"
     );
 
     if remaining > 0 {
-        println!(
-            "[InlineWebview] Skipping destroy for {} — {} ref(s) still active",
-            label, remaining
+        debug!(
+            label = %label,
+            remaining,
+            "browser::inline: skipping destroy; refs still active"
         );
         return Ok(());
     }
@@ -508,9 +509,9 @@ pub fn close_inline_webview(
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(format!("Failed to close: {}", e)),
             Err(_) => {
-                println!(
-                    "[InlineWebview] Warning: close panicked for {}, webview may be invalid",
-                    label
+                warn!(
+                    label = %label,
+                    "browser::inline: close panicked; webview may be invalid"
                 );
                 Ok(())
             }
@@ -548,20 +549,14 @@ pub fn hide_all_inline_webviews(app: AppHandle) -> Result<Vec<String>, String> {
 
         match result {
             Ok(Ok(())) => {
-                println!("[HideAllWebviews] Hidden webview: {}", label);
+                debug!(label = %label, "browser::inline: hidden webview");
                 hidden_labels.push(label.clone());
             }
             Ok(Err(e)) => {
-                println!(
-                    "[HideAllWebviews] Failed to hide webview '{}': {}",
-                    label, e
-                );
+                warn!(label = %label, error = %e, "browser::inline: failed to hide webview");
             }
             Err(_) => {
-                println!(
-                    "[HideAllWebviews] Warning: hide panicked for '{}', skipping",
-                    label
-                );
+                warn!(label = %label, "browser::inline: hide panicked; skipping");
             }
         }
     }
@@ -618,20 +613,14 @@ pub fn close_all_inline_webviews(app: AppHandle) -> Result<Vec<String>, String> 
 
         match result {
             Ok(Ok(())) => {
-                println!("[CloseAllWebviews] Closed webview: {}", label);
+                debug!(label = %label, "browser::inline: closed webview");
                 closed_labels.push(label.clone());
             }
             Ok(Err(e)) => {
-                println!(
-                    "[CloseAllWebviews] Failed to close webview '{}': {}",
-                    label, e
-                );
+                warn!(label = %label, error = %e, "browser::inline: failed to close webview");
             }
             Err(_) => {
-                println!(
-                    "[CloseAllWebviews] Warning: close panicked for '{}', skipping",
-                    label
-                );
+                warn!(label = %label, "browser::inline: close panicked; skipping");
             }
         }
     }
@@ -655,9 +644,9 @@ pub fn navigate_inline_webview(app: AppHandle, label: String, url: String) -> Re
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(format!("Failed to navigate: {}", e)),
             Err(_) => {
-                println!(
-                    "[InlineWebview] Warning: navigate panicked for {}, webview may be invalid",
-                    label
+                warn!(
+                    label = %label,
+                    "browser::inline: navigate panicked; webview may be invalid"
                 );
                 Err("Navigation failed - webview in invalid state".to_string())
             }
@@ -679,9 +668,9 @@ pub fn reload_inline_webview(app: AppHandle, label: String) -> Result<(), String
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(format!("Failed to reload: {}", e)),
             Err(_) => {
-                println!(
-                    "[InlineWebview] Warning: reload panicked for {}, webview may be invalid",
-                    label
+                warn!(
+                    label = %label,
+                    "browser::inline: reload panicked; webview may be invalid"
                 );
                 Err("Reload failed - webview in invalid state".to_string())
             }

@@ -903,7 +903,16 @@
     "diskCategory_screenshots": "Captures d'écran du navigateur",
     "diskCategory_agentWorktrees": "Worktrees de Session Agent",
     "diskCategory_lspBin": "Binaires LSP Server",
-    "loadZeroRows": "Cliquez pour charger {{count}} éléments de plus"
+    "loadZeroRows": "Cliquez pour charger {{count}} éléments de plus",
+    "categoryTerminal": "Processus terminal/outil",
+    "categoryWebview": "Moteur de rendu WebView",
+    "categoryGpu": "GPU WebKit",
+    "categoryNetwork": "Réseau WebKit",
+    "categoryOther": "Processus auxiliaire",
+    "breakdownBackendRss": "RSS du processus backend",
+    "breakdownWebkitHelpers": "Auxiliaires WebKit / WebView",
+    "breakdownToolHelpers": "Auxiliaires terminal et outils",
+    "breakdownFileCache": "Cache de fichiers backend"
   },
   "storage": {
     "dataDirectory": "Répertoire de données",
@@ -1281,5 +1290,14 @@
     "searchActions": "Rechercher des actions...",
     "noActionsFound": "Aucune action trouvée",
     "noConfigurableProperties": "Aucune propriété configurable"
+  },
+  "toasts": {
+    "loginFailed": "Échec de la connexion. Veuillez réessayer.",
+    "signedOut": "Déconnexion réussie",
+    "logoutFailed": "Échec de la déconnexion. Veuillez réessayer.",
+    "customCommandUpdated": "Commande personnalisée mise à jour",
+    "shellSettingUpdated": "Paramètre du shell mis à jour",
+    "idesDetected": "{{count}} IDE détecté(s)",
+    "ideDetectFailed": "Impossible de détecter les IDE. Veuillez vérifier que votre IDE est installé et réessayer."
   }
 }

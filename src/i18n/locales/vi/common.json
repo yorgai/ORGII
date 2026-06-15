@@ -1602,7 +1602,9 @@
     "openAgentStation": "Đi tới Agent Station",
     "openOpsControl": "Đi tới Ops Control",
     "changeLanguage": "Thay đổi ngôn ngữ",
-    "switchToSystemTheme": "Theo chủ đề hệ thống"
+    "switchToSystemTheme": "Theo chủ đề hệ thống",
+    "recentlyUsed": "Đã dùng gần đây",
+    "detectUpdate": "Kiểm tra cập nhật"
   },
   "commands": {
     "showBottomPanel": "Hiện bảng dưới",
@@ -2155,5 +2157,47 @@
     "downloadedOfTotal": "{{downloaded}} trên {{total}}",
     "preparingDownload": "Đang chuẩn bị tải xuống…",
     "downloadingAndInstalling": "Đang tải và cài đặt bản cập nhật (v{{version}})…"
+  },
+  "toasts": {
+    "replyEmpty": "Câu trả lời không được để trống",
+    "sessionNotFound": "Không tìm thấy phiên",
+    "answerSubmitted": "Đã gửi câu trả lời thành công",
+    "answerFailed": "Không thể gửi câu trả lời. Vui lòng thử lại.",
+    "replyError": "Đã xảy ra lỗi khi gửi câu trả lời",
+    "questionIgnored": "Đã bỏ qua câu hỏi",
+    "addedAsContext": "Đã thêm {{name}} làm ngữ cảnh",
+    "addedFilesAsContext": "Đã thêm {{count}} tệp làm ngữ cảnh",
+    "chooseAgentAssigneeAi": "Hãy chọn một agent phụ trách trước khi tạo bằng AI.",
+    "autoExecuteRequiresAgent": "Thực thi tự động cần một agent phụ trách.",
+    "openSessionBeforeLinking": "Hãy mở một phiên trước khi liên kết hạng mục công việc.",
+    "sessionLinkedToWorkItem": "Đã liên kết phiên với hạng mục công việc.",
+    "sessionLinkFailed": "Không thể liên kết phiên: {{message}}",
+    "chooseFolderNewWorkspace": "Chọn thư mục để tạo không gian làm việc",
+    "chooseExistingWorkspace": "Chọn không gian làm việc hiện có",
+    "selectDirectoryFailed": "Không thể chọn thư mục",
+    "workspaceCreated": "Đã tạo không gian làm việc",
+    "workspaceCreateFailed": "Không thể tạo không gian làm việc",
+    "workspaceImported": "Đã nhập không gian làm việc",
+    "workspaceImportFailed": "Không thể nhập không gian làm việc",
+    "chooseFolderCloneRepo": "Chọn thư mục để sao chép kho lưu trữ",
+    "repositoryCloned": "Đã sao chép kho lưu trữ",
+    "repositoryCloneFailed": "Không thể sao chép kho lưu trữ"
+  },
+  "previews": {
+    "noCanvasAvailable": "Không có canvas",
+    "canvas": "Canvas",
+    "openInBrowser": "Mở trong trình duyệt",
+    "closeCanvas": "Đóng canvas",
+    "generatingCanvas": "Đang tạo canvas…",
+    "noContent": "Không có nội dung",
+    "noIssueSelected": "Chưa chọn issue",
+    "selectIssueHint": "Chọn một issue trong bảng Issues ở thanh bên.",
+    "reload": "Tải lại",
+    "urlPreviewRequiresTauri": "Xem trước URL cần Tauri",
+    "openInExternalBrowser": "Hãy mở trong trình duyệt ngoài",
+    "loadPresentationFailed": "Không thể tải bản trình bày",
+    "slideNumber": "Trang {{index}}",
+    "noTextContent": "Không có nội dung văn bản",
+    "noSlidesFound": "Không tìm thấy trang trình bày"
   }
 }

@@ -33,6 +33,7 @@ import {
   PanelLeft,
   Play,
   RadioTower,
+  RefreshCw,
   RotateCcw,
   Search,
   Sparkles,
@@ -93,7 +94,8 @@ export type SpotlightStaticActionId =
   | "toggle-workstation-chat-panel"
   | "open-search-sidebar"
   | "open-source-control-tab"
-  | "open-terminal-tab";
+  | "open-terminal-tab"
+  | "detect-update";
 
 export type SpotlightStaticActionFallback =
   | "open-session-creator"
@@ -118,7 +120,8 @@ export type SpotlightStaticActionFallback =
   | "open-ops-control"
   | "open-search-sidebar"
   | "open-source-control-tab"
-  | "open-terminal-tab";
+  | "open-terminal-tab"
+  | "detect-update";
 
 export type SpotlightEditorActionId =
   | "go-to-editor-file"
@@ -382,6 +385,28 @@ export const STATION_MODE_ACTIONS = [
     actionId: ACTION_ID.WORKSTATION_OPEN_OPS_CONTROL,
     payload: {},
     fallback: "open-ops-control",
+    closeOnSuccess: true,
+  },
+] satisfies SpotlightStaticActionDefinition[];
+
+export const APP_ACTIONS = [
+  {
+    id: "detect-update",
+    labelKey: "common:spotlightActions.detectUpdate",
+    icon: RefreshCw,
+    keywords: [
+      "detect update",
+      "check for update",
+      "check for updates",
+      "update",
+      "app update",
+      "software update",
+      "upgrade",
+      "new version",
+    ],
+    actionId: ACTION_ID.APP_CHECK_FOR_UPDATES,
+    payload: {},
+    fallback: "detect-update",
     closeOnSuccess: true,
   },
 ] satisfies SpotlightStaticActionDefinition[];

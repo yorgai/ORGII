@@ -48,6 +48,7 @@ import {
   useCommunicationAgentIdentity,
 } from "./communicationAgentIdentity";
 import type { MessageEntry } from "./types";
+import { computeUserBubbleLayout } from "./userBubbleLayout";
 
 interface TerminalPillData {
   displayName: string;
@@ -451,8 +452,8 @@ const UserBubbleContent: React.FC<{
     [content]
   );
 
-  const hasImages = !!images && images.length > 0;
-  const hasContent = strippedContent !== "";
+  const { hasImages, hasContent, showBubble, imageRowNeedsGap } =
+    computeUserBubbleLayout(strippedContent, images);
 
   if (isPlanApproved) {
     return (
@@ -486,14 +487,18 @@ const UserBubbleContent: React.FC<{
 
   return (
     <div className="flex flex-col items-start gap-1.5 text-left">
-      {hasContent && (
+      {showBubble && (
         <div
           className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} rounded-lg bg-primary-1 p-3`}
         >
-          <UserMessageContent text={strippedContent} />
+          {hasImages && images && (
+            <div className={imageRowNeedsGap ? "mb-2" : ""}>
+              <ChatImageThumbnailRow images={images} />
+            </div>
+          )}
+          {hasContent && <UserMessageContent text={strippedContent} />}
         </div>
       )}
-      {hasImages && <ChatImageThumbnailRow images={images} />}
       {terminalPills.map((pill, index) => (
         <TerminalContextCard key={`${pill.displayName}-${index}`} pill={pill} />
       ))}

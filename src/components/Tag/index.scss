@@ -28,17 +28,38 @@
     align-items: center;
   }
 
+  &-body {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    cursor: inherit;
+  }
+
   &-close {
     display: flex;
     align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin-left: 4px;
+    border: none;
+    background: transparent;
     font-size: 12px;
     cursor: pointer;
     opacity: 0.6;
     transition: opacity 0.2s ease;
-    margin-left: 4px;
+    color: inherit;
 
     &:hover {
       opacity: 1;
+    }
+
+    &:focus-visible {
+      outline: 2px solid
+        color-mix(in srgb, var(--color-primary-6) 35%, transparent);
+      outline-offset: 1px;
+      border-radius: 2px;
     }
   }
 
@@ -142,12 +163,14 @@
     cursor: pointer;
     user-select: none;
 
-    &:hover {
-      opacity: 0.8;
-    }
+    .tag-body {
+      &:hover {
+        opacity: 0.8;
+      }
 
-    &:active {
-      transform: scale(0.98);
+      &:active {
+        transform: scale(0.98);
+      }
     }
   }
 

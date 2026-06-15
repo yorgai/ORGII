@@ -10,6 +10,7 @@ import {
 } from "@src/api/http/project";
 import Message from "@src/components/Message";
 import type { SessionLaunchSuccessInfo } from "@src/engines/SessionCore/hooks/session/useSessionCreator/useSessionLaunch/types";
+import i18n from "@src/i18n";
 import type { AgentDefinition } from "@src/modules/MainApp/AgentOrgs/types";
 import { SESSION_TARGET_KIND } from "@src/store/session";
 import type { SessionCreatorState } from "@src/store/session/creatorStateAtom";
@@ -166,7 +167,7 @@ export function useAiWorkItemCreator({
 
     const assignee = resolveAiWorkItemAssignee(draft);
     if (!assignee) {
-      Message.error("Choose an agent assignee before creating with AI.");
+      Message.error(i18n.t("toasts.chooseAgentAssigneeAi"));
       return null;
     }
 
