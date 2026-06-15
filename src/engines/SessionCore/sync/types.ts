@@ -15,6 +15,7 @@
  * all session types through a single code path.
  */
 import type { CancelReason } from "@src/api/tauri/agent/session";
+import { createLogger } from "@src/hooks/logger";
 import type { WorkspaceSnapshot } from "@src/services/context/workspaceSnapshot";
 import {
   isAgentSession,
@@ -25,6 +26,8 @@ import {
 } from "@src/util/session/sessionDispatch";
 
 import type { SessionEvent } from "../core/types";
+
+const log = createLogger("SessionCore");
 
 // ============================================================================
 // Raw event from Tauri Channel / WebSocket
@@ -307,9 +310,7 @@ export function getAdapterForSession(
   sessionId: string
 ): SessionAdapter | undefined {
   if (adapterRegistry.size === 0) {
-    console.warn(
-      "[SessionCore] getAdapterForSession called before adapters were registered"
-    );
+    log.warn("getAdapterForSession called before adapters were registered");
   }
 
   if (isAgentSession(sessionId)) {

@@ -2037,6 +2037,32 @@
       "pickerError": "Failed to open picker"
     }
   },
+  "sqlEditor": {
+    "placeholder": "Enter SQL query...",
+    "format": "Format",
+    "runQueryToSeeResults": "Run a query to see results",
+    "executingQuery": "Executing query...",
+    "queryFailed": "Query failed",
+    "queryCompleted": "Query completed",
+    "noResults": "Query returned no results",
+    "rowCount_one": "{{count}} row",
+    "rowCount_other": "{{count}} rows",
+    "press": "Press",
+    "toRun": "to run",
+    "nullValue": "NULL",
+    "booleanTrue": "true",
+    "booleanFalse": "false"
+  },
+  "uploadZone": {
+    "clickOrDrag": "Click or drag file to this area to upload",
+    "supportFormats": "Support: {{accept}}"
+  },
+  "chatImage": {
+    "maxReached": "Maximum {{max}} images allowed",
+    "remainingWarning": "Only {{remaining}} more image(s) can be added (max {{max}})",
+    "processFailed": "Failed to process image",
+    "loadFailed": "Failed to load image: {{fileName}}"
+  },
   "dragDrop": {
     "dropFilesToUpload": "Drop files to upload",
     "dropFileToChat": "Drop file to add to chat",
