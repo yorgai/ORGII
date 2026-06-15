@@ -1,4 +1,13 @@
 {
+  "toasts": {
+    "loginFailed": "Đăng nhập thất bại. Vui lòng thử lại.",
+    "signedOut": "Đã đăng xuất thành công",
+    "logoutFailed": "Đăng xuất thất bại. Vui lòng thử lại.",
+    "customCommandUpdated": "Đã cập nhật lệnh tùy chỉnh",
+    "shellSettingUpdated": "Đã cập nhật cài đặt shell",
+    "idesDetected": "Đã phát hiện {{count}} IDE",
+    "ideDetectFailed": "Không thể phát hiện IDE. Vui lòng đảm bảo IDE của bạn đã được cài đặt và thử lại."
+  },
   "noSettingsFound": "Không tìm thấy cài đặt cho \"{{query}}\"",
   "searchPlaceholder": "Tìm kiếm cài đặt...",
   "panel": {
@@ -782,6 +791,15 @@
     "currentVersion": "Phiên bản hiện tại"
   },
   "monitor": {
+    "categoryTerminal": "Tiến trình terminal/công cụ",
+    "categoryWebview": "Trình kết xuất WebView",
+    "categoryGpu": "GPU WebKit",
+    "categoryNetwork": "Mạng WebKit",
+    "categoryOther": "Tiến trình trợ giúp",
+    "breakdownBackendRss": "RSS tiến trình backend",
+    "breakdownWebkitHelpers": "Trình trợ giúp WebKit / WebView",
+    "breakdownToolHelpers": "Trình trợ giúp terminal và công cụ",
+    "breakdownFileCache": "Bộ nhớ đệm tệp backend",
     "resourceUsage": "Sử dụng tài nguyên",
     "performanceMonitor": "Giám sát hiệu suất",
     "cpu": "CPU",

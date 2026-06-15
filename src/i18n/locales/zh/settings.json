@@ -1,4 +1,13 @@
 {
+  "toasts": {
+    "loginFailed": "登录失败，请重试。",
+    "signedOut": "已成功退出登录",
+    "logoutFailed": "退出登录失败，请重试。",
+    "customCommandUpdated": "自定义命令已更新",
+    "shellSettingUpdated": "Shell 设置已更新",
+    "idesDetected": "检测到 {{count}} 个 IDE",
+    "ideDetectFailed": "无法检测到 IDE。请确保已安装 IDE 后重试。"
+  },
   "noSettingsFound": "未找到\"{{query}}\"相关设置",
   "searchPlaceholder": "搜索设置...",
   "panel": {
@@ -782,6 +791,15 @@
     "currentVersion": "当前版本"
   },
   "monitor": {
+    "categoryTerminal": "终端/工具进程",
+    "categoryWebview": "WebView 渲染器",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit 网络",
+    "categoryOther": "辅助进程",
+    "breakdownBackendRss": "后端进程 RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView 辅助进程",
+    "breakdownToolHelpers": "终端和工具辅助进程",
+    "breakdownFileCache": "后端文件缓存",
     "resourceUsage": "资源使用",
     "performanceMonitor": "性能监控",
     "cpu": "CPU",

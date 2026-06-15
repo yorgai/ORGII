@@ -1,4 +1,13 @@
 {
+  "toasts": {
+    "loginFailed": "Anmeldung fehlgeschlagen. Bitte erneut versuchen.",
+    "signedOut": "Erfolgreich abgemeldet",
+    "logoutFailed": "Abmeldung fehlgeschlagen. Bitte erneut versuchen.",
+    "customCommandUpdated": "Benutzerdefinierter Befehl aktualisiert",
+    "shellSettingUpdated": "Shell-Einstellung aktualisiert",
+    "idesDetected": "{{count}} IDE erkannt",
+    "ideDetectFailed": "IDEs konnten nicht erkannt werden. Stelle sicher, dass deine IDE installiert ist, und versuche es erneut."
+  },
   "noSettingsFound": "Keine Einstellungen für \"{{query}}\" gefunden",
   "searchPlaceholder": "Einstellungen durchsuchen...",
   "panel": {
@@ -782,6 +791,15 @@
     "currentVersion": "Aktuelle Version"
   },
   "monitor": {
+    "categoryTerminal": "Terminal-/Tool-Prozess",
+    "categoryWebview": "WebView-Renderer",
+    "categoryGpu": "WebKit-GPU",
+    "categoryNetwork": "WebKit-Netzwerk",
+    "categoryOther": "Hilfsprozess",
+    "breakdownBackendRss": "Backend-Prozess-RSS",
+    "breakdownWebkitHelpers": "WebKit-/WebView-Helfer",
+    "breakdownToolHelpers": "Terminal- und Tool-Helfer",
+    "breakdownFileCache": "Backend-Dateicache",
     "resourceUsage": "Ressourcennutzung",
     "performanceMonitor": "Leistungsmonitor",
     "cpu": "CPU",

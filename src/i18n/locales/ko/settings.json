@@ -1,4 +1,13 @@
 {
+  "toasts": {
+    "loginFailed": "로그인에 실패했습니다. 다시 시도하세요.",
+    "signedOut": "로그아웃되었습니다",
+    "logoutFailed": "로그아웃에 실패했습니다. 다시 시도하세요.",
+    "customCommandUpdated": "사용자 지정 명령이 업데이트되었습니다",
+    "shellSettingUpdated": "셸 설정이 업데이트되었습니다",
+    "idesDetected": "{{count}}개의 IDE를 감지했습니다",
+    "ideDetectFailed": "IDE를 감지할 수 없습니다. IDE가 설치되어 있는지 확인한 후 다시 시도하세요."
+  },
   "noSettingsFound": "\"{{query}}\"에 대한 설정을 찾을 수 없습니다",
   "searchPlaceholder": "설정 검색...",
   "panel": {
@@ -782,6 +791,15 @@
     "currentVersion": "현재 버전"
   },
   "monitor": {
+    "categoryTerminal": "터미널/도구 프로세스",
+    "categoryWebview": "WebView 렌더러",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit 네트워킹",
+    "categoryOther": "헬퍼 프로세스",
+    "breakdownBackendRss": "백엔드 프로세스 RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView 헬퍼",
+    "breakdownToolHelpers": "터미널 및 도구 헬퍼",
+    "breakdownFileCache": "백엔드 파일 캐시",
     "resourceUsage": "리소스 사용량",
     "performanceMonitor": "성능 모니터",
     "cpu": "CPU",

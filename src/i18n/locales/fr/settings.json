@@ -1,4 +1,13 @@
 {
+  "toasts": {
+    "loginFailed": "Échec de la connexion. Veuillez réessayer.",
+    "signedOut": "Déconnexion réussie",
+    "logoutFailed": "Échec de la déconnexion. Veuillez réessayer.",
+    "customCommandUpdated": "Commande personnalisée mise à jour",
+    "shellSettingUpdated": "Paramètre du shell mis à jour",
+    "idesDetected": "{{count}} IDE détecté(s)",
+    "ideDetectFailed": "Impossible de détecter les IDE. Veuillez vérifier que votre IDE est installé et réessayer."
+  },
   "noSettingsFound": "Aucun paramètre trouvé pour \"{{query}}\"",
   "searchPlaceholder": "Rechercher des paramètres...",
   "panel": {
@@ -782,6 +791,15 @@
     "currentVersion": "Version actuelle"
   },
   "monitor": {
+    "categoryTerminal": "Processus terminal/outil",
+    "categoryWebview": "Moteur de rendu WebView",
+    "categoryGpu": "GPU WebKit",
+    "categoryNetwork": "Réseau WebKit",
+    "categoryOther": "Processus auxiliaire",
+    "breakdownBackendRss": "RSS du processus backend",
+    "breakdownWebkitHelpers": "Auxiliaires WebKit / WebView",
+    "breakdownToolHelpers": "Auxiliaires terminal et outils",
+    "breakdownFileCache": "Cache de fichiers backend",
     "resourceUsage": "Utilisation des ressources",
     "performanceMonitor": "Moniteur de performance",
     "cpu": "CPU",

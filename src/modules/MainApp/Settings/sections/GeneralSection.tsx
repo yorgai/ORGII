@@ -303,7 +303,7 @@ const GeneralTabBody: React.FC = () => {
       await login();
     } catch (error) {
       log.error("Login error:", error);
-      Message.error("Login failed. Please try again.");
+      Message.error(t("toasts.loginFailed"));
     }
   };
 
@@ -324,11 +324,11 @@ const GeneralTabBody: React.FC = () => {
         github_infos: [],
         gitlab_infos: [],
       } as IUserInfo);
-      Message.success("Signed out successfully");
+      Message.success(t("toasts.signedOut"));
       navigate(ROUTES.auth.login.path, { replace: true });
     } catch (error) {
       log.error("Logout error:", error);
-      Message.error("Logout failed. Please try again.");
+      Message.error(t("toasts.logoutFailed"));
     }
   };
 

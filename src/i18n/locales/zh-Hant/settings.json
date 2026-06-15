@@ -1,4 +1,13 @@
 {
+  "toasts": {
+    "loginFailed": "登入失敗，請重試。",
+    "signedOut": "已成功登出",
+    "logoutFailed": "登出失敗，請重試。",
+    "customCommandUpdated": "自訂命令已更新",
+    "shellSettingUpdated": "Shell 設定已更新",
+    "idesDetected": "偵測到 {{count}} 個 IDE",
+    "ideDetectFailed": "無法偵測到 IDE。請確認已安裝 IDE 後再試一次。"
+  },
   "noSettingsFound": "未找到\"{{query}}\"相關設置",
   "searchPlaceholder": "搜索設置...",
   "panel": {
@@ -782,6 +791,15 @@
     "currentVersion": "目前版本"
   },
   "monitor": {
+    "categoryTerminal": "終端機/工具程序",
+    "categoryWebview": "WebView 轉譯器",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit 網路",
+    "categoryOther": "輔助程序",
+    "breakdownBackendRss": "後端程序 RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView 輔助程序",
+    "breakdownToolHelpers": "終端機與工具輔助程序",
+    "breakdownFileCache": "後端檔案快取",
     "resourceUsage": "資源使用",
     "performanceMonitor": "性能監控",
     "cpu": "CPU",

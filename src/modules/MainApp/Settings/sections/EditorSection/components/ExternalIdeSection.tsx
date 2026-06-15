@@ -122,7 +122,9 @@ const ExternalIdeSection: React.FC = () => {
         if (detectedPreferred) {
           setPreferredExternalIde(detectedPreferred);
         }
-        Message.success(`Detected ${normalizedIdes.length} IDE(s)`);
+        Message.success(
+          t("toasts.idesDetected", { count: normalizedIdes.length })
+        );
       } else {
         Message.error(
           "Unable to detect IDEs. Please ensure your IDE is installed and try again."
@@ -130,13 +132,11 @@ const ExternalIdeSection: React.FC = () => {
       }
     } catch (error) {
       log.error("Failed to detect IDEs", error);
-      Message.error(
-        "Unable to detect IDEs. Please ensure your IDE is installed and try again."
-      );
+      Message.error(t("toasts.ideDetectFailed"));
     } finally {
       setIsDetectingIde(false);
     }
-  }, [setPreferredExternalIde]);
+  }, [setPreferredExternalIde, t]);
 
   const selectPlaceholder = isDetectingIde
     ? tCommon("actions.loading")

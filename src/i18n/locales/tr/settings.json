@@ -1,4 +1,13 @@
 {
+  "toasts": {
+    "loginFailed": "Giriş başarısız. Lütfen tekrar deneyin.",
+    "signedOut": "Başarıyla çıkış yapıldı",
+    "logoutFailed": "Çıkış başarısız. Lütfen tekrar deneyin.",
+    "customCommandUpdated": "Özel komut güncellendi",
+    "shellSettingUpdated": "Shell ayarı güncellendi",
+    "idesDetected": "{{count}} IDE algılandı",
+    "ideDetectFailed": "IDE algılanamadı. Lütfen IDE'nizin yüklü olduğundan emin olup tekrar deneyin."
+  },
   "noSettingsFound": "\"{{query}}\" için ayar bulunamadı",
   "searchPlaceholder": "Ayarlarda ara...",
   "panel": {
@@ -782,6 +791,15 @@
     "currentVersion": "Mevcut Sürüm"
   },
   "monitor": {
+    "categoryTerminal": "Terminal/araç süreci",
+    "categoryWebview": "WebView işleyici",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit ağ",
+    "categoryOther": "Yardımcı süreç",
+    "breakdownBackendRss": "Arka uç süreci RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView yardımcıları",
+    "breakdownToolHelpers": "Terminal ve araç yardımcıları",
+    "breakdownFileCache": "Arka uç dosya önbelleği",
     "resourceUsage": "Kaynak Kullanımı",
     "performanceMonitor": "Performans Monitörü",
     "cpu": "CPU",

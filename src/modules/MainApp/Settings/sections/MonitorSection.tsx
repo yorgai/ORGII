@@ -104,13 +104,13 @@ const MonitorSection: React.FC<MonitorSectionProps> = ({
 
   const categoryLabels: Record<string, string> = useMemo(
     () => ({
-      terminal: "Terminal/tool process",
-      webview: "WebView renderer",
-      gpu: "WebKit GPU",
-      network: "WebKit networking",
-      other: "Helper process",
+      terminal: t("monitor.categoryTerminal"),
+      webview: t("monitor.categoryWebview"),
+      gpu: t("monitor.categoryGpu"),
+      network: t("monitor.categoryNetwork"),
+      other: t("monitor.categoryOther"),
     }),
-    []
+    [t]
   );
 
   const breakdownRows = useMemo<BreakdownRow[]>(() => {
@@ -118,25 +118,25 @@ const MonitorSection: React.FC<MonitorSectionProps> = ({
     return [
       {
         key: "backendRss",
-        label: "Backend process RSS",
+        label: t("monitor.breakdownBackendRss"),
         megabytes: memoryBreakdown.backend_rss_mb,
         totalMb: totalMemoryMb,
       },
       {
         key: "webkitHelpers",
-        label: "WebKit / WebView helpers",
+        label: t("monitor.breakdownWebkitHelpers"),
         megabytes: webviewMemoryMb,
         totalMb: totalMemoryMb,
       },
       {
         key: "toolHelpers",
-        label: "Terminal & tool helpers",
+        label: t("monitor.breakdownToolHelpers"),
         megabytes: toolProcessMemoryMb,
         totalMb: totalMemoryMb,
       },
       {
         key: "backendFileCache",
-        label: "Backend file cache",
+        label: t("monitor.breakdownFileCache"),
         megabytes: memoryBreakdown.file_cache_mb,
         totalMb: backendMemoryMb,
       },
@@ -147,6 +147,7 @@ const MonitorSection: React.FC<MonitorSectionProps> = ({
     totalMemoryMb,
     webviewMemoryMb,
     toolProcessMemoryMb,
+    t,
   ]);
 
   const breakdownColumns = useMemo<SettingsTableColumn<BreakdownRow>[]>(

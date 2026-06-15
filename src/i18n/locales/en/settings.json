@@ -1,4 +1,13 @@
 {
+  "toasts": {
+    "loginFailed": "Login failed. Please try again.",
+    "signedOut": "Signed out successfully",
+    "logoutFailed": "Logout failed. Please try again.",
+    "customCommandUpdated": "Custom command updated",
+    "shellSettingUpdated": "Shell setting updated",
+    "idesDetected": "Detected {{count}} IDE(s)",
+    "ideDetectFailed": "Unable to detect IDEs. Please ensure your IDE is installed and try again."
+  },
   "noSettingsFound": "No settings found for \"{{query}}\"",
   "searchPlaceholder": "Search settings...",
   "panel": {
@@ -782,6 +791,15 @@
     "currentVersion": "Current Version"
   },
   "monitor": {
+    "categoryTerminal": "Terminal/tool process",
+    "categoryWebview": "WebView renderer",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit networking",
+    "categoryOther": "Helper process",
+    "breakdownBackendRss": "Backend process RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView helpers",
+    "breakdownToolHelpers": "Terminal & tool helpers",
+    "breakdownFileCache": "Backend file cache",
     "resourceUsage": "Resource Usage",
     "performanceMonitor": "Performance Monitor",
     "cpu": "CPU",

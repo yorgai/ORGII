@@ -1,4 +1,13 @@
 {
+  "toasts": {
+    "loginFailed": "ログインに失敗しました。もう一度お試しください。",
+    "signedOut": "ログアウトしました",
+    "logoutFailed": "ログアウトに失敗しました。もう一度お試しください。",
+    "customCommandUpdated": "カスタムコマンドを更新しました",
+    "shellSettingUpdated": "シェル設定を更新しました",
+    "idesDetected": "{{count}} 個の IDE を検出しました",
+    "ideDetectFailed": "IDE を検出できませんでした。IDE がインストールされていることを確認して、もう一度お試しください。"
+  },
   "noSettingsFound": "「{{query}}」に一致する設定が見つかりません",
   "searchPlaceholder": "設定を検索...",
   "panel": {
@@ -782,6 +791,15 @@
     "currentVersion": "現在のバージョン"
   },
   "monitor": {
+    "categoryTerminal": "ターミナル/ツールプロセス",
+    "categoryWebview": "WebView レンダラー",
+    "categoryGpu": "WebKit GPU",
+    "categoryNetwork": "WebKit ネットワーク",
+    "categoryOther": "ヘルパープロセス",
+    "breakdownBackendRss": "バックエンドプロセス RSS",
+    "breakdownWebkitHelpers": "WebKit / WebView ヘルパー",
+    "breakdownToolHelpers": "ターミナルとツールのヘルパー",
+    "breakdownFileCache": "バックエンドファイルキャッシュ",
     "resourceUsage": "リソース使用状況",
     "performanceMonitor": "パフォーマンスモニター",
     "cpu": "CPU",
