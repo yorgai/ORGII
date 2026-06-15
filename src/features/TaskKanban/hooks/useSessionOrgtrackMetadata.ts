@@ -33,6 +33,35 @@ function metadataFromSummaries(
   return metadataBySessionId;
 }
 
+function hasImpactMetadata(metadata: KanbanTaskOrgtrackMetadata): boolean {
+  return (
+    metadata.filesChanged > 0 ||
+    metadata.linesAdded > 0 ||
+    metadata.linesRemoved > 0 ||
+    metadata.relatedCommits > 0 ||
+    metadata.committedFiles > 0 ||
+    metadata.committedRatePercent > 0
+  );
+}
+
+function metadataFromSession(
+  session: Session
+): KanbanTaskOrgtrackMetadata | undefined {
+  const filesChanged = session.filesChanged ?? 0;
+  const linesAdded = session.linesAdded ?? 0;
+  const linesRemoved = session.linesRemoved ?? 0;
+  const metadata = {
+    filesChanged,
+    linesAdded,
+    linesRemoved,
+    relatedCommits: 0,
+    committedFiles: 0,
+    committedRatePercent: 0,
+  };
+
+  return hasImpactMetadata(metadata) ? metadata : undefined;
+}
+
 export function useSessionOrgtrackMetadata(
   sessions: readonly Session[]
 ): Map<string, KanbanTaskOrgtrackMetadata> {
@@ -89,11 +118,22 @@ export function useSessionOrgtrackMetadata(
 
   return useMemo(() => {
     const metadataBySessionId = new Map<string, KanbanTaskOrgtrackMetadata>();
+    for (const session of sessions) {
+      const metadata = metadataFromSession(session);
+      if (metadata) {
+        metadataBySessionId.set(session.session_id, metadata);
+      }
+    }
     for (const summaries of summariesByWorkspacePath.values()) {
       for (const [sessionId, metadata] of metadataFromSummaries(summaries)) {
-        metadataBySessionId.set(sessionId, metadata);
+        if (
+          hasImpactMetadata(metadata) ||
+          !metadataBySessionId.has(sessionId)
+        ) {
+          metadataBySessionId.set(sessionId, metadata);
+        }
       }
     }
     return metadataBySessionId;
-  }, [summariesByWorkspacePath]);
+  }, [sessions, summariesByWorkspacePath]);
 }

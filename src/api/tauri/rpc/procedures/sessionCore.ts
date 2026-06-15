@@ -163,6 +163,10 @@ const eventStore = {
     .input(schemas.sessionCore.NullableSessionIdInput)
     .output(schemas.sessionCore.SessionEventArraySchema)
     .build(),
+  extractEventDataWindow: defineProcedure("es_extract_event_data_window")
+    .input(schemas.sessionCore.ExtractedEventDataWindowInput)
+    .output(schemas.sessionCore.ExtractedEventDataPairsSchema)
+    .build(),
   exportMarkdown: defineProcedure("es_export_markdown")
     .input(schemas.sessionCore.NullableSessionIdInput)
     .output(z.string())

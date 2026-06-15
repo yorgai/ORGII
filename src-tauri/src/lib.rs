@@ -575,6 +575,9 @@ pub fn run() {
             project_management::sync::start_worker(app.handle().clone());
             tracing::info!("[sync::worker] Sync worker started");
 
+            orgtrack::analysis_backfill::spawn_analysis_backfill_worker();
+            tracing::info!("[orgtrack_analysis] Analysis backfill worker started");
+
                         // Restore previously-enabled channels (e.g. feishu was toggled on last run)
             let app_handle_for_restore = app.handle().clone();
             tauri::async_runtime::spawn(async move {

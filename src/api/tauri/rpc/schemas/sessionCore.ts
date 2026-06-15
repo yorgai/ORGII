@@ -102,6 +102,21 @@ export const SessionEventSchema = SessionEventRuntimeSchema as z.ZodType<
 
 export const SessionEventArraySchema = z.array(SessionEventSchema);
 
+export const ExtractedEventDataWindowInput = z.object({
+  sessionId: z.string().optional(),
+  offset: z.number().int().nonnegative(),
+  limit: z.number().int().positive(),
+});
+
+export const ExtractedEventDataPairSchema = z.tuple([
+  z.string(),
+  ExtractedDataSchema,
+]);
+
+export const ExtractedEventDataPairsSchema = z.array(
+  ExtractedEventDataPairSchema
+);
+
 const SessionEventPartialRuntimeSchema =
   SessionEventRuntimeSchema.partial().catchall(z.unknown());
 

@@ -1,4 +1,8 @@
-use crate::canonical::{ActivityRecord, CommitLinkRecord, FileChangeRecord, SessionRecord};
+use crate::canonical::{
+    ActivityRecord, CommitLinkRecord, FileChangeRecord, SessionCheckpointFileStateRecord,
+    SessionCheckpointRecord, SessionDiffChunkRecord, SessionEditArtifactRecord,
+    SessionFinalDiffRecord, SessionRecord,
+};
 
 #[derive(Debug, Clone)]
 pub struct SourceDescriptor {
@@ -20,6 +24,11 @@ pub struct SourceRecords {
     pub activities: Vec<ActivityRecord>,
     pub file_changes: Vec<FileChangeRecord>,
     pub commit_links: Vec<CommitLinkRecord>,
+    pub edit_artifacts: Vec<SessionEditArtifactRecord>,
+    pub diff_chunks: Vec<SessionDiffChunkRecord>,
+    pub final_diffs: Vec<SessionFinalDiffRecord>,
+    pub checkpoints: Vec<SessionCheckpointRecord>,
+    pub checkpoint_file_states: Vec<SessionCheckpointFileStateRecord>,
 }
 
 pub trait SourceAdapter {

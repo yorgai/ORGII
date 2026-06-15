@@ -24,6 +24,9 @@ export interface CursorIdeSessionRow {
   readOnly: true;
   model?: string;
   totalTokens: number;
+  linesAdded: number;
+  linesRemoved: number;
+  filesChanged: number;
   background: boolean;
   isActive: boolean;
   repoPath?: string;

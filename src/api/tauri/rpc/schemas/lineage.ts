@@ -132,6 +132,70 @@ export const OrgtrackReachabilityStateSchema = z.enum([
   "unknown",
 ]);
 
+export const OrgtrackTierSupportSchema = z.enum([
+  "default",
+  "opt_in",
+  "unsupported",
+]);
+
+export const OrgtrackSourceTierPolicySchema = z.object({
+  tier1: OrgtrackTierSupportSchema,
+  tier2: OrgtrackTierSupportSchema,
+  tier3: OrgtrackTierSupportSchema,
+});
+
+export const OrgtrackSourceTierPolicyInput = z.object({
+  source: z.string(),
+});
+
+export const OrgtrackExtractionMemoryDecisionSchema = z.enum([
+  "run",
+  "pause_soft",
+  "pause_hard",
+  "pause_system_memory",
+]);
+
+export const OrgtrackExtractionMemoryGateSchema = z.object({
+  decision: OrgtrackExtractionMemoryDecisionSchema,
+  rustRssMb: z.number(),
+  systemAvailableMb: z.number(),
+  shouldResume: z.boolean(),
+});
+
+export const OrgtrackSessionArtifactQueryInput = z.object({
+  source: z.string().optional(),
+  sessionId: z.string().optional(),
+});
+
+export const OrgtrackCheckpointFileStateInput = z.object({
+  checkpointId: z.string(),
+});
+
+export const OrgtrackEditKindSchema = z.enum([
+  "read",
+  "write",
+  "delete",
+  "patch",
+  "commit_boundary",
+  "unknown",
+]);
+
+export const OrgtrackArtifactQualitySchema = z.enum([
+  "exact",
+  "patch_reversible",
+  "inferred",
+  "stats_only",
+]);
+
+export const OrgtrackCheckpointKindSchema = z.enum([
+  "pre_message_snapshot",
+  "post_tool_call",
+  "post_turn",
+  "explicit_user_checkpoint",
+  "commit_boundary",
+  "inferred",
+]);
+
 export const OrgtrackParsedCategorySchema = z.object({
   key: z.string(),
   value: z.string(),
@@ -150,6 +214,113 @@ export const OrgtrackAgentIdentitySchema = z.object({
   keySource: z.string().nullable().optional(),
   origin: z.string().nullable().optional(),
   parsedCategories: z.array(OrgtrackParsedCategorySchema),
+});
+
+export const OrgtrackAgentMetadataSchema = z.object({
+  dispatchCategory: z.string().nullable().optional(),
+  rustAgentType: z.string().nullable().optional(),
+  cliAgentType: z.string().nullable().optional(),
+  agentExecMode: z.string().nullable().optional(),
+  displayName: z.string().nullable().optional(),
+  providerModelType: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  keySource: z.string().nullable().optional(),
+  origin: z.string().nullable().optional(),
+  parsedCategories: z.record(z.string(), z.string()),
+});
+
+export const OrgtrackSessionEditArtifactSchema = z.object({
+  schemaVersion: z.number().int(),
+  recordId: z.string(),
+  source: z.string(),
+  sourceSessionId: z.string().nullable().optional(),
+  sessionId: z.string(),
+  sourceEventId: z.string().nullable().optional(),
+  turnId: z.string().nullable().optional(),
+  sequenceIndex: z.number().int(),
+  timestamp: z.string().nullable().optional(),
+  workspacePath: z.string().nullable().optional(),
+  filePath: z.string(),
+  pathHash: z.string(),
+  editKind: OrgtrackEditKindSchema,
+  oldStartLine: z.number().int().nullable().optional(),
+  newStartLine: z.number().int().nullable().optional(),
+  startLine: z.number().int().nullable().optional(),
+  endLine: z.number().int().nullable().optional(),
+  linesAdded: z.number().int(),
+  linesRemoved: z.number().int(),
+  quality: OrgtrackArtifactQualitySchema,
+  metadata: OrgtrackAgentMetadataSchema,
+});
+
+export const OrgtrackSessionDiffChunkSchema = z.object({
+  schemaVersion: z.number().int(),
+  recordId: z.string(),
+  editRecordId: z.string(),
+  source: z.string(),
+  sessionId: z.string(),
+  sourceEventId: z.string().nullable().optional(),
+  sequenceIndex: z.number().int(),
+  chunkIndex: z.number().int(),
+  filePath: z.string(),
+  oldStartLine: z.number().int().nullable().optional(),
+  newStartLine: z.number().int().nullable().optional(),
+  oldContent: z.string().nullable().optional(),
+  newContent: z.string().nullable().optional(),
+  diff: z.string().nullable().optional(),
+  linesAdded: z.number().int(),
+  linesRemoved: z.number().int(),
+  isDeleted: z.boolean(),
+  quality: OrgtrackArtifactQualitySchema,
+});
+
+export const OrgtrackSessionFinalDiffSchema = z.object({
+  schemaVersion: z.number().int(),
+  recordId: z.string(),
+  source: z.string(),
+  sessionId: z.string(),
+  filePath: z.string(),
+  baselineEventId: z.string().nullable().optional(),
+  finalEventId: z.string().nullable().optional(),
+  oldContent: z.string().nullable().optional(),
+  newContent: z.string().nullable().optional(),
+  diff: z.string().nullable().optional(),
+  linesAdded: z.number().int(),
+  linesRemoved: z.number().int(),
+  quality: OrgtrackArtifactQualitySchema,
+  differsFromSummedChunks: z.boolean(),
+  computedAt: z.string(),
+});
+
+export const OrgtrackSessionCheckpointSchema = z.object({
+  schemaVersion: z.number().int(),
+  checkpointId: z.string(),
+  source: z.string(),
+  sourceSessionId: z.string().nullable().optional(),
+  sessionId: z.string(),
+  sequenceIndex: z.number().int(),
+  sourceEventId: z.string().nullable().optional(),
+  turnId: z.string().nullable().optional(),
+  checkpointKind: OrgtrackCheckpointKindSchema,
+  timestamp: z.string().nullable().optional(),
+  affectedFilePaths: z.array(z.string()),
+  editRecordIds: z.array(z.string()),
+  quality: OrgtrackArtifactQualitySchema,
+  undoSupported: z.boolean(),
+  metadataJson: z.string().nullable().optional(),
+});
+
+export const OrgtrackCheckpointFileStateSchema = z.object({
+  schemaVersion: z.number().int(),
+  recordId: z.string(),
+  checkpointId: z.string(),
+  sessionId: z.string(),
+  filePath: z.string(),
+  content: z.string().nullable().optional(),
+  reversePatch: z.string().nullable().optional(),
+  diff: z.string().nullable().optional(),
+  contentHash: z.string().nullable().optional(),
+  quality: OrgtrackArtifactQualitySchema,
 });
 
 export const OrgtrackBranchContextSchema = z.object({
@@ -282,6 +453,28 @@ export const OrgtrackFileSessionLookupSchema = z.object({
 export type FunctionEntry = z.output<typeof FunctionEntrySchema>;
 export type SessionImpact = z.output<typeof SessionImpactSchema>;
 export type OrgtrackTier = z.output<typeof OrgtrackTierSchema>;
+export type OrgtrackTierSupport = z.output<typeof OrgtrackTierSupportSchema>;
+export type OrgtrackSourceTierPolicy = z.output<
+  typeof OrgtrackSourceTierPolicySchema
+>;
+export type OrgtrackExtractionMemoryGate = z.output<
+  typeof OrgtrackExtractionMemoryGateSchema
+>;
+export type OrgtrackSessionEditArtifact = z.output<
+  typeof OrgtrackSessionEditArtifactSchema
+>;
+export type OrgtrackSessionDiffChunk = z.output<
+  typeof OrgtrackSessionDiffChunkSchema
+>;
+export type OrgtrackSessionFinalDiff = z.output<
+  typeof OrgtrackSessionFinalDiffSchema
+>;
+export type OrgtrackSessionCheckpoint = z.output<
+  typeof OrgtrackSessionCheckpointSchema
+>;
+export type OrgtrackCheckpointFileState = z.output<
+  typeof OrgtrackCheckpointFileStateSchema
+>;
 export type OrgtrackExportResult = z.output<typeof OrgtrackExportResultSchema>;
 export type OrgtrackScanStatus = z.output<typeof OrgtrackScanStatusSchema>;
 export type OrgtrackScanPhase = z.output<typeof OrgtrackScanPhaseSchema>;

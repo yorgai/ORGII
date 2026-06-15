@@ -1,7 +1,11 @@
 use rusqlite::{params, Connection, OptionalExtension};
 
 use super::RecordStore;
-use crate::canonical::{ActivityRecord, CommitLinkRecord, FileChangeRecord, ScanCheckpoint, SessionRecord};
+use crate::canonical::{
+    ActivityRecord, CommitLinkRecord, FileChangeRecord, ScanCheckpoint,
+    SessionCheckpointFileStateRecord, SessionCheckpointRecord, SessionDiffChunkRecord,
+    SessionEditArtifactRecord, SessionFinalDiffRecord, SessionRecord,
+};
 
 pub struct SqliteRecordStore<'conn> {
     conn: &'conn Connection,
@@ -79,6 +83,79 @@ impl<'conn> SqliteRecordStore<'conn> {
                 updated_at      TEXT,
                 payload_json    TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS orgtrack_core_edit_artifacts (
+                record_id       TEXT PRIMARY KEY,
+                source          TEXT NOT NULL,
+                session_id      TEXT NOT NULL,
+                source_event_id TEXT,
+                sequence_index  INTEGER NOT NULL,
+                workspace_path  TEXT,
+                file_path       TEXT NOT NULL,
+                path_hash       TEXT NOT NULL,
+                quality         TEXT NOT NULL,
+                payload_json    TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_orgtrack_core_edit_artifacts_session
+                ON orgtrack_core_edit_artifacts(source, session_id, sequence_index);
+            CREATE INDEX IF NOT EXISTS idx_orgtrack_core_edit_artifacts_workspace
+                ON orgtrack_core_edit_artifacts(workspace_path, sequence_index);
+            CREATE INDEX IF NOT EXISTS idx_orgtrack_core_edit_artifacts_path
+                ON orgtrack_core_edit_artifacts(file_path, sequence_index);
+
+            CREATE TABLE IF NOT EXISTS orgtrack_core_diff_chunks (
+                record_id       TEXT PRIMARY KEY,
+                edit_record_id  TEXT NOT NULL,
+                source          TEXT NOT NULL,
+                session_id      TEXT NOT NULL,
+                source_event_id TEXT,
+                sequence_index  INTEGER NOT NULL,
+                chunk_index     INTEGER NOT NULL,
+                file_path       TEXT NOT NULL,
+                quality         TEXT NOT NULL,
+                payload_json    TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_orgtrack_core_diff_chunks_session
+                ON orgtrack_core_diff_chunks(source, session_id, sequence_index, chunk_index);
+            CREATE INDEX IF NOT EXISTS idx_orgtrack_core_diff_chunks_edit
+                ON orgtrack_core_diff_chunks(edit_record_id);
+
+            CREATE TABLE IF NOT EXISTS orgtrack_core_final_diffs (
+                record_id       TEXT PRIMARY KEY,
+                source          TEXT NOT NULL,
+                session_id      TEXT NOT NULL,
+                file_path       TEXT NOT NULL,
+                quality         TEXT NOT NULL,
+                computed_at     TEXT NOT NULL,
+                payload_json    TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_orgtrack_core_final_diffs_session
+                ON orgtrack_core_final_diffs(source, session_id, file_path);
+
+            CREATE TABLE IF NOT EXISTS orgtrack_core_session_checkpoints (
+                checkpoint_id   TEXT PRIMARY KEY,
+                source          TEXT NOT NULL,
+                session_id      TEXT NOT NULL,
+                sequence_index  INTEGER NOT NULL,
+                source_event_id TEXT,
+                checkpoint_kind TEXT NOT NULL,
+                quality         TEXT NOT NULL,
+                undo_supported  INTEGER NOT NULL,
+                payload_json    TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_orgtrack_core_session_checkpoints_session
+                ON orgtrack_core_session_checkpoints(source, session_id, sequence_index);
+
+            CREATE TABLE IF NOT EXISTS orgtrack_core_checkpoint_file_states (
+                record_id       TEXT PRIMARY KEY,
+                checkpoint_id   TEXT NOT NULL,
+                session_id      TEXT NOT NULL,
+                file_path       TEXT NOT NULL,
+                quality         TEXT NOT NULL,
+                payload_json    TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_orgtrack_core_checkpoint_file_states_checkpoint
+                ON orgtrack_core_checkpoint_file_states(checkpoint_id, file_path);
             ",
         )
     }
@@ -197,6 +274,64 @@ impl<'conn> SqliteRecordStore<'conn> {
     fn from_json<T: serde::de::DeserializeOwned>(value: String) -> Result<T, String> {
         serde_json::from_str(&value).map_err(|err| err.to_string())
     }
+
+    fn list_by_scope<T: serde::de::DeserializeOwned>(
+        &self,
+        table_name: &str,
+        source: Option<&str>,
+        session_id: Option<&str>,
+        order_by: &str,
+    ) -> Result<Vec<T>, String> {
+        let mut records = Vec::new();
+        let query = match (source, session_id) {
+            (Some(_), Some(_)) => format!(
+                "SELECT payload_json FROM {table_name} WHERE source = ?1 AND session_id = ?2 ORDER BY {order_by}"
+            ),
+            (Some(_), None) => format!(
+                "SELECT payload_json FROM {table_name} WHERE source = ?1 ORDER BY {order_by}"
+            ),
+            (None, Some(_)) => format!(
+                "SELECT payload_json FROM {table_name} WHERE session_id = ?1 ORDER BY {order_by}"
+            ),
+            (None, None) => format!("SELECT payload_json FROM {table_name} ORDER BY {order_by}"),
+        };
+        let mut stmt = self.conn.prepare(&query).map_err(|err| err.to_string())?;
+        match (source, session_id) {
+            (Some(source), Some(session_id)) => {
+                let rows = stmt
+                    .query_map(params![source, session_id], |row| row.get::<_, String>(0))
+                    .map_err(|err| err.to_string())?;
+                for row in rows {
+                    records.push(Self::from_json(row.map_err(|err| err.to_string())?)?);
+                }
+            }
+            (Some(source), None) => {
+                let rows = stmt
+                    .query_map(params![source], |row| row.get::<_, String>(0))
+                    .map_err(|err| err.to_string())?;
+                for row in rows {
+                    records.push(Self::from_json(row.map_err(|err| err.to_string())?)?);
+                }
+            }
+            (None, Some(session_id)) => {
+                let rows = stmt
+                    .query_map(params![session_id], |row| row.get::<_, String>(0))
+                    .map_err(|err| err.to_string())?;
+                for row in rows {
+                    records.push(Self::from_json(row.map_err(|err| err.to_string())?)?);
+                }
+            }
+            (None, None) => {
+                let rows = stmt
+                    .query_map([], |row| row.get::<_, String>(0))
+                    .map_err(|err| err.to_string())?;
+                for row in rows {
+                    records.push(Self::from_json(row.map_err(|err| err.to_string())?)?);
+                }
+            }
+        }
+        Ok(records)
+    }
 }
 
 impl RecordStore for SqliteRecordStore<'_> {
@@ -301,6 +436,269 @@ impl RecordStore for SqliteRecordStore<'_> {
         Ok(())
     }
 
+
+    fn upsert_edit_artifact(&self, record: &SessionEditArtifactRecord) -> Result<(), String> {
+        let payload = Self::to_json(record)?;
+        self.conn
+            .execute(
+                "INSERT INTO orgtrack_core_edit_artifacts (
+                    record_id, source, session_id, source_event_id, sequence_index,
+                    workspace_path, file_path, path_hash, quality, payload_json
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                ON CONFLICT(record_id) DO UPDATE SET
+                    source=excluded.source,
+                    session_id=excluded.session_id,
+                    source_event_id=excluded.source_event_id,
+                    sequence_index=excluded.sequence_index,
+                    workspace_path=excluded.workspace_path,
+                    file_path=excluded.file_path,
+                    path_hash=excluded.path_hash,
+                    quality=excluded.quality,
+                    payload_json=excluded.payload_json",
+                params![
+                    record.record_id,
+                    record.source,
+                    record.session_id,
+                    record.source_event_id,
+                    record.sequence_index,
+                    record.workspace_path,
+                    record.file_path,
+                    record.path_hash,
+                    format!("{:?}", record.quality),
+                    payload
+                ],
+            )
+            .map_err(|err| err.to_string())?;
+        Ok(())
+    }
+
+    fn upsert_diff_chunk(&self, record: &SessionDiffChunkRecord) -> Result<(), String> {
+        let payload = Self::to_json(record)?;
+        self.conn
+            .execute(
+                "INSERT INTO orgtrack_core_diff_chunks (
+                    record_id, edit_record_id, source, session_id, source_event_id,
+                    sequence_index, chunk_index, file_path, quality, payload_json
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                ON CONFLICT(record_id) DO UPDATE SET
+                    edit_record_id=excluded.edit_record_id,
+                    source=excluded.source,
+                    session_id=excluded.session_id,
+                    source_event_id=excluded.source_event_id,
+                    sequence_index=excluded.sequence_index,
+                    chunk_index=excluded.chunk_index,
+                    file_path=excluded.file_path,
+                    quality=excluded.quality,
+                    payload_json=excluded.payload_json",
+                params![
+                    record.record_id,
+                    record.edit_record_id,
+                    record.source,
+                    record.session_id,
+                    record.source_event_id,
+                    record.sequence_index,
+                    record.chunk_index,
+                    record.file_path,
+                    format!("{:?}", record.quality),
+                    payload
+                ],
+            )
+            .map_err(|err| err.to_string())?;
+        Ok(())
+    }
+
+    fn upsert_final_diff(&self, record: &SessionFinalDiffRecord) -> Result<(), String> {
+        let payload = Self::to_json(record)?;
+        self.conn
+            .execute(
+                "INSERT INTO orgtrack_core_final_diffs (
+                    record_id, source, session_id, file_path, quality, computed_at, payload_json
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+                ON CONFLICT(record_id) DO UPDATE SET
+                    source=excluded.source,
+                    session_id=excluded.session_id,
+                    file_path=excluded.file_path,
+                    quality=excluded.quality,
+                    computed_at=excluded.computed_at,
+                    payload_json=excluded.payload_json",
+                params![
+                    record.record_id,
+                    record.source,
+                    record.session_id,
+                    record.file_path,
+                    format!("{:?}", record.quality),
+                    record.computed_at,
+                    payload
+                ],
+            )
+            .map_err(|err| err.to_string())?;
+        Ok(())
+    }
+
+    fn upsert_session_checkpoint(&self, record: &SessionCheckpointRecord) -> Result<(), String> {
+        let payload = Self::to_json(record)?;
+        self.conn
+            .execute(
+                "INSERT INTO orgtrack_core_session_checkpoints (
+                    checkpoint_id, source, session_id, sequence_index, source_event_id,
+                    checkpoint_kind, quality, undo_supported, payload_json
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                ON CONFLICT(checkpoint_id) DO UPDATE SET
+                    source=excluded.source,
+                    session_id=excluded.session_id,
+                    sequence_index=excluded.sequence_index,
+                    source_event_id=excluded.source_event_id,
+                    checkpoint_kind=excluded.checkpoint_kind,
+                    quality=excluded.quality,
+                    undo_supported=excluded.undo_supported,
+                    payload_json=excluded.payload_json",
+                params![
+                    record.checkpoint_id,
+                    record.source,
+                    record.session_id,
+                    record.sequence_index,
+                    record.source_event_id,
+                    format!("{:?}", record.checkpoint_kind),
+                    format!("{:?}", record.quality),
+                    record.undo_supported,
+                    payload
+                ],
+            )
+            .map_err(|err| err.to_string())?;
+        Ok(())
+    }
+
+    fn upsert_checkpoint_file_state(
+        &self,
+        record: &SessionCheckpointFileStateRecord,
+    ) -> Result<(), String> {
+        let payload = Self::to_json(record)?;
+        self.conn
+            .execute(
+                "INSERT INTO orgtrack_core_checkpoint_file_states (
+                    record_id, checkpoint_id, session_id, file_path, quality, payload_json
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                ON CONFLICT(record_id) DO UPDATE SET
+                    checkpoint_id=excluded.checkpoint_id,
+                    session_id=excluded.session_id,
+                    file_path=excluded.file_path,
+                    quality=excluded.quality,
+                    payload_json=excluded.payload_json",
+                params![
+                    record.record_id,
+                    record.checkpoint_id,
+                    record.session_id,
+                    record.file_path,
+                    format!("{:?}", record.quality),
+                    payload
+                ],
+            )
+            .map_err(|err| err.to_string())?;
+        Ok(())
+    }
+
+    fn delete_session_artifacts(&self, source: &str, session_id: &str) -> Result<(), String> {
+        let checkpoint_ids = self
+            .list_session_checkpoints(Some(source), Some(session_id))?
+            .into_iter()
+            .map(|checkpoint| checkpoint.checkpoint_id)
+            .collect::<Vec<_>>();
+        for checkpoint_id in checkpoint_ids {
+            self.conn
+                .execute(
+                    "DELETE FROM orgtrack_core_checkpoint_file_states WHERE checkpoint_id = ?1",
+                    params![checkpoint_id],
+                )
+                .map_err(|err| err.to_string())?;
+        }
+        for table_name in [
+            "orgtrack_core_edit_artifacts",
+            "orgtrack_core_diff_chunks",
+            "orgtrack_core_final_diffs",
+            "orgtrack_core_session_checkpoints",
+        ] {
+            self.conn
+                .execute(
+                    &format!("DELETE FROM {table_name} WHERE source = ?1 AND session_id = ?2"),
+                    params![source, session_id],
+                )
+                .map_err(|err| err.to_string())?;
+        }
+        Ok(())
+    }
+
+    fn list_edit_artifacts(
+        &self,
+        source: Option<&str>,
+        session_id: Option<&str>,
+    ) -> Result<Vec<SessionEditArtifactRecord>, String> {
+        self.list_by_scope(
+            "orgtrack_core_edit_artifacts",
+            source,
+            session_id,
+            "sequence_index ASC",
+        )
+    }
+
+    fn list_diff_chunks(
+        &self,
+        source: Option<&str>,
+        session_id: Option<&str>,
+    ) -> Result<Vec<SessionDiffChunkRecord>, String> {
+        self.list_by_scope(
+            "orgtrack_core_diff_chunks",
+            source,
+            session_id,
+            "sequence_index ASC, chunk_index ASC",
+        )
+    }
+
+    fn list_final_diffs(
+        &self,
+        source: Option<&str>,
+        session_id: Option<&str>,
+    ) -> Result<Vec<SessionFinalDiffRecord>, String> {
+        self.list_by_scope(
+            "orgtrack_core_final_diffs",
+            source,
+            session_id,
+            "file_path ASC",
+        )
+    }
+
+    fn list_session_checkpoints(
+        &self,
+        source: Option<&str>,
+        session_id: Option<&str>,
+    ) -> Result<Vec<SessionCheckpointRecord>, String> {
+        self.list_by_scope(
+            "orgtrack_core_session_checkpoints",
+            source,
+            session_id,
+            "sequence_index ASC",
+        )
+    }
+
+    fn list_checkpoint_file_states(
+        &self,
+        checkpoint_id: &str,
+    ) -> Result<Vec<SessionCheckpointFileStateRecord>, String> {
+        let mut records = Vec::new();
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT payload_json FROM orgtrack_core_checkpoint_file_states WHERE checkpoint_id = ?1 ORDER BY file_path ASC",
+            )
+            .map_err(|err| err.to_string())?;
+        let rows = stmt
+            .query_map(params![checkpoint_id], |row| row.get::<_, String>(0))
+            .map_err(|err| err.to_string())?;
+        for row in rows {
+            records.push(Self::from_json(row.map_err(|err| err.to_string())?)?);
+        }
+        Ok(records)
+    }
+
     fn list_commit_links(&self) -> Result<Vec<CommitLinkRecord>, String> {
         let mut records = Vec::new();
         let mut stmt = self.conn
@@ -396,5 +794,64 @@ impl RecordStore for SqliteRecordStore<'_> {
             records.push(Self::from_json(row.map_err(|err| err.to_string())?)?);
         }
         Ok(records)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::canonical::{
+        AgentMetadata, ArtifactQuality, SessionEditArtifactRecord, SessionEditKind,
+    };
+    use crate::privacy::ORGTRACK_SCHEMA_VERSION;
+
+    fn fixture_store() -> SqliteRecordStore<'static> {
+        let conn = Connection::open_in_memory().expect("in-memory sqlite");
+        SqliteRecordStore::init_tables(&conn).expect("init tables");
+        SqliteRecordStore::new(Box::leak(Box::new(conn)))
+    }
+
+    #[test]
+    fn edit_artifacts_are_upserted_listed_and_deleted_by_session() {
+        let store = fixture_store();
+        let record = SessionEditArtifactRecord {
+            schema_version: ORGTRACK_SCHEMA_VERSION,
+            record_id: "edit-1".to_string(),
+            source: "cursor_ide".to_string(),
+            source_session_id: Some("source-1".to_string()),
+            session_id: "session-1".to_string(),
+            source_event_id: Some("event-1".to_string()),
+            turn_id: Some("turn-1".to_string()),
+            sequence_index: 1,
+            timestamp: Some("2026-06-15T00:00:00Z".to_string()),
+            workspace_path: Some("/repo".to_string()),
+            file_path: "src/lib.rs".to_string(),
+            path_hash: "hash".to_string(),
+            edit_kind: SessionEditKind::Patch,
+            old_start_line: Some(1),
+            new_start_line: Some(1),
+            start_line: Some(1),
+            end_line: Some(2),
+            lines_added: 2,
+            lines_removed: 1,
+            quality: ArtifactQuality::PatchReversible,
+            metadata: AgentMetadata::default(),
+        };
+        store
+            .upsert_edit_artifact(&record)
+            .expect("upsert edit artifact");
+        let records = store
+            .list_edit_artifacts(Some("cursor_ide"), Some("session-1"))
+            .expect("list edit artifacts");
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].record_id, "edit-1");
+
+        store
+            .delete_session_artifacts("cursor_ide", "session-1")
+            .expect("delete session artifacts");
+        let records = store
+            .list_edit_artifacts(Some("cursor_ide"), Some("session-1"))
+            .expect("list edit artifacts after delete");
+        assert!(records.is_empty());
     }
 }

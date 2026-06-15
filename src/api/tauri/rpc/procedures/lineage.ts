@@ -62,4 +62,52 @@ export const lineage = {
     .input(schemas.lineage.OrgtrackFileSessionLookupInput)
     .output(schemas.lineage.OrgtrackFileSessionLookupSchema.nullable())
     .build(),
+
+  orgtrackGetSourceTierPolicy: defineProcedure(
+    "orgtrack_get_source_tier_policy"
+  )
+    .input(schemas.lineage.OrgtrackSourceTierPolicyInput)
+    .output(schemas.lineage.OrgtrackSourceTierPolicySchema)
+    .build(),
+
+  orgtrackGetExtractionMemoryGate: defineProcedure(
+    "orgtrack_get_extraction_memory_gate"
+  )
+    .output(schemas.lineage.OrgtrackExtractionMemoryGateSchema)
+    .build(),
+
+  orgtrackGetSessionEditArtifacts: defineProcedure(
+    "orgtrack_get_session_edit_artifacts"
+  )
+    .input(schemas.lineage.OrgtrackSessionArtifactQueryInput)
+    .output(z.array(schemas.lineage.OrgtrackSessionEditArtifactSchema))
+    .build(),
+
+  orgtrackGetSessionDiffChunks: defineProcedure(
+    "orgtrack_get_session_diff_chunks"
+  )
+    .input(schemas.lineage.OrgtrackSessionArtifactQueryInput)
+    .output(z.array(schemas.lineage.OrgtrackSessionDiffChunkSchema))
+    .build(),
+
+  orgtrackGetSessionFinalDiffs: defineProcedure(
+    "orgtrack_get_session_final_diffs"
+  )
+    .input(schemas.lineage.OrgtrackSessionArtifactQueryInput)
+    .output(z.array(schemas.lineage.OrgtrackSessionFinalDiffSchema))
+    .build(),
+
+  orgtrackGetSessionCheckpoints: defineProcedure(
+    "orgtrack_get_session_checkpoints"
+  )
+    .input(schemas.lineage.OrgtrackSessionArtifactQueryInput)
+    .output(z.array(schemas.lineage.OrgtrackSessionCheckpointSchema))
+    .build(),
+
+  orgtrackGetCheckpointFileStates: defineProcedure(
+    "orgtrack_get_checkpoint_file_states"
+  )
+    .input(schemas.lineage.OrgtrackCheckpointFileStateInput)
+    .output(z.array(schemas.lineage.OrgtrackCheckpointFileStateSchema))
+    .build(),
 } as const;

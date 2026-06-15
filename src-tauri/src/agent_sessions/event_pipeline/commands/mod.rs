@@ -13,7 +13,7 @@
 mod analytics;
 mod batch_update;
 mod cache_bridge;
-mod event_conversion;
+pub(crate) mod event_conversion;
 mod extractors;
 mod history;
 mod ingestion;

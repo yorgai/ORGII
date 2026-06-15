@@ -1,4 +1,6 @@
+pub mod analysis_backfill;
 pub mod exporter;
+pub mod extraction_scheduler;
 pub mod history_commands;
 pub mod importer;
 pub mod paths;
@@ -7,6 +9,11 @@ pub mod types;
 use std::path::PathBuf;
 
 use database::db::get_connection;
+use orgtrack_core::canonical::{
+    SessionCheckpointFileStateRecord, SessionCheckpointRecord, SessionDiffChunkRecord,
+    SessionEditArtifactRecord, SessionFinalDiffRecord,
+};
+use orgtrack_core::policy::{source_tier_policy, SourceTierPolicy};
 use orgtrack_core::projectors::stats::{session_summaries, CoreSessionSummary};
 use orgtrack_core::store::{sqlite::SqliteRecordStore, RecordStore};
 use types::OrgtrackTier;
@@ -126,6 +133,88 @@ pub async fn orgtrack_lookup_file_sessions(
 ) -> Result<Option<types::OrgtrackFileSessionLookup>, String> {
     tokio::task::spawn_blocking(move || {
         importer::read_file_session_lookup(&PathBuf::from(repo_path), &file_path)
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+#[tauri::command]
+pub async fn orgtrack_get_source_tier_policy(source: String) -> Result<SourceTierPolicy, String> {
+    Ok(source_tier_policy(&source))
+}
+
+#[tauri::command]
+pub async fn orgtrack_get_extraction_memory_gate(
+) -> Result<extraction_scheduler::ExtractionMemoryGateState, String> {
+    Ok(extraction_scheduler::evaluate_memory_gate(
+        &extraction_scheduler::ExtractionMemoryGateConfig::default(),
+    ))
+}
+
+#[tauri::command]
+pub async fn orgtrack_get_session_edit_artifacts(
+    source: Option<String>,
+    session_id: Option<String>,
+) -> Result<Vec<SessionEditArtifactRecord>, String> {
+    tokio::task::spawn_blocking(move || {
+        let conn = get_connection().map_err(|err| err.to_string())?;
+        let store = SqliteRecordStore::new(&conn);
+        store.list_edit_artifacts(source.as_deref(), session_id.as_deref())
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+#[tauri::command]
+pub async fn orgtrack_get_session_diff_chunks(
+    source: Option<String>,
+    session_id: Option<String>,
+) -> Result<Vec<SessionDiffChunkRecord>, String> {
+    tokio::task::spawn_blocking(move || {
+        let conn = get_connection().map_err(|err| err.to_string())?;
+        let store = SqliteRecordStore::new(&conn);
+        store.list_diff_chunks(source.as_deref(), session_id.as_deref())
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+#[tauri::command]
+pub async fn orgtrack_get_session_final_diffs(
+    source: Option<String>,
+    session_id: Option<String>,
+) -> Result<Vec<SessionFinalDiffRecord>, String> {
+    tokio::task::spawn_blocking(move || {
+        let conn = get_connection().map_err(|err| err.to_string())?;
+        let store = SqliteRecordStore::new(&conn);
+        store.list_final_diffs(source.as_deref(), session_id.as_deref())
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+#[tauri::command]
+pub async fn orgtrack_get_session_checkpoints(
+    source: Option<String>,
+    session_id: Option<String>,
+) -> Result<Vec<SessionCheckpointRecord>, String> {
+    tokio::task::spawn_blocking(move || {
+        let conn = get_connection().map_err(|err| err.to_string())?;
+        let store = SqliteRecordStore::new(&conn);
+        store.list_session_checkpoints(source.as_deref(), session_id.as_deref())
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+#[tauri::command]
+pub async fn orgtrack_get_checkpoint_file_states(
+    checkpoint_id: String,
+) -> Result<Vec<SessionCheckpointFileStateRecord>, String> {
+    tokio::task::spawn_blocking(move || {
+        let conn = get_connection().map_err(|err| err.to_string())?;
+        let store = SqliteRecordStore::new(&conn);
+        store.list_checkpoint_file_states(&checkpoint_id)
     })
     .await
     .map_err(|err| err.to_string())?

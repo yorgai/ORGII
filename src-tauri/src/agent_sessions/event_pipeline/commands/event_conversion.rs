@@ -71,7 +71,7 @@ fn merge_loser_into_winner(winner: &mut SessionEvent, loser: SessionEvent) {
     winner.recompute_extracted();
 }
 
-pub(super) fn dedup_by_call_id(events: Vec<SessionEvent>) -> Vec<SessionEvent> {
+pub(crate) fn dedup_by_call_id(events: Vec<SessionEvent>) -> Vec<SessionEvent> {
     // winner_idx -> list of loser indices that should merge into it.
     let mut merges: HashMap<usize, Vec<usize>> = HashMap::new();
     let mut drop_set: std::collections::HashSet<usize> = std::collections::HashSet::new();
@@ -267,7 +267,7 @@ fn merge_missing_args_from_tool_input(event: &mut SessionEvent, tool_input: &ser
     event.recompute_extracted();
 }
 
-pub(super) fn backfill_tool_inputs_from_messages(session_id: &str, events: &mut [SessionEvent]) {
+pub(crate) fn backfill_tool_inputs_from_messages(session_id: &str, events: &mut [SessionEvent]) {
     let candidates: Vec<usize> = events
         .iter()
         .enumerate()
@@ -320,7 +320,7 @@ pub(super) fn backfill_tool_inputs_from_messages(session_id: &str, events: &mut 
     }
 }
 
-pub(super) fn backfill_subagent_links(session_id: &str, events: &mut [SessionEvent]) {
+pub(crate) fn backfill_subagent_links(session_id: &str, events: &mut [SessionEvent]) {
     let total_agent_events = events
         .iter()
         .filter(|e| e.action_type == "tool_call" && e.function_name == "agent")

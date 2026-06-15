@@ -9,11 +9,18 @@ import { rpc } from "@src/api/tauri/rpc";
 import type {
   CoreSessionSummary,
   FunctionEntry,
+  OrgtrackCheckpointFileState,
   OrgtrackExportResult,
+  OrgtrackExtractionMemoryGate,
   OrgtrackFileSessionLookup,
   OrgtrackFileTimeline,
   OrgtrackIndex,
   OrgtrackScanProgress,
+  OrgtrackSessionCheckpoint,
+  OrgtrackSessionDiffChunk,
+  OrgtrackSessionEditArtifact,
+  OrgtrackSessionFinalDiff,
+  OrgtrackSourceTierPolicy,
   OrgtrackTier,
   SessionImpact,
 } from "@src/api/tauri/rpc/schemas/lineage";
@@ -22,11 +29,18 @@ import type {
 export type {
   CoreSessionSummary,
   FunctionEntry,
+  OrgtrackCheckpointFileState,
   OrgtrackExportResult,
+  OrgtrackExtractionMemoryGate,
   OrgtrackFileSessionLookup,
   OrgtrackFileTimeline,
   OrgtrackIndex,
   OrgtrackScanProgress,
+  OrgtrackSessionCheckpoint,
+  OrgtrackSessionDiffChunk,
+  OrgtrackSessionEditArtifact,
+  OrgtrackSessionFinalDiff,
+  OrgtrackSourceTierPolicy,
   OrgtrackTier,
   SessionImpact,
 };
@@ -111,4 +125,48 @@ export async function lookupOrgtrackFileSessions(input: {
   filePath: string;
 }): Promise<OrgtrackFileSessionLookup | null> {
   return rpc.lineage.orgtrackLookupFileSessions(input);
+}
+
+export async function getOrgtrackSourceTierPolicy(
+  source: string
+): Promise<OrgtrackSourceTierPolicy> {
+  return rpc.lineage.orgtrackGetSourceTierPolicy({ source });
+}
+
+export async function getOrgtrackExtractionMemoryGate(): Promise<OrgtrackExtractionMemoryGate> {
+  return rpc.lineage.orgtrackGetExtractionMemoryGate();
+}
+
+export async function getOrgtrackSessionEditArtifacts(input: {
+  source?: string;
+  sessionId?: string;
+}): Promise<OrgtrackSessionEditArtifact[]> {
+  return rpc.lineage.orgtrackGetSessionEditArtifacts(input);
+}
+
+export async function getOrgtrackSessionDiffChunks(input: {
+  source?: string;
+  sessionId?: string;
+}): Promise<OrgtrackSessionDiffChunk[]> {
+  return rpc.lineage.orgtrackGetSessionDiffChunks(input);
+}
+
+export async function getOrgtrackSessionFinalDiffs(input: {
+  source?: string;
+  sessionId?: string;
+}): Promise<OrgtrackSessionFinalDiff[]> {
+  return rpc.lineage.orgtrackGetSessionFinalDiffs(input);
+}
+
+export async function getOrgtrackSessionCheckpoints(input: {
+  source?: string;
+  sessionId?: string;
+}): Promise<OrgtrackSessionCheckpoint[]> {
+  return rpc.lineage.orgtrackGetSessionCheckpoints(input);
+}
+
+export async function getOrgtrackCheckpointFileStates(
+  checkpointId: string
+): Promise<OrgtrackCheckpointFileState[]> {
+  return rpc.lineage.orgtrackGetCheckpointFileStates({ checkpointId });
 }

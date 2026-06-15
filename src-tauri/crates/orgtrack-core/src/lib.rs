@@ -6,6 +6,8 @@
 //! runtime-specific adapters.
 
 pub mod canonical;
+pub mod edit_extraction;
+pub mod policy;
 pub mod privacy;
 pub mod projectors;
 pub mod repo_sync;
