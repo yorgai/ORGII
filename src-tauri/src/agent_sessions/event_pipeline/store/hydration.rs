@@ -23,6 +23,14 @@ impl EventStore {
         &mut self,
         events: Vec<crate::agent_sessions::event_pipeline::types::SessionEvent>,
     ) {
+        // Never let an empty round window clobber a store that already holds
+        // events. The window can resolve to zero events when the turn index is
+        // mid-rebuild (e.g. switching into a session right after a long run);
+        // overwriting here would publish an empty snapshot and render the chat
+        // as "loaded + 0 events" until the user hits Reload.
+        if events.is_empty() && !self.events.is_empty() {
+            return;
+        }
         self.set_with_hydration(events, HydrationMode::RoundWindow);
     }
 

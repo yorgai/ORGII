@@ -43,6 +43,7 @@ import {
   NoTabsPlaceholder,
   SimulatorReplayChrome,
   WorkStationShell,
+  buildConsolidatedSessionReplayDiffSectionItems,
   buildPrimarySidebarConfig,
   buildSessionReplayDiffSectionItems,
   useSimulatorAwaitingAgentCaption,
@@ -309,7 +310,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   const [diffCommitNavigationRequest, setDiffCommitNavigationRequest] = useAtom(
     simulatorDiffCommitNavigationRequestAtom
   );
-  const { displayEntry, selectedEntryId, selectEntry } = useDiff();
+  const { entries, displayEntry, selectedEntryId, selectEntry } = useDiff();
   const [orgtrackFinalDiffs, setOrgtrackFinalDiffs] = useState<
     OrgtrackSessionFinalDiff[]
   >([]);
@@ -385,6 +386,18 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     [orgtrackFinalDiffs]
   );
   const finalDiffCount = canonicalFinalSections.length;
+
+  const simulatorConsolidatedSections = useMemo(
+    () => buildConsolidatedSessionReplayDiffSectionItems(entries),
+    [entries]
+  );
+  const hasSimulatorDiffs = simulatorConsolidatedSections.length > 0;
+
+  const sidebarItems =
+    finalDiffCount > 0 ? canonicalFinalSections : simulatorConsolidatedSections;
+
+  const consolidatedSections =
+    finalDiffCount > 0 ? canonicalFinalSections : simulatorConsolidatedSections;
 
   const primarySidebarCollapsed = useAtomValue(
     simulatorPrimarySidebarCollapsedAtom
@@ -682,10 +695,20 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     };
   }, [fallbackRepoContext, orgtrackSubmissionCommits, repos]);
 
-  const submissionCommits =
-    resolvedSubmissionCommits.length > 0
+  const submissionCommits = useMemo(() => {
+    if (submissionsResolved) {
+      return resolvedSubmissionCommits.filter(
+        (commit) => commit.summary && commit.summary !== commit.short_sha
+      );
+    }
+    return resolvedSubmissionCommits.length > 0
       ? resolvedSubmissionCommits
       : orgtrackSubmissionCommits;
+  }, [
+    resolvedSubmissionCommits,
+    orgtrackSubmissionCommits,
+    submissionsResolved,
+  ]);
   const hasSubmissions =
     submissionCommits.length > 0 || submissionsData.pullRequests.length > 0;
 
@@ -726,10 +749,8 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   usePublishWorkstationTabHeader({
     host: "simulator",
     content: diffHeaderContent,
-    enabled: finalDiffCount > 0 || hasSubmissions,
+    enabled: finalDiffCount > 0 || hasSimulatorDiffs || hasSubmissions,
   });
-
-  const sidebarItems = canonicalFinalSections;
 
   const handleSubmissionCommitSelect = useCallback(
     (commit: SubmissionCommit) => {
@@ -882,8 +903,6 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
       handlePrimarySidebarWidthChange,
     ]
   );
-
-  const consolidatedSections = canonicalFinalSections;
 
   const focusedSections = useMemo(
     () =>
@@ -1053,7 +1072,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     t,
   ]);
 
-  if (finalDiffCount === 0 && !hasSubmissions) {
+  if (finalDiffCount === 0 && !hasSimulatorDiffs && !hasSubmissions) {
     return (
       <SimulatorReplayChrome
         tabs={tabs}
