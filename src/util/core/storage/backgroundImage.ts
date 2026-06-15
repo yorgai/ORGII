@@ -24,7 +24,7 @@ type MetadataStore = Record<string, ImageMetadata>;
 
 /**
  * Get the backgrounds directory path
- * Uses standard app data directory: ~/Library/Application Support/ai.soyd.app/backgrounds/
+ * Uses the Tauri app data directory (e.g. ~/Library/Application Support/yorg.orgii/backgrounds/).
  * This is consistent with other app data (semantic index, etc.)
  */
 async function getBackgroundsPath(): Promise<string> {

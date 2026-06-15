@@ -148,7 +148,7 @@ function shouldSuppressLine(clean) {
     ) ||
     clean ===
       "Info Watching /Users/laptop-h/Documents/GitHub/yorg_frontend/src-tauri for changes..." ||
-    /^> com\.soyd\.app@/.test(clean) ||
+    /^> orgii@/.test(clean) ||
     clean === "> node scripts/dev/webpack-server.js" ||
     clean === "webpack compiled successfully" ||
     /^webpack compiled successfully in \d+ ms$/.test(clean) ||
