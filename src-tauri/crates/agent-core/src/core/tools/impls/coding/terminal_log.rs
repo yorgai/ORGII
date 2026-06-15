@@ -438,7 +438,7 @@ mod tests {
 
     #[test]
     fn test_resolve_logs_root_with_app_data() {
-        let app_data = Path::new("/home/user/.local/share/com.soyd.app");
+        let app_data = Path::new("/home/user/.local/share/yorg.orgii");
         let workspace = Path::new("/home/user/projects/myapp");
         let result = resolve_logs_root(Some(app_data), workspace);
         assert!(result.to_string_lossy().contains("agent-terminal-logs"));

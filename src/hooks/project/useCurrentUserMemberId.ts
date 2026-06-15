@@ -139,7 +139,7 @@ function memberMatchesUser(
     // Direct email match
     if (memberEmail === email) return true;
 
-    // Email prefix match (e.g. github username "leeyyi" matches "leeyyi@vip.qq.com")
+    // Email prefix match (e.g. github username "alice" matches "alice@example.com")
     if (memberEmail && memberEmail.split("@")[0] === email) return true;
 
     // Reverse: member email prefix matches user email
