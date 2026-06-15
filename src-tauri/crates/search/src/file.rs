@@ -13,6 +13,7 @@
 use ignore::WalkBuilder;
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
+use tracing::{debug, info, warn};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -139,10 +140,10 @@ fn build_file_index(root_path: &str, exclude_dirs: &[String]) -> Vec<FileEntry> 
         .collect();
 
     let duration = start.elapsed();
-    println!(
-        "📂 [FileSearch] Indexed {} entries in {:?}",
-        entries.len(),
-        duration
+    info!(
+        entries = entries.len(),
+        ?duration,
+        "search::file: indexed entries"
     );
 
     entries
@@ -171,9 +172,9 @@ fn get_file_index(root_path: &str, exclude_dirs: &[String]) -> Vec<FileEntry> {
     //    Protects against bad descriptors after rapid repo switches.
     let root = std::path::Path::new(root_path);
     if !root.exists() || !root.is_dir() {
-        println!(
-            "⚠️ [FileSearch] Root path invalid or gone, skipping index: {}",
-            root_path
+        warn!(
+            root_path = %root_path,
+            "search::file: root path invalid or gone; skipping index"
         );
         return Vec::new();
     }
@@ -376,7 +377,7 @@ pub async fn index_project_files(
     tokio::task::spawn_blocking(move || {
         let start = Instant::now();
 
-        println!("📂 [FileSearch] Force re-indexing '{}'", root_path);
+        debug!(root_path = %root_path, "search::file: force re-indexing");
 
         // Validate root path exists
         let root = PathBuf::from(&root_path);
@@ -420,9 +421,10 @@ pub async fn index_project_files(
         }
 
         let duration = start.elapsed();
-        println!(
-            "✅ [FileSearch] Indexed {} entries in {:?}",
-            count, duration
+        info!(
+            entries = count,
+            ?duration,
+            "search::file: indexed entries"
         );
 
         Ok(count)
@@ -450,10 +452,10 @@ pub async fn prewarm_file_index(root_path: String) -> Result<usize, String> {
             if let Some(index) = cache.get(&root_path) {
                 if let Ok(elapsed) = index.indexed_at.elapsed() {
                     if elapsed.as_secs() < CACHE_TTL_SECS {
-                        println!(
-                            "📂 [FileSearch] Prewarm skipped — cache still fresh ({} entries, {:.0}s old)",
-                            index.entries.len(),
-                            elapsed.as_secs_f64(),
+                        debug!(
+                            entries = index.entries.len(),
+                            age_secs = elapsed.as_secs_f64(),
+                            "search::file: prewarm skipped; cache still fresh"
                         );
                         return Ok(index.entries.len());
                     }
@@ -461,7 +463,7 @@ pub async fn prewarm_file_index(root_path: String) -> Result<usize, String> {
             }
         }
 
-        println!("📂 [FileSearch] Prewarming index for '{}'", root_path);
+        debug!(root_path = %root_path, "search::file: prewarming index");
 
         let default_excludes = vec![
             "node_modules".to_string(),
@@ -493,7 +495,7 @@ pub async fn prewarm_file_index(root_path: String) -> Result<usize, String> {
             );
         }
 
-        println!("✅ [FileSearch] Prewarm complete — {} entries cached", count);
+        info!(entries = count, "search::file: prewarm complete");
         Ok(count)
     })
     .await
@@ -505,7 +507,7 @@ pub async fn prewarm_file_index(root_path: String) -> Result<usize, String> {
 pub fn clear_file_index_cache() {
     let mut cache = FILE_INDEX_CACHE.lock().unwrap();
     cache.clear();
-    println!("🗑️ [FileSearch] Cache cleared");
+    info!("search::file: cache cleared");
 }
 
 /// Find files by extension in a directory
@@ -518,9 +520,10 @@ pub async fn find_files_by_extension(
     tokio::task::spawn_blocking(move || {
         let start = Instant::now();
 
-        println!(
-            "🔍 [FileSearch] Finding files with extensions {:?} in '{}'",
-            extensions, directory
+        debug!(
+            ?extensions,
+            directory = %directory,
+            "search::file: finding files by extension"
         );
 
         // Validate directory exists
@@ -592,11 +595,11 @@ pub async fn find_files_by_extension(
             .collect();
 
         let duration = start.elapsed();
-        println!(
-            "✅ [FileSearch] Found {} files with extensions {:?} in {:?}",
-            results.len(),
-            extensions,
-            duration
+        info!(
+            files = results.len(),
+            ?extensions,
+            ?duration,
+            "search::file: found files by extension"
         );
 
         Ok(results)
