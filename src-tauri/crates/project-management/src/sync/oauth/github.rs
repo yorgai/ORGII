@@ -53,13 +53,13 @@ const DEFAULT_CLIENT_ID: &str = "Ov23liGsB3lDighTSmmO";
 /// password). Keep additions intentional: each extra scope widens the
 /// consent screen and the blast radius if the token leaks.
 ///
-/// - `repo`       — full control of private repos: issues, PRs, contents,
-///                  HTTPS clone/push.
-/// - `workflow`   — read/modify `.github/workflows/*` (orthogonal to
-///                  `repo`; required when an agent edits workflow files).
-/// - `read:user`  — fetch the authenticated user's login/avatar so the
-///                  connection card can show "Signed in as @octocat"
-///                  instead of an opaque token.
+/// - `repo` — full control of private repos: issues, PRs, contents,
+///   HTTPS clone/push.
+/// - `workflow` — read/modify `.github/workflows/*` (orthogonal to
+///   `repo`; required when an agent edits workflow files).
+/// - `read:user` — fetch the authenticated user's login/avatar so the
+///   connection card can show "Signed in as @octocat" instead of an opaque
+///   token.
 const SCOPES: &str = "repo workflow read:user";
 /// Default poll interval if the device-code response somehow omits one;
 /// GitHub always returns an interval, but the spec allows it to be

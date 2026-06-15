@@ -42,6 +42,7 @@ pub fn init_project_tables(conn: &Connection) -> SqliteResult<()> {
     init_webhook_secrets_table(conn)?;
     init_import_progress_table(conn)?;
     init_outbox_conflicts_table(conn)?;
+    init_linear_metadata_cache_table(conn)?;
     Ok(())
 }
 
@@ -181,6 +182,25 @@ pub fn init_outbox_conflicts_table(conn: &Connection) -> SqliteResult<()> {
             ON outbox_conflicts(project_slug, resolved_at);
         CREATE INDEX IF NOT EXISTS idx_outbox_conflicts_entity
             ON outbox_conflicts(project_slug, entity_id);
+        "#,
+    )?;
+    Ok(())
+}
+
+pub fn init_linear_metadata_cache_table(conn: &Connection) -> SqliteResult<()> {
+    conn.execute_batch(
+        r#"
+        CREATE TABLE IF NOT EXISTS linear_metadata_cache (
+            connection_id TEXT NOT NULL,
+            scope         TEXT NOT NULL,
+            scope_id      TEXT NOT NULL,
+            payload_json  TEXT NOT NULL,
+            fetched_at    INTEGER NOT NULL,
+            expires_at    INTEGER NOT NULL,
+            PRIMARY KEY (connection_id, scope, scope_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_linear_metadata_cache_expires
+            ON linear_metadata_cache(expires_at);
         "#,
     )?;
     Ok(())
@@ -566,6 +586,7 @@ mod tests {
             "outbox_entries",
             "webhook_secrets",
             "import_progress",
+            "linear_metadata_cache",
         ];
 
         for name in expected {

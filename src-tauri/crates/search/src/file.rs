@@ -283,7 +283,7 @@ fn fuzzy_search(
 
     // Sort by score descending and take top results
     let mut sorted_results = results;
-    sorted_results.sort_by(|a, b| b.1.cmp(&a.1));
+    sorted_results.sort_by_key(|result| std::cmp::Reverse(result.1));
     sorted_results.truncate(max_results);
 
     sorted_results

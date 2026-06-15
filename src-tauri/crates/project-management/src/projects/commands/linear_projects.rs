@@ -16,32 +16,37 @@ use crate::sync::linear_native::{
 pub async fn linear_projects_list(
     connection_id: String,
     cursor: Option<String>,
+    force_refresh: Option<bool>,
 ) -> Result<LinearProjectListResult, String> {
-    linear_native::list_projects(&connection_id, cursor).await
+    linear_native::list_projects(&connection_id, cursor, force_refresh.unwrap_or(false)).await
 }
 
 #[tauri::command]
 pub async fn linear_project_get(
     connection_id: String,
     project_id: String,
+    force_refresh: Option<bool>,
 ) -> Result<LinearProjectSummary, String> {
-    linear_native::get_project(&connection_id, &project_id).await
+    linear_native::get_project(&connection_id, &project_id, force_refresh.unwrap_or(false)).await
 }
 
 #[tauri::command]
 pub async fn linear_teams_list(
     connection_id: String,
     cursor: Option<String>,
+    force_refresh: Option<bool>,
 ) -> Result<LinearTeamListResult, String> {
-    linear_native::list_teams(&connection_id, cursor).await
+    linear_native::list_teams(&connection_id, cursor, force_refresh.unwrap_or(false)).await
 }
 
 #[tauri::command]
 pub async fn linear_workflow_states_list(
     connection_id: String,
     team_id: String,
+    force_refresh: Option<bool>,
 ) -> Result<LinearWorkflowStateListResult, String> {
-    linear_native::list_workflow_states(&connection_id, &team_id).await
+    linear_native::list_workflow_states(&connection_id, &team_id, force_refresh.unwrap_or(false))
+        .await
 }
 
 #[tauri::command]
@@ -99,8 +104,15 @@ pub async fn linear_project_issues_list(
     connection_id: String,
     project_id: String,
     cursor: Option<String>,
+    force_refresh: Option<bool>,
 ) -> Result<LinearIssueListResult, String> {
-    linear_native::list_project_issues(&connection_id, &project_id, cursor).await
+    linear_native::list_project_issues(
+        &connection_id,
+        &project_id,
+        cursor,
+        force_refresh.unwrap_or(false),
+    )
+    .await
 }
 
 #[tauri::command]

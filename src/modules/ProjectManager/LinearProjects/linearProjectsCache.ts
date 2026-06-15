@@ -95,7 +95,12 @@ export const cachedLinearProjectsApi = {
   ): Promise<LinearProjectListResult> {
     return readCached(
       projectsListKey(connectionId),
-      () => linearProjectsApi.listProjects(connectionId),
+      () =>
+        linearProjectsApi.listProjects(
+          connectionId,
+          null,
+          options.forceRefresh
+        ),
       options.forceRefresh
     );
   },
@@ -106,7 +111,8 @@ export const cachedLinearProjectsApi = {
   ): Promise<LinearTeamListResult> {
     return readCached(
       teamsKey(connectionId),
-      () => linearProjectsApi.listTeams(connectionId),
+      () =>
+        linearProjectsApi.listTeams(connectionId, null, options.forceRefresh),
       options.forceRefresh
     );
   },
@@ -118,7 +124,12 @@ export const cachedLinearProjectsApi = {
   ): Promise<LinearProjectSummary> {
     return readCached(
       projectKey(connectionId, projectId),
-      () => linearProjectsApi.getProject(connectionId, projectId),
+      () =>
+        linearProjectsApi.getProject(
+          connectionId,
+          projectId,
+          options.forceRefresh
+        ),
       options.forceRefresh
     );
   },
@@ -130,7 +141,13 @@ export const cachedLinearProjectsApi = {
   ): Promise<LinearIssueListResult> {
     return readCached(
       projectIssuesKey(connectionId, projectId),
-      () => linearProjectsApi.listProjectIssues(connectionId, projectId),
+      () =>
+        linearProjectsApi.listProjectIssues(
+          connectionId,
+          projectId,
+          null,
+          options.forceRefresh
+        ),
       options.forceRefresh
     );
   },
@@ -142,7 +159,12 @@ export const cachedLinearProjectsApi = {
   ): Promise<LinearWorkflowStateListResult> {
     return readCached(
       workflowStatesKey(connectionId, teamId),
-      () => linearProjectsApi.listWorkflowStates(connectionId, teamId),
+      () =>
+        linearProjectsApi.listWorkflowStates(
+          connectionId,
+          teamId,
+          options.forceRefresh
+        ),
       options.forceRefresh
     );
   },

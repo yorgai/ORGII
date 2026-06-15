@@ -177,36 +177,50 @@ export interface LinearIssueUpdateRequest {
 export const linearProjectsApi = {
   listProjects(
     connectionId: string,
-    cursor?: string | null
+    cursor?: string | null,
+    forceRefresh = false
   ): Promise<LinearProjectListResult> {
     return invoke("linear_projects_list", {
       connectionId,
       cursor: cursor ?? null,
+      forceRefresh,
     });
   },
 
   getProject(
     connectionId: string,
-    projectId: string
+    projectId: string,
+    forceRefresh = false
   ): Promise<LinearProjectSummary> {
-    return invoke("linear_project_get", { connectionId, projectId });
+    return invoke("linear_project_get", {
+      connectionId,
+      projectId,
+      forceRefresh,
+    });
   },
 
   listTeams(
     connectionId: string,
-    cursor?: string | null
+    cursor?: string | null,
+    forceRefresh = false
   ): Promise<LinearTeamListResult> {
     return invoke("linear_teams_list", {
       connectionId,
       cursor: cursor ?? null,
+      forceRefresh,
     });
   },
 
   listWorkflowStates(
     connectionId: string,
-    teamId: string
+    teamId: string,
+    forceRefresh = false
   ): Promise<LinearWorkflowStateListResult> {
-    return invoke("linear_workflow_states_list", { connectionId, teamId });
+    return invoke("linear_workflow_states_list", {
+      connectionId,
+      teamId,
+      forceRefresh,
+    });
   },
 
   createWorkflowState(
@@ -261,12 +275,14 @@ export const linearProjectsApi = {
   listProjectIssues(
     connectionId: string,
     projectId: string,
-    cursor?: string | null
+    cursor?: string | null,
+    forceRefresh = false
   ): Promise<LinearIssueListResult> {
     return invoke("linear_project_issues_list", {
       connectionId,
       projectId,
       cursor: cursor ?? null,
+      forceRefresh,
     });
   },
 
