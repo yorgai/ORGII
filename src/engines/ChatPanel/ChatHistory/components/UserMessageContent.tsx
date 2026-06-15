@@ -402,7 +402,6 @@ const UserMessageContent: React.FC<UserMessageContentProps> = memo(
 
     return (
       <div className="flex flex-col gap-2">
-        {hasImages && <ChatImageThumbnailRow images={images} />}
         {text && text !== "(image)" && (
           <span
             className="whitespace-pre-wrap break-words text-[14px] text-text-1"
@@ -417,6 +416,7 @@ const UserMessageContent: React.FC<UserMessageContentProps> = memo(
             )}
           </span>
         )}
+        {hasImages && <ChatImageThumbnailRow images={images} />}
       </div>
     );
   }

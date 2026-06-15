@@ -29,6 +29,8 @@ export interface ComposerBarProps {
   dropdownDirection?: "up" | "down";
   /** Content before the + button (e.g. cite-code badge, reply indicator) */
   leftPrefix?: React.ReactNode;
+  /** Optional tools rendered after the + button. */
+  leftTools?: React.ReactNode;
   /** Pills rendered after the + button (mode, model, source, settings…) */
   pills?: React.ReactNode;
   /** Repo path forwarded to ContextInfoButton */
@@ -73,6 +75,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
     onOpenSkillsTools,
     dropdownDirection = "up",
     leftPrefix,
+    leftTools,
     pills,
     repoPath,
     submitButton,
@@ -123,6 +126,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
         <div className={rowClass}>
           {leftPrefix}
           {addButton}
+          {leftTools}
           {pills}
         </div>
         <div className={rowClass}>
@@ -151,6 +155,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
         <div className={`${rowClass} shrink-0`} style={{ gridArea: "left" }}>
           {leftPrefix}
           {addButton}
+          {leftTools}
         </div>
       );
       const editorWrap = (

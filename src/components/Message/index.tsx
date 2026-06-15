@@ -28,7 +28,8 @@ import {
   Info,
   X,
 } from "lucide-react";
-import React, { useCallback, useEffect, useRef } from "react";
+import type { FC, ReactNode, Ref } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 
@@ -39,12 +40,12 @@ import { useTranslation } from "react-i18next";
 export type MessageType = "success" | "error" | "warning" | "info";
 
 export interface MessageConfig {
-  content: React.ReactNode;
+  content: ReactNode;
   type?: MessageType;
   duration?: number;
   closable?: boolean;
   onClose?: () => void;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   className?: string;
   id?: string;
   /** Optional title for the message */
@@ -67,6 +68,7 @@ export interface MessageConfig {
 interface MessageItemProps extends MessageConfig {
   id: string;
   onRemove: (id: string) => void;
+  ref?: Ref<HTMLDivElement>;
 }
 
 // ============================================
@@ -105,151 +107,147 @@ const DEFAULT_DURATION = 1000;
 // Message Item Component
 // ============================================
 
-const MessageItem = React.forwardRef<HTMLDivElement, MessageItemProps>(
-  (
-    {
-      id,
-      content,
-      title,
-      type = "info",
-      duration = DEFAULT_DURATION,
-      closable = true,
-      onClose,
-      onRemove,
-      icon,
-      className = "",
-      download,
-      cancel,
-    },
-    ref
-  ) => {
-    const { t } = useTranslation();
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+const MessageItem = ({
+  id,
+  content,
+  title,
+  type = "info",
+  duration = DEFAULT_DURATION,
+  closable = true,
+  onClose,
+  onRemove,
+  icon,
+  className = "",
+  download,
+  cancel,
+  ref,
+}: MessageItemProps) => {
+  const { t } = useTranslation();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const handleClose = useCallback(() => {
-      onRemove(id);
-      onClose?.();
-    }, [id, onRemove, onClose]);
+  const handleClose = useCallback(() => {
+    onRemove(id);
+    onClose?.();
+  }, [id, onRemove, onClose]);
 
-    // Auto dismiss timer
-    useEffect(() => {
-      if (duration <= 0) return;
+  // Auto dismiss timer
+  useEffect(() => {
+    if (duration <= 0) return;
 
-      timerRef.current = setTimeout(() => {
-        handleClose();
-      }, duration);
+    timerRef.current = setTimeout(() => {
+      handleClose();
+    }, duration);
 
-      return () => {
-        if (timerRef.current) {
-          clearTimeout(timerRef.current);
-        }
-      };
-    }, [duration, handleClose]);
-
-    const IconComponent = ICONS[type];
-    const typeStyle = TYPE_STYLES[type];
-    const iconNode = icon || <IconComponent size={18} />;
-    const hasDescription = Boolean(title || download || cancel);
-    const handleDownload = useCallback(() => {
-      const blob =
-        download?.content instanceof Blob
-          ? download.content
-          : new Blob([download?.content ?? ""], {
-              type: download?.mimeType ?? "text/plain;charset=utf-8",
-            });
-
-      const objectUrl = URL.createObjectURL(blob);
-      const downloadLink = document.createElement("a");
-      downloadLink.href = objectUrl;
-      downloadLink.download = download?.fileName ?? "message.txt";
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      URL.revokeObjectURL(objectUrl);
-    }, [download]);
-    const handleCancelAction = useCallback(() => {
-      cancel?.onClick?.();
-      if (cancel?.closeOnClick !== false) {
-        handleClose();
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
       }
-    }, [cancel, handleClose]);
+    };
+  }, [duration, handleClose]);
 
-    return (
-      <motion.div
-        ref={ref}
-        initial={{ opacity: 0, y: 16 }}
-        animate={{
-          opacity: 1,
-          y: 0,
-        }}
-        exit={{
-          opacity: 0,
-        }}
-        transition={{
-          duration: 0.2,
-          ease: "easeOut",
-        }}
-        className={`pointer-events-auto relative flex w-full cursor-default gap-3 overflow-hidden rounded-xl border bg-bg-2 p-[14px_16px] shadow-[0_2px_4px_rgba(0,0,0,0.04),0_12px_24px_rgba(0,0,0,0.08)] transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-px hover:shadow-[0_4px_8px_rgba(0,0,0,0.06),0_16px_32px_rgba(0,0,0,0.12)] max-[480px]:gap-2.5 max-[480px]:rounded-[10px] max-[480px]:p-[12px_14px] ${hasDescription ? "items-start" : "items-center"} ${typeStyle.border} ${className}`}
+  const IconComponent = ICONS[type];
+  const typeStyle = TYPE_STYLES[type];
+  const iconNode = icon || <IconComponent size={18} />;
+  const hasDescription = Boolean(title || download || cancel);
+  const handleDownload = useCallback(() => {
+    const blob =
+      download?.content instanceof Blob
+        ? download.content
+        : new Blob([download?.content ?? ""], {
+            type: download?.mimeType ?? "text/plain;charset=utf-8",
+          });
+
+    const objectUrl = URL.createObjectURL(blob);
+    const downloadLink = document.createElement("a");
+    downloadLink.href = objectUrl;
+    downloadLink.download = download?.fileName ?? "message.txt";
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(objectUrl);
+  }, [download]);
+  const handleCancelAction = useCallback(() => {
+    cancel?.onClick?.();
+    if (cancel?.closeOnClick !== false) {
+      handleClose();
+    }
+  }, [cancel, handleClose]);
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
+      exit={{
+        opacity: 0,
+      }}
+      transition={{
+        duration: 0.2,
+        ease: "easeOut",
+      }}
+      className={`pointer-events-auto relative flex w-full cursor-default gap-3 overflow-hidden rounded-xl border bg-bg-2 p-[14px_16px] shadow-[0_2px_4px_rgba(0,0,0,0.04),0_12px_24px_rgba(0,0,0,0.08)] transition-[transform,box-shadow] duration-200 ease-out hover:-translate-y-px hover:shadow-[0_4px_8px_rgba(0,0,0,0.06),0_16px_32px_rgba(0,0,0,0.12)] max-[480px]:gap-2.5 max-[480px]:rounded-[10px] max-[480px]:p-[12px_14px] ${hasDescription ? "items-start" : "items-center"} ${typeStyle.border} ${className}`}
+    >
+      {/* Icon */}
+      <div
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg max-[480px]:h-6 max-[480px]:w-6 max-[480px]:rounded-md ${typeStyle.icon}`}
       >
-        {/* Icon */}
-        <div
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg max-[480px]:h-6 max-[480px]:w-6 max-[480px]:rounded-md ${typeStyle.icon}`}
-        >
-          {iconNode}
-        </div>
+        {iconNode}
+      </div>
 
-        {/* Content */}
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          {title && (
-            <div className="text-[13px] font-semibold leading-[1.4] tracking-[-0.01em] text-text-1 max-[480px]:text-xs">
-              {title}
-            </div>
-          )}
-          <div
-            className={`break-words text-[13px] leading-[1.5] max-[480px]:text-xs ${
-              title ? "font-[450] text-text-2" : "font-medium text-text-1"
-            }`}
-          >
-            {content}
+      {/* Content */}
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        {title && (
+          <div className="text-[13px] font-semibold leading-[1.4] tracking-[-0.01em] text-text-1 max-[480px]:text-xs">
+            {title}
           </div>
-          {(download || cancel) && (
-            <div className="mt-2 flex justify-end gap-3">
-              {cancel && (
-                <button
-                  type="button"
-                  className="cursor-pointer border-none bg-transparent p-0 text-xs font-medium leading-[1.2] text-primary-6 hover:text-primary-5 hover:underline"
-                  onClick={handleCancelAction}
-                >
-                  {cancel.label ?? t("actions.cancel")}
-                </button>
-              )}
-              {download && (
-                <button
-                  type="button"
-                  className="cursor-pointer border-none bg-transparent p-0 text-xs font-medium leading-[1.2] text-primary-6 hover:text-primary-5 hover:underline"
-                  onClick={handleDownload}
-                >
-                  {download.label ?? t("actions.download")}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Close button */}
-        {closable && (
-          <button
-            className="my-[-2px] ml-1 mr-[-4px] flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0 text-text-3 opacity-60 transition-all duration-150 ease-out hover:bg-[rgba(255,255,255,0.1)] hover:text-text-1 hover:opacity-100 active:scale-95"
-            onClick={handleClose}
-            aria-label={t("actions.close")}
-          >
-            <X size={14} />
-          </button>
         )}
-      </motion.div>
-    );
-  }
-);
+        <div
+          className={`break-words text-[13px] leading-[1.5] max-[480px]:text-xs ${
+            title ? "font-[450] text-text-2" : "font-medium text-text-1"
+          }`}
+        >
+          {content}
+        </div>
+        {(download || cancel) && (
+          <div className="mt-2 flex justify-end gap-3">
+            {cancel && (
+              <button
+                type="button"
+                className="cursor-pointer border-none bg-transparent p-0 text-xs font-medium leading-[1.2] text-primary-6 hover:text-primary-5 hover:underline"
+                onClick={handleCancelAction}
+              >
+                {cancel.label ?? t("actions.cancel")}
+              </button>
+            )}
+            {download && (
+              <button
+                type="button"
+                className="cursor-pointer border-none bg-transparent p-0 text-xs font-medium leading-[1.2] text-primary-6 hover:text-primary-5 hover:underline"
+                onClick={handleDownload}
+              >
+                {download.label ?? t("actions.download")}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Close button */}
+      {closable && (
+        <button
+          className="my-[-2px] ml-1 mr-[-4px] flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0 text-text-3 opacity-60 transition-all duration-150 ease-out hover:bg-[rgba(255,255,255,0.1)] hover:text-text-1 hover:opacity-100 active:scale-95"
+          onClick={handleClose}
+          aria-label={t("actions.close")}
+        >
+          <X size={14} />
+        </button>
+      )}
+    </motion.div>
+  );
+};
 
 MessageItem.displayName = "MessageItem";
 
@@ -262,7 +260,7 @@ interface MessageContainerProps {
   onRemove: (id: string) => void;
 }
 
-const MessageContainer: React.FC<MessageContainerProps> = ({
+const MessageContainer: FC<MessageContainerProps> = ({
   messages,
   onRemove,
 }) => {
@@ -366,7 +364,7 @@ class MessageManager {
 
   private createMethod(type: MessageType) {
     return (
-      content: React.ReactNode | MessageConfig,
+      content: ReactNode | MessageConfig,
       durationOrConfig?: number | Partial<MessageConfig>
     ): string => {
       let config: MessageConfig;
