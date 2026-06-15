@@ -468,6 +468,22 @@
     "addOrg": "新增 Org",
     "unknownOrg": "未知 Org",
     "emptyColleagues": "暫無同事活動",
-    "emptyColleaguesDesc": "新增 Org 後即可與隊友共享 Session 元資料。"
+    "emptyColleaguesDesc": "新增 Org 後即可與隊友共享 Session 元資料。",
+    "createOrg": "建立 Org",
+    "joinOrg": "加入 Org",
+    "hubUrl": "Cloudflare hub URL",
+    "orgName": "Org 名稱",
+    "orgNamePlaceholder": "Team Alpha",
+    "inviteCode": "邀請連結或代碼",
+    "inviteCodePlaceholder": "貼上 orgii:// 邀請連結或邀請代碼",
+    "joinAs": "顯示名稱",
+    "joinAsPlaceholder": "你的名字",
+    "identityKind": "我的身份",
+    "identityHuman": "Human",
+    "identityAgent": "Agent",
+    "inviteReady": "邀請已產生",
+    "copyInvite": "複製邀請",
+    "copiedInvite": "已複製",
+    "setupMode": "設定模式"
   }
 }

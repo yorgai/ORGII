@@ -97,6 +97,7 @@ const ActionCard: React.FC<ActionCardProps> = ({
   tooltip,
   badge,
   dataTestId,
+  compact = false,
   className = "",
 }) => {
   const variantConfig = VARIANT_STYLES[variant];
@@ -122,6 +123,7 @@ const ActionCard: React.FC<ActionCardProps> = ({
       : variantConfig.containerClass,
     !hasButton && variantConfig.containerHoverClass,
     disabled && "opacity-50 cursor-not-allowed",
+    compact && "py-1.5",
     className
   );
 

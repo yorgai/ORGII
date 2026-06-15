@@ -377,6 +377,22 @@
     "addOrg": "Org ekle",
     "unknownOrg": "Bilinmeyen org",
     "emptyColleagues": "Henüz ekip arkadaşı aktivitesi yok",
-    "emptyColleaguesDesc": "Ekip ile session metadata paylaşmaya başlamak için bir org ekleyin."
+    "emptyColleaguesDesc": "Ekip ile session metadata paylaşmaya başlamak için bir org ekleyin.",
+    "createOrg": "Org oluştur",
+    "joinOrg": "Org'a katıl",
+    "hubUrl": "Cloudflare hub URL'si",
+    "orgName": "Org adı",
+    "orgNamePlaceholder": "Team Alpha",
+    "inviteCode": "Davet bağlantısı veya kodu",
+    "inviteCodePlaceholder": "orgii:// davet bağlantısı veya davet kodu yapıştırın",
+    "joinAs": "Şu adla katıl",
+    "joinAsPlaceholder": "Adınız",
+    "identityKind": "Kimliğim",
+    "identityHuman": "İnsan",
+    "identityAgent": "Agent",
+    "inviteReady": "Davet hazır",
+    "copyInvite": "Daveti kopyala",
+    "copiedInvite": "Kopyalandı",
+    "setupMode": "Kurulum modu"
   }
 }

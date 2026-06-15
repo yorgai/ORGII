@@ -61,8 +61,17 @@ export const SECTION_GAP_CLASSES = "flex flex-col gap-3";
 // ============================================
 
 /** Base classes for the section container (bg, rounded, container-query root) */
-export const SECTION_CONTAINER_CLASSES =
-  "w-full rounded-lg bg-surface-container @container";
+export const SECTION_CONTAINER_BASE_CLASSES = "w-full rounded-lg @container";
+
+export const SECTION_CONTAINER_COLOR_CLASSES = {
+  default: "bg-surface-container",
+  chatPanelInfo: "bg-chat-panel-info-container",
+} as const;
+
+export type SectionContainerColor =
+  keyof typeof SECTION_CONTAINER_COLOR_CLASSES;
+
+export const SECTION_CONTAINER_CLASSES = `${SECTION_CONTAINER_BASE_CLASSES} ${SECTION_CONTAINER_COLOR_CLASSES.default}`;
 
 /** Padding variants for the section container */
 export const SECTION_PADDING = {

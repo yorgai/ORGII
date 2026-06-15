@@ -379,6 +379,22 @@
     "addOrg": "Adicionar org",
     "unknownOrg": "Org desconhecida",
     "emptyColleagues": "Ainda não há atividade de colegas",
-    "emptyColleaguesDesc": "Adicione uma org para começar a compartilhar metadados de sessão com a equipe."
+    "emptyColleaguesDesc": "Adicione uma org para começar a compartilhar metadados de sessão com a equipe.",
+    "createOrg": "Criar Org",
+    "joinOrg": "Entrar na Org",
+    "hubUrl": "URL do hub Cloudflare",
+    "orgName": "Nome da Org",
+    "orgNamePlaceholder": "Team Alpha",
+    "inviteCode": "Link ou código de convite",
+    "inviteCodePlaceholder": "Cole um link orgii:// ou código de convite",
+    "joinAs": "Entrar como",
+    "joinAsPlaceholder": "Seu nome",
+    "identityKind": "Minha identidade",
+    "identityHuman": "Humano",
+    "identityAgent": "Agent",
+    "inviteReady": "Convite pronto",
+    "copyInvite": "Copiar convite",
+    "copiedInvite": "Copiado",
+    "setupMode": "Modo de configuração"
   }
 }

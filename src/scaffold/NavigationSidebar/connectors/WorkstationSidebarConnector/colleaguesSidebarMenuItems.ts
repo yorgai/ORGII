@@ -58,6 +58,7 @@ export function buildColleaguesSidebarMenuItems({
         org.name,
         session.title,
         session.ownerDisplayName,
+        session.ownerIdentityKind,
         session.repoPath,
         session.branch,
         session.status
@@ -86,6 +87,7 @@ export function buildColleaguesSidebarMenuItems({
         searchText: [
           org.name,
           session.ownerDisplayName,
+          session.ownerIdentityKind,
           session.repoPath,
           session.branch,
         ]
@@ -93,7 +95,9 @@ export function buildColleaguesSidebarMenuItems({
           .join(" "),
         icon: Users,
         iconName: "users",
-        shortcut: session.status,
+        shortcut: session.status
+          ? `${session.ownerIdentityKind} · ${session.status}`
+          : session.ownerIdentityKind,
       });
     }
   }
@@ -108,6 +112,7 @@ export function buildColleaguesSidebarMenuItems({
       normalizedQuery,
       session.title,
       session.ownerDisplayName,
+      session.ownerIdentityKind,
       session.repoPath,
       session.branch,
       session.status
@@ -129,12 +134,19 @@ export function buildColleaguesSidebarMenuItems({
       id: getCollabTeammateSessionMenuItemId(session.id),
       key: getCollabTeammateSessionMenuItemId(session.id),
       label: session.title,
-      searchText: [session.ownerDisplayName, session.repoPath, session.branch]
+      searchText: [
+        session.ownerDisplayName,
+        session.ownerIdentityKind,
+        session.repoPath,
+        session.branch,
+      ]
         .filter(Boolean)
         .join(" "),
       icon: Users,
       iconName: "users",
-      shortcut: session.status,
+      shortcut: session.status
+        ? `${session.ownerIdentityKind} · ${session.status}`
+        : session.ownerIdentityKind,
     });
   }
 

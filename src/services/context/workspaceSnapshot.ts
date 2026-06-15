@@ -47,7 +47,8 @@ export type ChatPanelSurfaceKind =
   | "workItem"
   | "workspaceDashboard"
   | "workspaceExplore"
-  | "workspaceOverview";
+  | "workspaceOverview"
+  | "newCollabOrg";
 
 export interface AppUiSnapshot {
   route?: {

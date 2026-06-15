@@ -377,6 +377,22 @@
     "addOrg": "Добавить org",
     "unknownOrg": "Неизвестная org",
     "emptyColleagues": "Активности коллег пока нет",
-    "emptyColleaguesDesc": "Добавьте org, чтобы начать делиться метаданными сессий с командой."
+    "emptyColleaguesDesc": "Добавьте org, чтобы начать делиться метаданными сессий с командой.",
+    "createOrg": "Создать Org",
+    "joinOrg": "Вступить в Org",
+    "hubUrl": "URL хаба Cloudflare",
+    "orgName": "Название Org",
+    "orgNamePlaceholder": "Team Alpha",
+    "inviteCode": "Ссылка или код приглашения",
+    "inviteCodePlaceholder": "Вставьте ссылку orgii:// или код приглашения",
+    "joinAs": "Вступить как",
+    "joinAsPlaceholder": "Ваше имя",
+    "identityKind": "Моя идентичность",
+    "identityHuman": "Человек",
+    "identityAgent": "Agent",
+    "inviteReady": "Приглашение готово",
+    "copyInvite": "Копировать приглашение",
+    "copiedInvite": "Скопировано",
+    "setupMode": "Режим настройки"
   }
 }

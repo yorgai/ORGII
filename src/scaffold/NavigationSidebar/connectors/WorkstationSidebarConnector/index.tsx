@@ -15,6 +15,7 @@ import type { WorkspaceRecord } from "@src/api/tauri/workspace";
 import { ROUTES } from "@src/config/routes";
 import { JoinSharedSessionDialog } from "@src/features/SessionSharing/JoinSharedSessionDialog";
 import { ShareSessionDialog } from "@src/features/SessionSharing/ShareSessionDialog";
+import { useCollaborationMetadataSync } from "@src/features/TeamCollaboration/useCollaborationMetadataSync";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { useKeyVault } from "@src/hooks/keyVault";
 import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
@@ -305,6 +306,8 @@ export const WorkstationSidebarConnector: React.FC = () => {
     groupByMode: projectsGroupByMode,
     groupVisibleCounts: projectsGroupVisibleCounts,
   });
+
+  useCollaborationMetadataSync();
 
   const rename = useRenameSessionModal();
   const activeSessionId = useAtomValue(workstationActiveSessionIdAtom) ?? "";

@@ -122,6 +122,11 @@ export interface ActionCardProps {
   dataTestId?: string;
 
   /**
+   * Use compact vertical padding when the card has no leading icon.
+   */
+  compact?: boolean;
+
+  /**
    * Additional CSS classes
    */
   className?: string;

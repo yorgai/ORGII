@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "orgii-collab-hub",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-15",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ORG_ROOMS",
+        "class_name": "CollabOrgRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["CollabOrgRoom"]
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "orgii-collab-hub",
+      "database_id": "replace-with-cloudflare-d1-database-id"
+    }
+  ]
+}

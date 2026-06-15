@@ -377,6 +377,22 @@
     "addOrg": "Add Org",
     "unknownOrg": "Unknown org",
     "emptyColleagues": "No colleague activity yet",
-    "emptyColleaguesDesc": "Add an org to start sharing session metadata with teammates."
+    "emptyColleaguesDesc": "Add an org to start sharing session metadata with teammates.",
+    "createOrg": "Org 만들기",
+    "joinOrg": "Org 참여",
+    "hubUrl": "Cloudflare hub URL",
+    "orgName": "Org 이름",
+    "orgNamePlaceholder": "Team Alpha",
+    "inviteCode": "초대 링크 또는 코드",
+    "inviteCodePlaceholder": "orgii:// 초대 링크 또는 초대 코드를 붙여넣기",
+    "joinAs": "참여 이름",
+    "joinAsPlaceholder": "이름",
+    "identityKind": "내 ID",
+    "identityHuman": "Human",
+    "identityAgent": "Agent",
+    "inviteReady": "초대 준비됨",
+    "copyInvite": "초대 복사",
+    "copiedInvite": "복사됨",
+    "setupMode": "설정 모드"
   }
 }

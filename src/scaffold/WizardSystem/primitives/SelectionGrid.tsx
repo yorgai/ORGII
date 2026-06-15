@@ -80,6 +80,8 @@ interface SharedGridProps<T extends string = string> {
   cardVariant?: ActionCardVariant;
   /** When using showSelect on cards, show the trailing checkmark (default true). */
   showSelectionCheck?: boolean;
+  /** Use compact card padding, useful for text-only picker cards. */
+  compactCards?: boolean;
 }
 
 /** Single-select mode (default) — radio-style */
@@ -126,6 +128,7 @@ function SelectionGrid<T extends string = string>(
     compactLabel,
     cardVariant = "default",
     showSelectionCheck = true,
+    compactCards = false,
   } = props;
 
   const isMulti = props.multiSelect === true;
@@ -193,6 +196,7 @@ function SelectionGrid<T extends string = string>(
             selected={isSelected}
             disabled={option.disabled}
             variant={cardVariant}
+            compact={compactCards}
             dataTestId={`selection-grid-option-${option.key}`}
           />
         );

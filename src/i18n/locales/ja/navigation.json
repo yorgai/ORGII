@@ -377,6 +377,22 @@
     "addOrg": "Org を追加",
     "unknownOrg": "不明な Org",
     "emptyColleagues": "同僚のアクティビティはまだありません",
-    "emptyColleaguesDesc": "Org を追加すると、チームと Session メタデータを共有できます。"
+    "emptyColleaguesDesc": "Org を追加すると、チームと Session メタデータを共有できます。",
+    "createOrg": "Org を作成",
+    "joinOrg": "Org に参加",
+    "hubUrl": "Cloudflare hub URL",
+    "orgName": "Org 名",
+    "orgNamePlaceholder": "Team Alpha",
+    "inviteCode": "招待リンクまたはコード",
+    "inviteCodePlaceholder": "orgii:// 招待リンクまたは招待コードを貼り付け",
+    "joinAs": "参加名",
+    "joinAsPlaceholder": "あなたの名前",
+    "identityKind": "自分の ID",
+    "identityHuman": "Human",
+    "identityAgent": "Agent",
+    "inviteReady": "招待の準備完了",
+    "copyInvite": "招待をコピー",
+    "copiedInvite": "コピー済み",
+    "setupMode": "セットアップモード"
   }
 }

@@ -377,6 +377,22 @@
     "addOrg": "Thêm org",
     "unknownOrg": "Org không xác định",
     "emptyColleagues": "Chưa có hoạt động của đồng nghiệp",
-    "emptyColleaguesDesc": "Thêm org để bắt đầu chia sẻ metadata session với nhóm."
+    "emptyColleaguesDesc": "Thêm org để bắt đầu chia sẻ metadata session với nhóm.",
+    "createOrg": "Tạo Org",
+    "joinOrg": "Tham gia Org",
+    "hubUrl": "URL hub Cloudflare",
+    "orgName": "Tên Org",
+    "orgNamePlaceholder": "Team Alpha",
+    "inviteCode": "Liên kết hoặc mã mời",
+    "inviteCodePlaceholder": "Dán liên kết orgii:// hoặc mã mời",
+    "joinAs": "Tham gia với tên",
+    "joinAsPlaceholder": "Tên của bạn",
+    "identityKind": "Danh tính của tôi",
+    "identityHuman": "Con người",
+    "identityAgent": "Agent",
+    "inviteReady": "Lời mời đã sẵn sàng",
+    "copyInvite": "Sao chép lời mời",
+    "copiedInvite": "Đã sao chép",
+    "setupMode": "Chế độ thiết lập"
   }
 }

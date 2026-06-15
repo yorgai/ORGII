@@ -218,7 +218,23 @@
     "addOrg": "Add Org",
     "unknownOrg": "Unknown org",
     "emptyColleagues": "No colleague activity yet",
-    "emptyColleaguesDesc": "Add an org to start sharing session metadata with teammates."
+    "emptyColleaguesDesc": "Add an org to start sharing session metadata with teammates.",
+    "createOrg": "Create Org",
+    "joinOrg": "Join Org",
+    "hubUrl": "Cloudflare hub URL",
+    "orgName": "Org name",
+    "orgNamePlaceholder": "Team Alpha",
+    "inviteCode": "Invite link or code",
+    "inviteCodePlaceholder": "Paste an orgii:// invite link or invite code",
+    "joinAs": "Join as",
+    "joinAsPlaceholder": "Your name",
+    "identityKind": "My identity",
+    "identityHuman": "Human",
+    "identityAgent": "Agent",
+    "inviteReady": "Invite ready",
+    "copyInvite": "Copy invite",
+    "copiedInvite": "Copied",
+    "setupMode": "Setup mode"
   },
   "myRole": {
     "tabs": {
