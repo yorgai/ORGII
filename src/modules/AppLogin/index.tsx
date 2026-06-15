@@ -20,7 +20,7 @@ import {
 } from "@src/modules/shared/layouts";
 
 const LOGIN_COLUMN_WIDTH_CLASS = ONBOARDING_LOADING_VIDEO_WIDTH_CLASS;
-const GITHUB_REPO_URL = "https://github.com/yorg-ai/orgii";
+const GITHUB_REPO_URL = "https://github.com/YORG-AI/ORGII";
 const OSS_LOGIN_ENABLED = false;
 
 const log = createLogger("LoginPage");

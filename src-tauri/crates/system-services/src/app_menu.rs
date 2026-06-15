@@ -596,10 +596,10 @@ pub fn setup_menu_events(app: &AppHandle) {
             // NOTE: Toggle Sidebar (Cmd+B) and Toggle Terminal (Cmd+`) are NOT in the native menu.
             // They are context-dependent frontend actions handled by the webview's keydown handler.
             "help_documentation" => {
-                let _ = open::that("https://docs.soyd.ai");
+                let _ = open::that("https://github.com/YORG-AI/ORGII/wiki");
             }
             "help_report_issue" => {
-                let _ = open::that("https://github.com/yorgai/soyd/issues");
+                let _ = open::that("https://github.com/YORG-AI/ORGII/issues");
             }
             "recent_clear" => {
                 clear_recent_menu(&app_handle);
