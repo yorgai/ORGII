@@ -8,7 +8,6 @@ import type { Repo } from "@src/store/repo";
 import {
   CHAT_PANEL_SURFACE_KIND,
   type ChatPanelNavigateCommand,
-  WORKSPACE_OVERVIEW_TAB,
 } from "@src/store/ui/chatPanelAtom";
 import type { WorkspaceFolder } from "@src/types/workspace";
 
@@ -149,7 +148,6 @@ export function useFoldersMenuItemClick({
               .map((folder) => folder.repoId)
               .filter((repoId): repoId is string => Boolean(repoId)),
           },
-          tab: WORKSPACE_OVERVIEW_TAB.OVERVIEW,
         });
         navigate(ROUTES.workStation.code.path);
         return;
@@ -172,7 +170,6 @@ export function useFoldersMenuItemClick({
           name: repo ? getRepoDisplayName(repo) : item.label,
           path: repo?.path ?? undefined,
         },
-        tab: WORKSPACE_OVERVIEW_TAB.OVERVIEW,
       });
       navigate(ROUTES.workStation.code.path);
     },

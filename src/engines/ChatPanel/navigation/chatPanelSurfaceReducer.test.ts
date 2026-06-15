@@ -88,4 +88,29 @@ describe("reduceChatPanelSurfaceCommand", () => {
     expect(snapshot.workspaceDashboardOpen).toBe(false);
     expect(snapshot.exploreOpen).toBe(false);
   });
+
+  it("preserves workspace overview tab when command omits tab", () => {
+    const currentSnapshot = reduceChatPanelSurfaceCommand({
+      kind: CHAT_PANEL_SURFACE_KIND.WORKSPACE_OVERVIEW,
+      workspace: sampleWorkspace,
+      tab: WORKSPACE_OVERVIEW_TAB.RECENT_SESSION,
+    });
+
+    const nextSnapshot = reduceChatPanelSurfaceCommand(
+      {
+        kind: CHAT_PANEL_SURFACE_KIND.WORKSPACE_OVERVIEW,
+        workspace: {
+          ...sampleWorkspace,
+          id: "repo-2",
+          name: "Repo 2",
+          path: "/tmp/repo-2",
+        },
+      },
+      currentSnapshot
+    );
+
+    expect(nextSnapshot.workspaceOverviewTab).toBe(
+      WORKSPACE_OVERVIEW_TAB.RECENT_SESSION
+    );
+  });
 });

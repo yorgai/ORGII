@@ -111,11 +111,11 @@ export const SessionTable: React.FC<SessionTableProps> = ({
       {
         key: "name",
         label: t("common:labels.name"),
-        width: "220px",
+        width: "250px",
         sorter: (left, right) => compareSessionText(left.title, right.title),
         renderCell: (item) => (
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate font-medium text-text-1">
+          <div className="flex min-w-0 max-w-[250px] items-center gap-2">
+            <span className="min-w-0 truncate font-medium text-text-1">
               {item.title}
             </span>
           </div>

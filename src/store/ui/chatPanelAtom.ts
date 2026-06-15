@@ -287,6 +287,8 @@ export interface ChatPanelSelectedWorkItem {
   projectName: string;
   projectSlug: string;
   shortId: string;
+  orgId?: string;
+  orgName?: string;
 }
 
 export const chatPanelSelectedWorkItemAtom =
@@ -303,6 +305,17 @@ export interface ChatPanelSelectedProject {
 export const chatPanelSelectedProjectAtom =
   atom<ChatPanelSelectedProject | null>(null);
 chatPanelSelectedProjectAtom.debugLabel = "chatPanelSelectedProjectAtom";
+
+export interface ChatPanelSelectedProjectOrg {
+  orgId: string;
+  orgName: string;
+  orgScope: "personal_org" | "project_org";
+  orgSyncProvider?: string | null;
+}
+
+export const chatPanelSelectedProjectOrgAtom =
+  atom<ChatPanelSelectedProjectOrg | null>(null);
+chatPanelSelectedProjectOrgAtom.debugLabel = "chatPanelSelectedProjectOrgAtom";
 
 export interface ChatPanelSelectedWorkspace {
   kind: "workspace" | "repo";
@@ -351,8 +364,9 @@ chatPanelExploreAgentSearchEnabledAtom.debugLabel =
  * into a specific repo (e.g. the dashboard's "Open details" button)
  * set this to `"details"` along with `chatPanelSelectedWorkspaceAtom`.
  *
- * Persisted only in-memory — switching workspaces resets the
- * selection (handled inside `WorkspaceOverviewPanelView`).
+ * Persisted only in-memory — switching between workspace overview
+ * targets preserves the selected tab unless navigation explicitly
+ * requests a different tab.
  */
 export const WORKSPACE_OVERVIEW_TAB = {
   OVERVIEW: "overview",
@@ -377,6 +391,7 @@ export const CHAT_PANEL_SURFACE_KIND = {
   NEW_WORK_ITEM: "newWorkItem",
   NEW_COLLAB_ORG: "newCollabOrg",
   PROJECT: "project",
+  PROJECT_ORG: "projectOrg",
   WORK_ITEM: "workItem",
   WORKSPACE_DASHBOARD: "workspaceDashboard",
   WORKSPACE_EXPLORE: "workspaceExplore",
@@ -396,6 +411,10 @@ export type ChatPanelSurfaceState =
   | {
       kind: typeof CHAT_PANEL_SURFACE_KIND.PROJECT;
       project: ChatPanelSelectedProject;
+    }
+  | {
+      kind: typeof CHAT_PANEL_SURFACE_KIND.PROJECT_ORG;
+      projectOrg: ChatPanelSelectedProjectOrg;
     }
   | {
       kind: typeof CHAT_PANEL_SURFACE_KIND.WORK_ITEM;
@@ -430,6 +449,10 @@ export type ChatPanelNavigateCommand =
       project: ChatPanelSelectedProject;
     }
   | {
+      kind: typeof CHAT_PANEL_SURFACE_KIND.PROJECT_ORG;
+      projectOrg: ChatPanelSelectedProjectOrg;
+    }
+  | {
       kind: typeof CHAT_PANEL_SURFACE_KIND.WORK_ITEM;
       workItem: ChatPanelSelectedWorkItem;
     }
@@ -453,6 +476,7 @@ type SetAtom = <Value, Args extends unknown[], Result>(
 function resetChatPanelSurfaceState(set: SetAtom): void {
   set(chatPanelSelectedWorkItemAtom, null);
   set(chatPanelSelectedProjectAtom, null);
+  set(chatPanelSelectedProjectOrgAtom, null);
   set(chatPanelSelectedWorkspaceAtom, null);
   set(chatPanelSelectedCollabOrgAtom, null);
   set(chatPanelWorkspaceDashboardOpenAtom, false);
@@ -464,7 +488,8 @@ function resetChatPanelSurfaceState(set: SetAtom): void {
 
 export const chatPanelNavigateAtom = atom(
   null,
-  (_get, set, command: ChatPanelNavigateCommand) => {
+  (get, set, command: ChatPanelNavigateCommand) => {
+    const currentWorkspaceOverviewTab = get(chatPanelWorkspaceOverviewTabAtom);
     resetChatPanelSurfaceState(set);
 
     switch (command.kind) {
@@ -501,6 +526,10 @@ export const chatPanelNavigateAtom = atom(
         set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.NON_SESSION);
         set(chatPanelSelectedProjectAtom, command.project);
         return;
+      case CHAT_PANEL_SURFACE_KIND.PROJECT_ORG:
+        set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        set(chatPanelSelectedProjectOrgAtom, command.projectOrg);
+        return;
       case CHAT_PANEL_SURFACE_KIND.WORK_ITEM:
         set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.NON_SESSION);
         set(chatPanelSelectedWorkItemAtom, command.workItem);
@@ -518,7 +547,7 @@ export const chatPanelNavigateAtom = atom(
         set(chatPanelSelectedWorkspaceAtom, command.workspace);
         set(
           chatPanelWorkspaceOverviewTabAtom,
-          command.tab ?? WORKSPACE_OVERVIEW_TAB.OVERVIEW
+          command.tab ?? currentWorkspaceOverviewTab
         );
         return;
       case CHAT_PANEL_SURFACE_KIND.COLLAB_ORG:
@@ -547,6 +576,14 @@ export const activeChatPanelSurfaceAtom = atom<ChatPanelSurfaceState>((get) => {
   const selectedProject = get(chatPanelSelectedProjectAtom);
   if (selectedProject) {
     return { kind: CHAT_PANEL_SURFACE_KIND.PROJECT, project: selectedProject };
+  }
+
+  const selectedProjectOrg = get(chatPanelSelectedProjectOrgAtom);
+  if (selectedProjectOrg) {
+    return {
+      kind: CHAT_PANEL_SURFACE_KIND.PROJECT_ORG,
+      projectOrg: selectedProjectOrg,
+    };
   }
 
   if (get(chatPanelWorkspaceDashboardOpenAtom)) {

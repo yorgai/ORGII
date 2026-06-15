@@ -6,7 +6,9 @@ import {
   type ChatPanelCreateProjectContext,
   type ChatPanelCreateTarget,
   type ChatPanelNavigateCommand,
+  type ChatPanelSelectedCollabOrg,
   type ChatPanelSelectedProject,
+  type ChatPanelSelectedProjectOrg,
   type ChatPanelSelectedWorkItem,
   type ChatPanelSelectedWorkspace,
   DEFAULT_CHAT_PANEL_CREATE_TARGET,
@@ -20,7 +22,9 @@ export interface ChatPanelSurfaceSnapshot {
   createProjectContext: ChatPanelCreateProjectContext | null;
   selectedWorkItem: ChatPanelSelectedWorkItem | null;
   selectedProject: ChatPanelSelectedProject | null;
+  selectedProjectOrg: ChatPanelSelectedProjectOrg | null;
   selectedWorkspace: ChatPanelSelectedWorkspace | null;
+  selectedCollabOrg: ChatPanelSelectedCollabOrg | null;
   workspaceDashboardOpen: boolean;
   exploreOpen: boolean;
   workspaceOverviewTab: WorkspaceOverviewTab;
@@ -32,14 +36,17 @@ export const EMPTY_CHAT_PANEL_SURFACE_SNAPSHOT: ChatPanelSurfaceSnapshot = {
   createProjectContext: null,
   selectedWorkItem: null,
   selectedProject: null,
+  selectedProjectOrg: null,
   selectedWorkspace: null,
+  selectedCollabOrg: null,
   workspaceDashboardOpen: false,
   exploreOpen: false,
   workspaceOverviewTab: WORKSPACE_OVERVIEW_TAB.OVERVIEW,
 };
 
 export function reduceChatPanelSurfaceCommand(
-  command: ChatPanelNavigateCommand
+  command: ChatPanelNavigateCommand,
+  currentSnapshot: ChatPanelSurfaceSnapshot = EMPTY_CHAT_PANEL_SURFACE_SNAPSHOT
 ): ChatPanelSurfaceSnapshot {
   const next: ChatPanelSurfaceSnapshot = {
     ...EMPTY_CHAT_PANEL_SURFACE_SNAPSHOT,
@@ -79,6 +86,11 @@ export function reduceChatPanelSurfaceCommand(
         ...next,
         selectedProject: command.project,
       };
+    case CHAT_PANEL_SURFACE_KIND.PROJECT_ORG:
+      return {
+        ...next,
+        selectedProjectOrg: command.projectOrg,
+      };
     case CHAT_PANEL_SURFACE_KIND.WORK_ITEM:
       return {
         ...next,
@@ -98,7 +110,13 @@ export function reduceChatPanelSurfaceCommand(
       return {
         ...next,
         selectedWorkspace: command.workspace,
-        workspaceOverviewTab: command.tab ?? WORKSPACE_OVERVIEW_TAB.OVERVIEW,
+        workspaceOverviewTab:
+          command.tab ?? currentSnapshot.workspaceOverviewTab,
+      };
+    case CHAT_PANEL_SURFACE_KIND.COLLAB_ORG:
+      return {
+        ...next,
+        selectedCollabOrg: command.collabOrg,
       };
   }
 }
