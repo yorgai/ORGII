@@ -11,6 +11,7 @@ import {
   type ChatPanelCreateTarget,
   type ChatPanelSelectedCollabOrg,
   type ChatPanelSelectedProject,
+  type ChatPanelSelectedProjectOrg,
   type ChatPanelSelectedWorkItem,
   type ChatPanelSelectedWorkspace,
 } from "@src/store/ui/chatPanelAtom";
@@ -30,6 +31,7 @@ interface UseChatPanelContentStateOptions {
   collabOrgHeaderTitleContent?: React.ReactNode;
   selectedCollabOrg: ChatPanelSelectedCollabOrg | null;
   selectedProject: ChatPanelSelectedProject | null;
+  selectedProjectOrg: ChatPanelSelectedProjectOrg | null;
   selectedWorkItem: ChatPanelSelectedWorkItem | null;
   selectedWorkspace: ChatPanelSelectedWorkspace | null;
   workspaceDashboardOpen: boolean;
@@ -63,6 +65,7 @@ export interface ChatPanelContentState {
   showPanelContent: boolean;
   showProjectAgentSwitchInHeader: boolean;
   showProjectContent: boolean;
+  showProjectOrgContent: boolean;
   showSessionContent: boolean;
   showWorkItemAgentSwitchInHeader: boolean;
   showWorkItemContent: boolean;
@@ -85,6 +88,7 @@ export function useChatPanelContentState({
   collabOrgHeaderTitleContent,
   selectedCollabOrg,
   selectedProject,
+  selectedProjectOrg,
   selectedWorkItem,
   selectedWorkspace,
   workspaceDashboardOpen,
@@ -120,18 +124,26 @@ export function useChatPanelContentState({
     !showBenchmarkSessionGroupContent &&
     !showSessionContent &&
     !showWorkItemContent;
+  const showProjectOrgContent =
+    Boolean(selectedProjectOrg) &&
+    !showBenchmarkSessionGroupContent &&
+    !showSessionContent &&
+    !showWorkItemContent &&
+    !showProjectContent;
   const showWorkspaceDashboardContent =
     workspaceDashboardOpen &&
     !showBenchmarkSessionGroupContent &&
     !showSessionContent &&
     !showWorkItemContent &&
-    !showProjectContent;
+    !showProjectContent &&
+    !showProjectOrgContent;
   const showExploreContent =
     exploreOpen &&
     !showBenchmarkSessionGroupContent &&
     !showSessionContent &&
     !showWorkItemContent &&
     !showProjectContent &&
+    !showProjectOrgContent &&
     !showWorkspaceDashboardContent;
   const showCollabOrgContent =
     Boolean(selectedCollabOrg) &&
@@ -139,6 +151,7 @@ export function useChatPanelContentState({
     !showSessionContent &&
     !showWorkItemContent &&
     !showProjectContent &&
+    !showProjectOrgContent &&
     !showWorkspaceDashboardContent &&
     !showExploreContent;
   const showWorkspaceOverviewContent =
@@ -147,6 +160,7 @@ export function useChatPanelContentState({
     !showSessionContent &&
     !showWorkItemContent &&
     !showProjectContent &&
+    !showProjectOrgContent &&
     !showWorkspaceDashboardContent &&
     !showExploreContent &&
     !showCollabOrgContent;
@@ -156,6 +170,7 @@ export function useChatPanelContentState({
     !showBenchmarkSessionGroupContent &&
     !showWorkItemContent &&
     !showProjectContent &&
+    !showProjectOrgContent &&
     !showWorkspaceDashboardContent &&
     !showExploreContent &&
     !showCollabOrgContent &&
@@ -166,6 +181,7 @@ export function useChatPanelContentState({
     showBenchmarkSessionGroupContent ||
     showWorkItemContent ||
     showProjectContent ||
+    showProjectOrgContent ||
     showWorkspaceDashboardContent ||
     showExploreContent ||
     showCollabOrgContent ||
@@ -175,6 +191,7 @@ export function useChatPanelContentState({
     showBenchmarkSessionGroupContent ||
     showWorkItemContent ||
     showProjectContent ||
+    showProjectOrgContent ||
     showWorkspaceDashboardContent ||
     showExploreContent ||
     showCollabOrgContent ||
@@ -184,6 +201,8 @@ export function useChatPanelContentState({
 
   const workItemTitle = selectedWorkItem?.workItem.name || "Work item";
   const projectTitle = selectedProject?.project.name || t("projects.project");
+  const projectOrgTitle =
+    selectedProjectOrg?.orgName || t("projects:orgs.title");
   const workspaceTitle =
     selectedWorkspace?.name || t("navigation:labels.workspace");
   const showBenchmarkChildSessionContent =
@@ -200,18 +219,20 @@ export function useChatPanelContentState({
           : workItemTitle
         : selectedProject
           ? projectTitle
-          : showWorkspaceDashboardContent
-            ? t("navigation:launchpad.dashboard")
-            : showExploreContent
-              ? t("navigation:explore.title", { defaultValue: "Explore" })
-              : showCollabOrgContent
-                ? (collabOrgHeaderTitle ??
-                  t("navigation:collaboration.orgDemoTitle"))
-                : createTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG
-                  ? t("navigation:collaboration.addOrg")
-                  : selectedWorkspace
-                    ? workspaceTitle
-                    : panelTitle;
+          : selectedProjectOrg
+            ? projectOrgTitle
+            : showWorkspaceDashboardContent
+              ? t("navigation:launchpad.dashboard")
+              : showExploreContent
+                ? t("navigation:explore.title", { defaultValue: "Explore" })
+                : showCollabOrgContent
+                  ? (collabOrgHeaderTitle ??
+                    t("navigation:collaboration.orgDemoTitle"))
+                  : createTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG
+                    ? t("navigation:collaboration.addOrg")
+                    : selectedWorkspace
+                      ? workspaceTitle
+                      : panelTitle;
 
   const handleBenchmarkSessionGroupHeaderClick = useCallback(() => {
     if (!benchmarkMasterSessionId) return;
@@ -248,6 +269,30 @@ export function useChatPanelContentState({
         },
       ]}
     />
+  ) : showWorkItemContent && selectedWorkItem ? (
+    <ChatPanelHeaderBreadcrumb
+      items={[
+        {
+          key: "org",
+          label: selectedWorkItem.orgName || t("projects:orgs.personalOrg"),
+        },
+        {
+          key: "project",
+          label:
+            selectedWorkItem.projectName ||
+            selectedWorkItem.workItem.project?.name ||
+            t("projects.dashboardTitle"),
+        },
+        {
+          key: "work-item",
+          label: workItemTitle,
+        },
+      ]}
+    />
+  ) : showProjectOrgContent && selectedProjectOrg ? (
+    <ChatPanelHeaderBreadcrumb
+      items={[{ key: "org", label: selectedProjectOrg.orgName }]}
+    />
   ) : showCollabOrgContent && collabOrgHeaderTitleContent ? (
     collabOrgHeaderTitleContent
   ) : showWorkspaceDashboardContent ||
@@ -271,6 +316,7 @@ export function useChatPanelContentState({
     !showSessionContent &&
     !selectedWorkItem &&
     !selectedProject &&
+    !selectedProjectOrg &&
     !selectedWorkspace &&
     !selectedCollabOrg &&
     !showExploreContent &&
@@ -282,6 +328,7 @@ export function useChatPanelContentState({
     showNonSessionContent &&
     !selectedWorkItem &&
     !selectedProject &&
+    !selectedProjectOrg &&
     !selectedWorkspace &&
     !selectedCollabOrg &&
     !showExploreContent &&
@@ -291,6 +338,7 @@ export function useChatPanelContentState({
     showNonSessionContent &&
     !selectedWorkItem &&
     !selectedProject &&
+    !selectedProjectOrg &&
     !selectedWorkspace &&
     !selectedCollabOrg &&
     !showExploreContent &&
@@ -301,6 +349,7 @@ export function useChatPanelContentState({
     !showSessionContent &&
     !selectedWorkItem &&
     !selectedProject &&
+    !selectedProjectOrg &&
     !selectedWorkspace &&
     !selectedCollabOrg &&
     !showExploreContent &&
@@ -327,6 +376,7 @@ export function useChatPanelContentState({
     showPanelContent,
     showProjectAgentSwitchInHeader,
     showProjectContent,
+    showProjectOrgContent,
     showSessionContent,
     showWorkItemAgentSwitchInHeader,
     showWorkItemContent,

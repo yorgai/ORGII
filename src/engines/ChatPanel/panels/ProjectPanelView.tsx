@@ -293,11 +293,15 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
         projectName: selectedProject.project.name,
         projectSlug: projectSlug ?? selectedProject.projectSlug,
         shortId: workItemShortIds.get(workItemId) ?? workItemId,
+        orgId: selectedProject.orgId,
+        orgName: selectedProject.orgName,
       });
     },
     [
       projectSlug,
       selectedProject.project.id,
+      selectedProject.orgId,
+      selectedProject.orgName,
       selectedProject.project.name,
       selectedProject.projectSlug,
       setSelectedWorkItem,

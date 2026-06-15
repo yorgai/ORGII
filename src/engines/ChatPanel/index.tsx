@@ -14,7 +14,7 @@ import {
   eventsAtom,
 } from "@src/engines/SessionCore/core/atoms";
 import { ShareSessionDialog } from "@src/features/SessionSharing/ShareSessionDialog";
-import type { CreatedCollabOrgResult } from "@src/features/TeamCollaboration/components/CreateCollabOrgView";
+import type { CreatedOrgResult } from "@src/features/TeamCollaboration/components/CreateCollabOrgView";
 import { useDropdownEngine } from "@src/hooks/dropdown";
 import { useShouldOffsetChatPanelHeader } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import { allAgentDefsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAgentsAtom";
@@ -54,6 +54,7 @@ import {
   chatPanelNavigateAtom,
   chatPanelSelectedCollabOrgAtom,
   chatPanelSelectedProjectAtom,
+  chatPanelSelectedProjectOrgAtom,
   chatPanelSelectedWorkItemAtom,
   chatPanelSelectedWorkspaceAtom,
   chatPanelWorkspaceDashboardOpenAtom,
@@ -152,6 +153,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
     const selectedProject = useAtomValue(chatPanelSelectedProjectAtom);
+    const selectedProjectOrg = useAtomValue(chatPanelSelectedProjectOrgAtom);
     const selectedWorkspace = useAtomValue(chatPanelSelectedWorkspaceAtom);
     const selectedCollabOrg = useAtomValue(chatPanelSelectedCollabOrgAtom);
     const collabOrgs = useAtomValue(collabOrgsAtom);
@@ -306,16 +308,22 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     ]);
 
     const handleChatPanelCollabOrgCreated = useCallback(
-      (result: CreatedCollabOrgResult) => {
-        navigateChatPanel({
-          kind: CHAT_PANEL_SURFACE_KIND.COLLAB_ORG,
-          collabOrg: { orgId: result.org.id },
-        });
+      (result: CreatedOrgResult) => {
+        if (result.source === "cloud") {
+          navigateChatPanel({
+            kind: CHAT_PANEL_SURFACE_KIND.COLLAB_ORG,
+            collabOrg: { orgId: result.org.id },
+          });
+        } else {
+          bumpProjectListRefresh((previous) => previous + 1);
+          navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.SESSION });
+        }
         dispatchClearSession();
         setWorkstationActiveSessionId(null);
         setActiveSessionId(null);
       },
       [
+        bumpProjectListRefresh,
         dispatchClearSession,
         navigateChatPanel,
         setActiveSessionId,
@@ -462,6 +470,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       collabOrgHeaderTitleContent: collabOrgHeader?.titleContent,
       selectedCollabOrg,
       selectedProject,
+      selectedProjectOrg,
       selectedWorkItem,
       selectedWorkspace,
       workspaceDashboardOpen,
@@ -687,6 +696,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         position={position}
         selectedCollabOrg={selectedCollabOrg}
         selectedProject={selectedProject}
+        selectedProjectOrg={selectedProjectOrg}
         selectedWorkItem={selectedWorkItem}
         selectedWorkspace={selectedWorkspace}
         showBenchmarkSessionGroupContent={
@@ -699,6 +709,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         showExploreContent={contentState.showExploreContent}
         showPanelContent={contentState.showPanelContent}
         showProjectContent={contentState.showProjectContent}
+        showProjectOrgContent={contentState.showProjectOrgContent}
         showSessionContent={contentState.showSessionContent}
         showWorkItemContent={contentState.showWorkItemContent}
         showWorkspaceDashboardContent={

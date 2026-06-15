@@ -10,12 +10,14 @@ import type {
   ChatHistoryDisplayMode,
   ChatPanelSelectedCollabOrg,
   ChatPanelSelectedProject,
+  ChatPanelSelectedProjectOrg,
   ChatPanelSelectedWorkItem,
   ChatPanelSelectedWorkspace,
 } from "@src/store/ui/chatPanelAtom";
 
 import ChatView from "./ChatView";
 import CollabOrgPanelView from "./panels/CollabOrgPanelView";
+import ProjectOrgPanelView from "./panels/ProjectOrgPanelView";
 import ProjectPanelView from "./panels/ProjectPanelView";
 import WorkItemPanelView from "./panels/WorkItemPanelView";
 import WorkspaceDashboardPanelView from "./panels/WorkspaceDashboardPanelView";
@@ -33,6 +35,7 @@ interface ChatPanelContentProps {
   position: "left" | "right";
   selectedCollabOrg: ChatPanelSelectedCollabOrg | null;
   selectedProject: ChatPanelSelectedProject | null;
+  selectedProjectOrg: ChatPanelSelectedProjectOrg | null;
   selectedWorkItem: ChatPanelSelectedWorkItem | null;
   selectedWorkspace: ChatPanelSelectedWorkspace | null;
   showBenchmarkSessionGroupContent: boolean;
@@ -41,6 +44,7 @@ interface ChatPanelContentProps {
   showExploreContent: boolean;
   showPanelContent: boolean;
   showProjectContent: boolean;
+  showProjectOrgContent: boolean;
   showSessionContent: boolean;
   showWorkItemContent: boolean;
   showWorkspaceDashboardContent: boolean;
@@ -58,6 +62,7 @@ export function ChatPanelContent({
   position,
   selectedCollabOrg,
   selectedProject,
+  selectedProjectOrg,
   selectedWorkItem,
   selectedWorkspace,
   showBenchmarkSessionGroupContent,
@@ -66,6 +71,7 @@ export function ChatPanelContent({
   showExploreContent,
   showPanelContent,
   showProjectContent,
+  showProjectOrgContent,
   showSessionContent,
   showWorkItemContent,
   showWorkspaceDashboardContent,
@@ -86,6 +92,8 @@ export function ChatPanelContent({
         <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
       ) : showProjectContent && selectedProject ? (
         <ProjectPanelView selectedProject={selectedProject} />
+      ) : showProjectOrgContent && selectedProjectOrg ? (
+        <ProjectOrgPanelView selectedProjectOrg={selectedProjectOrg} />
       ) : showWorkspaceDashboardContent ? (
         <WorkspaceDashboardPanelView />
       ) : showExploreContent ? (

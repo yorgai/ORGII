@@ -29,5 +29,7 @@ export function toChatPanelWorkItem(
     projectName: workItem.projectName,
     projectSlug: workItem.projectSlug,
     shortId: workItem.shortId,
+    orgId: workItem.orgId,
+    orgName: workItem.orgName,
   };
 }

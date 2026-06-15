@@ -1,6 +1,6 @@
 import { emit } from "@tauri-apps/api/event";
 import { useSetAtom } from "jotai";
-import { ChevronRight, ExternalLink, X } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -11,7 +11,6 @@ import {
   projectApi,
 } from "@src/api/http/project";
 import Button from "@src/components/Button";
-import { PropertyDropdownField } from "@src/components/PropertyField/PropertyDropdownField";
 import { createLogger } from "@src/hooks/logger";
 import {
   WorkItemContent,
@@ -238,53 +237,6 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
     selectedWorkItem.shortId || selectedWorkItem.workItem.session_id
   }`;
 
-  const projectPathLabel =
-    selectedWorkItem.projectName ||
-    selectedWorkItem.workItem.project?.name ||
-    t("projects.dashboardTitle");
-  const orgPathLabel = t("orgs.personalOrg");
-  const headerPath = (
-    <div
-      className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
-      data-testid="chat-panel-work-item-pill-breadcrumb"
-    >
-      <PropertyDropdownField
-        value="org"
-        label={orgPathLabel}
-        icon={null}
-        placement="portal"
-        fieldVariant="pill"
-        triggerVariant="pill"
-        readonly
-        searchable={false}
-        selected
-        maxWidthClassName="max-w-[220px] shrink-0"
-      />
-      <ChevronRight
-        size={14}
-        strokeWidth={1.75}
-        className="shrink-0 text-fill-4"
-        aria-hidden
-      />
-      <PropertyDropdownField
-        value={
-          selectedWorkItem.projectId ||
-          selectedWorkItem.projectSlug ||
-          "project"
-        }
-        label={projectPathLabel}
-        icon={null}
-        placement="portal"
-        fieldVariant="pill"
-        triggerVariant="pill"
-        readonly
-        searchable={false}
-        selected
-        maxWidthClassName="max-w-[220px] shrink-0"
-      />
-    </div>
-  );
-
   const inlineProperties = (
     <WorkItemProperties
       workItem={selectedWorkItem.workItem}
@@ -307,7 +259,6 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
         onUpdateWorkItemImmediate={handleUpdateWorkItem}
         projectSlug={selectedWorkItem.projectSlug}
         shortId={selectedWorkItem.shortId}
-        headerPath={headerPath}
         headerProperties={inlineProperties}
         onOpenSession={handleOpenSession}
         activeAgentSessionId={activeLinkedSession?.session_id ?? null}
