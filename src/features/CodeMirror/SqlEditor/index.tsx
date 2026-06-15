@@ -14,6 +14,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
 import { AlignLeft, History, Play } from "lucide-react";
 import React, { memo, useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { format as formatSql } from "sql-formatter";
 
 import type { TableInfo } from "@src/engines/DatabaseCore";
@@ -62,6 +63,7 @@ export const SqlQueryEditor: React.FC<SqlQueryEditorProps> = memo(
     history = [],
     onHistorySelect,
   }) => {
+    const { t } = useTranslation("common");
     const [value, setValue] = useState(defaultValue);
     const [showHistory, setShowHistory] = useState(false);
     const historyRef = useRef<HTMLDivElement>(null);
@@ -149,11 +151,11 @@ export const SqlQueryEditor: React.FC<SqlQueryEditorProps> = memo(
             {/* Format button */}
             <button
               onClick={handleFormat}
-              title="Format SQL (prettify)"
+              title={t("tooltips.formatSql")}
               className="sql-query-editor__btn"
             >
               <AlignLeft size={14} strokeWidth={1.75} />
-              <span>Format</span>
+              <span>{t("sqlEditor.format")}</span>
             </button>
 
             {/* History dropdown */}
@@ -161,11 +163,11 @@ export const SqlQueryEditor: React.FC<SqlQueryEditorProps> = memo(
               <div className="sql-query-editor__history-container">
                 <button
                   onClick={() => setShowHistory(!showHistory)}
-                  title="Query history"
+                  title={t("tooltips.queryHistory")}
                   className="sql-query-editor__btn"
                 >
                   <History size={14} strokeWidth={1.75} />
-                  <span>History</span>
+                  <span>{t("labels.history")}</span>
                 </button>
 
                 {showHistory && (
@@ -199,11 +201,11 @@ export const SqlQueryEditor: React.FC<SqlQueryEditorProps> = memo(
             <button
               onClick={handleExecute}
               disabled={loading || !value.trim()}
-              title="Execute query (Ctrl+Enter)"
+              title={t("tooltips.executeQuery")}
               className="sql-query-editor__btn sql-query-editor__btn--primary"
             >
               <Play size={14} strokeWidth={1.75} />
-              <span>{loading ? "Running..." : "Run"}</span>
+              <span>{loading ? t("status.running") : t("actions.run")}</span>
             </button>
           </div>
         </div>
@@ -216,17 +218,17 @@ export const SqlQueryEditor: React.FC<SqlQueryEditorProps> = memo(
             height="100%"
             theme={theme}
             extensions={extensions}
-            placeholder="Enter SQL query..."
+            placeholder={t("sqlEditor.placeholder")}
             basicSetup={BASIC_SETUP_SQL_CONFIG}
           />
         </div>
 
         {/* Keyboard hint */}
         <div className="absolute bottom-2 right-3 flex items-center gap-1 text-xs text-text-4">
-          <span>Press</span>
+          <span>{t("sqlEditor.press")}</span>
           <kbd className="rounded bg-fill-2 px-1.5 py-0.5">⌘</kbd>
           <kbd className="rounded bg-fill-2 px-1.5 py-0.5">↵</kbd>
-          <span>to run</span>
+          <span>{t("sqlEditor.toRun")}</span>
         </div>
       </div>
     );

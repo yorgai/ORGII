@@ -15,6 +15,7 @@
 import { type UnlistenFn, listen } from "@tauri-apps/api/event";
 
 import { rpc } from "@src/api/tauri/rpc";
+import { createLogger } from "@src/hooks/logger";
 
 import type { EventPayloadBody, SessionEvent } from "../types";
 import type {
@@ -43,6 +44,7 @@ export type {
 export { isStreamingSnapshot } from "./snapshotMaterialization";
 
 const SNAPSHOT_CACHE_MAX = 20;
+const log = createLogger("EventStoreProxy");
 
 class EventStoreProxyImpl {
   private _globalListeners = new Set<GlobalListener>();
@@ -468,10 +470,10 @@ class EventStoreProxyImpl {
     try {
       return await rpc.sessionCore.eventStore.saveToCache({ sessionId });
     } catch (error) {
-      console.warn(
-        `[EventStoreProxy] saveToCache failed for ${sessionId}; continuing with in-memory EventStore`,
-        error
-      );
+      log.warn("saveToCache failed; continuing with in-memory EventStore", {
+        sessionId,
+        error,
+      });
       return 0;
     }
   }

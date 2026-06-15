@@ -12,14 +12,18 @@
 import { readFile } from "@tauri-apps/plugin-fs";
 import { useAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import Message from "@src/components/Message";
+import { createLogger } from "@src/hooks/logger";
 import {
   type ChatImageAttachment,
   MAX_CHAT_IMAGES,
   chatImageAttachmentsAtom,
 } from "@src/store/ui/chatImageAtom";
 import { optimizeImage } from "@src/util/optimization/imageOptimizer";
+
+const log = createLogger("ImageAttachment");
 
 /** Accepted image MIME types */
 const ACCEPTED_IMAGE_TYPES = new Set([
@@ -52,6 +56,7 @@ function mimeFromPath(path: string): string | undefined {
 }
 
 export function useImageAttachment(ownerId?: string) {
+  const { t } = useTranslation("common");
   const [images, setImages] = useAtom(chatImageAttachmentsAtom);
 
   const ownerImages = useMemo(
@@ -80,14 +85,17 @@ export function useImageAttachment(ownerId?: string) {
 
       const remaining = MAX_CHAT_IMAGES - imagesLengthRef.current;
       if (remaining <= 0) {
-        Message.warning(`Maximum ${MAX_CHAT_IMAGES} images allowed`);
+        Message.warning(t("chatImage.maxReached", { max: MAX_CHAT_IMAGES }));
         return;
       }
 
       const filesToProcess = files.slice(0, remaining);
       if (files.length > remaining) {
         Message.warning(
-          `Only ${remaining} more image(s) can be added (max ${MAX_CHAT_IMAGES})`
+          t("chatImage.remainingWarning", {
+            remaining,
+            max: MAX_CHAT_IMAGES,
+          })
         );
       }
 
@@ -112,8 +120,8 @@ export function useImageAttachment(ownerId?: string) {
             ownerId,
           });
         } catch (error) {
-          console.error("[ImageAttachment] Failed to optimize image:", error);
-          Message.error("Failed to process image");
+          log.error("Failed to optimize image", error);
+          Message.error(t("chatImage.processFailed"));
         }
       }
 
@@ -121,7 +129,7 @@ export function useImageAttachment(ownerId?: string) {
         setImages((prev) => [...prev, ...newAttachments]);
       }
     },
-    [setImages, ownerId]
+    [setImages, ownerId, t]
   );
 
   const handleImagePaste = useCallback(
@@ -222,15 +230,12 @@ export function useImageAttachment(ownerId?: string) {
         const file = new File([bytes as BlobPart], name, { type: mime });
         await ingestFiles([file]);
       } catch (error) {
-        console.error(
-          "[ImageAttachment] Failed to read image from path:",
-          path,
-          error
-        );
-        Message.error(`Failed to load image: ${basename(path)}`);
+        const name = fileName || basename(path);
+        log.error("Failed to read image from path", { path, error });
+        Message.error(t("chatImage.loadFailed", { fileName: name }));
       }
     },
-    [ingestFiles]
+    [ingestFiles, t]
   );
 
   const clearImages = useCallback(() => {

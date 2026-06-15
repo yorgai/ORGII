@@ -84,20 +84,23 @@ const ICONS: Record<MessageType, typeof CheckCircle2> = {
 
 const TYPE_STYLES: Record<MessageType, { border: string; icon: string }> = {
   success: {
-    border: "border-[rgba(16,185,129,0.3)]",
-    icon: "text-[#10b981] bg-[rgba(16,185,129,0.15)]",
+    border:
+      "border-[color-mix(in_srgb,var(--color-success-6)_30%,transparent)]",
+    icon: "text-[var(--color-success-6)] bg-[color-mix(in_srgb,var(--color-success-6)_15%,transparent)]",
   },
   error: {
-    border: "border-[rgba(239,68,68,0.3)]",
-    icon: "text-[#ef4444] bg-[rgba(239,68,68,0.15)]",
+    border: "border-[color-mix(in_srgb,var(--color-danger-6)_30%,transparent)]",
+    icon: "text-[var(--color-danger-6)] bg-[color-mix(in_srgb,var(--color-danger-6)_15%,transparent)]",
   },
   warning: {
-    border: "border-[rgba(245,158,11,0.3)]",
-    icon: "text-[#f59e0b] bg-[rgba(245,158,11,0.15)]",
+    border:
+      "border-[color-mix(in_srgb,var(--color-warning-6)_30%,transparent)]",
+    icon: "text-[var(--color-warning-6)] bg-[color-mix(in_srgb,var(--color-warning-6)_15%,transparent)]",
   },
   info: {
-    border: "border-[rgba(59,130,246,0.3)]",
-    icon: "text-[#3b82f6] bg-[rgba(59,130,246,0.15)]",
+    border:
+      "border-[color-mix(in_srgb,var(--color-primary-6)_30%,transparent)]",
+    icon: "text-[var(--color-primary-6)] bg-[color-mix(in_srgb,var(--color-primary-6)_15%,transparent)]",
   },
 };
 

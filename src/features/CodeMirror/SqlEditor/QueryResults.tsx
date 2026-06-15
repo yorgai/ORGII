@@ -10,6 +10,7 @@
  */
 import { AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import React, { memo } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { QueryResult } from "@src/engines/DatabaseCore";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
@@ -33,9 +34,13 @@ export interface QueryResultsProps {
 
 export const QueryResults: React.FC<QueryResultsProps> = memo(
   ({ result, error, loading }) => {
+    const { t } = useTranslation("common");
+
     // Loading state
     if (loading) {
-      return <Placeholder variant="loading" title="Executing query..." />;
+      return (
+        <Placeholder variant="loading" title={t("sqlEditor.executingQuery")} />
+      );
     }
 
     // Error state
@@ -50,7 +55,7 @@ export const QueryResults: React.FC<QueryResultsProps> = memo(
               className="text-[var(--color-danger-6)]"
             />
             <span className="text-xs font-medium text-[var(--color-danger-6)]">
-              Query failed
+              {t("sqlEditor.queryFailed")}
             </span>
           </div>
 
@@ -66,7 +71,12 @@ export const QueryResults: React.FC<QueryResultsProps> = memo(
 
     // Empty state (no query run yet)
     if (!result) {
-      return <Placeholder variant="empty" title="Run a query to see results" />;
+      return (
+        <Placeholder
+          variant="empty"
+          title={t("sqlEditor.runQueryToSeeResults")}
+        />
+      );
     }
 
     // No results
@@ -82,7 +92,7 @@ export const QueryResults: React.FC<QueryResultsProps> = memo(
                 className="text-[var(--color-success-6)]"
               />
               <span className="text-xs font-medium text-[var(--color-success-6)]">
-                Query completed
+                {t("sqlEditor.queryCompleted")}
               </span>
             </div>
             <div className="flex items-center gap-1 text-xs text-text-3">
@@ -95,12 +105,17 @@ export const QueryResults: React.FC<QueryResultsProps> = memo(
           <div className="flex flex-1 items-center justify-center">
             <Placeholder
               variant="no-results"
-              title="Query returned no results"
+              title={t("sqlEditor.noResults")}
             />
           </div>
         </div>
       );
     }
+
+    const rowCountLabel =
+      result.rowCount === 1
+        ? t("sqlEditor.rowCount_one", { count: result.rowCount })
+        : t("sqlEditor.rowCount_other", { count: result.rowCount });
 
     // Results table
     return (
@@ -114,7 +129,7 @@ export const QueryResults: React.FC<QueryResultsProps> = memo(
               className="text-[var(--color-success-6)]"
             />
             <span className="text-xs font-medium text-text-1">
-              {result.rowCount} row{result.rowCount !== 1 ? "s" : ""}
+              {rowCountLabel}
             </span>
           </div>
           <div className="flex items-center gap-1 text-xs text-text-3">
@@ -146,7 +161,7 @@ export const QueryResults: React.FC<QueryResultsProps> = memo(
                       key={cellIdx}
                       className="border-b border-r border-border-1 px-3 py-1.5 last:border-r-0"
                     >
-                      {renderCellValue(cell)}
+                      {renderCellValue(cell, t)}
                     </td>
                   ))}
                 </tr>
@@ -163,18 +178,26 @@ export const QueryResults: React.FC<QueryResultsProps> = memo(
 // Helper Functions
 // ============================================
 
-function renderCellValue(value: unknown): React.ReactNode {
+type TranslateFn = (key: string) => string;
+
+function renderCellValue(value: unknown, t: TranslateFn): React.ReactNode {
   if (value === null) {
-    return <span className="italic text-text-4">NULL</span>;
+    return (
+      <span className="italic text-text-4">{t("sqlEditor.nullValue")}</span>
+    );
   }
   if (value === undefined) {
     return <span className="text-text-4">—</span>;
   }
   if (typeof value === "boolean") {
-    return <span className="text-[#722ed1]">{value ? "true" : "false"}</span>;
+    return (
+      <span className="text-[var(--color-primary-6)]">
+        {value ? t("sqlEditor.booleanTrue") : t("sqlEditor.booleanFalse")}
+      </span>
+    );
   }
   if (typeof value === "number") {
-    return <span className="text-[#14c9c9]">{value}</span>;
+    return <span className="text-[var(--color-primary-5)]">{value}</span>;
   }
   // Truncate long strings
   const strValue = String(value);
