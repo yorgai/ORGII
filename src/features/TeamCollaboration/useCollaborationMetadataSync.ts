@@ -11,9 +11,14 @@ import {
 import {
   COLLAB_MESSAGE_TYPE,
   COLLAB_PROTOCOL_VERSION,
+  createCollabAvatarIdentity,
 } from "@src/store/collaboration/protocol";
-import { COLLAB_CONNECTION_STATUS } from "@src/store/collaboration/types";
+import {
+  COLLAB_CONNECTION_STATUS,
+  COLLAB_ROLE,
+} from "@src/store/collaboration/types";
 import type {
+  CollabChatMessageRecord,
   CollabMemberRecord,
   CollabOrgConnectionState,
   CollabOrgRecord,
@@ -58,13 +63,58 @@ function upsertConnectionState(
   return next;
 }
 
+function upsertCollabMember(
+  current: CollabMemberRecord[],
+  incoming: CollabMemberRecord
+): CollabMemberRecord[] {
+  const existingIndex = current.findIndex(
+    (member) => member.orgId === incoming.orgId && member.id === incoming.id
+  );
+  if (existingIndex < 0) return [incoming, ...current];
+  const next = [...current];
+  next[existingIndex] = { ...current[existingIndex], ...incoming };
+  return next;
+}
+
+function memberFromRemoteSession(
+  session: RemoteTeammateSessionMetadata
+): CollabMemberRecord {
+  const joinedAt = session.lastActivityAt ?? new Date().toISOString();
+  return {
+    id: session.ownerMemberId,
+    orgId: session.orgId,
+    displayName: session.ownerDisplayName,
+    avatar: createCollabAvatarIdentity(session.ownerDisplayName),
+    role: COLLAB_ROLE.MEMBER,
+    identityKind: session.ownerIdentityKind,
+    joinedAt,
+  };
+}
+
+function memberFromChatMessage(
+  message: CollabChatMessageRecord
+): CollabMemberRecord {
+  return {
+    id: message.authorMemberId,
+    orgId: message.orgId,
+    displayName: message.authorDisplayName,
+    avatar: createCollabAvatarIdentity(message.authorDisplayName),
+    role: COLLAB_ROLE.MEMBER,
+    identityKind: message.authorIdentityKind,
+    joinedAt: message.createdAt,
+  };
+}
+
 export function useCollaborationMetadataSync(): void {
   const orgs = useAtomValue(collabOrgsAtom);
   const members = useAtomValue(collabMembersAtom);
+  const remoteSessions = useAtomValue(remoteTeammateSessionsAtom);
+  const chatMessages = useAtomValue(collabChatMessagesAtom);
   const sessions = useAtomValue(sessionsAtom);
   const setRemoteSessions = useSetAtom(remoteTeammateSessionsAtom);
   const setConnectionStates = useSetAtom(collabConnectionStatesAtom);
   const setChatMessages = useSetAtom(collabChatMessagesAtom);
+  const setMembers = useSetAtom(collabMembersAtom);
 
   const activeConnections = useMemo(
     () =>
@@ -79,6 +129,17 @@ export function useCollaborationMetadataSync(): void {
       }),
     [members, orgs]
   );
+
+  useEffect(() => {
+    const inferredMembers = [
+      ...remoteSessions.map(memberFromRemoteSession),
+      ...chatMessages.map(memberFromChatMessage),
+    ];
+    if (inferredMembers.length === 0) return;
+    setMembers((current) =>
+      inferredMembers.reduce(upsertCollabMember, current)
+    );
+  }, [chatMessages, remoteSessions, setMembers]);
 
   useEffect(() => {
     if (activeConnections.length === 0) return;
@@ -104,6 +165,18 @@ export function useCollaborationMetadataSync(): void {
         accessToken: member.accessToken ?? "",
         onOpen: () => {
           setStatus(COLLAB_CONNECTION_STATUS.CONNECTED);
+          socket.send({
+            protocolVersion: COLLAB_PROTOCOL_VERSION,
+            id: crypto.randomUUID(),
+            type: COLLAB_MESSAGE_TYPE.PRESENCE_UPDATE,
+            orgId: org.id,
+            senderMemberId: member.id,
+            sentAt: new Date().toISOString(),
+            payload: {
+              member,
+              active: true,
+            },
+          });
           for (const session of sessions) {
             socket.send({
               protocolVersion: COLLAB_PROTOCOL_VERSION,
@@ -123,6 +196,14 @@ export function useCollaborationMetadataSync(): void {
           setStatus(COLLAB_CONNECTION_STATUS.ERROR, "Connection failed"),
         onMessage: (message) => {
           if (message.senderMemberId === member.id) return;
+          if (message.type === COLLAB_MESSAGE_TYPE.PRESENCE_UPDATE) {
+            const incomingMember = message.payload.member;
+            if (message.payload.active && !incomingMember.removedAt) {
+              setMembers((current) =>
+                upsertCollabMember(current, incomingMember)
+              );
+            }
+          }
           if (message.type === COLLAB_MESSAGE_TYPE.SESSION_METADATA_UPSERT) {
             setRemoteSessions((current) => {
               const incoming = message.payload.session;
@@ -134,6 +215,12 @@ export function useCollaborationMetadataSync(): void {
               next[existingIndex] = incoming;
               return next;
             });
+            setMembers((current) =>
+              upsertCollabMember(
+                current,
+                memberFromRemoteSession(message.payload.session)
+              )
+            );
           }
           if (message.type === COLLAB_MESSAGE_TYPE.SESSION_METADATA_REMOVE) {
             setRemoteSessions((current) =>
@@ -154,6 +241,12 @@ export function useCollaborationMetadataSync(): void {
               next[existingIndex] = incoming;
               return next;
             });
+            setMembers((current) =>
+              upsertCollabMember(
+                current,
+                memberFromChatMessage(message.payload.message)
+              )
+            );
           }
         },
       });
@@ -168,6 +261,7 @@ export function useCollaborationMetadataSync(): void {
     sessions,
     setChatMessages,
     setConnectionStates,
+    setMembers,
     setRemoteSessions,
   ]);
 }

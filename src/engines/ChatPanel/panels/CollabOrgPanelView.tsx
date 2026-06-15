@@ -10,6 +10,7 @@ import {
   listCollabChatMessages,
   postCollabChatMessage,
 } from "@src/features/TeamCollaboration/collabHubClient";
+import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
 import WorkItemContentStack from "@src/modules/ProjectManager/WorkItems/components/WorkItemContentStack";
 import { SectionContainer } from "@src/modules/shared/layouts/SectionLayout";
 import {
@@ -36,6 +37,7 @@ import type {
   CollabMemberRecord,
   RemoteTeammateSessionMetadata,
 } from "@src/store/collaboration/types";
+import { sessionsAtom } from "@src/store/session";
 import type { ChatPanelSelectedCollabOrg } from "@src/store/ui/chatPanelAtom";
 import { chatPanelSelectedCollabOrgAtom } from "@src/store/ui/chatPanelAtom";
 import { copyText } from "@src/util/data/clipboard";
@@ -153,7 +155,9 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
   const { t } = useTranslation("navigation");
   const orgs = useAtomValue(collabOrgsAtom);
   const members = useAtomValue(collabMembersAtom);
+  const sessions = useAtomValue(sessionsAtom);
   const remoteSessions = useAtomValue(remoteTeammateSessionsAtom);
+  const { openSession } = useSessionView();
   const [chatMessages, setChatMessages] = useAtom(collabChatMessagesAtom);
   const [invites, setInvites] = useAtom(collabInvitesAtom);
   const setSelectedCollabOrg = useSetAtom(chatPanelSelectedCollabOrgAtom);
@@ -325,6 +329,37 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
     [setSelectedCollabOrg]
   );
 
+  const handleSelectSession = useCallback(
+    (item: SessionTableItem) => {
+      const remoteSession = orgSessions.find(
+        (session) => session.id === item.id
+      );
+      if (!remoteSession) return;
+
+      const localSession = sessions.find(
+        (session) =>
+          session.session_id === remoteSession.sourceSessionId ||
+          session.session_id === remoteSession.id
+      );
+
+      if (localSession) {
+        openSession(
+          localSession.session_id,
+          localSession.name || localSession.user_input || remoteSession.title,
+          localSession.repoPath ?? remoteSession.repoPath
+        );
+        return;
+      }
+
+      setSelectedCollabOrg({
+        orgId: remoteSession.orgId,
+        memberId: remoteSession.ownerMemberId,
+      });
+      setActiveTab(COLLAB_ORG_TAB.SESSIONS);
+    },
+    [openSession, orgSessions, sessions, setSelectedCollabOrg]
+  );
+
   const handleBackToOrg = useCallback(() => {
     setSelectedCollabOrg({ orgId: selectedCollabOrg.orgId });
     setActiveTab(COLLAB_ORG_TAB.SESSIONS);
@@ -405,6 +440,7 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
         {activeTab === COLLAB_ORG_TAB.SESSIONS ? (
           <SessionTable
             items={sessionItems}
+            onSelect={handleSelectSession}
             showSearch
             surfaceVariant="chatPanel"
             maxHeight={520}
