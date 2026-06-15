@@ -274,10 +274,11 @@ impl QuestionManager {
     /// Emits `agent:interaction_finalized` with structured answers so the UI
     /// flips from "waiting" to "answered" without waiting for the tool's
     /// `execute()` to return.
-    pub async fn respond(&self, request_id: &str, answers: Vec<QuestionAnswer>) {
+    pub async fn respond(&self, request_id: &str, answers: Vec<QuestionAnswer>) -> Result<(), String> {
         let Some((resolved_id, entry)) = self.take_pending(request_id).await else {
-            warn!("[question] No pending request found for {}", request_id);
-            return;
+            let msg = format!("No pending question found for request/tool_call '{}' (expired, already answered, or never created)", request_id);
+            warn!("[question] {}", msg);
+            return Err(msg);
         };
 
         let answer_labels = resolve_answer_labels(&entry.questions, &answers);
@@ -306,12 +307,15 @@ impl QuestionManager {
         } else {
             info!("[question] Resolved request {}", resolved_id);
         }
+        Ok(())
     }
 
     /// Reject a pending question (user dismissed the dialog).
-    pub async fn reject(&self, request_id: &str) {
+    pub async fn reject(&self, request_id: &str) -> Result<(), String> {
         let Some((resolved_id, entry)) = self.take_pending(request_id).await else {
-            return;
+            let msg = format!("No pending question found for request/tool_call '{}' (expired, already answered, or never created)", request_id);
+            warn!("[question] {}", msg);
+            return Err(msg);
         };
 
         finalize_interaction_event(
@@ -335,6 +339,7 @@ impl QuestionManager {
         } else {
             info!("[question] Rejected request {}", resolved_id);
         }
+        Ok(())
     }
 
     /// Invoked when the tool's wait was cancelled by the session cancel_flag

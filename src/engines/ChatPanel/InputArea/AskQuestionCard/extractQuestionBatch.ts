@@ -6,18 +6,8 @@
  */
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 
+import { ASK_QUESTION_FUNCTIONS } from "./askQuestionFunctionNames";
 import type { QuestionBatch, QuestionOption, SingleQuestion } from "./types";
-
-const ASK_QUESTION_FUNCTIONS = new Set([
-  "askuserquestion",
-  "AskUserQuestion",
-  "AskQuestion",
-  "CollectFeedback",
-  "question",
-  "ask_user_questions",
-  "ask_question",
-  "ask_followup_question",
-]);
 
 /**
  * Predicate shared by `extractQuestionBatch` and `useQuestionBatches`'s
@@ -29,7 +19,7 @@ export function isAskUserQuestionsEvent(event: SessionEvent): boolean {
   if (event.actionType === "ask_user_questions") return true;
   if (
     event.actionType === "tool_call" &&
-    ASK_QUESTION_FUNCTIONS.has(event.functionName)
+    ASK_QUESTION_FUNCTIONS.has(event.functionName?.toLowerCase() ?? "")
   ) {
     return true;
   }
@@ -54,7 +44,8 @@ export function extractQuestionBatch(
     if (result?.success === true) return null;
     if (result?.error) return null;
   }
-  if (event.displayStatus === "completed") return null;
+  if (event.displayStatus === "completed" || event.displayStatus === "failed")
+    return null;
 
   const sessionId = event.sessionId || "";
   const questionId =

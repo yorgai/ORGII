@@ -136,9 +136,45 @@ impl Tool for QuestionTool {
             .get("questions")
             .ok_or_else(|| ToolError::InvalidParams("Missing 'questions' array".into()))?;
 
-        let questions_arr = questions
-            .as_array()
-            .ok_or_else(|| ToolError::InvalidParams("'questions' must be an array".into()))?;
+        let questions_arr = match questions.as_array() {
+            Some(arr) => arr,
+            None => {
+                // Log the actual deserialized shape — the JSON Schema says
+                // "questions" must be an array, but a provider or model may
+                // have mangled it (string, object, extra wrapper, etc.).
+                let preview = crate::utils::safe_truncate_chars_to_string(
+                    &serde_json::to_string(&params).unwrap_or_else(|_| "(unserializable)".into()),
+                    400,
+                );
+                tracing::warn!(
+                    "[question] execute_text received non-array 'questions' \
+                     (type={:?}, session={}, call_id={}, params_preview={})",
+                    questions,
+                    session_id,
+                    ctx.call_id,
+                    preview,
+                );
+                // Build an error the LLM can use to self-correct. Show what
+                // it actually sent and a concrete example of the right shape.
+                let actual_preview = questions.to_string();
+                let actual_short = crate::utils::safe_truncate_chars_to_string(&actual_preview, 120);
+                return Err(ToolError::InvalidParams(format!(
+                    "`questions` must be a JSON array, but got {}: {}. \
+                     Correct format example: \
+                     {{\"questions\":[{{\"question\":\"...\",\"header\":\"...\",\"options\":\
+                     [{{\"id\":\"opt_a\",\"label\":\"Choice A\",\"description\":\"What A means\"}}]}}]}}",
+                    match questions {
+                        serde_json::Value::String(_) => "a string",
+                        serde_json::Value::Number(_) => "a number",
+                        serde_json::Value::Object(_) => "an object",
+                        serde_json::Value::Bool(_) => "a boolean",
+                        serde_json::Value::Null => "null",
+                        _ => "an unexpected type",
+                    },
+                    actual_short,
+                )));
+            }
+        };
 
         if questions_arr.is_empty() {
             return Err(ToolError::InvalidParams(
@@ -149,13 +185,23 @@ impl Tool for QuestionTool {
         let request_id = format!("question-{}", uuid::Uuid::new_v4());
 
         // Per-call tool_call_id flows through `CallContext` (constructed
-        // by `tool_execution` dispatch sites). Empty when a direct
-        // in-process caller forgot to populate ctx.
-        let tool_call_id = if ctx.call_id.is_empty() {
-            None
-        } else {
-            Some(ctx.call_id.clone())
-        };
+        // by `tool_execution` dispatch sites). A missing call_id means
+        // `finalize_interaction_event` will silently skip the broadcast,
+        // leaving the tool_call event stuck at `awaiting_user` forever.
+        // Fail fast so the LLM sees the error instead of hanging.
+        if ctx.call_id.is_empty() {
+            tracing::error!(
+                "[question] execute_text called with empty call_id (session={}, request={}) — \
+                 refusing to proceed. The dispatch path must populate `CallContext.call_id`.",
+                session_id,
+                request_id
+            );
+            return Err(ToolError::ExecutionFailed(
+                "Cannot ask questions: tool dispatch context missing call_id".into(),
+            ));
+        }
+
+        let tool_call_id = Some(ctx.call_id.clone());
 
         // Send question to frontend and return a receiver.
         let receiver = self

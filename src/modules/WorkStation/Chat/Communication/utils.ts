@@ -7,6 +7,7 @@
  * Same pattern as CODE_EDITOR's file_read/shell/search routing — no hardcoded
  * event category arrays, no suffix stripping.
  */
+import { ASK_QUESTION_FUNCTIONS } from "@src/engines/ChatPanel/InputArea/AskQuestionCard/askQuestionFunctionNames";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { getAppSubtool } from "@src/engines/SessionCore/rendering/registry/initToolRegistry";
 
@@ -196,15 +197,6 @@ export function convertToMessageEntry(
 // ============================================
 // Ask-Question Detection & Extraction
 // ============================================
-
-const ASK_QUESTION_FUNCTIONS = new Set([
-  "ask_user_questions",
-  "ask_question",
-  "askuserquestion",
-  "askquestion",
-  "collectfeedback",
-  "question",
-]);
 
 export function isAskQuestionEvent(event: SessionEvent): boolean {
   const funcName = event.functionName?.toLowerCase() || "";

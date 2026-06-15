@@ -1479,7 +1479,7 @@ pub async fn test_sde_question_respond(
         }
     };
 
-    qm.respond(&request.request_id, request.answers).await;
+    let _ = qm.respond(&request.request_id, request.answers).await;
     Json(serde_json::json!({ "ok": true }))
 }
 

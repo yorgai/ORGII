@@ -124,11 +124,13 @@ export function useSubmitMessage({
               [displayText.trim()],
             ]).catch((err: unknown) => {
               log.warn("[useSubmitMessage] respondQuestion failed:", err);
+              Message.warning(t("chat.questionExpired"));
             });
           } else {
             void rejectQuestion(batch.sessionId, batch.questionId).catch(
               (err: unknown) => {
                 log.warn("[useSubmitMessage] rejectQuestion failed:", err);
+                Message.warning(t("chat.questionExpired"));
               }
             );
           }
