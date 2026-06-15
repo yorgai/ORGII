@@ -12,9 +12,23 @@ const ASSISTANT_COMMIT_LINE_PATTERN =
   /^\s*(?:[-*•]\s*)?`?([0-9a-f]{7,40})`?\s+([a-z][a-z0-9-]*(?:\([^)]+\))?!?:\s+[^\n]+)$/gim;
 const ASSISTANT_SHA_DASH_SUBJECT_PATTERN =
   /^\s*(?:[-*•]\s*)?(?:[A-Za-z][A-Za-z\s-]{0,32}:\s*)?`?([0-9a-f]{7,40})`?\s*(?:—|–|-)\s*([a-z][a-z0-9-]*(?:\([^)]+\))?!?:\s+[^\n]+)$/gim;
-const ASSISTANT_CONTEXTUAL_COMMIT_SHA_PATTERN =
-  /\b(?:commit(?:ted|s)?|commit\s+(?:created|sha|tip)|branch\s+tip|synced\s+at)\b[^\n]{0,120}?`?(?<![#0-9a-z_-])([0-9a-f]{7,40})(?![0-9a-z_-])`?/gi;
-const BARE_GIT_SHA_PATTERN = /(?<![#0-9a-z_-])([0-9a-f]{7,40})(?![0-9a-z_-])/gi;
+// A bare hex token is only treated as a commit when the surrounding prose
+// supplies positive git evidence. An 8-hex turn id (`74371fe5`), an epoch
+// millis timestamp (`1781462067585`), or any other internal id is shaped
+// exactly like a short SHA, so a context-free bare-hex pass produces endless
+// false positives. The keyword list below is the allowlist of phrasings that
+// actually introduce a commit in agent/assistant output.
+const COMMIT_CONTEXT_KEYWORDS =
+  "commit(?:ted|s)?|commit\\s+(?:created|sha|tip|hash)|sha|" +
+  "branch\\s+tip|synced\\s+at|pushed(?:\\s+(?:to|as))?|" +
+  "(?:force[- ]?)?push(?:ed)?|HEAD(?:\\s+(?:is|at))?|" +
+  "rebased(?:\\s+(?:to|onto))?|checked\\s+out|checkout|" +
+  "tagged(?:\\s+at)?|revision|cherry[- ]?picked|amended|" +
+  "fixed\\s+in|landed\\s+(?:as|in)|merged\\s+(?:as|in)";
+const ASSISTANT_CONTEXTUAL_COMMIT_SHA_PATTERN = new RegExp(
+  `\\b(?:${COMMIT_CONTEXT_KEYWORDS})\\b[^\\n]{0,120}?\`?(?<![#0-9a-z_-])([0-9a-f]{7,40})(?![0-9a-z_-])\`?`,
+  "gi"
+);
 const ASSISTANT_COMMIT_SUBJECT_LINE_PATTERN =
   /^\s*(?:[-*•]\s*)?`?([a-z][a-z0-9-]*(?:\([^)]+\))?!?:\s+[^`\n]+?)`?\s*$/i;
 
@@ -23,6 +37,11 @@ function shortSha(sha: string): string {
 }
 
 function looksLikeAutoDetectedSha(sha: string): boolean {
+  // Reject pure-decimal tokens: epoch-millis timestamps, PR numbers, line
+  // counts etc. are all-digit and would otherwise render as broken commit
+  // cards ("Failed to load commit diff"). A real git SHA is random hex and
+  // virtually always carries at least one a–f letter.
+  if (!/[a-f]/.test(sha)) return false;
   return (sha.match(/\d/g)?.length ?? 0) >= 2;
 }
 
@@ -138,16 +157,6 @@ export function parseGitArtifactsFromText(
       sha,
       shortSha: shortSha(sha),
       subject: findNearestCommitSubjectBefore(text, match.index ?? 0),
-    });
-  }
-
-  for (const match of text.matchAll(BARE_GIT_SHA_PATTERN)) {
-    const sha = match[1]?.toLowerCase();
-    if (!sha || !looksLikeAutoDetectedSha(sha)) continue;
-    pushArtifact({
-      kind: "commit",
-      sha,
-      shortSha: shortSha(sha),
     });
   }
 
