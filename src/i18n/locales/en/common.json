@@ -53,6 +53,7 @@
     "add": "Add",
     "remove": "Remove",
     "create": "Create",
+    "link": "Link",
     "update": "Update",
     "updateAiBlame": "Update AI Blame",
     "submit": "Submit",
