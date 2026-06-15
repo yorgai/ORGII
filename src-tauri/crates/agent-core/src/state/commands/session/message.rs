@@ -313,6 +313,18 @@ pub(crate) async fn send_message_impl(
         let turn_intent_id = turn_intent_id_for_closure;
 
         Box::pin(async move {
+            // Clear any stale pre-turn cancel signal before starting a fresh
+            // turn. A UserStop that lands while the session is idle (e.g. only
+            // a background subagent is still running, the parent turn already
+            // finished) takes the `keep_pre_turn_cancel_when_idle` branch in
+            // `cancel_active_turn` and leaves `cancel_flag = true`. Without
+            // this reset the *next* user message inherits that flag and the
+            // turn loop self-cancels on iteration 1 (0 tokens, no response).
+            // Messages that reach this closure have already passed the
+            // scheduler's generation check, so a still-queued Send-Now that
+            // Stop meant to discard was dropped as stale before getting here.
+            cancel_flag.store(false, std::sync::atomic::Ordering::SeqCst);
+
             let turn_id = session.begin_turn(content.clone()).await;
 
             let input = crate::session::TurnInput {

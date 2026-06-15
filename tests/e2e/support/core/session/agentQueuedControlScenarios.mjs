@@ -4,6 +4,7 @@ import {
   assertControlFlowHealthyAfterStop,
   assertLiveAssistantOverlayOrdering,
   assertNoDurableLiveStreamPlaceholders,
+  assertProgressUiSettledAfterAssistantReply,
   assertTurnSummaryOrdering,
   configureScenario,
   execJS,
@@ -987,6 +988,114 @@ async function runFreshStopRollbackScenario(config) {
   );
 }
 
+// Regression: pressing the MAIN composer Stop while the parent turn has
+// already settled (runtime idle) but a background subagent is still running
+// took the `keep_pre_turn_cancel_when_idle` branch in `cancel_active_turn`
+// and left `session.cancel_flag = true` with no turn closure to reset it.
+// The NEXT user message then inherited that stale flag and self-cancelled on
+// iteration 1 (0 tokens, no assistant reply). The fix resets `cancel_flag`
+// at the start of every fresh turn closure (message.rs). This scenario:
+//   1. runs a real turn to completion (parent idle),
+//   2. seeds a *running* background subagent so the composer shows Stop,
+//   3. clicks Stop (the idle UserStop that strands the flag),
+//   4. sends a NEW message and asserts it gets a genuine assistant reply —
+//      proving the next turn was NOT self-cancelled by a stale flag.
+async function runStopWithBackgroundSubagentNextMessageScenario(config) {
+  const label = `${config.label}-stop-bg-subagent`;
+  const safeLabel = config.label.replace(/[^a-zA-Z0-9]/g, "_");
+  const firstPrompt = `Reply with a one-line confirmation for ${config.label}. STOP_BG_FIRST_${safeLabel}_${Date.now()}`;
+  const followupMarker = `STOP_BG_NEXT_${safeLabel}_${Date.now()}`;
+  const followupPrompt = `Reply with exactly this token and nothing else: ${followupMarker}`;
+
+  await configureScenario(config);
+  const inputSelector = await waitForChatInput();
+
+  // 1. First turn runs to natural completion → parent session goes idle.
+  await typeAndClickSend(inputSelector, firstPrompt);
+  await waitForChatLaunched(firstPrompt);
+  await waitForRuntimeIdle(label);
+  await waitForIdleSendButton(label);
+
+  const active = unwrap(
+    await invokeE2E("getActiveSessionId"),
+    `${label}-getActiveSessionId`
+  );
+  if (!active.sessionId) {
+    throw new Error(`${label} produced no active session id`);
+  }
+
+  // 2. Seed a live background subagent job on the REAL session. This drives
+  //    updateSubagentJobAtom (the same atom agent:subagent_job_changed feeds)
+  //    so the composer re-enters Stop state over the idle parent — the exact
+  //    "parent idle + background worker running" window the bug needs.
+  const subagentHandle = `agent-builtin:explore-stopbg-${Date.now()}`;
+  const seed = await invokeE2E("seedSubagentJob", {
+    sessionId: active.sessionId,
+    handle: subagentHandle,
+    agentName: `E2E Stop-BG Worker ${safeLabel}`,
+    subagentType: "delegate",
+    status: "running",
+  });
+  if (!seed || seed.ok !== true) {
+    throw new Error(
+      `${label} seedSubagentJob failed: ${seed?.error ?? "unknown"}`
+    );
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const sendState = await execJS(js.sendState);
+      return sendState?.state === "stop";
+    },
+    {
+      timeout: 20_000,
+      interval: 400,
+      timeoutMsg: `${label} composer did not re-enter Stop while a background subagent ran; sendState=${JSON.stringify(await execJS(js.sendState))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+    }
+  );
+
+  // 3. The bug's trigger: UserStop while the parent turn is already idle.
+  await clickMainAction("stop", `${label}-idle-stop`, 30_000);
+
+  // Drop the seeded subagent so it can no longer hold the composer in Stop —
+  // any subsequent Stop state must come from the new turn we are about to send.
+  unwrap(
+    await invokeE2E("seedSubagentJob", {
+      sessionId: active.sessionId,
+      handle: subagentHandle,
+      agentName: `E2E Stop-BG Worker ${safeLabel}`,
+      subagentType: "delegate",
+      status: "completed",
+    }),
+    `${label}-complete-subagent`
+  );
+
+  await browser.waitUntil(
+    async () => {
+      const sendState = await execJS(js.sendState);
+      return sendState?.state === "submit";
+    },
+    {
+      timeout: 20_000,
+      interval: 400,
+      timeoutMsg: `${label} composer never returned to Send after Stop + subagent completion; sendState=${JSON.stringify(await execJS(js.sendState))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+    }
+  );
+
+  // 4. Send a fresh message. Before the fix this self-cancelled instantly
+  //    (0 tokens, no reply); after the fix it must produce a real reply.
+  const followupSelector = await waitForChatInput();
+  await typeAndClickSend(followupSelector, followupPrompt);
+  await assertProgressUiSettledAfterAssistantReply(
+    `${label}-next-message`,
+    followupMarker
+  );
+
+  console.log(
+    `[queued-followup] ${label} session=${active.sessionId} nextMarker=${followupMarker}`
+  );
+}
+
 async function runFreshStopImageRestoreScenario(config) {
   const marker = `IMAGE_CANCEL_RESTORE_${config.label.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
   const imageFileName = `${marker}.png`;
@@ -1889,6 +1998,7 @@ async function runForceSendScenario(config) {
 
 export {
   assertStationSurfacesConsistent,
+  hasAuthoritativeRunningTurn,
   clickMainAction,
   clickSendNowForQueuedMarker,
   runBurstQueueSendNowOrderingScenario,
@@ -1902,6 +2012,7 @@ export {
   runSendAfterIdleDoesNotQueueScenario,
   runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
+  runStopWithBackgroundSubagentNextMessageScenario,
   waitForIdleSendButton,
   waitForQueuedFollowup,
   waitForRuntimeIdle,

@@ -29,6 +29,7 @@ export {
   runSendAfterIdleDoesNotQueueScenario,
   runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
+  runStopWithBackgroundSubagentNextMessageScenario,
 } from "./agentQueuedControlScenarios.mjs";
 export {
   runPlanBuildDirectScenario,

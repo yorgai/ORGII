@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { SessionEvent } from "@src/engines/SessionCore";
 import {
+  focusedSubagentCellAtom,
   simulatorSubagentSessionsAtom,
   subagentPanelRevealRequestAtom,
 } from "@src/store/ui/simulatorAtom";
@@ -47,6 +48,7 @@ export function useSimulatorSubagents({
   currentEvent,
 }: UseSimulatorSubagentsOptions): UseSimulatorSubagentsReturn {
   const panelRevealRequest = useAtomValue(subagentPanelRevealRequestAtom);
+  const focusedCellId = useAtomValue(focusedSubagentCellAtom);
   const [dismissedSnapshot, setDismissedSnapshot] = useState<{
     keys: string;
     reveal: number;
@@ -88,8 +90,30 @@ export function useSimulatorSubagents({
     () => allSubagentSessions.filter((sub) => sub.endedAtMs === null),
     [allSubagentSessions]
   );
-  const cursorOrAllSubagents =
+  // A subagent the user explicitly navigated to (clicked the chat block's
+  // locate arrow) must surface even when the replay cursor doesn't land inside
+  // its clip window. The spawning tool_call is filtered out of the simulator
+  // event list, so seeking the cursor to it resolves to a neighbour outside
+  // the window — focus is the authoritative "show this one" signal, so honour
+  // it directly instead of depending on the (substituted) cursor event.
+  const focusedSubagent = useMemo(
+    () =>
+      focusedCellId
+        ? (allSubagentSessions.find((sub) => sub.sessionId === focusedCellId) ??
+          null)
+        : null,
+    [allSubagentSessions, focusedCellId]
+  );
+  const baseSubagents =
     cursorActiveSubagents.length > 0 ? cursorActiveSubagents : openSubagents;
+  const cursorOrAllSubagents = useMemo(() => {
+    if (!focusedSubagent) return baseSubagents;
+    if (
+      baseSubagents.some((sub) => sub.sessionId === focusedSubagent.sessionId)
+    )
+      return baseSubagents;
+    return [focusedSubagent, ...baseSubagents];
+  }, [baseSubagents, focusedSubagent]);
 
   // Subscribe (count-only) to every subagent's EventStore so we can rank
   // "has activity" rows ahead of "no activity" rows BEFORE the consumer

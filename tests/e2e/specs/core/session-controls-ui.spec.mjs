@@ -35,6 +35,7 @@ import {
   runSendAfterIdleDoesNotQueueScenario,
   runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
+  runStopWithBackgroundSubagentNextMessageScenario,
   rustAgentConfigs,
   scenarioConfigs,
   shouldRunScenario,
@@ -150,6 +151,7 @@ const CONTROL_SCENARIO_NAMES = [
   "queue-does-not-autoflush-while-active",
   "queue-edit-image-upload",
   "stop-double-click-no-resubmit",
+  "stop-bg-subagent-next-message",
   "force-send",
   "rewind",
   "restore-checkpoint",
@@ -166,6 +168,7 @@ const CONTROL_SCENARIO_NAMES = [
 const RUST_AGENT_EXEC_MODE_SCENARIOS = new Set([
   "fresh-stop",
   "fresh-stop-image",
+  "stop-bg-subagent-next-message",
   "queue-edit-image-upload",
   "plan-build-direct",
   "plan-update",
@@ -325,6 +328,15 @@ describe("ORGII force-send queued follow-up behavior", function () {
 
   it("restores the in-flight prompt on Stop without consuming queued follow-ups across Rust and CLI agents", async function () {
     await runScenario("stop-restore", runStopRestoresInFlightScenario, this);
+  });
+
+  it("keeps the next message live after Stopping with a background subagent over an idle parent turn across Rust AgentExecMode sessions", async function () {
+    this.timeout(1_200_000);
+    await runScenario(
+      "stop-bg-subagent-next-message",
+      runStopWithBackgroundSubagentNextMessageScenario,
+      this
+    );
   });
 
   it("force-sends coherent follow-ups through Rust and CLI agents", async function () {

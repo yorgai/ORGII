@@ -152,6 +152,8 @@ const IndependentGridCellComponent: React.FC<GridCellProps> = ({
 
   return (
     <div
+      data-subagent-cell-thread-id={threadId ?? undefined}
+      data-subagent-cell-focused={isFocused ? "true" : undefined}
       className={`relative h-full w-full overflow-hidden transition-all duration-300 ${isFocused ? "z-10 ring-1 ring-inset ring-blue-500/50" : ""}`}
     >
       <div className="flex h-full w-full flex-col overflow-hidden">

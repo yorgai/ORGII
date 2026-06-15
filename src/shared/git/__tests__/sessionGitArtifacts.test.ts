@@ -120,6 +120,39 @@ After rebase/push, the branch tip is synced at \`1a4a01d3\`.
     );
   });
 
+  it("does not parse all-decimal tokens (epoch millis, PR numbers) as commits", () => {
+    expect(parseGitArtifactsFromText("Commit 1781462067585")).toEqual([]);
+    expect(
+      parseGitArtifactsFromText("committed at 1781462067585; done")
+    ).toEqual([]);
+    expect(parseGitArtifactsFromText("Latest revision is 1234567.")).toEqual(
+      []
+    );
+  });
+
+  it("does not parse a context-free bare hex token as a commit", () => {
+    // No commit keyword nearby — could be a turn id, a hash, any internal id.
+    // Without positive git evidence we must not render a (broken) commit card.
+    expect(parseGitArtifactsFromText("The value is 74371fe5 here.")).toEqual(
+      []
+    );
+    expect(parseGitArtifactsFromText("74371fe5")).toEqual([]);
+  });
+
+  it("does not parse turn ids as commits", () => {
+    expect(parseGitArtifactsFromText("parent turn 74371fe5 started")).toEqual(
+      []
+    );
+    expect(
+      parseGitArtifactsFromText(
+        "The parent turn `74371fe5` had its cancel flag set"
+      )
+    ).toEqual([]);
+    expect(
+      parseGitArtifactsFromText("Trace parent turn 74371fe5 lifecycle")
+    ).toEqual([]);
+  });
+
   it("does not partial-match hex inside bare UUIDs via commit context", () => {
     expect(
       parseGitArtifactsFromText(

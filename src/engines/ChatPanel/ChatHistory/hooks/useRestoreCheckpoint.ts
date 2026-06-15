@@ -29,7 +29,7 @@ import { editTruncationTimestampAtom } from "@src/engines/SessionCore";
 import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
-import { deleteSession as deleteCachedSession } from "@src/engines/SessionCore/storage/cacheAdapter";
+import { truncateAfterEvent as truncateCacheAfterEvent } from "@src/engines/SessionCore/storage/sqliteCache";
 import { createLogger } from "@src/hooks/logger";
 import {
   clearPendingPlanApproval,
@@ -168,34 +168,22 @@ export function useRestoreCheckpoint(): (
               revertFiles,
             });
           }
-          // Purge the Rust EventStore and the session-persistence cache so
-          // that after a browser reload the session reloads from the
-          // authoritative SQLite source (agent_messages for agent sessions,
-          // code_session_chunks for CLI sessions) rather than from stale cached
-          // events that predate the restore. Unlike edit-resend, restore does
-          // NOT re-dispatch a turn, so there is no fresh event stream to
-          // overwrite the stale tail — the eviction is what makes the truncated
-          // checkpoint stick across reload.
-          //
-          // Order matters: evict the live Rust store FIRST, then delete the
-          // frontend cache LAST. Running them concurrently raced — eviction
-          // could flush the still-resident pre-restore turn back into the
-          // session-persistence cache after deleteCachedSession had already
-          // run, leaving a stale turn-index/events row that a fresh reload
-          // then rehydrated into an inconsistent (often empty) live store.
-          await eventStoreProxy
-            .evictSession(initiatedSessionId)
-            .catch((err) =>
+          // Truncate the session-persistence `events` cache (and rebuild its
+          // turn index) at the same checkpoint. The live in-memory store was
+          // already truncated by `truncateBeforeId` above and the authoritative
+          // source (agent_messages / code_session_chunks) by the calls above,
+          // but the cached `events` rows survive untouched. Edit-resend gets
+          // away without this because its follow-up resend writes fresh events
+          // that overwrite the cache; restore has no resend, so a later reload
+          // would rehydrate the stale pre-restore tail from this cache. Unlike
+          // eviction, this keeps the live store intact — it only realigns the
+          // persisted cache with the checkpoint.
+          await truncateCacheAfterEvent(initiatedSessionId, eventId).catch(
+            (err) =>
               log.warn(
-                "[useRestoreCheckpoint] evictSession failed (non-fatal):",
+                "[useRestoreCheckpoint] cache truncate failed (non-fatal):",
                 err
               )
-            );
-          await deleteCachedSession(initiatedSessionId).catch((err) =>
-            log.warn(
-              "[useRestoreCheckpoint] deleteSession failed (non-fatal):",
-              err
-            )
           );
         }
 

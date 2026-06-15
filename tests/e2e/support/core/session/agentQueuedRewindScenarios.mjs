@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   assertStationSurfacesConsistent,
+  hasAuthoritativeRunningTurn,
   waitForRuntimeIdle,
 } from "./agentQueuedControlScenarios.mjs";
 import {
@@ -311,6 +312,34 @@ async function runRestoreCheckpointScenario(config) {
       "file_rewind",
       1
     );
+
+    // LIVE assertion (no reload): the on-screen history must immediately
+    // reflect the checkpoint — message A visible, message B gone — and the
+    // runtime must read idle. This guards the production UX where restore does
+    // NOT reload the page: a regression that cleared the live store (e.g. an
+    // over-eager evictSession) would leave the panel rendering an empty
+    // "Agent is running" placeholder here even though files/DB were correct.
+    await browser.waitUntil(
+      async () => {
+        const state = await invokeE2E("inspectChatState");
+        const userTexts = (state.chatEvents ?? [])
+          .filter((event) => event.source === "user")
+          .map((event) => String(event.displayText ?? ""));
+        const aMatches = userTexts.filter((text) => text.includes(markerTextA));
+        const bMatches = userTexts.filter((text) => text.includes(markerTextB));
+        return (
+          aMatches.length === 1 &&
+          bMatches.length === 0 &&
+          !hasAuthoritativeRunningTurn(state)
+        );
+      },
+      {
+        timeout: 30_000,
+        interval: 1_000,
+        timeoutMsg: `${config.label} live history after restore-checkpoint was wrong (empty/stale/running) without a reload; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+      }
+    );
+
     await assertStationSurfacesConsistent(`${config.label}-restore-checkpoint`);
 
     // --- Reload + reopen: only message A survives ---
