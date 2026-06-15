@@ -182,7 +182,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 onClick={handleUpdateGitBlame}
               >
                 <CircleSlash size={12} strokeWidth={1.75} />
-                <span>{t("actions.updateGitBlame")}</span>
+                <span>{t("actions.updateAiBlame")}</span>
               </button>
             ) : (
               <span className="kanban-task-card__impact-empty">

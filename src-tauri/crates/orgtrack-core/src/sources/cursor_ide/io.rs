@@ -4,10 +4,12 @@
 //! The connection is opened read-only and dropped between calls so we never
 //! block Cursor from writing.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use rusqlite::{params_from_iter, Connection, OpenFlags};
+
+use super::helpers::parse_iso_to_epoch_ms;
 
 use super::models::{OrderedBubble, RawBubble, RawComposerForOrder, RawComposerHeader};
 
@@ -66,7 +68,91 @@ pub(super) fn load_bubble_order(
     conn: &Connection,
     composer_id: &str,
 ) -> Result<Vec<RawComposerHeader>, String> {
-    Ok(load_composer_for_order(conn, composer_id)?.full_conversation_headers_only)
+    Ok(load_complete_bubble_order(
+        conn,
+        composer_id,
+        &load_composer_for_order(conn, composer_id)?.full_conversation_headers_only,
+    )?)
+}
+
+pub(super) fn load_complete_bubble_order(
+    conn: &Connection,
+    composer_id: &str,
+    header_order: &[RawComposerHeader],
+) -> Result<Vec<RawComposerHeader>, String> {
+    let prefix = format!("bubbleId:{}:", composer_id);
+    let upper_bound = format!("bubbleId:{};", composer_id);
+    let header_index_by_id: HashMap<&str, usize> = header_order
+        .iter()
+        .enumerate()
+        .map(|(index, header)| (header.bubble_id.as_str(), index))
+        .collect();
+    let mut seen_ids: HashSet<String> = HashSet::new();
+    let mut ordered_rows: Vec<(i64, usize, String, RawComposerHeader)> = Vec::new();
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT key, value FROM cursorDiskKV
+             WHERE key >= ?1 AND key < ?2
+             ORDER BY key ASC",
+        )
+        .map_err(|err| format!("Failed to prepare Cursor bubble range query: {}", err))?;
+    let rows = stmt
+        .query_map([prefix.as_str(), upper_bound.as_str()], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|err| format!("Failed to read Cursor bubble range: {}", err))?;
+
+    for row in rows {
+        let (key, value) =
+            row.map_err(|err| format!("Failed to read Cursor bubble row: {}", err))?;
+        let bubble_id_from_key = key.rsplit(':').next().unwrap_or_default().to_string();
+        if bubble_id_from_key.is_empty() || bubble_id_from_key == "undefined" {
+            continue;
+        }
+        let raw = match serde_json::from_str::<RawBubble>(&value) {
+            Ok(raw) => raw,
+            Err(_) => continue,
+        };
+        let bubble_id = if raw.bubble_id.trim().is_empty() {
+            bubble_id_from_key
+        } else {
+            raw.bubble_id.clone()
+        };
+        if bubble_id.is_empty() || !seen_ids.insert(bubble_id.clone()) {
+            continue;
+        }
+        let timestamp = parse_iso_to_epoch_ms(&raw.created_at);
+        let tie_breaker = header_index_by_id
+            .get(bubble_id.as_str())
+            .copied()
+            .unwrap_or(usize::MAX);
+        ordered_rows.push((
+            timestamp,
+            tie_breaker,
+            key,
+            RawComposerHeader {
+                bubble_id,
+                bubble_type: raw.bubble_type,
+            },
+        ));
+    }
+
+    if ordered_rows.is_empty() {
+        return Ok(header_order.to_vec());
+    }
+
+    ordered_rows.sort_by(|left, right| {
+        left.0
+            .cmp(&right.0)
+            .then_with(|| left.1.cmp(&right.1))
+            .then_with(|| left.2.cmp(&right.2))
+    });
+
+    Ok(ordered_rows
+        .into_iter()
+        .map(|(_, _, _, header)| header)
+        .collect())
 }
 
 pub(super) fn load_composer_for_order(
@@ -168,4 +254,81 @@ pub(super) fn load_content_blob(conn: &Connection, content_id: &str) -> Option<S
         |row| row.get::<_, String>(0),
     )
     .ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_db() -> Connection {
+        let conn = Connection::open_in_memory().expect("open in-memory db");
+        conn.execute(
+            "CREATE TABLE cursorDiskKV (key TEXT PRIMARY KEY, value TEXT)",
+            [],
+        )
+        .expect("create cursorDiskKV");
+        conn
+    }
+
+    fn insert_bubble(
+        conn: &Connection,
+        composer_id: &str,
+        bubble_id: &str,
+        bubble_type: i64,
+        created_at: &str,
+    ) {
+        let value = serde_json::json!({
+            "bubbleId": bubble_id,
+            "type": bubble_type,
+            "createdAt": created_at,
+            "text": "test"
+        })
+        .to_string();
+        conn.execute(
+            "INSERT INTO cursorDiskKV (key, value) VALUES (?1, ?2)",
+            [format!("bubbleId:{}:{}", composer_id, bubble_id), value],
+        )
+        .expect("insert bubble");
+    }
+
+    #[test]
+    fn complete_bubble_order_includes_rows_missing_from_headers() {
+        let conn = test_db();
+        let composer_id = "composer-1";
+        insert_bubble(
+            &conn,
+            composer_id,
+            "early-user",
+            1,
+            "2026-06-14T17:38:39.000Z",
+        );
+        insert_bubble(
+            &conn,
+            composer_id,
+            "early-edit",
+            2,
+            "2026-06-14T17:53:51.000Z",
+        );
+        insert_bubble(
+            &conn,
+            composer_id,
+            "header-user",
+            1,
+            "2026-06-15T08:40:00.000Z",
+        );
+
+        let header_order = vec![RawComposerHeader {
+            bubble_id: "header-user".to_string(),
+            bubble_type: 1,
+        }];
+
+        let order = load_complete_bubble_order(&conn, composer_id, &header_order)
+            .expect("load complete order");
+        let ids = order
+            .iter()
+            .map(|header| header.bubble_id.as_str())
+            .collect::<Vec<_>>();
+
+        assert_eq!(ids, vec!["early-user", "early-edit", "header-user"]);
+    }
 }

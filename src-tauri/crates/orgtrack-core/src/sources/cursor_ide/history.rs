@@ -35,7 +35,9 @@ use super::helpers::{
     bubbles_to_chunks, build_fallback_user_chunk, build_unloaded_turn_placeholder_chunk,
     cache_row_to_session_row, composer_source_updated_at, is_listable_cursor_session,
 };
-use super::io::{load_bubbles_by_id, load_composer_for_order, open_cursor_db};
+use super::io::{
+    load_bubbles_by_id, load_complete_bubble_order, load_composer_for_order, open_cursor_db,
+};
 use super::models::{CursorComposerContext, OrderedBubble, RawComposerHeader};
 use super::summaries::{
     build_cursor_ide_turn_summaries, cursor_ide_summary_source_fingerprint,
@@ -202,7 +204,11 @@ pub fn load_history_for_session(session_id: &str) -> Result<Vec<ActivityChunk>, 
 
     let composer = load_composer_for_order(&cursor_conn, composer_id)?;
     let composer_context = CursorComposerContext::from_composer(&composer);
-    let order = composer.full_conversation_headers_only;
+    let order = load_complete_bubble_order(
+        &cursor_conn,
+        composer_id,
+        &composer.full_conversation_headers_only,
+    )?;
     if order.is_empty() {
         return Ok(vec![]);
     }
@@ -235,13 +241,13 @@ pub fn load_full_refresh_for_session(
 
     let composer = load_composer_for_order(&cursor_conn, composer_id)?;
     let composer_context = CursorComposerContext::from_composer(&composer);
-    let source_updated_at = composer_source_updated_at(
+    let order = load_complete_bubble_order(
         &cursor_conn,
         composer_id,
-        &composer,
         &composer.full_conversation_headers_only,
     )?;
-    let order = composer.full_conversation_headers_only;
+    let source_updated_at =
+        composer_source_updated_at(&cursor_conn, composer_id, &composer, &order)?;
     if order.is_empty() {
         return Ok(CursorIdeFullRefresh {
             chunks: vec![],
@@ -309,13 +315,13 @@ pub fn load_initial_window_for_session(
 
     let composer = load_composer_for_order(&cursor_conn, composer_id)?;
     let composer_context = CursorComposerContext::from_composer(&composer);
-    let source_updated_at = composer_source_updated_at(
+    let order = load_complete_bubble_order(
         &cursor_conn,
         composer_id,
-        &composer,
         &composer.full_conversation_headers_only,
     )?;
-    let order = composer.full_conversation_headers_only;
+    let source_updated_at =
+        composer_source_updated_at(&cursor_conn, composer_id, &composer, &order)?;
     if order.is_empty() {
         return Ok(CursorIdeInitialWindow {
             chunks: vec![],
@@ -493,7 +499,11 @@ pub fn load_turn_window_for_session(
 
     let composer = load_composer_for_order(&cursor_conn, composer_id)?;
     let composer_context = CursorComposerContext::from_composer(&composer);
-    let order = composer.full_conversation_headers_only;
+    let order = load_complete_bubble_order(
+        &cursor_conn,
+        composer_id,
+        &composer.full_conversation_headers_only,
+    )?;
     let Some(start_index) = order
         .iter()
         .position(|header| header.bubble_id == user_bubble_id)

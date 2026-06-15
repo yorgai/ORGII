@@ -53,7 +53,7 @@
     "remove": "Retirer",
     "create": "Créer",
     "update": "Mettre à jour",
-    "updateGitBlame": "Update git blame",
+    "updateAiBlame": "Mettre à jour AI Blame",
     "submit": "Soumettre",
     "loadMore": "Charger plus",
     "load": "Charger",

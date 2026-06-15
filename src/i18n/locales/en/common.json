@@ -54,7 +54,7 @@
     "remove": "Remove",
     "create": "Create",
     "update": "Update",
-    "updateGitBlame": "Update git blame",
+    "updateAiBlame": "Update AI Blame",
     "submit": "Submit",
     "loadMore": "Load more",
     "load": "Load",
