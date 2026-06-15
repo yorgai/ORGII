@@ -1,7 +1,10 @@
 import {
   LOAD_MORE_GROUP_PREFIX,
+  PROJECTS_CLOUD_ORG_PREFIX,
   PROJECTS_LINEAR_LOAD_PREFIX,
+  PROJECTS_LINEAR_ORG_PREFIX,
   PROJECTS_LINEAR_WORK_ITEM_PREFIX,
+  PROJECTS_LOCAL_ORG_PREFIX,
   PROJECTS_PROJECT_OVERVIEW_PREFIX,
   PROJECTS_WORK_ITEM_CREATE_PREFIX,
   PROJECTS_WORK_ITEM_GROUP_PREFIX,
@@ -18,6 +21,18 @@ export function getWorkItemMenuItemId(workItemId: string): string {
 
 export function getLinearWorkItemMenuItemId(workItemId: string): string {
   return `${PROJECTS_LINEAR_WORK_ITEM_PREFIX}${workItemId}`;
+}
+
+export function getLocalOrgMenuItemId(orgId: string): string {
+  return `${PROJECTS_LOCAL_ORG_PREFIX}${orgId}`;
+}
+
+export function getCloudOrgMenuItemId(orgId: string): string {
+  return `${PROJECTS_CLOUD_ORG_PREFIX}${orgId}`;
+}
+
+export function getLinearOrgMenuItemId(orgId: string): string {
+  return `${PROJECTS_LINEAR_ORG_PREFIX}${orgId}`;
 }
 
 export function getProjectsProjectOverviewSlug(
@@ -40,6 +55,21 @@ export function getProjectsLinearWorkItemId(menuItemId: string): string | null {
 export function getProjectsLinearLoadOrgId(menuItemId: string): string | null {
   if (!menuItemId.startsWith(PROJECTS_LINEAR_LOAD_PREFIX)) return null;
   return menuItemId.slice(PROJECTS_LINEAR_LOAD_PREFIX.length) || null;
+}
+
+export function getProjectsLocalOrgId(menuItemId: string): string | null {
+  if (!menuItemId.startsWith(PROJECTS_LOCAL_ORG_PREFIX)) return null;
+  return menuItemId.slice(PROJECTS_LOCAL_ORG_PREFIX.length) || null;
+}
+
+export function getProjectsCloudOrgId(menuItemId: string): string | null {
+  if (!menuItemId.startsWith(PROJECTS_CLOUD_ORG_PREFIX)) return null;
+  return menuItemId.slice(PROJECTS_CLOUD_ORG_PREFIX.length) || null;
+}
+
+export function getProjectsLinearOrgId(menuItemId: string): string | null {
+  if (!menuItemId.startsWith(PROJECTS_LINEAR_ORG_PREFIX)) return null;
+  return menuItemId.slice(PROJECTS_LINEAR_ORG_PREFIX.length) || null;
 }
 
 export function getProjectsWorkItemCreateOrgId(

@@ -1,10 +1,9 @@
-export type GroupByMode = "byTime" | "byAgent" | "byWorkspace" | "byTags";
+export type GroupByMode = "byTime" | "byAgent" | "byWorkspace";
 
 export const GROUP_BY_MODES: readonly GroupByMode[] = [
   "byTime",
   "byWorkspace",
   "byAgent",
-  "byTags",
 ];
 
 export type ProjectsGroupByMode =

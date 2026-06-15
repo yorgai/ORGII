@@ -16,11 +16,9 @@ import LinearProjectsPage from "@src/modules/ProjectManager/LinearProjects";
 import ProjectManagerSidebar from "@src/modules/ProjectManager/Panels/ProjectManagerSidebar";
 import type { LinearProjectSelection } from "@src/modules/ProjectManager/Panels/ProjectManagerSidebar/content/WorkspaceTreeContent";
 import { STORY_MANAGER_SUSPENSE_LOADING_FALLBACK } from "@src/modules/ProjectManager/ProjectManagerLayout/components/ProjectManagerContentRouter";
-import { ProjectManagerCreateModals } from "@src/modules/ProjectManager/ProjectManagerLayout/components/ProjectManagerCreateModals";
 import ProjectOrgHubContent from "@src/modules/ProjectManager/ProjectManagerLayout/components/ProjectOrgHubContent";
 import { ProjectWorkItemsTabContent } from "@src/modules/ProjectManager/ProjectManagerLayout/components/ProjectWorkItemsTabContent";
 import { RepoSettingsTabContent } from "@src/modules/ProjectManager/ProjectManagerLayout/components/RepoSettingsTabContent";
-import { useProjectManagerCreateModals } from "@src/modules/ProjectManager/ProjectManagerLayout/hooks/useProjectManagerCreateModals";
 import type { ActiveRepoView } from "@src/modules/ProjectManager/ProjectManagerLayout/types";
 import ProjectsPage from "@src/modules/ProjectManager/Projects";
 import WorkItemsPage from "@src/modules/ProjectManager/WorkItems";
@@ -108,8 +106,6 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
         string | undefined
       >(undefined);
       const bumpProjectListRefresh = useSetAtom(projectListRefreshAtom);
-      const { orgCreateModalOpen, openOrgCreateModal, closeOrgCreateModal } =
-        useProjectManagerCreateModals();
 
       const setStationMode = useSetAtom(stationModeAtom);
       const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
@@ -291,14 +287,11 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
         setStationChatVisible("my-station", true);
       }, [navigateChatPanel, setStationChatVisible, setStationMode]);
 
-      const handleOrgCreated = useCallback(
-        (org: ProjectOrg) => {
-          closeOrgCreateModal();
-          bumpProjectListRefresh((previous) => previous + 1);
-          handleOpenProjectOrg(org);
-        },
-        [bumpProjectListRefresh, closeOrgCreateModal, handleOpenProjectOrg]
-      );
+      const handleCreateOrg = useCallback(() => {
+        navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_COLLAB_ORG });
+        setStationMode("my-station");
+        setStationChatVisible("my-station", true);
+      }, [navigateChatPanel, setStationChatVisible, setStationMode]);
 
       const primarySidebarConfig = useMemo(
         () =>
@@ -311,7 +304,7 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
                 onSelectProject={handleSelectProject}
                 onCreateProject={handleCreateProject}
                 onCreateWorkItem={handleCreateWorkItem}
-                onCreateOrg={openOrgCreateModal}
+                onCreateOrg={handleCreateOrg}
                 onImportOrgs={handleImportOrgs}
                 onOpenProjects={handleOpenProjects}
                 onOpenWorkItems={handleOpenWorkItems}
@@ -341,6 +334,7 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
           activeOrgScope,
           activeRepoView,
           closePrimarySidebar,
+          handleCreateOrg,
           handleCreateProject,
           handleCreateWorkItem,
           handleOpenProjects,
@@ -352,7 +346,6 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
           handleOpenSettings,
           handleImportOrgs,
           handleSelectProject,
-          openOrgCreateModal,
           primarySidebarCollapsed,
           primarySidebarWidth,
           repoName,
@@ -500,36 +493,29 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
         view.orgSyncProvider === PROJECT_ORG_SYNC_PROVIDER.GIT_FOLDER;
 
       return (
-        <>
-          <WorkStationShell
-            primarySidebarConfig={primarySidebarConfig}
-            content={
-              <div className="ops-control-page flex h-full min-h-0 w-full flex-col overflow-hidden">
-                <Suspense fallback={STORY_MANAGER_SUSPENSE_LOADING_FALLBACK}>
-                  {content}
-                </Suspense>
-              </div>
-            }
-            statusBar={
-              <ProjectStatusBar
-                projectSlug={
-                  view.kind === "project" ? view.projectSlug : undefined
-                }
-                projectOrgId={activeProjectOrgId}
-                projectOrgName={activeProjectOrgName}
-                projectOrgGitFolderSyncEnabled={
-                  activeProjectOrgGitFolderSyncEnabled
-                }
-              />
-            }
-            appClassName="ops-control-workstation"
-          />
-          <ProjectManagerCreateModals
-            orgCreateModalOpen={orgCreateModalOpen}
-            onCloseOrgCreateModal={closeOrgCreateModal}
-            onOrgCreated={handleOrgCreated}
-          />
-        </>
+        <WorkStationShell
+          primarySidebarConfig={primarySidebarConfig}
+          content={
+            <div className="ops-control-page flex h-full min-h-0 w-full flex-col overflow-hidden">
+              <Suspense fallback={STORY_MANAGER_SUSPENSE_LOADING_FALLBACK}>
+                {content}
+              </Suspense>
+            </div>
+          }
+          statusBar={
+            <ProjectStatusBar
+              projectSlug={
+                view.kind === "project" ? view.projectSlug : undefined
+              }
+              projectOrgId={activeProjectOrgId}
+              projectOrgName={activeProjectOrgName}
+              projectOrgGitFolderSyncEnabled={
+                activeProjectOrgGitFolderSyncEnabled
+              }
+            />
+          }
+          appClassName="ops-control-workstation"
+        />
       );
     }
   );

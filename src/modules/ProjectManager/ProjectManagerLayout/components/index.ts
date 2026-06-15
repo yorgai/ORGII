@@ -3,13 +3,10 @@ export type { ProjectDetailSurfacePillSwitchProps } from "./ProjectDetailSurface
 export { default as ProjectGitSyncReviewContent } from "./ProjectGitSyncReviewContent";
 export { ProjectManagerContentRouter } from "./ProjectManagerContentRouter";
 export { STORY_MANAGER_SUSPENSE_LOADING_FALLBACK } from "./ProjectManagerContentRouter";
-export { ProjectManagerCreateModals } from "./ProjectManagerCreateModals";
 export { ProjectLinearSurfacePillSwitch } from "./ProjectLinearSurfacePillSwitch";
 export type { ProjectLinearSurfacePillSwitchProps } from "./ProjectLinearSurfacePillSwitch";
 export { default as ProjectManagerWorkItemsTabBarTrailing } from "./ProjectManagerWorkItemsTabBarTrailing";
 export type { ProjectManagerWorkItemsTabBarTrailingProps } from "./ProjectManagerWorkItemsTabBarTrailing";
-export { default as ProjectOrgCreateModal } from "./ProjectOrgCreateModal";
-export type { ProjectOrgCreateModalProps } from "./ProjectOrgCreateModal";
 export { ProjectOrgHubContent } from "./ProjectOrgHubContent";
 export type { ProjectOrgHubContentProps } from "./ProjectOrgHubContent";
 export { ProjectOrgHubHeader } from "./ProjectOrgHubHeader";

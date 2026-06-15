@@ -1,5 +1,1 @@
-export type WorkstationSidebarKey =
-  | "folders"
-  | "workstation"
-  | "colleagues"
-  | "projects";
+export type WorkstationSidebarKey = "folders" | "workstation" | "projects";

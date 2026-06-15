@@ -1,8 +1,8 @@
 import {
   Box,
-  Building2,
   Compass,
   LayoutDashboard,
+  Network,
   Plus,
   Radar,
   SquarePen,
@@ -33,6 +33,7 @@ interface BuildPinnedMenuItemsParams {
 }
 
 interface BuildProjectsPinnedMenuItemsParams {
+  addOrgLabel: string;
   createProjectLabel: string;
   createWorkItemLabel: string;
 }
@@ -73,10 +74,18 @@ export function buildPinnedMenuItems({
 }
 
 export function buildProjectsPinnedMenuItems({
+  addOrgLabel,
   createProjectLabel,
   createWorkItemLabel,
 }: BuildProjectsPinnedMenuItemsParams): NavigationMenuItem[] {
   return [
+    {
+      id: COLLAB_ADD_ORG_MENU_ITEM_ID,
+      key: COLLAB_ADD_ORG_MENU_ITEM_ID,
+      label: addOrgLabel,
+      icon: Network,
+      iconName: "network",
+    },
     {
       id: PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
       key: PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
@@ -90,24 +99,6 @@ export function buildProjectsPinnedMenuItems({
       label: createProjectLabel,
       icon: Box,
       iconName: "box",
-    },
-  ];
-}
-
-interface BuildColleaguesPinnedMenuItemsParams {
-  addOrgLabel: string;
-}
-
-export function buildColleaguesPinnedMenuItems({
-  addOrgLabel,
-}: BuildColleaguesPinnedMenuItemsParams): NavigationMenuItem[] {
-  return [
-    {
-      id: COLLAB_ADD_ORG_MENU_ITEM_ID,
-      key: COLLAB_ADD_ORG_MENU_ITEM_ID,
-      label: addOrgLabel,
-      icon: Building2,
-      iconName: "building-2",
     },
   ];
 }

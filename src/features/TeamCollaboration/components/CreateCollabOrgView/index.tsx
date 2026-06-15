@@ -2,6 +2,8 @@ import { useSetAtom } from "jotai";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { projectApi } from "@src/api/http/project";
+import type { ProjectOrg } from "@src/api/http/project";
 import Button from "@src/components/Button";
 import Input from "@src/components/Input";
 import Markdown from "@src/components/MarkDown";
@@ -34,9 +36,12 @@ import {
   createCollabOrg,
 } from "../../collabHubClient";
 
+const LOCAL_SOURCE = "local";
+const CLOUD_SOURCE = "cloud";
 const CREATE_MODE = "create";
 const JOIN_MODE = "join";
 
+type CreateOrgSource = typeof LOCAL_SOURCE | typeof CLOUD_SOURCE;
 type CreateCollabOrgMode = typeof CREATE_MODE | typeof JOIN_MODE;
 
 const HUB_SETUP_MARKDOWN = `1. Create a hub project.
@@ -83,14 +88,20 @@ const COLLAB_FORM_CONTROL_STYLE = {
   maxWidth: "100%",
 } as const;
 
-export interface CreatedCollabOrgResult {
-  org: CollabOrgRecord;
-  member: CollabMemberRecord;
-}
+export type CreatedOrgResult =
+  | {
+      source: typeof LOCAL_SOURCE;
+      org: ProjectOrg;
+    }
+  | {
+      source: typeof CLOUD_SOURCE;
+      org: CollabOrgRecord;
+      member: CollabMemberRecord;
+    };
 
 export interface CreateCollabOrgViewProps {
   onCancel: () => void;
-  onCreated?: (result: CreatedCollabOrgResult) => void;
+  onCreated?: (result: CreatedOrgResult) => void;
 }
 
 function upsertOrg(
@@ -135,6 +146,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
   const setCollabMembers = useSetAtom(collabMembersAtom);
   const setCollabInvites = useSetAtom(collabInvitesAtom);
 
+  const [source, setSource] = useState<CreateOrgSource | null>(null);
   const [mode, setMode] = useState<CreateCollabOrgMode>(CREATE_MODE);
   const [hubUrl, setHubUrl] = useState("");
   const [orgName, setOrgName] = useState("");
@@ -147,6 +159,20 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const sourceOptions = useMemo<SelectionGridOption<CreateOrgSource>[]>(
+    () => [
+      {
+        key: LOCAL_SOURCE,
+        label: t("navigation:collaboration.localOrg"),
+      },
+      {
+        key: CLOUD_SOURCE,
+        label: t("navigation:collaboration.cloudOrg"),
+      },
+    ],
+    [t]
+  );
 
   const modeOptions = useMemo<SelectionGridOption<CreateCollabOrgMode>[]>(
     () => [
@@ -177,16 +203,18 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
   );
 
   const canSubmit = useMemo(() => {
-    if (loading || !hubUrl.trim() || !displayName.trim()) return false;
+    if (loading || source === null) return false;
+    if (source === LOCAL_SOURCE) return Boolean(orgName.trim());
+    if (!hubUrl.trim() || !displayName.trim()) return false;
     if (mode === CREATE_MODE) return Boolean(orgName.trim());
     return Boolean(inviteInput.trim());
-  }, [displayName, hubUrl, inviteInput, loading, mode, orgName]);
+  }, [displayName, hubUrl, inviteInput, loading, mode, orgName, source]);
 
   const handleCreated = useCallback(
     async (org: CollabOrgRecord, member: CollabMemberRecord) => {
       setCollabOrgs((current) => upsertOrg(current, org));
       setCollabMembers((current) => upsertMember(current, member));
-      onCreated?.({ org, member });
+      onCreated?.({ source: CLOUD_SOURCE, org, member });
       const invite = await createCollabInvite({
         hubUrl: org.hubUrl ?? hubUrl,
         orgId: org.id,
@@ -204,6 +232,12 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
     setCopied(false);
     setLoading(true);
     try {
+      if (source === LOCAL_SOURCE) {
+        const org = await projectApi.createOrg({ name: orgName });
+        onCreated?.({ source: LOCAL_SOURCE, org });
+        return;
+      }
+
       if (mode === CREATE_MODE) {
         const result = await createCollabOrg({
           hubUrl,
@@ -224,7 +258,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
       });
       setCollabOrgs((current) => upsertOrg(current, result.org));
       setCollabMembers((current) => upsertMember(current, result.member));
-      onCreated?.(result);
+      onCreated?.({ source: CLOUD_SOURCE, ...result });
       setLatestInviteLink("");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -236,12 +270,14 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
     displayName,
     handleCreated,
     hubUrl,
+    identityKind,
     inviteInput,
     mode,
     onCreated,
     orgName,
     setCollabMembers,
     setCollabOrgs,
+    source,
   ]);
 
   const handleCopyInvite = useCallback(async () => {
@@ -263,101 +299,130 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
           <div className="mx-auto flex w-full max-w-[932px] flex-col gap-4 px-4 pb-6">
             <SectionContainer color="chatPanelInfo">
               <SectionRow
-                label={t("navigation:collaboration.setupMode")}
+                label={t("navigation:collaboration.orgSource")}
                 layout="vertical"
+                required
               >
                 <SelectionGrid
-                  options={modeOptions}
-                  selected={mode}
+                  options={sourceOptions}
+                  selected={source}
                   columns={2}
                   cardVariant="subtle"
                   compactCards
-                  onSelect={setMode}
+                  onSelect={setSource}
                 />
               </SectionRow>
             </SectionContainer>
 
-            <SectionContainer color="chatPanelInfo">
-              {mode === CREATE_MODE ? (
+            {source === CLOUD_SOURCE && (
+              <SectionContainer color="chatPanelInfo">
                 <SectionRow
-                  label={t("navigation:collaboration.orgName")}
+                  label={t("navigation:collaboration.setupMode")}
                   layout="vertical"
-                  required
                 >
-                  <Input
-                    value={orgName}
-                    onChange={setOrgName}
-                    placeholder={t(
-                      "navigation:collaboration.orgNamePlaceholder"
-                    )}
-                    style={COLLAB_FORM_CONTROL_STYLE}
+                  <SelectionGrid
+                    options={modeOptions}
+                    selected={mode}
+                    columns={2}
+                    cardVariant="subtle"
+                    compactCards
+                    onSelect={setMode}
                   />
                 </SectionRow>
-              ) : (
-                <SectionRow
-                  label={t("navigation:collaboration.inviteCode")}
-                  layout="vertical"
-                  required
+              </SectionContainer>
+            )}
+
+            {source !== null && (
+              <SectionContainer color="chatPanelInfo">
+                {mode === CREATE_MODE || source === LOCAL_SOURCE ? (
+                  <SectionRow
+                    label={t("navigation:collaboration.orgName")}
+                    layout="vertical"
+                    required
+                  >
+                    <Input
+                      value={orgName}
+                      onChange={setOrgName}
+                      placeholder={t(
+                        "navigation:collaboration.orgNamePlaceholder"
+                      )}
+                      style={COLLAB_FORM_CONTROL_STYLE}
+                    />
+                  </SectionRow>
+                ) : (
+                  <SectionRow
+                    label={t("navigation:collaboration.inviteCode")}
+                    layout="vertical"
+                    required
+                  >
+                    <Input
+                      value={inviteInput}
+                      onChange={setInviteInput}
+                      placeholder={t(
+                        "navigation:collaboration.inviteCodePlaceholder"
+                      )}
+                      style={COLLAB_FORM_CONTROL_STYLE}
+                    />
+                  </SectionRow>
+                )}
+
+                {source === CLOUD_SOURCE && (
+                  <SectionRow
+                    label={t("navigation:collaboration.joinAs")}
+                    layout="vertical"
+                    required
+                  >
+                    <Input
+                      value={displayName}
+                      onChange={setDisplayName}
+                      placeholder={t(
+                        "navigation:collaboration.joinAsPlaceholder"
+                      )}
+                      style={COLLAB_FORM_CONTROL_STYLE}
+                    />
+                  </SectionRow>
+                )}
+              </SectionContainer>
+            )}
+
+            {source === CLOUD_SOURCE && (
+              <>
+                <SectionContainer color="chatPanelInfo">
+                  <SectionRow
+                    label={t("navigation:collaboration.hubUrl")}
+                    layout="vertical"
+                    required
+                  >
+                    <Input
+                      value={hubUrl}
+                      onChange={setHubUrl}
+                      placeholder="https://team.example.workers.dev"
+                      type="url"
+                      style={COLLAB_FORM_CONTROL_STYLE}
+                    />
+                  </SectionRow>
+                </SectionContainer>
+
+                <CollapsibleSection
+                  title={t("navigation:collaboration.hubSetupTitle")}
+                  defaultOpen={false}
+                  compact
+                  headerRowClassName="h-5 px-1"
+                  titleButtonClassName="text-[12px] font-medium text-text-2 hover:text-text-1"
+                  chevronSize={12}
                 >
-                  <Input
-                    value={inviteInput}
-                    onChange={setInviteInput}
-                    placeholder={t(
-                      "navigation:collaboration.inviteCodePlaceholder"
-                    )}
-                    style={COLLAB_FORM_CONTROL_STYLE}
-                  />
-                </SectionRow>
-              )}
+                  <div className="cursor-text select-text px-1 text-[12px] leading-[18px] text-text-2">
+                    <Markdown
+                      textContent={HUB_SETUP_MARKDOWN}
+                      useChatCodeBlock
+                      skipPreprocess
+                    />
+                  </div>
+                </CollapsibleSection>
+              </>
+            )}
 
-              <SectionRow
-                label={t("navigation:collaboration.joinAs")}
-                layout="vertical"
-                required
-              >
-                <Input
-                  value={displayName}
-                  onChange={setDisplayName}
-                  placeholder={t("navigation:collaboration.joinAsPlaceholder")}
-                  style={COLLAB_FORM_CONTROL_STYLE}
-                />
-              </SectionRow>
-            </SectionContainer>
-
-            <SectionContainer color="chatPanelInfo">
-              <SectionRow
-                label={t("navigation:collaboration.hubUrl")}
-                layout="vertical"
-                required
-              >
-                <Input
-                  value={hubUrl}
-                  onChange={setHubUrl}
-                  placeholder="https://team.example.workers.dev"
-                  type="url"
-                  style={COLLAB_FORM_CONTROL_STYLE}
-                />
-              </SectionRow>
-            </SectionContainer>
-
-            <CollapsibleSection
-              title={t("navigation:collaboration.hubSetupTitle")}
-              defaultOpen={false}
-              compact
-              headerRowClassName="h-5 px-1"
-              titleButtonClassName="text-[12px] font-medium text-text-2 hover:text-text-1"
-              chevronSize={12}
-            >
-              <div className="cursor-text select-text px-1 text-[12px] leading-[18px] text-text-2">
-                <Markdown
-                  textContent={HUB_SETUP_MARKDOWN}
-                  useChatCodeBlock
-                  skipPreprocess
-                />
-              </div>
-            </CollapsibleSection>
-
-            {mode === JOIN_MODE && (
+            {source === CLOUD_SOURCE && mode === JOIN_MODE && (
               <SectionContainer color="chatPanelInfo">
                 <SectionRow
                   label={t("navigation:collaboration.identityKind")}
@@ -418,7 +483,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
             loading={loading}
             data-testid="create-collab-org-submit"
           >
-            {mode === CREATE_MODE
+            {source === LOCAL_SOURCE || mode === CREATE_MODE
               ? t("navigation:collaboration.createOrg")
               : t("navigation:collaboration.joinOrg")}
           </Button>

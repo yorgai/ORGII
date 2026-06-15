@@ -8,26 +8,43 @@ import {
   type ChatPanelSelectedProject,
   type ChatPanelSelectedWorkItem,
 } from "@src/store/ui/chatPanelAtom";
+import { STORY_ORG_SCOPE } from "@src/store/workstation/tabs";
 
 import {
+  COLLAB_ADD_ORG_MENU_ITEM_ID,
   PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
   PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
 } from "../sidebarConnectorUtils";
 import {
+  getProjectsCloudOrgId,
   getProjectsLinearLoadOrgId,
+  getProjectsLinearOrgId,
   getProjectsLinearWorkItemId,
+  getProjectsLocalOrgId,
   getProjectsProjectOverviewSlug,
   getProjectsWorkItemCreateOrgId,
   getProjectsWorkItemId,
 } from "../useProjectsWorkItemMenuItems";
 
-interface UseProjectsMenuItemClickParams<Project, WorkItem, LinearWorkItem> {
+interface UseProjectsMenuItemClickParams<
+  Project,
+  WorkItem,
+  LocalOrg extends { id: string; name: string; sync_provider?: string | null },
+  CloudOrg,
+  LinearOrg,
+  LinearWorkItem,
+> {
+  activateMyStationRouteForProjectTabContent: () => void;
   activateMyStationRouteForProjectsContent: () => void;
   getProjectsLoadMoreGroupId: (id: string) => string | null;
   loadProjectsLinearOrgWorkItems: (orgId: string) => void;
   navigateChatPanel: (command: ChatPanelNavigateCommand) => void;
+  openProjectsLinearOrg: (org: LinearOrg) => void;
   openProjectsLinearWorkItem: (workItem: LinearWorkItem) => void;
+  projectsCloudOrgMap: ReadonlyMap<string, CloudOrg>;
+  projectsLinearOrgMap: ReadonlyMap<string, LinearOrg>;
   projectsLinearWorkItemMap: ReadonlyMap<string, LinearWorkItem>;
+  projectsLocalOrgMap: ReadonlyMap<string, LocalOrg>;
   projectsProjectMap: ReadonlyMap<string, Project>;
   projectsWorkItemMap: ReadonlyMap<string, WorkItem>;
   resetOpsControlStateForProjectsContent: () => void;
@@ -39,13 +56,25 @@ interface UseProjectsMenuItemClickParams<Project, WorkItem, LinearWorkItem> {
   toChatPanelWorkItem: (workItem: WorkItem) => ChatPanelSelectedWorkItem;
 }
 
-export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
+export function useProjectsMenuItemClick<
+  Project,
+  WorkItem,
+  LocalOrg extends { id: string; name: string; sync_provider?: string | null },
+  CloudOrg extends { id: string },
+  LinearOrg,
+  LinearWorkItem,
+>({
+  activateMyStationRouteForProjectTabContent,
   activateMyStationRouteForProjectsContent,
   getProjectsLoadMoreGroupId,
   loadProjectsLinearOrgWorkItems,
   navigateChatPanel,
+  openProjectsLinearOrg,
   openProjectsLinearWorkItem,
+  projectsCloudOrgMap,
+  projectsLinearOrgMap,
   projectsLinearWorkItemMap,
+  projectsLocalOrgMap,
   projectsProjectMap,
   projectsWorkItemMap,
   resetOpsControlStateForProjectsContent,
@@ -53,12 +82,23 @@ export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
   setProjectsSelectedMenuItemId,
   toChatPanelProject,
   toChatPanelWorkItem,
-}: UseProjectsMenuItemClickParams<Project, WorkItem, LinearWorkItem>): (
-  key: string,
-  item: NavigationMenuItem
-) => void {
+}: UseProjectsMenuItemClickParams<
+  Project,
+  WorkItem,
+  LocalOrg,
+  CloudOrg,
+  LinearOrg,
+  LinearWorkItem
+>): (key: string, item: NavigationMenuItem) => void {
   return useCallback(
     (_key: string, item: NavigationMenuItem) => {
+      if (item.id === COLLAB_ADD_ORG_MENU_ITEM_ID) {
+        resetOpsControlStateForProjectsContent();
+        setProjectsSelectedMenuItemId(COLLAB_ADD_ORG_MENU_ITEM_ID);
+        navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_COLLAB_ORG });
+        return;
+      }
+
       if (item.id === PROJECTS_NEW_PROJECT_MENU_ITEM_ID) {
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(PROJECTS_NEW_PROJECT_MENU_ITEM_ID);
@@ -70,6 +110,47 @@ export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID);
         navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM });
+        return;
+      }
+
+      const localOrgId = getProjectsLocalOrgId(item.id);
+      if (localOrgId) {
+        const localOrg = projectsLocalOrgMap.get(localOrgId);
+        if (!localOrg) return;
+        activateMyStationRouteForProjectsContent();
+        setProjectsSelectedMenuItemId(item.id);
+        navigateChatPanel({
+          kind: CHAT_PANEL_SURFACE_KIND.PROJECT_ORG,
+          projectOrg: {
+            orgId: localOrg.id,
+            orgName: localOrg.name,
+            orgScope: STORY_ORG_SCOPE.PROJECT_ORG,
+            orgSyncProvider: localOrg.sync_provider,
+          },
+        });
+        return;
+      }
+
+      const cloudOrgId = getProjectsCloudOrgId(item.id);
+      if (cloudOrgId) {
+        const cloudOrg = projectsCloudOrgMap.get(cloudOrgId);
+        if (!cloudOrg) return;
+        resetOpsControlStateForProjectsContent();
+        setProjectsSelectedMenuItemId(item.id);
+        navigateChatPanel({
+          kind: CHAT_PANEL_SURFACE_KIND.COLLAB_ORG,
+          collabOrg: { orgId: cloudOrg.id },
+        });
+        return;
+      }
+
+      const linearOrgId = getProjectsLinearOrgId(item.id);
+      if (linearOrgId) {
+        const linearOrg = projectsLinearOrgMap.get(linearOrgId);
+        if (!linearOrg) return;
+        activateMyStationRouteForProjectTabContent();
+        setProjectsSelectedMenuItemId(item.id);
+        openProjectsLinearOrg(linearOrg);
         return;
       }
 
@@ -116,8 +197,8 @@ export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
       if (linearWorkItemId) {
         const linearWorkItem = projectsLinearWorkItemMap.get(linearWorkItemId);
         if (!linearWorkItem) return;
+        activateMyStationRouteForProjectTabContent();
         setProjectsSelectedMenuItemId(item.id);
-        navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.SESSION });
         openProjectsLinearWorkItem(linearWorkItem);
         return;
       }
@@ -135,12 +216,17 @@ export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
       });
     },
     [
+      activateMyStationRouteForProjectTabContent,
       activateMyStationRouteForProjectsContent,
       getProjectsLoadMoreGroupId,
       loadProjectsLinearOrgWorkItems,
       navigateChatPanel,
+      openProjectsLinearOrg,
       openProjectsLinearWorkItem,
+      projectsCloudOrgMap,
+      projectsLinearOrgMap,
       projectsLinearWorkItemMap,
+      projectsLocalOrgMap,
       projectsProjectMap,
       projectsWorkItemMap,
       resetOpsControlStateForProjectsContent,

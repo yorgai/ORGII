@@ -3,10 +3,7 @@ import React, { memo, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import {
-  PROJECT_ORG_SYNC_PROVIDER,
-  type ProjectOrg,
-} from "@src/api/http/project";
+import { PROJECT_ORG_SYNC_PROVIDER } from "@src/api/http/project";
 import {
   WIZARD_IDS,
   buildIntegrationsPath,
@@ -19,6 +16,12 @@ import {
 } from "@src/hooks/workStation";
 import { WorkStationShell } from "@src/modules/WorkStation/shared";
 import { projectListRefreshAtom } from "@src/store/project/projectAtom";
+import {
+  CHAT_PANEL_SURFACE_KIND,
+  activeStationChatVisibleAtom,
+  chatPanelNavigateAtom,
+} from "@src/store/ui/chatPanelAtom";
+import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { projectStatusBarCallbacksAtom } from "@src/store/ui/workStationAtom";
 import {
   STORY_ORG_SCOPE,
@@ -29,8 +32,6 @@ import {
 
 import type { EmbeddedWorkItemDetailState } from "../WorkItems";
 import { ProjectManagerContentRouter } from "./components/ProjectManagerContentRouter";
-import { ProjectManagerCreateModals } from "./components/ProjectManagerCreateModals";
-import { useProjectManagerCreateModals } from "./hooks/useProjectManagerCreateModals";
 import { useProjectManagerSidebarConfig } from "./hooks/useProjectManagerSidebarConfig";
 import { useProjectStatusBar } from "./hooks/useProjectStatusBar";
 import { useProjectTabActions } from "./hooks/useProjectTabActions";
@@ -132,12 +133,12 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
     ]);
 
     const bumpProjectListRefresh = useSetAtom(projectListRefreshAtom);
+    const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
+    const setStationMode = useSetAtom(stationModeAtom);
+    const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
     const handleProjectListRefreshRequested = useCallback(() => {
       bumpProjectListRefresh((prev) => prev + 1);
     }, [bumpProjectListRefresh]);
-
-    const { orgCreateModalOpen, openOrgCreateModal, closeOrgCreateModal } =
-      useProjectManagerCreateModals();
 
     const [embeddedWorkItemDetailTabs, setEmbeddedWorkItemDetailTabs] =
       useState<Record<string, boolean>>({});
@@ -218,6 +219,12 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
       );
     }, [navigate]);
 
+    const handleCreateOrg = useCallback(() => {
+      navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_COLLAB_ORG });
+      setStationMode("my-station");
+      setStationChatVisible("my-station", true);
+    }, [navigateChatPanel, setStationChatVisible, setStationMode]);
+
     const { activePrimarySidebarConfig } = useProjectManagerSidebarConfig({
       repoPath,
       repoName,
@@ -230,7 +237,7 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
       onSelectProject: handleSelectProject,
       onCreateProject: handleCreateProject,
       onCreateWorkItem: handleCreateWorkItem,
-      onCreateOrg: openOrgCreateModal,
+      onCreateOrg: handleCreateOrg,
       onImportOrgs: handleImportOrgs,
       onOpenProjects: handleOpenProjects,
       onOpenWorkItems: handleOpenWorkItems,
@@ -266,34 +273,14 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
       />
     );
 
-    const handleOrgCreated = useCallback(
-      (org: ProjectOrg) => {
-        closeOrgCreateModal();
-        handleProjectListRefreshRequested();
-        handleOpenProjectOrg(org);
-      },
-      [
-        closeOrgCreateModal,
-        handleOpenProjectOrg,
-        handleProjectListRefreshRequested,
-      ]
-    );
-
     return (
-      <>
-        <WorkStationShell
-          primarySidebarConfig={activePrimarySidebarConfig}
-          content={mainContent}
-          statusBar={null}
-          layoutMode={layoutMode}
-          appClassName="project-manager"
-        />
-        <ProjectManagerCreateModals
-          orgCreateModalOpen={orgCreateModalOpen}
-          onCloseOrgCreateModal={closeOrgCreateModal}
-          onOrgCreated={handleOrgCreated}
-        />
-      </>
+      <WorkStationShell
+        primarySidebarConfig={activePrimarySidebarConfig}
+        content={mainContent}
+        statusBar={null}
+        layoutMode={layoutMode}
+        appClassName="project-manager"
+      />
     );
   }
 );

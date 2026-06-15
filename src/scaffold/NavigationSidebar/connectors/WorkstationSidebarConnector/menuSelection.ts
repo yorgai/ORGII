@@ -4,7 +4,6 @@ import {
   CHAT_PANEL_CREATE_TARGET,
   type ChatPanelContentMode,
   type ChatPanelCreateTarget,
-  type ChatPanelSelectedCollabOrg,
   type ChatPanelSelectedProject,
   type ChatPanelSelectedWorkItem,
   type ChatPanelSelectedWorkspace,
@@ -16,10 +15,6 @@ import {
   getSelectedMenuItemId,
   getSelectedPinnedMenuItemId,
 } from "../workstationSidebarData";
-import {
-  COLLAB_MEMBER_PREFIX,
-  getCollabOrgDashboardMenuItemId,
-} from "./colleaguesSidebarMenuItems";
 import {
   FOLDERS_DASHBOARD_ITEM_ID,
   FOLDERS_EXPLORE_ITEM_ID,
@@ -33,7 +28,6 @@ interface ResolveSelectedMenuItemIdParams {
   activeSidebarKey: WorkstationSidebarKey;
   chatPanelContentMode: ChatPanelContentMode;
   chatPanelCreateTarget: ChatPanelCreateTarget;
-  chatPanelSelectedCollabOrg: ChatPanelSelectedCollabOrg | null;
   chatPanelSelectedProject: ChatPanelSelectedProject | null;
   chatPanelSelectedWorkItem: ChatPanelSelectedWorkItem | null;
   chatPanelSelectedWorkspace: ChatPanelSelectedWorkspace | null;
@@ -42,7 +36,6 @@ interface ResolveSelectedMenuItemIdParams {
   opsControlRoutePath: string;
   pathname: string;
   projectsSelectedMenuItemId: string;
-  colleaguesSelectedMenuItemId: string;
   sessionCreatorDrafts: readonly SessionCreatorDraft[];
 }
 
@@ -57,7 +50,6 @@ export function resolveSelectedMenuItemIds({
   activeSidebarKey,
   chatPanelContentMode,
   chatPanelCreateTarget,
-  chatPanelSelectedCollabOrg,
   chatPanelSelectedProject,
   chatPanelSelectedWorkItem,
   chatPanelSelectedWorkspace,
@@ -66,7 +58,6 @@ export function resolveSelectedMenuItemIds({
   opsControlRoutePath,
   pathname,
   projectsSelectedMenuItemId,
-  colleaguesSelectedMenuItemId,
   sessionCreatorDrafts,
 }: ResolveSelectedMenuItemIdParams): ResolvedSelectedMenuItemIds {
   const selectedDraftMenuItemId = getSelectedDraftMenuItemId(
@@ -93,12 +84,14 @@ export function resolveSelectedMenuItemIds({
           selectedDraftMenuItemId,
         });
   const resolvedProjectsSelectedMenuItemId =
-    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.PROJECT ||
-    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
-    chatPanelSelectedWorkItem ||
-    chatPanelSelectedProject
-      ? projectsSelectedMenuItemId
-      : "";
+    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG
+      ? COLLAB_ADD_ORG_MENU_ITEM_ID
+      : chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.PROJECT ||
+          chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
+          chatPanelSelectedWorkItem ||
+          chatPanelSelectedProject
+        ? projectsSelectedMenuItemId
+        : "";
   const foldersSelectedMenuItemId = chatPanelSelectedWorkspace
     ? getFolderItemId(chatPanelSelectedWorkspace)
     : chatPanelExploreOpen
@@ -106,23 +99,12 @@ export function resolveSelectedMenuItemIds({
       : chatPanelWorkspaceDashboardOpen
         ? FOLDERS_DASHBOARD_ITEM_ID
         : "";
-  const selectedCollabOrgMenuItemId = chatPanelSelectedCollabOrg
-    ? chatPanelSelectedCollabOrg.memberId
-      ? `${COLLAB_MEMBER_PREFIX}${chatPanelSelectedCollabOrg.memberId}`
-      : getCollabOrgDashboardMenuItemId(chatPanelSelectedCollabOrg.orgId)
-    : "";
-  const resolvedColleaguesSelectedMenuItemId =
-    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG
-      ? colleaguesSelectedMenuItemId || COLLAB_ADD_ORG_MENU_ITEM_ID
-      : selectedCollabOrgMenuItemId;
   const selectedMenuItemId =
     activeSidebarKey === "projects"
-      ? resolvedProjectsSelectedMenuItemId
+      ? resolvedProjectsSelectedMenuItemId || projectsSelectedMenuItemId
       : activeSidebarKey === "folders"
         ? foldersSelectedMenuItemId
-        : activeSidebarKey === "colleagues"
-          ? resolvedColleaguesSelectedMenuItemId
-          : sessionSelectedMenuItemId;
+        : sessionSelectedMenuItemId;
 
   return { selectedMenuItemId, sessionSelectedMenuItemId };
 }

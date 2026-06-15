@@ -1,7 +1,15 @@
 import type { TFunction } from "i18next";
-import { Box, Loader2, MoreHorizontal, SquarePen } from "lucide-react";
+import {
+  Box,
+  Cloud,
+  Loader2,
+  MoreHorizontal,
+  Network,
+  SquarePen,
+} from "lucide-react";
 import React from "react";
 
+import IntegrationIcon from "@src/components/IntegrationIcon";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 
 import {
@@ -10,7 +18,10 @@ import {
   PROJECTS_WORK_ITEM_CREATE_PREFIX,
 } from "./constants";
 import {
+  getCloudOrgMenuItemId,
+  getLinearOrgMenuItemId,
   getLinearWorkItemMenuItemId,
+  getLocalOrgMenuItemId,
   getProjectOverviewMenuItemId,
   getWorkItemMenuItemId,
 } from "./idHelpers";
@@ -19,6 +30,44 @@ import { statusIconElement, toWorkItemStatus } from "./workItemMapping";
 
 export function separator(id: string, title = ""): NavigationMenuItem {
   return { id: `separator-${id}`, key: `separator-${id}`, label: title };
+}
+
+function localOrgMenuRow(id: string, label: string): NavigationMenuItem {
+  return {
+    id,
+    key: id,
+    label,
+    icon: Network,
+    iconName: "network",
+    visualTone: "secondary",
+  };
+}
+
+export function localOrgRow(orgId: string, label: string): NavigationMenuItem {
+  return localOrgMenuRow(getLocalOrgMenuItemId(orgId), label);
+}
+
+export function cloudOrgRow(orgId: string, label: string): NavigationMenuItem {
+  const id = getCloudOrgMenuItemId(orgId);
+  return {
+    id,
+    key: id,
+    label,
+    icon: Cloud,
+    iconName: "cloud",
+    visualTone: "secondary",
+  };
+}
+
+export function linearOrgRow(orgId: string, label: string): NavigationMenuItem {
+  const id = getLinearOrgMenuItemId(orgId);
+  return {
+    id,
+    key: id,
+    label,
+    iconElement: <IntegrationIcon type="linear" size={14} />,
+    visualTone: "secondary",
+  };
 }
 
 export function groupLoadMoreRow(
@@ -82,10 +131,32 @@ export function buildProjectOverviewRow(
     label: t("projects:orgs.management.overview"),
     icon: Box,
     iconName: "box",
+    visualTone: "secondary",
     dataTestId: `sidebar-project-overview-${projectSlug}`,
     dragPayload: {
       path: projectSlug,
       name: projectName ?? projectSlug,
+      iconType: "project",
+    },
+  };
+}
+
+export function buildProjectRow(
+  projectSlug: string,
+  projectName: string
+): NavigationMenuItem {
+  const id = getProjectOverviewMenuItemId(projectSlug);
+  return {
+    id,
+    key: id,
+    label: projectName,
+    icon: Box,
+    iconName: "box",
+    visualTone: "secondary",
+    dataTestId: `sidebar-project-overview-${projectSlug}`,
+    dragPayload: {
+      path: projectSlug,
+      name: projectName,
       iconType: "project",
     },
   };

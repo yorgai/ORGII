@@ -15,7 +15,6 @@ import type { Repo } from "@src/store/repo";
 import type { SessionCreatorDraft } from "@src/store/session";
 
 import {
-  buildColleaguesPinnedMenuItems,
   buildDraftMenuItems,
   buildFoldersPinnedMenuItems,
   buildPinnedMenuItems,
@@ -65,8 +64,12 @@ export function usePinnedMenuItems({
   );
   const projectsPinnedMenuItems = useMemo<NavigationMenuItem[]>(
     () =>
-      buildProjectsPinnedMenuItems({ createProjectLabel, createWorkItemLabel }),
-    [createProjectLabel, createWorkItemLabel]
+      buildProjectsPinnedMenuItems({
+        addOrgLabel,
+        createProjectLabel,
+        createWorkItemLabel,
+      }),
+    [addOrgLabel, createProjectLabel, createWorkItemLabel]
   );
   const foldersPinnedMenuItems = useMemo<NavigationMenuItem[]>(
     () =>
@@ -78,18 +81,12 @@ export function usePinnedMenuItems({
       }),
     [t]
   );
-  const colleaguesPinnedMenuItems = useMemo<NavigationMenuItem[]>(
-    () => buildColleaguesPinnedMenuItems({ addOrgLabel }),
-    [addOrgLabel]
-  );
   const pinnedMenuItems =
     activeSidebarKey === "projects"
       ? projectsPinnedMenuItems
       : activeSidebarKey === "folders"
         ? foldersPinnedMenuItems
-        : activeSidebarKey === "colleagues"
-          ? colleaguesPinnedMenuItems
-          : sessionPinnedMenuItems;
+        : sessionPinnedMenuItems;
 
   return { pinnedMenuItems, sessionPinnedMenuItems };
 }

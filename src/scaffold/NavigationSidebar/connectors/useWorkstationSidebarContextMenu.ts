@@ -29,7 +29,6 @@ interface UseWorkstationSidebarContextMenuParams {
   handleDeleteDraft: (draftId: string) => void;
   handleExportMarkdown: (sessionId: string) => Promise<void>;
   handleTogglePin: (sessionId: string) => Promise<void>;
-  handleAddTag: (sessionId: string) => Promise<void>;
   onShareSession: (sessionId: string) => void;
   tCommon: (key: string, defaultValue?: string) => string;
 }
@@ -41,7 +40,6 @@ export function useWorkstationSidebarContextMenu({
   handleDeleteDraft,
   handleExportMarkdown,
   handleTogglePin,
-  handleAddTag,
   onShareSession,
   tCommon,
 }: UseWorkstationSidebarContextMenuParams): (
@@ -93,10 +91,6 @@ export function useWorkstationSidebarContextMenu({
           text: pinLabel,
           action: () => handleTogglePin(item.id),
         });
-        const addTagItem = await MenuItem.new({
-          text: tCommon("sessions:chat.addTag", "Add Tag…"),
-          action: () => handleAddTag(item.id),
-        });
         const deleteItem = await MenuItem.new({
           text: tCommon("actions.delete"),
           action: () => handleDeleteSession(item.id),
@@ -112,7 +106,7 @@ export function useWorkstationSidebarContextMenu({
           : [renameItem, exportItem];
         const menuItems = isCliSessionItem
           ? [...primaryItems, menuSeparator, deleteItem]
-          : [...primaryItems, pinItem, addTagItem, menuSeparator, deleteItem];
+          : [...primaryItems, pinItem, menuSeparator, deleteItem];
         const menu = await TauriMenu.new({ items: menuItems });
         await menu.popup();
       } catch (error) {
@@ -127,7 +121,6 @@ export function useWorkstationSidebarContextMenu({
       handleDeleteDraft,
       handleExportMarkdown,
       handleTogglePin,
-      handleAddTag,
       onShareSession,
     ]
   );

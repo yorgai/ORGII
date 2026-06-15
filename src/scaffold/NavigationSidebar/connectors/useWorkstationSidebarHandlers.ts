@@ -62,7 +62,6 @@ interface UseWorkstationSidebarHandlersResult {
   handleExportMarkdown: (sessionId: string) => Promise<void>;
   handleMenuItemClick: (_key: string, item: NavigationMenuItem) => void;
   handleTogglePin: (sessionId: string) => Promise<void>;
-  handleAddTag: (sessionId: string) => Promise<void>;
 }
 
 export function useWorkstationSidebarHandlers({
@@ -243,39 +242,11 @@ export function useWorkstationSidebarHandlers({
     },
     [sessionMap]
   );
-
-  const handleAddTag = useCallback(
-    async (sessionId: string) => {
-      const session = sessionMap.get(sessionId);
-      if (!session) return;
-      const tag = window.prompt(
-        tCommon("sessions:chat.addTagPrompt", "Add tag (e.g. review, infra):")
-      );
-      if (!tag || !tag.trim()) return;
-      const trimmedTag = tag.trim().toLowerCase().replace(/\s+/g, "-");
-      const currentTags = session.tags ?? [];
-      if (currentTags.includes(trimmedTag)) return;
-      const newTags = [...currentTags, trimmedTag];
-      upsertSession({ ...session, tags: newTags });
-      try {
-        await rpc.sessionAggregate.patch({
-          sessionId,
-          patch: { tags: newTags },
-        });
-      } catch (error) {
-        upsertSession({ ...session, tags: currentTags });
-        log.error("[WorkstationSidebar] Failed to add tag:", error);
-      }
-    },
-    [sessionMap, tCommon]
-  );
-
   return {
     handleDeleteSession,
     handleExportMarkdown,
     handleMenuItemClick,
     handleTogglePin,
-    handleAddTag,
   };
 }
 

@@ -14,8 +14,6 @@ import type {
   WorkItemStatus,
 } from "@src/types/core/workItem";
 
-import type { ProjectsGroupByMode } from "../types";
-
 export interface SidebarProject {
   projectData: ProjectData;
   orgId: string;
@@ -66,8 +64,19 @@ export interface LinearOrgLoadState {
 
 export interface UseProjectsWorkItemMenuItemsParams {
   enabled: boolean;
-  groupByMode: ProjectsGroupByMode;
   groupVisibleCounts: ReadonlyMap<string, number>;
+  searchQuery: string;
+}
+
+export interface SidebarLocalOrgRecord {
+  id: string;
+  name: string;
+  sync_provider?: string | null;
+}
+
+export interface SidebarCloudOrgRecord {
+  id: string;
+  name: string;
 }
 
 export interface UseProjectsWorkItemMenuItemsResult {
@@ -75,10 +84,15 @@ export interface UseProjectsWorkItemMenuItemsResult {
   projectMap: Map<string, SidebarProject>;
   workItemMap: Map<string, SidebarWorkItem>;
   linearWorkItemMap: Map<string, SidebarLinearWorkItem>;
+  localOrgMap: Map<string, SidebarLocalOrgRecord>;
+  cloudOrgMap: Map<string, SidebarCloudOrgRecord>;
+  linearOrgMap: Map<string, LinearOrgRecord>;
   loading: boolean;
   getLoadMoreGroupId: (id: string) => string | null;
   loadLinearOrgWorkItems: (orgId: string) => void;
   toChatPanelProject: (project: SidebarProject) => ChatPanelSelectedProject;
   toChatPanelWorkItem: (workItem: SidebarWorkItem) => ChatPanelSelectedWorkItem;
+  openLocalOrg: (org: SidebarLocalOrgRecord) => void;
+  openLinearOrg: (org: LinearOrgRecord) => void;
   openLinearWorkItem: (workItem: SidebarLinearWorkItem) => void;
 }

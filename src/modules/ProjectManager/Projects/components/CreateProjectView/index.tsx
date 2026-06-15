@@ -93,13 +93,6 @@ export interface CreateProjectViewProps {
 
 const logger = createLogger("CreateProjectView");
 
-type ProjectAiPromptMode = "concrete_goal" | "inspire_me";
-
-const PROJECT_AI_PROMPT_MODES: ProjectAiPromptMode[] = [
-  "concrete_goal",
-  "inspire_me",
-];
-
 const CreateProjectView: React.FC<CreateProjectViewProps> = ({
   tabId,
   repoPath,
@@ -116,8 +109,6 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
   const [saving, setSaving] = useState(false);
   const [availableOrgs, setAvailableOrgs] = useState<ProjectOrg[]>([]);
   const [editorResetKey, setEditorResetKey] = useState(0);
-  const [aiPromptMode, setAiPromptMode] =
-    useState<ProjectAiPromptMode>("concrete_goal");
 
   // Read draft from atom (survives tab switches)
   const draftsMap = useAtomValue(projectDraftsAtom);
@@ -392,30 +383,6 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
     />
   );
 
-  const aiPromptModePill = (
-    <div className="inline-flex items-center gap-px rounded-[100px] border border-border-2 bg-fill-1 p-0.5">
-      {PROJECT_AI_PROMPT_MODES.map((mode) => {
-        const selected = aiPromptMode === mode;
-        const label = mode === "concrete_goal" ? "Concrete goal" : "Inspire me";
-        return (
-          <button
-            key={mode}
-            type="button"
-            className={`h-6 rounded-[100px] border-0 px-3 text-[12px] font-medium transition-colors duration-150 ${
-              selected
-                ? "bg-primary-6 text-white"
-                : "bg-transparent text-text-1 hover:bg-fill-3"
-            }`}
-            aria-pressed={selected}
-            onClick={() => setAiPromptMode(mode)}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-
   return (
     <DetailSplitLayout
       title={t("projects.newProject")}
@@ -429,9 +396,7 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
             pathContent={orgBreadcrumbPill}
             propertiesContent={propertyPills}
             descriptionContent={
-              aiGenerateMode ? (
-                aiPromptModePill
-              ) : (
+              !aiGenerateMode ? (
                 <ProjectContentEditor
                   key={editorResetKey}
                   ref={editorRef}
@@ -448,7 +413,7 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
                   repoPath={repoPath}
                   className="flex h-full min-h-0 flex-col"
                 />
-              )
+              ) : undefined
             }
             descriptionFlexible={!aiGenerateMode}
             metaClassName="py-2"

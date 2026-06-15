@@ -1,49 +1,46 @@
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { syncConnectionsApi } from "@src/api/http/integrations";
 import { projectApi } from "@src/api/http/project";
 import type { ProjectOrg } from "@src/api/http/project";
 import { createLogger } from "@src/hooks/logger";
 import { useProjectDataChanged } from "@src/hooks/project";
 import { cachedLinearProjectsApi } from "@src/modules/ProjectManager/LinearProjects/linearProjectsCache";
 import { linearIssueToWorkItem } from "@src/modules/ProjectManager/LinearProjects/utils";
+import { collabOrgsAtom } from "@src/store/collaboration/collabOrgsAtom";
 import {
+  PROJECT_ORG_SURFACE_VIEW,
+  STORY_ORG_SCOPE,
   createProjectLinearWorkItemsTab,
+  createProjectOrgTab,
   openTab,
   workstationLayoutAtom,
 } from "@src/store/workstation/tabs";
 import { STORY_PERSONAL_ORG_FILTER_ID } from "@src/store/workstation/tabs/factories/project";
 
 import { toChatPanelProject, toChatPanelWorkItem } from "./chatPanelMapping";
+import { buildByOrgMenuItems } from "./groupingBuilders";
 import {
-  buildByOrgMenuItems,
-  buildByPriorityMenuItems,
-  buildByProjectMenuItems,
-  buildByStatusMenuItems,
-} from "./groupingBuilders";
-import {
+  getProjectsCloudOrgId,
   getProjectsLinearLoadOrgId,
   getProjectsLinearOrgGroupId,
+  getProjectsLinearOrgId,
   getProjectsLinearWorkItemId,
+  getProjectsLocalOrgId,
   getProjectsProjectOverviewSlug,
   getProjectsWorkItemCreateOrgId,
   getProjectsWorkItemId,
   isProjectsLinearOrgGroupId,
   isProjectsWorkItemLoadMoreId,
 } from "./idHelpers";
-import {
-  getErrorMessage,
-  getLinearOrgId,
-  getLinearTeamOrgName,
-  isLinearConnection,
-} from "./linearHelpers";
+import { getErrorMessage } from "./linearHelpers";
 import type {
   LinearOrgLoadState,
   LinearOrgRecord,
   SidebarAnyWorkItem,
   SidebarLinearWorkItem,
+  SidebarLocalOrgRecord,
   SidebarProject,
   SidebarWorkItem,
   UseProjectsWorkItemMenuItemsParams,
@@ -54,9 +51,12 @@ import { toWorkItemPriority, toWorkItemStatus } from "./workItemMapping";
 const logger = createLogger("ProjectsWorkItemSidebar");
 
 export {
+  getProjectsCloudOrgId,
   getProjectsLinearLoadOrgId,
   getProjectsLinearOrgGroupId,
+  getProjectsLinearOrgId,
   getProjectsLinearWorkItemId,
+  getProjectsLocalOrgId,
   getProjectsProjectOverviewSlug,
   getProjectsWorkItemCreateOrgId,
   getProjectsWorkItemId,
@@ -66,15 +66,16 @@ export {
 
 export function useProjectsWorkItemMenuItems({
   enabled,
-  groupByMode,
   groupVisibleCounts,
+  searchQuery = "",
 }: UseProjectsWorkItemMenuItemsParams): UseProjectsWorkItemMenuItemsResult {
   const { t } = useTranslation(["projects", "common", "navigation"]);
   const setLayout = useSetAtom(workstationLayoutAtom);
+  const collabOrgs = useAtomValue(collabOrgsAtom);
   const [localOrgs, setLocalOrgs] = useState<ProjectOrg[]>([]);
   const [localProjects, setLocalProjects] = useState<SidebarProject[]>([]);
   const [workItems, setWorkItems] = useState<SidebarWorkItem[]>([]);
-  const [linearOrgs, setLinearOrgs] = useState<LinearOrgRecord[]>([]);
+  const [linearOrgs] = useState<LinearOrgRecord[]>([]);
   const [linearWorkItems, setLinearWorkItems] = useState<
     SidebarLinearWorkItem[]
   >([]);
@@ -92,14 +93,10 @@ export function useProjectsWorkItemMenuItems({
         projectApi.readProjects(),
       ]);
       setLocalOrgs(orgs);
-      const orgNameById = new Map(
-        orgs.map((org) => [
-          org.id,
-          org.id === STORY_PERSONAL_ORG_FILTER_ID
-            ? t("projects:orgs.personalOrg")
-            : org.name,
-        ])
-      );
+      const orgNameById = new Map<string, string>([
+        [STORY_PERSONAL_ORG_FILTER_ID, t("projects:orgs.personalOrg")],
+        ...orgs.map((org) => [org.id, org.name] as const),
+      ]);
       const projectResults = await Promise.all(
         projects.map(async (project) => {
           const [viewData, labelsFile, membersFile] = await Promise.all([
@@ -157,35 +154,6 @@ export function useProjectsWorkItemMenuItems({
       setLoading(false);
     }
   }, [enabled, t]);
-
-  const loadLinearOrgs = useCallback(async () => {
-    if (!enabled) return;
-    try {
-      const connections = (await syncConnectionsApi.list()).filter(
-        isLinearConnection
-      );
-      const teamGroups = await Promise.all(
-        connections.map(async (connection) => {
-          const teamResult = await cachedLinearProjectsApi.listTeams(
-            connection.id
-          );
-          return teamResult.teams.map(
-            (team): LinearOrgRecord => ({
-              id: getLinearOrgId(connection.id, team.id),
-              connectionId: connection.id,
-              teamId: team.id,
-              teamName: team.name,
-              orgName: getLinearTeamOrgName(team.name),
-            })
-          );
-        })
-      );
-      setLinearOrgs(teamGroups.flat());
-    } catch (error) {
-      logger.error("Failed to load Linear sidebar orgs:", error);
-      setLinearOrgs([]);
-    }
-  }, [enabled]);
 
   const loadLinearOrgWorkItems = useCallback(
     async (org: LinearOrgRecord) => {
@@ -264,8 +232,7 @@ export function useProjectsWorkItemMenuItems({
 
   useEffect(() => {
     void loadLocalWorkItems();
-    void loadLinearOrgs();
-  }, [loadLocalWorkItems, loadLinearOrgs]);
+  }, [loadLocalWorkItems]);
 
   const loadLinearOrgWorkItemsById = useCallback(
     (orgId: string) => {
@@ -308,45 +275,109 @@ export function useProjectsWorkItemMenuItems({
     return map;
   }, [linearWorkItems]);
 
+  const localOrgMap = useMemo(() => {
+    const map = new Map<string, SidebarLocalOrgRecord>();
+    map.set(STORY_PERSONAL_ORG_FILTER_ID, {
+      id: STORY_PERSONAL_ORG_FILTER_ID,
+      name: t("projects:orgs.personalOrg"),
+    });
+    for (const org of localOrgs) {
+      map.set(org.id, {
+        id: org.id,
+        name: org.name,
+        sync_provider: org.sync_provider,
+      });
+    }
+    for (const project of localProjects) {
+      if (map.has(project.orgId)) continue;
+      map.set(project.orgId, {
+        id: project.orgId,
+        name: project.orgName,
+      });
+    }
+    return map;
+  }, [localOrgs, localProjects, t]);
+
+  const cloudOrgMap = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    for (const org of collabOrgs) {
+      map.set(org.id, { id: org.id, name: org.name });
+    }
+    return map;
+  }, [collabOrgs]);
+
+  const linearOrgMap = useMemo(() => {
+    const map = new Map<string, LinearOrgRecord>();
+    for (const org of linearOrgs) {
+      map.set(org.id, org);
+    }
+    return map;
+  }, [linearOrgs]);
+
   const allWorkItems = useMemo<SidebarAnyWorkItem[]>(
-    () => [...workItems, ...linearWorkItems],
-    [linearWorkItems, workItems]
+    () => [...workItems],
+    [workItems]
   );
 
-  const menuItems = useMemo(() => {
-    const builderContext = {
+  const menuItems = useMemo(
+    () =>
+      buildByOrgMenuItems({
+        allWorkItems,
+        groupVisibleCounts,
+        searchQuery,
+        t,
+        cloudOrgs: collabOrgs,
+        localOrgs,
+        localProjects,
+      }),
+    [
       allWorkItems,
       groupVisibleCounts,
+      searchQuery,
       t,
-    };
+      collabOrgs,
+      localOrgs,
+      localProjects,
+    ]
+  );
 
-    switch (groupByMode) {
-      case "byProject":
-        return buildByProjectMenuItems(builderContext);
-      case "byStatus":
-        return buildByStatusMenuItems(builderContext);
-      case "byPriority":
-        return buildByPriorityMenuItems(builderContext);
-      case "byOrg":
-      default:
-        return buildByOrgMenuItems({
-          ...builderContext,
-          linearOrgLoadStates,
-          linearOrgs,
-          localOrgs,
-          localProjects,
-        });
-    }
-  }, [
-    allWorkItems,
-    groupByMode,
-    groupVisibleCounts,
-    linearOrgLoadStates,
-    linearOrgs,
-    localOrgs,
-    localProjects,
-    t,
-  ]);
+  const openLocalOrg = useCallback(
+    (org: SidebarLocalOrgRecord) => {
+      const orgScope =
+        org.id === STORY_PERSONAL_ORG_FILTER_ID
+          ? STORY_ORG_SCOPE.PERSONAL_ORG
+          : STORY_ORG_SCOPE.PROJECT_ORG;
+      const tab = createProjectOrgTab(
+        {
+          id: org.id,
+          name: org.name,
+          sync_provider: org.sync_provider,
+        },
+        PROJECT_ORG_SURFACE_VIEW.WORK_ITEMS,
+        orgScope
+      );
+      setLayout((layout) => ({
+        ...layout,
+        mainPane: openTab(layout.mainPane, tab),
+      }));
+    },
+    [setLayout]
+  );
+
+  const openLinearOrg = useCallback(
+    (org: LinearOrgRecord) => {
+      const tab = createProjectLinearWorkItemsTab({
+        connectionId: org.connectionId,
+        teamId: org.teamId,
+        teamName: org.teamName,
+      });
+      setLayout((layout) => ({
+        ...layout,
+        mainPane: openTab(layout.mainPane, tab),
+      }));
+    },
+    [setLayout]
+  );
 
   const openLinearWorkItem = useCallback(
     (workItem: SidebarLinearWorkItem) => {
@@ -370,11 +401,16 @@ export function useProjectsWorkItemMenuItems({
     projectMap,
     workItemMap,
     linearWorkItemMap,
+    localOrgMap,
+    cloudOrgMap,
+    linearOrgMap,
     loading,
     getLoadMoreGroupId: isProjectsWorkItemLoadMoreId,
     loadLinearOrgWorkItems: loadLinearOrgWorkItemsById,
     toChatPanelProject,
     toChatPanelWorkItem,
+    openLocalOrg,
+    openLinearOrg,
     openLinearWorkItem,
   };
 }
