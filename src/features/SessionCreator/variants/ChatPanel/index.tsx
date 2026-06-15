@@ -230,6 +230,7 @@ const SessionCreatorChatPanelSingle: React.FC<
 
   const [isCategorySelectorOpen, setIsCategorySelectorOpen] = useState(false);
   const agentHeroRef = useRef<HTMLButtonElement>(null);
+  const workItemPanelHostRef = useRef<HTMLDivElement>(null);
   const setSessionSource = useSetAtom(sessionSourceAtom);
   const modelPickerStyle = useAtomValue(modelPickerStyleAtom);
   const [openOrgMembersPanelId, setOpenOrgMembersPanelId] = useState<
@@ -742,6 +743,7 @@ const SessionCreatorChatPanelSingle: React.FC<
                   {leadingActionSlot}
                   <WorkItemAttachmentControl
                     currentWorkItemContext={attachedWorkItemContext}
+                    panelHostRef={workItemPanelHostRef}
                     repoPath={currentRepoPath}
                     onWorkItemContextChange={setAttachedWorkItemContext}
                   />
@@ -771,6 +773,11 @@ const SessionCreatorChatPanelSingle: React.FC<
               }
             />
           </div>
+
+          <div
+            ref={workItemPanelHostRef}
+            className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
+          />
 
           {selectedOrg && isOrgMembersPanelOpen && (
             <div id="session-creator-org-members-panel">
