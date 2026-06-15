@@ -223,7 +223,7 @@ impl OpenAICompatClient {
                         "[openai_compat] reassemble_sse: skipping unparseable chunk: {} \
                          (head: {:?})",
                         err,
-                        crate::utils::safe_truncate_chars(json_str, 120).to_string(),
+                        crate::utils::safe_truncate_chars_to_string(&json_str, 120),
                     );
                     continue;
                 }

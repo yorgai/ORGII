@@ -176,7 +176,7 @@ pub(crate) fn extract_first_sentence(content: &str) -> String {
             }
         }
     }
-    let truncated: String = crate::utils::safe_truncate_chars(trimmed, 300).to_string();
+    let truncated: String = crate::utils::safe_truncate_chars_to_string(&trimmed, 300);
     if truncated.len() < trimmed.len() {
         format!("{}…", truncated.trim_end())
     } else {

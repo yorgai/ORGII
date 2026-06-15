@@ -177,7 +177,7 @@ pub(super) async fn wecom_ws_loop(
                                 "[{}] Dropped WS frame: invalid JSON payload: {} (frame head: {:?})",
                                 channel_name,
                                 err,
-                                crate::utils::safe_truncate_chars(text, 120).to_string(),
+                                crate::utils::safe_truncate_chars_to_string(&text, 120),
                             );
                             continue;
                         }
@@ -262,7 +262,7 @@ where
                             "wait_for_subscribe_ack: dropped WS frame, invalid JSON: {} \
                              (frame head: {:?})",
                             err,
-                            crate::utils::safe_truncate_chars(text, 120).to_string(),
+                            crate::utils::safe_truncate_chars_to_string(&text, 120),
                         );
                         continue;
                     }

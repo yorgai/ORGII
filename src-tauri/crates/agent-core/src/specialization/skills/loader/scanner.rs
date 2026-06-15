@@ -723,7 +723,7 @@ impl SkillsLoader {
                 if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with("<!--") {
                     continue;
                 }
-                meta.description = crate::utils::safe_truncate_chars(trimmed, 120).to_string();
+                meta.description = crate::utils::safe_truncate_chars_to_string(&trimmed, 120);
                 break;
             }
         }

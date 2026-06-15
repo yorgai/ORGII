@@ -68,7 +68,7 @@ pub(super) async fn execute_parallel_group(
     let mut denied_count: usize = 0;
 
     for (idx, call) in calls.iter().enumerate() {
-        let args_preview: String = crate::utils::safe_truncate_chars(call.arguments.to_string(), 200).to_string();
+        let args_preview: String = crate::utils::safe_truncate_chars_to_string(&call.arguments.to_string(), 200);
         info!("[agent-core] Tool call: {}({})", call.name, args_preview);
 
         if is_cancelled(cancel_flag) {

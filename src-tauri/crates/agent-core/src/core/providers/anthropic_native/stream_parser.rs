@@ -316,7 +316,7 @@ fn handle_block_delta(
 }
 
 fn bounded_value_sample(value: &Value) -> String {
-    crate::utils::safe_truncate_chars(value.to_string(), 500).to_string()
+    crate::utils::safe_truncate_chars_to_string(&value.to_string(), 500)
 }
 
 fn handle_error_event(

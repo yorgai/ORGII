@@ -117,7 +117,7 @@ pub fn build_agent_definitions_context() -> Option<String> {
     for agent in &agents {
         let mut line = format!("- **{}** (`{}`)", agent.name, agent.id);
         if let Some(ref desc) = agent.description {
-            let preview: String = crate::utils::safe_truncate_chars(desc, 80).to_string();
+            let preview: String = crate::utils::safe_truncate_chars_to_string(&desc, 80);
             let suffix = if desc.chars().count() > 80 { "…" } else { "" };
             line.push_str(&format!(": {}{}", preview, suffix));
         }
@@ -168,7 +168,7 @@ pub fn build_agent_orgs_context() -> Option<String> {
             org.member_count()
         );
         if let Some(ref desc) = org.description {
-            let preview: String = crate::utils::safe_truncate_chars(desc, 60).to_string();
+            let preview: String = crate::utils::safe_truncate_chars_to_string(&desc, 60);
             let suffix = if desc.chars().count() > 60 { "…" } else { "" };
             line.push_str(&format!(": {}{}", preview, suffix));
         }

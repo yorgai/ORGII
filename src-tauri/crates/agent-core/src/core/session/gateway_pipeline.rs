@@ -23,7 +23,7 @@ pub async fn process_gateway_message(
     ide_context: Option<&IdeContext>,
     app_handle: Option<tauri::AppHandle>,
 ) -> Result<Option<OutboundMessage>, String> {
-    let preview: String = crate::utils::safe_truncate_chars(msg.content, 80).to_string();
+    let preview: String = crate::utils::safe_truncate_chars_to_string(&msg.content, 80);
     info!(
         "Processing message from {}:{}: {}...",
         msg.channel, msg.sender_id, preview
@@ -46,7 +46,7 @@ pub async fn process_gateway_message(
         let sk = session_key.clone();
         let channel = msg.channel.clone();
         let chat_id = msg.chat_id.clone();
-        let user_input_preview: String = crate::utils::safe_truncate_chars(msg.content, 200).to_string();
+        let user_input_preview: String = crate::utils::safe_truncate_chars_to_string(&msg.content, 200);
         let model = effective_model.clone();
         if let Err(err) =
             tokio::task::spawn_blocking(move || match unified_persistence::get_session(&sk) {
@@ -201,7 +201,7 @@ pub async fn process_gateway_message(
     match result {
         Ok(processing_result) => {
             let content = &processing_result.content;
-            let out_preview: String = crate::utils::safe_truncate_chars(content, 80).to_string();
+            let out_preview: String = crate::utils::safe_truncate_chars_to_string(&content, 80);
             info!(
                 "[agent-loop] Response for {}:{}: {}...",
                 msg.channel, msg.chat_id, out_preview

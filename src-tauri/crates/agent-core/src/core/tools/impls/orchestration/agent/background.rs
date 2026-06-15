@@ -196,7 +196,7 @@ impl AgentTool {
                     );
 
                     if let Some(ref wid) = bg_work_item_id {
-                        let preview: String = crate::utils::safe_truncate_chars(resp, 2000).to_string();
+                        let preview: String = crate::utils::safe_truncate_chars_to_string(&resp, 2000);
                         AgentTool::update_linked_session_sync(
                             wid,
                             &bg_session_id,

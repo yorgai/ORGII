@@ -443,7 +443,7 @@ pub async fn execute_turn(
             if Some(&current_signature) == last_tool_signature.as_ref() {
                 repeat_count += 1;
                 if repeat_count >= MAX_REPEAT_STREAK {
-                    let preview: String = crate::utils::safe_truncate_chars(current_signature, 200).to_string();
+                    let preview: String = crate::utils::safe_truncate_chars_to_string(&current_signature, 200);
                     warn!(
                         "[agent-core] Detected {} repeated identical tool calls, breaking loop: {}",
                         repeat_count, preview

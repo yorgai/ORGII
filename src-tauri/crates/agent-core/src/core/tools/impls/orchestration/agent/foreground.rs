@@ -197,7 +197,7 @@ impl AgentTool {
         };
 
         let result_preview: String = match &response {
-            Ok(resp) => crate::utils::safe_truncate_chars(resp, 2000).to_string(),
+            Ok(resp) => crate::utils::safe_truncate_chars_to_string(&resp, 2000),
             Err(err) => format!("{}", err),
         };
         self.update_linked_session(&subagent_session_id, final_status, tokens, &result_preview)

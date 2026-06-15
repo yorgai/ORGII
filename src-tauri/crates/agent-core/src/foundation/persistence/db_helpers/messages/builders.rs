@@ -159,7 +159,7 @@ pub fn save_tool_result_msg(
     tool_name: &str,
     result: &str,
 ) -> SqliteResult<String> {
-    let content_preview: String = crate::utils::safe_truncate_chars(result, 2000).to_string();
+    let content_preview: String = crate::utils::safe_truncate_chars_to_string(&result, 2000);
     let msg = AgentMessageRow {
         id: Uuid::new_v4().to_string(),
         session_id: session_id.to_string(),

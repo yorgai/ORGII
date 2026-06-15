@@ -273,7 +273,7 @@ fn compacted_history_rows(
                 let mut row = message_row(
                     session_id,
                     shared::message_role::TOOL_RESULT,
-                    crate::utils::safe_truncate_chars(content, 2000).to_string(),
+                    crate::utils::safe_truncate_chars_to_string(&content, 2000),
                     None,
                 );
                 row.tool_call_id = Some(tool_call_id.to_string());

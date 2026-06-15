@@ -106,7 +106,7 @@ impl Tool for WebFetchTool {
         })?;
 
         if content_type.contains("json") {
-            let truncated: String = crate::utils::safe_truncate_chars(body, max_chars).to_string();
+            let truncated: String = crate::utils::safe_truncate_chars_to_string(&body, max_chars);
             return Ok(truncated);
         }
 
@@ -116,7 +116,7 @@ impl Tool for WebFetchTool {
             body
         };
 
-        let truncated: String = crate::utils::safe_truncate_chars(text, max_chars).to_string();
+        let truncated: String = crate::utils::safe_truncate_chars_to_string(&text, max_chars);
         let was_truncated = text.len() > max_chars;
 
         if was_truncated {
