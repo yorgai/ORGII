@@ -10,8 +10,8 @@ use std::path::PathBuf;
 
 use database::db::get_connection;
 use orgtrack_core::canonical::{
-    SessionCheckpointFileStateRecord, SessionCheckpointRecord, SessionDiffChunkRecord,
-    SessionEditArtifactRecord, SessionFinalDiffRecord,
+    CommitLinkRecord, SessionCheckpointFileStateRecord, SessionCheckpointRecord,
+    SessionDiffChunkRecord, SessionEditArtifactRecord, SessionFinalDiffRecord,
 };
 use orgtrack_core::policy::{source_tier_policy, SourceTierPolicy};
 use orgtrack_core::projectors::stats::{session_summaries, CoreSessionSummary};
@@ -118,9 +118,26 @@ pub async fn orgtrack_get_session_summaries(
         let conn = get_connection().map_err(|err| err.to_string())?;
         let store = SqliteRecordStore::new(&conn);
         let sessions = store.list_sessions(workspace_path.as_deref())?;
-        let file_changes = store.list_file_changes(None)?;
+        let final_diffs = store.list_final_diffs(None, None)?;
         let commit_links = store.list_commit_links()?;
-        Ok(session_summaries(sessions, file_changes, commit_links))
+        Ok(session_summaries(sessions, final_diffs, commit_links))
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+#[tauri::command]
+pub async fn orgtrack_analyze_sessions(
+    workspace_path: Option<String>,
+    session_id: Option<String>,
+    rebuild: Option<bool>,
+) -> Result<analysis_backfill::AnalysisBackfillStats, String> {
+    tokio::task::spawn_blocking(move || {
+        analysis_backfill::analyze_requested(
+            workspace_path.as_deref(),
+            session_id.as_deref(),
+            rebuild.unwrap_or(false),
+        )
     })
     .await
     .map_err(|err| err.to_string())?
@@ -188,6 +205,30 @@ pub async fn orgtrack_get_session_final_diffs(
         let conn = get_connection().map_err(|err| err.to_string())?;
         let store = SqliteRecordStore::new(&conn);
         store.list_final_diffs(source.as_deref(), session_id.as_deref())
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+#[tauri::command]
+pub async fn orgtrack_get_session_commit_links(
+    session_id: Option<String>,
+) -> Result<Vec<CommitLinkRecord>, String> {
+    tokio::task::spawn_blocking(move || {
+        let conn = get_connection().map_err(|err| err.to_string())?;
+        let store = SqliteRecordStore::new(&conn);
+        let commit_links = store.list_commit_links()?;
+        Ok(match session_id {
+            Some(session_id) => commit_links
+                .into_iter()
+                .filter(|link| {
+                    link.session_ids
+                        .iter()
+                        .any(|linked_id| linked_id == &session_id)
+                })
+                .collect(),
+            None => commit_links,
+        })
     })
     .await
     .map_err(|err| err.to_string())?

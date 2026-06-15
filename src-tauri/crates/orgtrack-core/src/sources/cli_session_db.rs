@@ -32,7 +32,6 @@ use serde::Serialize;
 
 use chrono::TimeZone;
 
-
 static LAST_SYNC: Mutex<Option<Instant>> = Mutex::new(None);
 const SYNC_COOLDOWN: Duration = Duration::from_secs(60);
 

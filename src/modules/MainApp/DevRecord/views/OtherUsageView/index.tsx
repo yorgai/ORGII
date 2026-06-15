@@ -111,7 +111,6 @@ const OtherUsageView: React.FC = () => {
               >
                 <OverviewTab
                   sessions={state.sessions}
-                  overviewStats={state.overviewStats}
                   modelStats={state.modelStats}
                   modelChartData={state.modelChartData}
                   modelNameMap={state.modelNameMap}

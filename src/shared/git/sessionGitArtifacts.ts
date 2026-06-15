@@ -1,3 +1,5 @@
+// Non-canonical UI extraction for rendering inline git reference cards only.
+// AI Blame commit attribution/counts must come from Rust Orgtrack summaries.
 import type {
   ExtractedGitArtifactData,
   SessionEvent,

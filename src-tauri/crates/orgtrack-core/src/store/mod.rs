@@ -46,7 +46,10 @@ pub trait RecordStore {
     fn get_checkpoint(&self, source: &str) -> Result<Option<ScanCheckpoint>, String>;
     fn put_checkpoint(&self, checkpoint: &ScanCheckpoint) -> Result<(), String>;
     fn list_sessions(&self, workspace_path: Option<&str>) -> Result<Vec<SessionRecord>, String>;
-    fn list_file_changes(&self, workspace_path: Option<&str>) -> Result<Vec<FileChangeRecord>, String>;
+    fn list_file_changes(
+        &self,
+        workspace_path: Option<&str>,
+    ) -> Result<Vec<FileChangeRecord>, String>;
 }
 
 #[cfg(feature = "sqlite")]

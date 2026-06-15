@@ -1,33 +1,17 @@
-/**
- * useDiff
- *
- * Adapts `useSimulatorAppState` for the Diff app: pulls derived entries,
- * excludes events that do not produce a real diff section, computes the
- * deduplicated file count, and resolves the entry shown in the detail pane.
- */
 import { useCallback, useMemo } from "react";
 
 import { simulatorEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
 import type { SimulatorAppConfig } from "@src/engines/Simulator/apps/core/types";
 import { useSimulatorAppState } from "@src/engines/Simulator/apps/core/useSimulatorAppState";
-import {
-  buildConsolidatedSessionReplayDiffSectionItems,
-  buildSessionReplayDiffSectionItems,
-} from "@src/modules/WorkStation/shared";
+import { buildSessionReplayDiffSectionItems } from "@src/modules/WorkStation/shared";
 
 import { DIFF_APP_CONFIG } from "./config";
 import type { DiffEntry, SimulatorDiffState } from "./types";
 
-export interface DiffCounts {
-  files: number;
-}
-
 export interface UseDiffReturn {
-  /** Diff entries that produce at least one renderable file section. */
+  /** Replay diff entries. Non-authoritative for final impact; Orgtrack final diffs own final counts. */
   entries: DiffEntry[];
-  /** Deduplicated file count for the top-level Diff tab. */
-  counts: DiffCounts;
-  /** Entry rendered in the right detail pane. */
+  /** Entry rendered in the right detail pane for replay/focus mode. */
   displayEntry: DiffEntry | null;
   /** Sidebar-selected entry id, or null when the cursor is in charge. */
   selectedEntryId: string | null;
@@ -52,12 +36,6 @@ export function useDiff(): UseDiffReturn {
     [state.entries]
   );
 
-  const counts = useMemo<DiffCounts>(() => {
-    return {
-      files: buildConsolidatedSessionReplayDiffSectionItems(entries).length,
-    };
-  }, [entries]);
-
   const displayEntry = useMemo<DiffEntry | null>(() => {
     if (selectedItemId) {
       const match = entries.find((entry) => entry.entryId === selectedItemId);
@@ -81,7 +59,6 @@ export function useDiff(): UseDiffReturn {
 
   return {
     entries,
-    counts,
     displayEntry,
     selectedEntryId: selectedItemId,
     selectEntry,

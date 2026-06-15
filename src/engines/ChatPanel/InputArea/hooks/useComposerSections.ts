@@ -58,7 +58,7 @@ export interface UseComposerSectionsOptions {
   hasModeSwitch?: boolean;
   /** Whether the CreatePlanCard currently has a pending plan to review. */
   hasPlan?: boolean;
-  /** Deduplicated commits and pull requests surfaced from session events. */
+  /** Commit / pull request counts supplied by Rust Orgtrack for the current session. */
   gitArtifactStats?: GitArtifactStats;
   /** Opens the dedicated file-diff surface when the files/submissions pill is clicked. */
   onFilesExpand: () => void;

@@ -152,7 +152,12 @@ pub fn load_opencode_history_for_session(session_id: &str) -> Result<Vec<Activit
 
 fn sync_opencode_history_cache(cache_conn: &mut Connection) -> Result<(), String> {
     let Some((conn, db_path)) = open_opencode_db()? else {
-        imported_cache::sync_source_cache_from_conn(cache_conn, SOURCE_OPENCODE, Vec::new(), Vec::new())?;
+        imported_cache::sync_source_cache_from_conn(
+            cache_conn,
+            SOURCE_OPENCODE,
+            Vec::new(),
+            Vec::new(),
+        )?;
         return Ok(());
     };
     let (source_mtime_ms, source_size_bytes) =

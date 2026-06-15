@@ -263,7 +263,7 @@ impl<'conn> SqliteRecordStore<'conn> {
                 ON imported_history_session_cache(source, repo_path);
             CREATE INDEX IF NOT EXISTS idx_imported_history_source_path
                 ON imported_history_session_cache(source, source_path);
-            "
+            ",
         )
     }
 
@@ -435,7 +435,6 @@ impl RecordStore for SqliteRecordStore<'_> {
             .map_err(|err| err.to_string())?;
         Ok(())
     }
-
 
     fn upsert_edit_artifact(&self, record: &SessionEditArtifactRecord) -> Result<(), String> {
         let payload = Self::to_json(record)?;
@@ -624,6 +623,21 @@ impl RecordStore for SqliteRecordStore<'_> {
                 )
                 .map_err(|err| err.to_string())?;
         }
+        self.conn
+            .execute(
+                "DELETE FROM orgtrack_core_file_changes WHERE source = ?1 AND session_id = ?2",
+                params![source, session_id],
+            )
+            .map_err(|err| err.to_string())?;
+        self.conn
+            .execute(
+                "DELETE FROM orgtrack_core_commit_links WHERE EXISTS (
+                    SELECT 1 FROM json_each(orgtrack_core_commit_links.payload_json, '$.sessionIds')
+                    WHERE json_each.value = ?1
+                )",
+                params![session_id],
+            )
+            .map_err(|err| err.to_string())?;
         Ok(())
     }
 
@@ -701,7 +715,8 @@ impl RecordStore for SqliteRecordStore<'_> {
 
     fn list_commit_links(&self) -> Result<Vec<CommitLinkRecord>, String> {
         let mut records = Vec::new();
-        let mut stmt = self.conn
+        let mut stmt = self
+            .conn
             .prepare("SELECT payload_json FROM orgtrack_core_commit_links ORDER BY linked_at DESC")
             .map_err(|err| err.to_string())?;
         let rows = stmt
@@ -757,7 +772,8 @@ impl RecordStore for SqliteRecordStore<'_> {
             return Ok(records);
         }
 
-        let mut stmt = self.conn
+        let mut stmt = self
+            .conn
             .prepare("SELECT payload_json FROM orgtrack_core_sessions ORDER BY updated_at DESC")
             .map_err(|err| err.to_string())?;
         let rows = stmt
@@ -769,7 +785,10 @@ impl RecordStore for SqliteRecordStore<'_> {
         Ok(records)
     }
 
-    fn list_file_changes(&self, workspace_path: Option<&str>) -> Result<Vec<FileChangeRecord>, String> {
+    fn list_file_changes(
+        &self,
+        workspace_path: Option<&str>,
+    ) -> Result<Vec<FileChangeRecord>, String> {
         let mut records = Vec::new();
         if let Some(workspace_path) = workspace_path {
             let mut stmt = self.conn
@@ -784,7 +803,8 @@ impl RecordStore for SqliteRecordStore<'_> {
             return Ok(records);
         }
 
-        let mut stmt = self.conn
+        let mut stmt = self
+            .conn
             .prepare("SELECT payload_json FROM orgtrack_core_file_changes ORDER BY timestamp DESC")
             .map_err(|err| err.to_string())?;
         let rows = stmt

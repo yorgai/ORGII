@@ -33,6 +33,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { getOrgtrackSessionSummaries } from "@src/api/tauri/lineage";
 import { useShowInteractArea } from "@src/contexts/workspace/ChatContext";
 import { AgentMessageClampProvider } from "@src/engines/ChatPanel/blocks";
 import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatStatusBanners";
@@ -44,6 +45,7 @@ import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/pl
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { activeGuestShareConnectionsAtom } from "@src/features/SessionSharing/state";
 import { useFileReviewSync } from "@src/hooks/fileReview";
+import { createLogger } from "@src/hooks/logger";
 import { useSessionWorkspaceSync } from "@src/hooks/session/useSessionWorkspaceSync";
 import { activeSessionIdAtom } from "@src/store/session";
 import {
@@ -84,14 +86,14 @@ import GitDiffActionsMenu from "./InputArea/components/GitDiffActionsMenu";
 import { useAgentOrgIntervention } from "./InputArea/components/useAgentOrgIntervention";
 import { useAgentOrgMemberSessionJump } from "./InputArea/components/useAgentOrgMemberSessionJump";
 import { useAgentOrgRunView } from "./InputArea/components/useAgentOrgRunView";
-import { deriveGitArtifactStats } from "./InputArea/hooks/gitArtifactStats";
 import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useGitDiffActions } from "./InputArea/hooks/useGitDiffActions";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
 import { useFollowAgent } from "./hooks/useFollowAgent";
 
+const logger = createLogger("ChatView");
+
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
-const FILE_CHANGE_STATS_EMPTY_GRACE_MS = 1200;
 
 export interface ChatViewProps {
   /** Session ID to display. Sync bridges and events load for this session. */
@@ -247,9 +249,32 @@ const ChatView: React.FC<ChatViewProps> = memo(
       sessionId
     )?.current;
     const chatEvents = useAtomValue(chatEventsAtom);
+    const [relatedCommitCount, setRelatedCommitCount] = useState(0);
+
+    useEffect(() => {
+      let cancelled = false;
+      void getOrgtrackSessionSummaries()
+        .then((summaries) => {
+          if (cancelled) return;
+          const summary = summaries.find(
+            (item) => item.sessionId === sessionId
+          );
+          setRelatedCommitCount(summary?.relatedCommits ?? 0);
+        })
+        .catch((error: unknown) => {
+          if (!cancelled) {
+            logger.warn("failed to load orgtrack commit summary", error);
+            setRelatedCommitCount(0);
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [sessionId]);
+
     const gitArtifactStats = useMemo(
-      () => deriveGitArtifactStats(chatEvents),
-      [chatEvents]
+      () => ({ commitCount: relatedCommitCount, pullRequestCount: 0 }),
+      [relatedCommitCount]
     );
     const planViewState = useMemo(
       () =>
@@ -419,21 +444,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const hasPlan = Boolean(
       currentPlanApproval && shouldShowCurrentPlanSurface
     );
-    const lastFileChangeStatsRef = useRef({
-      count: 0,
-      additions: 0,
-      deletions: 0,
-    });
-    const clearFileChangeStatsTimerRef = useRef<number | null>(null);
-
-    useEffect(() => {
-      return () => {
-        if (clearFileChangeStatsTimerRef.current !== null) {
-          window.clearTimeout(clearFileChangeStatsTimerRef.current);
-        }
-      };
-    }, []);
-
     const setStationMode = useSetAtom(stationModeAtom);
     const setSelectedSimulatorApp = useSetAtom(simulatorSelectedAppAtom);
     const setReplayMode = useSetAtom(replayModeAtom);
@@ -521,15 +531,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
     });
 
     useEffect(() => {
-      if (clearFileChangeStatsTimerRef.current !== null) {
-        window.clearTimeout(clearFileChangeStatsTimerRef.current);
-        clearFileChangeStatsTimerRef.current = null;
-      }
-      lastFileChangeStatsRef.current = {
-        count: 0,
-        additions: 0,
-        deletions: 0,
-      };
       setFileChangeStats({ count: 0, additions: 0, deletions: 0 });
     }, [sessionId, setFileChangeStats]);
 
@@ -698,55 +699,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
               onToggleQueue={toggleQueue}
               onToggleProcess={toggleProcess}
               onProcessVisibleCountChange={setProcessVisibleCount}
-              onFileChangeStatsChange={(stats) => {
-                if (clearFileChangeStatsTimerRef.current !== null) {
-                  window.clearTimeout(clearFileChangeStatsTimerRef.current);
-                  clearFileChangeStatsTimerRef.current = null;
-                }
-
-                if (stats.count > 0) {
-                  const lastStats = lastFileChangeStatsRef.current;
-                  const incomingHasLineStats =
-                    stats.additions > 0 || stats.deletions > 0;
-                  const lastHasLineStats =
-                    lastStats.additions > 0 || lastStats.deletions > 0;
-                  const shouldPreserveLineStats =
-                    !incomingHasLineStats &&
-                    lastHasLineStats &&
-                    lastStats.count === stats.count;
-                  const nextStats = shouldPreserveLineStats
-                    ? {
-                        ...stats,
-                        additions: lastStats.additions,
-                        deletions: lastStats.deletions,
-                      }
-                    : stats;
-
-                  lastFileChangeStatsRef.current = nextStats;
-                  setFileChangeStats(nextStats);
-                  return;
-                }
-
-                const lastStats = lastFileChangeStatsRef.current;
-                if (lastStats.count > 0) {
-                  setFileChangeStats(lastStats);
-                  clearFileChangeStatsTimerRef.current = window.setTimeout(
-                    () => {
-                      lastFileChangeStatsRef.current = {
-                        count: 0,
-                        additions: 0,
-                        deletions: 0,
-                      };
-                      setFileChangeStats(stats);
-                      clearFileChangeStatsTimerRef.current = null;
-                    },
-                    FILE_CHANGE_STATS_EMPTY_GRACE_MS
-                  );
-                  return;
-                }
-
-                setFileChangeStats(stats);
-              }}
+              onFileChangeStatsChange={setFileChangeStats}
               groupChatPendingMessage={groupChatPendingMessage}
               groupChatViewActive={groupChatViewActive}
               hasAnyInlineSection={hasAny}

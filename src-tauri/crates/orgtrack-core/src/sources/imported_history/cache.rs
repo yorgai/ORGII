@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use chrono::Utc;
 use crate::canonical::{AgentMetadata, SessionRecord};
 use crate::privacy::ORGTRACK_SCHEMA_VERSION;
 use crate::store::{sqlite::SqliteRecordStore, RecordStore};
+use chrono::Utc;
 use rusqlite::{params, params_from_iter, Connection, OptionalExtension};
 
 use super::metadata::{ImportedHistoryCacheInput, ImportedHistoryRecordSignature};

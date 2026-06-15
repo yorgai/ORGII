@@ -53,6 +53,7 @@
     "remove": "Xóa",
     "create": "Tạo",
     "update": "Cập nhật",
+    "updateGitBlame": "Update git blame",
     "submit": "Gửi",
     "loadMore": "Tải thêm",
     "load": "Tải",

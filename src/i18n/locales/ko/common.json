@@ -53,6 +53,7 @@
     "remove": "제거",
     "create": "생성",
     "update": "업데이트",
+    "updateGitBlame": "Update git blame",
     "submit": "제출",
     "loadMore": "더 보기",
     "load": "불러오기",

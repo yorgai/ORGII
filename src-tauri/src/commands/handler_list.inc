@@ -302,8 +302,6 @@ session_persistence::cache_delete_event,
 session_persistence::cache_update_event,
 session_persistence::cache_clear_session_history,
 session_persistence::cache_get_event,
-// File Changes Statistics
-session_persistence::cache_get_file_changes,
 // Session Unified Diff (file-history based, works without worktree)
 session_persistence::cache_get_session_diff,
 // Lineage - Chat Session Impact Graph
@@ -319,12 +317,14 @@ orgtrack::orgtrack_export,
 orgtrack::orgtrack_get_index,
 orgtrack::orgtrack_get_file_timeline,
 orgtrack::orgtrack_get_session_summaries,
+orgtrack::orgtrack_analyze_sessions,
 orgtrack::orgtrack_lookup_file_sessions,
 orgtrack::orgtrack_get_source_tier_policy,
 orgtrack::orgtrack_get_extraction_memory_gate,
 orgtrack::orgtrack_get_session_edit_artifacts,
 orgtrack::orgtrack_get_session_diff_chunks,
 orgtrack::orgtrack_get_session_final_diffs,
+orgtrack::orgtrack_get_session_commit_links,
 orgtrack::orgtrack_get_session_checkpoints,
 orgtrack::orgtrack_get_checkpoint_file_states,
 // Per-round token usage

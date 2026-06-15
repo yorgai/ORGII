@@ -102,7 +102,8 @@ pub fn session_details_path(repo_path: &Path, session_id: &str) -> PathBuf {
 }
 
 pub fn session_trajectory_path(repo_path: &Path, session_id: &str) -> PathBuf {
-    history_trajectories_dir(repo_path).join(format!("{}.trajectory.json", safe_file_stem(session_id)))
+    history_trajectories_dir(repo_path)
+        .join(format!("{}.trajectory.json", safe_file_stem(session_id)))
 }
 
 pub fn provenance_record_path(repo_path: &Path, record_id: &str) -> PathBuf {
@@ -114,7 +115,11 @@ pub fn commit_record_path(repo_path: &Path, record_id: &str) -> PathBuf {
 }
 
 pub fn file_timeline_path(repo_path: &Path, repo_relative_path: &str) -> PathBuf {
-    sharded_path(files_dir(repo_path), &path_hash(repo_relative_path), "jsonl")
+    sharded_path(
+        files_dir(repo_path),
+        &path_hash(repo_relative_path),
+        "jsonl",
+    )
 }
 
 pub fn file_timeline_legacy_path(repo_path: &Path, repo_relative_path: &str) -> PathBuf {
@@ -148,7 +153,8 @@ pub fn ensure_orgtrack_dirs(repo_path: &Path) -> Result<(), String> {
         objects_dir(repo_path),
         packs_dir(repo_path),
     ] {
-        fs::create_dir_all(&dir).map_err(|err| format!("Failed to create {}: {}", dir.display(), err))?;
+        fs::create_dir_all(&dir)
+            .map_err(|err| format!("Failed to create {}: {}", dir.display(), err))?;
     }
     ensure_readme(repo_path)?;
     ensure_gitignore(repo_path)?;
@@ -173,8 +179,11 @@ fn ensure_gitignore(repo_path: &Path) -> Result<(), String> {
     if path.exists() {
         return Ok(());
     }
-    fs::write(&path, "histories/\nmetadata/derived/objects/\nmetadata/derived/packs/\n*.trajectory.json\n")
-        .map_err(|err| format!("Failed to write {}: {}", path.display(), err))
+    fs::write(
+        &path,
+        "histories/\nmetadata/derived/objects/\nmetadata/derived/packs/\n*.trajectory.json\n",
+    )
+    .map_err(|err| format!("Failed to write {}: {}", path.display(), err))
 }
 
 fn ensure_gitattributes(repo_path: &Path) -> Result<(), String> {
@@ -199,18 +208,24 @@ pub fn load_config(repo_path: &Path) -> Result<PrivacyConfig, String> {
 
 pub fn write_json_pretty<T: serde::Serialize>(path: &Path, value: &T) -> Result<(), String> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|err| format!("Failed to create {}: {}", parent.display(), err))?;
+        fs::create_dir_all(parent)
+            .map_err(|err| format!("Failed to create {}: {}", parent.display(), err))?;
     }
-    let json = serde_json::to_string_pretty(value).map_err(|err| format!("Failed to serialize {}: {}", path.display(), err))?;
+    let json = serde_json::to_string_pretty(value)
+        .map_err(|err| format!("Failed to serialize {}: {}", path.display(), err))?;
     fs::write(path, json).map_err(|err| format!("Failed to write {}: {}", path.display(), err))
 }
 
 pub fn append_json_line<T: serde::Serialize>(path: &Path, value: &T) -> Result<u64, String> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|err| format!("Failed to create {}: {}", parent.display(), err))?;
+        fs::create_dir_all(parent)
+            .map_err(|err| format!("Failed to create {}: {}", parent.display(), err))?;
     }
-    let offset = fs::metadata(path).map(|metadata| metadata.len()).unwrap_or(0);
-    let mut json = serde_json::to_string(value).map_err(|err| format!("Failed to serialize {}: {}", path.display(), err))?;
+    let offset = fs::metadata(path)
+        .map(|metadata| metadata.len())
+        .unwrap_or(0);
+    let mut json = serde_json::to_string(value)
+        .map_err(|err| format!("Failed to serialize {}: {}", path.display(), err))?;
     json.push('\n');
     use std::io::Write;
     let mut file = fs::OpenOptions::new()
@@ -218,24 +233,31 @@ pub fn append_json_line<T: serde::Serialize>(path: &Path, value: &T) -> Result<u
         .append(true)
         .open(path)
         .map_err(|err| format!("Failed to open {}: {}", path.display(), err))?;
-    file.write_all(json.as_bytes()).map_err(|err| format!("Failed to append {}: {}", path.display(), err))?;
+    file.write_all(json.as_bytes())
+        .map_err(|err| format!("Failed to append {}: {}", path.display(), err))?;
     Ok(offset)
 }
 
 pub fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
-    let bytes = fs::read(path).map_err(|err| format!("Failed to read {}: {}", path.display(), err))?;
-    serde_json::from_slice(&bytes).map_err(|err| format!("Failed to parse {}: {}", path.display(), err))
+    let bytes =
+        fs::read(path).map_err(|err| format!("Failed to read {}: {}", path.display(), err))?;
+    serde_json::from_slice(&bytes)
+        .map_err(|err| format!("Failed to parse {}: {}", path.display(), err))
 }
 
 pub fn read_json_lines<T: serde::de::DeserializeOwned>(path: &Path) -> Result<Vec<T>, String> {
     if !path.exists() {
         return Ok(Vec::new());
     }
-    let contents = fs::read_to_string(path).map_err(|err| format!("Failed to read {}: {}", path.display(), err))?;
+    let contents = fs::read_to_string(path)
+        .map_err(|err| format!("Failed to read {}: {}", path.display(), err))?;
     contents
         .lines()
         .filter(|line| !line.trim().is_empty())
-        .map(|line| serde_json::from_str(line).map_err(|err| format!("Failed to parse {}: {}", path.display(), err)))
+        .map(|line| {
+            serde_json::from_str(line)
+                .map_err(|err| format!("Failed to parse {}: {}", path.display(), err))
+        })
         .collect()
 }
 
@@ -248,7 +270,13 @@ pub fn sharded_path(root: PathBuf, id: &str, extension: &str) -> PathBuf {
 pub fn safe_file_stem(value: &str) -> String {
     value
         .chars()
-        .map(|ch| if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' { ch } else { '_' })
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -265,15 +293,25 @@ pub fn record_id(parts: &[&str]) -> String {
 pub fn repo_relative_path(repo_path: &Path, file_path: &str) -> String {
     let path = Path::new(file_path);
     if let Ok(relative) = path.strip_prefix(repo_path) {
-        return relative.to_string_lossy().trim_start_matches('/').to_string();
+        return relative
+            .to_string_lossy()
+            .trim_start_matches('/')
+            .to_string();
     }
     file_path.trim_start_matches('/').to_string()
 }
 
 pub fn clear_derived_outputs(repo_path: &Path) -> Result<(), String> {
-    for dir in [derived_dir(repo_path), files_dir(repo_path), commits_dir(repo_path), objects_dir(repo_path), packs_dir(repo_path)] {
+    for dir in [
+        derived_dir(repo_path),
+        files_dir(repo_path),
+        commits_dir(repo_path),
+        objects_dir(repo_path),
+        packs_dir(repo_path),
+    ] {
         if dir.exists() {
-            fs::remove_dir_all(&dir).map_err(|err| format!("Failed to remove {}: {}", dir.display(), err))?;
+            fs::remove_dir_all(&dir)
+                .map_err(|err| format!("Failed to remove {}: {}", dir.display(), err))?;
         }
     }
     ensure_orgtrack_dirs(repo_path)

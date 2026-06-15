@@ -7,6 +7,8 @@
 
 pub mod canonical;
 pub mod edit_extraction;
+#[cfg(test)]
+mod edit_extraction_tests;
 pub mod policy;
 pub mod privacy;
 pub mod projectors;

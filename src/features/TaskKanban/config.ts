@@ -76,6 +76,7 @@ export const KANBAN_AGENT_TYPE_FILTER = {
   KIRO: "kiro",
   KIMI_CLI: "kimi_cli",
   OPENCODE: "opencode",
+  WINDSURF: "windsurf",
 } as const;
 
 export type KanbanBuiltInAgentTypeFilter =

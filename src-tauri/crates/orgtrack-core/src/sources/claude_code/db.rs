@@ -24,7 +24,6 @@ use chrono::TimeZone;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 
-
 static LAST_SYNC: Mutex<Option<Instant>> = Mutex::new(None);
 const SYNC_COOLDOWN: Duration = Duration::from_secs(60);
 

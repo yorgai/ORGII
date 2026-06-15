@@ -53,6 +53,7 @@
     "remove": "Kaldır",
     "create": "Oluştur",
     "update": "Güncelle",
+    "updateGitBlame": "Update git blame",
     "submit": "Gönder",
     "loadMore": "Daha fazla yükle",
     "load": "Yükle",

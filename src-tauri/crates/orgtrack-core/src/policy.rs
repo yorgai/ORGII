@@ -45,8 +45,12 @@ impl SourceTierPolicy {
 pub fn source_tier_policy(source: &str) -> SourceTierPolicy {
     match source {
         SOURCE_ORGII_CLI_SESSIONS | SOURCE_ORGII_RUST_AGENTS => SourceTierPolicy::orgii_owned(),
-        SOURCE_CURSOR_IDE | SOURCE_CLAUDE_CODE | SOURCE_CODEX_APP | SOURCE_OPENCODE
-        | SOURCE_WINDSURF | SOURCE_IMPORTED_HISTORY => SourceTierPolicy::external_default(),
+        SOURCE_CURSOR_IDE
+        | SOURCE_CLAUDE_CODE
+        | SOURCE_CODEX_APP
+        | SOURCE_OPENCODE
+        | SOURCE_WINDSURF
+        | SOURCE_IMPORTED_HISTORY => SourceTierPolicy::external_default(),
         _ => SourceTierPolicy {
             tier1: TierSupport::Default,
             tier2: TierSupport::Default,

@@ -1,16 +1,14 @@
 //! Tauri commands for session event persistence
 //!
-//! Thin async wrappers around the blocking SQLite operations in `crud`,
-//! `editing`, and `file_changes`. Each command offloads to
-//! `tokio::task::spawn_blocking` to avoid blocking the Tauri main thread.
+//! Thin async wrappers around the blocking SQLite operations in `crud` and
+//! `editing`. Each command offloads to `tokio::task::spawn_blocking` to avoid
+//! blocking the Tauri main thread.
 //!
 //! Exposed commands: `cache_save_events`, `cache_load_events`,
-//! `cache_delete_session`, `cache_truncate_session`,
-//! `cache_get_file_changes`, `cache_get_session_metadata`.
+//! `cache_delete_session`, `cache_truncate_session`, `cache_get_session_metadata`.
 
 use super::crud;
 use super::editing;
-use super::file_changes;
 use super::turn_index::CachedTurnSummary;
 use super::types::*;
 
@@ -209,19 +207,6 @@ pub async fn cache_get_event(
     event_id: String,
 ) -> Result<Option<CachedEvent>, String> {
     tokio::task::spawn_blocking(move || crud::get_event(&session_id, &event_id))
-        .await
-        .map_err(|e| e.to_string())?
-        .map_err(|e| e.to_string())
-}
-
-// ============================================
-// File Changes
-// ============================================
-
-/// Get file changes for a session (computed from cached events)
-#[tauri::command]
-pub async fn cache_get_file_changes(session_id: String) -> Result<FileChangesResult, String> {
-    tokio::task::spawn_blocking(move || file_changes::get_file_changes(&session_id))
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())

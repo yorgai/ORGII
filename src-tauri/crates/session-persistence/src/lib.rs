@@ -24,7 +24,6 @@ pub mod commands;
 mod connection;
 mod crud;
 mod editing;
-mod file_changes;
 pub(crate) mod schema;
 mod sequence;
 pub mod token_usage;
@@ -41,8 +40,8 @@ pub use turn_window::{
     load_initial_turn_window, load_turn_body_window, CachedInitialTurnWindow, CachedTurnBodyWindow,
 };
 pub use types::{
-    CacheStats, CachedEvent, CachedSession, CrossSessionSearchHit, FileChangeInfo,
-    FileChangesResult, FileChangesStats, SearchResult, SessionMetadata, TruncateResult,
+    CacheStats, CachedEvent, CachedSession, CrossSessionSearchHit, SearchResult, SessionMetadata,
+    TruncateResult,
 };
 
 // Re-export connection for legacy callers in this crate; new code should
@@ -58,15 +57,14 @@ pub use crud::{
     save_session, search_all_sessions, search_events, update_session_specs,
 };
 pub use editing::{clear_session_history, delete_event, truncate_after_event, update_event};
-pub use file_changes::{aggregate_file_change, get_file_changes};
 
 // Tauri commands — registered in `app::commands::handler_list.inc` as
 // `session_persistence::cache_*` (formerly `session::cache::cache_*`).
 pub use commands::{
     cache_clear_old_sessions, cache_clear_session_history, cache_delete_event,
-    cache_delete_session, cache_get_all_sessions, cache_get_event, cache_get_file_changes,
-    cache_get_session_diff, cache_get_session_metadata, cache_get_stats, cache_load_events,
-    cache_load_session, cache_load_turn_index, cache_save_events, cache_save_session,
-    cache_search_all_sessions, cache_search_events, cache_truncate_after_event, cache_update_event,
-    cache_update_session_specs, get_session_token_usage_records,
+    cache_delete_session, cache_get_all_sessions, cache_get_event, cache_get_session_diff,
+    cache_get_session_metadata, cache_get_stats, cache_load_events, cache_load_session,
+    cache_load_turn_index, cache_save_events, cache_save_session, cache_search_all_sessions,
+    cache_search_events, cache_truncate_after_event, cache_update_event, cache_update_session_specs,
+    get_session_token_usage_records,
 };

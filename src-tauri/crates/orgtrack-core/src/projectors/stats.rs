@@ -8,7 +8,7 @@ struct FileChangeStats {
     lines_removed: i32,
 }
 
-use crate::canonical::{CommitLinkRecord, FileChangeRecord, SessionRecord};
+use crate::canonical::{CommitLinkRecord, SessionFinalDiffRecord, SessionRecord};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,15 +28,15 @@ pub struct CoreSessionSummary {
 
 pub fn session_summaries(
     sessions: Vec<SessionRecord>,
-    file_changes: Vec<FileChangeRecord>,
+    final_diffs: Vec<SessionFinalDiffRecord>,
     commit_links: Vec<CommitLinkRecord>,
 ) -> Vec<CoreSessionSummary> {
     let mut stats_by_session: BTreeMap<String, FileChangeStats> = BTreeMap::new();
-    for change in file_changes {
-        let stats = stats_by_session.entry(change.session_id).or_default();
-        stats.files.insert(change.file_path);
-        stats.lines_added += change.lines_added;
-        stats.lines_removed += change.lines_removed;
+    for final_diff in final_diffs {
+        let stats = stats_by_session.entry(final_diff.session_id).or_default();
+        stats.files.insert(final_diff.file_path);
+        stats.lines_added += final_diff.lines_added;
+        stats.lines_removed += final_diff.lines_removed;
     }
 
     let mut commits_by_session: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();

@@ -53,6 +53,7 @@
     "remove": "移除",
     "create": "创建",
     "update": "更新",
+    "updateGitBlame": "Update git blame",
     "submit": "提交",
     "loadMore": "加载更多",
     "load": "加载",

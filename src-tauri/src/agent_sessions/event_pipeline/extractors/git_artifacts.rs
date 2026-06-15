@@ -22,14 +22,6 @@ static GIT_COMMIT_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?m)^\[(?P<prefix>.+)\s(?P<sha>[0-9a-fA-F]{7,40})\]\s(?P<subject>.+)$")
         .expect("valid git commit output regex")
 });
-static GIT_ONELINE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?m)^(?P<sha>[0-9a-fA-F]{7,40})\s+(?P<subject>.+)$")
-        .expect("valid git oneline output regex")
-});
-static GIT_REV_PARSE_OUTPUT_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?m)^(?P<sha>[0-9a-fA-F]{40})$").expect("valid git rev-parse output regex")
-});
-
 pub struct GitArtifactParseInput<'a> {
     pub command: &'a str,
     pub output: Option<&'a str>,
@@ -51,8 +43,6 @@ pub fn parse_git_artifacts(input: GitArtifactParseInput<'_>) -> Vec<ExtractedGit
     collect_pr_urls(output, &mut artifacts, &mut seen);
     collect_commit_urls(output, &mut artifacts, &mut seen);
     collect_commit_output(input.command, output, &mut artifacts, &mut seen);
-    collect_git_log_output(input.command, output, &mut artifacts, &mut seen);
-    collect_rev_parse_output(input.command, output, &mut artifacts, &mut seen);
 
     artifacts
 }
@@ -150,76 +140,6 @@ fn collect_commit_output(
             sha: Some(sha.clone()),
             short_sha: Some(short_sha(&sha)),
             subject,
-            pr_number: None,
-            pr_title: None,
-            source_branch: None,
-            target_branch: None,
-        });
-    }
-}
-
-fn collect_git_log_output(
-    command: &str,
-    output: &str,
-    artifacts: &mut Vec<ExtractedGitArtifactData>,
-    seen: &mut HashSet<String>,
-) {
-    if !command_mentions_git_subcommand(command, "log") {
-        return;
-    }
-    for captures in GIT_ONELINE_OUTPUT_RE.captures_iter(output) {
-        let sha = captures
-            .name("sha")
-            .map(|m| m.as_str().to_ascii_lowercase())
-            .unwrap_or_default();
-        let subject = captures
-            .name("subject")
-            .map(|m| m.as_str().trim().to_string())
-            .filter(|value| !value.is_empty());
-        let key = format!("commit:local@{sha}");
-        if !seen.insert(key) {
-            continue;
-        }
-        artifacts.push(ExtractedGitArtifactData {
-            kind: GitArtifactKind::Commit,
-            url: None,
-            repo_full_name: None,
-            sha: Some(sha.clone()),
-            short_sha: Some(short_sha(&sha)),
-            subject,
-            pr_number: None,
-            pr_title: None,
-            source_branch: None,
-            target_branch: None,
-        });
-    }
-}
-
-fn collect_rev_parse_output(
-    command: &str,
-    output: &str,
-    artifacts: &mut Vec<ExtractedGitArtifactData>,
-    seen: &mut HashSet<String>,
-) {
-    if !command_mentions_git_subcommand(command, "rev-parse") || !command.contains("HEAD") {
-        return;
-    }
-    for captures in GIT_REV_PARSE_OUTPUT_RE.captures_iter(output) {
-        let sha = captures
-            .name("sha")
-            .map(|m| m.as_str().to_ascii_lowercase())
-            .unwrap_or_default();
-        let key = format!("commit:local@{sha}");
-        if !seen.insert(key) {
-            continue;
-        }
-        artifacts.push(ExtractedGitArtifactData {
-            kind: GitArtifactKind::Commit,
-            url: None,
-            repo_full_name: None,
-            sha: Some(sha.clone()),
-            short_sha: Some(short_sha(&sha)),
-            subject: None,
             pr_number: None,
             pr_title: None,
             source_branch: None,

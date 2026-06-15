@@ -61,6 +61,7 @@ pub fn evaluate_memory_gate(config: &ExtractionMemoryGateConfig) -> ExtractionMe
         rust_rss_mb: process.memory_rss_mb,
         system_available_mb: system.available_mb,
         should_resume: process.memory_rss_mb < config.resume_rss_mb
-            && (system.available_mb == 0.0 || system.available_mb >= config.min_system_available_mb),
+            && (system.available_mb == 0.0
+                || system.available_mb >= config.min_system_available_mb),
     }
 }

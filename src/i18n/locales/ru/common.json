@@ -53,6 +53,7 @@
     "remove": "Удалить",
     "create": "Создать",
     "update": "Обновить",
+    "updateGitBlame": "Update git blame",
     "submit": "Отправить",
     "loadMore": "Загрузить ещё",
     "load": "Загрузить",

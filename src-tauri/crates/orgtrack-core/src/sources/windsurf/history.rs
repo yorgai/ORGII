@@ -160,7 +160,12 @@ pub fn load_windsurf_history_for_session(session_id: &str) -> Result<Vec<Activit
 
 fn sync_windsurf_history_cache(cache_conn: &mut Connection) -> Result<(), String> {
     let Some((conn, db_path)) = open_windsurf_db() else {
-        imported_cache::sync_source_cache_from_conn(cache_conn, SOURCE_WINDSURF, Vec::new(), Vec::new())?;
+        imported_cache::sync_source_cache_from_conn(
+            cache_conn,
+            SOURCE_WINDSURF,
+            Vec::new(),
+            Vec::new(),
+        )?;
         return Ok(());
     };
     let (source_mtime_ms, source_size_bytes) =

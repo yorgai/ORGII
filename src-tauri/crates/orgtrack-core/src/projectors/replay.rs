@@ -9,7 +9,13 @@ pub struct ReplayProjection {
     pub activities: Vec<ActivityRecord>,
 }
 
-pub fn project_replay(session: SessionRecord, mut activities: Vec<ActivityRecord>) -> ReplayProjection {
+pub fn project_replay(
+    session: SessionRecord,
+    mut activities: Vec<ActivityRecord>,
+) -> ReplayProjection {
     activities.sort_by(|left, right| left.timestamp.cmp(&right.timestamp));
-    ReplayProjection { session, activities }
+    ReplayProjection {
+        session,
+        activities,
+    }
 }

@@ -219,6 +219,8 @@ pub struct SessionFinalDiffRecord {
     pub diff: Option<String>,
     pub lines_added: i32,
     pub lines_removed: i32,
+    #[serde(default)]
+    pub is_deleted: bool,
     pub quality: ArtifactQuality,
     pub differs_from_summed_chunks: bool,
     pub computed_at: String,

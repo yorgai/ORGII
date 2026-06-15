@@ -20,6 +20,12 @@ import { useTranslation } from "react-i18next";
 
 import { getGitCommits } from "@src/api/http/git";
 import type { GitCommitInfo } from "@src/api/http/git/types";
+import {
+  type OrgtrackCommitLink,
+  type OrgtrackSessionFinalDiff,
+  getOrgtrackSessionCommitLinks,
+  getOrgtrackSessionFinalDiffs,
+} from "@src/api/tauri/lineage";
 import Button from "@src/components/Button";
 import TabPill from "@src/components/TabPill";
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
@@ -37,7 +43,6 @@ import {
   NoTabsPlaceholder,
   SimulatorReplayChrome,
   WorkStationShell,
-  buildConsolidatedSessionReplayDiffSectionItems,
   buildPrimarySidebarConfig,
   buildSessionReplayDiffSectionItems,
   useSimulatorAwaitingAgentCaption,
@@ -76,6 +81,44 @@ type DiffPillMode = "focus" | "all-changes";
 
 const SUBMISSION_COMMIT_RESOLVE_LIMIT = 200;
 const logger = createLogger("SessionReplayDiff");
+
+function commitLinkToSubmissionCommit(
+  link: OrgtrackCommitLink,
+  fallbackRepoContext: SubmissionRepoContext
+): SubmissionCommit {
+  const shortSha = link.commitSha.slice(0, 7);
+  return {
+    sha: link.commitSha,
+    short_sha: shortSha,
+    summary: shortSha,
+    author: null,
+    repoId: fallbackRepoContext.repoId,
+    repoPath: fallbackRepoContext.repoPath,
+  };
+}
+
+function finalDiffToSection(
+  finalDiff: OrgtrackSessionFinalDiff
+): DiffFileNavigationItem<DiffFileSectionData> {
+  const isDeleted = Boolean(finalDiff.isDeleted);
+  return {
+    key: finalDiff.filePath,
+    file: {
+      path: finalDiff.filePath,
+      status: isDeleted ? "deleted" : "modified",
+      staged: false,
+      additions: finalDiff.linesAdded,
+      deletions: finalDiff.linesRemoved,
+      oldContent: finalDiff.oldContent ?? "",
+      newContent: finalDiff.newContent ?? "",
+      isUnavailable:
+        !finalDiff.diff && !finalDiff.oldContent && !finalDiff.newContent
+          ? true
+          : undefined,
+    },
+    entryIds: [finalDiff.recordId],
+  };
+}
 
 const GitCommitDetailContent = React.lazy(
   () =>
@@ -203,6 +246,8 @@ function mergeResolvedCommit(
   };
 }
 
+// Non-canonical submission-card extraction. Final AI Blame commit counts come
+// from Rust Orgtrack summaries; this only preserves clickable replay references.
 function collectSubmissionArtifacts(
   events: readonly SessionEvent[],
   fallbackRepoContext: SubmissionRepoContext
@@ -264,8 +309,82 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   const [diffCommitNavigationRequest, setDiffCommitNavigationRequest] = useAtom(
     simulatorDiffCommitNavigationRequestAtom
   );
-  const { entries, counts, displayEntry, selectedEntryId, selectEntry } =
-    useDiff();
+  const { displayEntry, selectedEntryId, selectEntry } = useDiff();
+  const [orgtrackFinalDiffs, setOrgtrackFinalDiffs] = useState<
+    OrgtrackSessionFinalDiff[]
+  >([]);
+  const [orgtrackFinalDiffsLoading, setOrgtrackFinalDiffsLoading] =
+    useState(false);
+  const [orgtrackCommitLinks, setOrgtrackCommitLinks] = useState<
+    OrgtrackCommitLink[]
+  >([]);
+
+  useEffect(() => {
+    if (!sessionId) {
+      setOrgtrackFinalDiffs([]);
+      return;
+    }
+
+    let cancelled = false;
+    setOrgtrackFinalDiffsLoading(true);
+    void getOrgtrackSessionFinalDiffs({ sessionId })
+      .then((finalDiffs) => {
+        if (!cancelled) {
+          setOrgtrackFinalDiffs(finalDiffs);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          logger.warn("failed to load orgtrack final diffs", {
+            err,
+            sessionId,
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setOrgtrackFinalDiffsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) {
+      setOrgtrackCommitLinks([]);
+      return;
+    }
+
+    let cancelled = false;
+    void getOrgtrackSessionCommitLinks({ sessionId })
+      .then((commitLinks) => {
+        if (!cancelled) {
+          setOrgtrackCommitLinks(commitLinks);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          logger.warn("failed to load orgtrack commit links", {
+            error,
+            sessionId,
+          });
+          setOrgtrackCommitLinks([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
+
+  const canonicalFinalSections = useMemo(
+    () => orgtrackFinalDiffs.map(finalDiffToSection),
+    [orgtrackFinalDiffs]
+  );
+  const finalDiffCount = canonicalFinalSections.length;
 
   const primarySidebarCollapsed = useAtomValue(
     simulatorPrimarySidebarCollapsedAtom
@@ -402,11 +521,19 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
       ),
     [fallbackRepoContext, simulatorEvents]
   );
+  const orgtrackSubmissionCommits = useMemo(
+    () =>
+      orgtrackCommitLinks.map((link) =>
+        commitLinkToSubmissionCommit(link, fallbackRepoContext)
+      ),
+    [fallbackRepoContext, orgtrackCommitLinks]
+  );
 
   useEffect(() => {
     logger.info("submission artifacts derived", {
       eventCount: simulatorEvents.length,
-      commitCount: submissionsData.commits.length,
+      commitCount: orgtrackSubmissionCommits.length,
+      replayCommitCount: submissionsData.commits.length,
       pullRequestCount: submissionsData.pullRequests.length,
       fallbackRepoContext,
       currentRepoContext: getRepoContextFromUnknown(currentEvent),
@@ -419,6 +546,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     sessionId,
     sessionRepoPath,
     simulatorEvents.length,
+    orgtrackSubmissionCommits.length,
     submissionsData.commits.length,
     submissionsData.pullRequests.length,
   ]);
@@ -426,21 +554,21 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   const [resolvedSubmissionCommits, setResolvedSubmissionCommits] = useState<
     SubmissionCommit[]
   >([]);
-  // Tracks which submissionsData.commits array the resolution ran against.
+  // Tracks which Orgtrack commit-link array the resolution ran against.
   // Commit-card navigation must wait for git-history resolution: consuming
   // the request against unresolved submissions would select a commit whose
   // repo context may still be a wrong session-level fallback.
   const [resolvedForCommits, setResolvedForCommits] = useState<
     SubmissionCommit[] | null
   >(null);
-  const submissionsResolved = resolvedForCommits === submissionsData.commits;
+  const submissionsResolved = resolvedForCommits === orgtrackSubmissionCommits;
 
   useEffect(() => {
     let cancelled = false;
 
     async function resolveSubmissionsAgainstGitHistory() {
       logger.info("resolving submission commits against git history", {
-        submissionCount: submissionsData.commits.length,
+        submissionCount: orgtrackSubmissionCommits.length,
         fallbackRepoContext,
       });
 
@@ -469,7 +597,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
       }
 
       const nextCommits = await Promise.all(
-        submissionsData.commits.map(async (submission) => {
+        orgtrackSubmissionCommits.map(async (submission) => {
           const primaryContext = {
             repoId: submission.repoId ?? fallbackRepoContext.repoId,
             repoPath: submission.repoPath ?? fallbackRepoContext.repoPath,
@@ -543,7 +671,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
           })),
         });
         setResolvedSubmissionCommits(nextCommits);
-        setResolvedForCommits(submissionsData.commits);
+        setResolvedForCommits(orgtrackSubmissionCommits);
       }
     }
 
@@ -552,12 +680,12 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [fallbackRepoContext, repos, submissionsData.commits]);
+  }, [fallbackRepoContext, orgtrackSubmissionCommits, repos]);
 
   const submissionCommits =
     resolvedSubmissionCommits.length > 0
       ? resolvedSubmissionCommits
-      : submissionsData.commits;
+      : orgtrackSubmissionCommits;
   const hasSubmissions =
     submissionCommits.length > 0 || submissionsData.pullRequests.length > 0;
 
@@ -572,7 +700,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
         kind: "diff-filter",
         label: formatLabel(
           t("simulator.replay.diffApp.tabLabel"),
-          counts.files
+          finalDiffCount
         ),
         title: t("simulator.replay.diffApp.tabLabel"),
         icon: <GitBranch size={14} className="shrink-0" />,
@@ -589,7 +717,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
       },
     ];
   }, [
-    counts.files,
+    finalDiffCount,
     submissionCommits.length,
     submissionsData.pullRequests.length,
     t,
@@ -598,13 +726,10 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   usePublishWorkstationTabHeader({
     host: "simulator",
     content: diffHeaderContent,
-    enabled: counts.files > 0 || hasSubmissions,
+    enabled: finalDiffCount > 0 || hasSubmissions,
   });
 
-  const sidebarItems = useMemo(
-    () => buildConsolidatedSessionReplayDiffSectionItems(entries),
-    [entries]
-  );
+  const sidebarItems = canonicalFinalSections;
 
   const handleSubmissionCommitSelect = useCallback(
     (commit: SubmissionCommit) => {
@@ -697,9 +822,14 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
             <DiffFileNavigationList
               items={sidebarItems}
               selectedEntryId={
-                historySelection
+                historySelection || pillMode === "all-changes"
                   ? null
                   : (selectedEntryId ?? displayEntry?.entryId ?? null)
+              }
+              selectedPath={
+                historySelection || pillMode !== "all-changes"
+                  ? null
+                  : focusedDiffPath
               }
               onSelectItem={handleSidebarItemSelect}
             />
@@ -715,6 +845,8 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
       historySelection,
       selectedEntryId,
       displayEntry,
+      pillMode,
+      focusedDiffPath,
       handleSidebarItemSelect,
       t,
     ]
@@ -751,10 +883,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     ]
   );
 
-  const consolidatedSections = useMemo(
-    () => buildConsolidatedSessionReplayDiffSectionItems(entries),
-    [entries]
-  );
+  const consolidatedSections = canonicalFinalSections;
 
   const focusedSections = useMemo(
     () =>
@@ -877,7 +1006,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
       return (
         <DiffSectionList
           sections={consolidatedSections}
-          loading={isCurrentEventLoading}
+          loading={orgtrackFinalDiffsLoading}
           emptyTitle={t(
             "simulator.replay.diffApp.emptyForFilter",
             "No diffs yet"
@@ -917,13 +1046,14 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     consolidatedSections,
     focusedSections,
     isCurrentEventLoading,
+    orgtrackFinalDiffsLoading,
     focusedDiffPath,
     focusedDiffNonce,
     collapseAllSignal,
     t,
   ]);
 
-  if (counts.files === 0 && !hasSubmissions) {
+  if (finalDiffCount === 0 && !hasSubmissions) {
     return (
       <SimulatorReplayChrome
         tabs={tabs}
@@ -931,7 +1061,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
         onTabClick={handleTabClick}
       >
         <div className="min-h-0 flex-1">
-          {isCurrentEventLoading ? (
+          {orgtrackFinalDiffsLoading ? (
             <Placeholder
               variant="loading"
               placement="detail-panel"

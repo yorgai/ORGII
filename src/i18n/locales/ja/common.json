@@ -53,6 +53,7 @@
     "remove": "削除",
     "create": "作成",
     "update": "更新",
+    "updateGitBlame": "Update git blame",
     "submit": "送信",
     "loadMore": "もっと読み込む",
     "load": "読み込む",

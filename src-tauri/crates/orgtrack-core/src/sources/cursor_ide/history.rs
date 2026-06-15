@@ -170,9 +170,10 @@ pub fn list_cursor_ide_sessions_paginated(
     offset: usize,
 ) -> Result<CursorIdeSessionPage, String> {
     let cursor_conn = open_cursor_db();
-    let (rows, has_more) = cursor_db::list_for_sidebar_filtered(cache_conn, limit, offset, |row| {
-        is_listable_cursor_session(row, cursor_conn.as_ref())
-    })?;
+    let (rows, has_more) =
+        cursor_db::list_for_sidebar_filtered(cache_conn, limit, offset, |row| {
+            is_listable_cursor_session(row, cursor_conn.as_ref())
+        })?;
     let sessions = rows
         .into_iter()
         .map(|row| cache_row_to_session_row(row, cursor_conn.as_ref()))

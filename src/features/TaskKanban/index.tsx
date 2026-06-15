@@ -13,7 +13,13 @@
  */
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Plus } from "lucide-react";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 
@@ -23,6 +29,7 @@ import {
 } from "@src/config/opsControlCardTokens";
 import type { KanbanTask, TaskStatus } from "@src/features/KanbanBoard";
 import { createLogger } from "@src/hooks/logger";
+import { loadSidebarSessions } from "@src/store/session";
 import { kanbanReplayModeAtom } from "@src/store/ui/kanbanReplayAtom";
 import {
   kanbanAgentTypeFilterAtom,
@@ -136,6 +143,10 @@ const Kanban: React.FC<TaskKanbanProps> = ({
   const [calendarDate, setCalendarDate] = useState<Date>(() => new Date());
   const [diaryTimelineDisplayMode, setDiaryTimelineDisplayMode] =
     useState<DiaryTimelineDisplayMode>(DIARY_TIMELINE_DISPLAY_MODE.Gantt);
+
+  useEffect(() => {
+    void loadSidebarSessions({ forceRefresh: true });
+  }, []);
 
   const { tasks, allTasks } = useKanbanTasks({
     timeFilter,

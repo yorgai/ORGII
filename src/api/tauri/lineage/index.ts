@@ -9,7 +9,9 @@ import { rpc } from "@src/api/tauri/rpc";
 import type {
   CoreSessionSummary,
   FunctionEntry,
+  OrgtrackAnalysisBackfillStats,
   OrgtrackCheckpointFileState,
+  OrgtrackCommitLink,
   OrgtrackExportResult,
   OrgtrackExtractionMemoryGate,
   OrgtrackFileSessionLookup,
@@ -29,9 +31,11 @@ import type {
 export type {
   CoreSessionSummary,
   FunctionEntry,
+  OrgtrackAnalysisBackfillStats,
   OrgtrackCheckpointFileState,
   OrgtrackExportResult,
   OrgtrackExtractionMemoryGate,
+  OrgtrackCommitLink,
   OrgtrackFileSessionLookup,
   OrgtrackFileTimeline,
   OrgtrackIndex,
@@ -120,6 +124,16 @@ export async function getOrgtrackSessionSummaries(
   return rpc.lineage.orgtrackGetSessionSummaries(input);
 }
 
+export async function analyzeOrgtrackSessions(
+  input: {
+    workspacePath?: string;
+    sessionId?: string;
+    rebuild?: boolean;
+  } = {}
+): Promise<OrgtrackAnalysisBackfillStats> {
+  return rpc.lineage.orgtrackAnalyzeSessions(input);
+}
+
 export async function lookupOrgtrackFileSessions(input: {
   repoPath: string;
   filePath: string;
@@ -156,6 +170,12 @@ export async function getOrgtrackSessionFinalDiffs(input: {
   sessionId?: string;
 }): Promise<OrgtrackSessionFinalDiff[]> {
   return rpc.lineage.orgtrackGetSessionFinalDiffs(input);
+}
+
+export async function getOrgtrackSessionCommitLinks(
+  input: { sessionId?: string } = {}
+): Promise<OrgtrackCommitLink[]> {
+  return rpc.lineage.orgtrackGetSessionCommitLinks(input);
 }
 
 export async function getOrgtrackSessionCheckpoints(input: {

@@ -54,6 +54,7 @@
     "remove": "Usuń",
     "create": "Utwórz",
     "update": "Aktualizuj",
+    "updateGitBlame": "Update git blame",
     "submit": "Wyślij",
     "loadMore": "Załaduj więcej",
     "load": "Załaduj",

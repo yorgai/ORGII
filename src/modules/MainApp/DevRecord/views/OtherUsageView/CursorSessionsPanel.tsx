@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, Code2, History, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, History, XCircle } from "lucide-react";
 import React, { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,7 +16,7 @@ import {
   STAT_GRID_TOKENS,
 } from "@src/modules/shared/layouts/blocks";
 
-import StatCard, { DiffValue } from "../../components/StatCard";
+import StatCard from "../../components/StatCard";
 import {
   formatDuration,
   formatModelNameFull,
@@ -65,15 +65,6 @@ const CursorSessionsPanel: React.FC<CursorSessionsPanelProps> = memo(
     const loading = isInitialLoad;
 
     const cursorStats = useMemo(() => {
-      const totalLinesAddedAI = cursorSessions.reduce(
-        (acc, session) => acc + session.linesAdded,
-        0
-      );
-      const totalLinesRemovedAI = cursorSessions.reduce(
-        (acc, session) => acc + session.linesRemoved,
-        0
-      );
-
       const durations = cursorSessions.map(sessionDurationSeconds);
       const sessionsWithDuration = durations.filter((dur) => dur > 0);
       const avgDurationSeconds =
@@ -85,8 +76,6 @@ const CursorSessionsPanel: React.FC<CursorSessionsPanelProps> = memo(
           : 0;
 
       return {
-        totalLinesAddedAI,
-        totalLinesRemovedAI,
         avgDurationSeconds,
       };
     }, [cursorSessions]);
@@ -167,44 +156,6 @@ const CursorSessionsPanel: React.FC<CursorSessionsPanelProps> = memo(
             </span>
           ),
         },
-        {
-          key: "files",
-          label: t("devActivity.filesTouched"),
-          width: "70px",
-          align: "right",
-          sorter: (rowA, rowB) => rowA.filesChanged - rowB.filesChanged,
-          renderCell: (session) =>
-            session.filesChanged > 0 ? (
-              <span className={`${SETTINGS_TABLE_CELL.value} tabular-nums`}>
-                {session.filesChanged}
-              </span>
-            ) : (
-              <span className={SETTINGS_TABLE_CELL.muted}>—</span>
-            ),
-        },
-        {
-          key: "lines",
-          label: t("devActivity.linesChanged"),
-          width: "220px",
-          align: "right",
-          sorter: (rowA, rowB) =>
-            rowA.linesAdded +
-            rowA.linesRemoved -
-            (rowB.linesAdded + rowB.linesRemoved),
-          renderCell: (session) =>
-            session.linesAdded > 0 || session.linesRemoved > 0 ? (
-              <span className="inline-grid grid-cols-[1fr_1fr] gap-x-3 text-right tabular-nums">
-                <span className="text-green-500">
-                  +{session.linesAdded.toLocaleString()}
-                </span>
-                <span className="text-red-400">
-                  -{session.linesRemoved.toLocaleString()}
-                </span>
-              </span>
-            ) : (
-              <span className={SETTINGS_TABLE_CELL.muted}>—</span>
-            ),
-        },
       ],
       [t]
     );
@@ -231,16 +182,6 @@ const CursorSessionsPanel: React.FC<CursorSessionsPanelProps> = memo(
             {hasData
               ? cursorSessions.length.toLocaleString()
               : t("common:status.unknown")}
-          </StatCard>
-          <StatCard icon={Code2} label={t("devActivity.linesChanged")}>
-            {hasData ? (
-              <DiffValue
-                added={cursorStats.totalLinesAddedAI}
-                removed={cursorStats.totalLinesRemovedAI}
-              />
-            ) : (
-              t("common:status.unknown")
-            )}
           </StatCard>
           <StatCard icon={Clock} label={t("devActivity.cursorAvgDuration")}>
             {hasData && cursorStats.avgDurationSeconds > 0

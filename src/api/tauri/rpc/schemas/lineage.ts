@@ -123,6 +123,19 @@ export const OrgtrackSessionSummariesInput = z.object({
   workspacePath: z.string().optional(),
 });
 
+export const OrgtrackAnalyzeSessionsInput = z.object({
+  workspacePath: z.string().optional(),
+  sessionId: z.string().optional(),
+  rebuild: z.boolean().optional(),
+});
+
+export const OrgtrackAnalysisBackfillStatsSchema = z.object({
+  scannedSessions: z.number().int(),
+  analyzedSessions: z.number().int(),
+  skippedSessions: z.number().int(),
+  failedSessions: z.number().int(),
+});
+
 export const OrgtrackReachabilityStateSchema = z.enum([
   "uncommitted",
   "linked_unreachable",
@@ -287,9 +300,20 @@ export const OrgtrackSessionFinalDiffSchema = z.object({
   diff: z.string().nullable().optional(),
   linesAdded: z.number().int(),
   linesRemoved: z.number().int(),
+  isDeleted: z.boolean().optional(),
   quality: OrgtrackArtifactQualitySchema,
   differsFromSummedChunks: z.boolean(),
   computedAt: z.string(),
+});
+
+export const OrgtrackCommitLinkSchema = z.object({
+  schemaVersion: z.number().int(),
+  recordId: z.string(),
+  commitSha: z.string(),
+  filePaths: z.array(z.string()),
+  sessionIds: z.array(z.string()),
+  reachabilityState: z.string(),
+  linkedAt: z.string(),
 });
 
 export const OrgtrackSessionCheckpointSchema = z.object({
@@ -460,6 +484,9 @@ export type OrgtrackSourceTierPolicy = z.output<
 export type OrgtrackExtractionMemoryGate = z.output<
   typeof OrgtrackExtractionMemoryGateSchema
 >;
+export type OrgtrackAnalysisBackfillStats = z.output<
+  typeof OrgtrackAnalysisBackfillStatsSchema
+>;
 export type OrgtrackSessionEditArtifact = z.output<
   typeof OrgtrackSessionEditArtifactSchema
 >;
@@ -469,6 +496,7 @@ export type OrgtrackSessionDiffChunk = z.output<
 export type OrgtrackSessionFinalDiff = z.output<
   typeof OrgtrackSessionFinalDiffSchema
 >;
+export type OrgtrackCommitLink = z.output<typeof OrgtrackCommitLinkSchema>;
 export type OrgtrackSessionCheckpoint = z.output<
   typeof OrgtrackSessionCheckpointSchema
 >;

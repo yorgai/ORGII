@@ -16,7 +16,9 @@ fn open_cache_conn() -> Result<rusqlite::Connection, String> {
 fn imported_recent_paths() -> Result<Vec<imported_history::ImportedHistoryRecentPath>, String> {
     let mut conn = open_cache_conn()?;
     let mut paths = codex_app::list_codex_app_recent_paths(&mut conn, 0)?;
-    paths.extend(claude_code_history::list_claude_code_recent_paths(&mut conn, 0)?);
+    paths.extend(claude_code_history::list_claude_code_recent_paths(
+        &mut conn, 0,
+    )?);
     paths.extend(opencode_history::list_opencode_recent_paths(&mut conn, 0)?);
     paths.extend(windsurf_history::list_windsurf_recent_paths(&mut conn, 0)?);
     Ok(imported_history::recent_paths_from_paths(&paths))

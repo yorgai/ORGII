@@ -9,9 +9,11 @@ import {
   CircleSlash,
   Diff,
   GitCommit,
+  LoaderCircle,
   MessagesSquare,
 } from "lucide-react";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import ModelIcon from "@src/components/ModelIcon";
 import Tag from "@src/components/Tag";
@@ -57,8 +59,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
   isDragging,
   isSelected = false,
 }) => {
+  const { t } = useTranslation("common");
   const handleClick = () => {
     onClick?.(task);
+  };
+  const handleUpdateGitBlame = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    task.onUpdateGitBlame?.(task);
   };
 
   const isInteractive = Boolean(onClick);
@@ -70,6 +77,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
       task.orgtrackMetadata.relatedCommits > 0 ||
       task.orgtrackMetadata.committedRatePercent > 0)
   );
+  const relatedCommits = task.orgtrackMetadata?.relatedCommits ?? 0;
+  const hasRelatedCommits = relatedCommits > 0;
   const cardClasses = [
     "kanban-task-card",
     isInteractive && "kanban-task-card--interactive",
@@ -147,18 +156,38 @@ const TaskCard: React.FC<TaskCardProps> = ({
                     {task.orgtrackMetadata.filesChanged.toLocaleString()}
                   </span>
                 </span>
-                <span className="kanban-task-card__impact-dot" />
-                <span className="kanban-task-card__impact-item">
-                  <GitCommit size={12} strokeWidth={1.75} />
-                  <span>
-                    {task.orgtrackMetadata.relatedCommits.toLocaleString()}
-                  </span>
-                </span>
+                {hasRelatedCommits && (
+                  <>
+                    <span className="kanban-task-card__impact-dot" />
+                    <span className="kanban-task-card__impact-item text-primary-6">
+                      <GitCommit
+                        className="kanban-task-card__commit-icon"
+                        size={12}
+                        strokeWidth={1.75}
+                      />
+                      <span>{relatedCommits.toLocaleString()}</span>
+                    </span>
+                  </>
+                )}
               </>
+            ) : task.orgtrackMetadataLoading ? (
+              <span className="kanban-task-card__impact-loading">
+                <LoaderCircle size={12} strokeWidth={1.75} />
+                <span>{t("loading")}</span>
+              </span>
+            ) : task.onUpdateGitBlame ? (
+              <button
+                className="kanban-task-card__impact-action"
+                type="button"
+                onClick={handleUpdateGitBlame}
+              >
+                <CircleSlash size={12} strokeWidth={1.75} />
+                <span>{t("actions.updateGitBlame")}</span>
+              </button>
             ) : (
               <span className="kanban-task-card__impact-empty">
                 <CircleSlash size={12} strokeWidth={1.75} />
-                <span>N/A</span>
+                <span>Not analyzed</span>
               </span>
             )}
           </div>

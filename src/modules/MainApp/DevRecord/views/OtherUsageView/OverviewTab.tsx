@@ -36,10 +36,10 @@ import {
   STAT_GRID_TOKENS,
 } from "@src/modules/shared/layouts/blocks";
 
-import StatCard, { DiffValue } from "../../components/StatCard";
+import StatCard from "../../components/StatCard";
 import { STAT_CARD_CONFIG } from "../../statCardConfig";
 import { IDE_COLORS, formatModelNameFull } from "../CodingProfileView/config";
-import type { ModelStats, OverviewStats } from "./config";
+import type { ModelStats } from "./config";
 
 // ============================================
 // Model pie tooltip
@@ -48,7 +48,7 @@ import type { ModelStats, OverviewStats } from "./config";
 const ModelPieTooltip: React.FC<{
   active?: boolean;
   payload?: { name: string; value: number; fill?: string }[];
-  modelChartData: { model: string; lines: number }[];
+  modelChartData: { model: string; tokens: number }[];
 }> = ({ active, payload, modelChartData }) => {
   if (!active || !payload?.length) return null;
   const entry = payload[0];
@@ -91,7 +91,7 @@ const ModelPieTooltip: React.FC<{
 // ============================================
 
 const PieLegend: React.FC<{
-  modelChartData: { model: string; lines: number }[];
+  modelChartData: { model: string; tokens: number }[];
   modelNameMap: Map<string, string>;
 }> = memo(({ modelChartData, modelNameMap }) => (
   <div className="flex flex-col gap-2">
@@ -109,7 +109,7 @@ const PieLegend: React.FC<{
         />
         <span className="text-[12px] text-text-2">{entry.model}</span>
         <span className="text-[11px] tabular-nums text-text-2">
-          {entry.lines.toLocaleString()}
+          {entry.tokens.toLocaleString()}
         </span>
       </div>
     ))}
@@ -124,9 +124,8 @@ PieLegend.displayName = "PieLegend";
 
 interface OverviewTabProps {
   sessions: CursorSession[];
-  overviewStats: OverviewStats;
   modelStats: ModelStats[];
-  modelChartData: { model: string; lines: number }[];
+  modelChartData: { model: string; tokens: number }[];
   modelNameMap: Map<string, string>;
   modelBreakdownView: "bar" | "pie";
   onModelBreakdownViewChange: (view: "bar" | "pie") => void;
@@ -135,7 +134,6 @@ interface OverviewTabProps {
 
 const OverviewTab: React.FC<OverviewTabProps> = ({
   sessions,
-  overviewStats,
   modelStats,
   modelChartData,
   modelNameMap,
@@ -182,26 +180,23 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         ),
       },
       {
-        key: "lines",
-        label: t("devActivity.linesChanged"),
+        key: "tokens",
+        label: t("devActivity.tokensUsed"),
         width: "160px",
-        sorter: (rowA, rowB) =>
-          rowA.linesAdded +
-          rowA.linesRemoved -
-          (rowB.linesAdded + rowB.linesRemoved),
+        sorter: (rowA, rowB) => rowA.tokensUsed - rowB.tokensUsed,
         renderCell: (row) => (
-          <span className="whitespace-nowrap tabular-nums">
-            <span className="text-green-500">
-              +{row.linesAdded.toLocaleString()}
-            </span>{" "}
-            <span className="text-red-400">
-              -{row.linesRemoved.toLocaleString()}
-            </span>
+          <span className={`${SETTINGS_TABLE_CELL.value} tabular-nums`}>
+            {row.tokensUsed.toLocaleString()}
           </span>
         ),
       },
     ],
     [t]
+  );
+
+  const totalTokensUsed = useMemo(
+    () => sessions.reduce((sum, session) => sum + session.tokensUsed, 0),
+    [sessions]
   );
 
   const modelBreakdownViewOptions = useMemo<TabPillItem[]>(
@@ -230,17 +225,12 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             : t("common:status.unknown")}
         </StatCard>
         <StatCard
-          icon={STAT_CARD_CONFIG.linesChanged.icon}
-          label={t(STAT_CARD_CONFIG.linesChanged.labelKey)}
+          icon={STAT_CARD_CONFIG.tokensUsed.icon}
+          label={t("devActivity.tokensUsed")}
         >
-          {sessions.length > 0 ? (
-            <DiffValue
-              added={overviewStats.totalLinesAdded}
-              removed={overviewStats.totalLinesRemoved}
-            />
-          ) : (
-            t("common:status.unknown")
-          )}
+          {sessions.length > 0
+            ? totalTokensUsed.toLocaleString()
+            : t("common:status.unknown")}
         </StatCard>
         <StatCard
           icon={STAT_CARD_CONFIG.modelsUsed.icon}
@@ -303,8 +293,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                   />
                   <Tooltip content={<ChartTooltip />} cursor={false} />
                   <Bar
-                    dataKey="lines"
-                    name={t("devActivity.linesChanged")}
+                    dataKey="tokens"
+                    name={t("devActivity.tokensUsed")}
                     fill="var(--color-primary-6)"
                     isAnimationActive={false}
                     radius={[0, 4, 4, 0]}
@@ -317,7 +307,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                   <PieChart>
                     <Pie
                       data={modelChartData}
-                      dataKey="lines"
+                      dataKey="tokens"
                       nameKey="model"
                       cx="50%"
                       cy="50%"
@@ -351,7 +341,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection title={t("otherUsage.linesByModel")}>
+      <CollapsibleSection title={t("devActivity.tokensUsed")}>
         {modelStats.length > 0 ? (
           <SettingsTable<ModelStats>
             columns={modelTableColumns}

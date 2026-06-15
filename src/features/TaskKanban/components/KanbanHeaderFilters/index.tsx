@@ -2,6 +2,10 @@ import { useAtom, useAtomValue } from "jotai";
 import React, { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  IMPORTED_HISTORY_SOURCES,
+  type ImportedHistorySourceId,
+} from "@src/api/tauri/importedHistory";
 import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
 import { CLI_AGENT, type CliAgentType } from "@src/api/types/keys";
 import { formatAgentType } from "@src/assets/providers";
@@ -9,7 +13,10 @@ import type { DropdownOption } from "@src/components/Dropdown/types";
 import Select from "@src/components/Select";
 import { sessionsAtom } from "@src/store/session";
 import { kanbanAgentTypeFilterAtom } from "@src/store/ui/kanbanViewStateAtom";
-import { getDispatchCategory } from "@src/util/session/sessionDispatch";
+import {
+  getDispatchCategory,
+  getExternalHistorySourceId,
+} from "@src/util/session/sessionDispatch";
 import { isPrimarySessionListSession } from "@src/util/session/sessionVisibility";
 
 import {
@@ -71,6 +78,29 @@ const CLI_AGENT_FILTER_ITEMS = new Map<
   ])
 );
 
+const EXTERNAL_HISTORY_FILTER_BY_SOURCE: Record<
+  ImportedHistorySourceId,
+  KanbanAgentTypeFilter
+> = {
+  codex_app: KANBAN_AGENT_TYPE_FILTER.CODEX,
+  claude_code: KANBAN_AGENT_TYPE_FILTER.CLAUDE_CODE,
+  opencode: KANBAN_AGENT_TYPE_FILTER.OPENCODE,
+  windsurf: KANBAN_AGENT_TYPE_FILTER.WINDSURF,
+};
+
+const EXTERNAL_HISTORY_FILTER_ITEMS = new Map<
+  KanbanAgentTypeFilter,
+  KanbanFilterItem<KanbanAgentTypeFilter>
+>(
+  IMPORTED_HISTORY_SOURCES.map((source) => [
+    EXTERNAL_HISTORY_FILTER_BY_SOURCE[source.sourceId],
+    {
+      key: EXTERNAL_HISTORY_FILTER_BY_SOURCE[source.sourceId],
+      label: source.displayName,
+    },
+  ])
+);
+
 function getAgentTypeFilterForSession(
   sessionId: string,
   cliAgentType: CliAgentType | undefined,
@@ -82,6 +112,10 @@ function getAgentTypeFilterForSession(
   }
   if (category === DISPATCH_CATEGORY.CLI_AGENT) {
     return cliAgentType ? (cliAgentType as KanbanAgentTypeFilter) : null;
+  }
+  if (category === DISPATCH_CATEGORY.EXTERNAL_HISTORY) {
+    const sourceId = getExternalHistorySourceId(sessionId);
+    return sourceId ? EXTERNAL_HISTORY_FILTER_BY_SOURCE[sourceId] : null;
   }
   if (category === DISPATCH_CATEGORY.RUST_AGENT) {
     return agentDefinitionId ?? null;
@@ -161,6 +195,11 @@ const KanbanHeaderFilters: React.FC = memo(() => {
     }
     if (presentFilters.has(KANBAN_AGENT_TYPE_FILTER.CURSOR_IDE)) {
       items.push(CURSOR_IDE_FILTER_ITEM);
+    }
+    for (const item of EXTERNAL_HISTORY_FILTER_ITEMS.values()) {
+      if (presentFilters.has(item.key)) {
+        items.push(item);
+      }
     }
     for (const cliAgentType of CLI_AGENT_FILTERS) {
       if (presentFilters.has(cliAgentType as KanbanAgentTypeFilter)) {

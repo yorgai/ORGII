@@ -72,6 +72,10 @@ export interface KanbanTask {
   modelName?: string;
   /** Repo-shareable orgtrack metadata for session file/commit attribution. */
   orgtrackMetadata?: KanbanTaskOrgtrackMetadata;
+  /** True while explicit Orgtrack / AI Blame analysis is running for this session. */
+  orgtrackMetadataLoading?: boolean;
+  /** Explicitly triggers Rust-side Orgtrack / AI Blame analysis for this session. */
+  onUpdateGitBlame?: (task: KanbanTask) => void;
   /** Display label for the workspace root associated with the session. */
   workspaceName?: string;
   /**

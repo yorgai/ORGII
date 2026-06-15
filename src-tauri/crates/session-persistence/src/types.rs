@@ -90,33 +90,3 @@ pub struct TruncateResult {
     /// History sequences of deleted events
     pub deleted_sequences: Vec<i64>,
 }
-
-/// File change info returned to the frontend
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FileChangeInfo {
-    pub path: String,
-    pub file_name: String,
-    pub status: String, // "A" | "M" | "D"
-    pub additions: i64,
-    pub deletions: i64,
-    pub line_count: i64,
-}
-
-/// Aggregated file changes result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FileChangesResult {
-    pub files: Vec<FileChangeInfo>,
-    pub total_additions: i64,
-    pub total_deletions: i64,
-    pub stats: FileChangesStats,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FileChangesStats {
-    pub added: i64,
-    pub modified: i64,
-    pub deleted: i64,
-}

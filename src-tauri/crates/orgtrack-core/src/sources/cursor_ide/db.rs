@@ -18,10 +18,9 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use chrono::TimeZone;
-use rusqlite::{params, Connection, OpenFlags};
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
 
 static LAST_SYNC: Mutex<Option<SyncSnapshot>> = Mutex::new(None);
 const SYNC_COOLDOWN: Duration = Duration::from_secs(60);
@@ -154,6 +153,14 @@ pub fn list_for_sidebar(
     offset: usize,
 ) -> Result<(Vec<CursorSession>, bool), String> {
     list_for_sidebar_filtered(cache_conn, limit, offset, |_| Ok(true))
+}
+
+pub fn get_cached_session(
+    cache_conn: &Connection,
+    session_id: &str,
+) -> Result<Option<CursorSession>, String> {
+    delta_sync(cache_conn)?;
+    query_cache_by_id(cache_conn, session_id)
 }
 
 pub fn list_for_sidebar_filtered<F>(
@@ -479,6 +486,36 @@ fn query_cache(
         .collect();
 
     Ok(sessions)
+}
+
+fn query_cache_by_id(conn: &Connection, session_id: &str) -> Result<Option<CursorSession>, String> {
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, created_at, last_active_at, status, is_agentic,
+                    mode, model, lines_added, lines_removed, files_changed, tokens_used
+             FROM cursor_session_cache
+             WHERE id = ?1",
+        )
+        .map_err(|err| format!("Failed to prepare cursor cache session query: {}", err))?;
+
+    stmt.query_row(params![session_id], |row| {
+        Ok(CursorSession {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            created_at: row.get(2)?,
+            last_active_at: row.get(3)?,
+            status: row.get(4)?,
+            is_agentic: row.get::<_, i32>(5)? != 0,
+            mode: row.get(6)?,
+            model: row.get(7)?,
+            lines_added: row.get(8)?,
+            lines_removed: row.get(9)?,
+            files_changed: row.get(10)?,
+            tokens_used: row.get(11)?,
+        })
+    })
+    .optional()
+    .map_err(|err| format!("Failed to query cursor cache session: {}", err))
 }
 
 fn query_cache_for_sidebar(conn: &Connection) -> Result<Vec<CursorSession>, String> {

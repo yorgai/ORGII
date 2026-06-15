@@ -18,6 +18,7 @@
 //! ```
 
 mod file_extractor;
+pub(crate) mod git_artifacts;
 mod helpers;
 pub mod lang;
 mod misc_extractor;

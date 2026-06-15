@@ -1,10 +1,14 @@
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";
 
+import type { ImportedHistorySourceId } from "@src/api/tauri/importedHistory";
 import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
 import type { KanbanTask } from "@src/features/KanbanBoard";
 import { type Session, sessionMapAtom } from "@src/store/session";
-import { getDispatchCategory } from "@src/util/session/sessionDispatch";
+import {
+  getDispatchCategory,
+  getExternalHistorySourceId,
+} from "@src/util/session/sessionDispatch";
 
 import type { KanbanAgentTypeFilter, KanbanSidebarFilter } from "../config";
 import {
@@ -12,6 +16,16 @@ import {
   KANBAN_COLUMNS,
   KANBAN_SIDEBAR_FILTER,
 } from "../config";
+
+const EXTERNAL_HISTORY_FILTER_BY_SOURCE: Record<
+  ImportedHistorySourceId,
+  KanbanAgentTypeFilter
+> = {
+  codex_app: KANBAN_AGENT_TYPE_FILTER.CODEX,
+  claude_code: KANBAN_AGENT_TYPE_FILTER.CLAUDE_CODE,
+  opencode: KANBAN_AGENT_TYPE_FILTER.OPENCODE,
+  windsurf: KANBAN_AGENT_TYPE_FILTER.WINDSURF,
+};
 
 function matchesAgentTypeFilter(
   session: Session | undefined,
@@ -28,6 +42,13 @@ function matchesAgentTypeFilter(
 
   if (category === DISPATCH_CATEGORY.RUST_AGENT) {
     return session?.agentDefinitionId === filter;
+  }
+
+  if (category === DISPATCH_CATEGORY.EXTERNAL_HISTORY) {
+    const sourceId = getExternalHistorySourceId(sessionId);
+    return sourceId
+      ? EXTERNAL_HISTORY_FILTER_BY_SOURCE[sourceId] === filter
+      : false;
   }
 
   return session?.cliAgentType === filter;

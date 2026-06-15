@@ -1,18 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getOrgtrackSessionSummaries } from "@src/api/tauri/lineage";
+import {
+  analyzeOrgtrackSessions,
+  getOrgtrackSessionSummaries,
+} from "@src/api/tauri/lineage";
 import type { CoreSessionSummary } from "@src/api/tauri/lineage";
 import type { KanbanTaskOrgtrackMetadata } from "@src/features/KanbanBoard/types";
 import { createLogger } from "@src/hooks/logger";
 import type { Session } from "@src/store/session";
 
 const logger = createLogger("SessionOrgtrackMetadata");
-
-function workspacePathsForSession(session: Session): string[] {
-  return [session.repoPath, session.worktreePath].filter(
-    (path): path is string => Boolean(path)
-  );
-}
 
 function metadataFromSummaries(
   summaries: readonly CoreSessionSummary[]
@@ -33,107 +30,82 @@ function metadataFromSummaries(
   return metadataBySessionId;
 }
 
-function hasImpactMetadata(metadata: KanbanTaskOrgtrackMetadata): boolean {
-  return (
-    metadata.filesChanged > 0 ||
-    metadata.linesAdded > 0 ||
-    metadata.linesRemoved > 0 ||
-    metadata.relatedCommits > 0 ||
-    metadata.committedFiles > 0 ||
-    metadata.committedRatePercent > 0
-  );
-}
-
-function metadataFromSession(
-  session: Session
-): KanbanTaskOrgtrackMetadata | undefined {
-  const filesChanged = session.filesChanged ?? 0;
-  const linesAdded = session.linesAdded ?? 0;
-  const linesRemoved = session.linesRemoved ?? 0;
-  const metadata = {
-    filesChanged,
-    linesAdded,
-    linesRemoved,
-    relatedCommits: 0,
-    committedFiles: 0,
-    committedRatePercent: 0,
-  };
-
-  return hasImpactMetadata(metadata) ? metadata : undefined;
+export interface SessionOrgtrackMetadataState {
+  metadataBySessionId: Map<string, KanbanTaskOrgtrackMetadata>;
+  analyzingSessionIds: Set<string>;
+  analyzeSession: (session: Session) => Promise<void>;
 }
 
 export function useSessionOrgtrackMetadata(
   sessions: readonly Session[]
-): Map<string, KanbanTaskOrgtrackMetadata> {
-  const workspacePaths = useMemo(() => {
-    const paths = new Set<string>();
-    for (const session of sessions) {
-      for (const workspacePath of workspacePathsForSession(session)) {
-        paths.add(workspacePath);
-      }
-    }
-    return [...paths].sort();
-  }, [sessions]);
-  const [summariesByWorkspacePath, setSummariesByWorkspacePath] = useState<
-    Map<string, CoreSessionSummary[]>
-  >(new Map());
+): SessionOrgtrackMetadataState {
+  const [summaries, setSummaries] = useState<CoreSessionSummary[]>([]);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [analyzingSessionIds, setAnalyzingSessionIds] = useState<Set<string>>(
+    () => new Set()
+  );
 
   useEffect(() => {
     let cancelled = false;
 
     void (async () => {
-      if (workspacePaths.length === 0) {
+      if (sessions.length === 0) {
         await Promise.resolve();
         if (!cancelled) {
-          setSummariesByWorkspacePath(new Map());
+          setSummaries([]);
         }
         return;
       }
 
-      const entries = await Promise.all(
-        workspacePaths.map(async (workspacePath) => {
-          try {
-            return [
-              workspacePath,
-              await getOrgtrackSessionSummaries({ workspacePath }),
-            ] as const;
-          } catch (err) {
-            logger.warn("failed to load orgtrack core summaries", {
-              workspacePath,
-              err,
-            });
-            return [workspacePath, []] as const;
-          }
-        })
-      );
-      if (!cancelled) {
-        setSummariesByWorkspacePath(new Map(entries));
+      try {
+        const nextSummaries = await getOrgtrackSessionSummaries();
+        if (!cancelled) {
+          setSummaries(nextSummaries);
+        }
+      } catch (err) {
+        logger.warn("failed to load orgtrack core summaries", { err });
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [workspacePaths]);
+  }, [refreshNonce, sessions.length]);
 
-  return useMemo(() => {
-    const metadataBySessionId = new Map<string, KanbanTaskOrgtrackMetadata>();
-    for (const session of sessions) {
-      const metadata = metadataFromSession(session);
-      if (metadata) {
-        metadataBySessionId.set(session.session_id, metadata);
-      }
+  const analyzeSession = useCallback(async (session: Session) => {
+    setAnalyzingSessionIds((current) => {
+      const next = new Set(current);
+      next.add(session.session_id);
+      return next;
+    });
+    try {
+      await analyzeOrgtrackSessions({
+        workspacePath: session.repoPath || session.worktreePath,
+        sessionId: session.session_id,
+        rebuild: true,
+      });
+      setRefreshNonce((current) => current + 1);
+    } catch (err) {
+      logger.warn("failed to analyze orgtrack session", {
+        err,
+        sessionId: session.session_id,
+      });
+    } finally {
+      setAnalyzingSessionIds((current) => {
+        const next = new Set(current);
+        next.delete(session.session_id);
+        return next;
+      });
     }
-    for (const summaries of summariesByWorkspacePath.values()) {
-      for (const [sessionId, metadata] of metadataFromSummaries(summaries)) {
-        if (
-          hasImpactMetadata(metadata) ||
-          !metadataBySessionId.has(sessionId)
-        ) {
-          metadataBySessionId.set(sessionId, metadata);
-        }
-      }
-    }
-    return metadataBySessionId;
-  }, [sessions, summariesByWorkspacePath]);
+  }, []);
+
+  const metadataBySessionId = useMemo(
+    () => metadataFromSummaries(summaries),
+    [summaries]
+  );
+
+  return useMemo(
+    () => ({ metadataBySessionId, analyzingSessionIds, analyzeSession }),
+    [analyzeSession, analyzingSessionIds, metadataBySessionId]
+  );
 }

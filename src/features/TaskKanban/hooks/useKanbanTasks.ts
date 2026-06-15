@@ -108,7 +108,8 @@ export function useKanbanTasks(
       ),
     [sessions, sessionIdFilter]
   );
-  const orgtrackMetadata = useSessionOrgtrackMetadata(visibleSessions);
+  const { metadataBySessionId, analyzingSessionIds, analyzeSession } =
+    useSessionOrgtrackMetadata(visibleSessions);
 
   // Pair sessions with their kanban-task projection once. Downstream
   // code reads from this so we don't re-iterate `sessions` per concern.
@@ -127,7 +128,9 @@ export function useKanbanTasks(
         session,
         task: {
           ...task,
-          orgtrackMetadata: orgtrackMetadata.get(session.session_id),
+          orgtrackMetadata: metadataBySessionId.get(session.session_id),
+          orgtrackMetadataLoading: analyzingSessionIds.has(session.session_id),
+          onUpdateGitBlame: () => void analyzeSession(session),
         },
       };
     });
@@ -137,7 +140,9 @@ export function useKanbanTasks(
     manualArchivedSessionIds,
     autoArchiveTtl,
     nowTick,
-    orgtrackMetadata,
+    metadataBySessionId,
+    analyzingSessionIds,
+    analyzeSession,
   ]);
 
   const sessionTasks = useMemo(

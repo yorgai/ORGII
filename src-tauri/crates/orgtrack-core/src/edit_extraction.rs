@@ -129,14 +129,29 @@ pub fn final_diff_from_chunks(
         .iter()
         .rev()
         .filter(|chunk| chunk.file_path == file_path)
-        .find(|chunk| chunk.new_content.is_some() || chunk.diff.is_some());
+        .find(|chunk| {
+            chunk.new_content.is_some() || chunk.old_content.is_some() || chunk.diff.is_some()
+        });
     let final_chunk = final_chunk?;
-    let old_content = baseline_chunk.and_then(|chunk| chunk.old_content.clone());
-    let new_content = final_chunk.new_content.clone();
-    let diff = match (&old_content, &new_content, &final_chunk.diff) {
-        (_, _, Some(diff)) => Some(diff.clone()),
-        (Some(old_content), Some(new_content), _) => Some(similar::TextDiff::from_lines(old_content, new_content).unified_diff().to_string()),
-        _ => None,
+    let old_content = baseline_chunk
+        .and_then(|chunk| chunk.old_content.clone())
+        .or_else(|| final_chunk.old_content.clone())
+        .or_else(|| final_chunk.new_content.as_ref().map(|_| String::new()));
+    let new_content = if final_chunk.is_deleted {
+        Some(String::new())
+    } else {
+        final_chunk.new_content.clone()
+    };
+    let diff = match (&old_content, &new_content) {
+        (Some(old_content), Some(new_content)) => {
+            let text_diff = similar::TextDiff::from_lines(old_content, new_content);
+            let unified_diff = text_diff.unified_diff().to_string();
+            if unified_diff.trim().is_empty() {
+                return None;
+            }
+            Some(unified_diff)
+        }
+        _ => final_chunk.diff.clone(),
     };
     let quality = if old_content.is_some() && new_content.is_some() {
         ArtifactQuality::Exact
@@ -145,6 +160,31 @@ pub fn final_diff_from_chunks(
     } else {
         ArtifactQuality::Inferred
     };
+    let summed_lines_added: i32 = chunks
+        .iter()
+        .filter(|chunk| chunk.file_path == file_path)
+        .map(|chunk| chunk.lines_added)
+        .sum();
+    let summed_lines_removed: i32 = chunks
+        .iter()
+        .filter(|chunk| chunk.file_path == file_path)
+        .map(|chunk| chunk.lines_removed)
+        .sum();
+    let final_numstat = old_content
+        .as_deref()
+        .zip(new_content.as_deref())
+        .map(|(old_content, new_content)| {
+            let diff = similar::TextDiff::from_lines(old_content, new_content);
+            diff.iter_all_changes()
+                .fold((0_i32, 0_i32), |(added, removed), change| {
+                    match change.tag() {
+                        similar::ChangeTag::Insert => (added + 1, removed),
+                        similar::ChangeTag::Delete => (added, removed + 1),
+                        similar::ChangeTag::Equal => (added, removed),
+                    }
+                })
+        })
+        .unwrap_or((final_chunk.lines_added, final_chunk.lines_removed));
     Some(SessionFinalDiffRecord {
         schema_version: ORGTRACK_SCHEMA_VERSION,
         record_id: record_id(&["final_diff", source, session_id, file_path]),
@@ -156,18 +196,12 @@ pub fn final_diff_from_chunks(
         old_content,
         new_content,
         diff,
-        lines_added: chunks
-            .iter()
-            .filter(|chunk| chunk.file_path == file_path)
-            .map(|chunk| chunk.lines_added)
-            .sum(),
-        lines_removed: chunks
-            .iter()
-            .filter(|chunk| chunk.file_path == file_path)
-            .map(|chunk| chunk.lines_removed)
-            .sum(),
+        lines_added: final_numstat.0,
+        lines_removed: final_numstat.1,
+        is_deleted: final_chunk.is_deleted,
         quality,
-        differs_from_summed_chunks: false,
+        differs_from_summed_chunks: final_numstat.0 != summed_lines_added
+            || final_numstat.1 != summed_lines_removed,
         computed_at: Utc::now().to_rfc3339(),
     })
 }

@@ -119,11 +119,11 @@ export interface Session {
   pinned?: boolean;
   created_time?: string;
   updated_time?: string;
-  /** Number of files changed in this session (written by the frontend diff pipeline). */
+  /** Deprecated source-cache stat. Do not use for canonical AI Blame/final impact; use Orgtrack summaries. */
   filesChanged?: number;
-  /** Number of lines added in this session (written by the frontend diff pipeline). */
+  /** Deprecated source-cache stat. Do not use for canonical AI Blame/final impact; use Orgtrack summaries. */
   linesAdded?: number;
-  /** Number of lines removed in this session (written by the frontend diff pipeline). */
+  /** Deprecated source-cache stat. Do not use for canonical AI Blame/final impact; use Orgtrack summaries. */
   linesRemoved?: number;
 }
 

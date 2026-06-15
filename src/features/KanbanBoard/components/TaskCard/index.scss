@@ -180,11 +180,35 @@
   white-space: nowrap;
 }
 
-.kanban-task-card__impact-empty {
+.kanban-task-card__impact-empty,
+.kanban-task-card__impact-loading,
+.kanban-task-card__impact-action {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: var(--color-text-3);
+}
+
+.kanban-task-card__impact-action {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+
+  &:hover {
+    color: var(--color-primary-6);
+  }
+}
+
+.kanban-task-card__impact-loading svg {
+  animation: kanban-task-card-spin 0.8s linear infinite;
+}
+
+@keyframes kanban-task-card-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .kanban-task-card__impact-diff {
@@ -200,8 +224,16 @@
   gap: 4px;
 }
 
+.kanban-task-card__impact-item {
+  font-size: 11px;
+}
+
 .kanban-task-card__impact-item svg {
   flex-shrink: 0;
+}
+
+.kanban-task-card__commit-icon {
+  transform: scale(1.17);
 }
 
 .kanban-task-card__impact-dot {

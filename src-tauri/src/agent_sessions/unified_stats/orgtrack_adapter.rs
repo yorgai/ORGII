@@ -37,8 +37,14 @@ fn aggregate_to_core_session(record: &SessionAggregateRecord) -> SessionRecord {
         created_at: Some(record.created_at.clone()),
         updated_at: Some(record.updated_at.clone()),
         completed_at: record.ended_at.clone(),
-        workspace_path: record.repo_path.clone().or_else(|| record.worktree_path.clone()),
-        branch: record.branch.clone().or_else(|| record.worktree_branch.clone()),
+        workspace_path: record
+            .repo_path
+            .clone()
+            .or_else(|| record.worktree_path.clone()),
+        branch: record
+            .branch
+            .clone()
+            .or_else(|| record.worktree_branch.clone()),
         parent_session_id: record.parent_session_id.clone(),
         org_member_id: record.org_member_id.clone(),
         metadata: AgentMetadata {

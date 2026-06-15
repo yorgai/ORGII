@@ -58,6 +58,11 @@ export const lineage = {
     .output(z.array(schemas.lineage.CoreSessionSummarySchema))
     .build(),
 
+  orgtrackAnalyzeSessions: defineProcedure("orgtrack_analyze_sessions")
+    .input(schemas.lineage.OrgtrackAnalyzeSessionsInput)
+    .output(schemas.lineage.OrgtrackAnalysisBackfillStatsSchema)
+    .build(),
+
   orgtrackLookupFileSessions: defineProcedure("orgtrack_lookup_file_sessions")
     .input(schemas.lineage.OrgtrackFileSessionLookupInput)
     .output(schemas.lineage.OrgtrackFileSessionLookupSchema.nullable())
@@ -95,6 +100,13 @@ export const lineage = {
   )
     .input(schemas.lineage.OrgtrackSessionArtifactQueryInput)
     .output(z.array(schemas.lineage.OrgtrackSessionFinalDiffSchema))
+    .build(),
+
+  orgtrackGetSessionCommitLinks: defineProcedure(
+    "orgtrack_get_session_commit_links"
+  )
+    .input(z.object({ sessionId: z.string().optional() }).optional())
+    .output(z.array(schemas.lineage.OrgtrackCommitLinkSchema))
     .build(),
 
   orgtrackGetSessionCheckpoints: defineProcedure(

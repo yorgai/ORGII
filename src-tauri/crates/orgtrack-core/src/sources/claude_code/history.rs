@@ -123,9 +123,12 @@ fn sync_claude_code_history_cache(conn: &mut Connection) -> Result<(), String> {
         .iter()
         .map(ImportedHistoryDiscoveredRecord::signature)
         .collect::<Vec<_>>();
-    let changed = imported_cache::changed_records_from_conn(conn, SOURCE_CLAUDE_CODE, &discovered, |record| {
-        record.signature()
-    })?;
+    let changed = imported_cache::changed_records_from_conn(
+        conn,
+        SOURCE_CLAUDE_CODE,
+        &discovered,
+        |record| record.signature(),
+    )?;
     let mut inputs = Vec::new();
     for record in changed {
         if let Some(meta) = parse_claude_session_meta(record)? {
@@ -541,7 +544,9 @@ fn claude_file_stem_from_session_id(session_id: &str) -> Result<&str, String> {
 }
 
 fn resolve_claude_session_path(conn: &Connection, file_stem: &str) -> Result<PathBuf, String> {
-    if let Some(path) = imported_cache::get_cached_source_path_from_conn(conn, SOURCE_CLAUDE_CODE, file_stem)? {
+    if let Some(path) =
+        imported_cache::get_cached_source_path_from_conn(conn, SOURCE_CLAUDE_CODE, file_stem)?
+    {
         let path = PathBuf::from(path);
         if path.is_file() {
             return Ok(path);
