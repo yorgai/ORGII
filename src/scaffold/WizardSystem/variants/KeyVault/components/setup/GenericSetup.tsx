@@ -15,7 +15,8 @@
  * Uses SectionContainer + SectionRow + SECTION_GAP_CLASSES.
  */
 import { Keyboard, Locate, ScanSearch } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import type { FC } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
@@ -39,7 +40,7 @@ import type { AgentSetupProps } from "./types";
 type SetupMethod = "autodetect" | "enter_key" | "extract";
 type BaseUrlMode = "official" | "custom";
 
-const GenericSetup: React.FC<AgentSetupProps> = ({
+const GenericSetup: FC<AgentSetupProps> = ({
   data,
   onChange,
   keyValidated,

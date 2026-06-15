@@ -9,7 +9,8 @@
  * No bottom border by default
  */
 import { type LucideIcon, Search, X } from "lucide-react";
-import React, { memo, useCallback, useRef, useState } from "react";
+import type { FC, KeyboardEvent, ReactNode } from "react";
+import { memo, useRef, useState } from "react";
 
 // ============================================
 // Tokens
@@ -36,9 +37,9 @@ interface BaseProps {
   /** Show bottom border (default: false) */
   showBorder?: boolean;
   /** Left side content (e.g., back button) */
-  leftContent?: React.ReactNode;
+  leftContent?: ReactNode;
   /** Right side actions */
-  actions?: React.ReactNode;
+  actions?: ReactNode;
 }
 
 interface DefaultVariantProps extends BaseProps {
@@ -76,38 +77,35 @@ interface SearchInputProps {
   onSubmit?: (value: string) => void;
 }
 
-const SearchInput: React.FC<SearchInputProps> = memo(
+const SearchInput: FC<SearchInputProps> = memo(
   ({ value, onChange, placeholder = "Search...", onSubmit }) => {
     const [isFocused, setIsFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const handleFocus = useCallback(() => {
+    const handleFocus = () => {
       setIsFocused(true);
       setTimeout(() => {
         inputRef.current?.select();
       }, 50);
-    }, []);
+    };
 
-    const handleBlur = useCallback(() => {
+    const handleBlur = () => {
       setIsFocused(false);
-    }, []);
+    };
 
-    const handleKeyDown = useCallback(
-      (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === "Enter" && onSubmit) {
-          onSubmit(value);
-          inputRef.current?.blur();
-        } else if (event.key === "Escape") {
-          inputRef.current?.blur();
-        }
-      },
-      [value, onSubmit]
-    );
+    const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter" && onSubmit) {
+        onSubmit(value);
+        inputRef.current?.blur();
+      } else if (event.key === "Escape") {
+        inputRef.current?.blur();
+      }
+    };
 
-    const handleClear = useCallback(() => {
+    const handleClear = () => {
       onChange("");
       inputRef.current?.focus();
-    }, [onChange]);
+    };
 
     return (
       <div
@@ -202,7 +200,7 @@ SearchInput.displayName = "SearchInput";
 // Main Component
 // ============================================
 
-const PageHeader: React.FC<PageHeaderProps> = (props) => {
+const PageHeader: FC<PageHeaderProps> = (props) => {
   const { className = "", showBorder = false, leftContent, actions } = props;
 
   const borderClass = showBorder ? "border-b border-border-2" : "";
