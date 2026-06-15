@@ -78,4 +78,37 @@ describe("setSessionRuntimeStatusAtom session gate", () => {
 
     expect(store.get(sessionRuntimeStatusAtom)).toBe("completed");
   });
+
+  it("fails open in the cold-start window when all gate atoms are null", () => {
+    const store = createStore();
+    registerRuntimeStatusGateSessionAtoms([visibleA, visibleB]);
+    // Both gate atoms still null — no visible session established yet (e.g.
+    // dispatching immediately after a hard reload before loadSessionAtom runs).
+    expect(store.get(visibleA)).toBeNull();
+    expect(store.get(visibleB)).toBeNull();
+
+    store.set(setSessionRuntimeStatusAtom, {
+      sessionId: "session-cold",
+      status: "running",
+      source: "queue",
+    });
+
+    expect(store.get(sessionRuntimeStatusAtom)).toBe("running");
+  });
+
+  it("still drops a mismatch once at least one gate atom is non-null", () => {
+    const store = createStore();
+    registerRuntimeStatusGateSessionAtoms([visibleA, visibleB]);
+    // Only one gate atom is set — the window is no longer "cold", so a write
+    // for an unrelated session must still be dropped (no cross-session bleed).
+    store.set(visibleA, "session-1");
+
+    store.set(setSessionRuntimeStatusAtom, {
+      sessionId: "session-2",
+      status: "running",
+      source: "queue",
+    });
+
+    expect(store.get(sessionRuntimeStatusAtom)).toBe("idle");
+  });
 });

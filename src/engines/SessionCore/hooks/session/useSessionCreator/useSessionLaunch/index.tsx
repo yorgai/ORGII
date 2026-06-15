@@ -12,6 +12,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { sessionLaunch } from "@src/api/tauri/agent/session";
 import { DISPATCH_CATEGORY, KEY_SOURCE } from "@src/api/tauri/session";
 import { Message } from "@src/components/Message";
+import { beginOptimisticTurn } from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import { markTurnRunning } from "@src/engines/SessionCore/control/turnLifecycle";
 import {
   loadSessionAtom,
@@ -32,10 +33,7 @@ import {
   upsertSession,
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
-import {
-  lastUserMessageAtom,
-  setSessionRuntimeStatusAtom,
-} from "@src/store/session/cliSessionStatusAtom";
+import { lastUserMessageAtom } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultExecModeAtom } from "@src/store/session/creatorDefaultExecModeAtom";
 import { cursorCreatorModeOverrideAtom } from "@src/store/session/cursorModeOverrideAtom";
 import { cursorCreatorModelOverrideAtom } from "@src/store/session/cursorModelOverrideAtom";
@@ -138,7 +136,6 @@ export function useSessionLaunch(
   );
   const setStationMode = useSetAtom(stationModeAtom);
   const setLastUserMessage = useSetAtom(lastUserMessageAtom);
-  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
   const setSessionSource = useSetAtom(sessionSourceAtom);
   const showAuthError = useCallback(() => {
     triggerSessionExpired();
@@ -406,11 +403,13 @@ export function useSessionLaunch(
         // After navigation: the pipeline atom now points at the launched
         // session, so the session-gated status write is accepted and the
         // planning indicator covers the gap until Rust's first status event.
-        setSessionRuntimeStatus({
-          sessionId: result.sessionId,
-          status: "running",
-          source: "launch",
-        });
+        // `beginOptimisticTurn` (not a raw status write) also records a
+        // session-scoped "recently started" marker so the session-switch
+        // effect that `setActiveSessionId` just scheduled does NOT reset this
+        // session's running back to idle — that reset used to erase the
+        // launch's running and leave slow providers (deepseek) showing no
+        // footer / no Stop until the first stream event arrived seconds later.
+        beginOptimisticTurn(result.sessionId, "launch");
       }
 
       setSessionSource(null);
@@ -460,7 +459,6 @@ export function useSessionLaunch(
     onLaunchSuccess,
     workItemContext,
     resolveWorkItemContext,
-    setSessionRuntimeStatus,
     navigateToLaunchedSession,
     setSessionSource,
     setShowAddFundsModal,

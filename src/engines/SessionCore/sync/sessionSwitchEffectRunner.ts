@@ -46,7 +46,7 @@ export function runSessionSwitchEffect(
   refs.prevSessionIdRef.current = sessionId;
   refs.prevReloadEpochRef.current = reloadEpoch;
 
-  resetSessionSwitchState(switchActions);
+  resetSessionSwitchState(switchActions, sessionId);
   disposeCurrentHandler(refs);
 
   const adapter = getAdapterForSession(sessionId);

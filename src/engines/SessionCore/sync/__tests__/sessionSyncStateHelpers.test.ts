@@ -1,13 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  beginOptimisticTurn,
+  clearRecentOptimisticTurn,
+} from "@src/engines/SessionCore/control/optimisticTurnStatus";
+import {
   markTurnRunning,
   markTurnTerminal,
 } from "@src/engines/SessionCore/control/turnLifecycle";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
-import { createSessionEventHandlerCallbacks } from "@src/engines/SessionCore/sync/sessionSyncStateHelpers";
+import {
+  createSessionEventHandlerCallbacks,
+  resetSessionSwitchState,
+} from "@src/engines/SessionCore/sync/sessionSyncStateHelpers";
 import type { SessionEventHandlerStateActions } from "@src/engines/SessionCore/sync/sessionSyncStateHelpers";
 import { updateSessionStatus } from "@src/store/session";
+import { createInstrumentedStore } from "@src/util/core/state/instrumentedStore";
+
+createInstrumentedStore();
 
 vi.mock("@src/engines/SessionCore/core/store/EventStoreProxy", () => ({
   eventStoreProxy: {
@@ -149,5 +159,58 @@ describe("session sync state callbacks", () => {
     callbacks.onStatusChange?.("running");
 
     expect(markTurnRunning).toHaveBeenCalledWith("session-1");
+  });
+});
+
+describe("resetSessionSwitchState optimistic-running preservation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function createSwitchActions() {
+    return {
+      clearSessionLoadError: vi.fn(),
+      setWpReadOnly: vi.fn(),
+      setSessionContextTokens: vi.fn(),
+      setSessionContextUsage: vi.fn(),
+      setSessionContextBreakdown: vi.fn(),
+      setSessionRuntimeStatus: vi.fn(),
+      setSessionRuntimeError: vi.fn(),
+      setPendingCancel: vi.fn(),
+      setStreamRetryStatus: vi.fn(),
+    };
+  }
+
+  it("resets to idle for a normal switch (no recent optimistic start)", () => {
+    const actions = createSwitchActions();
+    resetSessionSwitchState(actions, "session-plain");
+    expect(actions.setSessionRuntimeStatus).toHaveBeenCalledWith("idle");
+  });
+
+  it("resets to idle when no sessionId is provided", () => {
+    const actions = createSwitchActions();
+    resetSessionSwitchState(actions);
+    expect(actions.setSessionRuntimeStatus).toHaveBeenCalledWith("idle");
+  });
+
+  it("preserves running for a session just optimistically started", () => {
+    // beginOptimisticTurn records the session-scoped "recently started" marker
+    // that resetSessionSwitchState consults.
+    beginOptimisticTurn("session-launched", "launch");
+    const actions = createSwitchActions();
+    resetSessionSwitchState(actions, "session-launched");
+    expect(actions.setSessionRuntimeStatus).not.toHaveBeenCalled();
+    // Other resets still run.
+    expect(actions.setPendingCancel).toHaveBeenCalledWith(false);
+    expect(actions.setStreamRetryStatus).toHaveBeenCalledWith(null);
+    clearRecentOptimisticTurn("session-launched");
+  });
+
+  it("does NOT preserve running for a different session than the launched one", () => {
+    beginOptimisticTurn("session-launched", "launch");
+    const actions = createSwitchActions();
+    resetSessionSwitchState(actions, "session-other");
+    expect(actions.setSessionRuntimeStatus).toHaveBeenCalledWith("idle");
+    clearRecentOptimisticTurn("session-launched");
   });
 });
