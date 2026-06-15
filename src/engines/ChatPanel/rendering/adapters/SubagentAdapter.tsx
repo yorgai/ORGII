@@ -16,6 +16,7 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback, useMemo } from "react";
 
+import { navigateToEventAtom } from "@src/engines/SessionCore/core/atoms/actions";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
@@ -142,11 +143,26 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
 
   const setFocusedCell = useSetAtom(focusedSubagentCellAtom);
   const setPanelReveal = useSetAtom(subagentPanelRevealRequestAtom);
+  const navigateToEvent = useSetAtom(navigateToEventAtom);
   const handleNavigate = useCallback(() => {
     if (!data.subagentSessionId) return;
+    // Seek the main replay cursor back to this subagent's delegate event so
+    // the cursor lands inside the subagent's [startedAtMs, endedAtMs] clip
+    // window. Without this, a subagent that already finished has retired its
+    // monitor cell (the cursor sits past endedAtMs), so focusing the cell or
+    // bumping the reveal counter has nothing to act on. navigateToEventAtom
+    // also flips replayMode to "replay" (free-browse), pausing tail-follow at
+    // that moment. The cell then re-materialises and focus/reveal take effect.
+    navigateToEvent(props.eventId);
     setFocusedCell(data.subagentSessionId);
     setPanelReveal((prev) => prev + 1);
-  }, [data.subagentSessionId, setFocusedCell, setPanelReveal]);
+  }, [
+    data.subagentSessionId,
+    props.eventId,
+    navigateToEvent,
+    setFocusedCell,
+    setPanelReveal,
+  ]);
 
   return (
     <div data-tool-call-event-id={props.eventId} data-tool-call-name="agent">
