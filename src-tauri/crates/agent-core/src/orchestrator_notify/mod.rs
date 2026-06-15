@@ -511,7 +511,7 @@ fn notify_inbox_phase_launch_failed(
             "[Orchestration Blocked] {:?} launch failed for {}",
             phase, work_item_id
         ),
-        preview: format!("Reason: {}", reason.chars().take(100).collect::<String>()),
+        preview: format!("Reason: {}", crate::utils::safe_truncate_chars(reason, 100).to_string()),
         content: format!(
             "Work item {} could not launch its {:?} session automatically.\n\n\
              **Reason:** {}\n\n\

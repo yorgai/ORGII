@@ -299,7 +299,7 @@ fn bounded_event_sample(event: &StreamEvent) -> String {
         "item_type": event.item.as_ref().and_then(|item| item.get("type")).and_then(Value::as_str),
     })
     .to_string();
-    sample.chars().take(500).collect()
+    crate::utils::safe_truncate_chars(sample, 500).to_string()
 }
 
 fn arguments_value_to_json_string(arguments_value: &Value) -> String {

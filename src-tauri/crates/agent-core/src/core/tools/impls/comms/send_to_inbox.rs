@@ -75,7 +75,7 @@ impl Tool for InboxTool {
         let msg = InboxMessage {
             id: Uuid::new_v4().to_string(),
             title: title.clone(),
-            preview: content.chars().take(200).collect(),
+            preview: crate::utils::safe_truncate_chars(content, 200).to_string(),
             content,
             category,
             priority,

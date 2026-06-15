@@ -89,7 +89,7 @@ pub(super) fn spawn_inbound_processor(
             info!(
                 "[gateway] Buffering inbound from {}: {}...",
                 msg.channel,
-                msg.content.chars().take(60).collect::<String>()
+                crate::utils::safe_truncate_chars(msg.content, 60).to_string()
             );
 
             // Inject any inbound media paths into the message content so the
@@ -221,7 +221,7 @@ pub(super) async fn spawn_outbound_dispatcher(
                     info!(
                         "[gateway] Routing outbound to {}: {}...",
                         outbound_msg.channel,
-                        outbound_msg.content.chars().take(60).collect::<String>()
+                        crate::utils::safe_truncate_chars(outbound_msg.content, 60).to_string()
                     );
 
                     let cm_lock = channel_manager.lock().await;

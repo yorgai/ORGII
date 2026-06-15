@@ -263,7 +263,7 @@ pub(super) fn derive_name(explicit: Option<&str>, content: &str) -> String {
     }
     let first_line = content.lines().find(|line| !line.trim().is_empty());
     let seed = first_line.unwrap_or("New session").trim();
-    let truncated: String = seed.chars().take(MAX_AUTO_NAME_LEN).collect();
+    let truncated: String = crate::utils::safe_truncate_chars(seed, MAX_AUTO_NAME_LEN).to_string();
     if truncated.is_empty() {
         "New session".to_string()
     } else {

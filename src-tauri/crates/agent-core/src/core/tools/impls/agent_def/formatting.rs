@@ -6,7 +6,7 @@ use crate::definitions::AgentDefinition;
 pub fn format_agent_summary(agent: &AgentDefinition) -> String {
     let mut line = format!("- **{}** (id: `{}`)", agent.name, agent.id);
     if let Some(ref desc) = agent.description {
-        let preview: String = desc.chars().take(80).collect();
+        let preview: String = crate::utils::safe_truncate_chars(desc, 80).to_string();
         if desc.chars().count() > 80 {
             line.push_str(&format!(": {}...", preview));
         } else {
@@ -63,7 +63,7 @@ pub fn format_org_summary(org: &OrgDefinition) -> String {
         org.member_count()
     );
     if let Some(ref desc) = org.description {
-        let preview: String = desc.chars().take(80).collect();
+        let preview: String = crate::utils::safe_truncate_chars(desc, 80).to_string();
         let suffix = if desc.chars().count() > 80 { "..." } else { "" };
         line.push_str(&format!(": {}{}", preview, suffix));
     }

@@ -74,7 +74,7 @@ impl ToolSearchTool {
         let mut output = format!("Found {} tool(s) matching '{}':\n\n", matches.len(), query);
         for (name, description, deferred) in matches {
             let label = self.availability_label(name, *deferred);
-            let summary: String = description.chars().take(300).collect();
+            let summary: String = crate::utils::safe_truncate_chars(description, 300).to_string();
             output.push_str(&format!("**{}** {}\n{}\n\n", name, label, summary));
         }
         output

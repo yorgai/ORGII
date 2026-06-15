@@ -168,7 +168,7 @@ pub async fn maybe_reflect_on_session(session_id: &str) -> Result<usize, String>
             debug!(
                 "[reflection] Rejected insight ({}): {}",
                 reason,
-                insight.content.chars().take(80).collect::<String>()
+                crate::utils::safe_truncate_chars(insight.content, 80).to_string()
             );
             continue;
         }
@@ -181,7 +181,7 @@ pub async fn maybe_reflect_on_session(session_id: &str) -> Result<usize, String>
         let category = LearningCategory::parse(&insight.category).unwrap_or_else(|| {
             tracing::warn!(
                 raw = %insight.category,
-                content_prefix = %insight.content.chars().take(60).collect::<String>(),
+                content_prefix = %crate::utils::safe_truncate_chars(insight.content, 60).to_string(),
                 "[reflection] unknown LearningCategory from LLM; defaulting to Pattern"
             );
             LearningCategory::Pattern
@@ -243,7 +243,7 @@ pub async fn maybe_reflect_on_session(session_id: &str) -> Result<usize, String>
                 debug!(
                     "[reflection] Stored pending insight '{}': {}",
                     id,
-                    insight.content.chars().take(60).collect::<String>()
+                    crate::utils::safe_truncate_chars(insight.content, 60).to_string()
                 );
             }
             Err(e) => warn!("[reflection] Failed to store insight: {}", e),

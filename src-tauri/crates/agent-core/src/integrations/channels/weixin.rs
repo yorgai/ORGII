@@ -541,7 +541,7 @@ async fn api_post(
         return Err(format!(
             "HTTP {}: {}",
             status,
-            text.chars().take(200).collect::<String>()
+            crate::utils::safe_truncate_chars(text, 200).to_string()
         ));
     }
     serde_json::from_str::<Value>(&text).map_err(|err| format!("JSON parse failed: {}", err))

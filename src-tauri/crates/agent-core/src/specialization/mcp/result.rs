@@ -122,7 +122,7 @@ pub(crate) fn maybe_persist_large_payload(
     // Prefix a reference stub + include a short preview so the LLM can
     // still make forward progress without opening the file.
     let preview_chars = MAX_RESULT_CHARS / 4;
-    let preview: String = text.chars().take(preview_chars).collect();
+    let preview: String = crate::utils::safe_truncate_chars(text, preview_chars).to_string();
     *text = reference + &preview + "…";
 
     Some(path)
@@ -188,7 +188,7 @@ pub(crate) fn persist_binary_blob(
     // Truncate the URI slug so filename stays under typical FS limits
     // (256 bytes on most platforms). 80 chars leaves room for the
     // server, timestamp, and extension.
-    let uri_trimmed: String = uri_s.chars().take(80).collect();
+    let uri_trimmed: String = crate::utils::safe_truncate_chars(uri_s, 80).to_string();
     let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%S%3fZ").to_string();
     let ext = extension_for_mime(mime_type);
     let filename = format!("{}-{}-{}.{}", server_s, uri_trimmed, stamp, ext);

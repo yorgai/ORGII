@@ -94,7 +94,7 @@ impl TurnEventHandler for BroadcastingHandler {
             result,
             ui_metadata,
         );
-        let preview: String = result.chars().take(200).collect();
+        let preview: String = crate::utils::safe_truncate_chars(result, 200).to_string();
         self.send_line(format!("[tool_result] {} → {}\n", display_name, preview));
     }
 

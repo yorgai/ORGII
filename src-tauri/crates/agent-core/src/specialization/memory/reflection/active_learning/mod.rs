@@ -138,7 +138,7 @@ pub async fn maybe_observe_tool_failures(session_id: &str) -> Result<usize, Stri
     let category = LearningCategory::parse(&insight.category).unwrap_or_else(|| {
         tracing::warn!(
             raw = %insight.category,
-            content_prefix = %insight.content.chars().take(60).collect::<String>(),
+            content_prefix = %crate::utils::safe_truncate_chars(insight.content, 60).to_string(),
             "[active-observation] unknown LearningCategory from LLM; defaulting to Pattern"
         );
         LearningCategory::Pattern

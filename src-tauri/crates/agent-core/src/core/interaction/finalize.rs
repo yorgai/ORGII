@@ -211,7 +211,7 @@ pub fn finalize_interaction_event(
         }
     }
 
-    let preview: String = content.chars().take(4000).collect();
+    let preview: String = crate::utils::safe_truncate_chars(content, 4000).to_string();
 
     broadcast_event(
         "agent:interaction_finalized",

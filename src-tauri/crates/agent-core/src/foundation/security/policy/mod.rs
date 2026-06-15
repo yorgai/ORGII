@@ -250,7 +250,7 @@ impl SecurityPolicy {
                 if command_pattern_matches(confirm_pattern, base_cmd, &parts) {
                     return Some(format!(
                         "\"{}\" requires confirmation before execution.",
-                        trimmed.chars().take(120).collect::<String>()
+                        crate::utils::safe_truncate_chars(trimmed, 120).to_string()
                     ));
                 }
             }

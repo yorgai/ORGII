@@ -605,7 +605,7 @@ impl TurnEventHandler for UnifiedEventHandler {
         );
         self.push_to_store(session_id, event);
 
-        let preview: String = result.chars().take(4000).collect();
+        let preview: String = crate::utils::safe_truncate_chars(result, 4000).to_string();
         broadcast_event(
             "agent:tool_result",
             serde_json::json!({

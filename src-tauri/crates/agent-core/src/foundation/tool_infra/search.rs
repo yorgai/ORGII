@@ -406,7 +406,7 @@ fn count_grep_matches(text: &str) -> usize {
 
 fn truncate_output(text: String, max_chars: usize) -> String {
     if text.len() > max_chars {
-        let truncated: String = text.chars().take(max_chars).collect();
+        let truncated: String = crate::utils::safe_truncate_chars(text, max_chars).to_string();
         format!(
             "{}\n\n[...truncated, {} total chars]",
             truncated,

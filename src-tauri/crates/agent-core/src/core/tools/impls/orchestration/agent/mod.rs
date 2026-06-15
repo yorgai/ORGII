@@ -969,7 +969,7 @@ impl Tool for AgentTool {
                 name: format!(
                     "{} ({})",
                     agent.name,
-                    description.chars().take(60).collect::<String>()
+                    crate::utils::safe_truncate_chars(description, 60).to_string()
                 ),
                 status: crate::session::SessionStatus::Running.as_str().to_string(),
                 model: Some(model.clone()),

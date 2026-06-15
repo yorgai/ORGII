@@ -188,7 +188,7 @@ impl HookExecutor {
                 let status = resp.status();
                 let success = status.is_success();
                 let body_text = match resp.text().await {
-                    Ok(t) => t.chars().take(10_000).collect::<String>(),
+                    Ok(t) => crate::utils::safe_truncate_chars(t, 10_000).to_string(),
                     Err(err) => {
                         // A body-read failure here means the connection
                         // dropped mid-read or the body was non-UTF-8.

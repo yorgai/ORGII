@@ -232,7 +232,7 @@ pub(crate) async fn send_message_impl(
     // Syncing the resolved account here keeps memory and DB in one truth.
     {
         let sid = session_id.clone();
-        let input_preview: String = content.chars().take(100).collect();
+        let input_preview: String = crate::utils::safe_truncate_chars(content, 100).to_string();
         let model_clone = effective_model.clone();
         let account_clone = effective_account_id.clone();
         let prev_account = tokio::task::spawn_blocking(move || {

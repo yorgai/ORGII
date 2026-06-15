@@ -103,7 +103,7 @@ pub fn requires_user_confirmation(command: &str) -> Option<String> {
                 if subcommands.contains(&sub) {
                     return Some(format!(
                         "\"{}\" has external side effects and requires your approval.",
-                        trimmed.chars().take(120).collect::<String>()
+                        crate::utils::safe_truncate_chars(trimmed, 120).to_string()
                     ));
                 }
             }

@@ -226,7 +226,7 @@ fn parse_stream_frame(data: &str) -> Result<Option<GenerateContentResponse>, Pro
 }
 
 fn bounded_gemini_frame_sample(data: &str) -> String {
-    data.chars().take(500).collect()
+    crate::utils::safe_truncate_chars(data, 500).to_string()
 }
 
 fn response_to_llm(response: GenerateContentResponse, tool_call_id_prefix: &str) -> LLMResponse {

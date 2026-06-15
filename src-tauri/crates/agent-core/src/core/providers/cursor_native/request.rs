@@ -90,7 +90,7 @@ fn message_text(msg: &serde_json::Value) -> String {
 
 fn preview(text: &str) -> String {
     let mut output = String::new();
-    for ch in text.chars().take(120) {
+    for ch in crate::utils::safe_truncate_chars(text, 120).chars() {
         if ch.is_control() && ch != '\n' && ch != '\t' {
             continue;
         }
