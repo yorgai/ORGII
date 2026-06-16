@@ -67,6 +67,6 @@ pub use commands::{
     cache_delete_session, cache_get_all_sessions, cache_get_event, cache_get_session_diff,
     cache_get_session_metadata, cache_get_stats, cache_load_events, cache_load_session,
     cache_load_turn_index, cache_save_events, cache_save_session, cache_search_all_sessions,
-    cache_search_events, cache_truncate_after_event, cache_update_event, cache_update_session_specs,
-    get_session_token_usage_records,
+    cache_search_events, cache_truncate_after_event, cache_update_event,
+    cache_update_session_specs, get_session_token_usage_records,
 };

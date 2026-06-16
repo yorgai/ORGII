@@ -45,12 +45,7 @@ impl TurnFileAccumulator {
 
     /// Fold one event into the accumulator. `args_json` / `result_json` are
     /// the raw event columns; non-file tools and error results are ignored.
-    pub fn add_event(
-        &mut self,
-        function_name: Option<&str>,
-        args_json: &str,
-        result_json: &str,
-    ) {
+    pub fn add_event(&mut self, function_name: Option<&str>, args_json: &str, result_json: &str) {
         let Some(function_name) = function_name else {
             return;
         };
@@ -148,12 +143,44 @@ fn read_lines(result: &serde_json::Value, key: &str) -> u32 {
     direct.or(nested).unwrap_or(0) as u32
 }
 
+fn content_line_count(args: &serde_json::Value) -> u32 {
+    args.get("new_string")
+        .and_then(serde_json::Value::as_str)
+        .or_else(|| args.get("content").and_then(serde_json::Value::as_str))
+        .or_else(|| args.get("insert_text").and_then(serde_json::Value::as_str))
+        .or_else(|| args.get("file_text").and_then(serde_json::Value::as_str))
+        .map(|content| content.lines().count().max(1) as u32)
+        .unwrap_or(0)
+}
+
+fn fallback_line_stats(function_name: &str, args: &serde_json::Value) -> (u32, u32) {
+    let line_count = content_line_count(args);
+    if line_count == 0 {
+        return (0, 0);
+    }
+
+    match function_name {
+        tool_names::DELETE_FILE => (0, line_count),
+        tool_names::STORAGE_EDIT_FILE_BY_REPLACE | tool_names::EDIT_FILE => {
+            let removed = args
+                .get("old_string")
+                .and_then(serde_json::Value::as_str)
+                .or_else(|| args.get("old_str").and_then(serde_json::Value::as_str))
+                .map(|content| content.lines().count().max(1) as u32)
+                .unwrap_or(0);
+            (line_count, removed)
+        }
+        _ => (line_count, 0),
+    }
+}
+
 fn extract_event_files(
     function_name: &str,
     args_json: &str,
     result_json: &str,
 ) -> Vec<TurnModifiedFile> {
-    let args: serde_json::Value = serde_json::from_str(args_json).unwrap_or(serde_json::Value::Null);
+    let args: serde_json::Value =
+        serde_json::from_str(args_json).unwrap_or(serde_json::Value::Null);
     let result: serde_json::Value =
         serde_json::from_str(result_json).unwrap_or(serde_json::Value::Null);
 
@@ -177,18 +204,28 @@ fn extract_event_files(
         return Vec::new();
     }
 
+    let result_additions = read_lines(&result, "linesAdded");
+    let result_deletions = read_lines(&result, "linesRemoved");
+    let (fallback_additions, fallback_deletions) = if result_additions == 0 && result_deletions == 0
+    {
+        fallback_line_stats(function_name, &args)
+    } else {
+        (0, 0)
+    };
+
     vec![TurnModifiedFile {
         file_name: file_name_for(&path),
         status: status_for_function(function_name).to_string(),
-        additions: read_lines(&result, "linesAdded"),
-        deletions: read_lines(&result, "linesRemoved"),
+        additions: result_additions.saturating_add(fallback_additions),
+        deletions: result_deletions.saturating_add(fallback_deletions),
         path,
     }]
 }
 
 /// apply_patch can touch multiple files. Prefer the structured `segments`
-/// result (carries per-file line stats); fall back to `filePaths`, then to
-/// parsing the patch header lines in the args.
+/// result (carries per-file line stats), then parse `patch_text` so fallback
+/// rows still carry per-file line stats. Use `filePaths` only when the patch
+/// text is unavailable.
 fn extract_patch_files(
     args: &serde_json::Value,
     result: &serde_json::Value,
@@ -210,7 +247,12 @@ fn extract_patch_files(
                 .unwrap_or(false);
             files.push(TurnModifiedFile {
                 file_name: file_name_for(&path),
-                status: if is_deleted { STATUS_DELETED } else { STATUS_MODIFIED }.to_string(),
+                status: if is_deleted {
+                    STATUS_DELETED
+                } else {
+                    STATUS_MODIFIED
+                }
+                .to_string(),
                 additions: read_lines(segment, "linesAdded"),
                 deletions: read_lines(segment, "linesRemoved"),
                 path,
@@ -221,7 +263,20 @@ fn extract_patch_files(
         }
     }
 
-    if let Some(paths) = result.get("filePaths").and_then(serde_json::Value::as_array) {
+    let patch_text = args
+        .get("patch_text")
+        .or_else(|| args.get("patch"))
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    let patch_files = extract_files_from_patch_text(patch_text);
+    if !patch_files.is_empty() {
+        return patch_files;
+    }
+
+    if let Some(paths) = result
+        .get("filePaths")
+        .and_then(serde_json::Value::as_array)
+    {
         let collected: Vec<TurnModifiedFile> = paths
             .iter()
             .filter_map(serde_json::Value::as_str)
@@ -239,40 +294,54 @@ fn extract_patch_files(
         }
     }
 
-    let patch_text = args
-        .get("patch_text")
-        .or_else(|| args.get("patch"))
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or_default();
-    extract_paths_from_patch_text(patch_text)
-        .into_iter()
-        .map(|path| TurnModifiedFile {
-            file_name: file_name_for(&path),
-            status: STATUS_MODIFIED.to_string(),
-            additions: 0,
-            deletions: 0,
-            path,
-        })
-        .collect()
+    Vec::new()
 }
 
-fn extract_paths_from_patch_text(patch_text: &str) -> Vec<String> {
-    let mut paths = Vec::new();
+fn extract_files_from_patch_text(patch_text: &str) -> Vec<TurnModifiedFile> {
+    let mut files: Vec<TurnModifiedFile> = Vec::new();
+    let mut current_path: Option<String> = None;
+
     for line in patch_text.lines() {
         let trimmed = line.trim();
-        let path = trimmed
+        let header_path = trimmed
             .strip_prefix("*** Add File:")
             .or_else(|| trimmed.strip_prefix("*** Update File:"))
             .or_else(|| trimmed.strip_prefix("*** Delete File:"))
             .or_else(|| trimmed.strip_prefix("+++ b/"))
-            .or_else(|| trimmed.strip_prefix("--- a/"));
-        if let Some(path) = path.map(str::trim).filter(|path| !path.is_empty()) {
-            if path != "/dev/null" && !paths.iter().any(|seen| seen == path) {
-                paths.push(path.to_string());
+            .or_else(|| trimmed.strip_prefix("--- a/"))
+            .map(str::trim)
+            .filter(|path| !path.is_empty() && *path != "/dev/null");
+
+        if let Some(path) = header_path {
+            let path = path.to_string();
+            if !files.iter().any(|seen| seen.path == path) {
+                files.push(TurnModifiedFile {
+                    file_name: file_name_for(&path),
+                    status: STATUS_MODIFIED.to_string(),
+                    additions: 0,
+                    deletions: 0,
+                    path: path.clone(),
+                });
+            }
+            current_path = Some(path);
+            continue;
+        }
+
+        let Some(path) = current_path.as_deref() else {
+            continue;
+        };
+        if line.starts_with('+') && !line.starts_with("+++") {
+            if let Some(file) = files.iter_mut().find(|file| file.path == path) {
+                file.additions = file.additions.saturating_add(1);
+            }
+        } else if line.starts_with('-') && !line.starts_with("---") {
+            if let Some(file) = files.iter_mut().find(|file| file.path == path) {
+                file.deletions = file.deletions.saturating_add(1);
             }
         }
     }
-    paths
+
+    files
 }
 
 #[cfg(test)]
@@ -312,6 +381,21 @@ mod tests {
         let files = acc.files();
         assert_eq!(files[0].status, "created");
         assert_eq!(files[1].status, "deleted");
+    }
+
+    #[test]
+    fn create_file_falls_back_to_content_line_count() {
+        let mut acc = TurnFileAccumulator::new();
+        acc.add_event(
+            Some("create_file"),
+            r#"{"file_path":"note.md","content":"one\ntwo\nthree"}"#,
+            "{}",
+        );
+        let files = acc.files();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].status, "created");
+        assert_eq!(files[0].additions, 3);
+        assert_eq!(files[0].deletions, 0);
     }
 
     #[test]
@@ -364,16 +448,35 @@ mod tests {
     }
 
     #[test]
-    fn apply_patch_falls_back_to_patch_text() {
+    fn apply_patch_falls_back_to_patch_text_with_line_stats() {
         let mut acc = TurnFileAccumulator::new();
         acc.add_event(
             Some("apply_patch"),
-            r#"{"patch_text":"*** Add File: x.rs\n*** Update File: y.rs\n"}"#,
+            r#"{"patch_text":"*** Add File: x.rs\n+one\n+two\n*** Update File: y.rs\n-old\n+new\n context\n"}"#,
             "{}",
         );
         let files = acc.files();
         let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
         assert_eq!(paths, vec!["x.rs", "y.rs"]);
+        assert_eq!(files[0].additions, 2);
+        assert_eq!(files[0].deletions, 0);
+        assert_eq!(files[1].additions, 1);
+        assert_eq!(files[1].deletions, 1);
+    }
+
+    #[test]
+    fn apply_patch_prefers_patch_text_stats_over_file_paths() {
+        let mut acc = TurnFileAccumulator::new();
+        acc.add_event(
+            Some("apply_patch"),
+            r#"{"patch_text":"*** Update File: a.rs\n-old\n+new\n+extra\n"}"#,
+            r#"{"filePaths":["a.rs"]}"#,
+        );
+        let files = acc.files();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].path, "a.rs");
+        assert_eq!(files[0].additions, 2);
+        assert_eq!(files[0].deletions, 1);
     }
 
     #[test]

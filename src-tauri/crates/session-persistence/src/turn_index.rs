@@ -18,7 +18,9 @@ const TURN_STATUS_FAILED: &str = "failed";
 /// rebuilds when the stored version is older.
 ///
 /// v6: materialize the per-round modified-file list (`modified_files_json`).
-const TURN_INDEX_VERSION: i64 = 6;
+/// v7: include patch-text fallback line stats in `modified_files_json`.
+/// v8: include content fallback line stats for create/write-style tools.
+const TURN_INDEX_VERSION: i64 = 8;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
