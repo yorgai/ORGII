@@ -56,6 +56,37 @@ function normalizeUserText(value: string | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim();
 }
 
+function getUserMessageContent(event: SessionEvent): string {
+  return typeof event.result?.message === "object" &&
+    event.result.message !== null &&
+    "content" in event.result.message
+    ? String(event.result.message.content ?? "")
+    : event.displayText;
+}
+
+function getUserMessageImages(event: SessionEvent): string[] | undefined {
+  const images = event.result?.images;
+  if (!Array.isArray(images) || images.length === 0) return undefined;
+  return images.filter((image): image is string => typeof image === "string");
+}
+
+function hasUserMessageImages(event: SessionEvent): boolean {
+  return Boolean(getUserMessageImages(event)?.length);
+}
+
+function withUserMessageImages(
+  event: SessionEvent,
+  images: string[]
+): SessionEvent {
+  return {
+    ...event,
+    result: {
+      ...(event.result ?? {}),
+      images,
+    },
+  };
+}
+
 /**
  * Local approximation of the Rust simulator/messages visibility rule
  * (`is_visible_in_simulator_or_messages` in `derived.rs`).
@@ -297,16 +328,16 @@ export const loadSessionAtom = atom(
 
     if (mergedEvents.some(isBackendUserMessageEvent)) {
       const syntheticDisplayTextByContent = new Map<string, string>();
+      const syntheticImagesByContent = new Map<string, string[]>();
       for (const event of mergedEvents) {
         if (!isSyntheticUserInputEvent(event)) continue;
-        const content =
-          typeof event.result?.message === "object" &&
-          event.result.message !== null &&
-          "content" in event.result.message
-            ? String(event.result.message.content ?? "")
-            : event.displayText;
+        const content = getUserMessageContent(event);
         if (content && event.displayText && content !== event.displayText) {
           syntheticDisplayTextByContent.set(content, event.displayText);
+        }
+        const images = getUserMessageImages(event);
+        if (content && images?.length) {
+          syntheticImagesByContent.set(content, images);
         }
       }
 
@@ -314,21 +345,21 @@ export const loadSessionAtom = atom(
         .filter((event) => !isSyntheticUserInputEvent(event))
         .map((event) => {
           if (!isBackendUserMessageEvent(event)) return event;
-          const content =
-            typeof event.result?.message === "object" &&
-            event.result.message !== null &&
-            "content" in event.result.message
-              ? String(event.result.message.content ?? "")
-              : event.displayText;
+          const content = getUserMessageContent(event);
           const syntheticDisplayText =
             syntheticDisplayTextByContent.get(content);
+          const syntheticImages = syntheticImagesByContent.get(content);
+          let nextEvent = event;
           if (
             syntheticDisplayText &&
-            event.displayText !== syntheticDisplayText
+            nextEvent.displayText !== syntheticDisplayText
           ) {
-            return { ...event, displayText: syntheticDisplayText };
+            nextEvent = { ...nextEvent, displayText: syntheticDisplayText };
           }
-          return event;
+          if (syntheticImages?.length && !hasUserMessageImages(nextEvent)) {
+            nextEvent = withUserMessageImages(nextEvent, syntheticImages);
+          }
+          return nextEvent;
         });
     }
 
@@ -433,26 +464,49 @@ export const appendEventsAtom = atom(
     const uniqueNew = newEvents.filter((evt) => !existingIndex.has(evt.id));
 
     if (uniqueNew.length > 0) {
+      const existingEvents = get(eventsAtom);
+      const syntheticImagesByContent = new Map<string, string[]>();
+      for (const event of existingEvents) {
+        if (!isSyntheticUserInputEvent(event)) continue;
+        const content = getUserMessageContent(event);
+        const images = getUserMessageImages(event);
+        if (content && images?.length) {
+          syntheticImagesByContent.set(content, images);
+        }
+      }
+
+      const uniqueNewWithImages = uniqueNew.map((event) => {
+        if (!isBackendUserMessageEvent(event) || hasUserMessageImages(event)) {
+          return event;
+        }
+        const images = syntheticImagesByContent.get(
+          getUserMessageContent(event)
+        );
+        return images?.length ? withUserMessageImages(event, images) : event;
+      });
+
       // When the backend echoes the real user message, evict the synthetic
       // placeholder so the user doesn't see a duplicate first message.
       // Use a semantic Rust-side removal instead of the getEvents→filter→set
       // pattern; events arriving between a TS-side read and write would be
       // silently dropped.
-      const hasRealUserMessage = uniqueNew.some(isBackendUserMessageEvent);
+      const hasRealUserMessage = uniqueNewWithImages.some(
+        isBackendUserMessageEvent
+      );
       if (hasRealUserMessage) {
         eventStoreProxy.removeSyntheticUserInputEvents();
       }
 
       // Incrementally extend the cached running-args map with new events
       // instead of rescanning all existing events (O(newEvents) vs O(allEvents)).
-      const argsMap = extendRunningArgsCache(uniqueNew);
-      const enrichedNew = applyRunningArgs(argsMap, uniqueNew);
+      const argsMap = extendRunningArgsCache(uniqueNewWithImages);
+      const enrichedNew = applyRunningArgs(argsMap, uniqueNewWithImages);
 
       eventStoreProxy.append(enrichedNew);
 
       // Update time range if needed
       const currentRange = get(replayTimeRangeAtom);
-      const lastNew = uniqueNew[uniqueNew.length - 1];
+      const lastNew = uniqueNewWithImages[uniqueNewWithImages.length - 1];
 
       if (
         !currentRange.end ||
@@ -469,9 +523,9 @@ export const appendEventsAtom = atom(
       const mode = get(replayModeAtom);
       if (mode === "follow") {
         let followTarget = lastNew;
-        for (let idx = uniqueNew.length - 1; idx >= 0; idx--) {
-          if (isSimulatorVisibleApprox(uniqueNew[idx])) {
-            followTarget = uniqueNew[idx];
+        for (let idx = uniqueNewWithImages.length - 1; idx >= 0; idx--) {
+          if (isSimulatorVisibleApprox(uniqueNewWithImages[idx])) {
+            followTarget = uniqueNewWithImages[idx];
             break;
           }
         }

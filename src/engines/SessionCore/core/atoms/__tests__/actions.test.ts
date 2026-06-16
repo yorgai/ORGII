@@ -1,13 +1,19 @@
 import { createStore } from "jotai/vanilla";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { eventStoreProxy } from "../../store/EventStoreProxy";
 import type { SessionEvent } from "../../types";
-import type { loadSessionAtom as LoadSessionAtomType } from "../actions";
+import type {
+  appendEventsAtom as AppendEventsAtomType,
+  loadSessionAtom as LoadSessionAtomType,
+} from "../actions";
 import type { eventsAtom as EventsAtomType } from "../events";
 
 vi.mock("../../store/EventStoreProxy", () => ({
   eventStoreProxy: {
+    append: vi.fn().mockResolvedValue(undefined),
     mergeEvents: vi.fn().mockResolvedValue(undefined),
+    removeSyntheticUserInputEvents: vi.fn().mockResolvedValue(0),
   },
 }));
 
@@ -26,12 +32,19 @@ vi.stubGlobal("localStorage", {
   },
 });
 
+let appendEventsAtom: typeof AppendEventsAtomType;
 let loadSessionAtom: typeof LoadSessionAtomType;
 let eventsAtom: typeof EventsAtomType;
 
 beforeAll(async () => {
-  ({ loadSessionAtom } = await import("../actions"));
+  ({ appendEventsAtom, loadSessionAtom } = await import("../actions"));
   ({ eventsAtom } = await import("../events"));
+});
+
+beforeEach(() => {
+  vi.mocked(eventStoreProxy.append).mockClear();
+  vi.mocked(eventStoreProxy.mergeEvents).mockClear();
+  vi.mocked(eventStoreProxy.removeSyntheticUserInputEvents).mockClear();
 });
 
 function makeMessageEvent(
@@ -44,16 +57,33 @@ function makeMessageEvent(
     chunk_id: id,
     sessionId,
     createdAt,
-    functionName: "message",
-    uiCanonical: "message",
-    actionType: "message",
+    functionName: id.startsWith("user") ? "user_message" : "message",
+    uiCanonical: id.startsWith("user") ? "user_message" : "message",
+    actionType: id.startsWith("user") ? "raw" : "message",
     args: {},
-    result: {},
+    result: id.startsWith("user") ? { message: { content: id } } : {},
     source: id.startsWith("user") ? "user" : "assistant",
     displayText: id,
     displayStatus: "completed",
     displayVariant: "message",
     activityStatus: "processed",
+  };
+}
+
+function makeUserMessageEvent(
+  id: string,
+  content: string,
+  options: { images?: string[]; synthetic?: boolean } = {}
+): SessionEvent {
+  const event = makeMessageEvent(id);
+  return {
+    ...event,
+    displayText: content,
+    result: {
+      message: { content },
+      ...(options.images ? { images: options.images } : {}),
+      ...(options.synthetic ? { syntheticUserInput: true } : {}),
+    },
   };
 }
 
@@ -146,6 +176,48 @@ describe("loadSessionAtom", () => {
 
     expect(store.get(eventsAtom).map((event) => event.sessionId)).toEqual([
       "session-2",
+    ]);
+  });
+
+  it("carries optimistic user images onto the persisted echo during load", () => {
+    const store = createStore();
+    const images = ["data:image/png;base64,AAA"];
+    const optimistic = makeUserMessageEvent("user-input-1", "see this", {
+      images,
+      synthetic: true,
+    });
+    const persisted = makeUserMessageEvent("user-message-1", "see this");
+
+    store.set(loadSessionAtom, {
+      sessionId: "session-1",
+      events: [optimistic, persisted],
+    });
+
+    expect(store.get(eventsAtom)).toHaveLength(1);
+    expect(store.get(eventsAtom)[0].id).toBe("user-message-1");
+    expect(store.get(eventsAtom)[0].result?.images).toEqual(images);
+  });
+
+  it("carries optimistic user images onto a live persisted echo", () => {
+    const store = createStore();
+    const images = ["data:image/png;base64,BBB"];
+    const optimistic = makeUserMessageEvent("user-input-1", "see this", {
+      images,
+      synthetic: true,
+    });
+    const persisted = makeUserMessageEvent("user-message-1", "see this");
+
+    store.set(loadSessionAtom, {
+      sessionId: "session-1",
+      events: [optimistic],
+    });
+    store.set(appendEventsAtom, [persisted]);
+
+    expect(eventStoreProxy.append).toHaveBeenLastCalledWith([
+      expect.objectContaining({
+        id: "user-message-1",
+        result: expect.objectContaining({ images }),
+      }),
     ]);
   });
 });
