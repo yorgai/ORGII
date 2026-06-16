@@ -10,9 +10,7 @@ pub mod swr_cache;
 
 /// Crate-wide canonical UTF-8 safe truncation helpers. See
 /// [`safe_truncate`] for byte-bounded vs char-bounded variants.
-pub use safe_truncate::{
-    safe_truncate_chars, safe_truncate_chars_to_string, safe_truncate_utf8,
-};
+pub use safe_truncate::{safe_truncate_chars, safe_truncate_chars_to_string, safe_truncate_utf8};
 
 /// Re-export of the canonical `default_true` serde helper from `app_utils`.
 ///

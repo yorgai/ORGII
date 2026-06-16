@@ -157,7 +157,8 @@ impl Tool for QuestionTool {
                 // Build an error the LLM can use to self-correct. Show what
                 // it actually sent and a concrete example of the right shape.
                 let actual_preview = questions.to_string();
-                let actual_short = crate::utils::safe_truncate_chars_to_string(&actual_preview, 120);
+                let actual_short =
+                    crate::utils::safe_truncate_chars_to_string(&actual_preview, 120);
                 return Err(ToolError::InvalidParams(format!(
                     "`questions` must be a JSON array, but got {}: {}. \
                      Correct format example: \

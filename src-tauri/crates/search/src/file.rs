@@ -13,13 +13,13 @@
 use ignore::WalkBuilder;
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Config, Matcher, Utf32Str};
-use tracing::{debug, info, warn};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use tracing::{debug, info, warn};
 
 // ============================================
 // Types
@@ -421,11 +421,7 @@ pub async fn index_project_files(
         }
 
         let duration = start.elapsed();
-        info!(
-            entries = count,
-            ?duration,
-            "search::file: indexed entries"
-        );
+        info!(entries = count, ?duration, "search::file: indexed entries");
 
         Ok(count)
     })
@@ -443,7 +439,10 @@ pub async fn prewarm_file_index(root_path: String) -> Result<usize, String> {
     tokio::task::spawn_blocking(move || {
         let root = PathBuf::from(&root_path);
         if !root.exists() || !root.is_dir() {
-            return Err(format!("Path does not exist or is not a directory: {}", root_path));
+            return Err(format!(
+                "Path does not exist or is not a directory: {}",
+                root_path
+            ));
         }
 
         // Check if already cached and fresh — skip the walk entirely.

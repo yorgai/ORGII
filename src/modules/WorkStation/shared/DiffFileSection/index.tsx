@@ -71,28 +71,16 @@ export interface DiffFileSectionData {
   newContent?: string;
   oldStartLine?: number;
   newStartLine?: number;
+  unifiedDiff?: string;
   isBinary?: boolean;
   /** True when the file was edited but content could not be retrieved (e.g. Cursor IDE blob pruned). */
   isUnavailable?: boolean;
-  /**
-   * Per-hunk old/new pairs for multi-hunk diffs. When present and longer
-   * than one entry, the section renders one CodeMirrorDiff per hunk so
-   * distant hunks are not joined by fabricated blank gap lines (which
-   * collapse into a bogus "N unchanged lines" band that expands to
-   * nothing). Single-hunk files leave this undefined and use
-   * oldContent/newContent.
-   */
-  hunks?: Array<{
-    oldValue: string;
-    newValue: string;
-    oldStartLine: number;
-    newStartLine: number;
-  }>;
 }
 
 export interface DiffFileSectionProps {
   file: DiffFileSectionData;
   defaultExpanded?: boolean;
+  expansionSignal?: number;
   repoPath?: string;
   sectionRef?: React.RefObject<HTMLDivElement | null>;
   onFileSelect?: (path: string) => void;
@@ -133,6 +121,7 @@ function getFileNameAndDir(path: string): {
 const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   file,
   defaultExpanded = true,
+  expansionSignal = 0,
   repoPath,
   sectionRef,
   onRequestContent,
@@ -143,7 +132,14 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   noBottomPadding = false,
 }) => {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [manualExpanded, setManualExpanded] = useState<{
+    signal: number;
+    value: boolean;
+  } | null>(null);
+  const expanded =
+    manualExpanded?.signal === expansionSignal
+      ? manualExpanded.value
+      : defaultExpanded;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const setAddToAgent = useSetAtom(addToAgentAtom);
@@ -181,7 +177,13 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   useEffect(() => {
     if (!expanded) return;
     if (isDeleted) return;
-    if (file.oldContent !== undefined || file.newContent !== undefined) return;
+    if (
+      file.oldContent !== undefined ||
+      file.newContent !== undefined ||
+      file.unifiedDiff !== undefined
+    ) {
+      return;
+    }
     onRequestContent?.(file);
   }, [expanded, file, isDeleted, onRequestContent]);
 
@@ -189,8 +191,8 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   const statusColor = getStatusColor(statusLetter);
 
   const toggleExpanded = useCallback(() => {
-    setExpanded((prev) => !prev);
-  }, []);
+    setManualExpanded({ signal: expansionSignal, value: !expanded });
+  }, [expanded, expansionSignal]);
 
   const { additions, deletions } = useMemo(() => {
     if (file.additions !== undefined && file.deletions !== undefined) {
@@ -204,17 +206,27 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
     };
   }, [file]);
 
+  const resolvedDiff = useMemo(
+    () => ({
+      oldContent: file.oldContent,
+      newContent: file.newContent,
+      oldStartLine: file.oldStartLine,
+      newStartLine: file.newStartLine,
+    }),
+    [file.newContent, file.newStartLine, file.oldContent, file.oldStartLine]
+  );
+
   const hasContent =
     !file.isUnavailable &&
-    (file.oldContent !== undefined || file.newContent !== undefined);
-
-  const hasMultipleHunks = (file.hunks?.length ?? 0) > 1;
+    (resolvedDiff.oldContent !== undefined ||
+      resolvedDiff.newContent !== undefined ||
+      file.unifiedDiff !== undefined);
 
   const isBinary =
     file.isBinary === true ||
     isBinaryByExtension(file.path) ||
-    file.oldContent === "Binary file - content not displayed" ||
-    file.newContent === "Binary file - content not displayed";
+    resolvedDiff.oldContent === "Binary file - content not displayed" ||
+    resolvedDiff.newContent === "Binary file - content not displayed";
 
   const previewType = getPreviewType(file.path);
   const isPreviewable =
@@ -296,42 +308,20 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
           subtitle={displayPath}
         />
       ) : hasContent ? (
-        hasMultipleHunks ? (
-          <div className="flex flex-col">
-            {file.hunks!.map((hunk, hunkIndex) => (
-              <CodeMirrorDiff
-                key={`${file.path}:hunk:${hunkIndex}:${hunk.oldStartLine}:${hunk.newStartLine}`}
-                oldValue={hunk.oldValue}
-                newValue={hunk.newValue}
-                filePath={file.path}
-                changeType={file.status}
-                oldStartLine={hunk.oldStartLine}
-                newStartLine={hunk.newStartLine}
-                viewMode="unified"
-                readOnly={true}
-                mergeControls={false}
-                collapseUnchanged={true}
-                noBottomPadding={noBottomPadding}
-                autoHeight
-              />
-            ))}
-          </div>
-        ) : (
-          <CodeMirrorDiff
-            oldValue={file.oldContent || ""}
-            newValue={file.newContent || ""}
-            filePath={file.path}
-            changeType={file.status}
-            oldStartLine={file.oldStartLine}
-            newStartLine={file.newStartLine}
-            viewMode="unified"
-            readOnly={true}
-            mergeControls={false}
-            collapseUnchanged={true}
-            noBottomPadding={noBottomPadding}
-            autoHeight
-          />
-        )
+        <CodeMirrorDiff
+          oldValue={resolvedDiff.oldContent || ""}
+          newValue={resolvedDiff.newContent || ""}
+          filePath={file.path}
+          changeType={file.status}
+          oldStartLine={resolvedDiff.oldStartLine}
+          newStartLine={resolvedDiff.newStartLine}
+          viewMode="unified"
+          readOnly={true}
+          mergeControls={false}
+          collapseUnchanged={true}
+          noBottomPadding={noBottomPadding}
+          autoHeight
+        />
       ) : file.isUnavailable ? (
         <Placeholder
           variant="empty"

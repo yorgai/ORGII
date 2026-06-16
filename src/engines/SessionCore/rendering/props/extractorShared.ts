@@ -273,7 +273,10 @@ export function mergeUnifiedDiffStrings(diffs: string[]): string {
   return parts.join("\n");
 }
 
-export function parseUnifiedDiffToOldNew(diffStr: string): {
+export function parseUnifiedDiffToOldNew(
+  diffStr: string,
+  options: { preserveHunkGaps?: boolean } = {}
+): {
   oldValue: string;
   newValue: string;
   oldStartLine?: number;
@@ -300,7 +303,7 @@ export function parseUnifiedDiffToOldNew(diffStr: string): {
       newStartLine ??= hunkNewStart;
       if (firstHunk) {
         firstHunk = false;
-      } else {
+      } else if (options.preserveHunkGaps === true) {
         const oldGap = hunkOldStart - oldCursor;
         const newGap = hunkNewStart - newCursor;
         const gapCount = Math.max(oldGap, newGap, 0);

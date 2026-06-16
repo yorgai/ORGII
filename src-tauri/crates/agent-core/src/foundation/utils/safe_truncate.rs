@@ -39,10 +39,7 @@ pub fn safe_truncate_chars(s: &str, max_chars: usize) -> &str {
 
 /// Like [`safe_truncate_chars`], but returns an owned `String`. Borrows any
 /// `AsRef<str>` input (including `String` fields and wire-protocol text buffers).
-pub fn safe_truncate_chars_to_string(
-    s: &(impl AsRef<str> + ?Sized),
-    max_chars: usize,
-) -> String {
+pub fn safe_truncate_chars_to_string(s: &(impl AsRef<str> + ?Sized), max_chars: usize) -> String {
     safe_truncate_chars(s.as_ref(), max_chars).to_string()
 }
 

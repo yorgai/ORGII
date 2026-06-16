@@ -274,7 +274,11 @@ impl QuestionManager {
     /// Emits `agent:interaction_finalized` with structured answers so the UI
     /// flips from "waiting" to "answered" without waiting for the tool's
     /// `execute()` to return.
-    pub async fn respond(&self, request_id: &str, answers: Vec<QuestionAnswer>) -> Result<(), String> {
+    pub async fn respond(
+        &self,
+        request_id: &str,
+        answers: Vec<QuestionAnswer>,
+    ) -> Result<(), String> {
         let Some((resolved_id, entry)) = self.take_pending(request_id).await else {
             let msg = format!("No pending question found for request/tool_call '{}' (expired, already answered, or never created)", request_id);
             warn!("[question] {}", msg);

@@ -31,10 +31,7 @@ import TabPill from "@src/components/TabPill";
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { simulatorEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
-import {
-  parseUnifiedDiffToHunks,
-  parseUnifiedDiffToOldNew,
-} from "@src/engines/SessionCore/rendering/props/propsDataExtractors";
+import { parseUnifiedDiffToOldNew } from "@src/engines/SessionCore/rendering/props/propsDataExtractors";
 import type { SimulatorAppProps } from "@src/engines/Simulator/apps/core/types";
 import { useFileReviewBatchActions } from "@src/hooks/fileReview/useFileReview";
 import { createLogger } from "@src/hooks/logger";
@@ -116,19 +113,18 @@ export function finalDiffToSection(
 ): DiffFileNavigationItem<DiffFileSectionData> {
   const isDeleted = Boolean(finalDiff.isDeleted);
   const parsedDiff = finalDiff.diff
-    ? parseUnifiedDiffToOldNew(finalDiff.diff)
+    ? parseUnifiedDiffToOldNew(finalDiff.diff, { preserveHunkGaps: false })
     : undefined;
-  const hunks = finalDiff.diff
-    ? parseUnifiedDiffToHunks(finalDiff.diff)
-    : undefined;
-
-  const oldContent = finalDiff.oldContent ?? parsedDiff?.oldValue ?? "";
-  const newContent = isDeleted
-    ? ""
-    : (finalDiff.newContent ?? parsedDiff?.newValue ?? "");
-
   const contentUnavailable =
     !finalDiff.diff && !finalDiff.oldContent && !finalDiff.newContent;
+  const oldContent = contentUnavailable
+    ? undefined
+    : (finalDiff.oldContent ?? parsedDiff?.oldValue ?? "");
+  const newContent = contentUnavailable
+    ? undefined
+    : isDeleted
+      ? ""
+      : (finalDiff.newContent ?? parsedDiff?.newValue ?? "");
 
   return {
     key: finalDiff.filePath,
@@ -138,12 +134,12 @@ export function finalDiffToSection(
       staged: false,
       additions: finalDiff.linesAdded,
       deletions: finalDiff.linesRemoved,
-      oldContent: contentUnavailable ? undefined : oldContent,
-      newContent: contentUnavailable ? undefined : newContent,
+      oldContent,
+      newContent,
       oldStartLine: parsedDiff?.oldStartLine,
       newStartLine: parsedDiff?.newStartLine,
+      unifiedDiff: finalDiff.diff || undefined,
       isUnavailable: contentUnavailable || undefined,
-      hunks: isDeleted ? undefined : hunks,
     },
     entryIds: [finalDiff.recordId],
   };
@@ -296,8 +292,6 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   currentEvent,
   mode = "simulation",
 }) => {
-  const isCurrentEventLoading =
-    (currentEvent as unknown as SessionEvent)?.displayStatus === "running";
   const { t } = useTranslation("sessions");
   const { t: tCommon } = useTranslation("common");
   const [activeTab, setActiveTab] = useState<DiffReplayTab>("diff");
@@ -1158,6 +1152,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
           focusedPath={focusedDiffPath}
           focusedNonce={focusedDiffNonce}
           collapseSignal={collapseAllSignal}
+          collapseThreshold={3}
           hideBottomPadding
         />
       );
@@ -1186,7 +1181,6 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     pillMode,
     consolidatedSections,
     focusedSections,
-    isCurrentEventLoading,
     orgtrackFinalDiffsLoading,
     focusedDiffPath,
     focusedDiffNonce,
