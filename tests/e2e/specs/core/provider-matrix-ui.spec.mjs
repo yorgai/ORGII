@@ -76,7 +76,7 @@ const EXPECTED_API_CONFIGS = {
   aihubmix_api: { env: "AIHUBMIX_API_KEY", baseUrl: "https://aihubmix.com/v1" },
   minimax_api: {
     env: "MINIMAX_API_KEY",
-    baseUrl: "https://api.minimax.chat/v1",
+    baseUrl: "https://api.minimax.io/v1",
   },
   vllm_api: { env: "VLLM_API_KEY", baseUrl: "http://localhost:8000/v1" },
   orgii_orchestrator: {

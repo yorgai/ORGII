@@ -147,7 +147,7 @@ pub fn get_provider_config(model_type: &str) -> ProviderConfig {
             api_key_env_var: "MINIMAX_API_KEY".to_string(),
             base_url_env_var: None,
             supports_base_url: true,
-            default_base_url: Some("https://api.minimax.chat/v1".to_string()),
+            default_base_url: Some("https://api.minimax.io/v1".to_string()),
         },
         "vllm_api" => ProviderConfig {
             api_key_env_var: "VLLM_API_KEY".to_string(),

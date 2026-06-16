@@ -168,7 +168,7 @@ pub static PROVIDERS: &[ProviderSpec] = &[
         keywords: &["minimax", "abab"],
         litellm_prefix: None,
         skip_prefixes: &[],
-        default_api_base: Some("https://api.minimax.chat/v1"),
+        default_api_base: Some("https://api.minimax.io/v1"),
         is_local: false,
         env_key: Some("MINIMAX_API_KEY"),
     },
