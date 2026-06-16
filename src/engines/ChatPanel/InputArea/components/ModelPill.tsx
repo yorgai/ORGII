@@ -8,12 +8,11 @@
  *  - In-session (a sessionId is in scope, the typical InputArea case)
  *    — display values come from `sessionByIdAtom(sessionId)` for the
  *    fields the row carries (`model`, `accountId`, `keySource`,
- *    `cliAgentType`, `tier`); display-only fields (provider label,
- *    selected-source label, listing display, etc.) layer on top of
- *    the creator-default selection. A user pick fires `session_patch`
- *    AND updates the creator-default atom so the user's most-recent
- *    choice continues to seed new sessions — mirrors the legacy
- *    "last-used" behaviour without losing per-session truth.
+ *    `cliAgentType`, `tier`); display-only labels are derived from
+ *    KeyVault by accountId in `ModelSelectorPill.resolveDisplaySelection`.
+ *    A user pick fires `session_patch` AND updates the creator-default
+ *    atom so the user's most-recent choice continues to seed new sessions
+ *    — mirrors the legacy "last-used" behaviour without losing per-session truth.
  *  - Creator-default (no sessionId) — reads + writes the creator-
  *    default atom only. Used by the SessionCreator preview.
  */
@@ -46,6 +45,7 @@ import {
 import { sessionByIdAtom } from "@src/store/session/sessionAtom";
 import { modelPickerStyleAtom } from "@src/store/ui/chatPanelAtom";
 import { modelSelectorAtom } from "@src/store/ui/modelSelectorAtom";
+import { isActiveStatus } from "@src/types/session/session";
 import { getDispatchCategory } from "@src/util/session/sessionDispatch";
 
 // ============================================
@@ -87,32 +87,25 @@ const ModelPill: React.FC = memo(() => {
 
   // The display value `lastModel` is built from the session row when
   // present. Fields the row doesn't carry (display labels, listing
-  // metadata) come from the creator-default atom so the pill keeps
-  // its previous label until UnifiedModelPalette emits a fresh
-  // selection. The session row's keySource / cliAgentType / model /
-  // accountId / tier always win over the creator-default values.
+  // metadata) stay undefined — the pill's `resolveDisplaySelection`
+  // derives account labels from KeyVault by accountId, and historical
+  // sessions skip variant remapping.
   const lastModel: LastModelSelection | null = useMemo(() => {
     if (!isInSession) return creatorDefaultLastModel;
     if (!session) return creatorDefaultLastModel;
 
-    const keySource = session.keySource ?? creatorDefaultLastModel?.keySource;
-    const isHosted = isHostedKey(keySource);
+    const isHosted = isHostedKey(session.keySource);
     return {
-      ...creatorDefaultLastModel,
-      keySource,
-      cliAgentType:
-        session.cliAgentType ?? creatorDefaultLastModel?.cliAgentType,
-      tier: session.tier ?? creatorDefaultLastModel?.tier,
-      model: isHosted
-        ? undefined
-        : (session.model ?? creatorDefaultLastModel?.model),
-      listingModel: isHosted
-        ? (session.model ?? creatorDefaultLastModel?.listingModel)
-        : undefined,
-      selectedAccountId:
-        session.accountId ?? creatorDefaultLastModel?.selectedAccountId,
+      keySource: session.keySource,
+      cliAgentType: session.cliAgentType,
+      tier: session.tier,
+      model: isHosted ? undefined : session.model,
+      listingModel: isHosted ? session.model : undefined,
+      selectedAccountId: session.accountId,
     };
   }, [isInSession, session, creatorDefaultLastModel]);
+
+  const isActiveSession = isInSession ? isActiveStatus(session?.status) : false;
 
   const advancedConfig: AdvancedConfig = useMemo(() => {
     if (!lastModel) return {};
@@ -234,6 +227,7 @@ const ModelPill: React.FC = memo(() => {
       onClick={handleOpenModelSelector}
       dataTestId="chat-model-pill-model"
       ariaLabel={t("sessions:creator.selectModel")}
+      isActiveSession={isActiveSession}
     />
   );
 

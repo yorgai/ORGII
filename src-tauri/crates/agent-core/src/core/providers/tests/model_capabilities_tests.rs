@@ -7,14 +7,14 @@ use std::path::Path;
 fn claude_fable_5_is_always_on() {
     let caps = resolve("claude-fable-5-20260601", None);
     assert_eq!(caps.thinking, ThinkingSupport::AlwaysOn);
-    assert_eq!(caps.context_window, 200_000);
+    assert_eq!(caps.context_window, 1_000_000);
 }
 
 #[test]
 fn claude_opus_4_is_optional() {
     let caps = resolve("claude-opus-4-20250514", None);
     assert_eq!(caps.thinking, ThinkingSupport::Optional);
-    assert_eq!(caps.context_window, 200_000);
+    assert_eq!(caps.context_window, 1_000_000);
 }
 
 #[test]
@@ -40,6 +40,15 @@ fn shorthand_sonnet_4_normalizes() {
     let caps = resolve("sonnet-4", None);
     assert_eq!(caps.thinking, ThinkingSupport::Optional);
     assert_eq!(caps.context_window, 200_000);
+}
+
+// ── Sonnet 4.6 variant (1M) ──
+
+#[test]
+fn sonnet_4_6_is_1m() {
+    let caps = resolve("claude-sonnet-4.6-20260101", None);
+    assert_eq!(caps.thinking, ThinkingSupport::Optional);
+    assert_eq!(caps.context_window, 1_000_000);
 }
 
 // ── OpenAI family ──
@@ -112,7 +121,7 @@ fn gemini_2_optional() {
 fn future_claude_defaults_to_always_on() {
     let caps = resolve("claude-7-ultra-2029", None);
     assert_eq!(caps.thinking, ThinkingSupport::AlwaysOn);
-    assert_eq!(caps.context_window, 200_000);
+    assert_eq!(caps.context_window, 1_000_000);
 }
 
 // ─────────────────────────────────────────────────────────────────────────

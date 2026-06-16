@@ -11,6 +11,8 @@ import type { DiffEntry, SimulatorDiffState } from "./types";
 export interface UseDiffReturn {
   /** Replay diff entries. Non-authoritative for final impact; Orgtrack final diffs own final counts. */
   entries: DiffEntry[];
+  /** Number of replay diff entries. */
+  entryCount: number;
   /** Entry rendered in the right detail pane for replay/focus mode. */
   displayEntry: DiffEntry | null;
   /** Sidebar-selected entry id, or null when the cursor is in charge. */
@@ -36,6 +38,8 @@ export function useDiff(): UseDiffReturn {
     [state.entries]
   );
 
+  const entryCount = entries.length;
+
   const displayEntry = useMemo<DiffEntry | null>(() => {
     if (selectedItemId) {
       const match = entries.find((entry) => entry.entryId === selectedItemId);
@@ -59,6 +63,7 @@ export function useDiff(): UseDiffReturn {
 
   return {
     entries,
+    entryCount,
     displayEntry,
     selectedEntryId: selectedItemId,
     selectEntry,

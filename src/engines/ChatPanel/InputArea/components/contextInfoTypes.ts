@@ -2,7 +2,23 @@
  * Shared types for the ContextInfoButton sub-component tree.
  */
 
-export type RingTone = "unused" | "used";
+export type RingTone = "unused" | "normal" | "warning" | "critical";
+
+/** Stroke color for each ring tone. */
+export const RING_TONE_STROKE: Record<RingTone, string> = {
+  unused: "stroke-text-4",
+  normal: "stroke-blue-500",
+  warning: "stroke-yellow-500",
+  critical: "stroke-red-500",
+};
+
+/** Determine ring tone from the real (unclamped) percentage. */
+export function ringToneForPercentage(pct: number): RingTone {
+  if (pct <= 0) return "unused";
+  if (pct < 80) return "normal";
+  if (pct <= 100) return "warning";
+  return "critical";
+}
 
 export interface PanelCategory {
   key: string;

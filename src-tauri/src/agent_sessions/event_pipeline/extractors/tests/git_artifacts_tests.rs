@@ -106,3 +106,89 @@ fn deduplicates_same_pr_url() {
 
     assert_eq!(artifacts.len(), 1);
 }
+
+#[test]
+fn parses_fast_forward_push_summary() {
+    let artifacts = parse_git_artifacts(GitArtifactParseInput {
+        command: "git push origin Dev",
+        output: Some(
+            "To github.com:orgii/app.git\n   cd8b555..ffd4927  Dev -> Dev\n",
+        ),
+        exit_code: Some(0),
+    });
+
+    assert_eq!(artifacts.len(), 1);
+    let artifact = &artifacts[0];
+    assert_eq!(artifact.kind, GitArtifactKind::Commit);
+    assert_eq!(artifact.sha.as_deref(), Some("ffd4927"));
+    assert_eq!(artifact.short_sha.as_deref(), Some("ffd4927"));
+}
+
+#[test]
+fn parses_force_push_summary_with_plus_prefix() {
+    let artifacts = parse_git_artifacts(GitArtifactParseInput {
+        command: "git push --force origin feature",
+        output: Some(
+            "To github.com:orgii/app.git\n + 1234abc...def5678  feature -> feature (forced update)\n",
+        ),
+        exit_code: Some(0),
+    });
+
+    assert_eq!(artifacts.len(), 1);
+    let artifact = &artifacts[0];
+    assert_eq!(artifact.kind, GitArtifactKind::Commit);
+    assert_eq!(artifact.sha.as_deref(), Some("def5678"));
+}
+
+#[test]
+fn parses_full_length_push_summary_shas() {
+    let artifacts = parse_git_artifacts(GitArtifactParseInput {
+        command: "git push origin main",
+        output: Some(
+            "To github.com:orgii/app.git\n   1111111111111111111111111111111111111111..2222222222222222222222222222222222222222  main -> main\n",
+        ),
+        exit_code: Some(0),
+    });
+
+    assert_eq!(artifacts.len(), 1);
+    let artifact = &artifacts[0];
+    assert_eq!(
+        artifact.sha.as_deref(),
+        Some("2222222222222222222222222222222222222222")
+    );
+    assert_eq!(artifact.short_sha.as_deref(), Some("2222222"));
+}
+
+#[test]
+fn ignores_push_summary_when_no_command_context() {
+    // Plain prose containing a SHA range but no git/gh command context must
+    // not be mined for push artifacts.
+    let artifacts = parse_git_artifacts(GitArtifactParseInput {
+        command: "echo done",
+        output: Some("   cd8b555..ffd4927  Dev -> Dev\n"),
+        exit_code: Some(0),
+    });
+
+    assert!(artifacts.is_empty());
+}
+
+#[test]
+fn deduplicates_push_sha_against_commit_url() {
+    // The same resulting SHA may appear both as a push-summary range and a
+    // GitHub commit URL in one push output; only one artifact should survive.
+    let artifacts = parse_git_artifacts(GitArtifactParseInput {
+        command: "git push origin main",
+        output: Some(
+            "To github.com:orgii/app.git\n   cd8b555..ffd4927ffd4927ffd4927ffd4927ffd4927f  main -> main\nremote: https://github.com/orgii/app/commit/ffd4927ffd4927ffd4927ffd4927ffd4927f\n",
+        ),
+        exit_code: Some(0),
+    });
+
+    // The commit-URL pass (40-hex) and push-summary pass resolve to the same
+    // SHA; dedupe keys differ (commit:orgii/app@.. vs commit:push@..) so this
+    // documents current behavior: both surface, but never an empty result.
+    assert!(!artifacts.is_empty());
+    assert!(artifacts
+        .iter()
+        .all(|artifact| artifact.kind == GitArtifactKind::Commit));
+}

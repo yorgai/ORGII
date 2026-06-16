@@ -1963,7 +1963,9 @@
     },
     "warningHint": "Context is filling up. Start a new session soon for best results.",
     "dangerHint": "Context is nearly full. Start a new session to avoid losing detail.",
-    "startNewSession": "Start new session"
+    "startNewSession": "Start new session",
+    "cacheSaved": "Cache saved: {{read}} read, {{write}} write",
+    "remaining": "Free: {{tokens}} remaining"
   },
   "relativeDate": {
     "today": "Today",

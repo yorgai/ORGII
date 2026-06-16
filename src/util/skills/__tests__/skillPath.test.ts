@@ -12,7 +12,7 @@ describe("extractSkillNameFromPath", () => {
   it("matches global user skills (~/.orgii/skills/<name>/SKILL.md)", () => {
     expect(
       extractSkillNameFromPath(
-        "/Users/junyu/.orgii/skills/frontend-ui-audit/SKILL.md"
+        "/Users/dev/.orgii/skills/frontend-ui-audit/SKILL.md"
       )
     ).toBe("frontend-ui-audit");
   });
@@ -20,7 +20,7 @@ describe("extractSkillNameFromPath", () => {
   it("matches Cursor user skills (~/.cursor/skills/<name>/SKILL.md)", () => {
     expect(
       extractSkillNameFromPath(
-        "/Users/junyu/.cursor/skills/brainstorming/SKILL.md"
+        "/Users/dev/.cursor/skills/brainstorming/SKILL.md"
       )
     ).toBe("brainstorming");
   });
@@ -28,7 +28,7 @@ describe("extractSkillNameFromPath", () => {
   it("matches Cursor builtin skills (~/.cursor/skills-cursor/<name>/SKILL.md)", () => {
     expect(
       extractSkillNameFromPath(
-        "/Users/junyu/.cursor/skills-cursor/code-review/SKILL.md"
+        "/Users/dev/.cursor/skills-cursor/code-review/SKILL.md"
       )
     ).toBe("code-review");
   });

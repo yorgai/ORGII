@@ -54,10 +54,30 @@ pub struct ContextUsageSnapshot {
     pub updated_at: String,
     pub sections: Vec<ContextUsageSection>,
     pub warnings: Vec<String>,
+    /// Provider-reported cache-read tokens (Anthropic prompt caching).
+    /// These tokens were NOT fetched over the wire — the model reused
+    /// previously cached KV blocks.  The frontend should NOT count cache
+    /// reads as "used" because they don't consume context-window budget.
+    #[serde(skip_serializing_if = "is_zero_i64")]
+    pub cache_read_tokens: i64,
+    /// Provider-reported cache-write tokens (new KV blocks written this
+    /// turn for future reuse).
+    #[serde(skip_serializing_if = "is_zero_i64")]
+    pub cache_write_tokens: i64,
+}
+
+fn is_zero_i64(v: &i64) -> bool {
+    *v == 0
 }
 
 impl ContextUsageSnapshot {
-    pub fn from_payload(messages: &[Value], tools: &[Value], used_tokens: i64) -> Self {
+    pub fn from_payload(
+        messages: &[Value],
+        tools: &[Value],
+        used_tokens: i64,
+        cache_read_tokens: i64,
+        cache_write_tokens: i64,
+    ) -> Self {
         let mut items = Vec::new();
 
         if !tools.is_empty() {
@@ -119,6 +139,8 @@ impl ContextUsageSnapshot {
             percent_used: None,
             updated_at: chrono::Utc::now().to_rfc3339(),
             sections,
+            cache_read_tokens,
+            cache_write_tokens,
             warnings: vec![
                 "Section token counts are estimated from the final request payload.".to_string(),
             ],
@@ -408,7 +430,7 @@ mod tests {
     #[test]
     fn adds_unattributed_difference() {
         let messages = vec![json!({"role":"user","content":"hello"})];
-        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 100);
+        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 100, 0, 0);
         assert!(snapshot
             .sections
             .iter()
@@ -435,7 +457,7 @@ mod tests {
                 "content":[{"type":"text","text":"# Scratchpad Directory", ORGII_SYSTEM_CACHE_SCOPE_KEY: "volatile"}]
             }),
         ];
-        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0);
+        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0, 0, 0);
         assert!(snapshot
             .sections
             .iter()
@@ -449,7 +471,7 @@ mod tests {
     #[test]
     fn tool_messages_are_not_conversation() {
         let messages = vec![json!({"role":"tool","name":"read_file","content":"file body"})];
-        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0);
+        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0, 0, 0);
         assert!(snapshot
             .sections
             .iter()
@@ -463,7 +485,7 @@ mod tests {
     #[test]
     fn cache_tokens_are_not_added_to_active_context() {
         let messages = vec![json!({"role":"user","content":"hello"})];
-        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0);
+        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0, 0, 0);
         assert_eq!(
             snapshot
                 .sections

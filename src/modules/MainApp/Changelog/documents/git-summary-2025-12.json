@@ -429,7 +429,7 @@
     {
       "date": "2025-12-22",
       "commitCount": 21,
-      "summary": "GlobalToolbar was modularized around LiquidGlassToolbar and dynamic sections, Soyd was restructured, GlobalSpotlight positioning and sitemap updates were refined, tab/editor detection improved, and resume/view-mode synchronization work began.",
+      "summary": "GlobalToolbar was modularized around LiquidGlassToolbar and dynamic sections, ORGII was restructured, GlobalSpotlight positioning and sitemap updates were refined, tab/editor detection improved, and resume/view-mode synchronization work began.",
       "frontendChangeBullets": [
         "Modularized GlobalToolbar around LiquidGlassToolbar for more flexible action sections.",
         "Added dynamic toolbar sections so workspace actions can adapt to context.",
@@ -438,7 +438,7 @@
         "Improved tab and editor detection so toolbar and view state match the active workspace."
       ],
       "backendChangeBullets": [
-        "Restructured Soyd-related code to better separate toolbar, routing, and workspace concerns.",
+        "Restructured ORGII-related code to better separate toolbar, routing, and workspace concerns.",
         "Improved sitemap data generation used by GlobalSpotlight and navigation surfaces.",
         "Refined tab/editor detection logic that synchronizes runtime state with UI actions.",
         "Started resume and view-mode synchronization work to keep session state consistent.",

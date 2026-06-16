@@ -1904,7 +1904,9 @@
     },
     "warningHint": "上下文即将填满。建议尽快开始新会话以获得更好的结果。",
     "dangerHint": "上下文几乎已满。请开始新会话，避免丢失细节。",
-    "startNewSession": "开始新会话"
+    "startNewSession": "开始新会话",
+    "cacheSaved": "缓存节省：读取 {{read}}，写入 {{write}}",
+    "remaining": "剩余可用：{{tokens}}"
   },
   "relativeDate": {
     "today": "今天",

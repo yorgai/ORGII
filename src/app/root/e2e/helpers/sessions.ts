@@ -616,6 +616,8 @@ export function createSessionHelpers(store: E2EStore) {
     seedShellProcess: seeders.seedShellProcess,
     seedSubagentJob: seeders.seedSubagentJob,
     debugSeedSubagentJobWire: seeders.debugSeedSubagentJobWire,
+    debugSeedCommitLinkWire: seeders.debugSeedCommitLinkWire,
+    debugSeedFinalDiffWire: seeders.debugSeedFinalDiffWire,
     killSubagentJobWire: seeders.killSubagentJobWire,
     listRunningSubagentJobsWire: seeders.listRunningSubagentJobsWire,
     debugSeedChildSessionWire: seeders.debugSeedChildSessionWire,

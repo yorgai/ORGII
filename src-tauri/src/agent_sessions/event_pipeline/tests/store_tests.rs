@@ -1063,6 +1063,31 @@ fn test_round_window_hydration_mode() {
 }
 
 #[test]
+fn test_empty_round_window_does_not_clobber_existing_events() {
+    let mut store = EventStore::new();
+    store.set_round_window(vec![
+        make_user_turn_header("turn-1", "2026-01-01T00:00:00Z"),
+        make_event("turn-1-body-1", "message"),
+    ]);
+    assert_eq!(store.events().len(), 2);
+
+    // An empty round window (turn index mid-rebuild) must not wipe the store.
+    store.set_round_window(Vec::new());
+
+    assert_eq!(store.events().len(), 2);
+    assert!(store.get_by_id("turn-1").is_some());
+    assert!(store.get_by_id("turn-1-body-1").is_some());
+}
+
+#[test]
+fn test_empty_round_window_on_empty_store_is_noop_set() {
+    let mut store = EventStore::new();
+    // Empty window on an already-empty store stays empty (no panic, no events).
+    store.set_round_window(Vec::new());
+    assert_eq!(store.events().len(), 0);
+}
+
+#[test]
 fn test_unload_turn_body_restores_placeholder_and_preserves_headers() {
     let mut store = EventStore::new();
     store.set_round_window(vec![

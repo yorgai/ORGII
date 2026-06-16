@@ -389,20 +389,20 @@
     {
       "date": "2026-01-20",
       "commitCount": 36,
-      "summary": "LiteEditor/SoydEditor source control was completed, LSP diagnostics and linting landed, terminal settings moved into system settings, Git file history and timeline diff features improved, and the editor was renamed toward SoydEditor.",
+      "summary": "LiteEditor/ORGII Editor source control was completed, LSP diagnostics and linting landed, terminal settings moved into system settings, Git file history and timeline diff features improved, and the editor was renamed toward ORGII Editor.",
       "frontendChangeBullets": [
-        "Completed LiteEditor/SoydEditor source-control UI for clearer repository workflows.",
+        "Completed LiteEditor/ORGII Editor source-control UI for clearer repository workflows.",
         "Added LSP diagnostics and linting feedback to surface code issues in the editor.",
         "Moved terminal settings into system settings for easier configuration.",
         "Improved Git file history and timeline diff views for richer source-control context.",
-        "Renamed the editor experience toward SoydEditor, aligning labels with the product direction."
+        "Renamed the editor experience toward ORGII Editor, aligning labels with the product direction."
       ],
       "backendChangeBullets": [
         "Added LSP diagnostics support and linting integration behind the editor.",
         "Moved terminal configuration into system settings data flow.",
         "Improved Git file history and timeline diff APIs used by source-control views.",
-        "Completed source-control support paths for LiteEditor/SoydEditor.",
-        "Updated editor naming and module references toward SoydEditor."
+        "Completed source-control support paths for LiteEditor/ORGII Editor.",
+        "Updated editor naming and module references toward ORGII Editor."
       ],
       "modelsUsed": ["Opus 4.5", "Sonnet 4.5"]
     },
@@ -469,11 +469,11 @@
     {
       "date": "2026-01-24",
       "commitCount": 26,
-      "summary": "Rust/Tauri-side Git watcher and dialog support advanced with discard-change dialogs, . git watching, watcher health monitoring, Git error dialogs, browser/process module refactors, and SoydEditor performance work.",
+      "summary": "Rust/Tauri-side Git watcher and dialog support advanced with discard-change dialogs, . git watching, watcher health monitoring, Git error dialogs, browser/process module refactors, and ORGII Editor performance work.",
       "frontendChangeBullets": [
         "Added discard-change dialogs so users can confirm risky source-control actions.",
         "Improved Git error dialogs to make repository issues easier to understand.",
-        "Improved SoydEditor performance for smoother file and source-control interactions.",
+        "Improved ORGII Editor performance for smoother file and source-control interactions.",
         "Added clearer watcher health feedback around repository monitoring.",
         "Refined dialog behavior through Tauri-side dialog support."
       ],

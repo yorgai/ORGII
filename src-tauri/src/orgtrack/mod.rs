@@ -14,7 +14,9 @@ use orgtrack_core::canonical::{
     SessionDiffChunkRecord, SessionEditArtifactRecord, SessionFinalDiffRecord,
 };
 use orgtrack_core::policy::{source_tier_policy, SourceTierPolicy};
+use orgtrack_core::privacy::ORGTRACK_SCHEMA_VERSION;
 use orgtrack_core::projectors::stats::{session_summaries, CoreSessionSummary};
+use orgtrack_core::repo_sync::paths::record_id;
 use orgtrack_core::store::{sqlite::SqliteRecordStore, RecordStore};
 use types::OrgtrackTier;
 
@@ -228,6 +230,95 @@ pub async fn orgtrack_get_session_commit_links(
                 })
                 .collect(),
             None => commit_links,
+        })
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+/// Debug-only: seed an orgtrack commit link for WDIO Submissions-tab specs.
+///
+/// Production commit links are written by `analysis_backfill` after the
+/// extraction scheduler parses a `git commit` / `git push` shell event. That
+/// path is async and depends on a real provider run, so WDIO specs cannot
+/// reach it. This wire writes the same `CommitLinkRecord` shape the backfill
+/// produces (camelCase JSON, `observed_in_terminal_output` reachability) so
+/// `orgtrack_get_session_commit_links` returns it and the Submissions tab
+/// renders the commit exactly like a live push. Returns Err in release builds.
+#[tauri::command]
+pub async fn debug_seed_commit_link(
+    session_id: String,
+    commit_sha: String,
+) -> Result<(), String> {
+    if !cfg!(debug_assertions) {
+        return Err("debug_seed_commit_link is only available in debug builds".into());
+    }
+    if session_id.is_empty() || commit_sha.is_empty() {
+        return Err("debug_seed_commit_link: `session_id` and `commit_sha` are required".into());
+    }
+    tokio::task::spawn_blocking(move || {
+        let conn = get_connection().map_err(|err| err.to_string())?;
+        let store = SqliteRecordStore::new(&conn);
+        let record_id = record_id(&["debug_seed_commit_link", &session_id, &commit_sha]);
+        store.upsert_commit_link(&CommitLinkRecord {
+            schema_version: ORGTRACK_SCHEMA_VERSION,
+            record_id,
+            commit_sha,
+            file_paths: Vec::new(),
+            session_ids: vec![session_id],
+            reachability_state: "observed_in_terminal_output".to_string(),
+            linked_at: chrono::Utc::now().to_rfc3339(),
+        })
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+/// Debug-only: seed an orgtrack final-diff record for WDIO Diff-tab-content specs.
+///
+/// The extraction scheduler produces `SessionFinalDiffRecord` entries from
+/// real edit events; because that path requires a live agent run, WDIO specs
+/// cannot seed diff-tab content through it. This wire writes a record with
+/// the same shape, but only a `diff` unified-diff string (no old_content /
+/// new_content), replicating the bug shape where orgtrack consolidation stores
+/// only the unified diff. Returns Err in release builds.
+#[tauri::command]
+pub async fn debug_seed_final_diff(
+    session_id: String,
+    source: String,
+    file_path: String,
+    diff: String,
+) -> Result<(), String> {
+    if !cfg!(debug_assertions) {
+        return Err("debug_seed_final_diff is only available in debug builds".into());
+    }
+    if session_id.is_empty() || source.is_empty() || file_path.is_empty() || diff.is_empty() {
+        return Err("debug_seed_final_diff: all fields are required".into());
+    }
+    tokio::task::spawn_blocking(move || {
+        let conn = get_connection().map_err(|err| err.to_string())?;
+        let store = SqliteRecordStore::new(&conn);
+        let record_id = record_id(&["debug_seed_final_diff", &session_id, &file_path]);
+        let words: Vec<&str> = diff.lines().collect();
+        let lines_added = words.iter().filter(|l| l.starts_with('+') && !l.starts_with("+++")).count() as i32;
+        let lines_removed = words.iter().filter(|l| l.starts_with('-') && !l.starts_with("---")).count() as i32;
+        store.upsert_final_diff(&SessionFinalDiffRecord {
+            schema_version: ORGTRACK_SCHEMA_VERSION,
+            record_id,
+            source,
+            session_id,
+            file_path,
+            baseline_event_id: None,
+            final_event_id: None,
+            old_content: None,
+            new_content: None,
+            diff: Some(diff),
+            lines_added,
+            lines_removed,
+            is_deleted: false,
+            quality: orgtrack_core::canonical::ArtifactQuality::PatchReversible,
+            differs_from_summed_chunks: false,
+            computed_at: chrono::Utc::now().to_rfc3339(),
         })
     })
     .await

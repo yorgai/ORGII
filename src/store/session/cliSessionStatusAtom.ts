@@ -52,7 +52,10 @@ export type SessionRuntimeStatusSource =
  * (viewAtom → SessionCore actions → actionsUtils → this file).
  *
  * Before registration (tests, very early startup) the gate fails open so
- * behavior degrades to the historical global write.
+ * behavior degrades to the historical global write. It also fails open in the
+ * cold-start window where all gate atoms are still null (no visible session
+ * established yet), so an optimistic running write dispatched immediately after
+ * a reload or session switch is not silently dropped.
  */
 let runtimeStatusGateSessionAtoms: ReadonlyArray<Atom<string | null>> = [];
 
@@ -73,15 +76,26 @@ export const setSessionRuntimeStatusAtom = atom(
       source: SessionRuntimeStatusSource;
     }
   ) => {
-    if (
-      runtimeStatusGateSessionAtoms.length > 0 &&
-      !runtimeStatusGateSessionAtoms.some(
-        (sessionAtom) => get(sessionAtom) === update.sessionId
-      )
-    ) {
-      // Write targets a session that is not visible — dropping it keeps the
-      // global mirror owned by the visible session (no cross-session bleed).
-      return;
+    if (runtimeStatusGateSessionAtoms.length > 0) {
+      const gateValues = runtimeStatusGateSessionAtoms.map((sessionAtom) =>
+        get(sessionAtom)
+      );
+      const matchesVisibleSession = gateValues.some(
+        (value) => value === update.sessionId
+      );
+      // Cold-start / first-navigation window: both gate atoms can still be
+      // null right after a hard reload or a session switch (activeSessionId is
+      // not restored on reload, and the pipeline sessionIdAtom is only set once
+      // loadSessionAtom runs). With no visible session established there is
+      // nothing to bleed into, so fail open — otherwise an optimistic running
+      // write dispatched in that window is silently dropped and the planning
+      // footer never appears until the first authoritative backend event.
+      const noVisibleSession = gateValues.every((value) => value === null);
+      if (!matchesVisibleSession && !noVisibleSession) {
+        // Write targets a session that is not visible — dropping it keeps the
+        // global mirror owned by the visible session (no cross-session bleed).
+        return;
+      }
     }
     set(sessionRuntimeStatusAtom, update.status);
   }
@@ -158,6 +172,10 @@ export interface ContextUsageSnapshot {
   updatedAt: string;
   sections: ContextUsageSection[];
   warnings: string[];
+  /** Provider-reported cache-read tokens (Anthropic prompt caching). */
+  cacheReadTokens?: number;
+  /** Provider-reported cache-write tokens (new KV blocks written this turn). */
+  cacheWriteTokens?: number;
 }
 
 export const sessionContextUsageAtom = atom<ContextUsageSnapshot | null>(null);

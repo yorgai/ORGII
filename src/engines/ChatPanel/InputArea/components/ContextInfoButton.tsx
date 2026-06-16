@@ -17,9 +17,9 @@ import { useTranslation } from "react-i18next";
 import ContextBreakdownBar from "./ContextBreakdownBar";
 import ContextCategoryRow from "./ContextCategoryRow";
 import ProgressRing from "./ProgressRing";
-import { type PanelCategory } from "./contextInfoTypes";
+import { type PanelCategory, ringToneForPercentage } from "./contextInfoTypes";
 import { useContextPanel } from "./useContextPanel";
-import { useContextUsageInfo } from "./useContextUsageInfo";
+import { formatTokenCount, useContextUsageInfo } from "./useContextUsageInfo";
 
 export interface ContextInfoButtonProps {
   repoPath?: string;
@@ -38,11 +38,25 @@ export interface ContextInfoButtonProps {
 const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
   ({ variant = "toolbar", compact = false }) => {
     const { t } = useTranslation();
-    const { clampedPercentage, tokenLabel, maxTokens, contextUsage } =
-      useContextUsageInfo();
+    const {
+      percentage,
+      clampedPercentage,
+      tokenLabel,
+      maxTokens,
+      contextUsage,
+      cacheReadTokens,
+      cacheWriteTokens,
+      remainingTokens,
+    } = useContextUsageInfo();
 
     const { panelPos, triggerRef, panelRef, toggle, close } = useContextPanel();
     const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+
+    const ringTone = ringToneForPercentage(percentage);
+    const displayPct = percentage > 100 ? 100 : percentage;
+    const cornerLabelClass =
+      ringTone === "unused" ? "text-text-4" : "text-text-2";
+    const hasCache = cacheReadTokens > 0 || cacheWriteTokens > 0;
 
     const categories: PanelCategory[] = useMemo(() => {
       const colors: Record<string, string> = {
@@ -74,10 +88,6 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
     );
     const handleMouseLeave = useCallback(() => setHoveredKey(null), []);
 
-    const ringTone = clampedPercentage > 0 ? "used" : "unused";
-    const cornerLabelClass =
-      ringTone === "used" ? "text-text-2" : "text-text-4";
-
     return (
       <>
         {variant === "corner" ? (
@@ -89,12 +99,12 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
             aria-label={t("contextInfo.ariaLabel")}
             aria-expanded={panelPos !== null}
           >
-            <ProgressRing percentage={clampedPercentage} tone={ringTone} />
+            <ProgressRing percentage={displayPct} tone={ringTone} />
             {!compact && (
               <span
                 className={`text-[12px] tabular-nums leading-none ${cornerLabelClass}`}
               >
-                {clampedPercentage.toFixed(0)}%
+                {percentage.toFixed(0)}%
               </span>
             )}
           </button>
@@ -107,7 +117,7 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
             aria-label={t("contextInfo.ariaLabel")}
             aria-expanded={panelPos !== null}
           >
-            <ProgressRing percentage={clampedPercentage} tone={ringTone} />
+            <ProgressRing percentage={displayPct} tone={ringTone} />
           </button>
         )}
 
@@ -136,6 +146,23 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
                 </div>
 
                 <p className="mt-0.5 text-[11px] text-text-3">{tokenLabel}</p>
+
+                {hasCache && (
+                  <p className="mt-0.5 text-[11px] text-green-600">
+                    {t("contextInfo.cacheSaved", {
+                      read: formatTokenCount(cacheReadTokens),
+                      write: formatTokenCount(cacheWriteTokens),
+                    })}
+                  </p>
+                )}
+
+                {maxTokens > 0 && (
+                  <p className="mt-0.5 text-[11px] text-text-3">
+                    {t("contextInfo.remaining", {
+                      tokens: formatTokenCount(remainingTokens),
+                    })}
+                  </p>
+                )}
 
                 <div className="mt-3">
                   <ContextBreakdownBar

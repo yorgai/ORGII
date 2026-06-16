@@ -263,17 +263,22 @@ type QuestionDisplayStatus = "answered" | "pending" | "failed";
 function resolveDisplayStatus(
   rawStatus: string | undefined,
   isAnswered: boolean,
-  isRejected: boolean
+  isRejected: boolean,
+  resultContentStartsWithError: boolean
 ): QuestionDisplayStatus {
   // User-dismissed via Skip button: Rust finalize sets `result.status =
   // "rejected"`, FE optimistic overlay does the same. Always render as the
   // terminal "Questions skipped" state — don't paint as answered/pending.
   if (isRejected) return "failed";
   if (isAnswered) return "answered";
+  // Tool call completed with a genuine execution error (e.g. LLM sent
+  // non-array `questions`, call_id was missing, etc.). The model will see
+  // the error and retry — this is NOT a user skip. Distinguish from the
+  // silent-complete path below so the history card doesn't say "skipped".
+  if (rawStatus === "failed" || resultContentStartsWithError) return "failed";
   // Tool call completed without a user reply — agent proceeded on its own.
   // Show "skipped" (static terminal state), not a loading spinner.
   if (rawStatus === "completed") return "failed";
-  if (rawStatus === "failed") return "failed";
   // `awaiting_user` means the question is still live and waiting for the
   // user. AskQuestionCard above the input handles the interactive state.
   // Show "pending" here so the history block acts as a status indicator
@@ -469,7 +474,18 @@ export const AskQuestionEvent: React.FC<AskQuestionEventProps> = (props) => {
     return null;
   }
 
-  const status = resolveDisplayStatus(rawStatus, isAnswered, isRejected);
+  const status = resolveDisplayStatus(
+    rawStatus,
+    isAnswered,
+    isRejected,
+    (() => {
+      const result = props.event?.result as Record<string, unknown> | undefined;
+      const content =
+        (typeof result?.content === "string" ? result.content : "") ||
+        (typeof result?.observation === "string" ? result.observation : "");
+      return content.startsWith("Error");
+    })()
+  );
 
   return (
     <QuestionHistoryBlock

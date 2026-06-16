@@ -193,7 +193,8 @@ impl ReliableProvider {
                             || lower.contains("invalid model")
                             || lower.contains("temperature` is deprecated")
                             || lower.contains("temperature is deprecated")
-                            || lower.contains("thinking may not be enabled")))
+                            || lower.contains("thinking may not be enabled")
+                            || lower.contains("does not support this tool_choice")))
             }
             // Retryable: server told us to back off, generic transient
             // errors. The frontend / backoff loop handles these.

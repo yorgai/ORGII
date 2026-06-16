@@ -325,6 +325,10 @@ orgtrack::orgtrack_get_session_edit_artifacts,
 orgtrack::orgtrack_get_session_diff_chunks,
 orgtrack::orgtrack_get_session_final_diffs,
 orgtrack::orgtrack_get_session_commit_links,
+// Debug-only: WDIO Submissions-tab commit-link seeding (Err outside debug builds)
+orgtrack::debug_seed_commit_link,
+// Debug-only: WDIO Diff-tab-content final-diff seeding (Err outside debug builds)
+orgtrack::debug_seed_final_diff,
 orgtrack::orgtrack_get_session_checkpoints,
 orgtrack::orgtrack_get_checkpoint_file_states,
 // Per-round token usage
@@ -1180,3 +1184,5 @@ agent_core::state::commands::session::wingman_open_window,
 agent_core::state::commands::session::wingman_close_windows,
 agent_core::state::commands::session::wingman_toggle_panel,
 agent_core::state::commands::session::wingman_list_monitors,
+// Model capability resolution (context window lookup from FAMILY_RULES)
+agent_core::core::providers::model_capabilities::resolve_model_context_k,

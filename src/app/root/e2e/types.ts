@@ -563,6 +563,16 @@ export interface E2EHelpers {
     agentName: string;
     subagentType?: string;
   }) => Promise<Result<{ sessionId: string; handle: string }>>;
+  debugSeedCommitLinkWire: (input: {
+    sessionId: string;
+    commitSha: string;
+  }) => Promise<Result<{ sessionId: string; commitSha: string }>>;
+  debugSeedFinalDiffWire: (input: {
+    sessionId: string;
+    source: string;
+    filePath: string;
+    diff: string;
+  }) => Promise<Result<{ sessionId: string; filePath: string }>>;
   killSubagentJobWire: (handle: string) => Promise<{ ok: true } | Err>;
   listRunningSubagentJobsWire: () => Promise<Result<{ jobs: Json[] }>>;
   debugSeedChildSessionWire: (input: {

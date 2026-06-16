@@ -35,15 +35,20 @@ export interface ModelSelectorPillProps {
   dataTestId?: string;
   ariaLabel?: string;
   iconSize?: number;
+  /** When false (browsing a historical session), skip variant resolution
+   *  so the pill shows the session's original model, not a remapped variant. */
+  isActiveSession?: boolean;
 }
 
 function resolveDisplaySelection(
   selection: LastModelSelection | null | undefined,
-  accounts: ReturnType<typeof useModelAccountLookup>["accounts"]
+  accounts: ReturnType<typeof useModelAccountLookup>["accounts"],
+  isActiveSession: boolean
 ): LastModelSelection | null | undefined {
   if (!selection || isHostedKey(selection.keySource) || !selection.model) {
     return selection;
   }
+  if (!isActiveSession) return selection;
 
   const selectedAccount = accounts.find((account) => {
     if (selection.selectedAccountId) {
@@ -99,13 +104,14 @@ const ModelSelectorPill = forwardRef<HTMLButtonElement, ModelSelectorPillProps>(
       dataTestId,
       ariaLabel,
       iconSize = PILL_SM_ICON_SIZE,
+      isActiveSession = false,
     },
     ref
   ) => {
     const { accounts } = useModelAccountLookup();
     const displaySelection = useMemo(
-      () => resolveDisplaySelection(selection, accounts),
-      [accounts, selection]
+      () => resolveDisplaySelection(selection, accounts, isActiveSession),
+      [accounts, selection, isActiveSession]
     );
 
     const {

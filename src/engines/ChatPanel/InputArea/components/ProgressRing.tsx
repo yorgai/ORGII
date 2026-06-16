@@ -12,6 +12,7 @@ import {
   RING_RADIUS,
   RING_SIZE,
   RING_STROKE,
+  RING_TONE_STROKE,
   type RingTone,
 } from "./contextInfoTypes";
 
@@ -24,7 +25,7 @@ const ProgressRing = memo(
   ({ percentage, tone = "unused" }: ProgressRingProps) => {
     const filled = (Math.min(percentage, 100) / 100) * RING_CIRCUMFERENCE;
     const gap = RING_CIRCUMFERENCE - filled;
-    const strokeClass = tone === "used" ? "stroke-text-2" : "stroke-text-4";
+    const strokeClass = RING_TONE_STROKE[tone] ?? "stroke-text-4";
 
     return (
       <svg

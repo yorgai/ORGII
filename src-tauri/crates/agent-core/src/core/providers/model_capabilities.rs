@@ -134,16 +134,45 @@ const FAMILY_RULES: &[FamilyRule] = &[
     // claude-fable-5: thinks by default in non-streaming responses
     // (2026-06-12 incident: thinking-only side-query responses broke
     // compaction + session-memory extraction).
+    // claude-fable-5: 1M context window (Anthropic official docs).
     FamilyRule {
         pattern: "claude-fable-5",
-        context_window: 200_000,
+        context_window: 1_000_000,
         thinking: ThinkingSupport::AlwaysOn,
     },
+    // claude-opus-4.* (4.6, 4.7, 4.8 …): 1M context window.
     FamilyRule {
         pattern: "claude-opus-4",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    // claude-sonnet-4.5: 200K. Must come BEFORE claude-sonnet-4 so the more
+    // specific pattern wins.
+    FamilyRule {
+        pattern: "claude-sonnet-4.5",
         context_window: 200_000,
         thinking: ThinkingSupport::Optional,
     },
+    // claude-sonnet-4-5 hyphen variant (same model, 200K).
+    FamilyRule {
+        pattern: "claude-sonnet-4-5",
+        context_window: 200_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    // claude-sonnet-4.6+: 1M context window. Must come BEFORE claude-sonnet-4
+    // so it beats the base pattern.
+    FamilyRule {
+        pattern: "claude-sonnet-4.6",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    // claude-sonnet-4-6 hyphen variant (1M).
+    FamilyRule {
+        pattern: "claude-sonnet-4-6",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    // claude-sonnet-4 base (original 20250514 release, 200K).
     FamilyRule {
         pattern: "claude-sonnet-4",
         context_window: 200_000,
@@ -153,6 +182,12 @@ const FAMILY_RULES: &[FamilyRule] = &[
         pattern: "claude-haiku-4",
         context_window: 200_000,
         thinking: ThinkingSupport::Optional,
+    },
+    // claude-mythos (Mythos Preview / Mythos 5): 1M, always-on thinking.
+    FamilyRule {
+        pattern: "claude-mythos",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::AlwaysOn,
     },
     FamilyRule {
         pattern: "claude-3-7",
@@ -174,12 +209,13 @@ const FAMILY_RULES: &[FamilyRule] = &[
         context_window: 200_000,
         thinking: ThinkingSupport::No,
     },
-    // Unknown claude generations (claude-5, claude-6 …): assume always-on
+    // Unknown claude generations (claude-5, claude-6 …): 1M context
+    // window (all new Anthropic models ship with 1M) and assume always-on
     // thinking — newer Anthropic models default to it, and AlwaysOn is the
     // safe guess (Optional would send `disabled` and risk a 400).
     FamilyRule {
         pattern: "claude",
-        context_window: 200_000,
+        context_window: 1_000_000,
         thinking: ThinkingSupport::AlwaysOn,
     },
     // ── OpenAI ──
@@ -417,6 +453,17 @@ fn resolve_thinking_from_keyvault(
 /// model is seen thinking despite a `disabled` request (or rejects
 /// `disabled` with a 400). Shared with `key_vault`'s writeback API.
 pub const OBSERVED_ALWAYS_ON_REASONING: &str = "always_on";
+
+/// Tauri command: resolve the official context window for a model in
+/// kilobytes (matching the unit the frontend `contextWindow` setting
+/// already uses). Calls through [`resolve_from_family_table`] so the
+/// returned value is the same FAMILY_RULES answer `context_window_hint`
+/// and compaction use.
+#[tauri::command]
+pub fn resolve_model_context_k(model: String) -> usize {
+    let caps = resolve_from_family_table(&model);
+    caps.context_window / 1_000
+}
 
 #[cfg(test)]
 #[path = "tests/model_capabilities_tests.rs"]

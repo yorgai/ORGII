@@ -88,7 +88,8 @@ export function useQuestionSubmission(): UseQuestionSubmissionReturn {
         const isExpired =
           msg.includes("No question manager") ||
           msg.includes("No pending question") ||
-          msg.includes("No session found for question response");
+          msg.includes("No session found for question response") ||
+          msg.includes("No pending question found for request/tool_call");
         if (isExpired) {
           Message.warning(t("chat.questionExpired"));
           // Backend has nothing to finalize, so we flip the event ourselves.
@@ -124,7 +125,8 @@ export function useQuestionSubmission(): UseQuestionSubmissionReturn {
         const isExpired =
           msg.includes("No question manager") ||
           msg.includes("No pending question") ||
-          msg.includes("No session found for question response");
+          msg.includes("No session found for question response") ||
+          msg.includes("No pending question found for request/tool_call");
         if (isExpired) {
           Message.warning(t("chat.questionExpired"));
         }

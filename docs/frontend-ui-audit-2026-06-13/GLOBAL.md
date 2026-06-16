@@ -1,7 +1,7 @@
 # Frontend UI Audit — GLOBAL (open-source readiness pass)
 
 **Scope:** React/TypeScript frontend under `src/` (`src/components/`, `src/modules/**/components/`, `src/engines/**`, `src/features/**`, `src/scaffold/**`)
-**Repo:** `/Users/junyu/github/ORGII`
+**Repo:** `ORGII`
 **Date:** 2026-06-13
 **Auditor:** frontend-ui-audit (global sweep, read-only)
 **Methodology:** `~/.orgii/skills/frontend-ui-audit/SKILL.md` (D1–D5 + Systematic Sweep Discipline)

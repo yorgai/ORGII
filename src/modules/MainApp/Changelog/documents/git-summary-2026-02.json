@@ -329,11 +329,11 @@
     {
       "date": "2026-02-17",
       "commitCount": 23,
-      "summary": "Agent terminology shifted from Coding Agent to SDE Agent, and OS Agent settings gained ATC, MCP server, and skills sections. SOYD pool frontend work and model configuration redesigns continued with synchronized localization.",
+      "summary": "Agent terminology shifted from Coding Agent to SDE Agent, and OS Agent settings gained ATC, MCP server, and skills sections. ORGII pool frontend work and model configuration redesigns continued with synchronized localization.",
       "frontendChangeBullets": [
         "Updated agent terminology from Coding Agent to SDE Agent in user-facing areas.",
         "Added ATC, MCP server, and skills sections to OS Agent settings.",
-        "Continued SOYD pool frontend work with clearer opt-in and configuration surfaces.",
+        "Continued ORGII pool frontend work with clearer opt-in and configuration surfaces.",
         "Redesigned model configuration screens for better account and model visibility.",
         "Synchronized localization with updated agent and settings terminology."
       ],
@@ -341,7 +341,7 @@
         "Updated agent terminology in configuration and session data paths.",
         "Added settings support for ATC, MCP server, and skills sections.",
         "Improved model configuration data handling behind redesigned screens.",
-        "Updated SOYD pool support paths used by frontend opt-in flows.",
+        "Updated ORGII pool support paths used by frontend opt-in flows.",
         "Refreshed localization resources tied to agent settings and model configuration."
       ],
       "modelsUsed": ["Opus 4.5", "Sonnet 4.5"]
@@ -353,14 +353,14 @@
       "frontendChangeBullets": [
         "Filtered disabled models from model configuration views so users see only actionable choices.",
         "Filtered disabled accounts to reduce clutter in account selection.",
-        "Made pool opt-in UI more consistent across SOYD-related settings.",
+        "Made pool opt-in UI more consistent across ORGII-related settings.",
         "Improved analytics display logic to distinguish local token usage from cloud cost.",
         "Polished account and provider setup screens with clearer visibility rules."
       ],
       "backendChangeBullets": [
         "Added filtering logic for disabled models and accounts.",
         "Improved model configuration data handling for account visibility.",
-        "Updated pool opt-in state behavior for consistent SOYD settings.",
+        "Updated pool opt-in state behavior for consistent ORGII settings.",
         "Adjusted analytics data presentation logic separating local token usage from cloud cost.",
         "Updated localization resources connected to model and account configuration."
       ],
@@ -409,10 +409,10 @@
     {
       "date": "2026-02-21",
       "commitCount": 4,
-      "summary": "Billing and subscription behavior moved toward backend-driven configuration, while SOYD subscription UI added wallet earned/purchased credit concepts. SOYD project settings gained work items, project data hooks, push retry behavior, and failure indicators.",
+      "summary": "Billing and subscription behavior moved toward backend-driven configuration, while ORGII subscription UI added wallet earned/purchased credit concepts. ORGII project settings gained work items, project data hooks, push retry behavior, and failure indicators.",
       "frontendChangeBullets": [
         "Moved billing and subscription behavior toward backend-driven configuration for more accurate plan display.",
-        "Added SOYD subscription UI concepts for earned and purchased wallet credit.",
+        "Added ORGII subscription UI concepts for earned and purchased wallet credit.",
         "Improved Work Items and project settings with richer planning surfaces.",
         "Added push retry feedback and failure indicators for project settings workflows.",
         "Expanded localization around wallet, billing, subscription, and project settings text."
@@ -420,7 +420,7 @@
       "backendChangeBullets": [
         "Added backend-driven billing and subscription configuration support.",
         "Updated wallet data handling for earned and purchased credit concepts.",
-        "Added project data hooks used by SOYD project settings.",
+        "Added project data hooks used by ORGII project settings.",
         "Improved push retry behavior in project settings workflows.",
         "Added failure indicator data paths for project and Work Item synchronization."
       ],
@@ -449,16 +449,16 @@
     {
       "date": "2026-02-23",
       "commitCount": 4,
-      "summary": "SOYD platform constants were cleaned up by replacing hardcoded orchestrator strings. Project sync status became more accurate, and network settings gained Git proxy and VPN detection features with localization support.",
+      "summary": "ORGII platform constants were cleaned up by replacing hardcoded orchestrator strings. Project sync status became more accurate, and network settings gained Git proxy and VPN detection features with localization support.",
       "frontendChangeBullets": [
-        "Cleaned SOYD platform labels by replacing hardcoded orchestrator strings with consistent product naming.",
+        "Cleaned ORGII platform labels by replacing hardcoded orchestrator strings with consistent product naming.",
         "Improved project sync status accuracy in project-facing screens.",
         "Added Git proxy settings so repository network behavior is easier to configure.",
         "Added VPN detection features in network settings.",
         "Expanded localization support for network, Git proxy, VPN, and project sync labels."
       ],
       "backendChangeBullets": [
-        "Replaced hardcoded orchestrator strings with shared SOYD platform constants.",
+        "Replaced hardcoded orchestrator strings with shared ORGII platform constants.",
         "Improved project sync status calculation and state reporting.",
         "Added Git proxy configuration support.",
         "Added VPN detection support for network settings.",

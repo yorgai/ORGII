@@ -120,6 +120,8 @@ pub struct ExtractedShellData {
     pub shell_process_status: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shell_log_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub git_artifacts: Option<Vec<ExtractedGitArtifactData>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

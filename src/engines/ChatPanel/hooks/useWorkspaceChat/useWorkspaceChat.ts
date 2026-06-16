@@ -353,6 +353,18 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         if (explicitPostStopSubmit) {
           setQueueFlushRequest((requestId) => requestId + 1);
         }
+        // Light up the planning indicator immediately for the visible session.
+        // The enqueue path used to return without any optimistic status, so a
+        // message that was queued (turn FSM not idle) showed no "working"
+        // feedback until the queue drainer finally dispatched it — which is
+        // gated behind MIN_QUEUE_VISIBLE_MS + a backend re-check and is worst
+        // for image turns whose first stream event lands seconds later. The
+        // gate inside setSessionRuntimeStatusAtom drops this write for
+        // background sessions, and `!isPendingCancel` suppresses it during a
+        // Stop episode, so it is safe to call unconditionally here.
+        if (!explicitPostStopSubmit) {
+          beginOptimisticTurn(sessionId, "queue");
+        }
         return;
       }
 

@@ -37,8 +37,14 @@ interface AgentModelsSectionProps {
 
 const CONTEXT_WINDOW_OPTIONS = [
   { label: "", value: "auto" },
+  { label: "1M (1,000,000)", value: "1000000" },
+  { label: "200K (200,000)", value: "200000" },
+  { label: "128K (128,000)", value: "128000" },
+  { label: "64K (64,000)", value: "64000" },
+  { label: "32K (32,000)", value: "32000" },
+  { label: "16K (16,000)", value: "16000" },
   { label: "", value: "custom" },
-];
+] as const;
 
 const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
   config,
@@ -55,6 +61,20 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
       ? contextWindowRaw
       : null;
   const isCustomContextWindow = contextWindow !== null;
+
+  const contextWindowSelectValue = (() => {
+    if (contextWindow === null) return "auto";
+    const preset = CONTEXT_WINDOW_OPTIONS.find(
+      (o) =>
+        o.value !== "auto" &&
+        o.value !== "custom" &&
+        Number(o.value) === contextWindow
+    );
+    if (preset) return preset.value;
+    return "custom";
+  })();
+
+  const isCustomNumberInput = contextWindowSelectValue === "custom";
 
   const maxTokens = getNestedNumber(config, "maxTokens", 8192);
   const temperature = getNestedNumber(config, "temperature", 0.7);
@@ -117,7 +137,9 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
     label:
       opt.value === "auto"
         ? t("sharedAgentConfig.contextWindowAuto")
-        : t("sharedAgentConfig.contextWindowCustom"),
+        : opt.value === "custom"
+          ? t("sharedAgentConfig.contextWindowCustom")
+          : opt.label,
   }));
 
   return (
@@ -126,18 +148,23 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
         <SectionRow
           label={t("sharedAgentConfig.contextWindow")}
           description={
-            isCustomContextWindow
+            isCustomNumberInput
               ? t("sharedAgentConfig.contextWindowCustomDesc")
-              : t("sharedAgentConfig.contextWindowAutoDesc")
+              : isCustomContextWindow
+                ? ""
+                : t("sharedAgentConfig.contextWindowAutoDesc")
           }
         >
           <Select
-            value={isCustomContextWindow ? "custom" : "auto"}
+            value={contextWindowSelectValue}
             onChange={(val) => {
               if (val === "auto") {
                 update("contextWindow", null);
-              } else {
+              } else if (val === "custom") {
                 update("contextWindow", 128000);
+              } else {
+                const n = Number(val);
+                if (!Number.isNaN(n) && n > 0) update("contextWindow", n);
               }
             }}
             options={contextWindowOptions}
@@ -145,7 +172,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
             style={SECTION_CONTROL_STYLE}
           />
         </SectionRow>
-        {isCustomContextWindow && (
+        {isCustomNumberInput && (
           <SectionRow
             label={t("sharedAgentConfig.contextWindowCustomTokens")}
             indent

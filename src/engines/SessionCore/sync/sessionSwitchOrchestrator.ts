@@ -20,6 +20,7 @@ import type { SessionSyncRefs } from "./sessionSyncTypes";
 import {
   hydrateSessionStoreBeforeDisplay,
   isInFlightRunStatus,
+  loadOwnSessionInitialEvents,
   loadPersistedHistory,
 } from "./sessionSyncUtils";
 import type { SessionAdapter } from "./types";
@@ -135,6 +136,22 @@ async function handleCacheHit(
       await eventStoreProxy.loadInitialTurnWindow(sessionId);
       if (abortController.signal.aborted) return;
       displayEvents = await eventStoreProxy.getEvents(sessionId);
+      // The round-window load can resolve to zero chat-visible events when
+      // the turn index is mid-rebuild (e.g. switching into a session right
+      // after it finished a long run), and `set_round_window` overwrites the
+      // in-memory store unconditionally. Without this guard the panel renders
+      // "loaded + 0 events" until the user hits Reload. Fall back to the full
+      // initial load (which itself falls back to `loadEvents` when the turn
+      // index is empty) and re-hydrate the store so the events actually show.
+      if (displayEvents.length === 0 || !displayEvents.some(isVisibleInChat)) {
+        const fallbackEvents = await loadOwnSessionInitialEvents(sessionId);
+        if (abortController.signal.aborted) return;
+        if (fallbackEvents.length > 0) {
+          await hydrateSessionStoreBeforeDisplay(sessionId, fallbackEvents);
+          if (abortController.signal.aborted) return;
+          displayEvents = fallbackEvents;
+        }
+      }
     } else if (
       displayEvents.length === 0 ||
       !displayEvents.some(isVisibleInChat)

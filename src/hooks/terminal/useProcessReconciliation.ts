@@ -23,7 +23,10 @@ import {
   shellProcessMapAtom,
   updateShellProcessAtom,
 } from "@src/store/session/shellProcessAtom";
-import { updateSubagentJobAtom } from "@src/store/session/subagentJobAtom";
+import {
+  pruneSubagentJobsAtom,
+  updateSubagentJobAtom,
+} from "@src/store/session/subagentJobAtom";
 import {
   closeTerminalSessionAtom,
   terminalSessionsAtom,
@@ -87,6 +90,7 @@ export function useProcessReconciliation(): void {
   const terminalSessions = useAtomValue(terminalSessionsAtom);
   const dispatchUpdateShellProcess = useSetAtom(updateShellProcessAtom);
   const dispatchUpdateSubagentJob = useSetAtom(updateSubagentJobAtom);
+  const dispatchPruneSubagentJobs = useSetAtom(pruneSubagentJobsAtom);
   const dispatchUpdateTerminalInfo = useSetAtom(updateTerminalSessionInfoAtom);
   const dispatchCloseSession = useSetAtom(closeTerminalSessionAtom);
 
@@ -96,6 +100,7 @@ export function useProcessReconciliation(): void {
   const terminalSessionsRef = useRef(terminalSessions);
   const dispatchUpdateShellProcessRef = useRef(dispatchUpdateShellProcess);
   const dispatchUpdateSubagentJobRef = useRef(dispatchUpdateSubagentJob);
+  const dispatchPruneSubagentJobsRef = useRef(dispatchPruneSubagentJobs);
   const dispatchUpdateTerminalInfoRef = useRef(dispatchUpdateTerminalInfo);
   const dispatchCloseSessionRef = useRef(dispatchCloseSession);
 
@@ -104,6 +109,7 @@ export function useProcessReconciliation(): void {
     terminalSessionsRef.current = terminalSessions;
     dispatchUpdateShellProcessRef.current = dispatchUpdateShellProcess;
     dispatchUpdateSubagentJobRef.current = dispatchUpdateSubagentJob;
+    dispatchPruneSubagentJobsRef.current = dispatchPruneSubagentJobs;
     dispatchUpdateTerminalInfoRef.current = dispatchUpdateTerminalInfo;
     dispatchCloseSessionRef.current = dispatchCloseSession;
   });
@@ -159,6 +165,13 @@ export function useProcessReconciliation(): void {
           "agent_list_running_subagent_jobs"
         );
         if (cancelled) return;
+
+        // Prune ghost rows: any "running" row whose handle is no longer in the
+        // authoritative live set (broadcast lost, registry GC'd, app restart)
+        // is stale and must be dropped so it can't linger unkillable.
+        dispatchPruneSubagentJobsRef.current({
+          liveHandles: new Set(runningSubagents.map((job) => job.handle)),
+        });
 
         for (const job of runningSubagents) {
           dispatchUpdateSubagentJobRef.current({

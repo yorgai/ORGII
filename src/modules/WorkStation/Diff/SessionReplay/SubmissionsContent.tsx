@@ -16,6 +16,8 @@ import { getPrStatusLabelKey } from "@src/shared/pr/prStatus";
 export type SubmissionArtifact = ExtractedGitArtifactData & {
   repoId?: string;
   repoPath?: string;
+  /** Event ID where this artifact was extracted from (for replay navigation). */
+  eventId?: string;
 };
 
 export type SubmissionCommit = Pick<
@@ -25,6 +27,8 @@ export type SubmissionCommit = Pick<
   author?: GitCommitInfo["author"] | null;
   repoId?: string;
   repoPath?: string;
+  /** Event ID where this commit was first mentioned (extracted from text/shell, not orgtrack-linked). */
+  mentionedEventId?: string;
 };
 
 export interface PullRequestSubmission {
@@ -75,6 +79,7 @@ function commitFromArtifact(
     author: null,
     repoId: artifact.repoId,
     repoPath: artifact.repoPath,
+    mentionedEventId: artifact.eventId,
   };
 }
 

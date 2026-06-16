@@ -1,5 +1,6 @@
 import type { SetStateAction } from "react";
 
+import { wasRecentlyOptimisticallyStarted } from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import {
   markTurnRunning,
   markTurnTerminal,
@@ -80,11 +81,22 @@ const RUNNING_HANDLER_STATUSES = new Set<string>([
   "waiting_for_funds",
 ]);
 export function resetSessionSwitchState(
-  actions: SessionSwitchStateActions
+  actions: SessionSwitchStateActions,
+  sessionId?: string
 ): void {
   actions.setWpReadOnly(false);
   actions.clearSessionLoadError();
-  actions.setSessionRuntimeStatus("idle");
+  // Preserve an optimistic running that a just-completed launch/dispatch set
+  // on the EXACT session we are switching into. The switch effect fires right
+  // after `setActiveSessionId`, so an unconditional idle reset here erases the
+  // launch's `running` before the provider's first event re-asserts it —
+  // invisible on fast providers (Claude), a multi-second "frozen, no footer,
+  // Send-not-Stop" gap on slow ones (deepseek). The marker is session-scoped
+  // so a stale `running` from a different (background) session is NOT
+  // preserved. The authoritative backend status event still overwrites it.
+  if (!sessionId || !wasRecentlyOptimisticallyStarted(sessionId)) {
+    actions.setSessionRuntimeStatus("idle");
+  }
   actions.setSessionRuntimeError(null);
   actions.setPendingCancel(false);
   actions.setStreamRetryStatus(null);

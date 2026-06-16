@@ -16,6 +16,12 @@ export interface ContextUsageInfo {
   tokenLabel: string;
   maxTokens: number;
   contextUsage: ContextUsageSnapshot | null;
+  /** Cache-read tokens saved by Anthropic prompt caching (not counted as used). */
+  cacheReadTokens: number;
+  /** Cache-write tokens written this turn. */
+  cacheWriteTokens: number;
+  /** Remaining available tokens (maxTokens - displayTokens excluding cache). */
+  remainingTokens: number;
 }
 
 export function formatTokenCount(count: number): string {
@@ -49,7 +55,11 @@ export function useContextUsageInfo(): ContextUsageInfo {
         : 0;
   const clampedPercentage = Math.min(percentage, 100);
 
-  const tokenLabel = `${clampedPercentage.toFixed(1)}% · ${formatTokenCount(displayTokens)} / ${formatTokenCount(maxTokens)} ${t("contextInfo.contextUsed")}`;
+  const tokenLabel = `${percentage.toFixed(1)}% · ${formatTokenCount(displayTokens)} / ${formatTokenCount(maxTokens)} ${t("contextInfo.contextUsed")}`;
+
+  const cacheReadTokens = contextUsage?.cacheReadTokens ?? 0;
+  const cacheWriteTokens = contextUsage?.cacheWriteTokens ?? 0;
+  const remainingTokens = Math.max(0, maxTokens - displayTokens);
 
   return {
     percentage,
@@ -57,5 +67,8 @@ export function useContextUsageInfo(): ContextUsageInfo {
     tokenLabel,
     maxTokens,
     contextUsage,
+    cacheReadTokens,
+    cacheWriteTokens,
+    remainingTokens,
   };
 }

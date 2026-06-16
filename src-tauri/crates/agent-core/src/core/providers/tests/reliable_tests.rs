@@ -189,6 +189,19 @@ fn overloaded_is_retryable() {
     ));
 }
 
+#[test]
+fn deepseek_thinking_tool_choice_400_is_non_retryable() {
+    // DeepSeek thinking models reject forced tool_choice with a deterministic
+    // 400. Retrying it 10× wastes the side-query budget and times out SM
+    // extraction; it must fail fast so side_query falls back to no-tool_choice.
+    assert!(ReliableProvider::is_non_retryable(
+        &ProviderError::RequestFailed(
+            "HTTP 400: {\"error\":{\"message\":\"Thinking mode does not support this tool_choice\"}}"
+                .into()
+        )
+    ));
+}
+
 // --- Integration: retry succeeds ---
 
 #[tokio::test]

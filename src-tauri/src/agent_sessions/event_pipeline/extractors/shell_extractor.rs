@@ -1,5 +1,6 @@
 //! Shell command and await_output extractors.
 
+use super::git_artifacts::{parse_git_artifacts, GitArtifactParseInput};
 use super::helpers::{get_failure_data, get_success_data, obj_f64, obj_i64, obj_str, safe_str};
 use crate::agent_sessions::event_pipeline::extractors::types::*;
 
@@ -58,6 +59,19 @@ pub(super) fn extract_shell(
     let shell_process_status = args.and_then(|a| obj_str(a, "shellProcessStatus"));
     let shell_log_path = args.and_then(|a| obj_str(a, "shellLogPath"));
 
+    let git_artifacts = {
+        let artifacts = parse_git_artifacts(GitArtifactParseInput {
+            command: &command,
+            output: output.as_deref(),
+            exit_code,
+        });
+        if artifacts.is_empty() {
+            None
+        } else {
+            Some(artifacts)
+        }
+    };
+
     ExtractedShellData {
         command,
         action,
@@ -72,6 +86,7 @@ pub(super) fn extract_shell(
         shell_pid,
         shell_process_status,
         shell_log_path,
+        git_artifacts,
     }
 }
 

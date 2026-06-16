@@ -424,6 +424,39 @@ export function createSessionSeederHelpers(store: E2EStore) {
     }
   };
 
+  /**
+   * Wire-path seed for the Diff app's Submissions tab. Calls the debug-only
+   * Tauri command `debug_seed_commit_link`, which writes a real orgtrack
+   * `CommitLinkRecord` (the same shape `analysis_backfill` produces from a
+   * `git push` shell event). `orgtrack_get_session_commit_links` then returns
+   * it and `SessionReplay` renders the commit in the Submissions tab exactly
+   * like a live push. No store writes happen here.
+   */
+  const debugSeedCommitLinkWire = async (input: {
+    sessionId: string;
+    commitSha: string;
+  }): Promise<Result<{ sessionId: string; commitSha: string }>> => {
+    try {
+      if (!input.sessionId || !input.commitSha) {
+        return {
+          ok: false,
+          error:
+            "debugSeedCommitLinkWire: `sessionId` and `commitSha` required",
+        };
+      }
+      await invoke("debug_seed_commit_link", {
+        sessionId: input.sessionId,
+        commitSha: input.commitSha,
+      });
+      return {
+        ok: true,
+        sessionId: input.sessionId,
+        commitSha: input.commitSha,
+      };
+    } catch (err) {
+      return asError(err);
+    }
+  };
   /** Wire-path kill: same Tauri command the pin bar's Stop button calls. */
   const killSubagentJobWire = async (
     handle: string
@@ -431,6 +464,44 @@ export function createSessionSeederHelpers(store: E2EStore) {
     try {
       await invoke("agent_kill_subagent_job", { handle });
       return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  /**
+   * Wire-path seed for the Diff app's Diff tab content. Calls the debug-only
+   * Tauri command `debug_seed_final_diff`, which writes an orgtrack
+   * `SessionFinalDiffRecord` with only the `diff` field set (no old_content /
+   * new_content). `orgtrack_get_session_final_diffs` then returns it and the
+   * `finalDiffToSection` fallback parses the unified diff to render content
+   * instead of a blank/empty panel.
+   */
+  const debugSeedFinalDiffWire = async (input: {
+    sessionId: string;
+    source: string;
+    filePath: string;
+    diff: string;
+  }): Promise<Result<{ sessionId: string; filePath: string }>> => {
+    try {
+      if (!input.sessionId || !input.source || !input.filePath || !input.diff) {
+        return {
+          ok: false,
+          error:
+            "debugSeedFinalDiffWire: `sessionId`, `source`, `filePath`, and `diff` required",
+        };
+      }
+      await invoke("debug_seed_final_diff", {
+        sessionId: input.sessionId,
+        source: input.source,
+        filePath: input.filePath,
+        diff: input.diff,
+      });
+      return {
+        ok: true,
+        sessionId: input.sessionId,
+        filePath: input.filePath,
+      };
     } catch (err) {
       return asError(err);
     }
@@ -537,10 +608,12 @@ export function createSessionSeederHelpers(store: E2EStore) {
     seedShellProcess,
     seedSubagentJob,
     debugSeedSubagentJobWire,
+    debugSeedCommitLinkWire,
     killSubagentJobWire,
     listRunningSubagentJobsWire,
     debugSeedChildSessionWire,
     debugSeedPendingPlanWire,
+    debugSeedFinalDiffWire,
     deleteSessionWire,
   };
 }

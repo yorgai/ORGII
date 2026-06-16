@@ -21,7 +21,11 @@ pub async fn agent_question_response(
 ) -> Result<(), String> {
     let session = state.get_session(&session_id).await;
     if let Some(session) = session {
-        session.question_manager.respond(&request_id, answers).await;
+        session
+            .question_manager
+            .respond(&request_id, answers)
+            .await
+            .map_err(|msg| format!("Question response failed: {}", msg))?;
         return Ok(());
     }
     Err(format!(
@@ -54,7 +58,11 @@ pub async fn agent_question_reject(
 ) -> Result<(), String> {
     let session = state.get_session(&session_id).await;
     if let Some(session) = session {
-        session.question_manager.reject(&request_id).await;
+        session
+            .question_manager
+            .reject(&request_id)
+            .await
+            .map_err(|msg| format!("Question rejection failed: {}", msg))?;
         return Ok(());
     }
     Err(format!(

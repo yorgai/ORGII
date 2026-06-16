@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
@@ -112,7 +112,7 @@ fn run_backfill_pass() -> Result<AnalysisBackfillStats, String> {
     let store = SqliteRecordStore::new(&conn);
     let mut sessions = store.list_sessions(None)?;
     sort_sessions_recent_first(&mut sessions);
-    let sessions_with_current_analysis = analyzed_session_ids(&store, None)?;
+    let sessions_with_current_analysis = analyzed_watermarks(&store, None)?;
     for session in sessions.into_iter().take(MAX_SESSIONS_PER_PASS) {
         stats.scanned_sessions += 1;
         if should_pause(&memory_config) {
@@ -197,7 +197,7 @@ fn analyze_sessions(
     if let AnalysisSelection::Session { session_id, .. } = selection {
         sessions.retain(|session| session.session_id == session_id);
     }
-    let sessions_with_current_analysis = analyzed_session_ids(&store, workspace_path)?;
+    let sessions_with_current_analysis = analyzed_watermarks(&store, workspace_path)?;
     for session in sessions.into_iter().take(MAX_ON_DEMAND_SESSIONS) {
         stats.scanned_sessions += 1;
         if should_pause(&memory_config) {
@@ -246,65 +246,67 @@ fn sort_sessions_recent_first(sessions: &mut [SessionRecord]) {
     });
 }
 
-fn analyzed_session_ids(
+/// Map of session id → the `updated_at` watermark recorded the last time the
+/// session was analyzed (from the analysis-marker checkpoint). A session is
+/// considered fully analyzed only up to this point; if it has been updated
+/// since (new commits/pushes/edits), the gate re-analyzes it.
+///
+/// Sessions that have artifacts (final diffs / commit links) but no marker are
+/// intentionally *omitted* so they get re-analyzed once and gain a proper
+/// watermarked marker — older markers predate the watermark field.
+fn analyzed_watermarks(
     store: &SqliteRecordStore<'_>,
     workspace_path: Option<&str>,
-) -> Result<BTreeSet<String>, String> {
-    let mut ids = sessions_with_current_analysis_marker(store, workspace_path)?;
-    for final_diff in store.list_final_diffs(None, None)? {
-        ids.insert(final_diff.session_id);
-    }
-    for commit_link in store.list_commit_links()? {
-        for session_id in commit_link.session_ids {
-            ids.insert(session_id);
+) -> Result<BTreeMap<String, Option<String>>, String> {
+    let mut watermarks: BTreeMap<String, Option<String>> = BTreeMap::new();
+    for checkpoint in store.list_session_checkpoints(None, None)? {
+        let Some(metadata) = checkpoint
+            .metadata_json
+            .as_deref()
+            .and_then(|raw| serde_json::from_str::<serde_json::Value>(raw).ok())
+        else {
+            continue;
+        };
+        let is_current_version = metadata
+            .get("analysisArtifactVersion")
+            .and_then(serde_json::Value::as_u64)
+            == Some(u64::from(ANALYSIS_ARTIFACT_VERSION));
+        if !is_current_version {
+            continue;
         }
+        if let Some(workspace_path) = workspace_path {
+            let checkpoint_workspace = metadata
+                .get("workspacePath")
+                .and_then(serde_json::Value::as_str);
+            if checkpoint_workspace != Some(workspace_path) {
+                continue;
+            }
+        }
+        let watermark = metadata
+            .get("analyzedThroughUpdatedAt")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string);
+        watermarks.insert(checkpoint.session_id, watermark);
     }
-    Ok(ids)
+    Ok(watermarks)
 }
 
-fn sessions_with_current_analysis_marker(
-    store: &SqliteRecordStore<'_>,
-    workspace_path: Option<&str>,
-) -> Result<BTreeSet<String>, String> {
-    Ok(store
-        .list_session_checkpoints(None, None)?
-        .into_iter()
-        .filter(|checkpoint| {
-            checkpoint
-                .metadata_json
-                .as_deref()
-                .and_then(|raw| serde_json::from_str::<serde_json::Value>(raw).ok())
-                .and_then(|value| {
-                    value
-                        .get("analysisArtifactVersion")
-                        .and_then(serde_json::Value::as_u64)
-                })
-                == Some(u64::from(ANALYSIS_ARTIFACT_VERSION))
-        })
-        .filter(|checkpoint| {
-            workspace_path.is_none()
-                || checkpoint
-                    .metadata_json
-                    .as_deref()
-                    .and_then(|raw| serde_json::from_str::<serde_json::Value>(raw).ok())
-                    .and_then(|value| {
-                        value
-                            .get("workspacePath")
-                            .and_then(serde_json::Value::as_str)
-                            .map(str::to_string)
-                    })
-                    .as_deref()
-                    == workspace_path
-        })
-        .map(|checkpoint| checkpoint.session_id)
-        .collect())
-}
-
+/// A session needs analysis when it has never been analyzed (no marker), or
+/// when it has been updated since the last analysis watermark. The watermark
+/// is `None` for legacy markers written before the field existed — those are
+/// re-analyzed once to backfill the watermark.
 fn session_needs_analysis(
     session: &SessionRecord,
-    sessions_with_current_analysis: &BTreeSet<String>,
+    analyzed_watermarks: &BTreeMap<String, Option<String>>,
 ) -> bool {
-    !sessions_with_current_analysis.contains(&session.session_id)
+    match analyzed_watermarks.get(&session.session_id) {
+        None => true,
+        Some(None) => true,
+        Some(Some(watermark)) => match session.updated_at.as_deref() {
+            Some(updated_at) => updated_at > watermark.as_str(),
+            None => false,
+        },
+    }
 }
 
 fn should_pause(config: &ExtractionMemoryGateConfig) -> bool {
@@ -765,6 +767,13 @@ fn upsert_analysis_marker_checkpoint(
                 "artifactClass": "analysis",
                 "analysisArtifactVersion": ANALYSIS_ARTIFACT_VERSION,
                 "workspacePath": session.workspace_path,
+                // Watermark: the session's `updated_at` at the moment this
+                // analysis ran. The gate re-analyzes whenever the session is
+                // updated past this value, so commits/pushes made *after* an
+                // earlier analysis still flow into orgtrack (commit links /
+                // Submissions). Without this, a session was analyzed once and
+                // then skipped forever — later pushes never produced links.
+                "analyzedThroughUpdatedAt": session.updated_at,
             })
             .to_string(),
         ),
@@ -807,4 +816,71 @@ fn upsert_analysis_boundary_checkpoints(
         })?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod gate_tests {
+    use super::*;
+    use orgtrack_core::canonical::AgentMetadata;
+
+    fn session_with_updated_at(session_id: &str, updated_at: Option<&str>) -> SessionRecord {
+        SessionRecord {
+            schema_version: ORGTRACK_SCHEMA_VERSION,
+            source: SOURCE_ORGII_RUST_AGENTS.to_string(),
+            source_session_id: session_id.to_string(),
+            session_id: session_id.to_string(),
+            title: String::new(),
+            status: None,
+            created_at: None,
+            updated_at: updated_at.map(str::to_string),
+            completed_at: None,
+            workspace_path: None,
+            branch: None,
+            parent_session_id: None,
+            org_member_id: None,
+            metadata: AgentMetadata::default(),
+        }
+    }
+
+    #[test]
+    fn unanalyzed_session_needs_analysis() {
+        let watermarks = BTreeMap::new();
+        let session = session_with_updated_at("s1", Some("2026-06-15T10:00:00Z"));
+        assert!(session_needs_analysis(&session, &watermarks));
+    }
+
+    #[test]
+    fn legacy_marker_without_watermark_is_reanalyzed_once() {
+        let mut watermarks = BTreeMap::new();
+        watermarks.insert("s1".to_string(), None);
+        let session = session_with_updated_at("s1", Some("2026-06-15T10:00:00Z"));
+        assert!(session_needs_analysis(&session, &watermarks));
+    }
+
+    #[test]
+    fn analyzed_session_with_no_new_updates_is_skipped() {
+        let mut watermarks = BTreeMap::new();
+        watermarks.insert("s1".to_string(), Some("2026-06-15T10:00:00Z".to_string()));
+        let session = session_with_updated_at("s1", Some("2026-06-15T10:00:00Z"));
+        assert!(!session_needs_analysis(&session, &watermarks));
+    }
+
+    #[test]
+    fn session_updated_after_watermark_is_reanalyzed() {
+        // Core regression: a session analyzed at T1 that then receives a new
+        // commit/push (bumping updated_at to T2 > T1) must be re-analyzed so
+        // the new commit link reaches Submissions.
+        let mut watermarks = BTreeMap::new();
+        watermarks.insert("s1".to_string(), Some("2026-06-15T10:00:00Z".to_string()));
+        let session = session_with_updated_at("s1", Some("2026-06-15T17:24:00Z"));
+        assert!(session_needs_analysis(&session, &watermarks));
+    }
+
+    #[test]
+    fn analyzed_session_missing_updated_at_is_skipped() {
+        let mut watermarks = BTreeMap::new();
+        watermarks.insert("s1".to_string(), Some("2026-06-15T10:00:00Z".to_string()));
+        let session = session_with_updated_at("s1", None);
+        assert!(!session_needs_analysis(&session, &watermarks));
+    }
 }

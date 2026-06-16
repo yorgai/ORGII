@@ -229,7 +229,13 @@ export async function handleInteractionFinalized(
   sessionId: string
 ): Promise<void> {
   const toolCallId = getToolCallId(event);
-  if (!toolCallId) return;
+  if (!toolCallId) {
+    log.warn(
+      "[handleInteractionFinalized] missing toolCallId — cannot merge finalize event",
+      event
+    );
+    return;
+  }
 
   const resultObject =
     (event.resultObject as Record<string, unknown> | undefined) ?? {};
