@@ -20,10 +20,11 @@ import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
+import DiffStatsBadge from "@src/components/DiffStatsBadge";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import Message from "@src/components/Message";
 import TabPill from "@src/components/TabPill";
-import { DIFF_STATS, HEADER_ICON_SIZE } from "@src/config/workstation/tokens";
+import { HEADER_ICON_SIZE } from "@src/config/workstation/tokens";
 import { useRefreshSpin } from "@src/hooks/ui";
 import { type WorkstationTabHeaderHost } from "@src/hooks/workStation";
 import { PANEL_HEADER_TOKENS } from "@src/modules/shared/layouts/blocks/PanelHeader";
@@ -415,15 +416,8 @@ export const FileHeader: React.FC<FileHeaderProps> = memo(
         {hasRightControls && (
           <div className="ml-auto flex flex-shrink-0 items-center gap-px">
             {/* Stats (for diffs) */}
-            {hasStats && (additions! > 0 || deletions! > 0) && (
-              <span className={DIFF_STATS.container}>
-                {additions! > 0 && (
-                  <span className={DIFF_STATS.additions}>+{additions}</span>
-                )}
-                {deletions! > 0 && (
-                  <span className={DIFF_STATS.deletions}>-{deletions}</span>
-                )}
-              </span>
+            {hasStats && (
+              <DiffStatsBadge additions={additions} deletions={deletions} />
             )}
 
             {/* Separator before tab pills */}

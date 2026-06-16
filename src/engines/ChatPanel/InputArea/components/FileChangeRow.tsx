@@ -7,8 +7,9 @@
  * surface was removed; this row now only displays change metadata (e.g.
  * the per-round file list at the bottom of each chat turn).
  */
-import { memo } from "react";
+import { type KeyboardEvent, memo } from "react";
 
+import DiffStatsBadge from "@src/components/DiffStatsBadge";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import {
   COMPOSER_STACK_ROW_BASE,
@@ -25,15 +26,22 @@ export interface FileChangeRowProps {
 }
 
 const FileChangeRow = memo(({ file, onFileClick }: FileChangeRowProps) => {
-  const stats = (file.additions > 0 || file.deletions > 0) && (
-    <span className="chat-block-xs flex shrink-0 items-center gap-1">
-      {file.additions > 0 && (
-        <span className="text-green-500">+{file.additions}</span>
-      )}
-      {file.deletions > 0 && (
-        <span className="text-red-500">-{file.deletions}</span>
-      )}
-    </span>
+  const handleClick = onFileClick ? () => onFileClick(file.path) : undefined;
+  const handleKeyDown = onFileClick
+    ? (event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onFileClick(file.path);
+        }
+      }
+    : undefined;
+
+  const stats = (
+    <DiffStatsBadge
+      additions={file.additions}
+      deletions={file.deletions}
+      variant="chat"
+    />
   );
 
   return (
@@ -43,7 +51,10 @@ const FileChangeRow = memo(({ file, onFileClick }: FileChangeRowProps) => {
       className={`group ${COMPOSER_STACK_ROW_BASE} ${
         onFileClick ? `${COMPOSER_STACK_ROW_HOVER} cursor-pointer` : ""
       }`}
-      onClick={onFileClick ? () => onFileClick(file.path) : undefined}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role={onFileClick ? "button" : undefined}
+      tabIndex={onFileClick ? 0 : undefined}
     >
       <FileTypeIcon fileName={file.fileName} size="small" />
       <span

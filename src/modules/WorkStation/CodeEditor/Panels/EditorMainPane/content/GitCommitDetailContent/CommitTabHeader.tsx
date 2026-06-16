@@ -1,8 +1,8 @@
 import React, { memo, useMemo } from "react";
 
 import type { CommitDiffResult } from "@src/api/http/git/types";
+import DiffStatsBadge from "@src/components/DiffStatsBadge";
 import { FileHeader } from "@src/modules/WorkStation/shared";
-import { DIFF_STATS } from "@src/modules/WorkStation/shared/tokens";
 import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 interface CommitTabHeaderProps {
@@ -38,14 +38,10 @@ export const CommitTabHeader: React.FC<CommitTabHeaderProps> = memo(
               </span>
             )}
             {commitDiff?.stats && (
-              <span className={DIFF_STATS.container}>
-                <span className={DIFF_STATS.additions}>
-                  +{commitDiff.stats.insertions}
-                </span>
-                <span className={DIFF_STATS.deletions}>
-                  -{commitDiff.stats.deletions}
-                </span>
-              </span>
+              <DiffStatsBadge
+                additions={commitDiff.stats.insertions}
+                deletions={commitDiff.stats.deletions}
+              />
             )}
           </div>
         ) : null,

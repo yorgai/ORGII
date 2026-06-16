@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import DiffStatsBadge from "@src/components/DiffStatsBadge";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import {
   type GitFileStatus,
@@ -18,7 +19,6 @@ import {
   getStatusLetterForFile,
 } from "@src/config/gitStatus";
 import { CodeMirrorDiff } from "@src/features/CodeMirror";
-import { DIFF_STATS } from "@src/modules/WorkStation/shared/tokens";
 import { FileHeader } from "@src/modules/shared/components/FileHeader";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import {
@@ -411,16 +411,11 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
               </span>
             ) : null}
           </div>
-          {(additions > 0 || deletions > 0) && (
-            <span className={DIFF_STATS.containerCompact}>
-              {additions > 0 && (
-                <span className={DIFF_STATS.additions}>+{additions}</span>
-              )}
-              {deletions > 0 && (
-                <span className={DIFF_STATS.deletions}>-{deletions}</span>
-              )}
-            </span>
-          )}
+          <DiffStatsBadge
+            additions={additions}
+            deletions={deletions}
+            variant="compact"
+          />
           <span className={`shrink-0 text-[11px] font-medium ${statusColor}`}>
             {statusLetter}
           </span>
