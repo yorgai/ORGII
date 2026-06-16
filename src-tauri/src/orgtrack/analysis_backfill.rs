@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, MutexGuard, TryLockError};
 use std::thread;
 use std::time::Duration;
 
@@ -50,11 +51,12 @@ use crate::orgtrack::extraction_scheduler::{
 };
 
 static STARTED: AtomicBool = AtomicBool::new(false);
+static ANALYSIS_LOCK: Mutex<()> = Mutex::new(());
 const STARTUP_DELAY: Duration = Duration::from_secs(20);
-const IDLE_INTERVAL: Duration = Duration::from_secs(10 * 60);
-const MAX_SESSIONS_PER_PASS: usize = 25;
+const IDLE_INTERVAL: Duration = Duration::from_secs(60);
+const MAX_SESSIONS_PER_PASS: usize = 1;
 const MAX_EVENTS_PER_SESSION: usize = 500;
-const MAX_ON_DEMAND_SESSIONS: usize = 40;
+const MAX_ON_DEMAND_SESSIONS: usize = 1;
 const ANALYSIS_HYDRATION_PAGE_SIZE: usize = 200;
 const ANALYSIS_ARTIFACT_VERSION: u32 = 2;
 
@@ -65,6 +67,20 @@ pub struct AnalysisBackfillStats {
     pub analyzed_sessions: usize,
     pub skipped_sessions: usize,
     pub failed_sessions: usize,
+}
+
+fn wait_for_analysis_slot() -> Result<MutexGuard<'static, ()>, String> {
+    ANALYSIS_LOCK
+        .lock()
+        .map_err(|_| "Orgtrack analysis lock is poisoned".to_string())
+}
+
+fn try_analysis_slot() -> Result<Option<MutexGuard<'static, ()>>, String> {
+    match ANALYSIS_LOCK.try_lock() {
+        Ok(guard) => Ok(Some(guard)),
+        Err(TryLockError::WouldBlock) => Ok(None),
+        Err(TryLockError::Poisoned(_)) => Err("Orgtrack analysis lock is poisoned".to_string()),
+    }
 }
 
 pub fn spawn_analysis_backfill_worker() {
@@ -104,6 +120,11 @@ pub fn spawn_analysis_backfill_worker() {
 }
 
 fn run_backfill_pass() -> Result<AnalysisBackfillStats, String> {
+    let Some(_analysis_slot) = try_analysis_slot()? else {
+        tracing::debug!("[orgtrack_analysis] background pass skipped; analysis already running");
+        return Ok(AnalysisBackfillStats::default());
+    };
+
     let mut stats = AnalysisBackfillStats::default();
     let memory_config = ExtractionMemoryGateConfig::default();
     hydrate_analyzable_session_records()?;
@@ -182,6 +203,7 @@ fn analyze_sessions(
     selection: AnalysisSelection<'_>,
     rebuild: bool,
 ) -> Result<AnalysisBackfillStats, String> {
+    let _analysis_slot = wait_for_analysis_slot()?;
     let mut stats = AnalysisBackfillStats::default();
     let memory_config = ExtractionMemoryGateConfig::default();
     hydrate_analyzable_session_records()?;

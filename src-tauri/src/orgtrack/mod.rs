@@ -246,10 +246,7 @@ pub async fn orgtrack_get_session_commit_links(
 /// `orgtrack_get_session_commit_links` returns it and the Submissions tab
 /// renders the commit exactly like a live push. Returns Err in release builds.
 #[tauri::command]
-pub async fn debug_seed_commit_link(
-    session_id: String,
-    commit_sha: String,
-) -> Result<(), String> {
+pub async fn debug_seed_commit_link(session_id: String, commit_sha: String) -> Result<(), String> {
     if !cfg!(debug_assertions) {
         return Err("debug_seed_commit_link is only available in debug builds".into());
     }
@@ -300,8 +297,14 @@ pub async fn debug_seed_final_diff(
         let store = SqliteRecordStore::new(&conn);
         let record_id = record_id(&["debug_seed_final_diff", &session_id, &file_path]);
         let words: Vec<&str> = diff.lines().collect();
-        let lines_added = words.iter().filter(|l| l.starts_with('+') && !l.starts_with("+++")).count() as i32;
-        let lines_removed = words.iter().filter(|l| l.starts_with('-') && !l.starts_with("---")).count() as i32;
+        let lines_added = words
+            .iter()
+            .filter(|l| l.starts_with('+') && !l.starts_with("+++"))
+            .count() as i32;
+        let lines_removed = words
+            .iter()
+            .filter(|l| l.starts_with('-') && !l.starts_with("---"))
+            .count() as i32;
         store.upsert_final_diff(&SessionFinalDiffRecord {
             schema_version: ORGTRACK_SCHEMA_VERSION,
             record_id,

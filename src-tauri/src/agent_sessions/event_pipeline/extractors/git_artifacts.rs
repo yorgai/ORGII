@@ -28,10 +28,8 @@ static GIT_PUSH_SUMMARY_RE: LazyLock<Regex> = LazyLock::new(|| {
     // e.g. `   cd8b555..ffd4927  Dev -> Dev` or
     // ` + 1234abc...def5678  feature -> feature (forced update)`. New-branch
     // / deleted rows have no SHA range and are intentionally skipped.
-    Regex::new(
-        r"(?m)^\s+[-+*!]?\s*([0-9a-fA-F]{7,40})\.\.+([0-9a-fA-F]{7,40})\s+\S+\s*->\s*\S+",
-    )
-    .expect("valid git push summary regex")
+    Regex::new(r"(?m)^\s+[-+*!]?\s*([0-9a-fA-F]{7,40})\.\.+([0-9a-fA-F]{7,40})\s+\S+\s*->\s*\S+")
+        .expect("valid git push summary regex")
 });
 pub struct GitArtifactParseInput<'a> {
     pub command: &'a str,

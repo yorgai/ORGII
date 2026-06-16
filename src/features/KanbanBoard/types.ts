@@ -38,6 +38,7 @@ export interface KanbanTaskOrgtrackMetadata {
   relatedCommits: number;
   committedFiles: number;
   committedRatePercent: number;
+  touchedFiles?: string[];
 }
 
 export interface KanbanTask {
@@ -72,10 +73,14 @@ export interface KanbanTask {
   modelName?: string;
   /** Repo-shareable orgtrack metadata for session file/commit attribution. */
   orgtrackMetadata?: KanbanTaskOrgtrackMetadata;
+  /** True when source impact metadata is known to be unavailable for this task. */
+  orgtrackMetadataUnavailable?: boolean;
   /** True while explicit Orgtrack / AI Blame analysis is running for this session. */
   orgtrackMetadataLoading?: boolean;
-  /** Explicitly triggers Rust-side Orgtrack / AI Blame analysis for this session. */
-  onUpdateGitBlame?: (task: KanbanTask) => void;
+  /** Explicitly rebuilds Rust-side Orgtrack / AI Blame analysis for this session. */
+  onUpdateGitBlame?: (task: KanbanTask) => void | Promise<void>;
+  /** Queues Rust-side Orgtrack / AI Blame analysis without rebuilding current artifacts. */
+  onAnalyzeGitBlame?: (task: KanbanTask) => void | Promise<void>;
   /** Display label for the workspace root associated with the session. */
   workspaceName?: string;
   /**

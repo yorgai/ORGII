@@ -27,6 +27,7 @@ export interface CursorIdeSessionRow {
   linesAdded: number;
   linesRemoved: number;
   filesChanged: number;
+  touchedFiles: string[];
   background: boolean;
   isActive: boolean;
   repoPath?: string;

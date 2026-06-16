@@ -74,6 +74,10 @@ function cursorIdeRowToSession(row: CursorIdeSessionRow): Session {
     repoPath: row.repoPath,
     repo_name: row.repoName || "",
     branch: row.branch || "",
+    filesChanged: row.filesChanged,
+    linesAdded: row.linesAdded,
+    linesRemoved: row.linesRemoved,
+    touchedFiles: row.touchedFiles,
     agentIconId: "cursor",
   };
 }

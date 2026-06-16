@@ -108,8 +108,12 @@ export function useKanbanTasks(
       ),
     [sessions, sessionIdFilter]
   );
-  const { metadataBySessionId, analyzingSessionIds, analyzeSession } =
-    useSessionOrgtrackMetadata(visibleSessions);
+  const {
+    metadataBySessionId,
+    unavailableSessionIds,
+    analyzingSessionIds,
+    analyzeSession,
+  } = useSessionOrgtrackMetadata(visibleSessions);
 
   // Pair sessions with their kanban-task projection once. Downstream
   // code reads from this so we don't re-iterate `sessions` per concern.
@@ -129,8 +133,16 @@ export function useKanbanTasks(
         task: {
           ...task,
           orgtrackMetadata: metadataBySessionId.get(session.session_id),
+          orgtrackMetadataUnavailable: unavailableSessionIds.has(
+            session.session_id
+          ),
           orgtrackMetadataLoading: analyzingSessionIds.has(session.session_id),
-          onUpdateGitBlame: () => void analyzeSession(session),
+          onUpdateGitBlame: unavailableSessionIds.has(session.session_id)
+            ? undefined
+            : () => analyzeSession(session, { rebuild: true }),
+          onAnalyzeGitBlame: unavailableSessionIds.has(session.session_id)
+            ? undefined
+            : () => analyzeSession(session, { rebuild: false }),
         },
       };
     });
@@ -141,6 +153,7 @@ export function useKanbanTasks(
     autoArchiveTtl,
     nowTick,
     metadataBySessionId,
+    unavailableSessionIds,
     analyzingSessionIds,
     analyzeSession,
   ]);

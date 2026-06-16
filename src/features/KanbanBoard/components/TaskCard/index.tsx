@@ -65,7 +65,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
   const handleUpdateGitBlame = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    task.onUpdateGitBlame?.(task);
+    void task.onUpdateGitBlame?.(task);
   };
 
   const isInteractive = Boolean(onClick);
@@ -170,6 +170,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   </>
                 )}
               </>
+            ) : task.orgtrackMetadataUnavailable ? (
+              <span className="kanban-task-card__impact-empty">
+                <CircleSlash size={12} strokeWidth={1.75} />
+                <span>N/A</span>
+              </span>
             ) : task.orgtrackMetadataLoading ? (
               <span className="kanban-task-card__impact-loading">
                 <LoaderCircle size={12} strokeWidth={1.75} />

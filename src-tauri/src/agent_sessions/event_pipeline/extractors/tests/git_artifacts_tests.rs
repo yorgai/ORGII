@@ -111,9 +111,7 @@ fn deduplicates_same_pr_url() {
 fn parses_fast_forward_push_summary() {
     let artifacts = parse_git_artifacts(GitArtifactParseInput {
         command: "git push origin Dev",
-        output: Some(
-            "To github.com:orgii/app.git\n   cd8b555..ffd4927  Dev -> Dev\n",
-        ),
+        output: Some("To github.com:orgii/app.git\n   cd8b555..ffd4927  Dev -> Dev\n"),
         exit_code: Some(0),
     });
 

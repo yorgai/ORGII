@@ -23,6 +23,7 @@ import React, {
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 
+import Button from "@src/components/Button";
 import {
   OPS_CONTROL_SESSION_PREVIEW_OVERLAY_CLASS,
   OPS_CONTROL_SESSION_PREVIEW_SURFACE_CLASS,
@@ -48,12 +49,7 @@ import TaskKanbanReplayBar from "./components/KanbanReplayBar";
 import KanbanReplayStatusPill from "./components/KanbanReplayStatusPill";
 import TaskDetailPanel from "./components/TaskDetailPanel";
 import TaskKanbanContent from "./components/TaskKanbanContent";
-import {
-  type AgentKanbanColumnId,
-  DIARY_TIMELINE_DISPLAY_MODE,
-  type DiaryTimelineDisplayMode,
-  type KanbanTimeFilter,
-} from "./config";
+import { type AgentKanbanColumnId, type KanbanTimeFilter } from "./config";
 import { useKanbanTasks } from "./hooks/useKanbanTasks";
 import { useTaskKanbanFilters } from "./hooks/useTaskKanbanFilters";
 import { useTaskKanbanHeader } from "./hooks/useTaskKanbanHeader";
@@ -141,8 +137,6 @@ const Kanban: React.FC<TaskKanbanProps> = ({
   const viewMode = parseFactoryViewMode(location.search);
   const showReplayControls = viewMode === "kanban";
   const [calendarDate, setCalendarDate] = useState<Date>(() => new Date());
-  const [diaryTimelineDisplayMode, setDiaryTimelineDisplayMode] =
-    useState<DiaryTimelineDisplayMode>(DIARY_TIMELINE_DISPLAY_MODE.Gantt);
 
   useEffect(() => {
     void loadSidebarSessions({ forceRefresh: true });
@@ -228,6 +222,13 @@ const Kanban: React.FC<TaskKanbanProps> = ({
     setCreatorVisible(true);
   }, [setCreatorVisible]);
 
+  const handleUpdateVisibleAiBlame = useCallback(async () => {
+    for (const task of visibleTasks) {
+      if (task.orgtrackMetadataLoading) continue;
+      await task.onAnalyzeGitBlame?.(task);
+    }
+  }, [visibleTasks]);
+
   React.useLayoutEffect(() => {
     resetKanbanHorizontalScroll();
   }, [detailPanelVisible, selectedTaskId]);
@@ -290,8 +291,6 @@ const Kanban: React.FC<TaskKanbanProps> = ({
     viewMode,
     calendarDate,
     onCalendarDateChange: setCalendarDate,
-    diaryTimelineDisplayMode,
-    onDiaryTimelineDisplayModeChange: setDiaryTimelineDisplayMode,
     worktreeSessionCount: worktreeSessionIds.length,
     onCompareWorktrees: handleCompareWorktrees,
     autoArchiveTtl,
@@ -316,7 +315,6 @@ const Kanban: React.FC<TaskKanbanProps> = ({
           selectedTaskId={selectedTaskId}
           detailPanelVisible={detailPanelVisible}
           calendarDate={calendarDate}
-          diaryTimelineDisplayMode={diaryTimelineDisplayMode}
           onTaskMove={handleTaskMove}
           onTaskClick={handleTaskClick}
           onAddTask={handleAddTask}
@@ -348,10 +346,18 @@ const Kanban: React.FC<TaskKanbanProps> = ({
         </div>
       )}
 
-      <div
-        aria-hidden
-        className="pointer-events-none h-10 shrink-0 overflow-visible border-t border-border-2"
-      />
+      <div className="flex h-10 shrink-0 items-center justify-end overflow-visible border-t border-border-2 px-3">
+        <Button
+          variant="tertiary"
+          size="small"
+          shape="round"
+          onClick={handleUpdateVisibleAiBlame}
+          aria-label={t("common:actions.updateAiBlame")}
+          title={t("common:actions.updateAiBlame")}
+        >
+          {t("common:actions.updateAiBlame")}
+        </Button>
+      </div>
 
       {detailPanelVisible && (
         <div

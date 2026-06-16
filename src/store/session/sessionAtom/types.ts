@@ -117,12 +117,14 @@ export interface Session {
   pinned?: boolean;
   created_time?: string;
   updated_time?: string;
-  /** Deprecated source-cache stat. Do not use for canonical AI Blame/final impact; use Orgtrack summaries. */
+  /** Source-cache impact stat for read-only external sessions such as Cursor IDE. */
   filesChanged?: number;
-  /** Deprecated source-cache stat. Do not use for canonical AI Blame/final impact; use Orgtrack summaries. */
+  /** Source-cache impact stat for read-only external sessions such as Cursor IDE. */
   linesAdded?: number;
-  /** Deprecated source-cache stat. Do not use for canonical AI Blame/final impact; use Orgtrack summaries. */
+  /** Source-cache impact stat for read-only external sessions such as Cursor IDE. */
   linesRemoved?: number;
+  /** Source-cache touched file list for read-only external sessions such as Cursor IDE. */
+  touchedFiles?: string[];
 }
 
 // ============================================

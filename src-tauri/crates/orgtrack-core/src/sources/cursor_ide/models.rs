@@ -3,6 +3,8 @@
 //! All types here are `pub(super)` — they are internal to `cursor_db_history`
 //! and its sibling submodules.
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -59,7 +61,17 @@ pub(super) struct RawComposerForOrder {
     pub(super) created_at: i64,
     pub(super) last_updated_at: i64,
     pub(super) full_conversation_headers_only: Vec<RawComposerHeader>,
+    pub(super) original_file_states: BTreeMap<String, RawCursorOriginalFileState>,
+    pub(super) tracked_git_repos: Vec<RawTrackedGitRepo>,
+    pub(super) workspace_identifier: Option<RawWorkspaceIdentifier>,
     pub(super) subagent_info: Option<RawCursorSubagentInfo>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(default, rename_all = "camelCase")]
+pub(super) struct RawCursorOriginalFileState {
+    pub(super) is_newly_created: bool,
+    pub(super) content_key: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -81,13 +93,6 @@ impl CursorComposerContext {
             subagent_info: composer.subagent_info.clone(),
         }
     }
-}
-
-#[derive(Debug, Clone, Deserialize, Default)]
-#[serde(default, rename_all = "camelCase")]
-pub(super) struct RawComposerWorkspaceMetadata {
-    pub(super) tracked_git_repos: Vec<RawTrackedGitRepo>,
-    pub(super) workspace_identifier: Option<RawWorkspaceIdentifier>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]

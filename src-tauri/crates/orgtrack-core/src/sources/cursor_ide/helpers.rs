@@ -12,10 +12,10 @@ use serde_json::{json, Value};
 use core_types::activity::ActivityChunk;
 
 use super::history::{CursorIdeSessionRow, CURSORIDE_SESSION_PREFIX, CURSOR_IDE_CATEGORY};
-use super::io::load_content_blob;
+use super::io::{load_composer_for_order, load_content_blob};
 use super::models::{
-    CursorComposerContext, CursorWorkspaceMetadata, OrderedBubble, RawBubble, RawComposerHeader,
-    RawComposerWorkspaceMetadata, RawCursorSubagentInfo, RawToolFormerData,
+    CursorComposerContext, CursorWorkspaceMetadata, OrderedBubble, RawBubble, RawComposerForOrder,
+    RawComposerHeader, RawCursorSubagentInfo, RawToolFormerData,
 };
 
 // ============================================================================
@@ -70,11 +70,19 @@ pub(super) fn cache_row_to_session_row(
     } else {
         Some(row.model)
     };
-    let metadata = match cursor_conn {
-        Some(conn) => load_workspace_metadata(conn, &row.id)?,
-        None => CursorWorkspaceMetadata::default(),
+    let composer = match cursor_conn {
+        Some(conn) => Some(load_composer_for_order(conn, &row.id)?),
+        None => None,
     };
+    let metadata = composer
+        .as_ref()
+        .map(cursor_workspace_metadata_from_composer)
+        .unwrap_or_default();
     let repo_name = metadata.repo_path.as_deref().and_then(repo_name_from_path);
+    let touched_files = composer
+        .as_ref()
+        .map(cursor_touched_files_from_composer)
+        .unwrap_or_default();
     Ok(CursorIdeSessionRow {
         session_id,
         name: if row.name.is_empty() {
@@ -96,6 +104,7 @@ pub(super) fn cache_row_to_session_row(
         lines_added: row.lines_added,
         lines_removed: row.lines_removed,
         files_changed: row.files_changed,
+        touched_files,
         background: false,
         is_active: false,
         repo_path: metadata.repo_path,
@@ -104,39 +113,49 @@ pub(super) fn cache_row_to_session_row(
     })
 }
 
+fn cursor_touched_files_from_composer(composer: &RawComposerForOrder) -> Vec<String> {
+    composer
+        .original_file_states
+        .iter()
+        .filter_map(|(uri, state)| {
+            let has_edit_marker = state.is_newly_created || !state.content_key.trim().is_empty();
+            if !has_edit_marker {
+                return None;
+            }
+            Some(cursor_file_uri_to_path(uri))
+        })
+        .collect()
+}
+
+fn cursor_file_uri_to_path(uri: &str) -> String {
+    uri.strip_prefix("file://")
+        .unwrap_or(uri)
+        .trim()
+        .to_string()
+}
+
 // ============================================================================
 // Workspace metadata helpers
 // ============================================================================
 
-pub(super) fn load_workspace_metadata(
-    conn: &Connection,
-    composer_id: &str,
-) -> Result<CursorWorkspaceMetadata, String> {
-    use rusqlite::OptionalExtension;
+fn cursor_workspace_metadata_from_composer(composer: &RawComposerForOrder) -> CursorWorkspaceMetadata {
+    cursor_workspace_metadata_from_parts(
+        &composer.tracked_git_repos,
+        composer.workspace_identifier.as_ref(),
+    )
+}
 
-    let key = format!("composerData:{}", composer_id);
-    let json_str: Option<String> = conn
-        .query_row(
-            "SELECT value FROM cursorDiskKV WHERE key = ?1",
-            [&key],
-            |row| row.get(0),
-        )
-        .optional()
-        .map_err(|err| format!("Failed to read Cursor composer metadata: {}", err))?;
-    let Some(json_str) = json_str else {
-        return Ok(CursorWorkspaceMetadata::default());
-    };
-    let raw: RawComposerWorkspaceMetadata = serde_json::from_str(&json_str)
-        .map_err(|err| format!("Failed to parse Cursor composer metadata: {}", err))?;
-
-    let tracked_repo = raw.tracked_git_repos.first();
+fn cursor_workspace_metadata_from_parts(
+    tracked_git_repos: &[super::models::RawTrackedGitRepo],
+    workspace_identifier: Option<&super::models::RawWorkspaceIdentifier>,
+) -> CursorWorkspaceMetadata {
+    let tracked_repo = tracked_git_repos.first();
     let repo_path = tracked_repo
         .map(|repo| repo.repo_path.trim())
         .filter(|path| !path.is_empty())
         .map(str::to_string)
         .or_else(|| {
-            raw.workspace_identifier
-                .as_ref()
+            workspace_identifier
                 .and_then(|workspace| workspace.uri.as_ref())
                 .and_then(|uri| {
                     let fs_path = uri.fs_path.trim();
@@ -154,7 +173,7 @@ pub(super) fn load_workspace_metadata(
         .filter(|branch| !branch.is_empty())
         .map(str::to_string);
 
-    Ok(CursorWorkspaceMetadata { repo_path, branch })
+    CursorWorkspaceMetadata { repo_path, branch }
 }
 
 pub(super) fn repo_name_from_path(path: &str) -> Option<String> {

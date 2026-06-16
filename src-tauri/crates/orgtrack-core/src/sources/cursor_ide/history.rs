@@ -109,6 +109,7 @@ pub struct CursorIdeSessionRow {
     pub lines_added: i64,
     pub lines_removed: i64,
     pub files_changed: i64,
+    pub touched_files: Vec<String>,
     pub background: bool,
     pub is_active: bool,
     pub repo_path: Option<String>,
