@@ -39,6 +39,12 @@ mod resume_state_tests {
                 additional_directories: None,
                 parent_session_id: None,
                 org_member_id: None,
+                org_id: None,
+                project_id: None,
+                project_name: None,
+                project_slug: None,
+                work_item_id: None,
+                agent_role: None,
             },
         )
         .expect("create test CLI session");
