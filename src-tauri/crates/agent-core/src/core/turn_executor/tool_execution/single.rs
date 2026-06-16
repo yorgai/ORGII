@@ -49,7 +49,8 @@ pub(super) async fn execute_single_tool(
     workspace_path: Option<&std::path::Path>,
     policy_context_activator: Option<&SessionScopedContextActivator>,
 ) -> SingleResult {
-    let args_preview: String = crate::utils::safe_truncate_chars_to_string(&tool_call.arguments.to_string(), 200);
+    let args_preview: String =
+        crate::utils::safe_truncate_chars_to_string(&tool_call.arguments.to_string(), 200);
     info!(
         "[agent-core] Tool call: {}({})",
         tool_call.name, args_preview

@@ -283,8 +283,8 @@ fn link_session_to_work_item_sync(
         agent_role,
     )
     .map_err(|err| err.to_string())?
-        .then_some(())
-        .ok_or_else(|| format!("Session not found: {session_id}"))?;
+    .then_some(())
+    .ok_or_else(|| format!("Session not found: {session_id}"))?;
 
     upsert_linked_session_on_work_item(project_slug, work_item_id, &session, agent_role)?;
 

@@ -109,13 +109,14 @@ function DiffSectionListInner<TFile extends DiffFileSectionData>({
           const suffix = sectionKeySuffix?.(section) ?? "";
           return (
             <DiffFileSection
-              key={`${section.key}-${collapseSignal}-${isFocused ? focusedNonce : 0}-${suffix}`}
+              key={`${section.key}-${suffix}`}
               file={section.file}
               defaultExpanded={
                 flat ||
                 isFocused ||
                 (collapseSignal > 0 ? false : !shouldAutoCollapse)
               }
+              expansionSignal={collapseSignal + (isFocused ? focusedNonce : 0)}
               repoPath={repoPath}
               sectionRef={getSectionRef?.(section.file.path)}
               dataPath={section.file.path}

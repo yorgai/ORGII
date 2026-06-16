@@ -46,7 +46,8 @@ pub async fn process_gateway_message(
         let sk = session_key.clone();
         let channel = msg.channel.clone();
         let chat_id = msg.chat_id.clone();
-        let user_input_preview: String = crate::utils::safe_truncate_chars_to_string(&msg.content, 200);
+        let user_input_preview: String =
+            crate::utils::safe_truncate_chars_to_string(&msg.content, 200);
         let model = effective_model.clone();
         if let Err(err) =
             tokio::task::spawn_blocking(move || match unified_persistence::get_session(&sk) {

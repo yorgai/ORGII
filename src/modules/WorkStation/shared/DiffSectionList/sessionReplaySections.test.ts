@@ -69,7 +69,7 @@ describe("session replay diff sections", () => {
 
     expect(sections).toHaveLength(1);
     expect(sections[0].file.oldStartLine).toBe(42);
-    expect(sections[0].file.newStartLine).toBe(51);
+    expect(sections[0].file.newStartLine).toBe(42);
     expect(sections[0].entryIds).toEqual(["edit-1", "edit-2"]);
   });
 
@@ -103,7 +103,7 @@ describe("session replay diff sections", () => {
     expect(sections).toEqual([]);
   });
 
-  it("splits distant hunks into per-hunk pairs without phantom gap lines", () => {
+  it("keeps distant hunks in one unified content pair", () => {
     const sections = buildSessionReplayDiffSectionItems(
       diffEntry(
         "edit-1",
@@ -112,35 +112,26 @@ describe("session replay diff sections", () => {
     );
 
     expect(sections).toHaveLength(1);
-    const { hunks } = sections[0].file;
-    expect(hunks).toHaveLength(2);
-    expect(hunks?.[0]).toMatchObject({
-      oldStartLine: 42,
-      newStartLine: 42,
-      oldValue: "context\nold",
-      newValue: "context\nnew",
-    });
-    expect(hunks?.[1]).toMatchObject({
-      oldStartLine: 180,
-      newStartLine: 180,
-      oldValue: "tail\nfoo",
-      newValue: "tail\nbar",
-    });
-    // No fabricated blank gap lines between the two hunks.
-    expect(hunks?.[0].oldValue).not.toContain("\n\n");
-    expect(hunks?.[1].oldValue).not.toContain("\n\n");
+    expect(sections[0].file.oldStartLine).toBe(42);
+    expect(sections[0].file.newStartLine).toBe(42);
+    expect(sections[0].file.oldContent).toBe("context\nold\ntail\nfoo");
+    expect(sections[0].file.newContent).toBe("context\nnew\ntail\nbar");
+    expect(sections[0].file.oldContent).not.toContain("\n\n");
+    expect(sections[0].file.newContent).not.toContain("\n\n");
   });
 
-  it("recomputes per-hunk pairs when consolidating multi-hunk edits", () => {
+  it("keeps consolidated multi-hunk edits in one unified content pair", () => {
     const sections = buildConsolidatedSessionReplayDiffSectionItems([
       diffEntry("edit-1", "@@ -42,1 +42,1 @@\n-old\n+new"),
       diffEntry("edit-2", "@@ -180,1 +180,1 @@\n-before\n+after"),
     ]);
 
     expect(sections).toHaveLength(1);
-    const { hunks } = sections[0].file;
-    expect(hunks).toHaveLength(2);
-    expect(hunks?.[0].oldStartLine).toBe(42);
-    expect(hunks?.[1].oldStartLine).toBe(180);
+    expect(sections[0].file.oldStartLine).toBe(42);
+    expect(sections[0].file.newStartLine).toBe(42);
+    expect(sections[0].file.oldContent).toBe("old\nbefore");
+    expect(sections[0].file.newContent).toBe("new\nafter");
+    expect(sections[0].file.oldContent).not.toContain("\n\n");
+    expect(sections[0].file.newContent).not.toContain("\n\n");
   });
 });

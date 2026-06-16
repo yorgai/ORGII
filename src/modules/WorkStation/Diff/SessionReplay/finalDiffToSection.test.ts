@@ -29,7 +29,7 @@ function makeFinalDiff(
 }
 
 describe("finalDiffToSection", () => {
-  it("renders diff content when only diff field is set (no oldContent/newContent)", () => {
+  it("renders diff-only records as one unified diff content pair", () => {
     const diff = `--- src/foo.ts
 +++ src/foo.ts
 @@ -1,3 +1,3 @@
@@ -41,19 +41,16 @@ describe("finalDiffToSection", () => {
     const section = finalDiffToSection(makeFinalDiff({ diff }));
 
     expect(section.file.isUnavailable).toBeFalsy();
+    expect(section.file.unifiedDiff).toBe(diff);
     expect(section.file.oldContent).toBe(`const hello = "world";
 const bar = "baz";`);
     expect(section.file.newContent).toBe(`const hello = "world";
 const qux = "corge";`);
     expect(section.file.oldStartLine).toBe(1);
     expect(section.file.newStartLine).toBe(1);
-    expect(section.file.hunks).toBeDefined();
-    expect(section.file.hunks).toHaveLength(1);
-    expect(section.file.hunks![0].oldValue).toContain("const bar");
-    expect(section.file.hunks![0].newValue).toContain("const qux");
   });
 
-  it("uses oldContent/newContent when available, supplemented with hunks from diff", () => {
+  it("uses Rust oldContent/newContent when available and preserves raw unified diff", () => {
     const diff = `--- src/bar.ts
 +++ src/bar.ts
 @@ -1,1 +1,1 @@
@@ -72,8 +69,7 @@ const qux = "corge";`);
     expect(section.file.isUnavailable).toBeFalsy();
     expect(section.file.oldContent).toBe("original content");
     expect(section.file.newContent).toBe("modified content");
-    expect(section.file.hunks).toBeDefined();
-    expect(section.file.hunks).toHaveLength(1);
+    expect(section.file.unifiedDiff).toBe(diff);
   });
 
   it("marks unavailable when all content fields are null", () => {
@@ -82,7 +78,6 @@ const qux = "corge";`);
     expect(section.file.isUnavailable).toBe(true);
     expect(section.file.oldContent).toBeUndefined();
     expect(section.file.newContent).toBeUndefined();
-    expect(section.file.hunks).toBeUndefined();
   });
 
   it("handles deleted file with diff only", () => {
@@ -99,13 +94,13 @@ const qux = "corge";`);
 
     expect(section.file.status).toBe("deleted");
     expect(section.file.isUnavailable).toBeFalsy();
+    expect(section.file.unifiedDiff).toBe(diff);
     expect(section.file.oldContent).toBe(`line one
 line two`);
     expect(section.file.newContent).toBe("");
-    expect(section.file.hunks).toBeUndefined();
   });
 
-  it("parses multi-hunk diffs", () => {
+  it("parses multi-hunk diffs into one unified content pair", () => {
     const diff = `--- src/multi.ts
 +++ src/multi.ts
 @@ -1,2 +1,2 @@
@@ -121,15 +116,11 @@ line two`);
     const section = finalDiffToSection(makeFinalDiff({ diff }));
 
     expect(section.file.isUnavailable).toBeFalsy();
-    expect(section.file.hunks).toHaveLength(2);
-    expect(section.file.hunks![0].oldValue).toContain("bbb");
-    expect(section.file.hunks![0].newValue).toContain("BBB");
-    expect(section.file.hunks![0].oldStartLine).toBe(1);
-    expect(section.file.hunks![0].newStartLine).toBe(1);
-    expect(section.file.hunks![1].oldValue).toContain("kkk");
-    expect(section.file.hunks![1].newValue).toContain("KKK");
-    expect(section.file.hunks![1].oldStartLine).toBe(10);
-    expect(section.file.hunks![1].newStartLine).toBe(10);
+    expect(section.file.unifiedDiff).toBe(diff);
+    expect(section.file.oldContent).toBe("aaa\nbbb\njjj\nkkk");
+    expect(section.file.newContent).toBe("aaa\nBBB\njjj\nKKK");
+    expect(section.file.oldContent).not.toContain("\n\n");
+    expect(section.file.newContent).not.toContain("\n\n");
   });
 
   it("distinguishes deletion from missing old/new content", () => {
@@ -149,7 +140,8 @@ line two`);
     );
 
     expect(section.file.status).toBe("deleted");
+    expect(section.file.unifiedDiff).toBe(diff);
+    expect(section.file.oldContent).toBe("removed");
     expect(section.file.newContent).toBe("");
-    expect(section.file.oldContent).toContain("removed");
   });
 });
