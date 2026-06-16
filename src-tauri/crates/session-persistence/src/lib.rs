@@ -27,12 +27,14 @@ mod editing;
 pub(crate) mod schema;
 mod sequence;
 pub mod token_usage;
+mod turn_files;
 mod turn_index;
 mod turn_index_debounce;
 pub mod turn_intents;
 mod turn_window;
 mod types;
 
+pub use turn_files::TurnModifiedFile;
 pub use turn_index::{
     ensure_turn_index_fresh, load_turn_index, rebuild_turn_index, CachedTurnSummary,
 };

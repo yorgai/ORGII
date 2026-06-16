@@ -66,6 +66,8 @@ import {
 } from "@src/store/ui/messageQueueAtom";
 import {
   STATION_MODE,
+  bumpSimulatorDiffRefreshNonceAtom,
+  simulatorDiffScopeRequestAtom,
   simulatorSelectedAppAtom,
   stationModeAtom,
 } from "@src/store/ui/simulatorAtom";
@@ -448,16 +450,27 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const setSelectedSimulatorApp = useSetAtom(simulatorSelectedAppAtom);
     const setReplayMode = useSetAtom(replayModeAtom);
     const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
+    const setDiffScope = useSetAtom(simulatorDiffScopeRequestAtom);
+    const refreshDiff = useSetAtom(bumpSimulatorDiffRefreshNonceAtom);
     const openAgentStationDiff = useCallback(() => {
       // Un-maximize the chat panel so ActivitySimulator becomes visible.
       // When chatPanelMaximized is true, AppShellContent suppresses the
       // simulator pane entirely (chatPanelFocused guard), so switching to
       // the Diff app would have no visible effect.
+      //
+      // Clear any per-round scope set by a chat `TurnFilesFooter` so this
+      // composer-level entry point always shows the whole-session diff.
+      setDiffScope(null);
+      // Force a fresh read of the canonical diffs so the full-session view
+      // reflects edits made since the Diff app last cached them.
+      refreshDiff();
       setChatPanelMaximized(false);
       setStationMode(STATION_MODE.AGENT_STATION);
       setSelectedSimulatorApp(AppType.DIFF);
       setReplayMode("replay");
     }, [
+      setDiffScope,
+      refreshDiff,
       setChatPanelMaximized,
       setReplayMode,
       setSelectedSimulatorApp,

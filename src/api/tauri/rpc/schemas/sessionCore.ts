@@ -319,6 +319,16 @@ export const TurnStatusSchema = z.enum([
   "failed",
 ]);
 
+export const TurnModifiedFileSchema = z.object({
+  path: z.string(),
+  fileName: z.string(),
+  status: z.enum(["created", "modified", "deleted"]),
+  additions: z.number(),
+  deletions: z.number(),
+});
+
+export type TurnModifiedFile = z.output<typeof TurnModifiedFileSchema>;
+
 export const TurnSummarySchema = z.object({
   sessionId: z.string(),
   turnId: z.string(),
@@ -334,6 +344,8 @@ export const TurnSummarySchema = z.object({
   bodyEventCount: z.number(),
   status: TurnStatusSchema,
   interrupted: z.boolean(),
+  // Per-round modified files, materialized by the Rust turn indexer.
+  modifiedFiles: z.array(TurnModifiedFileSchema).default([]),
 });
 
 export const TurnBodyWindowInput = z.object({

@@ -99,6 +99,14 @@ pub fn init_session_tables(conn: &Connection) -> SqliteResult<()> {
          ON session_turns(started_at)",
         [],
     )?;
+    // Per-round modified-file list, materialized by the turn indexer so the
+    // frontend never aggregates file changes itself. JSON array of
+    // `{ path, fileName, status, additions, deletions }`.
+    conn.execute(
+        "ALTER TABLE session_turns ADD COLUMN modified_files_json TEXT NOT NULL DEFAULT '[]'",
+        [],
+    )
+    .ok();
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS session_turn_index_state (

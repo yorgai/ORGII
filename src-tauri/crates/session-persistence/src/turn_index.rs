@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::connection::{begin_immediate, get_connection, with_sessions_writer};
 use super::crud::normalize_session_sequences;
+use super::turn_files::{TurnFileAccumulator, TurnModifiedFile};
 
 const USER_MESSAGE_FUNCTION: &str = "user_message";
 const TURN_STATUS_PENDING: &str = "pending";
@@ -15,7 +16,9 @@ const TURN_STATUS_FAILED: &str = "failed";
 /// Bump the index version every time the build_turn_drafts algorithm or
 /// the status derivation changes shape — `ensure_turn_index_fresh`
 /// rebuilds when the stored version is older.
-const TURN_INDEX_VERSION: i64 = 5;
+///
+/// v6: materialize the per-round modified-file list (`modified_files_json`).
+const TURN_INDEX_VERSION: i64 = 6;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,12 +37,17 @@ pub struct CachedTurnSummary {
     pub body_event_count: i64,
     pub status: String,
     pub interrupted: bool,
+    /// Files this round wrote to, materialized so the frontend never
+    /// re-aggregates file changes from raw events.
+    #[serde(default)]
+    pub modified_files: Vec<TurnModifiedFile>,
 }
 
 #[derive(Debug, Clone)]
 struct IndexEventRow {
     id: String,
     function_name: Option<String>,
+    args_json: String,
     result_json: String,
     content: String,
     created_at: String,
@@ -62,6 +70,8 @@ struct TurnDraft {
     /// one. Used by `build_turn_drafts` to collapse a synthetic + backend
     /// pair into a single draft.
     turn_intent_id: Option<String>,
+    /// File changes accumulated from the round's body events.
+    file_accumulator: TurnFileAccumulator,
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +85,7 @@ struct UserMessageRow {
 
 fn load_index_rows(conn: &Connection, session_id: &str) -> SqliteResult<Vec<IndexEventRow>> {
     let mut stmt = conn.prepare_cached(
-        "SELECT id, function_name, result_json, content, created_at, history_sequence AS order_sequence
+        "SELECT id, function_name, args_json, result_json, content, created_at, history_sequence AS order_sequence
          FROM events
          WHERE session_id = ?1
          ORDER BY history_sequence ASC, created_at ASC, id ASC",
@@ -86,10 +96,11 @@ fn load_index_rows(conn: &Connection, session_id: &str) -> SqliteResult<Vec<Inde
             Ok(IndexEventRow {
                 id: row.get(0)?,
                 function_name: row.get(1)?,
-                result_json: row.get(2)?,
-                content: row.get(3)?,
-                created_at: row.get(4)?,
-                order_sequence: row.get(5)?,
+                args_json: row.get(2)?,
+                result_json: row.get(3)?,
+                content: row.get(4)?,
+                created_at: row.get(5)?,
+                order_sequence: row.get(6)?,
             })
         })?
         .collect::<SqliteResult<Vec<_>>>()?;
@@ -244,6 +255,7 @@ fn load_existing_user_event_keys(
         let event_row = IndexEventRow {
             id: id.clone(),
             function_name: Some(USER_MESSAGE_FUNCTION.to_string()),
+            args_json: String::new(),
             result_json,
             content: content.clone(),
             created_at: String::new(),
@@ -415,6 +427,7 @@ fn build_turn_drafts(rows: &[IndexEventRow], stale_intent_ids: &StaleIntentIds) 
                 event_count: 1,
                 body_event_count: 0,
                 turn_intent_id: row_intent_id,
+                file_accumulator: TurnFileAccumulator::new(),
             });
             continue;
         }
@@ -423,6 +436,11 @@ fn build_turn_drafts(rows: &[IndexEventRow], stale_intent_ids: &StaleIntentIds) 
             turn.ended_at = Some(max_timestamp(&turn.started_at, &row.created_at));
             turn.event_count += 1;
             turn.body_event_count += 1;
+            turn.file_accumulator.add_event(
+                row.function_name.as_deref(),
+                &row.args_json,
+                &row.result_json,
+            );
         }
     }
 
@@ -452,6 +470,8 @@ fn turn_summary_from_row(row: &rusqlite::Row<'_>) -> SqliteResult<CachedTurnSumm
     let user_event_ids_json: String = row.get(8)?;
     let user_event_ids = serde_json::from_str(&user_event_ids_json).unwrap_or_else(|_| Vec::new());
     let interrupted_int: i64 = row.get(13)?;
+    let modified_files_json: String = row.get(14)?;
+    let modified_files = serde_json::from_str(&modified_files_json).unwrap_or_else(|_| Vec::new());
 
     Ok(CachedTurnSummary {
         session_id: row.get(0)?,
@@ -468,6 +488,7 @@ fn turn_summary_from_row(row: &rusqlite::Row<'_>) -> SqliteResult<CachedTurnSumm
         body_event_count: row.get(11)?,
         status: row.get(12)?,
         interrupted: interrupted_int != 0,
+        modified_files,
     })
 }
 
@@ -501,13 +522,15 @@ fn rebuild_turn_index_inner(session_id: &str) -> SqliteResult<Vec<CachedTurnSumm
             "INSERT INTO session_turns
              (session_id, turn_id, start_sequence, end_sequence, next_turn_id, started_at, ended_at,
               duration_ms, user_event_ids_json, user_preview, event_count, body_event_count,
-              status, interrupted, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+              status, interrupted, updated_at, modified_files_json)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
         )?;
 
         for draft in &drafts {
             let user_event_ids_json =
                 serde_json::to_string(&draft.user_event_ids).unwrap_or_else(|_| "[]".to_string());
+            let modified_files_json = serde_json::to_string(draft.file_accumulator.files())
+                .unwrap_or_else(|_| "[]".to_string());
             // Status derivation: lifecycle store wins when available.
             // Falls back to the legacy `body_event_count > 0` heuristic for
             // rows that predate the canonical intent id (no row in
@@ -549,6 +572,7 @@ fn rebuild_turn_index_inner(session_id: &str) -> SqliteResult<Vec<CachedTurnSumm
                 status,
                 0_i64,
                 rebuilt_at,
+                modified_files_json,
             ])?;
         }
     }
@@ -630,7 +654,7 @@ pub fn load_turn_index(session_id: &str) -> SqliteResult<Vec<CachedTurnSummary>>
     let mut stmt = conn.prepare_cached(
         "SELECT session_id, turn_id, start_sequence, end_sequence, next_turn_id, started_at, ended_at,
                 duration_ms, user_event_ids_json, user_preview, event_count, body_event_count,
-                status, interrupted
+                status, interrupted, modified_files_json
          FROM session_turns
          WHERE session_id = ?1
          ORDER BY started_at ASC, start_sequence ASC",
@@ -651,7 +675,7 @@ pub fn get_turn_summary(
     conn.query_row(
         "SELECT session_id, turn_id, start_sequence, end_sequence, next_turn_id, started_at, ended_at,
                 duration_ms, user_event_ids_json, user_preview, event_count, body_event_count,
-                status, interrupted
+                status, interrupted, modified_files_json
          FROM session_turns
          WHERE session_id = ?1 AND turn_id = ?2",
         params![session_id, turn_id],
@@ -673,6 +697,7 @@ mod tests {
         IndexEventRow {
             id: id.to_string(),
             function_name: function_name.map(str::to_string),
+            args_json: "{}".to_string(),
             result_json: result_json.to_string(),
             content: id.to_string(),
             created_at: "2026-05-27T00:00:00Z".to_string(),

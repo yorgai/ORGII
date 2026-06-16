@@ -70,6 +70,14 @@ export type TurnStatus =
   | "interrupted"
   | "failed";
 
+export interface TurnModifiedFile {
+  path: string;
+  fileName: string;
+  status: "created" | "modified" | "deleted";
+  additions: number;
+  deletions: number;
+}
+
 export interface TurnSummary {
   sessionId: string;
   turnId: string;
@@ -85,6 +93,7 @@ export interface TurnSummary {
   bodyEventCount: number;
   status: TurnStatus;
   interrupted: boolean;
+  modifiedFiles: TurnModifiedFile[];
 }
 
 export interface TurnBodyWindow {

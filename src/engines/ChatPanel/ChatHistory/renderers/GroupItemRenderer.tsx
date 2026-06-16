@@ -27,8 +27,10 @@ import {
   resolveGroupChatMessageBubble,
   resolveGroupChatToolUseSummary,
 } from "../GroupChatView/groupChatUtils";
+import { useTurnFiles } from "../TurnFilesContext";
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
 import { NewEventDivider } from "../components/NewEventDivider";
+import TurnFilesFooter from "../components/TurnFilesFooter";
 import { getUnloadedTurnMeta } from "../hooks/useChatGroups";
 import { ChatItemRenderer } from "./ChatItemRenderer";
 import ChatItemWrap from "./ChatItemWrap";
@@ -200,6 +202,7 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
     const { t } = useTranslation("sessions");
     const chatItem = flatItems[flatIndex];
     const groupChat = useGroupChatContext();
+    const { filesByTurnId, turnIdByGroupIndex } = useTurnFiles();
     const event = chatItem?.event;
 
     const simpleMessage = useMemo(() => {
@@ -370,6 +373,21 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
       !isStructuralUnloadedTurnItem &&
       !isStructuralOnlyItem;
 
+    // Per-round file list. Painted once, below the group's last rendered
+    // body item, sourced from the DB-materialized turn index keyed by
+    // turnId. Suppressed in group-chat panes (bubble layout) and for
+    // structural/unloaded rows that have nothing to anchor to.
+    const turnId = turnIdByGroupIndex[groupIndex] ?? null;
+    const turnModifiedFiles =
+      turnId !== null ? filesByTurnId.get(turnId) : undefined;
+    const showTurnFilesFooter =
+      isLastItemInGroup &&
+      renderedItem !== null &&
+      !groupChat?.enabled &&
+      !isStructuralUnloadedTurnItem &&
+      !isStructuralOnlyItem &&
+      Boolean(turnModifiedFiles && turnModifiedFiles.length > 0);
+
     return (
       <AgentTurnContext.Provider value={turnContext}>
         <div className={turnGapClass || undefined} style={{ minHeight: 1 }}>
@@ -377,6 +395,13 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
             <NewEventDivider label={newEventDividerLabel as string} />
           )}
           {renderedItem}
+          {showTurnFilesFooter && (
+            <TurnFilesFooter
+              modifiedFiles={turnModifiedFiles}
+              sessionId={event?.sessionId ?? null}
+              turnId={turnId}
+            />
+          )}
         </div>
       </AgentTurnContext.Provider>
     );

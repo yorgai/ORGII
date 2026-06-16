@@ -150,6 +150,58 @@ simulatorDiffCommitNavigationRequestAtom.debugLabel =
   "simulatorDiffCommitNavigationRequestAtom";
 
 /**
+ * Per-round Diff scope request.
+ *
+ * Set by the chat `TurnFilesFooter` (the per-round "N Files Changed" card)
+ * so the Agent Station Diff app narrows its file list to just that round's
+ * modified files, mirroring Cursor's message-scoped "Review". `null` (the
+ * default, and what `openAgentStationDiff` resets it to) means "no scope" —
+ * the Diff app shows the whole session working diff exactly as before.
+ *
+ * - `filePaths` — the round's modified file paths (the scope set).
+ * - `selectedPath` — optional clicked row, scrolled/focused on open.
+ * - `sessionId` — the round's session; the Diff app ignores the scope when
+ *   it doesn't match the session currently being viewed (session switch).
+ * - `nonce` — bumped on every set so re-clicking the same file re-focuses.
+ */
+export interface SimulatorDiffScopeRequest {
+  sessionId?: string | null;
+  turnId?: string | null;
+  filePaths: string[];
+  selectedPath?: string | null;
+  nonce: number;
+}
+
+export const simulatorDiffScopeRequestAtom =
+  atom<SimulatorDiffScopeRequest | null>(null);
+simulatorDiffScopeRequestAtom.debugLabel = "simulatorDiffScopeRequestAtom";
+
+/**
+ * Diff-app refresh signal — a monotonically increasing nonce bumped whenever
+ * the user navigates *into* the Agent Station Diff app from chat (the per-round
+ * `TurnFilesFooter` "Review"/file-row click, or the composer "files" pill in
+ * `ChatView.openAgentStationDiff`).
+ *
+ * The Diff app caches its canonical Orgtrack final diffs per session, so a
+ * file edited after the cache was warmed would otherwise render a stale diff
+ * (e.g. round 2 appends `test2` but the view still shows only round 1's
+ * `test1`). The Diff app re-reads its underlying diff data when this nonce
+ * changes, so navigating in always reflects the latest working-tree state.
+ *
+ * Bump it via `bumpSimulatorDiffRefreshNonceAtom` (a write-only helper) so
+ * callers never have to read the current value. Tied to explicit navigation —
+ * not render cycles — so it cannot cause a refetch loop.
+ */
+export const simulatorDiffRefreshNonceAtom = atom<number>(0);
+simulatorDiffRefreshNonceAtom.debugLabel = "simulatorDiffRefreshNonceAtom";
+
+export const bumpSimulatorDiffRefreshNonceAtom = atom(null, (get, set) => {
+  set(simulatorDiffRefreshNonceAtom, get(simulatorDiffRefreshNonceAtom) + 1);
+});
+bumpSimulatorDiffRefreshNonceAtom.debugLabel =
+  "bumpSimulatorDiffRefreshNonceAtom";
+
+/**
  * Playback speed for simulator replay (grid cells).
  * Matches replay bar options: 0.25x–2x; default 1x.
  */

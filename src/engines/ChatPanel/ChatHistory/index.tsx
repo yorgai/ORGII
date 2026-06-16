@@ -51,6 +51,7 @@ import {
   isAgentOrgInboxTranscriptEvent,
   isCoordinatorHumanUserEvent,
 } from "./GroupChatView/groupChatUtils";
+import { TurnFilesContext } from "./TurnFilesContext";
 import { ChatHistoryDisplayModeProvider } from "./chatDisplayModeContext";
 import type { OptimizedChatItem } from "./chatItemPipeline/types";
 import ChatHistoryEmptyState from "./components/ChatHistoryEmptyState";
@@ -75,6 +76,7 @@ import {
   useGroupHeaderRenderer,
   useReloadSession,
   useRestoreCheckpoint,
+  useTurnModifiedFiles,
   useTurnPageNavigation,
   useTurnPageSelectionState,
 } from "./hooks";
@@ -482,7 +484,29 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     // dead subagent session).
     mergeUserOnlyPages: hideGroupUserMessage,
   });
-  const virtuosoDataKey = `${activeId ?? "no-session"}:${turnPaginationEnabled ? `page-${currentPageIndex}` : "all"}`;
+  const virtuosoGroupShapeKey = displayGroupCounts.join(",");
+  const virtuosoDataKey = `${activeId ?? "no-session"}:${
+    turnPaginationEnabled ? `page-${currentPageIndex}` : "all"
+  }:${virtuosoGroupShapeKey}`;
+
+  // --- Per-round file list (turn index store) ---
+  // Reload the DB-materialized turn index when the session changes, a new
+  // round appears, or the agent transitions idle — never per streamed event.
+  const turnFilesReloadKey = `${activeId ?? ""}:${displayGroupCounts.length}:${
+    isAgentWorking ? "working" : "idle"
+  }`;
+  const turnFilesByTurnId = useTurnModifiedFiles(activeId, turnFilesReloadKey);
+  const turnIdByGroupIndex = useMemo(
+    () => displayGroupMeta.map((meta) => meta.turnId),
+    [displayGroupMeta]
+  );
+  const turnFilesContextValue = useMemo(
+    () => ({
+      filesByTurnId: turnFilesByTurnId,
+      turnIdByGroupIndex,
+    }),
+    [turnFilesByTurnId, turnIdByGroupIndex]
+  );
 
   // --- Empty-state grace period ---
   const optimizedLen = chatHistory.length;
@@ -1038,41 +1062,43 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                 className={`mx-auto h-full w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
               >
                 {optimizedChatHistory.length > 0 ? (
-                  <ChatHistoryList
-                    flatItems={displayFlatItems}
-                    groupCounts={displayGroupCounts}
-                    totalFlatItems={displayTotalFlatItems}
-                    lastAssistantFlatIndexPerItem={
-                      displayLastAssistantFlatIndexPerItem
-                    }
-                    codeBlockContainerWidth={codeBlockContainerWidth ?? 0}
-                    footerSpacerHeight={footerSpacerHeight}
-                    planningIndicatorCount={planningIndicatorCount}
-                    planningShowSlowHint={planningShowSlowHint}
-                    planningVariantIndex={planningVariantIndex}
-                    virtuosoRef={
-                      virtuosoRef as React.RefObject<GroupedVirtuosoHandle>
-                    }
-                    virtuosoDataKey={virtuosoDataKey}
-                    getIsWpGeneWorking={getIsWpGeneWorking}
-                    getIsExploring={getIsExploring}
-                    followOutput={followOutput}
-                    renderGroupHeader={
-                      turnPaginationEnabled
-                        ? renderNoGroupHeader
-                        : renderGroupHeader
-                    }
-                    onAtBottomStateChange={handleAtBottomStateChange}
-                    onRangeChanged={handleRangeChanged}
-                    onEndReached={handleTurnPageEndReached}
-                    onRegenerate={handleRegenerateGroup}
-                    onSubmit={memoizedSubmit}
-                    onSkip={stableHandleIgnoreQuestion}
-                    onEditUserMessage={handleEditUserMessage}
-                    ChatScroller={ChatScroller}
-                    staticScrollerRef={staticScrollerRef}
-                    newEventDividerLabel={newEventDividerLabel}
-                  />
+                  <TurnFilesContext.Provider value={turnFilesContextValue}>
+                    <ChatHistoryList
+                      flatItems={displayFlatItems}
+                      groupCounts={displayGroupCounts}
+                      totalFlatItems={displayTotalFlatItems}
+                      lastAssistantFlatIndexPerItem={
+                        displayLastAssistantFlatIndexPerItem
+                      }
+                      codeBlockContainerWidth={codeBlockContainerWidth ?? 0}
+                      footerSpacerHeight={footerSpacerHeight}
+                      planningIndicatorCount={planningIndicatorCount}
+                      planningShowSlowHint={planningShowSlowHint}
+                      planningVariantIndex={planningVariantIndex}
+                      virtuosoRef={
+                        virtuosoRef as React.RefObject<GroupedVirtuosoHandle>
+                      }
+                      virtuosoDataKey={virtuosoDataKey}
+                      getIsWpGeneWorking={getIsWpGeneWorking}
+                      getIsExploring={getIsExploring}
+                      followOutput={followOutput}
+                      renderGroupHeader={
+                        turnPaginationEnabled
+                          ? renderNoGroupHeader
+                          : renderGroupHeader
+                      }
+                      onAtBottomStateChange={handleAtBottomStateChange}
+                      onRangeChanged={handleRangeChanged}
+                      onEndReached={handleTurnPageEndReached}
+                      onRegenerate={handleRegenerateGroup}
+                      onSubmit={memoizedSubmit}
+                      onSkip={stableHandleIgnoreQuestion}
+                      onEditUserMessage={handleEditUserMessage}
+                      ChatScroller={ChatScroller}
+                      staticScrollerRef={staticScrollerRef}
+                      newEventDividerLabel={newEventDividerLabel}
+                    />
+                  </TurnFilesContext.Provider>
                 ) : (
                   <div className="flex h-full min-h-0 flex-col">
                     {hasPinnedContent && (

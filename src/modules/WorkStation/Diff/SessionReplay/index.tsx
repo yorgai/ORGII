@@ -64,6 +64,8 @@ import { reposAtom } from "@src/store/repo/atoms";
 import { sessionByIdAtom } from "@src/store/session";
 import {
   simulatorDiffCommitNavigationRequestAtom,
+  simulatorDiffRefreshNonceAtom,
+  simulatorDiffScopeRequestAtom,
   simulatorPrimarySidebarCollapsedAtom,
   simulatorPrimarySidebarPositionAtom,
   simulatorPrimarySidebarWidthAtom,
@@ -79,6 +81,11 @@ import {
   SubmissionPullRequestsContent,
   deriveSubmissionsData,
 } from "./SubmissionsContent";
+import {
+  filterDiffSectionsByScope,
+  isDiffScopeActive,
+  resolveScopedSelectedPath,
+} from "./diffScope";
 import type { DiffReplayTab } from "./types";
 import { useDiff } from "./useDiff";
 
@@ -315,6 +322,10 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   const [diffCommitNavigationRequest, setDiffCommitNavigationRequest] = useAtom(
     simulatorDiffCommitNavigationRequestAtom
   );
+  const diffScopeRequest = useAtomValue(simulatorDiffScopeRequestAtom);
+  // Bumped on every chat→Diff navigation; forces a fresh read of the canonical
+  // final diffs below so a just-edited file isn't shown with a stale diff.
+  const diffRefreshNonce = useAtomValue(simulatorDiffRefreshNonceAtom);
   const { entries, displayEntry, selectedEntryId, selectEntry } = useDiff();
   const [orgtrackFinalDiffs, setOrgtrackFinalDiffs] = useState<
     OrgtrackSessionFinalDiff[]
@@ -384,7 +395,9 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+    // `diffRefreshNonce` re-runs this load on each chat→Diff navigation so the
+    // canonical final diffs reflect the latest working tree (not a stale cache).
+  }, [sessionId, diffRefreshNonce]);
 
   const canonicalFinalSections = useMemo(
     () => orgtrackFinalDiffs.map(finalDiffToSection),
@@ -398,11 +411,18 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   );
   const hasSimulatorDiffs = simulatorConsolidatedSections.length > 0;
 
-  const sidebarItems =
+  // When the chat `TurnFilesFooter` requested a per-round scope (and it
+  // targets the session on screen), narrow the file list to that round's
+  // files; otherwise this is the whole-session diff exactly as before.
+  const baseSections =
     finalDiffCount > 0 ? canonicalFinalSections : simulatorConsolidatedSections;
 
-  const consolidatedSections =
-    finalDiffCount > 0 ? canonicalFinalSections : simulatorConsolidatedSections;
+  const sidebarItems = useMemo(
+    () => filterDiffSectionsByScope(baseSections, diffScopeRequest, sessionId),
+    [baseSections, diffScopeRequest, sessionId]
+  );
+
+  const consolidatedSections = sidebarItems;
 
   const primarySidebarCollapsed = useAtomValue(
     simulatorPrimarySidebarCollapsedAtom
@@ -859,6 +879,25 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     sessionId,
     setDiffCommitNavigationRequest,
   ]);
+
+  // Per-round scope from the chat `TurnFilesFooter`. When a new scope arrives
+  // for this session, drop into the all-changes diff view (the only mode that
+  // renders the filtered consolidated list) and scroll to the clicked row, if
+  // any. `nonce` is part of the dep set so re-clicking the same file refocuses.
+  useEffect(() => {
+    if (!isDiffScopeActive(diffScopeRequest, sessionId)) return;
+    setActiveTab("diff");
+    setPillMode("all-changes");
+    setHistorySelection(null);
+    setHistoryRepoContext(null);
+    const selected = resolveScopedSelectedPath(diffScopeRequest, sessionId);
+    if (selected) {
+      setFocusedDiffPath(selected);
+      setFocusedDiffNonce((prev) => prev + 1);
+    } else {
+      setFocusedDiffPath(null);
+    }
+  }, [diffScopeRequest, sessionId]);
 
   const handleSidebarItemSelect = useCallback(
     (item: DiffFileNavigationItem<DiffFileSectionData>) => {
