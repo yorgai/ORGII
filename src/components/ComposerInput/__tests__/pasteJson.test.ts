@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { looksLikePastedJson } from "../pasteHandlers";
+import { looksLikeLargePlainText, looksLikePastedJson } from "../pasteHandlers";
 
 const PADDING_SOURCE = "abcdefghij0123456789".repeat(20);
 
@@ -9,6 +9,22 @@ function longPlainText(): string {
   // ~400 chars, no leading "{" or "["
   return PADDING_SOURCE + PADDING_SOURCE;
 }
+
+describe("looksLikeLargePlainText", () => {
+  it("accepts long single-line plain text", () => {
+    expect(looksLikeLargePlainText("x".repeat(4_000))).toBe(true);
+  });
+
+  it("accepts many-line plain text even when total length is modest", () => {
+    expect(
+      looksLikeLargePlainText(Array.from({ length: 80 }, () => "x").join("\n"))
+    ).toBe(true);
+  });
+
+  it("keeps normal short text inline", () => {
+    expect(looksLikeLargePlainText("short\ntext")).toBe(false);
+  });
+});
 
 describe("looksLikePastedJson", () => {
   it("returns null for plain text long enough to clear the length gate", () => {

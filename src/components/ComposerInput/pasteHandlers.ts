@@ -141,6 +141,8 @@ function resolveSkill(
  * snippets inline without losing them to a pill.
  */
 const JSON_PASTE_MIN_LENGTH = 200;
+const LARGE_TEXT_PASTE_MIN_LENGTH = 4_000;
+const LARGE_TEXT_PASTE_MIN_LINES = 80;
 
 /**
  * Detect "user pasted a chunk of JSON" and propose a pill display name.
@@ -198,6 +200,18 @@ export function looksLikePastedJson(
 
   const pretty = JSON.stringify(value, null, 2);
   return { suggestedName: `${suggested}.json`, pretty };
+}
+
+export function looksLikeLargePlainText(text: string): boolean {
+  if (text.length >= LARGE_TEXT_PASTE_MIN_LENGTH) return true;
+  let lineCount = 1;
+  for (let index = 0; index < text.length; index++) {
+    if (text.charCodeAt(index) === 10) {
+      lineCount += 1;
+      if (lineCount >= LARGE_TEXT_PASTE_MIN_LINES) return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -324,6 +338,22 @@ export function createPasteHandler(ctx: PasteHandlerContext) {
           lineEnd: null,
         });
         storePillText(pillPath, capPillText(jsonHit.pretty));
+        event.preventDefault();
+        return true;
+      }
+      if (looksLikeLargePlainText(pastedText)) {
+        const pillPath = `paste://${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+        ctx.insertPill({
+          filePath: pillPath,
+          fileName: "pasted.txt",
+          isFolder: false,
+          iconType: "paste",
+          lineStart: null,
+          lineEnd: null,
+        });
+        storePillText(pillPath, capPillText(sanitizeText(pastedText)));
         event.preventDefault();
         return true;
       }
