@@ -249,10 +249,10 @@
     "pickCliTypeDesc": "코딩용 CLI 에이전트를 선택하세요",
     "pickProvider": "모델 공급자",
     "pickProviderDesc": "모델의 API 공급자를 선택하세요",
-    "accountName": "계정 이름",
-    "accountNameDesc": "이 계정에 사용할 표시 이름",
+    "accountName": "계정 이름(선택 사항)",
+    "accountNameDesc": "비워 두면 {{provider}}를 사용하고, 이후 {{provider}}-1, {{provider}}-2 순서로 사용합니다",
     "selectorDesc": "연결할 서비스 선택",
-    "accountNamePlaceholder": "계정 이름 입력",
+    "accountNamePlaceholder": "자동: {{provider}}",
     "descriptionOptional": "설명 (선택)",
     "descriptionDesc": "이 계정의 용도에 대한 선택적 메모",
     "descriptionPlaceholder": "설명 입력",
@@ -2328,7 +2328,10 @@
       "addConnection": "추가",
       "testPassed": "연결 테스트 통과",
       "saved": "연결이 추가되었습니다",
-      "savedDesc": "데이터베이스 연결이 저장되었습니다. 이 마법사를 닫을 수 있습니다"
+      "savedDesc": "데이터베이스 연결이 저장되었습니다. 이 마법사를 닫을 수 있습니다",
+      "connectionNameOptional": "Connection 이름 (선택 사항)",
+      "connectionNameOptionalDesc": "비워 두면 {{provider}}, 이후 {{provider}}-1, {{provider}}-2 순서로 사용합니다",
+      "connectionNamePlaceholder": "자동: {{provider}}"
     }
   },
   "devTools": {

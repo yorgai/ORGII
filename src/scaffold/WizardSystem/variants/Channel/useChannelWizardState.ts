@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   STORY_SYNC_ADAPTER,
@@ -6,6 +7,10 @@ import {
 } from "@src/api/http/integrations";
 import type { OAuthFlowStart } from "@src/api/http/project";
 import { probeChannel } from "@src/modules/MainApp/Integrations/Connections/Channels/api";
+import {
+  COMING_SOON_CHANNEL_TYPES,
+  LIVE_CHANNEL_TYPES,
+} from "@src/modules/MainApp/Integrations/Connections/Channels/config";
 import type { ChannelProbeResult } from "@src/modules/MainApp/Integrations/Connections/Channels/types";
 
 import { canSubmitChannel } from "./SetupForms";
@@ -13,6 +18,7 @@ import {
   type ChannelWizardErrors,
   hasDuplicateAccountName,
   normalizeAccountName,
+  resolveAccountName,
 } from "./channelWizardHelpers";
 import type {
   ProjectSyncAuthMethod,
@@ -46,6 +52,7 @@ export function useChannelWizardState({
   initialCategory = null,
   initialType = null,
 }: ChannelWizardStateOptions) {
+  const { t } = useTranslation("integrations");
   const [category, setCategory] = useState<WizardCategory | null>(
     initialCategory
   );
@@ -101,6 +108,32 @@ export function useChannelWizardState({
         existingAccounts
       ),
     [selectedType, normalizedAccountName, existingAccounts]
+  );
+
+  const selectedTypeLabel = useMemo(() => {
+    if (!selectedType) return "";
+    const channelType = [
+      ...LIVE_CHANNEL_TYPES,
+      ...COMING_SOON_CHANNEL_TYPES,
+    ].find((channel) => channel.type === selectedType);
+    if (channelType) return t(channelType.labelKey);
+
+    if (selectedType === STORY_SYNC_ADAPTER.GITHUB) return "GitHub";
+    return selectedType.charAt(0).toUpperCase() + selectedType.slice(1);
+  }, [selectedType, t]);
+
+  const resolvedAccountName = useMemo(() => {
+    if (!selectedType || !selectedTypeLabel) return accountName.trim();
+    return resolveAccountName(
+      accountName,
+      selectedTypeLabel,
+      existingAccounts.get(selectedType) ?? []
+    );
+  }, [accountName, selectedType, selectedTypeLabel, existingAccounts]);
+
+  const resolvedAccountId = useMemo(
+    () => normalizeAccountName(resolvedAccountName),
+    [resolvedAccountName]
   );
 
   const channelIsValid = selectedType
@@ -227,7 +260,10 @@ export function useChannelWizardState({
     projectSubmitError,
     projectSubmitting,
     projectToken,
+    resolvedAccountId,
+    resolvedAccountName,
     selectedType,
+    selectedTypeLabel,
     setErrors,
     setGitOAuthFlow,
     setGitPat,

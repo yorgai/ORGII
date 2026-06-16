@@ -82,7 +82,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     isDuplicateName,
     isGit,
     isProjects,
-    normalizedAccountName,
     probeErrorDismissed,
     probeResult,
     probing,
@@ -91,7 +90,10 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     projectSubmitError,
     projectSubmitting,
     projectToken,
+    resolvedAccountId,
+    resolvedAccountName,
     selectedType,
+    selectedTypeLabel,
     setErrors,
     setGitOAuthFlow,
     setGitPat,
@@ -109,8 +111,7 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
   const handleSubmit = useCallback(() => {
     if (!selectedType) return;
 
-    const validationErrors = validateAccountName(accountName, isDuplicateName, {
-      required: t("keyVault.nameRequired"),
+    const validationErrors = validateAccountName(isDuplicateName, {
       duplicate: t("integrations.accountNameDuplicate"),
     });
     if (validationErrors.name) {
@@ -119,12 +120,11 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     }
 
     const configData = buildConfigData(channelConfig);
-    onSubmit(selectedType, normalizedAccountName, configData);
+    onSubmit(selectedType, resolvedAccountId, configData);
   }, [
     selectedType,
-    accountName,
     isDuplicateName,
-    normalizedAccountName,
+    resolvedAccountId,
     channelConfig,
     t,
     onSubmit,
@@ -136,8 +136,7 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
   const handleGitSubmit = useCallback(async () => {
     if (!gitMethod) return;
 
-    const validationErrors = validateAccountName(accountName, isDuplicateName, {
-      required: t("keyVault.nameRequired"),
+    const validationErrors = validateAccountName(isDuplicateName, {
       duplicate: t("integrations.accountNameDuplicate"),
     });
     if (validationErrors.name) {
@@ -148,7 +147,7 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     setGitSubmitting(true);
     setGitSubmitError(null);
     try {
-      const label = accountName.trim();
+      const label = resolvedAccountName;
       if (gitMethod === STORY_SYNC_AUTH_METHOD.SCAN) {
         if (!gitScanCandidate) {
           setGitSubmitError(
@@ -219,7 +218,7 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     gitScanCandidate,
     gitPat,
     gitSshKeyPath,
-    accountName,
+    resolvedAccountName,
     isDuplicateName,
     t,
     onGitConnected,
@@ -241,8 +240,7 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
   const handleProjectSubmit = useCallback(async () => {
     if (!selectedType) return;
 
-    const validationErrors = validateAccountName(accountName, isDuplicateName, {
-      required: t("keyVault.nameRequired"),
+    const validationErrors = validateAccountName(isDuplicateName, {
       duplicate: t("integrations.accountNameDuplicate"),
     });
     if (validationErrors.name) {
@@ -265,13 +263,13 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
       if (projectAuthMethod === STORY_SYNC_AUTH_METHOD.PAT) {
         await syncConnectionsApi.createPat(
           adapterId,
-          accountName.trim(),
+          resolvedAccountName,
           projectToken.trim()
         );
       } else {
         const started = await syncConnectionsApi.oauthStart(
           adapterId,
-          accountName.trim()
+          resolvedAccountName
         );
         setProjectOAuthFlow(started.flow);
         await syncConnectionsApi.oauthComplete(started.connection.id);
@@ -287,7 +285,7 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     }
   }, [
     selectedType,
-    accountName,
+    resolvedAccountName,
     isDuplicateName,
     projectAuthMethod,
     projectToken,
@@ -307,7 +305,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
       isProjects={isProjects}
       isGit={isGit}
       selectedType={selectedType}
-      accountName={accountName}
       isDuplicateName={isDuplicateName}
       channelIsValid={channelIsValid}
       projectAuthMethod={projectAuthMethod}
@@ -348,7 +345,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
   const projectContent = isProjects ? (
     <ProjectContent
       selectedType={selectedType}
-      accountName={accountName}
       isDuplicateName={isDuplicateName}
       projectAuthMethod={projectAuthMethod}
       projectToken={projectToken}
@@ -364,7 +360,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
   const gitContent = isGit ? (
     <GitContent
       selectedType={selectedType}
-      accountName={accountName}
       isDuplicateName={isDuplicateName}
       gitMethod={gitMethod}
       gitPat={gitPat}
@@ -389,6 +384,7 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
         onSelectType={handleSelectType}
         onClearSelection={handleSelectionClear}
         accountName={accountName}
+        accountNameBase={selectedTypeLabel}
         onAccountNameChange={handleAccountNameChange}
         errors={errors}
         isDuplicateName={isDuplicateName}

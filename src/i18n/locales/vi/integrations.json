@@ -252,10 +252,10 @@
     "pickCliTypeDesc": "Chọn Agent CLI để lập trình",
     "pickProvider": "Nhà cung cấp mô hình",
     "pickProviderDesc": "Chọn nhà cung cấp API cho các mô hình của bạn",
-    "accountName": "Tên tài khoản",
-    "accountNameDesc": "Tên hiển thị bạn đặt cho tài khoản này",
+    "accountName": "Tên tài khoản (tùy chọn)",
+    "accountNameDesc": "Để trống để dùng {{provider}}, sau đó {{provider}}-1, {{provider}}-2, v.v",
     "selectorDesc": "Chọn dịch vụ để kết nối",
-    "accountNamePlaceholder": "Nhập tên tài khoản",
+    "accountNamePlaceholder": "Tự động: {{provider}}",
     "descriptionOptional": "Mô tả (tùy chọn)",
     "descriptionDesc": "Ghi chú tùy chọn về mục đích sử dụng tài khoản",
     "descriptionPlaceholder": "Nhập mô tả",
@@ -2331,7 +2331,10 @@
       "addConnection": "Thêm",
       "testPassed": "Kiểm tra kết nối thành công",
       "saved": "Đã thêm kết nối",
-      "savedDesc": "Kết nối cơ sở dữ liệu đã được lưu. Bạn có thể đóng trình hướng dẫn này"
+      "savedDesc": "Kết nối cơ sở dữ liệu đã được lưu. Bạn có thể đóng trình hướng dẫn này",
+      "connectionNameOptional": "Tên kết nối (tùy chọn)",
+      "connectionNameOptionalDesc": "Để trống để dùng {{provider}}, sau đó {{provider}}-1, {{provider}}-2, v.v",
+      "connectionNamePlaceholder": "Tự động: {{provider}}"
     }
   },
   "devTools": {

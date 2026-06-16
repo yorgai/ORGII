@@ -10,9 +10,11 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { ModelType } from "@src/api/types/keys";
 import { isApiKeyProvider } from "@src/assets/providers";
 import { WizardShell } from "@src/scaffold/WizardSystem/primitives";
 
+import { useProviderRegistry } from "../hooks/useProviderRegistry";
 import { useWizard } from "../hooks/useWizard";
 import type { KeyVaultWizardProps } from "../types";
 import ApiSetup from "./ApiSetup";
@@ -28,6 +30,22 @@ const KeyVaultWizard: React.FC<KeyVaultWizardProps> = ({
   existingAccountNames,
 }) => {
   const { t } = useTranslation("integrations");
+  const { unifiedProviders } = useProviderRegistry({
+    primaryOnly: primaryProvidersOnly,
+  });
+
+  const getDefaultNameBase = useCallback(
+    (modelType: ModelType) => {
+      for (const provider of unifiedProviders) {
+        const hasMatchingVariant = provider.variants.some(
+          (variant) => variant.modelType === modelType
+        );
+        if (hasMatchingVariant) return provider.label;
+      }
+      return undefined;
+    },
+    [unifiedProviders]
+  );
 
   const computedInitialData = useMemo(
     () => ({
@@ -43,6 +61,8 @@ const KeyVaultWizard: React.FC<KeyVaultWizardProps> = ({
   const { data, updateData, submit } = useWizard({
     onSubmit,
     initialData: computedInitialData,
+    existingAccountNames,
+    getDefaultNameBase,
   });
   const [browserOpen, setBrowserOpen] = useState(false);
   const [browserCloseSignal, setBrowserCloseSignal] = useState(0);

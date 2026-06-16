@@ -249,10 +249,10 @@
     "pickCliTypeDesc": "Kodlama için CLI Agent'ı seçin",
     "pickProvider": "Model sağlayıcısı",
     "pickProviderDesc": "Modelleriniz için API sağlayıcısını seçin",
-    "accountName": "Hesap Adı",
-    "accountNameDesc": "Bu hesap için seçtiğiniz görünen ad",
+    "accountName": "Hesap adı (isteğe bağlı)",
+    "accountNameDesc": "Boş bırakırsanız {{provider}}, ardından {{provider}}-1, {{provider}}-2 şeklinde kullanılır",
     "selectorDesc": "Bağlanacak hizmeti seçin",
-    "accountNamePlaceholder": "Hesap adını girin",
+    "accountNamePlaceholder": "Otomatik: {{provider}}",
     "descriptionOptional": "Açıklama (İsteğe Bağlı)",
     "descriptionDesc": "Bu hesabın amacı hakkında isteğe bağlı not",
     "descriptionPlaceholder": "Açıklama girin",
@@ -2328,7 +2328,10 @@
       "addConnection": "Ekle",
       "testPassed": "Bağlantı testi başarılı",
       "saved": "Bağlantı eklendi",
-      "savedDesc": "Veritabanı bağlantısı kaydedildi. Bu sihirbazı kapatabilirsiniz"
+      "savedDesc": "Veritabanı bağlantısı kaydedildi. Bu sihirbazı kapatabilirsiniz",
+      "connectionNameOptional": "Bağlantı adı (isteğe bağlı)",
+      "connectionNameOptionalDesc": "Boş bırakırsanız {{provider}}, ardından {{provider}}-1, {{provider}}-2 vb. kullanılır",
+      "connectionNamePlaceholder": "Otomatik: {{provider}}"
     }
   },
   "devTools": {

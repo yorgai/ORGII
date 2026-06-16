@@ -2,7 +2,10 @@ import React from "react";
 
 import type { DatabaseConnectionConfig } from "@src/engines/DatabaseCore";
 import AddConnectionWizard from "@src/scaffold/WizardSystem/variants/Database/AddConnectionWizard";
-import { addConnectionConfig } from "@src/store/workstation/database";
+import {
+  addConnectionConfig,
+  loadConnectionConfigs,
+} from "@src/store/workstation/database";
 
 import type { CategoryTableContentProps } from "../Tables";
 import { CategoryTableContent } from "../Tables";
@@ -40,10 +43,15 @@ export const DatabasesCategoryView: React.FC<DatabasesCategoryViewProps> = ({
   };
 
   if (addWizardOpen) {
+    const existingConnectionNames = loadConnectionConfigs().map(
+      (config) => config.name
+    );
+
     return (
       <AddConnectionWizard
         onSave={handleSaveConnection}
         onCancel={onCloseAddWizard}
+        existingConnectionNames={existingConnectionNames}
       />
     );
   }

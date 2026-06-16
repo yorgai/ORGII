@@ -251,10 +251,10 @@
     "pickCliTypeDesc": "Select the CLI agent for coding",
     "pickProvider": "Model Provider",
     "pickProviderDesc": "Select the API provider for your models",
-    "accountName": "Account Name",
-    "accountNameDesc": "Display name you choose for this account",
+    "accountName": "Account Name (Optional)",
+    "accountNameDesc": "Leave blank to use {{provider}}, then {{provider}}-1, {{provider}}-2, and so on",
     "selectorDesc": "Choose which service to connect",
-    "accountNamePlaceholder": "Enter account name",
+    "accountNamePlaceholder": "Auto: {{provider}}",
     "apiKeyPlaceholder": "Enter your API key",
     "extractPlaceholder": "Paste your keys (messy text is OK):\n\nExample:\nKEY: {{key}}\n{{urlLine}}",
     "descriptionOptional": "Description (Optional)",
@@ -2358,7 +2358,10 @@
       "addConnection": "Add",
       "testPassed": "Connection test passed",
       "saved": "Connection added",
-      "savedDesc": "The database connection has been saved. You can close this wizard"
+      "savedDesc": "The database connection has been saved. You can close this wizard",
+      "connectionNameOptional": "Connection Name (Optional)",
+      "connectionNameOptionalDesc": "Leave blank to use {{provider}}, then {{provider}}-1, {{provider}}-2, and so on",
+      "connectionNamePlaceholder": "Auto: {{provider}}"
     }
   },
   "devTools": {

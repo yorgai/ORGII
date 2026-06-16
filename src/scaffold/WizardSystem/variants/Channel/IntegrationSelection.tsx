@@ -68,6 +68,7 @@ interface IntegrationSelectionProps {
   onSelectType: (category: WizardCategory, type: string) => void;
   onClearSelection: () => void;
   accountName: string;
+  accountNameBase: string;
   onAccountNameChange: (name: string) => void;
   errors: { type?: string; name?: string };
   /** Live duplicate-name flag — true while the typed name collides. */
@@ -89,6 +90,7 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
   onSelectType,
   onClearSelection,
   accountName,
+  accountNameBase,
   onAccountNameChange,
   errors,
   isDuplicateName = false,
@@ -194,8 +196,9 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
     <SectionContainer>
       <SectionRow
         label={t("keyVault.accountName")}
-        description={t("keyVault.accountNameDesc")}
-        required
+        description={t("keyVault.accountNameDesc", {
+          provider: accountNameBase,
+        })}
       >
         <Input
           value={accountName}
@@ -206,7 +209,9 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
           onBlur={() => {
             if (accountName.trim()) setAccountNameTouched(true);
           }}
-          placeholder={t("keyVault.accountNamePlaceholder")}
+          placeholder={t("keyVault.accountNamePlaceholder", {
+            provider: accountNameBase,
+          })}
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}

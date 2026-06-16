@@ -93,7 +93,6 @@ export const ChannelContent: React.FC<ChannelContentProps> = ({
 
 interface ProjectContentProps {
   selectedType: string | null;
-  accountName: string;
   isDuplicateName: boolean;
   projectAuthMethod: ProjectSyncAuthMethod;
   projectToken: string;
@@ -107,7 +106,6 @@ interface ProjectContentProps {
 
 export const ProjectContent: React.FC<ProjectContentProps> = ({
   selectedType,
-  accountName,
   isDuplicateName,
   projectAuthMethod,
   projectToken,
@@ -223,9 +221,7 @@ export const ProjectContent: React.FC<ProjectContentProps> = ({
                 variant="primary"
                 size="default"
                 loading={projectSubmitting}
-                disabled={
-                  !accountName.trim() || isDuplicateName || projectSubmitting
-                }
+                disabled={isDuplicateName || projectSubmitting}
                 onClick={onProjectSubmit}
                 className="h-8 min-h-8"
               >
@@ -247,7 +243,6 @@ export const ProjectContent: React.FC<ProjectContentProps> = ({
 
 interface GitContentProps {
   selectedType: string | null;
-  accountName: string;
   isDuplicateName: boolean;
   gitMethod: ProjectSyncAuthMethod | null;
   gitPat: string;
@@ -265,7 +260,6 @@ interface GitContentProps {
 
 export const GitContent: React.FC<GitContentProps> = ({
   selectedType,
-  accountName,
   isDuplicateName,
   gitMethod,
   gitPat,
@@ -333,7 +327,6 @@ export const GitContent: React.FC<GitContentProps> = ({
 
       {gitMethod === STORY_SYNC_AUTH_METHOD.SCAN && (
         <GitScanPanel
-          accountName={accountName}
           isDuplicateName={isDuplicateName}
           selected={gitScanCandidate}
           onSelect={onGitScanCandidateChange}
@@ -387,9 +380,7 @@ export const GitContent: React.FC<GitContentProps> = ({
                 variant="primary"
                 size="default"
                 loading={gitSubmitting}
-                disabled={
-                  !accountName.trim() || isDuplicateName || gitSubmitting
-                }
+                disabled={isDuplicateName || gitSubmitting}
                 onClick={onGitOAuthStart}
                 className="h-8 min-h-8"
               >
@@ -446,14 +437,12 @@ export const GitContent: React.FC<GitContentProps> = ({
 // SSH key → createFromSsh).
 
 interface GitScanPanelProps {
-  accountName: string;
   isDuplicateName: boolean;
   selected: GitScanCandidate | null;
   onSelect: (candidate: GitScanCandidate | null) => void;
 }
 
 const GitScanPanel: React.FC<GitScanPanelProps> = ({
-  accountName,
   isDuplicateName,
   selected,
   onSelect,
@@ -594,7 +583,7 @@ const GitScanPanel: React.FC<GitScanPanelProps> = ({
                 key={`${candidate.kind}:${candidate.secret}`}
                 type="button"
                 onClick={() => onSelect(isSelected ? null : candidate)}
-                disabled={!accountName.trim() || isDuplicateName}
+                disabled={isDuplicateName}
                 className={`flex items-center justify-between rounded-md border px-3 py-2 text-left text-[12px] transition-colors ${
                   isSelected
                     ? "border-primary-6 bg-primary-1 text-text-1"

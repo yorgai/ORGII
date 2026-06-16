@@ -125,7 +125,7 @@ export interface KeyVaultWizardProps {
   initialData?: Partial<WizardData>;
   /** Limit displayed providers to primary ones with region restrictions (Cursor, OpenAI, Anthropic, Google, OpenRouter) */
   primaryProvidersOnly?: boolean;
-  /** Existing account names — used to reject duplicate names on submit. */
+  /** Existing account names — used to generate default names and reject duplicate custom names. */
   existingAccountNames?: string[];
 }
 
@@ -141,7 +141,7 @@ export interface ApiSetupProps {
   loading?: boolean;
   /** Limit displayed providers to primary ones with region restrictions */
   primaryProvidersOnly?: boolean;
-  /** Existing account names — used to reject duplicate names on submit. */
+  /** Existing account names — used to generate default names and reject duplicate custom names. */
   existingAccountNames?: string[];
   browserCloseSignal?: number;
   onBrowserStateChange?: (isOpen: boolean) => void;

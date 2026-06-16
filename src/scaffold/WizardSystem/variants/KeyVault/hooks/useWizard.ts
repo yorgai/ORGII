@@ -13,6 +13,7 @@ import {
   type SaveKeyRequest,
 } from "@src/api/tauri/rpc/schemas/validation";
 import type { ModelType } from "@src/api/types/keys";
+import { isPlaceholderModelName } from "@src/components/ModelTable/unifiedCustomFlatExtras";
 import { useUndoableState } from "@src/hooks/ui";
 import { parseModelVariants } from "@src/util/modelVariants";
 
@@ -49,6 +50,8 @@ export interface UseWizardOptions {
   onSubmit: (data: SaveKeyRequest) => void;
   /** Initial data to pre-populate */
   initialData?: Partial<WizardData>;
+  existingAccountNames?: string[];
+  getDefaultNameBase?: (modelType: ModelType) => string | undefined;
 }
 
 // ============================================
@@ -70,8 +73,26 @@ export interface UseWizardReturn {
 // Hook Implementation
 // ============================================
 
+function nextDefaultName(baseName: string, existingNames: string[]): string {
+  const normalizedExistingNames = new Set(
+    existingNames.map((name) => name.trim().toLowerCase())
+  );
+  if (!normalizedExistingNames.has(baseName.toLowerCase())) return baseName;
+
+  let suffix = 1;
+  while (normalizedExistingNames.has(`${baseName}-${suffix}`.toLowerCase())) {
+    suffix += 1;
+  }
+  return `${baseName}-${suffix}`;
+}
+
 export function useWizard(options: UseWizardOptions): UseWizardReturn {
-  const { onSubmit, initialData } = options;
+  const {
+    onSubmit,
+    initialData,
+    existingAccountNames = [],
+    getDefaultNameBase,
+  } = options;
 
   const {
     state: data,
@@ -146,14 +167,26 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
       {} as Record<string, string>
     );
 
+    const resolvedName = data.name.trim()
+      ? data.name.trim()
+      : nextDefaultName(
+          getDefaultNameBase?.(data.agent_type as ModelType) || data.agent_type,
+          existingAccountNames
+        );
+
     // Models the backend should use for this account. Auto-detected models:
     // enabled_models directly. Manual rows: derive from non-empty `alias`
     // (the actual proxy model id used to call the LLM).
     const allowedModels = (() => {
-      const enabledModels = data.enabled_models || [];
+      const enabledModels = (data.enabled_models || []).filter(
+        (model) => !isPlaceholderModelName(model)
+      );
       if (enabledModels.length > 0) return enabledModels;
       return data.model_aliases
-        .filter((alias) => alias.alias.trim() !== "")
+        .filter(
+          (alias) =>
+            alias.alias.trim() !== "" && !isPlaceholderModelName(alias.alias)
+        )
         .map((alias) => alias.alias);
     })();
 
@@ -162,21 +195,26 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
     // `custom_models` split; the unified `ModelTable` owns edits for custom rows.
     const allAvailableModels = (() => {
       const detected = data.available_models || [];
-      const custom = data.custom_models || [];
-      const merged = [...detected];
+      const custom = (data.custom_models || []).filter(
+        (model) => !isPlaceholderModelName(model)
+      );
+      const merged = detected.filter((model) => !isPlaceholderModelName(model));
       for (const model of custom) {
         if (!merged.includes(model)) merged.push(model);
       }
       if (merged.length > 0) return merged;
       return data.model_aliases
-        .filter((alias) => alias.alias.trim() !== "")
+        .filter(
+          (alias) =>
+            alias.alias.trim() !== "" && !isPlaceholderModelName(alias.alias)
+        )
         .map((alias) => alias.alias);
     })();
 
     const variantMetadata = parseModelVariants(allAvailableModels);
 
     const request: SaveKeyRequest = {
-      name: data.name,
+      name: resolvedName,
       description: data.description || undefined,
       agent_type: data.agent_type as ModelType,
       api_key: apiKeyForRequest,
@@ -189,7 +227,11 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
       model_aliases:
         data.model_aliases.length > 0
           ? data.model_aliases
-              .filter((alias) => alias.alias.trim() !== "")
+              .filter(
+                (alias) =>
+                  alias.alias.trim() !== "" &&
+                  !isPlaceholderModelName(alias.alias)
+              )
               .map((alias) => ({
                 display_name: alias.displayName,
                 alias: alias.alias,
@@ -214,7 +256,7 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
     };
 
     onSubmit(request);
-  }, [data, onSubmit]);
+  }, [data, existingAccountNames, getDefaultNameBase, onSubmit]);
 
   const reset = useCallback(() => {
     resetData(DEFAULT_WIZARD_DATA);

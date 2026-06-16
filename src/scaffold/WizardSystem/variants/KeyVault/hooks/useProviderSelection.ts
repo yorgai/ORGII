@@ -61,10 +61,12 @@ export function useProviderSelection({
     primaryOnly: primaryProvidersOnly,
   });
 
-  const [selectedProviderKey, setSelectedProviderKey] = useState<string | null>(
-    () =>
-      data.agent_type ? (modelTypeToProviderKey[data.agent_type] ?? null) : null
-  );
+  const [selectedProviderKeyOverride, setSelectedProviderKeyOverride] =
+    useState<string | null>(null);
+
+  const selectedProviderKey = data.agent_type
+    ? (modelTypeToProviderKey[data.agent_type] ?? null)
+    : selectedProviderKeyOverride;
 
   const selectedProvider = useMemo(
     () => unifiedProviders.find((p) => p.key === selectedProviderKey),
@@ -125,7 +127,7 @@ export function useProviderSelection({
     (providerKey: string) => {
       const provider = unifiedProviders.find((p) => p.key === providerKey);
       if (!provider) return;
-      setSelectedProviderKey(providerKey);
+      setSelectedProviderKeyOverride(providerKey);
       if (provider.variants.length === 1) {
         setAgentType(provider.variants[0].modelType);
       } else {
@@ -136,7 +138,7 @@ export function useProviderSelection({
   );
 
   const handleProviderClear = useCallback(() => {
-    setSelectedProviderKey(null);
+    setSelectedProviderKeyOverride(null);
     resetAgentType();
   }, [resetAgentType]);
 

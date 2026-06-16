@@ -55,6 +55,7 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
 
   const {
     selectedProviderKey,
+    selectedProvider,
     hasMultipleVariants,
     providerGridOptions,
     providerSelectOptions,
@@ -111,11 +112,6 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
     trimmedName !== "" && existingNameSet.has(trimmedName.toLowerCase());
 
   const handleNext = () => {
-    if (!trimmedName) {
-      setNameError(t("keyVault.nameRequired"));
-      return;
-    }
-
     if (isDuplicateName) {
       setNameTouched(true);
       setNameError(t("keyVault.nameDuplicate"));
@@ -164,6 +160,45 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
       (hook.isOAuthAgent && data.validated) ||
       isLocalModelProvider);
 
+  const accountNameBase =
+    selectedProvider?.label ||
+    data.agent_type ||
+    t("wizard.pickProvider", "Provider");
+
+  const accountNameSection = (
+    <SectionContainer>
+      <SectionRow
+        label={t("keyVault.accountName")}
+        description={t("keyVault.accountNameDesc", {
+          provider: accountNameBase,
+        })}
+      >
+        <Input
+          value={data.name}
+          onChange={(value) => {
+            onChange({ name: value });
+            if (nameError) setNameError(null);
+            if (nameTouched) setNameTouched(false);
+          }}
+          onBlur={() => {
+            if (trimmedName) setNameTouched(true);
+          }}
+          placeholder={t("keyVault.accountNamePlaceholder", {
+            provider: accountNameBase,
+          })}
+          size="default"
+          style={SECTION_CONTROL_STYLE}
+          errorMessage={
+            nameTouched && isDuplicateName
+              ? t("keyVault.nameDuplicate")
+              : (nameError ?? undefined)
+          }
+          errorPlacement="left"
+        />
+      </SectionRow>
+    </SectionContainer>
+  );
+
   const handleTestModel = useCallback(
     async (model: string) => {
       const apiKey = data.extracted_api_key || data.raw_key_input;
@@ -205,35 +240,7 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
           {/* Provider, method, and region sections — hidden when browser is open */}
           {!hook.browserOpen && (
             <>
-              {/* Account Name — its own settings box */}
-              <SectionContainer>
-                <SectionRow
-                  label={t("keyVault.accountName")}
-                  description={t("keyVault.accountNameDesc")}
-                  required
-                >
-                  <Input
-                    value={data.name}
-                    onChange={(value) => {
-                      onChange({ name: value });
-                      if (nameError) setNameError(null);
-                      if (nameTouched) setNameTouched(false);
-                    }}
-                    onBlur={() => {
-                      if (trimmedName) setNameTouched(true);
-                    }}
-                    placeholder={t("keyVault.accountNamePlaceholder")}
-                    size="default"
-                    style={SECTION_CONTROL_STYLE}
-                    errorMessage={
-                      nameTouched && isDuplicateName
-                        ? t("keyVault.nameDuplicate")
-                        : (nameError ?? undefined)
-                    }
-                    errorPlacement="left"
-                  />
-                </SectionRow>
-              </SectionContainer>
+              {accountNameSection}
 
               <SectionContainer>
                 {/* Provider selection */}

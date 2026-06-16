@@ -252,10 +252,10 @@
     "pickCliTypeDesc": "Wählen Sie den CLI Agent für die Programmierung",
     "pickProvider": "Modellanbieter",
     "pickProviderDesc": "Wählen Sie den API-Anbieter für Ihre Modelle",
-    "accountName": "Kontoname",
-    "accountNameDesc": "Anzeigename, den Sie für dieses Konto wählen",
+    "accountName": "Kontoname (optional)",
+    "accountNameDesc": "Leer lassen, um {{provider}}, dann {{provider}}-1, {{provider}}-2 usw. zu verwenden",
     "selectorDesc": "Wählen Sie den zu verbindenden Dienst",
-    "accountNamePlaceholder": "Kontoname eingeben",
+    "accountNamePlaceholder": "Auto: {{provider}}",
     "descriptionOptional": "Beschreibung (optional)",
     "descriptionDesc": "Optionaler Hinweis zum Zweck dieses Kontos",
     "descriptionPlaceholder": "Beschreibung eingeben",
@@ -2331,7 +2331,10 @@
       "addConnection": "Hinzufügen",
       "testPassed": "Verbindungstest bestanden",
       "saved": "Verbindung hinzugefügt",
-      "savedDesc": "Die Datenbankverbindung wurde gespeichert. Sie können diesen Assistenten schließen"
+      "savedDesc": "Die Datenbankverbindung wurde gespeichert. Sie können diesen Assistenten schließen",
+      "connectionNameOptional": "Verbindungsname (optional)",
+      "connectionNameOptionalDesc": "Leer lassen, um {{provider}}, dann {{provider}}-1, {{provider}}-2 usw. zu verwenden",
+      "connectionNamePlaceholder": "Auto: {{provider}}"
     }
   },
   "devTools": {

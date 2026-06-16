@@ -13,7 +13,6 @@ interface ChannelWizardActionsProps {
   isProjects: boolean;
   isGit: boolean;
   selectedType: string | null;
-  accountName: string;
   isDuplicateName: boolean;
   channelIsValid: boolean;
   projectAuthMethod: ProjectSyncAuthMethod;
@@ -35,7 +34,6 @@ export const ChannelWizardActions: React.FC<ChannelWizardActionsProps> = ({
   isProjects,
   isGit,
   selectedType,
-  accountName,
   isDuplicateName,
   channelIsValid,
   projectAuthMethod,
@@ -59,12 +57,7 @@ export const ChannelWizardActions: React.FC<ChannelWizardActionsProps> = ({
       <Button
         variant="primary"
         size="small"
-        disabled={
-          !selectedType ||
-          !accountName.trim() ||
-          isDuplicateName ||
-          !channelIsValid
-        }
+        disabled={!selectedType || isDuplicateName || !channelIsValid}
         onClick={onChannelSubmit}
       >
         {t("common:actions.done")}
@@ -79,12 +72,7 @@ export const ChannelWizardActions: React.FC<ChannelWizardActionsProps> = ({
       <Button
         variant="primary"
         size="small"
-        disabled={
-          !selectedType ||
-          !accountName.trim() ||
-          isDuplicateName ||
-          !projectToken.trim()
-        }
+        disabled={!selectedType || isDuplicateName || !projectToken.trim()}
         loading={projectSubmitting}
         onClick={onProjectSubmit}
       >
@@ -110,13 +98,7 @@ export const ChannelWizardActions: React.FC<ChannelWizardActionsProps> = ({
       <Button
         variant="primary"
         size="small"
-        disabled={
-          !selectedType ||
-          !accountName.trim() ||
-          isDuplicateName ||
-          !gitMethod ||
-          !hasInput
-        }
+        disabled={!selectedType || isDuplicateName || !gitMethod || !hasInput}
         loading={gitSubmitting}
         onClick={onGitSubmit}
       >

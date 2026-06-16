@@ -25,6 +25,34 @@ export function normalizeAccountName(accountName: string): string {
   return accountName.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
+export function nextDefaultName(
+  baseName: string,
+  existingNames: string[]
+): string {
+  const normalizedExistingNames = new Set(
+    existingNames.map((name) => name.trim().toLowerCase())
+  );
+  if (!normalizedExistingNames.has(baseName.toLowerCase())) return baseName;
+
+  let suffix = 1;
+  while (normalizedExistingNames.has(`${baseName}-${suffix}`.toLowerCase())) {
+    suffix += 1;
+  }
+  return `${baseName}-${suffix}`;
+}
+
+export function resolveAccountName(
+  accountName: string,
+  baseName: string,
+  existingAccountIds: string[]
+): string {
+  const trimmedName = accountName.trim();
+  if (trimmedName) return trimmedName;
+
+  const normalizedExistingNames = existingAccountIds.map(normalizeAccountName);
+  return nextDefaultName(baseName, normalizedExistingNames);
+}
+
 export function hasDuplicateAccountName(
   selectedType: string | null,
   normalizedAccountName: string,
@@ -38,16 +66,13 @@ export function hasDuplicateAccountName(
 }
 
 export interface AccountNameValidationMessages {
-  required: string;
   duplicate: string;
 }
 
 export function validateAccountName(
-  accountName: string,
   isDuplicateName: boolean,
   messages: AccountNameValidationMessages
 ): ChannelWizardErrors {
-  if (!accountName.trim()) return { name: messages.required };
   if (isDuplicateName) return { name: messages.duplicate };
   return {};
 }

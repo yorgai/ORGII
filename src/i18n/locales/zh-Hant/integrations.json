@@ -249,10 +249,10 @@
     "pickCliTypeDesc": "選擇用於編碼的 CLI Agent",
     "pickProvider": "模型供應商",
     "pickProviderDesc": "選擇模型的 API 供應商",
-    "accountName": "賬戶名稱",
-    "accountNameDesc": "你為此賬戶設置的顯示名稱",
+    "accountName": "帳戶名稱（選填）",
+    "accountNameDesc": "留空則使用 {{provider}}，之後依序使用 {{provider}}-1、{{provider}}-2 等",
     "selectorDesc": "選擇要連接的服務",
-    "accountNamePlaceholder": "輸入賬號名稱",
+    "accountNamePlaceholder": "自動：{{provider}}",
     "descriptionOptional": "描述（選填）",
     "descriptionDesc": "關於此賬戶用途的可選備註",
     "descriptionPlaceholder": "輸入描述",
@@ -2328,7 +2328,10 @@
       "addConnection": "添加",
       "testPassed": "連接測試通過",
       "saved": "連接已添加",
-      "savedDesc": "數據庫連接已保存。你可以關閉此嚮導"
+      "savedDesc": "數據庫連接已保存。你可以關閉此嚮導",
+      "connectionNameOptional": "連線名稱（選填）",
+      "connectionNameOptionalDesc": "留空將使用 {{provider}}，然後是 {{provider}}-1、{{provider}}-2，依此類推",
+      "connectionNamePlaceholder": "自動：{{provider}}"
     }
   },
   "devTools": {

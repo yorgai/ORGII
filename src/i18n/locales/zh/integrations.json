@@ -253,10 +253,10 @@
     "pickCliTypeDesc": "选择用于编码的 CLI Agent",
     "pickProvider": "模型供应商",
     "pickProviderDesc": "选择模型的 API 供应商",
-    "accountName": "账户名称",
-    "accountNameDesc": "你为此账户设置的显示名称",
+    "accountName": "账户名称（可选）",
+    "accountNameDesc": "留空则使用 {{provider}}，之后依次使用 {{provider}}-1、{{provider}}-2 等",
     "selectorDesc": "选择要连接的服务",
-    "accountNamePlaceholder": "输入账号名称",
+    "accountNamePlaceholder": "自动：{{provider}}",
     "descriptionOptional": "描述（选填）",
     "descriptionDesc": "关于此账户用途的可选备注",
     "descriptionPlaceholder": "输入描述",
@@ -2348,7 +2348,10 @@
       "addConnection": "添加",
       "testPassed": "连接测试通过",
       "saved": "连接已添加",
-      "savedDesc": "数据库连接已保存。你可以关闭此向导"
+      "savedDesc": "数据库连接已保存。你可以关闭此向导",
+      "connectionNameOptional": "连接名称（可选）",
+      "connectionNameOptionalDesc": "留空将使用 {{provider}}，然后是 {{provider}}-1、{{provider}}-2，依此类推",
+      "connectionNamePlaceholder": "自动：{{provider}}"
     }
   },
   "devTools": {

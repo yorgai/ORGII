@@ -249,10 +249,10 @@
     "pickCliTypeDesc": "Seleccione el agente CLI para codificar",
     "pickProvider": "Proveedor de modelos",
     "pickProviderDesc": "Seleccione el proveedor de API para sus modelos",
-    "accountName": "Nombre de cuenta",
-    "accountNameDesc": "Nombre para mostrar que eliges para esta cuenta",
+    "accountName": "Nombre de la cuenta (opcional)",
+    "accountNameDesc": "Déjalo en blanco para usar {{provider}}, luego {{provider}}-1, {{provider}}-2, etc",
     "selectorDesc": "Elige qué servicio conectar",
-    "accountNamePlaceholder": "Ingrese el nombre de la cuenta",
+    "accountNamePlaceholder": "Auto: {{provider}}",
     "descriptionOptional": "Descripción (opcional)",
     "descriptionDesc": "Nota opcional sobre el uso de esta cuenta",
     "descriptionPlaceholder": "Ingrese la descripción",
@@ -2328,7 +2328,10 @@
       "addConnection": "Añadir",
       "testPassed": "Prueba de conexión exitosa",
       "saved": "Conexión agregada",
-      "savedDesc": "La conexión de base de datos ha sido guardada. Puede cerrar este asistente"
+      "savedDesc": "La conexión de base de datos ha sido guardada. Puede cerrar este asistente",
+      "connectionNameOptional": "Nombre de conexión (opcional)",
+      "connectionNameOptionalDesc": "Déjalo en blanco para usar {{provider}}, luego {{provider}}-1, {{provider}}-2, etc",
+      "connectionNamePlaceholder": "Auto: {{provider}}"
     }
   },
   "devTools": {

@@ -252,10 +252,10 @@
     "pickCliTypeDesc": "コーディング用の CLI エージェントを選択",
     "pickProvider": "モデルプロバイダー",
     "pickProviderDesc": "モデルの API プロバイダーを選択",
-    "accountName": "アカウント名",
-    "accountNameDesc": "このアカウント用に設定する表示名",
+    "accountName": "アカウント名（任意）",
+    "accountNameDesc": "空欄にすると {{provider}}、次に {{provider}}-1、{{provider}}-2 のように使用します",
     "selectorDesc": "接続するサービスを選択",
-    "accountNamePlaceholder": "アカウント名を入力",
+    "accountNamePlaceholder": "自動: {{provider}}",
     "descriptionOptional": "説明（任意）",
     "descriptionDesc": "このアカウントの用途に関するメモ（任意）",
     "descriptionPlaceholder": "説明を入力",
@@ -2331,7 +2331,10 @@
       "addConnection": "追加",
       "testPassed": "接続テスト成功",
       "saved": "接続を追加しました",
-      "savedDesc": "データベース接続が保存されました。このウィザードを閉じることができます"
+      "savedDesc": "データベース接続が保存されました。このウィザードを閉じることができます",
+      "connectionNameOptional": "接続名（任意）",
+      "connectionNameOptionalDesc": "空欄のままにすると {{provider}}、続いて {{provider}}-1、{{provider}}-2 のように使用します",
+      "connectionNamePlaceholder": "自動: {{provider}}"
     }
   },
   "devTools": {

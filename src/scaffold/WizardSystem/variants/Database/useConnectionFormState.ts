@@ -1,6 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 
 import {
   type DatabaseConnectionConfig,
@@ -17,9 +16,27 @@ import {
 
 export type TestStatus = "idle" | "testing" | "success" | "error";
 
+export interface UseConnectionFormStateOptions {
+  existingConnectionNames?: string[];
+}
+
+function nextDefaultName(baseName: string, existingNames: string[]): string {
+  const normalizedExistingNames = new Set(
+    existingNames.map((name) => name.trim().toLowerCase())
+  );
+  if (!normalizedExistingNames.has(baseName.toLowerCase())) return baseName;
+
+  let suffix = 1;
+  while (normalizedExistingNames.has(`${baseName}-${suffix}`.toLowerCase())) {
+    suffix += 1;
+  }
+  return `${baseName}-${suffix}`;
+}
+
 export interface ConnectionFormState {
   dbType: DatabaseType;
   connectionName: string;
+  connectionNameBase: string;
   filePath: string;
   supabaseUrl: string;
   supabaseToken: string;
@@ -71,9 +88,10 @@ export interface ConnectionFormActions {
   handleTypeChange: (key: string) => void;
 }
 
-export function useConnectionFormState(): ConnectionFormState &
-  ConnectionFormActions {
-  const { t } = useTranslation("integrations");
+export function useConnectionFormState(
+  options: UseConnectionFormStateOptions = {}
+): ConnectionFormState & ConnectionFormActions {
+  const { existingConnectionNames = [] } = options;
 
   const [dbType, setDbType] = useState<DatabaseType>("sqlite");
   const [connectionName, setConnectionName] = useState("");
@@ -102,6 +120,25 @@ export function useConnectionFormState(): ConnectionFormState &
   const [testError, setTestError] = useState<string | null>(null);
   const [testErrorDismissed, setTestErrorDismissed] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const connectionNameBase = useMemo(() => {
+    switch (dbType) {
+      case "mysql":
+        return "MySQL";
+      case "neon":
+        return "Neon";
+      case "postgres":
+        return "PostgreSQL";
+      case "sqlite":
+        return "SQLite";
+      case "supabase":
+        return "Supabase";
+      case "turso":
+        return "Turso";
+      default:
+        return dbType;
+    }
+  }, [dbType]);
 
   useEffect(() => {
     if (testError) setTestErrorDismissed(false);
@@ -168,9 +205,7 @@ export function useConnectionFormState(): ConnectionFormState &
       id: `${dbType}:${crypto.randomUUID()}`,
       name:
         connectionName.trim() ||
-        t("common:database.newConnection", {
-          type: dbType,
-        }),
+        nextDefaultName(connectionNameBase, existingConnectionNames),
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -235,6 +270,8 @@ export function useConnectionFormState(): ConnectionFormState &
   }, [
     dbType,
     connectionName,
+    connectionNameBase,
+    existingConnectionNames,
     filePath,
     supabaseUrl,
     supabaseToken,
@@ -252,7 +289,6 @@ export function useConnectionFormState(): ConnectionFormState &
     mysqlDatabase,
     mysqlUser,
     mysqlPassword,
-    t,
   ]);
 
   const handleTest = useCallback(async () => {
@@ -300,6 +336,7 @@ export function useConnectionFormState(): ConnectionFormState &
   return {
     dbType,
     connectionName,
+    connectionNameBase,
     filePath,
     supabaseUrl,
     supabaseToken,

@@ -252,10 +252,10 @@
     "pickCliTypeDesc": "Выберите CLI Agent для кодирования",
     "pickProvider": "Провайдер моделей",
     "pickProviderDesc": "Выберите API-провайдера для ваших моделей",
-    "accountName": "Имя аккаунта",
-    "accountNameDesc": "Отображаемое имя, которое вы выбираете для этого аккаунта",
+    "accountName": "Имя аккаунта (необязательно)",
+    "accountNameDesc": "Оставьте пустым, чтобы использовать {{provider}}, затем {{provider}}-1, {{provider}}-2 и так далее",
     "selectorDesc": "Выберите сервис для подключения",
-    "accountNamePlaceholder": "Введите название аккаунта",
+    "accountNamePlaceholder": "Авто: {{provider}}",
     "descriptionOptional": "Описание (необязательно)",
     "descriptionDesc": "Необязательная заметка о назначении этого аккаунта",
     "descriptionPlaceholder": "Введите описание",
@@ -2331,7 +2331,10 @@
       "addConnection": "Добавить",
       "testPassed": "Тест подключения пройден",
       "saved": "Подключение добавлено",
-      "savedDesc": "Подключение к базе данных сохранено. Вы можете закрыть этот мастер"
+      "savedDesc": "Подключение к базе данных сохранено. Вы можете закрыть этот мастер",
+      "connectionNameOptional": "Имя подключения (необязательно)",
+      "connectionNameOptionalDesc": "Оставьте пустым, чтобы использовать {{provider}}, затем {{provider}}-1, {{provider}}-2 и так далее",
+      "connectionNamePlaceholder": "Авто: {{provider}}"
     }
   },
   "devTools": {

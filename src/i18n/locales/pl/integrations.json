@@ -249,10 +249,10 @@
     "pickCliTypeDesc": "Wybierz agenta CLI do kodowania",
     "pickProvider": "Dostawca modelu",
     "pickProviderDesc": "Wybierz dostawcę API dla swoich modeli",
-    "accountName": "Nazwa konta",
-    "accountNameDesc": "Wyświetlana nazwa, którą wybierasz dla tego konta",
+    "accountName": "Nazwa konta (opcjonalnie)",
+    "accountNameDesc": "Pozostaw puste, aby użyć {{provider}}, następnie {{provider}}-1, {{provider}}-2 itd",
     "selectorDesc": "Wybierz usługę do połączenia",
-    "accountNamePlaceholder": "Wprowadź nazwę konta",
+    "accountNamePlaceholder": "Auto: {{provider}}",
     "apiKeyPlaceholder": "Wprowadź swój klucz API",
     "extractPlaceholder": "Wklej swoje klucze (niesformatowany tekst jest OK):\n\nPrzykład:\nKEY: {{key}}\n{{urlLine}}",
     "descriptionOptional": "Opis (opcjonalnie)",
@@ -2338,7 +2338,10 @@
       "addConnection": "Dodaj",
       "testPassed": "Test połączenia zaliczony",
       "saved": "Połączenie dodane",
-      "savedDesc": "Połączenie z bazą danych zostało zapisane. Możesz zamknąć ten kreator"
+      "savedDesc": "Połączenie z bazą danych zostało zapisane. Możesz zamknąć ten kreator",
+      "connectionNameOptional": "Nazwa połączenia (opcjonalna)",
+      "connectionNameOptionalDesc": "Zostaw puste, aby użyć {{provider}}, potem {{provider}}-1, {{provider}}-2 itd",
+      "connectionNamePlaceholder": "Auto: {{provider}}"
     }
   },
   "devTools": {

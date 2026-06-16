@@ -37,6 +37,7 @@ import { useConnectionFormState } from "./useConnectionFormState";
 export interface AddConnectionWizardProps {
   onSave: (config: DatabaseConnectionConfig) => void;
   onCancel: () => void;
+  existingConnectionNames?: string[];
 }
 
 const DB_TYPE_OPTIONS: SelectionGridOption<DatabaseType>[] = [
@@ -87,11 +88,13 @@ const DB_TYPE_OPTIONS: SelectionGridOption<DatabaseType>[] = [
 const AddConnectionWizard: React.FC<AddConnectionWizardProps> = ({
   onSave,
   onCancel,
+  existingConnectionNames = [],
 }) => {
   const { t } = useTranslation("integrations");
   const {
     dbType,
     connectionName,
+    connectionNameBase,
     filePath,
     supabaseUrl,
     supabaseToken,
@@ -137,7 +140,7 @@ const AddConnectionWizard: React.FC<AddConnectionWizardProps> = ({
     handleTest,
     handleSave,
     handleTypeChange,
-  } = useConnectionFormState();
+  } = useConnectionFormState({ existingConnectionNames });
 
   const footerLeft =
     testStatus === "success" ? (
@@ -191,13 +194,17 @@ const AddConnectionWizard: React.FC<AddConnectionWizardProps> = ({
 
           <SectionContainer>
             <SectionRow
-              label={t("common:database.connectionName")}
-              description={t("databases.wizard.connectionNameDesc")}
+              label={t("databases.wizard.connectionNameOptional")}
+              description={t("databases.wizard.connectionNameOptionalDesc", {
+                provider: connectionNameBase,
+              })}
             >
               <Input
                 value={connectionName}
                 onChange={setConnectionName}
-                placeholder={t("common:placeholders.myDatabase")}
+                placeholder={t("databases.wizard.connectionNamePlaceholder", {
+                  provider: connectionNameBase,
+                })}
                 style={SECTION_CONTROL_STYLE}
               />
             </SectionRow>
