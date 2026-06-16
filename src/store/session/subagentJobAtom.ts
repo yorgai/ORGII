@@ -91,6 +91,82 @@ export const updateSubagentJobAtom = atom(
 updateSubagentJobAtom.debugLabel = "updateSubagentJob";
 
 /**
+ * Prune subagent rows that the backend no longer considers running.
+ *
+ * The atom is event-driven: a row is dropped only when its terminal
+ * `agent:subagent_job_changed` arrives (subagentJobAtom line "Terminal: drop
+ * the row"). If that broadcast is ever missed (listener not mounted, channel
+ * backpressure, app restart wiping the in-memory job registry) the row sticks
+ * at "running" forever and becomes unkillable — `agent_kill_subagent_job`
+ * returns "handle not found" because the registry entry is already gone.
+ *
+ * This reconciliation pass takes the authoritative set of live handles
+ * (from `agent_list_running_subagent_jobs`) and removes every "running" row
+ * not present in it — mirroring `findStaleShellProcesses` for shell jobs.
+ */
+export const pruneSubagentJobsAtom = atom(
+  null,
+  (get, set, action: { liveHandles: ReadonlySet<string> }) => {
+    const currentMap = get(subagentJobMapAtom);
+    let mutated = false;
+    const newMap = new Map(currentMap);
+
+    for (const [sessionId, jobs] of currentMap) {
+      let sessionMutated = false;
+      const nextJobs = new Map(jobs);
+      for (const [handle, job] of jobs) {
+        if (job.status === "running" && !action.liveHandles.has(handle)) {
+          nextJobs.delete(handle);
+          sessionMutated = true;
+        }
+      }
+      if (!sessionMutated) continue;
+      mutated = true;
+      if (nextJobs.size === 0) {
+        newMap.delete(sessionId);
+      } else {
+        newMap.set(sessionId, nextJobs);
+      }
+    }
+
+    if (mutated) set(subagentJobMapAtom, newMap);
+  }
+);
+pruneSubagentJobsAtom.debugLabel = "pruneSubagentJobs";
+
+/**
+ * Force-remove a single subagent row by handle, regardless of status.
+ *
+ * Used when a kill request fails with "handle not found": the backend job
+ * registry has already GC'd the entry (so it can never broadcast a terminal
+ * event), yet the UI row survives. The kill the user clicked must still take
+ * the row off the pin bar.
+ */
+export const removeSubagentJobAtom = atom(
+  null,
+  (get, set, action: { handle: string }) => {
+    const currentMap = get(subagentJobMapAtom);
+    let mutated = false;
+    const newMap = new Map(currentMap);
+
+    for (const [sessionId, jobs] of currentMap) {
+      if (!jobs.has(action.handle)) continue;
+      const nextJobs = new Map(jobs);
+      nextJobs.delete(action.handle);
+      mutated = true;
+      if (nextJobs.size === 0) {
+        newMap.delete(sessionId);
+      } else {
+        newMap.set(sessionId, nextJobs);
+      }
+    }
+
+    if (mutated) set(subagentJobMapAtom, newMap);
+  }
+);
+removeSubagentJobAtom.debugLabel = "removeSubagentJob";
+
+/**
  * Whether a given parent session currently has at least one live
  * (status === "running") background subagent job.
  *

@@ -9,7 +9,7 @@
  * Data comes from shellProcessMapAtom (status "running" | "background") and
  * subagentJobMapAtom (status "running"), both filtered by the active session.
  */
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { Bot, SquareTerminal, Trash2 } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -32,6 +32,7 @@ import {
 } from "@src/store/session/shellProcessAtom";
 import {
   type SubagentJobState,
+  removeSubagentJobAtom,
   subagentJobMapAtom,
 } from "@src/store/session/subagentJobAtom";
 import { invokeTauri } from "@src/util/platform/tauri/init";
@@ -163,6 +164,7 @@ const ActiveProcesses: React.FC<ActiveProcessesProps> = memo(
     const sessionId = sessionIdProp ?? activeSessionId;
     const processMap = useAtomValue(shellProcessMapAtom);
     const subagentJobMap = useAtomValue(subagentJobMapAtom);
+    const dispatchRemoveSubagentJob = useSetAtom(removeSubagentJobAtom);
 
     const activeProcesses = useMemo(() => {
       if (initialProcesses) return initialProcesses;
@@ -213,13 +215,23 @@ const ActiveProcesses: React.FC<ActiveProcessesProps> = memo(
       [sessionId]
     );
 
-    const handleStopSubagent = useCallback(async (handle: string) => {
-      try {
-        await invokeTauri("agent_kill_subagent_job", { handle });
-      } catch (err: unknown) {
-        logger.warn("subagent kill failed:", err);
-      }
-    }, []);
+    const handleStopSubagent = useCallback(
+      async (handle: string) => {
+        try {
+          await invokeTauri("agent_kill_subagent_job", { handle });
+        } catch (err: unknown) {
+          // Registry already GC'd the job (it can never broadcast a terminal
+          // event), so the row would otherwise linger unkillable. The kill the
+          // user clicked must still take it off the pin bar.
+          if (String(err).includes("not found")) {
+            dispatchRemoveSubagentJob({ handle });
+          } else {
+            logger.warn("subagent kill failed:", err);
+          }
+        }
+      },
+      [dispatchRemoveSubagentJob]
+    );
 
     if (count === 0 || hidden) return null;
 
