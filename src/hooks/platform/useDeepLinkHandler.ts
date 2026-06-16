@@ -3,9 +3,8 @@
  *
  * Handles deep link URLs (yorgai:// and orgii://) in Tauri production mode.
  * This is critical for:
- *   - OAuth callbacks where Auth0 redirects to yorgai://marketplace/callback
- *     after authentication (scheme stays "yorgai" — Auth0 identifiers are
- *     immutable even after the brand rename to ORGII).
+ *   - OAuth callbacks where Supabase redirects to yorgai://marketplace/callback
+ *     after authentication.
  *   - Collaboration invite links of the form
  *     orgii://collaboration/join?hub=…&invite=… which route the user into the
  *     collaboration JOIN flow with the hub + invite prefilled.
@@ -47,9 +46,9 @@ function parseDeepLink(
     // Two distinct identifiers — do not collapse:
     //   - URL schemes `yorgai://` / `orgii://` — the OS-level deep link
     //     protocols; both must be listed in tauri.conf.json's
-    //     `deep-link.desktop.schemes`. `yorgai` must also match the Auth0
-    //     "Allowed Callback URLs" entry — Auth0 API identifiers are immutable
-    //     so OAuth stays on "yorgai" even after the brand rename to ORGII.
+    //     `deep-link.desktop.schemes`. `yorgai` must also be registered in
+    //     Supabase Auth redirect URLs so production desktop OAuth callbacks
+    //     can return to the app.
     //   - In-app route prefix `/orgii` — the React Router base path.
     //
     // NOTE: `orgii://collaboration/join` is intercepted earlier (see

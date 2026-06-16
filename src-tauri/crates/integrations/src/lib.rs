@@ -1,7 +1,6 @@
 //! External Integrations
 //!
-//! External service integrations and authentication systems. Bundles four
-//! adapters: `auth` (OAuth token store), `computer_use_lock` (single-session
+//! External service integrations. Bundles `computer_use_lock` (single-session
 //! file lock for Computer Use tools), `external_ide` (open-in-IDE Tauri
 //! commands), `github` (REST + gh-cli token detection), and `proxy` (per-session
 //! MITM HTTPS proxy + ORGII-cloud allocate/release).
@@ -16,7 +15,6 @@
 //! Note: Cursor and Kiro runner-specific modules (credential capture, usage
 //! tracking, SSO) live in `agent_sessions::cli::platform_adapters::{cursor,kiro}`.
 
-pub mod auth;
 pub mod commands;
 pub mod computer_use_lock;
 pub mod external_ide;

@@ -43,14 +43,6 @@ pub fn keys() -> PathBuf {
     orgii_root().join("credentials.json")
 }
 
-/// Marketplace OAuth/auth tokens: `~/.orgii/auth_tokens.json`.
-///
-/// Used by `integrations::auth` to back session-token storage for
-/// browser-flow logins (kiro, copilot, marketplace). 0o600 perms.
-pub fn auth_tokens() -> PathBuf {
-    orgii_root().join("auth_tokens.json")
-}
-
 /// Local MITM proxy directory: `~/.orgii/proxy/`.
 ///
 /// Holds the root CA certificate (`ca.pem` + `ca-key.pem`) generated and

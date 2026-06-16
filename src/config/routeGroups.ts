@@ -261,7 +261,7 @@ export const APP_MARKET_ROUTES = {
     "mainApp",
     "app",
     "loader",
-    "Auth0 OAuth callback for marketplace"
+    "Supabase OAuth callback for hosted-service login"
   ),
   agentApps: route(
     "/orgii/app/market/agent-apps",

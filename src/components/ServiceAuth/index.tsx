@@ -1,7 +1,7 @@
 /**
  * Service Auth Components
  *
- * UI components for Auth0-backed service authentication.
+ * UI components for hosted-service authentication.
  * Note: ServiceAuthGuard was removed -- the global AuthGuard in
  * RootLayout already blocks unauthenticated users at the router level.
  */

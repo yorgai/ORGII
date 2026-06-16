@@ -1,7 +1,7 @@
 /**
  * Authentication Hooks
  *
- * Hosted service (Auth0) authentication only.
+ * Hosted service OAuth authentication only.
  * For CLI agent credentials, see @src/hooks/keyVault.
  */
 export {

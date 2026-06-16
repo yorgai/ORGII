@@ -55,7 +55,7 @@ async function stopOAuthServer() {
   }
 }
 
-function authing_signin(
+function completeOAuthSignIn(
   payload: string,
   setUser: (user: IUserInfo) => void,
   setVisible: (visible: boolean) => void
@@ -123,9 +123,9 @@ function authing_signin(
     });
 }
 
-const openAuthingSignIn = async (port: string, login_url: string) => {
+const openOAuthSignIn = async (loginUrl: string) => {
   try {
-    await openPath(login_url);
+    await openPath(loginUrl);
   } catch (error) {
     throw new Error("Failed to open path: " + error);
   }
@@ -150,13 +150,11 @@ async function startOAuthFlow(
     });
     // Set up listeners for OAuth results
     await onUrl((url) => {
-      // Handle the OAuth redirect
-      authing_signin(url, setUser, setVisible);
+      completeOAuthSignIn(url, setUser, setVisible);
       stopOAuthServer();
     });
 
-    // Initiate your OAuth flow here
-    openAuthingSignIn("54031", login_url);
+    openOAuthSignIn(login_url);
   } catch (error) {
     log.error("Error starting OAuth server:", error);
   }

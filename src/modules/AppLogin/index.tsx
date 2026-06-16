@@ -1,4 +1,4 @@
-import { ArrowUpRight, LogIn, RefreshCw } from "lucide-react";
+import { LogIn, RefreshCw } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -6,7 +6,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Button from "@src/components/Button";
 import InlineAlert from "@src/components/InlineAlert";
 import { ROUTES } from "@src/config/routes";
-import { setAuthSkipped } from "@src/config/serviceAuth";
+import { HOSTED_LOGIN_ENABLED, setAuthSkipped } from "@src/config/serviceAuth";
 import { CODEMIRROR_STYLE_NONCE } from "@src/features/CodeMirror/config/csp";
 import {
   clearAuthStateCompletely,
@@ -20,9 +20,6 @@ import {
 } from "@src/modules/shared/layouts";
 
 const LOGIN_COLUMN_WIDTH_CLASS = ONBOARDING_LOADING_VIDEO_WIDTH_CLASS;
-const GITHUB_REPO_URL = "https://github.com/YORG-AI/ORGII";
-const OSS_LOGIN_ENABLED = false;
-
 const log = createLogger("LoginPage");
 
 /** Primary CTAs — taller than default `Button` large for login prominence */
@@ -30,7 +27,7 @@ const LOGIN_ACTION_BUTTON_CLASS = `pointer-events-auto relative z-10 h-14 ${LOGI
 
 // ============================================
 // Exported Loading State Component
-// Used by the Auth0 callback route to show loading on login page layout
+// Used by the OAuth callback route to show loading on login page layout
 // ============================================
 
 interface LoginLoadingStateProps {
@@ -100,7 +97,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
         <OnboardingLoadingVideo />
 
         <div
-          className={`flex flex-col items-center gap-4 ${LOGIN_COLUMN_WIDTH_CLASS}`}
+          className={`flex flex-col items-center gap-2 ${LOGIN_COLUMN_WIDTH_CLASS}`}
         >
           {sessionExpired && (
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -118,39 +115,24 @@ const LoginForm: React.FC<LoginFormProps> = ({
             </InlineAlert>
           )}
 
-          {OSS_LOGIN_ENABLED && (
-            <Button
-              variant="primary"
-              size="large"
-              loading={isLoading}
-              onClick={onLogin}
-              className={LOGIN_ACTION_BUTTON_CLASS}
-            >
-              {isLoading ? t("login.signingIn") : t("login.button")}
-            </Button>
-          )}
-
           <Button
             variant="primary"
+            size="large"
+            loading={isLoading}
+            onClick={onLogin}
+            className={LOGIN_ACTION_BUTTON_CLASS}
+          >
+            {isLoading ? t("login.signingIn") : t("login.button")}
+          </Button>
+
+          <Button
+            variant="tertiary"
             size="large"
             onClick={onSkip}
             className={LOGIN_ACTION_BUTTON_CLASS}
             loading={false}
           >
             {t("login.startButton")}
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="large"
-            href={GITHUB_REPO_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-            className={LOGIN_ACTION_BUTTON_CLASS}
-            icon={<ArrowUpRight className="h-4 w-4" />}
-            iconPosition="right"
-          >
-            {t("login.githubRepoButton")}
           </Button>
 
           <p className="m-0 text-center text-xs leading-normal text-text-3">
@@ -200,7 +182,7 @@ const AuthenticatedForm: React.FC<AuthenticatedFormProps> = ({
         <OnboardingLoadingVideo />
 
         <div
-          className={`flex flex-col items-center gap-4 ${LOGIN_COLUMN_WIDTH_CLASS}`}
+          className={`flex flex-col items-center gap-2 ${LOGIN_COLUMN_WIDTH_CLASS}`}
         >
           <Button
             variant="primary"
@@ -246,6 +228,7 @@ const AuthenticatedForm: React.FC<AuthenticatedFormProps> = ({
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation("auth");
   const { isAuthenticated, isLoading, login } = useServiceAuth();
 
   // State for displaying auth errors
@@ -267,6 +250,12 @@ const LoginPage: React.FC = () => {
   // Derive showAccountOptions from auth state (no effect needed)
   const showAccountOptions =
     isAuthenticated && !isLoading && !isSwitchingAccount;
+
+  useEffect(() => {
+    if (!HOSTED_LOGIN_ENABLED) {
+      navigate(redirectPath, { replace: true });
+    }
+  }, [navigate, redirectPath]);
 
   // Disable Command+N (new window) on login page
   useEffect(() => {
@@ -294,6 +283,9 @@ const LoginPage: React.FC = () => {
       await login();
     } catch (err) {
       log.error("[LoginPage] login() error:", err);
+      setCallbackError(
+        err instanceof Error ? err.message : t("loading.failed")
+      );
     }
   };
 
@@ -321,6 +313,10 @@ const LoginPage: React.FC = () => {
     // Initiate fresh login flow
     handleLogin();
   };
+
+  if (!HOSTED_LOGIN_ENABLED) {
+    return <LoginLoadingState />;
+  }
 
   // Show authenticated options if user has a valid session
   if (showAccountOptions && isAuthenticated) {

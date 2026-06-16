@@ -1,42 +1,22 @@
-/**
- * useServiceAuth Hook
- *
- * Handles Auth0 authentication for the ORGII hosted service
- * Uses Authorization Code Flow with PKCE and refresh tokens
- *
- * Features:
- * - Automatic token refresh before expiry
- * - Seamless session management with refresh tokens
- * - Global state sharing via Jotai atoms
- *
- * @example
- * const { isAuthenticated, login, logout, token } = useServiceAuth();
- */
 import { useAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import {
-  auth0RefreshAndStore,
-  auth0RevokeToken,
-  secureClearTokens,
-} from "@src/api/http/auth/secure";
+  refreshSupabaseSession,
+  signInWithSupabase,
+  signOutSupabase,
+} from "@src/api/http/auth/supabase";
 import { AUTH_ROUTES } from "@src/config/routes";
 import {
-  SERVICE_AUTH_CONFIG,
-  buildAuth0LoginUrl,
-  clearCodeVerifier,
   clearHostedToken,
   clearProcessedCode,
-  getCallbackUrl,
   getHostedToken,
   getTimeUntilExpiry,
   hasRefreshToken,
   isServiceAuthenticated,
-  isTauriProduction,
   isTokenAboutToExpire,
   setAuthSkipped,
-  storeHostedToken,
   verifyHostedToken,
 } from "@src/config/serviceAuth";
 import { createLogger } from "@src/hooks/logger";
@@ -57,7 +37,6 @@ import {
   sleep,
 } from "./serviceAuthHelpers";
 
-// Re-export atoms and helpers for backward compatibility
 export {
   clearAuthStateCompletely,
   serviceAuthAtom,
@@ -80,8 +59,6 @@ const INITIAL_RETRY_DELAY_MS = 1000;
 const VISIBILITY_CHANGE_DEBOUNCE_MS = 500;
 const VISIBILITY_VERIFY_MIN_INTERVAL_MS = 3 * 60 * 1000;
 let lastVisibilityVerifyAt = 0;
-
-/** Global guard: prevents concurrent refresh calls across all hook instances */
 let globalRefreshInProgress = false;
 
 export interface UseServiceAuthReturn {
@@ -97,11 +74,6 @@ export interface UseServiceAuthReturn {
   refreshToken: () => Promise<boolean>;
 }
 
-/**
- * Full hook with side effects and actions.
- * Use ONLY in components that need login/logout/refresh.
- * Runs validation, expiry timer, and visibility listener.
- */
 export function useServiceAuth(): UseServiceAuthReturn {
   const location = useLocation();
   const navigate = useNavigate();
@@ -114,7 +86,6 @@ export function useServiceAuth(): UseServiceAuthReturn {
   const [hasValidated, setHasValidated] = useAtom(serviceValidatedAtom);
   const [isRefreshing, setIsRefreshing] = useAtom(serviceRefreshingAtom);
 
-  // ── Token Refresh (with retry logic) ─────────────────────────────────────
   const refreshToken = useCallback(async (): Promise<boolean> => {
     if (globalRefreshInProgress) return false;
 
@@ -125,21 +96,12 @@ export function useServiceAuth(): UseServiceAuthReturn {
 
     for (let attempt = 0; attempt < MAX_REFRESH_RETRIES; attempt++) {
       try {
-        const tokenResponse = await auth0RefreshAndStore(
-          SERVICE_AUTH_CONFIG.domain,
-          SERVICE_AUTH_CONFIG.clientId
-        );
+        const tokenResponse = await refreshSupabaseSession();
 
         setToken(tokenResponse.access_token);
         setExpiresIn(tokenResponse.expires_in);
         setIsAuthenticated(true);
         setError(null);
-
-        storeHostedToken(
-          tokenResponse.access_token,
-          tokenResponse.expires_in,
-          tokenResponse.refresh_token
-        );
 
         window.dispatchEvent(new Event("localStorageChange"));
 
@@ -156,7 +118,7 @@ export function useServiceAuth(): UseServiceAuthReturn {
         }
 
         logger.warn(
-          `[ServiceAuth] Token refresh attempt ${attempt + 1}/${MAX_REFRESH_RETRIES} failed:`,
+          `Token refresh attempt ${attempt + 1}/${MAX_REFRESH_RETRIES} failed:`,
           refreshError
         );
 
@@ -183,14 +145,13 @@ export function useServiceAuth(): UseServiceAuthReturn {
     logger.error("Token refresh failed after all retries");
 
     if (isAuthError(lastError)) {
-      await secureClearTokens();
       clearHostedToken();
       setToken(null);
       setIsAuthenticated(false);
       setExpiresIn(null);
       setError("Session expired. Please log in again.");
     } else if (isNoRefreshTokenError(lastError)) {
-      // No refresh token - user simply isn't logged in
+      // User is not logged in.
     } else if (!navigator.onLine) {
       logger.warn("Offline after retries - keeping session");
     } else {
@@ -203,7 +164,6 @@ export function useServiceAuth(): UseServiceAuthReturn {
     return false;
   }, [setIsRefreshing, setToken, setExpiresIn, setIsAuthenticated, setError]);
 
-  // ── Refresh auth state from storage ──────────────────────────────────────
   const refresh = useCallback(() => {
     const storedToken = getHostedToken();
     const authenticated = isServiceAuthenticated();
@@ -220,7 +180,6 @@ export function useServiceAuth(): UseServiceAuthReturn {
     }
   }, [setToken, setIsAuthenticated, setExpiresIn, setIsLoading]);
 
-  // ── Validate token on mount ───────────────────────────────────────────────
   useEffect(() => {
     if (hasValidated) return;
 
@@ -265,10 +224,10 @@ export function useServiceAuth(): UseServiceAuthReturn {
             setIsAuthenticated(false);
           }
         })
-        .catch((err) => {
+        .catch((verifyError) => {
           clearTimeout(timeoutId);
           if (cancelled) return;
-          logger.warn("Token validation failed:", err);
+          logger.warn("Token validation failed:", verifyError);
           setIsAuthenticated(!!storedToken);
           setToken(storedToken);
         })
@@ -301,61 +260,31 @@ export function useServiceAuth(): UseServiceAuthReturn {
     refreshToken,
   ]);
 
-  // ── Refresh on route changes ──────────────────────────────────────────────
   useEffect(() => {
     if (!hasValidated) return;
     refresh();
   }, [location.pathname, refresh, hasValidated]);
 
-  // ── Login ─────────────────────────────────────────────────────────────────
   const login = useCallback(async () => {
-    // User is opting in to a real account; clear any prior "skipped" flag
-    // so that on a successful sign-in the BYOK-only soft-pass goes away.
     setAuthSkipped(false);
-
-    const callbackUrl = getCallbackUrl();
-    const loginUrl = await buildAuth0LoginUrl(callbackUrl);
-
-    if (isTauriProduction()) {
-      try {
-        const { open } = await import("@tauri-apps/plugin-shell");
-        await open(loginUrl);
-      } catch (err) {
-        logger.error("Failed to open browser:", err);
-        window.open(loginUrl, "_blank");
-      }
-    } else {
-      window.location.href = loginUrl;
-    }
+    await signInWithSupabase();
   }, []);
 
-  // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(
     async (options: { redirect?: boolean } = { redirect: true }) => {
       try {
-        await auth0RevokeToken(
-          SERVICE_AUTH_CONFIG.domain,
-          SERVICE_AUTH_CONFIG.clientId
-        );
-      } catch (revokeError) {
-        logger.warn("Token revocation failed:", revokeError);
+        await signOutSupabase();
+      } catch (signOutError) {
+        logger.warn("Supabase sign-out failed:", signOutError);
+        clearHostedToken();
       }
-      await secureClearTokens().catch(() => {});
 
-      clearHostedToken();
       setToken(null);
       setIsAuthenticated(false);
       setExpiresIn(null);
       setError(null);
-
-      // Logout is an explicit choice — drop any prior soft-pass so the user
-      // sees the login screen again on next protected route hit.
       setAuthSkipped(false);
-
-      await Promise.all([
-        clearProcessedCode().catch(() => {}),
-        clearCodeVerifier().catch(() => {}),
-      ]);
+      await clearProcessedCode().catch(() => {});
 
       if (options.redirect) {
         navigate(AUTH_ROUTES.login.path, { replace: true });
@@ -364,7 +293,6 @@ export function useServiceAuth(): UseServiceAuthReturn {
     [setToken, setIsAuthenticated, setExpiresIn, setError, navigate]
   );
 
-  // ── Auto-refresh & visibility re-validate ─────────────────────────────────
   useEffect(() => {
     if (!isAuthenticated) return;
 

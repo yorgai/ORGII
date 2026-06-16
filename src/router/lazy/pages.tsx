@@ -63,9 +63,9 @@ export const ProviderBoost = MarketUnavailable;
 export const AgentStudioPage = MarketUnavailable;
 export const DelegationHistoryPage = MarketUnavailable;
 
-// Auth0 OAuth callback — NOT a market feature. Required for login to work
+// Supabase OAuth callback — NOT a market feature. Required for login to work
 // in any build (OSS or hosted). Path stays "/orgii/marketplace/callback"
-// for compatibility with the Auth0 application's Allowed Callback URLs.
+// so existing desktop deep-link routing remains stable.
 export const AuthCallback = React.lazy(
   () =>
     import(

@@ -153,19 +153,6 @@ agent_sessions::cli::platform_adapters::kiro::kiro_auth::create_kiro_auth_webvie
 agent_sessions::cli::platform_adapters::kiro::kiro_auth::close_kiro_auth_webview,
 // Kiro ACP session listing
 agent_sessions::cli::parsers::kiro::list_kiro_sessions_cmd,
-// Auth0 commands (bypass CORS for token exchange)
-integrations::auth::auth0_exchange_code,
-integrations::auth::auth0_refresh_token,
-integrations::auth::auth0_exchange_and_store,
-integrations::auth::auth0_refresh_and_store,
-integrations::auth::auth0_revoke_token,
-// Secure token storage (local file)
-integrations::auth::secure_store_tokens,
-integrations::auth::secure_get_auth_state,
-integrations::auth::secure_get_access_token,
-integrations::auth::secure_get_refresh_token,
-integrations::auth::secure_is_token_expiring,
-integrations::auth::secure_clear_tokens,
 // GitHub local API commands
 integrations::github::commands::github_list_repos,
 integrations::github::commands::github_search_repos,
