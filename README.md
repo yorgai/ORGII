@@ -4,11 +4,13 @@ ORGII is a self-evolving agentic development framework for coding with agents an
 
 Built with Tauri and Rust, ORGII stays lightweight and RAM-friendly compared with Electron-based IDEs and heavier agentic tools. It supports bring-your-own keys and existing subscriptions across your favorite CLI agents & ORGII's resource-friendly Rust harness.
 
+Agents can be aware of your computer's RAM, CPU, and presence status, then adapt their behavior based on your instructions. ORGII also supports the keys and subscriptions you already love and use.
+
 Agents and GUIs support end-to-end testing, which empowers ORGII to self-evolve (with human supervision). A research paper is releasing soon. The frontend is written with our ORGII SDE Agent.
 
 ## Demo
 
-![ORGII demo](assets/demo.gif)
+https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a
 
 ## Quick start
 
