@@ -50,9 +50,6 @@ const KeyVaultWizard: React.FC<KeyVaultWizardProps> = ({
   const computedInitialData = useMemo(
     () => ({
       ...(initialAgentType ? { agent_type: initialAgentType } : {}),
-      ...(process.env.NODE_ENV !== "production"
-        ? window.__ORGII_E2E_KEYVAULT_INITIAL_DATA__
-        : undefined),
       ...initialData,
     }),
     [initialAgentType, initialData]

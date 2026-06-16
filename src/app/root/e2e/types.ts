@@ -789,8 +789,5 @@ declare global {
     __ORGII_E2E_CODEX_OAUTH_MOCK__?: boolean;
     __ORGII_E2E_GEMINI_OAUTH_MOCK__?: boolean;
     __ORGII_E2E_MODE_SWITCH_MOCK__?: boolean;
-    __ORGII_E2E_KEYVAULT_INITIAL_DATA__?: Partial<
-      import("@src/scaffold/WizardSystem/variants/KeyVault/types").WizardData
-    >;
   }
 }
