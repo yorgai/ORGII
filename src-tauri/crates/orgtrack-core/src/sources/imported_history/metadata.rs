@@ -1,5 +1,13 @@
 use std::path::PathBuf;
 
+#[derive(Debug, Clone, Default)]
+pub struct ImportedHistoryImpactStats {
+    pub files_changed: i64,
+    pub lines_added: i64,
+    pub lines_removed: i64,
+    pub touched_files: Vec<String>,
+}
+
 pub const SOURCE_CLAUDE_CODE: &str = "claude_code";
 pub const SOURCE_CODEX_APP: &str = "codex_app";
 pub const SOURCE_OPENCODE: &str = "opencode";
@@ -24,6 +32,7 @@ pub struct ImportedHistoryCacheInput {
     pub output_tokens: i64,
     pub repo_path: Option<String>,
     pub branch: Option<String>,
+    pub impact: ImportedHistoryImpactStats,
     pub listable: bool,
 }
 

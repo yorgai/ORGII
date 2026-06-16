@@ -8,7 +8,11 @@ import type { CoreSessionSummary } from "@src/api/tauri/lineage";
 import type { KanbanTaskOrgtrackMetadata } from "@src/features/KanbanBoard/types";
 import { createLogger } from "@src/hooks/logger";
 import type { Session } from "@src/store/session";
-import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
+import {
+  isClaudeCodeHistorySession,
+  isCodexAppSession,
+  isCursorIdeSession,
+} from "@src/util/session/sessionDispatch";
 
 const logger = createLogger("SessionOrgtrackMetadata");
 const AUTO_ANALYSIS_MAX_SESSIONS_PER_PASS = 8;
@@ -25,10 +29,18 @@ function hasOrgtrackActivity(summary: CoreSessionSummary | undefined): boolean {
   );
 }
 
+function hasSourceImpactFastPath(session: Session): boolean {
+  return (
+    isCursorIdeSession(session.session_id) ||
+    isCodexAppSession(session.session_id) ||
+    isClaudeCodeHistorySession(session.session_id)
+  );
+}
+
 function metadataFromSessionImpact(
   session: Session
 ): KanbanTaskOrgtrackMetadata | undefined {
-  if (!isCursorIdeSession(session.session_id)) return undefined;
+  if (!hasSourceImpactFastPath(session)) return undefined;
 
   const touchedFileCount = session.touchedFiles?.length ?? 0;
   const filesChanged =
@@ -54,8 +66,7 @@ function metadataFromSessionImpact(
 
 function isSourceImpactUnavailable(session: Session): boolean {
   return (
-    isCursorIdeSession(session.session_id) &&
-    !metadataFromSessionImpact(session)
+    hasSourceImpactFastPath(session) && !metadataFromSessionImpact(session)
   );
 }
 

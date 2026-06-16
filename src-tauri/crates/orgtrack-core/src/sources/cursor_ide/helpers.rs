@@ -138,7 +138,9 @@ fn cursor_file_uri_to_path(uri: &str) -> String {
 // Workspace metadata helpers
 // ============================================================================
 
-fn cursor_workspace_metadata_from_composer(composer: &RawComposerForOrder) -> CursorWorkspaceMetadata {
+fn cursor_workspace_metadata_from_composer(
+    composer: &RawComposerForOrder,
+) -> CursorWorkspaceMetadata {
     cursor_workspace_metadata_from_parts(
         &composer.tracked_git_repos,
         composer.workspace_identifier.as_ref(),

@@ -11,6 +11,26 @@ pub struct SqliteRecordStore<'conn> {
     conn: &'conn Connection,
 }
 
+fn ensure_column(
+    conn: &Connection,
+    table_name: &str,
+    column_name: &str,
+    column_definition: &str,
+) -> rusqlite::Result<()> {
+    let mut statement = conn.prepare(&format!("PRAGMA table_info({table_name})"))?;
+    let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
+    for row in rows {
+        if row? == column_name {
+            return Ok(());
+        }
+    }
+    conn.execute(
+        &format!("ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"),
+        [],
+    )?;
+    Ok(())
+}
+
 impl<'conn> SqliteRecordStore<'conn> {
     pub fn new(conn: &'conn Connection) -> Self {
         Self { conn }
@@ -253,6 +273,10 @@ impl<'conn> SqliteRecordStore<'conn> {
                 output_tokens       INTEGER NOT NULL DEFAULT 0,
                 repo_path           TEXT NOT NULL DEFAULT '',
                 branch              TEXT NOT NULL DEFAULT '',
+                files_changed       INTEGER NOT NULL DEFAULT 0,
+                lines_added         INTEGER NOT NULL DEFAULT 0,
+                lines_removed       INTEGER NOT NULL DEFAULT 0,
+                touched_files_json  TEXT NOT NULL DEFAULT '[]',
                 listable            INTEGER NOT NULL DEFAULT 1,
                 updated_at          TEXT NOT NULL DEFAULT '',
                 PRIMARY KEY (source, source_session_id)
@@ -264,6 +288,30 @@ impl<'conn> SqliteRecordStore<'conn> {
             CREATE INDEX IF NOT EXISTS idx_imported_history_source_path
                 ON imported_history_session_cache(source, source_path);
             ",
+        )?;
+        ensure_column(
+            conn,
+            "imported_history_session_cache",
+            "files_changed",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
+        ensure_column(
+            conn,
+            "imported_history_session_cache",
+            "lines_added",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
+        ensure_column(
+            conn,
+            "imported_history_session_cache",
+            "lines_removed",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
+        ensure_column(
+            conn,
+            "imported_history_session_cache",
+            "touched_files_json",
+            "TEXT NOT NULL DEFAULT '[]'",
         )
     }
 

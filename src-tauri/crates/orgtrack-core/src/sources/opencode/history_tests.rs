@@ -200,6 +200,7 @@ fn maps_opencode_session_metadata_to_cache_input() {
         output_tokens: inputs[0].output_tokens,
         repo_path: inputs[0].repo_path.clone(),
         branch: inputs[0].branch.clone(),
+        impact: inputs[0].impact.clone(),
         listable: inputs[0].listable,
     }
     .to_row();
@@ -255,6 +256,7 @@ fn opencode_recent_paths_use_all_sessions_before_limiting() {
                 output_tokens: input.output_tokens,
                 repo_path: input.repo_path,
                 branch: input.branch,
+                impact: input.impact,
                 listable: input.listable,
             }
             .to_row()

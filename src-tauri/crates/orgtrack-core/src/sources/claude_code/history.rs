@@ -4,7 +4,7 @@
 //! converts them into ORGII's canonical `ActivityChunk` shape for read-only
 //! replay.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -16,14 +16,17 @@ use serde_json::{json, Value};
 
 use crate::sources::imported_history::{
     self, cache as imported_cache,
-    metadata::{ImportedHistoryCacheInput, ImportedHistoryDiscoveredRecord, SOURCE_CLAUDE_CODE},
+    metadata::{
+        ImportedHistoryCacheInput, ImportedHistoryDiscoveredRecord, ImportedHistoryImpactStats,
+        SOURCE_CLAUDE_CODE,
+    },
     paths as imported_paths, ImportedHistoryRecentPath, ImportedHistorySessionPage,
     ImportedHistorySessionRow, ImportedToolCall,
 };
 
 const CLAUDE_CODE_SESSION_PREFIX: &str = "claudecodeapp-";
 const CLAUDE_CODE_PROVIDER_SLUG: &str = "claudecode";
-const CLAUDE_CODE_METADATA_PARSER_VERSION: i64 = 1;
+const CLAUDE_CODE_METADATA_PARSER_VERSION: i64 = 2;
 
 pub type ClaudeCodeHistorySessionRow = ImportedHistorySessionRow;
 pub type ClaudeCodeHistorySessionPage = ImportedHistorySessionPage;
@@ -46,6 +49,7 @@ struct ClaudeCodeHistoryMeta {
     branch: Option<String>,
     input_tokens: i64,
     output_tokens: i64,
+    impact: ImportedHistoryImpactStats,
 }
 
 #[derive(Debug, Deserialize)]
@@ -212,6 +216,8 @@ fn parse_claude_session_meta(
     let mut branch: Option<String> = None;
     let mut input_tokens = 0;
     let mut output_tokens = 0;
+    let mut impact = ImportedHistoryImpactStats::default();
+    let mut touched_files = BTreeSet::new();
 
     for line in reader.lines() {
         let line = line.map_err(|err| format!("Failed to read Claude history line: {err}"))?;
@@ -253,6 +259,11 @@ fn parse_claude_session_meta(
             {
                 model = Some(message.model.clone());
             }
+            if parsed.r#type == "assistant" {
+                for item in claude_content_items(&message.content) {
+                    collect_claude_impact_from_item(item, &mut impact, &mut touched_files);
+                }
+            }
             if let Some(usage) = message.usage {
                 input_tokens += usage.input_tokens
                     + usage.cache_read_input_tokens
@@ -261,6 +272,9 @@ fn parse_claude_session_meta(
             }
         }
     }
+
+    impact.touched_files = touched_files.into_iter().collect();
+    impact.files_changed = impact.touched_files.len() as i64;
 
     if created_at_ms == 0 && record.source_mtime_ms == 0 {
         return Ok(None);
@@ -294,6 +308,7 @@ fn parse_claude_session_meta(
         branch,
         input_tokens,
         output_tokens,
+        impact,
     }))
 }
 
@@ -316,7 +331,72 @@ fn session_meta_to_cache_input(meta: ClaudeCodeHistoryMeta) -> ImportedHistoryCa
         output_tokens: meta.output_tokens,
         repo_path: meta.repo_path,
         branch: meta.branch,
+        impact: meta.impact,
         listable: true,
+    }
+}
+
+fn collect_claude_impact_from_item(
+    item: &Value,
+    impact: &mut ImportedHistoryImpactStats,
+    touched_files: &mut BTreeSet<String>,
+) {
+    if item.get("type").and_then(Value::as_str) != Some("tool_use") {
+        return;
+    }
+    let Some(tool_name) = item.get("name").and_then(Value::as_str) else {
+        return;
+    };
+    if !matches!(tool_name, "Edit" | "MultiEdit" | "Write") {
+        return;
+    }
+    let Some(input) = item.get("input") else {
+        return;
+    };
+    let Some(file_path) = input
+        .get("file_path")
+        .and_then(Value::as_str)
+        .or_else(|| input.get("path").and_then(Value::as_str))
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+    else {
+        return;
+    };
+    touched_files.insert(file_path.to_string());
+    match tool_name {
+        "Write" => {
+            if let Some(content) = input.get("content").and_then(Value::as_str) {
+                impact.lines_added += count_text_lines(content);
+            }
+        }
+        "Edit" => {
+            accumulate_claude_edit_input(input, impact);
+        }
+        "MultiEdit" => {
+            if let Some(edits) = input.get("edits").and_then(Value::as_array) {
+                for edit in edits {
+                    accumulate_claude_edit_input(edit, impact);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn accumulate_claude_edit_input(input: &Value, impact: &mut ImportedHistoryImpactStats) {
+    if let Some(old_string) = input.get("old_string").and_then(Value::as_str) {
+        impact.lines_removed += count_text_lines(old_string);
+    }
+    if let Some(new_string) = input.get("new_string").and_then(Value::as_str) {
+        impact.lines_added += count_text_lines(new_string);
+    }
+}
+
+fn count_text_lines(text: &str) -> i64 {
+    if text.is_empty() {
+        0
+    } else {
+        text.lines().count() as i64
     }
 }
 

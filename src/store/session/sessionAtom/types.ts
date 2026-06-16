@@ -117,13 +117,13 @@ export interface Session {
   pinned?: boolean;
   created_time?: string;
   updated_time?: string;
-  /** Source-cache impact stat for read-only external sessions such as Cursor IDE. */
+  /** Source-cache impact stat for read-only external sessions. */
   filesChanged?: number;
-  /** Source-cache impact stat for read-only external sessions such as Cursor IDE. */
+  /** Source-cache impact stat for read-only external sessions. */
   linesAdded?: number;
-  /** Source-cache impact stat for read-only external sessions such as Cursor IDE. */
+  /** Source-cache impact stat for read-only external sessions. */
   linesRemoved?: number;
-  /** Source-cache touched file list for read-only external sessions such as Cursor IDE. */
+  /** Source-cache touched file list for read-only external sessions. */
   touchedFiles?: string[];
 }
 

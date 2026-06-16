@@ -40,6 +40,10 @@ pub struct ImportedHistorySessionRow {
     pub repo_path: Option<String>,
     pub repo_name: Option<String>,
     pub branch: Option<String>,
+    pub files_changed: i64,
+    pub lines_added: i64,
+    pub lines_removed: i64,
+    pub touched_files: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -68,6 +72,10 @@ pub struct ImportedHistoryRowInput {
     pub output_tokens: i64,
     pub repo_path: Option<String>,
     pub branch: Option<String>,
+    pub files_changed: i64,
+    pub lines_added: i64,
+    pub lines_removed: i64,
+    pub touched_files: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -116,6 +124,10 @@ pub fn row_from_input(input: ImportedHistoryRowInput) -> ImportedHistorySessionR
         repo_path: input.repo_path,
         repo_name,
         branch: input.branch,
+        files_changed: input.files_changed,
+        lines_added: input.lines_added,
+        lines_removed: input.lines_removed,
+        touched_files: input.touched_files,
     }
 }
 

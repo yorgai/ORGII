@@ -14,7 +14,7 @@ use serde_json::{json, Value};
 
 use crate::sources::imported_history::{
     self, cache as imported_cache,
-    metadata::{ImportedHistoryCacheInput, SOURCE_WINDSURF},
+    metadata::{ImportedHistoryCacheInput, ImportedHistoryImpactStats, SOURCE_WINDSURF},
     paths as imported_paths, ImportedHistoryRecentPath, ImportedHistorySessionPage,
     ImportedHistorySessionRow, ImportedToolCall,
 };
@@ -269,6 +269,7 @@ fn composer_meta_to_cache_input(meta: WindsurfComposerMeta) -> ImportedHistoryCa
         output_tokens: 0,
         repo_path: metadata.repo_path,
         branch: metadata.branch,
+        impact: ImportedHistoryImpactStats::default(),
         listable: meta.listable,
     }
 }

@@ -124,6 +124,7 @@ fn maps_windsurf_composer_metadata_to_cache_input() {
         output_tokens: inputs[0].output_tokens,
         repo_path: inputs[0].repo_path.clone(),
         branch: inputs[0].branch.clone(),
+        impact: inputs[0].impact.clone(),
         listable: inputs[0].listable,
     }
     .to_row();

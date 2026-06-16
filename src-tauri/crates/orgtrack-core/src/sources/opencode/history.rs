@@ -13,7 +13,7 @@ use serde_json::{json, Value};
 
 use crate::sources::imported_history::{
     self, cache as imported_cache,
-    metadata::{ImportedHistoryCacheInput, SOURCE_OPENCODE},
+    metadata::{ImportedHistoryCacheInput, ImportedHistoryImpactStats, SOURCE_OPENCODE},
     paths as imported_paths, ImportedHistoryRecentPath, ImportedHistorySessionPage,
     ImportedHistorySessionRow, ImportedToolCall,
 };
@@ -257,6 +257,7 @@ fn session_meta_to_cache_input(meta: OpenCodeSessionMeta) -> ImportedHistoryCach
         output_tokens: meta.output_tokens,
         repo_path: (!meta.directory.trim().is_empty()).then_some(meta.directory),
         branch: None,
+        impact: ImportedHistoryImpactStats::default(),
         listable: true,
     }
 }

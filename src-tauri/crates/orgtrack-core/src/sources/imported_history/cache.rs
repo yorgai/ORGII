@@ -4,9 +4,11 @@ use crate::canonical::{AgentMetadata, SessionRecord};
 use crate::privacy::ORGTRACK_SCHEMA_VERSION;
 use crate::store::{sqlite::SqliteRecordStore, RecordStore};
 use chrono::Utc;
-use rusqlite::{params, params_from_iter, Connection, OptionalExtension};
+use rusqlite::{params, params_from_iter, types::Type, Connection, OptionalExtension};
 
-use super::metadata::{ImportedHistoryCacheInput, ImportedHistoryRecordSignature};
+use super::metadata::{
+    ImportedHistoryCacheInput, ImportedHistoryImpactStats, ImportedHistoryRecordSignature,
+};
 use super::{
     effective_limit, recent_paths_from_rows, row_from_input, ImportedHistoryRecentPath,
     ImportedHistoryRowInput, ImportedHistorySessionPage, ImportedHistorySessionRow,
@@ -30,6 +32,7 @@ pub struct ImportedHistoryCachedSession {
     pub output_tokens: i64,
     pub repo_path: Option<String>,
     pub branch: Option<String>,
+    pub impact: ImportedHistoryImpactStats,
     pub listable: bool,
 }
 
@@ -45,6 +48,10 @@ impl ImportedHistoryCachedSession {
             output_tokens: self.output_tokens,
             repo_path: self.repo_path.clone(),
             branch: self.branch.clone(),
+            files_changed: self.impact.files_changed,
+            lines_added: self.impact.lines_added,
+            lines_removed: self.impact.lines_removed,
+            touched_files: self.impact.touched_files.clone(),
         })
     }
 }
@@ -112,10 +119,11 @@ pub fn upsert_imported_session_cache_from_conn(
                     source, source_session_id, session_id, source_path, source_record_key,
                     source_mtime_ms, source_size_bytes, source_fingerprint, parser_version,
                     name, created_at_ms, updated_at_ms, model, input_tokens, output_tokens,
-                    repo_path, branch, listable, updated_at
+                    repo_path, branch, files_changed, lines_added, lines_removed,
+                    touched_files_json, listable, updated_at
                 ) VALUES (
                     ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-                    ?16, ?17, ?18, ?19
+                    ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23
                 )
                 ON CONFLICT(source, source_session_id) DO UPDATE SET
                     session_id = excluded.session_id,
@@ -133,11 +141,17 @@ pub fn upsert_imported_session_cache_from_conn(
                     output_tokens = excluded.output_tokens,
                     repo_path = excluded.repo_path,
                     branch = excluded.branch,
+                    files_changed = excluded.files_changed,
+                    lines_added = excluded.lines_added,
+                    lines_removed = excluded.lines_removed,
+                    touched_files_json = excluded.touched_files_json,
                     listable = excluded.listable,
                     updated_at = excluded.updated_at",
             )
             .map_err(|err| format!("Failed to prepare imported history cache upsert: {err}"))?;
         for input in inputs {
+            let touched_files_json = serde_json::to_string(&input.impact.touched_files)
+                .map_err(|err| format!("Failed to encode imported history touched files: {err}"))?;
             stmt.execute(params![
                 input.source,
                 input.source_session_id,
@@ -156,6 +170,10 @@ pub fn upsert_imported_session_cache_from_conn(
                 input.output_tokens,
                 input.repo_path.as_deref().unwrap_or_default(),
                 input.branch.as_deref().unwrap_or_default(),
+                input.impact.files_changed,
+                input.impact.lines_added,
+                input.impact.lines_removed,
+                touched_files_json,
                 if input.listable { 1_i64 } else { 0_i64 },
                 updated_at,
             ])
@@ -286,7 +304,8 @@ fn query_cached_sessions_from_conn(
             "SELECT source_session_id, session_id, source_path, source_record_key,
                     source_mtime_ms, source_size_bytes, source_fingerprint, parser_version,
                     name, created_at_ms, updated_at_ms, model, input_tokens, output_tokens,
-                    repo_path, branch, listable
+                    repo_path, branch, files_changed, lines_added, lines_removed,
+                    touched_files_json, listable
              FROM imported_history_session_cache
              WHERE source = ?1 AND listable = 1
              ORDER BY updated_at_ms DESC, created_at_ms DESC, source_session_id ASC
@@ -298,6 +317,11 @@ fn query_cached_sessions_from_conn(
             let model: String = row.get(11)?;
             let repo_path: String = row.get(14)?;
             let branch: String = row.get(15)?;
+            let touched_files_json: String = row.get(19)?;
+            let touched_files =
+                serde_json::from_str::<Vec<String>>(&touched_files_json).map_err(|err| {
+                    rusqlite::Error::FromSqlConversionFailure(19, Type::Text, Box::new(err))
+                })?;
             Ok(ImportedHistoryCachedSession {
                 source_session_id: row.get(0)?,
                 session_id: row.get(1)?,
@@ -315,7 +339,13 @@ fn query_cached_sessions_from_conn(
                 output_tokens: row.get(13)?,
                 repo_path: non_empty_string(repo_path),
                 branch: non_empty_string(branch),
-                listable: row.get::<_, i64>(16)? != 0,
+                impact: ImportedHistoryImpactStats {
+                    files_changed: row.get(16)?,
+                    lines_added: row.get(17)?,
+                    lines_removed: row.get(18)?,
+                    touched_files,
+                },
+                listable: row.get::<_, i64>(20)? != 0,
             })
         })
         .map_err(|err| format!("Failed to query imported history cache rows: {err}"))?;

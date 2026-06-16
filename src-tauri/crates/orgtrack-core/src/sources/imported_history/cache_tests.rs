@@ -2,7 +2,8 @@ use rusqlite::Connection;
 
 use super::*;
 use crate::sources::imported_history::metadata::{
-    ImportedHistoryCacheInput, ImportedHistoryRecordSignature, SOURCE_CODEX_APP, SOURCE_OPENCODE,
+    ImportedHistoryCacheInput, ImportedHistoryImpactStats, ImportedHistoryRecordSignature,
+    SOURCE_CODEX_APP, SOURCE_OPENCODE,
 };
 
 fn fixture_conn() -> Connection {
@@ -27,6 +28,10 @@ fn fixture_conn() -> Connection {
             output_tokens       INTEGER NOT NULL DEFAULT 0,
             repo_path           TEXT NOT NULL DEFAULT '',
             branch              TEXT NOT NULL DEFAULT '',
+            files_changed       INTEGER NOT NULL DEFAULT 0,
+            lines_added         INTEGER NOT NULL DEFAULT 0,
+            lines_removed       INTEGER NOT NULL DEFAULT 0,
+            touched_files_json  TEXT NOT NULL DEFAULT '[]',
             listable            INTEGER NOT NULL DEFAULT 1,
             updated_at          TEXT NOT NULL DEFAULT '',
             PRIMARY KEY (source, source_session_id)
@@ -66,6 +71,7 @@ fn input(
         output_tokens: 4,
         repo_path: Some(format!("/tmp/repo-{source_session_id}")),
         branch: Some("main".to_string()),
+        impact: ImportedHistoryImpactStats::default(),
         listable: true,
     }
 }

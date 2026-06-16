@@ -17,6 +17,10 @@ export interface OpenCodeHistorySessionRow {
   repoPath?: string;
   repoName?: string;
   branch?: string;
+  filesChanged: number;
+  linesAdded: number;
+  linesRemoved: number;
+  touchedFiles: string[];
 }
 
 export interface OpenCodeHistorySessionPage {

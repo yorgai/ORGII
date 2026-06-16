@@ -17,6 +17,10 @@ export interface ClaudeCodeHistorySessionRow {
   repoPath?: string;
   repoName?: string;
   branch?: string;
+  filesChanged: number;
+  linesAdded: number;
+  linesRemoved: number;
+  touchedFiles: string[];
 }
 
 export interface ClaudeCodeHistorySessionPage {

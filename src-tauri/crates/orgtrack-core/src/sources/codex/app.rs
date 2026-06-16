@@ -5,7 +5,7 @@
 //! imported history only: ORGII does not own the Codex process or write back to
 //! Codex's local files.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -17,14 +17,17 @@ use serde_json::{json, Value};
 
 use crate::sources::imported_history::{
     self, cache as imported_cache,
-    metadata::{ImportedHistoryCacheInput, ImportedHistoryDiscoveredRecord, SOURCE_CODEX_APP},
+    metadata::{
+        ImportedHistoryCacheInput, ImportedHistoryDiscoveredRecord, ImportedHistoryImpactStats,
+        SOURCE_CODEX_APP,
+    },
     paths as imported_paths, ImportedHistoryRecentPath, ImportedHistorySessionPage,
     ImportedHistorySessionRow, ImportedToolCall,
 };
 
 const CODEX_APP_SESSION_PREFIX: &str = "codexapp-";
 const CODEX_PROVIDER_SLUG: &str = "codex";
-const CODEX_APP_METADATA_PARSER_VERSION: i64 = 1;
+const CODEX_APP_METADATA_PARSER_VERSION: i64 = 2;
 
 pub type CodexAppSessionRow = ImportedHistorySessionRow;
 pub type CodexAppSessionPage = ImportedHistorySessionPage;
@@ -46,6 +49,7 @@ struct CodexAppSessionMeta {
     repo_path: Option<String>,
     input_tokens: i64,
     output_tokens: i64,
+    impact: ImportedHistoryImpactStats,
 }
 
 #[derive(Debug, Deserialize)]
@@ -177,6 +181,8 @@ fn parse_codex_session_meta(
     let mut repo_path: Option<String> = None;
     let mut input_tokens = 0;
     let mut output_tokens = 0;
+    let mut impact = ImportedHistoryImpactStats::default();
+    let mut touched_files = BTreeSet::new();
 
     for line in reader.lines() {
         let line = line.map_err(|err| format!("Failed to read Codex history line: {err}"))?;
@@ -229,7 +235,11 @@ fn parse_codex_session_meta(
                     .unwrap_or(output_tokens);
             }
         }
+        collect_codex_impact_from_payload(&parsed.payload, &mut impact, &mut touched_files);
     }
+
+    impact.touched_files = touched_files.into_iter().collect();
+    impact.files_changed = impact.touched_files.len() as i64;
 
     if created_at_ms == 0 && record.source_mtime_ms == 0 {
         return Ok(None);
@@ -263,6 +273,7 @@ fn parse_codex_session_meta(
         repo_path,
         input_tokens,
         output_tokens,
+        impact,
     }))
 }
 
@@ -285,7 +296,87 @@ fn session_meta_to_cache_input(meta: CodexAppSessionMeta) -> ImportedHistoryCach
         output_tokens: meta.output_tokens,
         repo_path: meta.repo_path,
         branch: None,
+        impact: meta.impact,
         listable: true,
+    }
+}
+
+fn collect_codex_impact_from_payload(
+    payload: &Value,
+    impact: &mut ImportedHistoryImpactStats,
+    touched_files: &mut BTreeSet<String>,
+) {
+    let Some(payload_type) = payload.get("type").and_then(Value::as_str) else {
+        return;
+    };
+    let patch = match payload_type {
+        "function_call" if payload.get("name").and_then(Value::as_str) == Some("apply_patch") => {
+            payload
+                .get("arguments")
+                .and_then(Value::as_str)
+                .map(imported_history::parse_inner_json)
+                .and_then(|args| patch_from_codex_args(&args))
+        }
+        "custom_tool_call"
+            if payload.get("name").and_then(Value::as_str) == Some("apply_patch") =>
+        {
+            payload
+                .get("input")
+                .and_then(Value::as_str)
+                .map(str::to_string)
+        }
+        _ => None,
+    };
+    if let Some(patch) = patch {
+        accumulate_patch_impact(&patch, impact, touched_files);
+    }
+}
+
+fn patch_from_codex_args(args: &Value) -> Option<String> {
+    args.get("patch")
+        .and_then(Value::as_str)
+        .or_else(|| args.get("input").and_then(Value::as_str))
+        .map(str::to_string)
+}
+
+fn accumulate_patch_impact(
+    patch: &str,
+    impact: &mut ImportedHistoryImpactStats,
+    touched_files: &mut BTreeSet<String>,
+) {
+    for line in patch.lines() {
+        if let Some(path) = patch_file_path_from_line(line) {
+            touched_files.insert(path);
+        }
+        if line.starts_with('+') && !line.starts_with("+++") {
+            impact.lines_added += 1;
+        } else if line.starts_with('-') && !line.starts_with("---") {
+            impact.lines_removed += 1;
+        }
+    }
+}
+
+fn patch_file_path_from_line(line: &str) -> Option<String> {
+    if let Some(rest) = line.strip_prefix("diff --git ") {
+        let mut parts = rest.split_whitespace();
+        let _old_path = parts.next();
+        return parts.next().and_then(normalize_patch_path);
+    }
+    line.strip_prefix("+++ ")
+        .and_then(normalize_patch_path)
+        .filter(|path| path != "/dev/null")
+}
+
+fn normalize_patch_path(path: &str) -> Option<String> {
+    let normalized = path
+        .strip_prefix("b/")
+        .or_else(|| path.strip_prefix("a/"))
+        .unwrap_or(path)
+        .trim();
+    if normalized.is_empty() {
+        None
+    } else {
+        Some(normalized.to_string())
     }
 }
 
