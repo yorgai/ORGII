@@ -289,6 +289,12 @@ export interface ChatPanelSelectedWorkItem {
   shortId: string;
   orgId?: string;
   orgName?: string;
+  sourceProject?: {
+    project: Project;
+    projectSlug: string;
+    orgId: string;
+    orgName?: string;
+  };
 }
 
 export const chatPanelSelectedWorkItemAtom =

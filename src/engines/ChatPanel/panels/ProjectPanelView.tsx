@@ -10,6 +10,10 @@ import { useTranslation } from "react-i18next";
 
 import { enrichedWorkItemToUI, projectApi } from "@src/api/http/project";
 import TabPill from "@src/components/TabPill";
+import {
+  ChatPanelHeaderBreadcrumb,
+  usePublishChatPanelHeader,
+} from "@src/engines/ChatPanel/header";
 import { createLogger } from "@src/hooks/logger";
 import { useProjectDataChanged } from "@src/hooks/project";
 import WorkItemContentStack from "@src/modules/ProjectManager/WorkItems/components/WorkItemContentStack";
@@ -23,15 +27,19 @@ import {
   type ProjectData,
   ProjectPropertyFields,
 } from "@src/modules/ProjectManager/shared";
-import ProjectManagerBreadcrumb from "@src/modules/ProjectManager/shared/components/ProjectManagerBreadcrumb";
 import {
   DetailPanelContainer,
   Placeholder,
 } from "@src/modules/shared/layouts/blocks";
 import {
+  CHAT_PANEL_SURFACE_KIND,
   type ChatPanelSelectedProject,
-  chatPanelSelectedWorkItemAtom,
+  chatPanelNavigateAtom,
 } from "@src/store/ui/chatPanelAtom";
+import {
+  STORY_ORG_SCOPE,
+  STORY_PERSONAL_ORG_FILTER_ID,
+} from "@src/store/workstation";
 import type { WorkItem } from "@src/types/core/workItem";
 
 const logger = createLogger("ProjectPanelView");
@@ -55,7 +63,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
   selectedProject,
 }) => {
   const { t } = useTranslation(["projects", "common"]);
-  const setSelectedWorkItem = useSetAtom(chatPanelSelectedWorkItemAtom);
+  const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
   const sidebarProjectDescription = getProjectOverviewDescription(
     selectedProject.project
   );
@@ -242,17 +250,60 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
     onBatchDeleteComplete: loadProjectWorkItems,
   });
 
-  const headerPath = (
-    <ProjectManagerBreadcrumb
-      segments={[
-        { label: orgPathLabel },
-        { label: selectedProject.project.name },
-        ...(activePanelTab === "workItems"
-          ? [{ label: t("projects:workItems.label") }]
-          : []),
-      ]}
-    />
+  const handleOpenOrg = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      navigateChatPanel({
+        kind: CHAT_PANEL_SURFACE_KIND.PROJECT_ORG,
+        projectOrg: {
+          orgId: selectedProject.orgId,
+          orgName: orgPathLabel,
+          orgScope:
+            selectedProject.orgId === STORY_PERSONAL_ORG_FILTER_ID
+              ? STORY_ORG_SCOPE.PERSONAL_ORG
+              : STORY_ORG_SCOPE.PROJECT_ORG,
+        },
+      });
+    },
+    [navigateChatPanel, orgPathLabel, selectedProject.orgId]
   );
+
+  const handleOpenProjectOverview = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      setActivePanelTab("overview");
+    },
+    []
+  );
+
+  const headerBreadcrumbContent = useMemo(
+    () => (
+      <ChatPanelHeaderBreadcrumb
+        items={[
+          {
+            key: "org",
+            label: orgPathLabel,
+            onClick: handleOpenOrg,
+          },
+          {
+            key: "project",
+            label: selectedProject.project.name,
+            onClick: handleOpenProjectOverview,
+          },
+        ]}
+      />
+    ),
+    [
+      handleOpenOrg,
+      handleOpenProjectOverview,
+      orgPathLabel,
+      selectedProject.project.name,
+    ]
+  );
+
+  usePublishChatPanelHeader({
+    content: { content: headerBreadcrumbContent },
+  });
 
   const inlineProperties = (
     <div ref={propertiesRef}>
@@ -279,14 +330,18 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
     (workItemId: string) => {
       const workItem = workItems.find((item) => item.session_id === workItemId);
       if (!workItem) return;
-      setSelectedWorkItem({
-        workItem,
-        projectId: selectedProject.project.id,
-        projectName: selectedProject.project.name,
-        projectSlug: projectSlug ?? selectedProject.projectSlug,
-        shortId: workItemShortIds.get(workItemId) ?? workItemId,
-        orgId: selectedProject.orgId,
-        orgName: selectedProject.orgName,
+      navigateChatPanel({
+        kind: CHAT_PANEL_SURFACE_KIND.WORK_ITEM,
+        workItem: {
+          workItem,
+          projectId: selectedProject.project.id,
+          projectName: selectedProject.project.name,
+          projectSlug: projectSlug ?? selectedProject.projectSlug,
+          shortId: workItemShortIds.get(workItemId) ?? workItemId,
+          orgId: selectedProject.orgId,
+          orgName: selectedProject.orgName,
+          sourceProject: selectedProject,
+        },
       });
     },
     [
@@ -296,7 +351,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
       selectedProject.orgName,
       selectedProject.project.name,
       selectedProject.projectSlug,
-      setSelectedWorkItem,
+      navigateChatPanel,
       workItemShortIds,
       workItems,
     ]
@@ -406,7 +461,6 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
     >
       <DetailPanelContainer className="relative">
         <WorkItemContentStack
-          pathContent={headerPath}
           propertiesContent={inlineProperties}
           descriptionContent={descriptionContent}
           descriptionFlexible

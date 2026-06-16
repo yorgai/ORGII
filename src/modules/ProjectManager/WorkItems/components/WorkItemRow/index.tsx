@@ -57,7 +57,7 @@ const WorkItemRow: React.FC<WorkItemRowProps> = React.memo(
     const status = workItem.workItemStatus || "backlog";
     const priority = workItem.priority || "none";
     const isDeleted = Boolean(workItem.deletedAt);
-    const isInteractive = !readonly && !isDeleted;
+    const isInteractive = !isDeleted;
 
     const visibleContextMenu =
       contextMenu && contextMenu.forSessionId === workItem.session_id

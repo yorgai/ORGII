@@ -13,17 +13,25 @@ export interface ChatPanelHeaderBreadcrumbItem {
 interface ChatPanelHeaderBreadcrumbProps {
   items: readonly ChatPanelHeaderBreadcrumbItem[];
   trailing?: ReactNode;
+  currentItemKey?: string;
   dataTestId?: string;
 }
 
-const SEGMENT_CLASS =
-  "flex h-7 min-w-0 max-w-full cursor-default items-center gap-1.5 rounded-lg px-1.5 text-[13px] font-medium text-text-1 transition-colors hover:bg-surface-hover";
+const SEGMENT_BASE_CLASS =
+  "flex h-7 min-w-0 max-w-full cursor-default items-center gap-1 rounded-lg px-1.5 text-[13px] text-text-1 transition-colors hover:bg-surface-hover";
+
+function getSegmentClass(isCurrent: boolean): string {
+  return `${SEGMENT_BASE_CLASS} ${isCurrent ? "font-semibold" : "font-normal"}`;
+}
 
 function ChatPanelHeaderBreadcrumbSegment({
   item,
+  isCurrent,
 }: {
   item: ChatPanelHeaderBreadcrumbItem;
+  isCurrent: boolean;
 }) {
+  const segmentClass = getSegmentClass(isCurrent);
   const content = (
     <span className="flex min-w-0 flex-col leading-tight">
       <span className="min-w-0 truncate">{item.label}</span>
@@ -39,7 +47,7 @@ function ChatPanelHeaderBreadcrumbSegment({
     return (
       <button
         type="button"
-        className={`${SEGMENT_CLASS} cursor-pointer`}
+        className={`${segmentClass} cursor-pointer`}
         onClick={item.onClick}
       >
         {content}
@@ -47,31 +55,40 @@ function ChatPanelHeaderBreadcrumbSegment({
     );
   }
 
-  return <span className={SEGMENT_CLASS}>{content}</span>;
+  return <span className={segmentClass}>{content}</span>;
 }
 
 export function ChatPanelHeaderBreadcrumb({
   items,
   trailing,
+  currentItemKey,
   dataTestId = "chat-panel-header-breadcrumb",
 }: ChatPanelHeaderBreadcrumbProps): React.ReactNode {
   return (
     <span
-      className="flex h-9 min-w-0 shrink items-center gap-1.5"
+      className="flex h-9 min-w-0 shrink items-center gap-1"
       data-testid={dataTestId}
     >
-      {items.map((item, index) => (
-        <span key={item.key} className="flex min-w-0 items-center gap-1.5">
-          {index > 0 ? (
-            <ChevronRight
-              size={DROPDOWN_ITEM.iconSize}
-              strokeWidth={1.75}
-              className="flex-shrink-0 text-fill-4"
+      {items.map((item, index) => {
+        const isCurrent = currentItemKey
+          ? item.key === currentItemKey
+          : index === items.length - 1;
+        return (
+          <span key={item.key} className="flex min-w-0 items-center gap-1">
+            {index > 0 ? (
+              <ChevronRight
+                size={DROPDOWN_ITEM.iconSize}
+                strokeWidth={1.75}
+                className="flex-shrink-0 text-fill-4"
+              />
+            ) : null}
+            <ChatPanelHeaderBreadcrumbSegment
+              item={item}
+              isCurrent={isCurrent}
             />
-          ) : null}
-          <ChatPanelHeaderBreadcrumbSegment item={item} />
-        </span>
-      ))}
+          </span>
+        );
+      })}
       {trailing ? <span className="ml-1 shrink-0">{trailing}</span> : null}
     </span>
   );
