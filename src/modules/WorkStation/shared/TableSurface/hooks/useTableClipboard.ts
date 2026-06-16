@@ -2,13 +2,23 @@ import { type ClipboardEvent, useCallback } from "react";
 
 import type { TableCellAddress, TableCellRange } from "../types";
 
-function parseClipboardText(text: string): string[][] {
-  return text
+const MAX_CLIPBOARD_TEXT_LENGTH = 100_000;
+const MAX_CLIPBOARD_CELL_COUNT = 10_000;
+
+export function parseClipboardText(text: string): string[][] | null {
+  if (text.length > MAX_CLIPBOARD_TEXT_LENGTH) return null;
+  const rows = text
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .split("\n")
     .filter((line, index, lines) => index < lines.length - 1 || line !== "")
     .map((line) => line.split("\t"));
+  let cellCount = 0;
+  for (const row of rows) {
+    cellCount += row.length;
+    if (cellCount > MAX_CLIPBOARD_CELL_COUNT) return null;
+  }
+  return rows;
 }
 
 function stringifyRangeAsTsv(
@@ -70,7 +80,9 @@ export function useTableClipboard({
       const text = event.clipboardData.getData("text/plain");
       if (text === "") return;
       event.preventDefault();
-      onPasteCells(activeCell, parseClipboardText(text), getActiveRange());
+      const values = parseClipboardText(text);
+      if (!values) return;
+      onPasteCells(activeCell, values, getActiveRange());
     },
     [activeCell, editable, getActiveRange, onPasteCells]
   );
