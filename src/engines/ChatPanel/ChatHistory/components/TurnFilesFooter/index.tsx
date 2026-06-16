@@ -14,11 +14,11 @@ import { MoreHorizontal } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import StackRowButton from "@src/components/StackRowButton";
+import TextButton from "@src/components/TextButton";
 import {
   CHAT_COMPOSER_STACK_BAR_INNER_PADDING_X_CLASS,
   CHAT_COMPOSER_STACK_BAR_SURFACE_BG_CLASS,
-  COMPOSER_STACK_ROW_BASE,
-  COMPOSER_STACK_ROW_HOVER,
 } from "@src/config/composerStackTokens";
 import FileChangeRow from "@src/engines/ChatPanel/InputArea/components/FileChangeRow";
 import { replayModeAtom } from "@src/engines/SessionCore";
@@ -121,12 +121,12 @@ const TurnFilesFooter: React.FC<TurnFilesFooterProps> = memo(
                 defaultValue: "{{count}} Files Changed",
               })}
             </span>
-            <button
+            <TextButton
               onClick={handleReviewClick}
-              className="shrink-0 cursor-pointer border-0 bg-transparent p-0 text-[13px] font-medium text-text-3 transition-colors hover:text-text-1"
+              className="shrink-0 text-[13px] text-text-3 hover:text-text-1"
             >
               {t("chat.turnFiles.review", { defaultValue: "Review" })}
-            </button>
+            </TextButton>
           </div>
 
           <div
@@ -142,9 +142,9 @@ const TurnFilesFooter: React.FC<TurnFilesFooterProps> = memo(
 
             {(hiddenCount > 0 || expanded) &&
               files.length > DEFAULT_VISIBLE_ROWS && (
-                <button
+                <StackRowButton
                   onClick={() => setExpanded((prev) => !prev)}
-                  className={`${COMPOSER_STACK_ROW_BASE} ${COMPOSER_STACK_ROW_HOVER} w-full cursor-pointer border-0 bg-transparent text-left text-text-3`}
+                  className="text-text-3"
                 >
                   <MoreHorizontal size={14} className="shrink-0" />
                   <span className="chat-block-title truncate">
@@ -157,7 +157,7 @@ const TurnFilesFooter: React.FC<TurnFilesFooterProps> = memo(
                           defaultValue: "Show {{count}} more",
                         })}
                   </span>
-                </button>
+                </StackRowButton>
               )}
           </div>
         </div>
