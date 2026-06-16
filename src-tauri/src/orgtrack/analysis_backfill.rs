@@ -1,9 +1,6 @@
 use std::collections::BTreeMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Mutex, MutexGuard, TryLockError};
-use std::thread;
-use std::time::Duration;
+use std::sync::{Mutex, MutexGuard};
 
 use core_types::activity::ActivityChunk;
 use core_types::extracted::ExtractedData;
@@ -50,11 +47,7 @@ use crate::orgtrack::extraction_scheduler::{
     evaluate_memory_gate, ExtractionMemoryDecision, ExtractionMemoryGateConfig,
 };
 
-static STARTED: AtomicBool = AtomicBool::new(false);
 static ANALYSIS_LOCK: Mutex<()> = Mutex::new(());
-const STARTUP_DELAY: Duration = Duration::from_secs(20);
-const IDLE_INTERVAL: Duration = Duration::from_secs(60);
-const MAX_SESSIONS_PER_PASS: usize = 1;
 const MAX_EVENTS_PER_SESSION: usize = 500;
 const MAX_ON_DEMAND_SESSIONS: usize = 1;
 const ANALYSIS_HYDRATION_PAGE_SIZE: usize = 200;
@@ -73,103 +66,6 @@ fn wait_for_analysis_slot() -> Result<MutexGuard<'static, ()>, String> {
     ANALYSIS_LOCK
         .lock()
         .map_err(|_| "Orgtrack analysis lock is poisoned".to_string())
-}
-
-fn try_analysis_slot() -> Result<Option<MutexGuard<'static, ()>>, String> {
-    match ANALYSIS_LOCK.try_lock() {
-        Ok(guard) => Ok(Some(guard)),
-        Err(TryLockError::WouldBlock) => Ok(None),
-        Err(TryLockError::Poisoned(_)) => Err("Orgtrack analysis lock is poisoned".to_string()),
-    }
-}
-
-pub fn spawn_analysis_backfill_worker() {
-    if STARTED.swap(true, Ordering::SeqCst) {
-        return;
-    }
-    thread::Builder::new()
-        .name("orgtrack-analysis-backfill".to_string())
-        .spawn(|| {
-            thread::sleep(STARTUP_DELAY);
-            loop {
-                let result = catch_unwind(AssertUnwindSafe(run_backfill_pass));
-                match result {
-                    Ok(Ok(stats)) => tracing::info!(
-                        scanned_sessions = stats.scanned_sessions,
-                        analyzed_sessions = stats.analyzed_sessions,
-                        skipped_sessions = stats.skipped_sessions,
-                        failed_sessions = stats.failed_sessions,
-                        "[orgtrack_analysis] background analysis backfill pass completed"
-                    ),
-                    Ok(Err(err)) => tracing::warn!(
-                        error = %err,
-                        "[orgtrack_analysis] background analysis backfill pass failed"
-                    ),
-                    Err(_) => tracing::error!(
-                        "[orgtrack_analysis] background analysis worker panicked; continuing after delay"
-                    ),
-                }
-                thread::sleep(IDLE_INTERVAL);
-            }
-        })
-        .map(|_| ())
-        .unwrap_or_else(|err| {
-            STARTED.store(false, Ordering::SeqCst);
-            tracing::warn!(error = %err, "[orgtrack_analysis] failed to spawn analysis worker");
-        });
-}
-
-fn run_backfill_pass() -> Result<AnalysisBackfillStats, String> {
-    let Some(_analysis_slot) = try_analysis_slot()? else {
-        tracing::debug!("[orgtrack_analysis] background pass skipped; analysis already running");
-        return Ok(AnalysisBackfillStats::default());
-    };
-
-    let mut stats = AnalysisBackfillStats::default();
-    let memory_config = ExtractionMemoryGateConfig::default();
-    hydrate_analyzable_session_records()?;
-
-    let conn = get_connection().map_err(|err| err.to_string())?;
-    let store = SqliteRecordStore::new(&conn);
-    let mut sessions = store.list_sessions(None)?;
-    sort_sessions_recent_first(&mut sessions);
-    let sessions_with_current_analysis = analyzed_watermarks(&store, None)?;
-    for session in sessions.into_iter().take(MAX_SESSIONS_PER_PASS) {
-        stats.scanned_sessions += 1;
-        if should_pause(&memory_config) {
-            break;
-        }
-        if !session_needs_analysis(&session, &sessions_with_current_analysis) {
-            stats.skipped_sessions += 1;
-            continue;
-        }
-        if source_tier_policy(&session.source).tier2 == TierSupport::Unsupported {
-            stats.skipped_sessions += 1;
-            continue;
-        }
-        match catch_unwind(AssertUnwindSafe(|| analyze_session(&store, &session))) {
-            Ok(Ok(true)) => stats.analyzed_sessions += 1,
-            Ok(Ok(false)) => stats.skipped_sessions += 1,
-            Ok(Err(err)) => {
-                stats.failed_sessions += 1;
-                tracing::warn!(
-                    session_id = %session.session_id,
-                    source = %session.source,
-                    error = %err,
-                    "[orgtrack_analysis] failed to analyze session"
-                );
-            }
-            Err(_) => {
-                stats.failed_sessions += 1;
-                tracing::error!(
-                    session_id = %session.session_id,
-                    source = %session.source,
-                    "[orgtrack_analysis] session analysis panicked; worker remains alive"
-                );
-            }
-        }
-    }
-    Ok(stats)
 }
 
 pub(crate) fn analyze_requested(
