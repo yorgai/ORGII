@@ -54,6 +54,7 @@ import {
   useSimulatorPlaceholderActions,
 } from "@src/modules/WorkStation/shared";
 import {
+  type PanelSection,
   PrimarySidebarLayoutWithSections,
   type PrimarySidebarTab,
 } from "@src/modules/WorkStation/shared/PrimarySidebarLayout";
@@ -916,8 +917,66 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     [pillMode, selectEntry]
   );
 
-  const sidebarTab = useMemo<PrimarySidebarTab>(
-    () => ({
+  const sidebarTab = useMemo<PrimarySidebarTab>(() => {
+    // Submissions tab: the sidebar lists what the agent shipped (commits +
+    // pull requests) and the main pane renders the selected commit's detail,
+    // mirroring the Diff tab's file-list ↔ diff master-detail layout.
+    if (activeTab === "submissions") {
+      const sections: PanelSection[] = [
+        {
+          key: "submission-commits",
+          title: t("simulator.replay.diffApp.submissions.commits", "Commits"),
+          content: (
+            <SubmissionCommitsContent
+              commits={submissionCommits}
+              selectedCommitSha={
+                historySelection?.type === "commit"
+                  ? historySelection.commitSha
+                  : null
+              }
+              onCommitSelect={handleSubmissionCommitSelect}
+              emptyLabel={t(
+                "simulator.replay.diffApp.submissions.noCommits",
+                "No Commits yet"
+              )}
+            />
+          ),
+          defaultFlexGrow: 2,
+          collapsible: true,
+          resizable: submissionsData.pullRequests.length > 0,
+        },
+      ];
+
+      if (submissionsData.pullRequests.length > 0) {
+        sections.push({
+          key: "submission-prs",
+          title: t("simulator.replay.diffApp.submissions.pr", "PR"),
+          content: (
+            <SubmissionPullRequestsContent
+              pullRequests={submissionsData.pullRequests}
+              emptyLabel={t(
+                "simulator.replay.diffApp.submissions.noPullRequests",
+                "No Pull Requests yet"
+              )}
+            />
+          ),
+          defaultFlexGrow: 1,
+          collapsible: true,
+          resizable: false,
+        });
+      }
+
+      return {
+        key: "submissions-sidebar",
+        label: t(
+          "simulator.replay.diffApp.submissions.tabLabel",
+          "Submissions"
+        ),
+        sections,
+      };
+    }
+
+    return {
       key: "diff-sidebar",
       label: t("simulator.replay.diffApp.tabLabel", "Diff"),
       sections: [
@@ -945,18 +1004,21 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
           resizable: false,
         },
       ],
-    }),
-    [
-      sidebarItems,
-      historySelection,
-      selectedEntryId,
-      displayEntry,
-      pillMode,
-      focusedDiffPath,
-      handleSidebarItemSelect,
-      t,
-    ]
-  );
+    };
+  }, [
+    activeTab,
+    submissionCommits,
+    submissionsData.pullRequests,
+    handleSubmissionCommitSelect,
+    sidebarItems,
+    historySelection,
+    selectedEntryId,
+    displayEntry,
+    pillMode,
+    focusedDiffPath,
+    handleSidebarItemSelect,
+    t,
+  ]);
 
   const noopTabChange = useCallback(() => {
     // single-tab shell — no-op
@@ -1064,45 +1126,23 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     }
 
     if (activeTab === "submissions") {
-      if (!hasSubmissions) {
-        return (
-          <Placeholder
-            variant="empty"
-            placement="detail-panel"
-            title={t(
-              "simulator.replay.diffApp.submissions.empty",
-              "No submissions yet."
-            )}
-            fillParentHeight
-          />
-        );
-      }
-
+      // The commits/PR list lives in the sidebar now (master-detail). A
+      // selected commit is rendered by the `historySelection` branch above;
+      // here we only need the "nothing selected" / "nothing shipped" states.
       return (
-        <div className="flex h-full min-h-0 flex-col overflow-auto">
-          <SubmissionCommitsContent
-            commits={submissionCommits}
-            selectedCommitSha={
-              historySelection?.type === "pr"
-                ? (historySelection.selectedCommitSha ?? null)
-                : historySelection?.type === "stash"
-                  ? historySelection.commitSha
-                  : null
-            }
-            onCommitSelect={handleSubmissionCommitSelect}
-            emptyLabel={t(
-              "simulator.replay.diffApp.submissions.noCommits",
-              "No commits yet."
-            )}
-          />
-          <SubmissionPullRequestsContent
-            pullRequests={submissionsData.pullRequests}
-            emptyLabel={t(
-              "simulator.replay.diffApp.submissions.noPullRequests",
-              "No pull requests yet."
-            )}
-          />
-        </div>
+        <Placeholder
+          variant="empty"
+          placement="detail-panel"
+          title={t(
+            hasSubmissions
+              ? "simulator.replay.diffApp.submissions.selectSubmission"
+              : "simulator.replay.diffApp.submissions.empty",
+            hasSubmissions
+              ? "Select a submission to view details"
+              : "No submissions yet"
+          )}
+          fillParentHeight
+        />
       );
     }
 
@@ -1143,9 +1183,6 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     tCommon,
     activeTab,
     hasSubmissions,
-    submissionCommits,
-    submissionsData.pullRequests,
-    handleSubmissionCommitSelect,
     pillMode,
     consolidatedSections,
     focusedSections,
