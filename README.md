@@ -6,6 +6,10 @@ Built with Tauri and Rust, ORGII stays lightweight and RAM-friendly compared wit
 
 Agents and GUIs support end-to-end testing, which empowers ORGII to self-evolve (with human supervision). A research paper is releasing soon. The frontend is written with our ORGII SDE Agent.
 
+## Demo
+
+![ORGII demo](assets/demo.gif)
+
 ## Quick start
 
 Download the latest ORGII desktop app from the [Releases](https://github.com/YORG-AI/ORGII/releases) page.
