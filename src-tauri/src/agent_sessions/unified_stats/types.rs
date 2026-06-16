@@ -118,6 +118,19 @@ pub struct SessionAggregateRecord {
     #[serde(default)]
     pub pinned: bool,
 
+    /// Source-impact files touched by this session.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub files_changed: Option<i64>,
+    /// Source-impact added lines when cheaply available from tool metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lines_added: Option<i64>,
+    /// Source-impact removed lines when cheaply available from tool metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lines_removed: Option<i64>,
+    /// Source-impact touched file paths.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub touched_files: Option<Vec<String>>,
+
     /// Host/source session ID for read-only remote mirror sessions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_session_id: Option<String>,

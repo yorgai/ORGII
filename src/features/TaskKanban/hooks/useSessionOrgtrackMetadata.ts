@@ -5,9 +5,10 @@ import {
   getOrgtrackSessionSummaries,
 } from "@src/api/tauri/lineage";
 import type { CoreSessionSummary } from "@src/api/tauri/lineage";
+import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
 import type { KanbanTaskOrgtrackMetadata } from "@src/features/KanbanBoard/types";
 import { createLogger } from "@src/hooks/logger";
-import type { Session } from "@src/store/session";
+import { type Session, loadSessions } from "@src/store/session";
 import {
   isClaudeCodeHistorySession,
   isCodexAppSession,
@@ -31,6 +32,7 @@ function hasOrgtrackActivity(summary: CoreSessionSummary | undefined): boolean {
 
 function hasSourceImpactFastPath(session: Session): boolean {
   return (
+    session.category === DISPATCH_CATEGORY.RUST_AGENT ||
     isCursorIdeSession(session.session_id) ||
     isCodexAppSession(session.session_id) ||
     isClaudeCodeHistorySession(session.session_id)
@@ -141,6 +143,7 @@ export function useSessionOrgtrackMetadata(
         metadataFromSessionImpact(session) ||
         isSourceImpactUnavailable(session)
       ) {
+        await loadSessions({ forceRefresh: true });
         setRefreshNonce((current) => current + 1);
         return;
       }
@@ -156,6 +159,7 @@ export function useSessionOrgtrackMetadata(
           sessionId: session.session_id,
           rebuild: options.rebuild ?? true,
         });
+        await loadSessions({ forceRefresh: true });
         setRefreshNonce((current) => current + 1);
       } catch (err) {
         logger.warn("failed to analyze orgtrack session", {

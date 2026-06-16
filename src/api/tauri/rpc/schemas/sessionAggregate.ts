@@ -176,6 +176,10 @@ export const SessionAggregateRecordSchema = z.object({
   replyTargetEventId: z.string().optional(),
   // Whether the session is pinned to the top of the sidebar.
   pinned: z.boolean().default(false),
+  filesChanged: z.number().int().optional(),
+  linesAdded: z.number().int().optional(),
+  linesRemoved: z.number().int().optional(),
+  touchedFiles: z.array(z.string()).optional(),
   sourceSessionId: z.string().optional(),
   shareId: z.string().optional(),
   sourceCategory: WireCategorySchema.optional(),

@@ -104,6 +104,10 @@ export function toFrontendSession(record: SessionAggregateRecord): Session {
     draftText: record.draftText,
     replyTargetEventId: record.replyTargetEventId,
     pinned: record.pinned,
+    filesChanged: record.filesChanged,
+    linesAdded: record.linesAdded,
+    linesRemoved: record.linesRemoved,
+    touchedFiles: record.touchedFiles,
   };
 }
 

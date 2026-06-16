@@ -117,13 +117,13 @@ export interface Session {
   pinned?: boolean;
   created_time?: string;
   updated_time?: string;
-  /** Source-cache impact stat for read-only external sessions. */
+  /** Source-cache impact stat for external and Rust-native sessions. */
   filesChanged?: number;
-  /** Source-cache impact stat for read-only external sessions. */
+  /** Source-cache impact stat for external and Rust-native sessions. */
   linesAdded?: number;
-  /** Source-cache impact stat for read-only external sessions. */
+  /** Source-cache impact stat for external and Rust-native sessions. */
   linesRemoved?: number;
-  /** Source-cache touched file list for read-only external sessions. */
+  /** Source-cache touched file list for external and Rust-native sessions. */
   touchedFiles?: string[];
 }
 

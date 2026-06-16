@@ -63,9 +63,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const handleClick = () => {
     onClick?.(task);
   };
-  const handleUpdateGitBlame = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleRefreshGitBlame = (
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
     event.stopPropagation();
-    void task.onUpdateGitBlame?.(task);
+    const refresh = task.onAnalyzeGitBlame ?? task.onUpdateGitBlame;
+    void refresh?.(task);
   };
 
   const isInteractive = Boolean(onClick);
@@ -170,29 +173,25 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   </>
                 )}
               </>
-            ) : task.orgtrackMetadataUnavailable ? (
-              <span className="kanban-task-card__impact-empty">
-                <CircleSlash size={12} strokeWidth={1.75} />
-                <span>N/A</span>
-              </span>
             ) : task.orgtrackMetadataLoading ? (
               <span className="kanban-task-card__impact-loading">
                 <LoaderCircle size={12} strokeWidth={1.75} />
                 <span>{t("loading")}</span>
               </span>
-            ) : task.onUpdateGitBlame ? (
+            ) : task.onAnalyzeGitBlame || task.onUpdateGitBlame ? (
               <button
                 className="kanban-task-card__impact-action"
                 type="button"
-                onClick={handleUpdateGitBlame}
+                title={t("actions.refresh")}
+                onClick={handleRefreshGitBlame}
               >
                 <CircleSlash size={12} strokeWidth={1.75} />
-                <span>{t("actions.updateAiBlame")}</span>
+                <span>N/A</span>
               </button>
             ) : (
               <span className="kanban-task-card__impact-empty">
                 <CircleSlash size={12} strokeWidth={1.75} />
-                <span>Not analyzed</span>
+                <span>N/A</span>
               </span>
             )}
           </div>

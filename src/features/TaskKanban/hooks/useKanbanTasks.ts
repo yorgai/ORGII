@@ -140,9 +140,7 @@ export function useKanbanTasks(
           onUpdateGitBlame: unavailableSessionIds.has(session.session_id)
             ? undefined
             : () => analyzeSession(session, { rebuild: true }),
-          onAnalyzeGitBlame: unavailableSessionIds.has(session.session_id)
-            ? undefined
-            : () => analyzeSession(session, { rebuild: false }),
+          onAnalyzeGitBlame: () => analyzeSession(session, { rebuild: false }),
         },
       };
     });

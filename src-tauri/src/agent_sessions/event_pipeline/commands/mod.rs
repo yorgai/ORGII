@@ -697,11 +697,20 @@ pub fn push_events_to_session(
             .collect::<Vec<_>>()
     });
 
+    let mut impact_events = Vec::new();
     for event in merged_tool_calls {
         if event_conversion::is_ts_placeholder_id(&event.id) {
             continue;
         }
+        impact_events.push(event.clone());
         persistable.push(event_conversion::session_event_to_cached_event(&event));
+    }
+
+    if !impact_events.is_empty() {
+        crate::orgtrack::impact_indexer::record_session_events_async(
+            session_id.to_string(),
+            impact_events,
+        );
     }
 
     schedule_notify(app, state, session_id);
