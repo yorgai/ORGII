@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { ROUTES } from "@src/config/routes";
 import { queueFileOpens } from "@src/store/workstation/tabs";
+import { openFileInEditor } from "@src/util/ui/openFileInEditor";
 
 export function useWorkItemFileActions(repoPath?: string | null) {
   const navigate = useNavigate();
@@ -26,11 +27,7 @@ export function useWorkItemFileActions(repoPath?: string | null) {
       queueFileOpens(resolved);
 
       for (const { path, line } of resolved) {
-        document.dispatchEvent(
-          new CustomEvent("open-file-in-editor", {
-            detail: { path, isDirectory: false, line },
-          })
-        );
+        openFileInEditor(path, { line });
       }
 
       navigate(ROUTES.workStation.code.path);

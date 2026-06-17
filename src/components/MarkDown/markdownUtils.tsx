@@ -12,6 +12,8 @@
  */
 import React from "react";
 
+import { openFileInEditor as openFileInEditorShared } from "@src/util/ui/openFileInEditor";
+
 type InlineCodeType = "file" | "directory" | "identifier" | null;
 
 const FILE_CONTENT_PATTERN =
@@ -373,9 +375,7 @@ export function detectCodeType(text: string): InlineCodeType {
 // ── openFileInEditor ──────────────────────────────────────────────────────────
 
 export function openFileInEditor(path: string, isDirectory: boolean = false) {
-  document.dispatchEvent(
-    new CustomEvent("open-file-in-editor", { detail: { path, isDirectory } })
-  );
+  openFileInEditorShared(path, { isDirectory });
 }
 
 // ── Citation rendering ────────────────────────────────────────────────────────

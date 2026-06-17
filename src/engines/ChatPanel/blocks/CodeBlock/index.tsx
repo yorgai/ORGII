@@ -21,6 +21,7 @@ import { FileTreeHoverPreview } from "@src/components/FileTreePreview/exports";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import ModernCodeViewer from "@src/features/CodeViewer/ModernCodeViewer";
 import { VirtualizedModernDiff } from "@src/features/CodeViewer/VirtualizedModernDiff";
+import { openFileInEditor } from "@src/util/ui/openFileInEditor";
 
 import {
   EVENT_BLOCK_FADE_FROM,
@@ -232,11 +233,7 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          document.dispatchEvent(
-                            new CustomEvent("open-file-in-editor", {
-                              detail: { path: filePath, isDirectory: false },
-                            })
-                          );
+                          openFileInEditor(filePath);
                         }}
                         title={filePath}
                       >
@@ -254,11 +251,7 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                       }`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        document.dispatchEvent(
-                          new CustomEvent("open-file-in-editor", {
-                            detail: { path: filePath, isDirectory: false },
-                          })
-                        );
+                        openFileInEditor(filePath);
                       }}
                       title={filePath}
                     >
@@ -387,11 +380,7 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                   title={filePath}
                   onClick={(e) => {
                     e.stopPropagation();
-                    document.dispatchEvent(
-                      new CustomEvent("open-file-in-editor", {
-                        detail: { path: filePath, isDirectory: false },
-                      })
-                    );
+                    openFileInEditor(filePath);
                   }}
                 >
                   {displayTitle}
