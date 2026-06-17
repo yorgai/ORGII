@@ -248,6 +248,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
       enabled: true,
       pinnedTabs,
       initialActiveTabId: explorerTab.id,
+      preferInitialTabWhenActivePinned: true,
     });
 
     // Tab change from EditorPrimarySidebar

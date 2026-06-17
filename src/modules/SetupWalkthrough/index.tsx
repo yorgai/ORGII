@@ -67,9 +67,9 @@ const SetupWalkthrough: React.FC = () => {
 
   const handleNext = useCallback(() => {
     if (isLastStep) {
-      // Mark setup as complete and navigate to home
+      // Mark setup as complete and navigate to WorkStation
       localStorage.setItem("setup_walkthrough_completed", "true");
-      navigate(ROUTES.app.home.start.path, { replace: true });
+      navigate(ROUTES.workStation.base.path, { replace: true });
     } else {
       setCurrentStepIndex((prev) => prev + 1);
     }
@@ -82,9 +82,9 @@ const SetupWalkthrough: React.FC = () => {
   }, [isFirstStep]);
 
   const handleSkip = useCallback(() => {
-    // Mark setup as complete and navigate to home
+    // Mark setup as complete and navigate to WorkStation
     localStorage.setItem("setup_walkthrough_completed", "true");
-    navigate(ROUTES.app.home.start.path, { replace: true });
+    navigate(ROUTES.workStation.base.path, { replace: true });
   }, [navigate]);
 
   // Left content: Step navigation

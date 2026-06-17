@@ -87,7 +87,7 @@ const AuthCallback: React.FC = () => {
         if (existingToken) {
           const storedRedirect = sessionStorage.getItem("login_redirect");
           sessionStorage.removeItem("login_redirect");
-          const redirectPath = storedRedirect || ROUTES.app.home.start.path;
+          const redirectPath = storedRedirect || ROUTES.workStation.base.path;
           navigate(redirectPath, { replace: true });
         }
         return;
@@ -112,7 +112,7 @@ const AuthCallback: React.FC = () => {
 
         const storedRedirect = sessionStorage.getItem("login_redirect");
         sessionStorage.removeItem("login_redirect");
-        const redirectPath = storedRedirect || ROUTES.app.home.start.path;
+        const redirectPath = storedRedirect || ROUTES.workStation.base.path;
         navigate(redirectPath, { replace: true });
       } catch (exchangeError) {
         log.error("Token exchange failed:", exchangeError);
