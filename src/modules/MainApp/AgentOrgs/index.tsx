@@ -314,7 +314,7 @@ const AgentOrgsPage: React.FC = () => {
     navigate(buildAgentOrgsPath({ tab: tab as AgentOrgsTabSegment }));
   };
 
-  const renderTableContent = () => {
+  const renderWizardContent = () => {
     if (orgWizardMode) {
       return (
         <OrgWizard
@@ -336,6 +336,10 @@ const AgentOrgsPage: React.FC = () => {
       );
     }
 
+    return null;
+  };
+
+  const renderTableContent = () => {
     if (activeTableTab === "orgs") {
       return (
         <OrgsTable
@@ -380,6 +384,16 @@ const AgentOrgsPage: React.FC = () => {
       </div>
     );
   };
+
+  const wizardContent = renderWizardContent();
+
+  if (wizardContent) {
+    return (
+      <div className="settings-page absolute inset-0 overflow-hidden">
+        {wizardContent}
+      </div>
+    );
+  }
 
   return (
     <div className="settings-page absolute inset-0 overflow-hidden">

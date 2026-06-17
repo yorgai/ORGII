@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
 import {
   WIZARD_IDS,
-  buildAgentOrgsPath,
   buildIntegrationsPath,
   buildWizardPath,
 } from "@src/config/mainAppPaths";
@@ -448,11 +447,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       navigate(buildWizardPath(accountsPath, WIZARD_IDS.KEY_ADD));
     }, [navigate, setStartPageOpen]);
 
-    const handleStartPageAgents = useCallback(() => {
-      setStartPageOpen(false);
-      navigate(buildWizardPath(buildAgentOrgsPath(), WIZARD_IDS.AGENT_ADD));
-    }, [navigate, setStartPageOpen]);
-
     const shareSessionAvailable =
       activeSession?.category === DISPATCH_CATEGORY.CLI_AGENT ||
       activeSession?.category === DISPATCH_CATEGORY.RUST_AGENT;
@@ -661,7 +655,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         handleChatPanelWorkItemCreated={handleChatPanelWorkItemCreated}
         handleRegionNoticeChange={handleRegionNoticeChange}
         handleStartPageAddApiKey={handleStartPageAddApiKey}
-        handleStartPageAgents={handleStartPageAgents}
         handleStartPageExploreRepos={handleStartPageExploreRepos}
         handleStartPageNewSession={handleNewSession}
         handleStartPageNewWorkItem={handleStartPageNewWorkItem}

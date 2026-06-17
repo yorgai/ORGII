@@ -75,6 +75,8 @@ export interface WizardStepLayoutProps {
   pinnedSection?: React.ReactNode;
   /** Suppress the footer border-top (use when pinnedSection already has one) */
   noBorderTop?: boolean;
+  /** Match the Add Account footer: bg surface + centered content-width action row. */
+  contentWidthFooter?: boolean;
 }
 
 // ============================================
@@ -96,6 +98,7 @@ const WizardStepLayout: React.FC<WizardStepLayoutProps> = ({
   fillWidth = false,
   pinnedSection,
   noBorderTop = false,
+  contentWidthFooter = false,
 }) => {
   const { t } = useTranslation("integrations");
 
@@ -152,34 +155,46 @@ const WizardStepLayout: React.FC<WizardStepLayoutProps> = ({
 
       {pinnedSection}
 
-      <div className={`${footerContainerClass} justify-between`}>
+      <div
+        className={`${footerContainerClass} ${
+          contentWidthFooter ? "relative z-10 bg-bg-2" : "justify-between"
+        }`}
+      >
         <div
           className={
-            hideStepIndicator ? "" : "flex items-center gap-2 text-[13px]"
+            contentWidthFooter
+              ? `${DETAIL_PANEL_TOKENS.contentWidth} flex items-center justify-between gap-2`
+              : "contents"
           }
         >
-          {!hideStepIndicator && (
-            <span className="font-bold text-text-1">
-              {t("keyVault.stepLabel", {
-                current: currentStep,
-                total: totalSteps,
-              })}
-            </span>
-          )}
-          {footerLeft}
-        </div>
-        <div className="flex gap-2">
-          {onCancel && (
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={onCancel}
-              data-testid={cancelTestId}
-            >
-              {cancelLabel ?? t("common:actions.cancel")}
-            </Button>
-          )}
-          {actions}
+          <div
+            className={
+              hideStepIndicator ? "" : "flex items-center gap-2 text-[13px]"
+            }
+          >
+            {!hideStepIndicator && (
+              <span className="font-bold text-text-1">
+                {t("keyVault.stepLabel", {
+                  current: currentStep,
+                  total: totalSteps,
+                })}
+              </span>
+            )}
+            {footerLeft}
+          </div>
+          <div className="flex gap-2">
+            {onCancel && (
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={onCancel}
+                data-testid={cancelTestId}
+              >
+                {cancelLabel ?? t("common:actions.cancel")}
+              </Button>
+            )}
+            {actions}
+          </div>
         </div>
       </div>
     </div>

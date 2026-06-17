@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next";
 import {
-  Bot,
   BriefcaseBusiness,
   ChevronRight,
   FolderGit2,
@@ -24,7 +23,6 @@ interface ChatPanelStartPageAction {
 interface ChatPanelStartPageProps {
   className?: string;
   onAddApiKey: () => void;
-  onAgents: () => void;
   onExploreRepos: () => void;
   onNewSession: () => void;
   onNewWorkItem: () => void;
@@ -62,7 +60,6 @@ function StartPageActionCard({
 export function ChatPanelStartPage({
   className,
   onAddApiKey,
-  onAgents,
   onExploreRepos,
   onNewSession,
   onNewWorkItem,
@@ -95,12 +92,6 @@ export function ChatPanelStartPage({
       title: t("chat.startPage.addApiKey.title"),
       icon: <KeyRound size={13} strokeWidth={1.8} />,
       onClick: onAddApiKey,
-    },
-    {
-      id: "agents",
-      title: t("chat.startPage.agents.title"),
-      icon: <Bot size={13} strokeWidth={1.8} />,
-      onClick: onAgents,
     },
   ];
   const exploreActions: ChatPanelStartPageAction[] = [
@@ -135,7 +126,7 @@ export function ChatPanelStartPage({
             onChange={(key) => setActiveTab(key as StartPageTabKey)}
           />
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           {actions.map((action) => (
             <StartPageActionCard key={action.id} action={action} />
           ))}

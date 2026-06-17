@@ -112,19 +112,28 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
         totalSteps={1}
         fillWidth
         noPadding
-        onCancel={onCancel}
-        cancelTestId="agent-orgs-agent-wizard-cancel-button"
         hideStepIndicator
+        contentWidthFooter
         actions={
-          <Button
-            variant="primary"
-            size="small"
-            disabled={!w.canCreate}
-            data-testid="agent-orgs-agent-wizard-create-button"
-            onClick={w.handleCreate}
-          >
-            {t("common:actions.create")}
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              size="small"
+              data-testid="agent-orgs-agent-wizard-cancel-button"
+              onClick={onCancel}
+            >
+              {t("common:actions.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="small"
+              disabled={!w.canCreate}
+              data-testid="agent-orgs-agent-wizard-create-button"
+              onClick={w.handleCreate}
+            >
+              {t("common:actions.create")}
+            </Button>
+          </>
         }
       >
         {w.activeTab === "core" && (
@@ -168,6 +177,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                       placeholder={t("agentOrgs.agentWizard.namePlaceholder")}
                       data-testid="agent-orgs-agent-wizard-name-input"
                       size="default"
+                      style={SECTION_CONTROL_STYLE}
                       autoFocus
                       autoComplete="off"
                       autoCorrect="off"
