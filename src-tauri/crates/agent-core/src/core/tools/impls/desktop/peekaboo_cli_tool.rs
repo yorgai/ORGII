@@ -196,7 +196,6 @@ struct DesktopOperationVisibilityState {
     hide_main_window: bool,
     main_window_was_visible: bool,
     wingman_bar_was_visible: bool,
-    wingman_window_was_visible: bool,
     monitor_index: Option<usize>,
 }
 
@@ -243,16 +242,13 @@ impl DesktopOperationVisibilityGuard {
                     .unwrap_or(false);
                 state.wingman_bar_was_visible =
                     crate::session::wingman::is_wingman_bar_visible(app_handle);
-                state.wingman_window_was_visible =
-                    crate::session::wingman::is_wingman_window_visible(app_handle);
                 state.monitor_index = monitor_index;
                 warn!(
-                    "[peekaboo-visibility] acquired lease generation={}, hide_main_window={}, main_was_visible={}, bar_was_visible={}, panel_was_visible={}, monitor_index={:?}",
+                    "[peekaboo-visibility] acquired lease generation={}, hide_main_window={}, main_was_visible={}, bar_was_visible={}, monitor_index={:?}",
                     state.generation,
                     state.hide_main_window,
                     state.main_window_was_visible,
                     state.wingman_bar_was_visible,
-                    state.wingman_window_was_visible,
                     state.monitor_index
                 );
                 (state.generation, true)
@@ -342,22 +338,16 @@ fn desktop_operation_visibility_state() -> &'static Mutex<DesktopOperationVisibi
 }
 
 fn apply_desktop_operation_visibility(app_handle: &tauri::AppHandle) {
-    let (hide_main_window, wingman_window_was_visible, monitor_index) = {
+    let (hide_main_window, monitor_index) = {
         let state = desktop_operation_visibility_state()
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        (
-            state.hide_main_window,
-            state.wingman_window_was_visible,
-            state.monitor_index,
-        )
+        (state.hide_main_window, state.monitor_index)
     };
 
     warn!(
-        "[peekaboo-visibility] apply start hide_main_window={}, panel_was_visible={}, monitor_index={:?}",
-        hide_main_window,
-        wingman_window_was_visible,
-        monitor_index
+        "[peekaboo-visibility] apply start hide_main_window={}, monitor_index={:?}",
+        hide_main_window, monitor_index
     );
 
     if hide_main_window {
@@ -369,17 +359,6 @@ fn apply_desktop_operation_visibility(app_handle: &tauri::AppHandle) {
         } else {
             warn!("[peekaboo-visibility] main window not found for hide");
         }
-    }
-
-    if wingman_window_was_visible {
-        warn!("[peekaboo-visibility] showing existing Wingman panel");
-        crate::session::wingman::show_existing_wingman_window(app_handle);
-    } else {
-        warn!("[peekaboo-visibility] showing desktop operation caption panel");
-        crate::session::wingman::show_desktop_operation_caption(
-            app_handle,
-            "Agent is controlling your desktop with Peekaboo…",
-        );
     }
     warn!(
         "[peekaboo-visibility] opening Wingman desktop-control bar monitor_index={:?}",
@@ -439,45 +418,31 @@ fn restore_desktop_operation_visibility_if_idle(app_handle: &tauri::AppHandle, g
     restore_desktop_operation_visibility_snapshot(app_handle, snapshot);
 }
 
-fn take_visibility_snapshot(
-    state: &mut DesktopOperationVisibilityState,
-) -> (bool, bool, bool, bool) {
+fn take_visibility_snapshot(state: &mut DesktopOperationVisibilityState) -> (bool, bool, bool) {
     let snapshot = (
         state.hide_main_window,
         state.main_window_was_visible,
         state.wingman_bar_was_visible,
-        state.wingman_window_was_visible,
     );
     state.lease_active = false;
     state.hide_main_window = false;
     state.main_window_was_visible = false;
     state.wingman_bar_was_visible = false;
-    state.wingman_window_was_visible = false;
     state.monitor_index = None;
     snapshot
 }
 
 fn restore_desktop_operation_visibility_snapshot(
     app_handle: &tauri::AppHandle,
-    snapshot: (bool, bool, bool, bool),
+    snapshot: (bool, bool, bool),
 ) {
-    let (
-        hide_main_window,
-        main_window_was_visible,
-        wingman_bar_was_visible,
-        wingman_window_was_visible,
-    ) = snapshot;
+    let (hide_main_window, main_window_was_visible, wingman_bar_was_visible) = snapshot;
     warn!(
-        "[peekaboo-visibility] restore snapshot hide_main_window={}, main_was_visible={}, bar_was_visible={}, panel_was_visible={}",
+        "[peekaboo-visibility] restore snapshot hide_main_window={}, main_was_visible={}, bar_was_visible={}",
         hide_main_window,
         main_window_was_visible,
-        wingman_bar_was_visible,
-        wingman_window_was_visible
+        wingman_bar_was_visible
     );
-    if !wingman_window_was_visible {
-        warn!("[peekaboo-visibility] hiding temporary Wingman panel");
-        crate::session::wingman::hide_wingman_window(app_handle);
-    }
     if !wingman_bar_was_visible {
         warn!("[peekaboo-visibility] closing temporary Wingman bar");
         crate::session::wingman::close_wingman_bar(app_handle);

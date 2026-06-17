@@ -1,7 +1,4 @@
 use std::collections::BTreeSet;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread;
-use std::time::Duration;
 
 use chrono::Utc;
 use core_types::extracted::{ExtractedData, ExtractedEditData, GitArtifactKind};
@@ -9,15 +6,8 @@ use database::db::get_connection;
 use orgtrack_core::canonical::SOURCE_ORGII_RUST_AGENTS;
 use rusqlite::{params, Connection, OptionalExtension};
 
-use crate::agent_sessions::event_pipeline::commands::event_conversion::{
-    cached_event_to_session_event, dedup_by_call_id,
-};
 use crate::agent_sessions::event_pipeline::types::{EventDisplayStatus, SessionEvent};
 
-static STARTED: AtomicBool = AtomicBool::new(false);
-const STARTUP_DELAY: Duration = Duration::from_secs(10);
-const IDLE_INTERVAL: Duration = Duration::from_secs(60);
-const MAX_SESSIONS_PER_PASS: usize = 20;
 const IMPACT_SCHEMA_VERSION: i64 = 1;
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
@@ -49,29 +39,6 @@ struct StoredImpact {
     workspace_path: Option<String>,
 }
 
-pub fn spawn_impact_backfill_worker() {
-    if STARTED.swap(true, Ordering::SeqCst) {
-        return;
-    }
-
-    thread::Builder::new()
-        .name("orgtrack-impact-indexer".to_string())
-        .spawn(|| {
-            thread::sleep(STARTUP_DELAY);
-            loop {
-                if let Err(err) = run_backfill_pass() {
-                    tracing::warn!(error = %err, "[orgtrack_impact] background impact backfill pass failed");
-                }
-                thread::sleep(IDLE_INTERVAL);
-            }
-        })
-        .map(|_| ())
-        .unwrap_or_else(|err| {
-            STARTED.store(false, Ordering::SeqCst);
-            tracing::warn!(error = %err, "[orgtrack_impact] failed to spawn impact worker");
-        });
-}
-
 pub fn record_session_events_async(session_id: String, events: Vec<SessionEvent>) {
     if events.is_empty() {
         return;
@@ -87,93 +54,6 @@ pub fn get_session_impact(session_id: &str) -> Result<Option<SessionImpactStats>
     let conn = get_connection().map_err(|err| err.to_string())?;
     ensure_tables(&conn).map_err(|err| err.to_string())?;
     get_session_impact_from_conn(&conn, session_id).map_err(|err| err.to_string())
-}
-
-fn run_backfill_pass() -> Result<(), String> {
-    let session_ids = native_session_ids()?;
-    let mut processed = 0_usize;
-    for session_id in session_ids {
-        if processed >= MAX_SESSIONS_PER_PASS {
-            break;
-        }
-        if is_session_backfilled(&session_id)? {
-            continue;
-        }
-        let cached =
-            session_persistence::load_events(&session_id).map_err(|err| err.to_string())?;
-        if cached.is_empty() {
-            mark_session_backfilled(&session_id, 0)?;
-            processed += 1;
-            continue;
-        }
-        let event_count = cached.len();
-        let events = cached
-            .iter()
-            .map(cached_event_to_session_event)
-            .collect::<Vec<_>>();
-        let events = dedup_by_call_id(events);
-        record_session_events(&session_id, &events)?;
-        mark_session_backfilled(&session_id, event_count)?;
-        processed += 1;
-    }
-    if processed > 0 {
-        tracing::debug!(
-            processed,
-            "[orgtrack_impact] background impact backfill pass completed"
-        );
-    }
-    Ok(())
-}
-
-fn native_session_ids() -> Result<Vec<String>, String> {
-    let mut ids = Vec::new();
-    for type_name in [
-        agent_core::session::persistence::session_type::CODING,
-        agent_core::session::persistence::session_type::ORG_MEMBER,
-        agent_core::session::persistence::session_type::DESKTOP,
-    ] {
-        let filter = agent_core::session::SessionListFilter {
-            type_name: Some(type_name.to_string()),
-            ..Default::default()
-        };
-        for session in agent_core::session::persistence::list_sessions(&filter)
-            .map_err(|err| format!("Failed to list native sessions for impact indexing: {err}"))?
-        {
-            ids.push(session.session_id);
-        }
-    }
-    ids.sort();
-    ids.dedup();
-    Ok(ids)
-}
-
-fn is_session_backfilled(session_id: &str) -> Result<bool, String> {
-    let conn = get_connection().map_err(|err| err.to_string())?;
-    ensure_tables(&conn).map_err(|err| err.to_string())?;
-    conn.query_row(
-        "SELECT 1 FROM orgtrack_session_impact_backfills WHERE session_id = ?1 LIMIT 1",
-        params![session_id],
-        |_| Ok(()),
-    )
-    .optional()
-    .map(|row| row.is_some())
-    .map_err(|err| err.to_string())
-}
-
-fn mark_session_backfilled(session_id: &str, event_count: usize) -> Result<(), String> {
-    let conn = get_connection().map_err(|err| err.to_string())?;
-    ensure_tables(&conn).map_err(|err| err.to_string())?;
-    conn.execute(
-        "INSERT INTO orgtrack_session_impact_backfills
-         (session_id, event_count, completed_at)
-         VALUES (?1, ?2, ?3)
-         ON CONFLICT(session_id) DO UPDATE SET
-           event_count = excluded.event_count,
-           completed_at = excluded.completed_at",
-        params![session_id, event_count as i64, Utc::now().to_rfc3339()],
-    )
-    .map(|_| ())
-    .map_err(|err| err.to_string())
 }
 
 fn record_session_events(session_id: &str, events: &[SessionEvent]) -> Result<(), String> {

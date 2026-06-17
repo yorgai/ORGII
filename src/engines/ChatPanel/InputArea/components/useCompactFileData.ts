@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { getOrgtrackSessionFinalDiffs } from "@src/api/tauri/lineage";
+import {
+  getOrgtrackSessionEditArtifacts,
+  getOrgtrackSessionFinalDiffs,
+} from "@src/api/tauri/lineage";
 import { createLogger } from "@src/hooks/logger";
 
 import type {
   FileChangeInfo,
   FileChangesResult,
 } from "./compactFileChangesHelpers";
-import { mapFinalDiffToFileChangeInfo } from "./compactFileChangesHelpers";
+import {
+  mapEditArtifactsToFileChangeInfo,
+  mapFinalDiffToFileChangeInfo,
+} from "./compactFileChangesHelpers";
 
 const logger = createLogger("CompactFileChanges");
 
@@ -41,14 +47,22 @@ export function useCompactFileData({
     }
 
     let cancelled = false;
-    void getOrgtrackSessionFinalDiffs({ sessionId })
-      .then((finalDiffs) => {
+    void getOrgtrackSessionEditArtifacts({ sessionId })
+      .then(async (editArtifacts) => {
+        if (cancelled) return;
+        const artifactFiles = mapEditArtifactsToFileChangeInfo(editArtifacts);
+        if (artifactFiles.length > 0) {
+          setOrgtrackFiles(artifactFiles);
+          return;
+        }
+
+        const finalDiffs = await getOrgtrackSessionFinalDiffs({ sessionId });
         if (cancelled) return;
         setOrgtrackFiles(finalDiffs.map(mapFinalDiffToFileChangeInfo));
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          logger.warn("failed to load orgtrack final diffs", {
+          logger.warn("failed to load orgtrack edit artifacts or final diffs", {
             err,
             sessionId,
           });

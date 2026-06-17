@@ -612,9 +612,7 @@ fn seed_user_data_if_missing() -> Result<bool, String> {
         .arg(format!("{}/", probe_dir.display()));
     // Suppress console window on Windows.
     app_platform::hide_console(&mut cmd);
-    let status = cmd
-        .status()
-        .map_err(|err| format!("spawn rsync: {err}"))?;
+    let status = cmd.status().map_err(|err| format!("spawn rsync: {err}"))?;
 
     if !status.success() {
         return Err(format!("rsync failed with exit status {status}"));

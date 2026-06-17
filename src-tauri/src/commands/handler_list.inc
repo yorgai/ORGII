@@ -1164,12 +1164,11 @@ agent_core::state::commands::agent_get_status,
 // create + send entry; agent_send_message handles follow-up turns).
 agent_core::state::commands::agent_send_message,
 agent_core::state::commands::session_launch,
-// Wingman mode — observation loop start / stop / window
+// Wingman mode — observation loop start / stop / bar
 agent_core::state::commands::session::wingman_start,
 agent_core::state::commands::session::wingman_stop,
-agent_core::state::commands::session::wingman_open_window,
 agent_core::state::commands::session::wingman_close_windows,
-agent_core::state::commands::session::wingman_toggle_panel,
+agent_core::state::commands::session::wingman_show_desktop_control_test,
 agent_core::state::commands::session::wingman_list_monitors,
 // Model capability resolution (context window lookup from FAMILY_RULES)
 agent_core::core::providers::model_capabilities::resolve_model_context_k,

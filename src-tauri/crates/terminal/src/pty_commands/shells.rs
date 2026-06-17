@@ -290,25 +290,22 @@ fn which_executable(name: &str) -> Option<String> {
     command.arg(name);
     // Suppress console window on Windows.
     app_platform::hide_console(&mut command);
-    command
-        .output()
-        .ok()
-        .and_then(|output| {
-            if output.status.success() {
-                let path = String::from_utf8_lossy(&output.stdout)
-                    .lines()
-                    .next()?
-                    .trim()
-                    .to_string();
-                if path.is_empty() {
-                    None
-                } else {
-                    Some(path)
-                }
-            } else {
+    command.output().ok().and_then(|output| {
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .next()?
+                .trim()
+                .to_string();
+            if path.is_empty() {
                 None
+            } else {
+                Some(path)
             }
-        })
+        } else {
+            None
+        }
+    })
 }
 
 /// Human-readable display name for a shell kind.

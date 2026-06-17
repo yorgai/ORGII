@@ -18,6 +18,11 @@ pub trait RecordStore {
         record: &SessionCheckpointFileStateRecord,
     ) -> Result<(), String>;
     fn delete_session_artifacts(&self, source: &str, session_id: &str) -> Result<(), String>;
+    fn delete_session_derived_artifacts(
+        &self,
+        source: &str,
+        session_id: &str,
+    ) -> Result<(), String>;
     fn list_commit_links(&self) -> Result<Vec<CommitLinkRecord>, String>;
     fn list_edit_artifacts(
         &self,

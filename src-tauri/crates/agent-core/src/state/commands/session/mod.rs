@@ -346,7 +346,7 @@ pub async fn wingman_stop(
     crate::session::wingman::stop(&state, &session_id).await
 }
 
-/// Close both Wingman windows (floating panel + bottom bar).
+/// Close Wingman UI surfaces.
 ///
 /// Used when the user clicks Stop / Close without a live session. If a
 /// session is active, prefer `wingman_stop` which also tears down the loop.
@@ -360,46 +360,16 @@ pub async fn wingman_close_windows(state: tauri::State<'_, AgentAppState>) -> Re
     Ok(())
 }
 
-/// Toggle the Wingman floating panel visibility (show ↔ hide).
+/// Show the desktop-control visibility test surface without opening a WebView panel.
 #[tauri::command]
-pub async fn wingman_toggle_panel(state: tauri::State<'_, AgentAppState>) -> Result<(), String> {
-    let handle = state
-        .app_handle
-        .as_ref()
-        .ok_or_else(|| "[wingman] AppHandle not available".to_string())?;
-    crate::session::wingman::toggle_panel(handle);
-    Ok(())
-}
-
-/// Open the Wingman floating window without starting an observation loop.
-///
-/// Useful for testing the window UI independently of a real session.
-/// Passing an empty `session_id` renders the window without session context.
-#[tauri::command]
-pub async fn wingman_open_window(
+pub async fn wingman_show_desktop_control_test(
     state: tauri::State<'_, AgentAppState>,
-    session_id: Option<String>,
     monitor_index: Option<usize>,
-    desktop_control_test: Option<bool>,
 ) -> Result<(), String> {
-    tracing::warn!(
-        "[wingman_open_window] command invoked, session_id={:?}, monitor_index={:?}, desktop_control_test={:?}",
-        session_id,
-        monitor_index,
-        desktop_control_test
-    );
     let handle = state
         .app_handle
         .as_ref()
         .ok_or_else(|| "[wingman] AppHandle not available".to_string())?;
-    if desktop_control_test.unwrap_or(false) {
-        crate::tools::impls::desktop::show_desktop_operation_visibility_test(handle, monitor_index);
-        tracing::warn!("[wingman_open_window] desktop control visibility test shown");
-        return Ok(());
-    }
-    let sid = session_id.unwrap_or_default();
-    crate::session::wingman::open_wingman_window(handle, &sid, monitor_index);
-    crate::session::wingman::open_wingman_bar(handle, &sid, "Test mode", monitor_index);
-    tracing::warn!("[wingman_open_window] done");
+    crate::tools::impls::desktop::show_desktop_operation_visibility_test(handle, monitor_index);
     Ok(())
 }

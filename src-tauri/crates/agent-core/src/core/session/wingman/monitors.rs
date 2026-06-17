@@ -1,4 +1,4 @@
-//! Display enumeration helpers shared by the panel and the bar window.
+//! Display enumeration helpers shared by the Wingman bar and screen picker.
 //!
 //! Coordinates and sizes are exposed to the UI in *logical* pixels
 //! (i.e. physical / scale_factor), which is what Tauri's `set_position` /
@@ -11,7 +11,7 @@ use tracing::warn;
 #[serde(rename_all = "camelCase")]
 pub struct WingmanMonitorInfo {
     /// 0-based index into `AppHandle::available_monitors()`. The UI passes this
-    /// index back to `open_wingman_window` to target a specific display.
+    /// index back to Wingman commands to target a specific display.
     pub index: usize,
     pub name: String,
     /// Top-left corner of the full screen rect (logical px).
@@ -73,27 +73,4 @@ pub(crate) fn list_monitors(app_handle: &tauri::AppHandle) -> Vec<WingmanMonitor
             }
         })
         .collect()
-}
-
-/// Resolve a monitor by index, falling back to the primary monitor, then any
-/// available monitor. Returns `None` only if no displays are reported at all.
-pub(crate) fn resolve_monitor(
-    app_handle: &tauri::AppHandle,
-    index: Option<usize>,
-) -> Option<tauri::Monitor> {
-    let monitors = app_handle.available_monitors().ok()?;
-    if let Some(i) = index {
-        if let Some(m) = monitors.get(i) {
-            return Some(m.clone());
-        }
-        warn!(
-            "[wingman] monitor index {} out of range (have {}) — falling back to primary",
-            i,
-            monitors.len()
-        );
-    }
-    if let Ok(Some(m)) = app_handle.primary_monitor() {
-        return Some(m);
-    }
-    monitors.into_iter().next()
 }

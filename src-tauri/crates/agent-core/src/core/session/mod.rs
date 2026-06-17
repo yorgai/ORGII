@@ -40,8 +40,7 @@ pub mod session_id;
 pub(crate) mod title;
 pub mod turn;
 mod types;
-// `wingman` is genuine public surface — `app::run` calls
-// `prewarm_wingman_windows` and the wingman_* Tauri commands live in
+// `wingman` is genuine public surface — the wingman_* Tauri commands live in
 // `state::commands::session`.
 pub mod wingman;
 pub mod workspace;

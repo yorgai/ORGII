@@ -111,37 +111,3 @@ export function preloadMainAppRoutes(): void {
     });
   }
 }
-
-/**
- * Secondary-window chunks the main app may open at any time.
- *
- * These all share `webpackChunkName: "windows"` with TabWindow +
- * ModeSelectionWindow, so warming any one fetches the whole chunk. We
- * still list each module so the entry graph is explicit — if a future
- * reorg splits them into separate chunks this will do the right thing.
- */
-const WINDOW_LOADERS: Array<() => Promise<unknown>> = [
-  () => import("@src/windows/WingmanWindow"),
-];
-
-let _wingmanPreloaded = false;
-
-/**
- * Preload the Wingman panel chunk during idle time.
- *
- * The Wingman panel opens in a fresh Tauri webview that has to download
- * the main bundle and the "windows" chunk before React can render. The
- * bottom bar is native on macOS and is not a webview.
- */
-export function preloadWingmanWindows(): void {
-  if (_wingmanPreloaded) return;
-  _wingmanPreloaded = true;
-  for (const loader of WINDOW_LOADERS) {
-    scheduleIdle(() => {
-      loader().catch(() => {
-        // preload is best-effort; fall back to lazy on real open
-        _wingmanPreloaded = false;
-      });
-    });
-  }
-}

@@ -39,10 +39,7 @@ import { useNarrowChatFocus } from "@src/hooks/workStation/useNarrowChatFocus";
 import WorkStationPage from "@src/modules/WorkStation";
 import { useGlobalBrowserWebviewLayering } from "@src/modules/WorkStation/Browser/hooks";
 import { SharedBrowserApp } from "@src/modules/WorkStation/Browser/shared";
-import {
-  preloadMainAppRoutes,
-  preloadWingmanWindows,
-} from "@src/router/lazy/preload";
+import { preloadMainAppRoutes } from "@src/router/lazy/preload";
 import {
   CODE_EDITOR_TOUR_EVENT,
   CodeEditorTour,
@@ -149,9 +146,6 @@ const AppShell = () => {
   useEffect(() => {
     if (isAuthenticated) {
       preloadMainAppRoutes();
-      // Warm the Wingman panel chunk so opening the secondary webview later
-      // doesn't leave it blank while the bundle is being fetched.
-      preloadWingmanWindows();
     }
   }, [isAuthenticated]);
 

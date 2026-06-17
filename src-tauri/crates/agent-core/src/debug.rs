@@ -86,9 +86,7 @@ pub use crate::core::session::turn::{
 pub use crate::core::session::recovery;
 
 // `core::session::prompt` and `core::session::wingman` are genuine
-// public surfaces (prompt::builder is called from /test/workspace and
-// from agent_sessions::cli; wingman::prewarm_wingman_windows is called
-// from app::run). Test routes can import them directly via the
+// public surfaces. Test routes can import them directly via the
 // `agent_core::session::*` re-exports — no shimming needed here.
 
 // `core::turn_executor::helpers` is genuine internal-leaf-public — the

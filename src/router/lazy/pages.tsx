@@ -82,10 +82,6 @@ export const ModeSelectionWindow = React.lazy(
     import(/* webpackChunkName: "windows" */ "@src/windows/ModeSelectionWindow")
 );
 
-export const WingmanWindow = React.lazy(
-  () => import(/* webpackChunkName: "windows" */ "@src/windows/WingmanWindow")
-);
-
 export const SessionDiffWindowPage = React.lazy(
   () =>
     import(/* webpackChunkName: "windows" */ "@src/windows/SessionDiffWindow")

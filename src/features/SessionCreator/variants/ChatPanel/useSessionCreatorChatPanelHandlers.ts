@@ -11,8 +11,8 @@ import { useTranslation } from "react-i18next";
 
 import {
   type WingmanMonitor,
+  showDesktopOperationVisibilityTest,
   wingmanListMonitors,
-  wingmanOpenWindow,
 } from "@src/api/tauri/agent";
 import { KEY_SOURCE } from "@src/api/tauri/session";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
@@ -26,7 +26,6 @@ import {
   isSourceCompatibleWithAgent,
   useAgentCompatibility,
 } from "@src/hooks/models/useAgentCompatibility";
-import { preloadWingmanWindows } from "@src/router/lazy/preload";
 import { useWorkspaceForm } from "@src/scaffold/GlobalSpotlight/hooks/forms";
 import type { AgentSelection } from "@src/scaffold/GlobalSpotlight/palettes/DispatchCategoryPalette";
 import type { RepoItem } from "@src/scaffold/GlobalSpotlight/types";
@@ -86,18 +85,18 @@ export function useSessionCreatorChatPanelHandlers({
     try {
       const monitors = await wingmanListMonitors();
       if (monitors.length <= 1) {
-        await wingmanOpenWindow(undefined, monitors[0]?.index, true);
+        await showDesktopOperationVisibilityTest(monitors[0]?.index);
         return;
       }
       setScreenPickerMonitors(monitors);
     } catch {
-      wingmanOpenWindow(undefined, undefined, true).catch(() => {});
+      showDesktopOperationVisibilityTest().catch(() => {});
     }
   }, []);
 
   const handleScreenPicked = useCallback((monitorIndex: number) => {
     setScreenPickerMonitors(null);
-    wingmanOpenWindow(undefined, monitorIndex, true).catch(() => {});
+    showDesktopOperationVisibilityTest(monitorIndex).catch(() => {});
   }, []);
 
   // ── Repo / branch selection ───────────────────────────────────────────────
@@ -237,8 +236,6 @@ export function useSessionCreatorChatPanelHandlers({
     setScreenPickerMonitors,
     handleShareScreenClick,
     handleScreenPicked,
-    preloadWingmanWindows,
-
     // Repo
     handleRepoChange,
     handleRepoSelectForSession,

@@ -152,11 +152,12 @@ export const agentSession = {
   wingmanStop: defineProcedure("wingman_stop")
     .input(schemas.agentSession.SessionIdInput)
     .build(),
-  wingmanOpenWindow: defineProcedure("wingman_open_window")
-    .input(schemas.agentSession.WingmanOpenWindowInput)
-    .build(),
   wingmanCloseWindows: defineProcedure("wingman_close_windows").build(),
-  wingmanTogglePanel: defineProcedure("wingman_toggle_panel").build(),
+  wingmanShowDesktopControlTest: defineProcedure(
+    "wingman_show_desktop_control_test"
+  )
+    .input(schemas.agentSession.WingmanDesktopControlTestInput)
+    .build(),
   wingmanListMonitors: defineProcedure("wingman_list_monitors")
     .output(z.array(schemas.agentSession.WingmanMonitorSchema))
     .build(),

@@ -689,6 +689,53 @@ impl RecordStore for SqliteRecordStore<'_> {
         Ok(())
     }
 
+    fn delete_session_derived_artifacts(
+        &self,
+        source: &str,
+        session_id: &str,
+    ) -> Result<(), String> {
+        let checkpoint_ids = self
+            .list_session_checkpoints(Some(source), Some(session_id))?
+            .into_iter()
+            .map(|checkpoint| checkpoint.checkpoint_id)
+            .collect::<Vec<_>>();
+        for checkpoint_id in checkpoint_ids {
+            self.conn
+                .execute(
+                    "DELETE FROM orgtrack_core_checkpoint_file_states WHERE checkpoint_id = ?1",
+                    params![checkpoint_id],
+                )
+                .map_err(|err| err.to_string())?;
+        }
+        for table_name in [
+            "orgtrack_core_final_diffs",
+            "orgtrack_core_session_checkpoints",
+        ] {
+            self.conn
+                .execute(
+                    &format!("DELETE FROM {table_name} WHERE source = ?1 AND session_id = ?2"),
+                    params![source, session_id],
+                )
+                .map_err(|err| err.to_string())?;
+        }
+        self.conn
+            .execute(
+                "DELETE FROM orgtrack_core_file_changes WHERE source = ?1 AND session_id = ?2",
+                params![source, session_id],
+            )
+            .map_err(|err| err.to_string())?;
+        self.conn
+            .execute(
+                "DELETE FROM orgtrack_core_commit_links WHERE EXISTS (
+                    SELECT 1 FROM json_each(orgtrack_core_commit_links.payload_json, '$.sessionIds')
+                    WHERE json_each.value = ?1
+                )",
+                params![session_id],
+            )
+            .map_err(|err| err.to_string())?;
+        Ok(())
+    }
+
     fn list_edit_artifacts(
         &self,
         source: Option<&str>,

@@ -30,27 +30,21 @@
 //! ## Module layout
 //!
 //! - [`handle`] — `WingmanHandle` + `WingmanSessionState` (per-session state)
-//! - [`lifecycle`] — public `start` / `stop` / `prewarm` / `close` / `toggle`
+//! - [`lifecycle`] — public `start` / `stop` / `close`
 //! - [`loop_runner`] — the background `WingmanLoop` (observe + enqueue)
-//! - [`monitors`] — display enumeration shared by panel + bar
-//! - [`window`] — the always-on-top Wingman floating panel
+//! - [`monitors`] — display enumeration shared by bar and screen picker
 //! - [`bar`] — the bottom dock-hugging strip (Zoom-style toolbar pill)
 //! - [`observation`] — screenshot capture + observation prompt builder
-//! - [`macos_window`] *(macOS only)* — Cocoa window-behavior tweaks
 //! - [`bar_native`] *(macOS, `wingman-bar-native`)* — Swift FFI bar driver
 
 mod handle;
 mod lifecycle;
 mod loop_runner;
 mod monitors;
-mod window;
 
 mod observation;
 
 mod bar;
-
-#[cfg(target_os = "macos")]
-mod macos_window;
 
 #[cfg(all(target_os = "macos", feature = "wingman-bar-native"))]
 pub(crate) mod bar_native;
@@ -65,13 +59,9 @@ mod windows_bar;
 pub(crate) use bar_native as wingman_bar_native;
 
 pub use handle::WingmanSessionState;
-pub use lifecycle::{prewarm_wingman_windows, start, stop};
+pub use lifecycle::{start, stop};
 pub use monitors::WingmanMonitorInfo;
 
 pub(crate) use bar::{close_wingman_bar, is_wingman_bar_visible, open_wingman_bar};
-pub(crate) use lifecycle::{close_wingman_windows, toggle_panel};
+pub(crate) use lifecycle::close_wingman_windows;
 pub(crate) use monitors::list_monitors;
-pub(crate) use window::{
-    hide_wingman_window, is_wingman_window_visible, open_wingman_window,
-    show_desktop_operation_caption, show_existing_wingman_window,
-};

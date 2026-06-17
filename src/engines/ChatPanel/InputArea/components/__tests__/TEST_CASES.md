@@ -3,8 +3,9 @@
 ## Preconditions
 
 - An agent session is active with the floating composer mounted (`ChatFloatingComposer`).
-- `getOrgtrackSessionFinalDiffs` returns the canonical per-session final diffs and
-  is cached per `[sessionId]` in Rust.
+- `getOrgtrackSessionEditArtifacts` returns the canonical runtime edit artifacts
+  for new Rust sessions; `getOrgtrackSessionFinalDiffs` remains available as a
+  fallback for historical/final-diff-only sessions.
 - The composer files pill reads its count/additions/deletions from
   `CompactFileChanges` → `useCompactFileData` (orgtrack path, `initialData` unset),
   NOT from the separate git-artifacts (commit/PR) pill.
@@ -21,6 +22,12 @@ shows 1 until the session changed).
 
 ## Fix Summary
 
+`useCompactFileData` first loads `getOrgtrackSessionEditArtifacts` and maps the
+runtime artifacts by normalized file path. This lets Rust sessions show Files
+Changed stats before orgtrack final-diff materialization. If no edit artifacts
+exist, the hook falls back to `getOrgtrackSessionFinalDiffs` for historical
+sessions.
+
 A `reloadKey` shaped like the per-round footer's `turnFilesReloadKey`
 (`${sessionId}:${roundCount}:${working|idle}`) is threaded into
 `useCompactFileData`'s effect deps. It bumps when the session changes, a new
@@ -33,7 +40,7 @@ on every streamed tick.
 | --- | ------------------------------------------ | --------------------------------------------------------------------------------- |
 | 1   | Round 1: agent edits 1 file, goes idle     | Pill shows `1` with that file's +/- stats                                         |
 | 2   | Round 2: agent edits a 2nd file, goes idle | `reloadKey` bumps (round count +1 and working→idle); pill refetches and shows `2` |
-| 3   | Switch to another session, then back       | Pill reflects each session's own final-diff count                                 |
+| 3   | Switch to another session, then back       | Pill reflects each session's own edit-artifact count, or final-diff fallback      |
 
 ## Edge Cases
 

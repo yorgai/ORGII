@@ -575,10 +575,7 @@ pub fn run() {
             project_management::sync::start_worker(app.handle().clone());
             tracing::info!("[sync::worker] Sync worker started");
 
-            orgtrack::impact_indexer::spawn_impact_backfill_worker();
-            tracing::info!("[orgtrack_impact] Impact backfill worker started");
-
-                        // Restore previously-enabled channels (e.g. feishu was toggled on last run)
+            // Restore previously-enabled channels (e.g. feishu was toggled on last run)
             let app_handle_for_restore = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 let state = app_handle_for_restore.state::<agent_core::state::AgentAppState>();
@@ -763,22 +760,6 @@ pub fn run() {
                     agent_core::utils::set_global_http_version_pref(pref);
                     tracing::info!(http_version = val, "[Network] HTTP version preference applied");
                 }
-            }
-
-            // Prewarm the Wingman floating windows (hidden) so the first
-            // "Share screen" click opens them instantly (Zoom/Feishu-style).
-            // Done after a short delay so it doesn't compete with main-window
-            // paint, and on the main thread because Tauri window builders
-            // must run there.
-            {
-                let app_for_prewarm = app.handle().clone();
-                std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_secs(2));
-                    let app_for_main = app_for_prewarm.clone();
-                    let _ = app_for_prewarm.run_on_main_thread(move || {
-                        agent_core::session::wingman::prewarm_wingman_windows(&app_for_main);
-                    });
-                });
             }
 
             // tauri_plugin_log removed — tracing_subscriber handles file logging.

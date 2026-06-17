@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   type ChatRoundEvent,
+  type EditArtifactLike,
   type FinalDiffLike,
   buildCompactFilesReloadKey,
   countChatRounds,
+  mapEditArtifactsToFileChangeInfo,
   mapFinalDiffToFileChangeInfo,
 } from "../compactFileChangesHelpers";
 
@@ -60,6 +62,69 @@ describe("mapFinalDiffToFileChangeInfo", () => {
       createFinalDiff({ linesAdded: 0, linesRemoved: 0 })
     );
     expect(result.lineCount).toBe(0);
+  });
+});
+
+function createEditArtifact(
+  overrides?: Partial<EditArtifactLike>
+): EditArtifactLike {
+  return {
+    filePath: "src/index.ts",
+    editKind: "patch",
+    linesAdded: 3,
+    linesRemoved: 1,
+    sequenceIndex: 1,
+    ...overrides,
+  };
+}
+
+describe("mapEditArtifactsToFileChangeInfo", () => {
+  it("maps edit artifacts without requiring final diffs", () => {
+    expect(mapEditArtifactsToFileChangeInfo([createEditArtifact()])).toEqual([
+      {
+        path: "src/index.ts",
+        fileName: "index.ts",
+        status: "M",
+        additions: 3,
+        deletions: 1,
+        lineCount: 4,
+      },
+    ]);
+  });
+
+  it("groups artifacts by normalized file path and sums stats", () => {
+    expect(
+      mapEditArtifactsToFileChangeInfo([
+        createEditArtifact({ filePath: "./src/index.ts", linesAdded: 2 }),
+        createEditArtifact({ filePath: "a/src/index.ts", linesRemoved: 5 }),
+        createEditArtifact({ filePath: "b/src/other.ts", linesAdded: 1 }),
+      ])
+    ).toEqual([
+      {
+        path: "src/index.ts",
+        fileName: "index.ts",
+        status: "M",
+        additions: 5,
+        deletions: 6,
+        lineCount: 11,
+      },
+      {
+        path: "src/other.ts",
+        fileName: "other.ts",
+        status: "M",
+        additions: 1,
+        deletions: 1,
+        lineCount: 2,
+      },
+    ]);
+  });
+
+  it("uses the latest artifact status for deleted files", () => {
+    const result = mapEditArtifactsToFileChangeInfo([
+      createEditArtifact({ editKind: "patch", sequenceIndex: 1 }),
+      createEditArtifact({ editKind: "delete", sequenceIndex: 2 }),
+    ]);
+    expect(result[0]?.status).toBe("D");
   });
 });
 

@@ -249,8 +249,7 @@ pub fn convert_tools_with_choice(tools: Option<&[Value]>) -> (Option<Vec<Value>>
         return (None, None);
     };
 
-    let (override_val, cleaned) =
-        crate::core::side_query::extract_tool_choice_override(tool_list);
+    let (override_val, cleaned) = crate::core::side_query::extract_tool_choice_override(tool_list);
     let converted = convert_tools(Some(&cleaned));
     let tool_choice = match override_val {
         Some(ovr) => Some(translate_tool_choice_for_responses(&ovr)),

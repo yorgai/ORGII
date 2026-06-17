@@ -476,36 +476,17 @@ export async function wingmanStop(sessionId: string): Promise<void> {
   return rpc.agentSession.wingmanStop({ sessionId });
 }
 
-/**
- * Open the Wingman floating window without starting an observation loop.
- * Used for testing the window UI independently of a real session.
- */
-export async function wingmanOpenWindow(
-  sessionId?: string,
-  monitorIndex?: number,
-  desktopControlTest?: boolean
+export async function showDesktopOperationVisibilityTest(
+  monitorIndex?: number
 ): Promise<void> {
-  return rpc.agentSession.wingmanOpenWindow({
-    sessionId,
-    monitorIndex,
-    desktopControlTest,
-  });
+  return rpc.agentSession.wingmanShowDesktopControlTest({ monitorIndex });
 }
 
 /**
- * Close both Wingman windows (panel + bar). Fire-and-forget; used when the
- * user clicks Stop / Close from inside a Wingman window.
+ * Close Wingman UI surfaces. Fire-and-forget; used when the user clicks Stop / Close.
  */
 export async function wingmanCloseWindows(): Promise<void> {
   return rpc.agentSession.wingmanCloseWindows();
-}
-
-/**
- * Toggle the Wingman floating panel visibility (show ↔ hide).
- * The bar stays visible regardless.
- */
-export async function wingmanTogglePanel(): Promise<void> {
-  return rpc.agentSession.wingmanTogglePanel();
 }
 
 /**
@@ -530,9 +511,8 @@ export interface WingmanMonitor {
 }
 
 /**
- * Enumerate connected displays so the UI can prompt the user to pick one
- * before opening Wingman windows. The returned `index` is what you pass to
- * {@link wingmanOpenWindow} / {@link wingmanStart}.
+ * Enumerate connected displays so the UI can prompt the user to pick one.
+ * The returned `index` is what you pass to Wingman commands.
  */
 export async function wingmanListMonitors(): Promise<WingmanMonitor[]> {
   return rpc.agentSession.wingmanListMonitors();

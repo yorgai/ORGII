@@ -314,10 +314,8 @@ export const WingmanStartInput = z.object({
   monitorIndex: z.number().optional(),
 });
 
-export const WingmanOpenWindowInput = z.object({
-  sessionId: z.string().optional(),
+export const WingmanDesktopControlTestInput = z.object({
   monitorIndex: z.number().optional(),
-  desktopControlTest: z.boolean().optional(),
 });
 
 export const WingmanMonitorSchema = z.object({

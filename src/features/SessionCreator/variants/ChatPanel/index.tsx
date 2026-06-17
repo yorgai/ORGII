@@ -270,7 +270,6 @@ const SessionCreatorChatPanelSingle: React.FC<
     setScreenPickerMonitors,
     handleShareScreenClick,
     handleScreenPicked,
-    preloadWingmanWindows,
     handleRepoChange,
     handleRepoSelectForSession,
     requestModelOpen,
@@ -725,8 +724,6 @@ const SessionCreatorChatPanelSingle: React.FC<
             <button
               type="button"
               className="flex items-center gap-1.5 rounded-full border border-dashed border-border-2 px-3 py-1.5 text-[12px] text-text-3 transition-colors hover:border-primary-4 hover:text-primary-6"
-              onMouseEnter={preloadWingmanWindows}
-              onFocus={preloadWingmanWindows}
               onClick={() => {
                 handleShareScreenClick().catch(log.error);
               }}

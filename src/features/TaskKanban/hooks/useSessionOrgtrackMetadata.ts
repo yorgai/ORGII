@@ -16,19 +16,6 @@ import {
 } from "@src/util/session/sessionDispatch";
 
 const logger = createLogger("SessionOrgtrackMetadata");
-const AUTO_ANALYSIS_MAX_SESSIONS_PER_PASS = 8;
-
-const autoAnalysisAttemptedSessionIds = new Set<string>();
-
-function hasOrgtrackActivity(summary: CoreSessionSummary | undefined): boolean {
-  if (!summary) return false;
-  return (
-    summary.filesChanged > 0 ||
-    summary.linesAdded > 0 ||
-    summary.linesRemoved > 0 ||
-    summary.relatedCommits > 0
-  );
-}
 
 function hasSourceImpactFastPath(session: Session): boolean {
   return (
@@ -139,10 +126,7 @@ export function useSessionOrgtrackMetadata(
 
   const analyzeSession = useCallback(
     async (session: Session, options: { rebuild?: boolean } = {}) => {
-      if (
-        metadataFromSessionImpact(session) ||
-        isSourceImpactUnavailable(session)
-      ) {
+      if (metadataFromSessionImpact(session)) {
         await loadSessions({ forceRefresh: true });
         setRefreshNonce((current) => current + 1);
         return;
@@ -176,61 +160,6 @@ export function useSessionOrgtrackMetadata(
     },
     []
   );
-
-  useEffect(() => {
-    if (sessions.length === 0) return;
-
-    const summaryBySessionId = new Map(
-      summaries.map((summary) => [summary.sessionId, summary])
-    );
-    const candidates = sessions
-      .filter((session) => {
-        const workspacePath = session.repoPath || session.worktreePath;
-        if (!workspacePath) return false;
-        if (autoAnalysisAttemptedSessionIds.has(session.session_id)) {
-          return false;
-        }
-        if (
-          metadataFromSessionImpact(session) ||
-          isSourceImpactUnavailable(session)
-        ) {
-          return false;
-        }
-        return !hasOrgtrackActivity(summaryBySessionId.get(session.session_id));
-      })
-      .slice(0, AUTO_ANALYSIS_MAX_SESSIONS_PER_PASS);
-
-    if (candidates.length === 0) return;
-
-    for (const session of candidates) {
-      autoAnalysisAttemptedSessionIds.add(session.session_id);
-    }
-
-    let cancelled = false;
-    void (async () => {
-      for (const session of candidates) {
-        if (cancelled) return;
-        try {
-          await analyzeOrgtrackSessions({
-            workspacePath: session.repoPath || session.worktreePath,
-            sessionId: session.session_id,
-          });
-        } catch (err) {
-          logger.warn("failed to auto-analyze orgtrack session", {
-            err,
-            sessionId: session.session_id,
-          });
-        }
-      }
-      if (!cancelled) {
-        setRefreshNonce((current) => current + 1);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [sessions, summaries]);
 
   const metadataBySessionId = useMemo(() => {
     const nextMetadata = metadataFromSummaries(summaries);

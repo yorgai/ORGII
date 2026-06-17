@@ -1,4 +1,4 @@
-import { getFileName } from "@src/util/file/pathUtils";
+import { getFileName, normalizeDiffFilePath } from "@src/util/file/pathUtils";
 
 export interface FileChangeInfo {
   path: string;
@@ -24,6 +24,20 @@ export interface FinalDiffLike {
   linesRemoved: number;
 }
 
+export interface EditArtifactLike {
+  filePath: string;
+  editKind:
+    | "read"
+    | "write"
+    | "delete"
+    | "patch"
+    | "commit_boundary"
+    | "unknown";
+  linesAdded: number;
+  linesRemoved: number;
+  sequenceIndex: number;
+}
+
 /**
  * Map a single orgtrack final-diff record to the pill's `FileChangeInfo`.
  * Pure so the composer pill's stats math stays unit-testable.
@@ -31,14 +45,55 @@ export interface FinalDiffLike {
 export function mapFinalDiffToFileChangeInfo(
   finalDiff: FinalDiffLike
 ): FileChangeInfo {
+  const normalizedPath = normalizeDiffFilePath(finalDiff.filePath);
   return {
-    path: finalDiff.filePath,
-    fileName: getFileName(finalDiff.filePath),
+    path: normalizedPath,
+    fileName: getFileName(normalizedPath),
     status: finalDiff.isDeleted ? "D" : "M",
     additions: finalDiff.linesAdded,
     deletions: finalDiff.linesRemoved,
     lineCount: finalDiff.linesAdded + finalDiff.linesRemoved,
   };
+}
+
+export function mapEditArtifactsToFileChangeInfo(
+  artifacts: ReadonlyArray<EditArtifactLike>
+): FileChangeInfo[] {
+  const byPath = new Map<
+    string,
+    FileChangeInfo & { lastSequenceIndex: number }
+  >();
+
+  for (const artifact of artifacts) {
+    const normalizedPath = normalizeDiffFilePath(artifact.filePath);
+    if (!normalizedPath) continue;
+
+    const existing = byPath.get(normalizedPath);
+    const status = artifact.editKind === "delete" ? "D" : "M";
+    if (existing) {
+      existing.additions += artifact.linesAdded;
+      existing.deletions += artifact.linesRemoved;
+      existing.lineCount = existing.additions + existing.deletions;
+      if (artifact.sequenceIndex >= existing.lastSequenceIndex) {
+        existing.status = status;
+        existing.lastSequenceIndex = artifact.sequenceIndex;
+      }
+    } else {
+      byPath.set(normalizedPath, {
+        path: normalizedPath,
+        fileName: getFileName(normalizedPath),
+        status,
+        additions: artifact.linesAdded,
+        deletions: artifact.linesRemoved,
+        lineCount: artifact.linesAdded + artifact.linesRemoved,
+        lastSequenceIndex: artifact.sequenceIndex,
+      });
+    }
+  }
+
+  return Array.from(byPath.values()).map(
+    ({ lastSequenceIndex: _lastSequenceIndex, ...file }) => file
+  );
 }
 
 /** Minimal chat-event shape needed to count round boundaries. */

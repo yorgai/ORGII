@@ -271,9 +271,7 @@ async fn run_install_command(
     tracing::info!("[lsp/auto_install] Running: {} {}", command, args.join(" "));
 
     let mut cmd = Command::new(command);
-    cmd.args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+    cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
     // Suppress console window on Windows.
     #[cfg(windows)]
     cmd.creation_flags(app_platform::CREATE_NO_WINDOW);

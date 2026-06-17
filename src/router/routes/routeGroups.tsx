@@ -29,7 +29,6 @@ import {
   SetupWalkthrough,
   SuggestionsPage,
   TabWindow,
-  WingmanWindow,
   WorktreeCompareWindowPage,
 } from "@src/router/lazy/pages";
 import ComingSoonRoutePage from "@src/router/routes/ComingSoonRoutePage";
@@ -248,7 +247,6 @@ export const windowRouteGroup: RouteObject = {
   children: [
     { path: "welcome", element: lazy(<ModeSelectionWindow />) },
     { path: "tab", element: lazy(<TabWindow />) },
-    { path: "wingman", element: lazy(<WingmanWindow />) },
     { path: "session-diff", element: lazy(<SessionDiffWindowRoute />) },
     {
       path: "worktree-compare",

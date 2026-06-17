@@ -121,6 +121,10 @@ fn analyze_sessions(
         if should_pause(&memory_config) {
             break;
         }
+        if !rebuild && session.source == SOURCE_ORGII_RUST_AGENTS {
+            stats.skipped_sessions += 1;
+            continue;
+        }
         if !rebuild && !session_needs_analysis(&session, &sessions_with_current_analysis) {
             stats.skipped_sessions += 1;
             continue;
@@ -414,10 +418,21 @@ fn imported_source_session_id(session_id: &str) -> String {
         .to_string()
 }
 
+fn delete_backfill_owned_artifacts(
+    store: &SqliteRecordStore<'_>,
+    session: &SessionRecord,
+) -> Result<(), String> {
+    if session.source == SOURCE_ORGII_RUST_AGENTS {
+        store.delete_session_derived_artifacts(&session.source, &session.session_id)
+    } else {
+        store.delete_session_artifacts(&session.source, &session.session_id)
+    }
+}
+
 fn analyze_session(store: &SqliteRecordStore<'_>, session: &SessionRecord) -> Result<bool, String> {
     let loaded = load_analysis_payload(session)?;
     if loaded.events.is_empty() {
-        store.delete_session_artifacts(&session.source, &session.session_id)?;
+        delete_backfill_owned_artifacts(store, session)?;
         upsert_analysis_marker_checkpoint(store, session)?;
         return Ok(false);
     }
@@ -439,7 +454,7 @@ fn analyze_session(store: &SqliteRecordStore<'_>, session: &SessionRecord) -> Re
         }
     }
 
-    store.delete_session_artifacts(&session.source, &session.session_id)?;
+    delete_backfill_owned_artifacts(store, session)?;
     if edit_events.is_empty() && commit_links.is_empty() {
         upsert_analysis_marker_checkpoint(store, session)?;
         return Ok(false);

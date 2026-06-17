@@ -27,6 +27,16 @@ mod turn_window;
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
+use core_types::extracted::ExtractedData;
+use database::db::get_connection;
+use orgtrack_core::canonical::{
+    AgentMetadata, SessionDiffChunkRecord, SessionRecord, SOURCE_ORGII_RUST_AGENTS,
+};
+use orgtrack_core::edit_extraction::{
+    artifacts_from_extracted_edit, final_diff_from_chunks, EditArtifactContext,
+};
+use orgtrack_core::privacy::ORGTRACK_SCHEMA_VERSION;
+use orgtrack_core::store::{sqlite::SqliteRecordStore, RecordStore};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -647,6 +657,141 @@ mod bulk_writer {
     }
 }
 
+fn persist_runtime_edit_artifacts_async(session_id: String, events: Vec<(usize, SessionEvent)>) {
+    tokio::task::spawn_blocking(move || {
+        if let Err(err) = persist_runtime_edit_artifacts(&session_id, events) {
+            tracing::warn!(
+                session_id = %session_id,
+                error = %err,
+                "[orgtrack_runtime_artifacts] failed to persist runtime edit artifacts"
+            );
+        }
+    });
+}
+
+fn persist_runtime_edit_artifacts(
+    session_id: &str,
+    events: Vec<(usize, SessionEvent)>,
+) -> Result<(), String> {
+    if events.is_empty() {
+        return Ok(());
+    }
+
+    let conn = get_connection().map_err(|err| err.to_string())?;
+    let store = SqliteRecordStore::new(&conn);
+    let session = runtime_artifact_session_record(session_id)?;
+    store.upsert_session(&session)?;
+
+    let mut chunks_by_file: HashMap<String, Vec<SessionDiffChunkRecord>> = HashMap::new();
+    for (sequence_index, event) in events {
+        let Some(ExtractedData::Edit(edit)) = event.extracted.as_ref() else {
+            continue;
+        };
+        let context = EditArtifactContext {
+            source: SOURCE_ORGII_RUST_AGENTS.to_string(),
+            source_session_id: Some(session.source_session_id.clone()),
+            session_id: session.session_id.clone(),
+            source_event_id: Some(event.id.clone()),
+            turn_id: event.thread_id.clone(),
+            sequence_index: sequence_index as i64,
+            timestamp: Some(event.created_at.clone()),
+            workspace_path: event
+                .repo_path
+                .clone()
+                .or_else(|| session.workspace_path.clone()),
+            metadata: session.metadata.clone(),
+        };
+        let artifacts = artifacts_from_extracted_edit(&context, edit);
+        for artifact in &artifacts.edits {
+            store.upsert_edit_artifact(artifact)?;
+        }
+        for chunk in artifacts.chunks {
+            chunks_by_file
+                .entry(chunk.file_path.clone())
+                .or_default()
+                .push(chunk.clone());
+            store.upsert_diff_chunk(&chunk)?;
+        }
+    }
+
+    for (file_path, chunks) in chunks_by_file {
+        if let Some(final_diff) = final_diff_from_chunks(
+            SOURCE_ORGII_RUST_AGENTS,
+            &session.session_id,
+            &file_path,
+            &chunks,
+        ) {
+            store.upsert_final_diff(&final_diff)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn runtime_artifact_session_record(session_id: &str) -> Result<SessionRecord, String> {
+    let Some(record) =
+        agent_core::session::persistence::get_session(session_id).map_err(|err| err.to_string())?
+    else {
+        return Ok(SessionRecord {
+            schema_version: ORGTRACK_SCHEMA_VERSION,
+            source: SOURCE_ORGII_RUST_AGENTS.to_string(),
+            source_session_id: session_id.to_string(),
+            session_id: session_id.to_string(),
+            title: session_id.to_string(),
+            status: None,
+            created_at: None,
+            updated_at: None,
+            completed_at: None,
+            workspace_path: None,
+            branch: None,
+            parent_session_id: None,
+            org_member_id: None,
+            metadata: AgentMetadata {
+                dispatch_category: Some("rust_agent".to_string()),
+                origin: Some(SOURCE_ORGII_RUST_AGENTS.to_string()),
+                ..AgentMetadata::default()
+            },
+        });
+    };
+
+    let rust_agent_type = match record.session_type.as_str() {
+        agent_core::session::persistence::session_type::DESKTOP => Some("os".to_string()),
+        agent_core::session::persistence::session_type::CODING
+        | agent_core::session::persistence::session_type::ORG_MEMBER => Some("sde".to_string()),
+        agent_core::session::persistence::session_type::GATEWAY => Some("gateway".to_string()),
+        _ => Some("custom".to_string()),
+    };
+
+    Ok(SessionRecord {
+        schema_version: ORGTRACK_SCHEMA_VERSION,
+        source: SOURCE_ORGII_RUST_AGENTS.to_string(),
+        source_session_id: record.session_id.clone(),
+        session_id: record.session_id,
+        title: record.name.clone(),
+        status: Some(record.status),
+        created_at: Some(record.created_at),
+        updated_at: Some(record.updated_at),
+        completed_at: None,
+        workspace_path: record
+            .workspace_path
+            .clone()
+            .or_else(|| record.worktree_path.clone()),
+        branch: record.worktree_branch.or(record.base_branch),
+        parent_session_id: record.parent_session_id,
+        org_member_id: record.org_member_id,
+        metadata: AgentMetadata {
+            dispatch_category: Some("rust_agent".to_string()),
+            rust_agent_type,
+            agent_exec_mode: record.agent_exec_mode,
+            model: record.model,
+            key_source: Some(record.key_source.to_string()),
+            origin: Some(SOURCE_ORGII_RUST_AGENTS.to_string()),
+            display_name: Some(record.name),
+            ..AgentMetadata::default()
+        },
+    })
+}
+
 /// Push live events into any session's store from Rust-side code (no Tauri
 /// command round-trip). Callers: `UnifiedEventHandler` (parent) and
 /// `UnifiedSubagentHandler` (child) — both funnel every SessionEvent they
@@ -686,23 +831,28 @@ pub fn push_events_to_session(
         store
             .events()
             .iter()
-            .filter(|event| {
+            .enumerate()
+            .filter(|(_, event)| {
                 event.action_type == ACTION_TYPE_TOOL_CALL
                     && event
                         .call_id
                         .as_ref()
                         .is_some_and(|call_id| result_call_ids.contains(call_id))
             })
-            .cloned()
+            .map(|(sequence_index, event)| (sequence_index, event.clone()))
             .collect::<Vec<_>>()
     });
 
     let mut impact_events = Vec::new();
-    for event in merged_tool_calls {
+    let mut runtime_artifact_events = Vec::new();
+    for (sequence_index, event) in merged_tool_calls {
         if event_conversion::is_ts_placeholder_id(&event.id) {
             continue;
         }
         impact_events.push(event.clone());
+        if matches!(event.extracted, Some(ExtractedData::Edit(_))) {
+            runtime_artifact_events.push((sequence_index, event.clone()));
+        }
         persistable.push(event_conversion::session_event_to_cached_event(&event));
     }
 
@@ -711,6 +861,9 @@ pub fn push_events_to_session(
             session_id.to_string(),
             impact_events,
         );
+    }
+    if !runtime_artifact_events.is_empty() {
+        persist_runtime_edit_artifacts_async(session_id.to_string(), runtime_artifact_events);
     }
 
     schedule_notify(app, state, session_id);
@@ -800,6 +953,74 @@ pub fn update_tool_args_by_call_id_with_persist(
     }
 
     Some(event_id)
+}
+
+#[cfg(test)]
+mod runtime_artifact_tests {
+    use super::*;
+    use core_types::extracted::ExtractedEditData;
+    use orgtrack_core::edit_extraction::artifacts_from_extracted_edit;
+    use orgtrack_core::repo_sync::paths::record_id;
+
+    #[test]
+    fn runtime_projection_uses_backfill_record_id_shape() {
+        let edit = ExtractedEditData {
+            file_path: "src/main.rs".to_string(),
+            file_name: "main.rs".to_string(),
+            language: "rust".to_string(),
+            content: None,
+            line_count: None,
+            old_content: Some("fn main() {}\n".to_string()),
+            new_content: Some("fn main() { println!(\"hi\"); }\n".to_string()),
+            diff: None,
+            old_start_line: Some(1),
+            new_start_line: Some(1),
+            lines_added: Some(1),
+            lines_removed: Some(1),
+            is_deleted: false,
+            apply_patch_segments: Vec::new(),
+        };
+        let context = EditArtifactContext {
+            source: SOURCE_ORGII_RUST_AGENTS.to_string(),
+            source_session_id: Some("sdeagent-1".to_string()),
+            session_id: "sdeagent-1".to_string(),
+            source_event_id: Some("tool-call-1".to_string()),
+            turn_id: Some("turn-1".to_string()),
+            sequence_index: 7,
+            timestamp: Some("2026-06-17T00:00:00Z".to_string()),
+            workspace_path: Some("/tmp/repo".to_string()),
+            metadata: AgentMetadata::default(),
+        };
+
+        let artifacts = artifacts_from_extracted_edit(&context, &edit);
+
+        assert_eq!(artifacts.edits.len(), 1);
+        assert_eq!(artifacts.chunks.len(), 1);
+        assert_eq!(
+            artifacts.edits[0].record_id,
+            record_id(&[
+                "edit",
+                SOURCE_ORGII_RUST_AGENTS,
+                "sdeagent-1",
+                "tool-call-1",
+                "7",
+                "0",
+                "src/main.rs",
+            ])
+        );
+        assert_eq!(
+            artifacts.chunks[0].record_id,
+            record_id(&[
+                "diff_chunk",
+                SOURCE_ORGII_RUST_AGENTS,
+                "sdeagent-1",
+                "tool-call-1",
+                "7",
+                "0",
+                "src/main.rs",
+            ])
+        );
+    }
 }
 
 // ============================================================================

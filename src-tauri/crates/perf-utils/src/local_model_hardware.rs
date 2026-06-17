@@ -169,13 +169,11 @@ fn detect_nvidia_gpu() -> GpuDetection {
     ]);
     // Suppress console window on Windows.
     app_platform::hide_console(&mut cmd);
-    let output = cmd
-        .output()
-        .map_err(|err| GpuAbsence {
-            status: GPU_DETECTION_STATUS_NOT_AVAILABLE,
-            source: GPU_PROBE_SOURCE_NVIDIA_SMI,
-            message: format!("nvidia-smi is not available: {err}"),
-        })?;
+    let output = cmd.output().map_err(|err| GpuAbsence {
+        status: GPU_DETECTION_STATUS_NOT_AVAILABLE,
+        source: GPU_PROBE_SOURCE_NVIDIA_SMI,
+        message: format!("nvidia-smi is not available: {err}"),
+    })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
