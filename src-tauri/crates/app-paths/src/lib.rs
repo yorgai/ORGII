@@ -473,13 +473,15 @@ fn git_version_succeeds(path: &Path) -> bool {
         return false;
     }
 
-    let Ok(mut child) = Command::new(path)
+    let mut command = Command::new(path);
+    command
         .arg("--version")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-    else {
+        .stderr(Stdio::null());
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut command);
+    let Ok(mut child) = command.spawn() else {
         return false;
     };
 
@@ -702,14 +704,16 @@ pub fn set_sensitive_file_permissions(path: &Path) -> std::io::Result<()> {
         if let Some(path_str) = path.to_str() {
             let username = std::env::var("USERNAME").unwrap_or_default();
             if !username.is_empty() {
-                let result = std::process::Command::new("icacls")
-                    .args([
-                        path_str,
-                        "/inheritance:r",
-                        "/grant:r",
-                        &format!("{}:F", username),
-                    ])
-                    .output();
+                let mut cmd = std::process::Command::new("icacls");
+                cmd.args([
+                    path_str,
+                    "/inheritance:r",
+                    "/grant:r",
+                    &format!("{}:F", username),
+                ]);
+                // Suppress console window on Windows.
+                app_platform::hide_console(&mut cmd);
+                let result = cmd.output();
 
                 match result {
                     Ok(output) if !output.status.success() => {

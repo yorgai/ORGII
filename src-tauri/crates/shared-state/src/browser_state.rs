@@ -608,11 +608,15 @@ pub fn is_port_available(port: u16) -> bool {
 }
 
 async fn verify_agent_browser_cli(cli_path: &Path) -> Result<(), String> {
-    let output = Command::new(cli_path)
-        .arg("--version")
+    let mut cmd = Command::new(cli_path);
+    cmd.arg("--version")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    // Suppress console window on Windows.
+    #[cfg(windows)]
+    cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+    let output = cmd
         .output()
         .await
         .map_err(|err| format!("Failed to execute agent-browser CLI: {}", err))?;
@@ -692,6 +696,10 @@ pub async fn run_browser_cli_command(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+
+    // Suppress console window on Windows.
+    #[cfg(windows)]
+    command.creation_flags(app_platform::CREATE_NO_WINDOW);
 
     let output = command
         .output()

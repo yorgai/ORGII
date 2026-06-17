@@ -42,10 +42,11 @@ pub async fn terminate_process_tree(pid: i64, label: &str) {
 
 #[cfg(windows)]
 pub async fn terminate_process_tree(pid: i64, _label: &str) {
-    let _ = tokio::process::Command::new("taskkill")
-        .args(["/PID", &pid.to_string(), "/T", "/F"])
-        .output()
-        .await;
+    let mut command = tokio::process::Command::new("taskkill");
+    command.args(["/PID", &pid.to_string(), "/T", "/F"]);
+    // Suppress the `taskkill` console window.
+    command.creation_flags(app_platform::CREATE_NO_WINDOW);
+    let _ = command.output().await;
 }
 
 /// Kill the running agent for a session: abort Tokio task, kill OS process, stop proxy.

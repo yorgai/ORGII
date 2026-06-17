@@ -669,14 +669,18 @@ pub async fn run_session(
         let api_key_val = session.proxy_token.as_deref().unwrap_or("");
         if !api_key_val.is_empty() {
             tracing::info!("[CodeSession] Running codex login --with-api-key...");
-            match Command::new("codex")
+            let mut login_cmd = Command::new("codex");
+            login_cmd
                 .arg("login")
                 .arg("--with-api-key")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
-                .envs(&env_vars)
-                .spawn()
+                .envs(&env_vars);
+            // Windows: don't flash a console window for `codex login`.
+            #[cfg(windows)]
+            login_cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+            match login_cmd.spawn()
             {
                 Ok(mut login_child) => {
                     if let Some(mut stdin) = login_child.stdin.take() {
@@ -849,6 +853,9 @@ pub async fn run_session(
         {
             spawn_cmd.process_group(0);
         }
+        // Windows: launch the agent CLI without flashing a console window.
+        #[cfg(windows)]
+        spawn_cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
 
         let mut child = {
             let mut attempt = 0usize;

@@ -84,8 +84,12 @@ pub async fn auto_install_cli(agent: String) -> Result<(), String> {
         tracing::info!("[auto_install_cli] Running: {} {}", program, args.join(" "));
 
         let which_cmd = if cfg!(windows) { "where" } else { "which" };
-        let installer_exists = tokio::process::Command::new(which_cmd)
-            .arg(program)
+        let mut which_command = tokio::process::Command::new(which_cmd);
+        which_command.arg(program);
+        // Suppress the `where`/`which` console window on Windows.
+        #[cfg(windows)]
+        which_command.creation_flags(app_platform::CREATE_NO_WINDOW);
+        let installer_exists = which_command
             .output()
             .await
             .map(|o| o.status.success())
@@ -100,10 +104,15 @@ pub async fn auto_install_cli(agent: String) -> Result<(), String> {
         }
 
         let install_future = async {
-            let child = tokio::process::Command::new(program)
+            let mut install_command = tokio::process::Command::new(program);
+            install_command
                 .args(args)
                 .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped());
+            // Suppress the installer's console window on Windows.
+            #[cfg(windows)]
+            install_command.creation_flags(app_platform::CREATE_NO_WINDOW);
+            let child = install_command
                 .spawn()
                 .map_err(|e| format!("Failed to run {}: {}", program, e))?;
 

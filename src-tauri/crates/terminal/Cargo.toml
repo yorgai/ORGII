@@ -11,6 +11,7 @@ name = "terminal"
 path = "src/lib.rs"
 
 [dependencies]
+app_platform = { path = "../app-platform" }
 tauri = { workspace = true }
 
 portable-pty = "0.9"

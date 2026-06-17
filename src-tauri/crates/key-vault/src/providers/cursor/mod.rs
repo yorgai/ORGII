@@ -161,23 +161,23 @@ impl CursorValidator {
 
     /// Test if a specific model works with the API key (runtime check)
     pub async fn check_model(&self, api_key: &str, model: &str) -> (bool, String) {
-        let result = timeout(
-            self.cli_timeout,
-            Command::new("cursor")
-                .args([
-                    "agent",
-                    "--api-key",
-                    api_key,
-                    "-p",
-                    "--model",
-                    model,
-                    "output 1<end>",
-                ])
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output(),
-        )
-        .await;
+        let mut command = Command::new("cursor");
+        command
+            .args([
+                "agent",
+                "--api-key",
+                api_key,
+                "-p",
+                "--model",
+                model,
+                "output 1<end>",
+            ])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        // Suppress the console window on Windows.
+        #[cfg(windows)]
+        command.creation_flags(app_platform::CREATE_NO_WINDOW);
+        let result = timeout(self.cli_timeout, command.output()).await;
 
         match result {
             Ok(Ok(output)) => {

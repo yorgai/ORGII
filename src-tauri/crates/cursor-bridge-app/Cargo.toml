@@ -16,6 +16,7 @@ path = "src/lib.rs"
 # in the sibling `cursor_bridge` library crate which this crate wraps.
 [dependencies]
 cursor_bridge = { path = "../cursor-bridge" }
+app_platform = { path = "../app-platform" }
 
 # Tauri command macro surface. Feature set kept identical to the root `app`
 # crate so cargo unifies features across the workspace.

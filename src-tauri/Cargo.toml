@@ -409,6 +409,10 @@ db_browser = { path = "crates/db-browser" }
 # `@try/@catch` FFI trampoline). Pure leaf.
 system_services = { path = "crates/system-services" }
 
+# Platform shims: macOS objc trampoline + `hide_console` / `CREATE_NO_WINDOW`
+# used to suppress console windows for child processes on Windows.
+app_platform = { path = "crates/app-platform" }
+
 # Git HTTP API — axum router + utoipa OpenAPI docs covering status,
 # branches, commits, remotes, staging, stash, diff, merge/rebase/cherry-pick,
 # blame, file blob/mtime. Composed into `app::api::server` at startup

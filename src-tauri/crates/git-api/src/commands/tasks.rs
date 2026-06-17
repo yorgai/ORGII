@@ -58,13 +58,17 @@ pub async fn run_task_stream(
         };
 
         // Spawn process with shell
-        let mut child = match Command::new(shell_cmd)
+        let mut task_cmd = Command::new(shell_cmd);
+        task_cmd
             .arg(shell_arg)
             .arg(&command_str)
             .current_dir(&cwd)
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
+            .stderr(Stdio::piped());
+        // Suppress console window on Windows.
+        #[cfg(windows)]
+        task_cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+        let mut child = match task_cmd.spawn()
         {
             Ok(child) => child,
             Err(e) => {

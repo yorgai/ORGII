@@ -143,7 +143,11 @@ impl KiroValidator {
         // Validate token by running kiro-cli-chat whoami
         use std::process::Command;
 
-        match Command::new("kiro-cli-chat").args(["whoami"]).output() {
+        let mut whoami_command = Command::new("kiro-cli-chat");
+        whoami_command.args(["whoami"]);
+        // Suppress the console window on Windows.
+        app_platform::hide_console(&mut whoami_command);
+        match whoami_command.output() {
             Ok(output) if output.status.success() => {
                 // Token is valid - whoami succeeded
             }
