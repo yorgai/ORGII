@@ -226,7 +226,15 @@ export async function stashDrop(
 // ============================================
 
 /**
- * Checkout with error dialog on failure
+ * Checkout with error dialog on failure.
+ *
+ * TODO(#17 de-dup): this is a second checkout path with its own error dialog,
+ * separate from the canonical `useBranchCheckout.selectBranch` flow that drives
+ * the CheckoutConflictDialog (stash/discard/cancel). For now we only ensure the
+ * shared classifier (`gitErrorDialog.inferErrorTypeFromText`) detects
+ * `uncommitted_changes` for the `checkout` operation. A full reroute onto
+ * `selectBranch` must preserve this function's `{ success, message, errorType }`
+ * result contract for ActionSystem callers before it can be done safely.
  */
 export async function checkoutWithDialog(
   branch: string,
