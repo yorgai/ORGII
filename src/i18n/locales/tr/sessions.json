@@ -1742,7 +1742,7 @@
   "creator": {
     "createTarget": {
       "agentSession": "Agent oturumu",
-      "createAgent": "Agent / Skill oluştur",
+      "manageAgents": "Agents / Skills yönet",
       "project": "Proje oluştur",
       "workItem": "Work Item oluştur",
       "benchmark": "Benchmark (Beta)"

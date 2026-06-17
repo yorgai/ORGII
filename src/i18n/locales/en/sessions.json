@@ -1768,7 +1768,7 @@
   "creator": {
     "createTarget": {
       "agentSession": "Agent session",
-      "createAgent": "Create agent / skill",
+      "manageAgents": "Manage agents / skills",
       "project": "Create project",
       "workItem": "Create work item",
       "benchmark": "Benchmark (Beta)"

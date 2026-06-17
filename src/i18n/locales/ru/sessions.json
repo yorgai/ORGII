@@ -1749,7 +1749,7 @@
   "creator": {
     "createTarget": {
       "agentSession": "Сессия Agent",
-      "createAgent": "Создать Agent / Skill",
+      "manageAgents": "Управлять Agents / Skills",
       "project": "Создать проект",
       "workItem": "Создать Work Item",
       "benchmark": "Benchmark (Beta)"
