@@ -71,8 +71,12 @@ function getLoadMoreItemIds(items: readonly NavigationMenuItem[]): string[] {
 
 describe("session menu section builders", () => {
   it("does not append a backend load-more row when a time group has local hidden sessions", () => {
+    // Use the current day so the sessions always land in the "today" group
+    // regardless of when the suite runs (a fixed past date would drift into
+    // "older" over time and break this assertion).
+    const today = new Date().toISOString();
     const sessions = Array.from({ length: 11 }, (_, index) =>
-      makeSession(`cursoride-${index}`, "2026-06-09T00:00:00.000Z")
+      makeSession(`cursoride-${index}`, today)
     );
 
     const items = buildByTimeMenuItems({

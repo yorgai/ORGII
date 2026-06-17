@@ -208,6 +208,10 @@ export const CONTEXT_CONFIG: Record<string, ContextConfig> = {
     chat: { requiresItemIndex: false, showStatusLine: true },
     simulator: { supportsSplitView: false, supportsFullscreen: false },
   },
+  tool_search: {
+    chat: { requiresItemIndex: false, showStatusLine: true },
+    simulator: { supportsSplitView: false, supportsFullscreen: false },
+  },
 
   // Terminal
   run_shell: {

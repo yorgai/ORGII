@@ -34,7 +34,6 @@ function resolveFoldersSelection(overrides: {
     opsControlRoutePath: "/ops-control",
     pathname: "/workstation/code",
     projectsSelectedMenuItemId: "",
-    colleaguesSelectedMenuItemId: "",
     sessionCreatorDrafts: [],
   }).selectedMenuItemId;
 }
@@ -68,12 +67,12 @@ describe("resolveSelectedMenuItemIds", () => {
     ).toBe("folders-repo:repo-1");
   });
 
-  it("selects Add Org by default on the colleagues sidebar", () => {
+  it("selects Add Org by default on the projects sidebar for the collab org create target", () => {
     expect(
       resolveSelectedMenuItemIds({
         activeSessionCreatorDraftId: null,
         activeSessionId: "session-1",
-        activeSidebarKey: "colleagues",
+        activeSidebarKey: "projects",
         chatPanelContentMode: CHAT_PANEL_CONTENT_MODE.NON_SESSION,
         chatPanelCreateTarget: CHAT_PANEL_CREATE_TARGET.COLLAB_ORG,
         chatPanelSelectedProject: null,
@@ -84,7 +83,6 @@ describe("resolveSelectedMenuItemIds", () => {
         opsControlRoutePath: "/ops-control",
         pathname: "/workstation/code",
         projectsSelectedMenuItemId: "",
-        colleaguesSelectedMenuItemId: "",
         sessionCreatorDrafts: [],
       }).selectedMenuItemId
     ).toBe(COLLAB_ADD_ORG_MENU_ITEM_ID);

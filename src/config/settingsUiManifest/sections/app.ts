@@ -40,7 +40,7 @@ const MY_ROLE_SETTING_KEYS = [
 ] as const satisfies readonly SettingsKey[];
 
 const GENERAL_SECTION_KEYS: SettingsKey[] = [
-  ...keysByPrefixes(["general.", "notifications."]).filter(
+  ...keysByPrefixes(["general.", "notifications.", "privacy."]).filter(
     (key) => !(MY_ROLE_SETTING_KEYS as readonly string[]).includes(key)
   ),
   "network.httpVersion",

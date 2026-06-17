@@ -24,6 +24,7 @@ describe("COMPONENT_LOADERS", () => {
     "edit_file",
     "delete_file",
     "list_dir",
+    "tool_search",
     "run_shell",
     "await_output",
     "inspect_terminals",

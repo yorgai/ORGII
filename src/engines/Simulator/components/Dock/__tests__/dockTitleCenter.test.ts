@@ -9,7 +9,6 @@ vi.mock("../config", () => ({
 
 vi.mock("lucide-react", () => ({
   Code: "CodeIcon",
-  Database: "DatabaseIcon",
   Globe: "GlobeIcon",
   Radar: "RadarIcon",
   ListTodo: "ListTodoIcon",
@@ -26,10 +25,6 @@ describe("getWorkStationStationTitleCenter", () => {
     expect(getWorkStationStationTitleCenter("browser", navigationT)).toEqual({
       icon: "GlobeIcon",
       label: "labels.browser",
-    });
-    expect(getWorkStationStationTitleCenter("data", navigationT)).toEqual({
-      icon: "DatabaseIcon",
-      label: "labels.databaseManager",
     });
     expect(getWorkStationStationTitleCenter("project", navigationT)).toEqual({
       icon: "ListTodoIcon",

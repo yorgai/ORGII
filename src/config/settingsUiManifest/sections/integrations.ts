@@ -6,6 +6,8 @@ import type { SettingsSectionDefinition } from "@src/config/settingsUiManifest/t
 
 const MY_ROLE_SETTING_KEYS = [
   "agent.sde.questionAutoSkipTimeoutByPresence",
+  "agent.sde.planAutoApproveTimeoutByPresence",
+  "agent.sde.goalMaxTurnsByPresence",
   "general.presenceGuidanceOnline",
   "general.presenceGuidanceInvisible",
   "general.presenceGuidanceAway",

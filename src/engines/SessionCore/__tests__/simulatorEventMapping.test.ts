@@ -80,8 +80,6 @@ const EXPECTED_CODE_EDITOR_TOOLS = [
   "manage_nodes",
   "mcp_tool",
   "tool_call",
-  "db_explore",
-  "db_run",
 ];
 
 const EXPECTED_CHANNELS_TOOLS = [

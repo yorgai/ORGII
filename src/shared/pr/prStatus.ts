@@ -86,7 +86,7 @@ export function normalizePrStatus(input: {
   ) {
     return normalized;
   }
-  return normalized ?? "open";
+  return normalized || "open";
 }
 
 /** Resolve a normalized status key to its badge + dot classes. */

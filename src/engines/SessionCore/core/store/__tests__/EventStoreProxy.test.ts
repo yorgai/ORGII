@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SessionEvent } from "../../types";
 import { eventStoreProxy } from "../EventStoreProxy";
 
-const { rpcMock } = vi.hoisted(() => ({
+const { rpcMock, warnMock } = vi.hoisted(() => ({
   rpcMock: {
     sessionCore: {
       eventStore: {
@@ -16,11 +16,27 @@ const { rpcMock } = vi.hoisted(() => ({
       },
     },
   },
+  warnMock: vi.fn(),
 }));
 
 vi.mock("@src/api/tauri/rpc", () => ({
   rpc: rpcMock,
 }));
+
+// EventStoreProxy logs recoverable failures through the logger facade
+// (`createLogger(...).warn`), not raw `console.warn`. The facade binds the
+// native console methods at import time, so spying on `console.warn` can't
+// observe the call — intercept the facade's `warn` instead.
+vi.mock("@src/hooks/logger", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@src/hooks/logger")>();
+  return {
+    ...actual,
+    createLogger: (namespace: string) => ({
+      ...actual.createLogger(namespace),
+      warn: warnMock,
+    }),
+  };
+});
 
 describe("EventStoreProxy session targeting", () => {
   it("infers the target session from an upserted event", async () => {
@@ -60,7 +76,7 @@ describe("EventStoreProxy session targeting", () => {
   });
 
   it("treats cache save failures as non-fatal best-effort sync", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    warnMock.mockClear();
     rpcMock.sessionCore.eventStore.saveToCache.mockRejectedValueOnce(
       new Error("database is locked")
     );
@@ -70,11 +86,13 @@ describe("EventStoreProxy session targeting", () => {
     expect(rpcMock.sessionCore.eventStore.saveToCache).toHaveBeenCalledWith({
       sessionId: "session-a",
     });
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("saveToCache failed for session-a"),
-      expect.any(Error)
+    expect(warnMock).toHaveBeenCalledWith(
+      expect.stringContaining("saveToCache failed"),
+      expect.objectContaining({
+        sessionId: "session-a",
+        error: expect.any(Error),
+      })
     );
-    warnSpy.mockRestore();
   });
 });
 
