@@ -24,6 +24,7 @@ import {
   checkSnapshotChanges,
   truncateAfterMessage,
 } from "@src/api/tauri/agent";
+import { analyzeOrgtrackSessions } from "@src/api/tauri/lineage";
 import Message from "@src/components/Message";
 import { editTruncationTimestampAtom } from "@src/engines/SessionCore";
 import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
@@ -184,6 +185,26 @@ export function useRestoreCheckpoint(): (
                 "[useRestoreCheckpoint] cache truncate failed (non-fatal):",
                 err
               )
+          );
+
+          // Realign the orgtrack ledger with the checkpoint. The Workstation
+          // "Diff (N)" panel reads orgtrack's own tables (final_diffs /
+          // edit_artifacts / diff_chunks / file_changes), which restore does
+          // not touch directly — so without this the panel keeps listing every
+          // file the session ever edited, even ones we just reverted. orgtrack
+          // analysis for ORGII sessions reads the (now-truncated) `events`
+          // cache, so a forced single-session rebuild re-derives all four
+          // tables from the post-checkpoint event stream (delete-then-reinsert,
+          // already idempotent). Non-fatal: a stale panel is better than a
+          // failed restore.
+          await analyzeOrgtrackSessions({
+            sessionId: initiatedSessionId,
+            rebuild: true,
+          }).catch((err) =>
+            log.warn(
+              "[useRestoreCheckpoint] orgtrack reanalyze failed (non-fatal):",
+              err
+            )
           );
         }
 

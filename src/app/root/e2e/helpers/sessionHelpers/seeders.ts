@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import { getOrgtrackSessionFinalDiffs } from "@src/api/tauri/lineage";
 import { loadSessionAtom, sessionIdAtom } from "@src/engines/SessionCore";
 import { navigateToEventAtom } from "@src/engines/SessionCore/core/atoms";
 import { derivedSnapshotAtom } from "@src/engines/SessionCore/core/atoms/events";
@@ -507,6 +508,34 @@ export function createSessionSeederHelpers(store: E2EStore) {
     }
   };
 
+  /**
+   * Read-path counterpart to `debugSeedFinalDiffWire`. Calls the production
+   * `getOrgtrackSessionFinalDiffs` lineage RPC and returns the row count for a
+   * session, so a spec can assert the orgtrack final-diffs ledger reconciles
+   * (e.g. after restore-to-checkpoint truncates the events cache and triggers a
+   * `rebuild` reanalysis, the stale residue rows must drop).
+   */
+  const debugReadFinalDiffCountWire = async (input: {
+    sessionId: string;
+    source?: string;
+  }): Promise<Result<{ sessionId: string; count: number }>> => {
+    try {
+      if (!input.sessionId) {
+        return {
+          ok: false,
+          error: "debugReadFinalDiffCountWire: `sessionId` required",
+        };
+      }
+      const diffs = await getOrgtrackSessionFinalDiffs({
+        sessionId: input.sessionId,
+        source: input.source,
+      });
+      return { ok: true, sessionId: input.sessionId, count: diffs.length };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   const listRunningSubagentJobsWire = async (): Promise<
     Result<{ jobs: Json[] }>
   > => {
@@ -614,6 +643,7 @@ export function createSessionSeederHelpers(store: E2EStore) {
     debugSeedChildSessionWire,
     debugSeedPendingPlanWire,
     debugSeedFinalDiffWire,
+    debugReadFinalDiffCountWire,
     deleteSessionWire,
   };
 }
