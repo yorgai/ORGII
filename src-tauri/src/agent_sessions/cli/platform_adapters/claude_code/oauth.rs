@@ -3,7 +3,11 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::webview::WebviewBuilder;
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl};
+// Host-managed popup window is only built on macOS/Linux; Windows uses the
+// native WebView2 popup (NewWindowResponse::Allow) instead.
+#[cfg(not(target_os = "windows"))]
+use tauri::WebviewWindowBuilder;
 
 use crate::agent_sessions::cli::platform_adapters::webview_session::{
     clear_oauth_browser_session_native, COMMON_OAUTH_SESSION_DOMAINS,
@@ -146,56 +150,80 @@ pub async fn create_claude_code_oauth_webview(
         let url_value = new_window_url.to_string();
         tracing::info!(url = %url_value, "[claude-code-oauth] new window requested");
         if is_google_accounts_url(&url_value) {
-            let popup_label = format!("{}-popup-{}", label_for_new_window, random_base64url(6));
-            let app_for_popup_navigation = app_for_new_window.clone();
-            let app_for_popup_close = app_for_new_window.clone();
-            let label_for_popup_navigation = label_for_new_window.clone();
-            let popup_label_for_navigation = popup_label.clone();
-            let builder = WebviewWindowBuilder::new(
-                &app_for_new_window,
-                popup_label,
-                WebviewUrl::External("about:blank".parse().expect("valid about:blank URL")),
-            )
-            .window_features(features)
-            .title("Google Sign in")
-            .inner_size(520.0, 640.0)
-            .on_navigation(move |popup_navigation_url| {
-                let popup_url_value = popup_navigation_url.to_string();
-                let _ = app_for_popup_navigation.emit(
-                    "claude-code-oauth-url-changed",
-                    serde_json::json!({
-                        "url": popup_url_value,
-                        "webviewLabel": label_for_popup_navigation,
-                    }),
-                );
-                if is_claude_code_callback_url(&popup_url_value)
-                    || is_google_gsi_transform_url(&popup_url_value)
-                {
-                    let close_delay_ms = if is_google_gsi_transform_url(&popup_url_value) {
-                        1_000
-                    } else {
-                        300
-                    };
-                    let app_for_async_close = app_for_popup_close.clone();
-                    let popup_label_for_async_close = popup_label_for_navigation.clone();
-                    tauri::async_runtime::spawn(async move {
-                        tokio::time::sleep(tokio::time::Duration::from_millis(close_delay_ms)).await;
-                        if let Some(popup) = app_for_async_close.get_webview_window(&popup_label_for_async_close) {
-                            let _ = popup.close();
-                        }
-                    });
-                }
-                true
-            });
+            // Windows: hand the popup to WebView2 natively. wry maps `Allow` to
+            // `SetHandled(false)`, so WebView2 opens the popup as a real child of
+            // the caller webview — preserving `window.opener` and the shared
+            // session. Google's GIS popup needs that opener to postMessage the
+            // credential back to claude.ai. The host-managed `Create` path below
+            // uses a fresh environment with no opener, so on Windows the popup
+            // renders but sign-in fails with "There was an error logging you in".
+            #[cfg(target_os = "windows")]
+            {
+                let _ = &features; // unused on this platform
+                tracing::info!(url = %url_value, "[claude-code-oauth] allowing native Google OAuth popup (Windows)");
+                return tauri::webview::NewWindowResponse::Allow;
+            }
 
-            match builder.build() {
-                Ok(window) => {
-                    tracing::info!(url = %url_value, "[claude-code-oauth] created Google OAuth popup");
-                    return tauri::webview::NewWindowResponse::Create { window };
-                }
-                Err(err) => {
-                    tracing::warn!(url = %url_value, error = %err, "[claude-code-oauth] failed to create Google OAuth popup");
-                    return tauri::webview::NewWindowResponse::Deny;
+            // macOS/Linux: WKWebView / WebKitGTK drive a host-created popup to the
+            // requested URL and keep it related to the caller, so we manage it
+            // ourselves and watch its navigation to auto-close on completion.
+            #[cfg(not(target_os = "windows"))]
+            {
+                let popup_label =
+                    format!("{}-popup-{}", label_for_new_window, random_base64url(6));
+                let app_for_popup_navigation = app_for_new_window.clone();
+                let app_for_popup_close = app_for_new_window.clone();
+                let label_for_popup_navigation = label_for_new_window.clone();
+                let popup_label_for_navigation = popup_label.clone();
+                let builder = WebviewWindowBuilder::new(
+                    &app_for_new_window,
+                    popup_label,
+                    WebviewUrl::External("about:blank".parse().expect("valid about:blank URL")),
+                )
+                .window_features(features)
+                .title("Google Sign in")
+                .inner_size(520.0, 640.0)
+                .on_navigation(move |popup_navigation_url| {
+                    let popup_url_value = popup_navigation_url.to_string();
+                    let _ = app_for_popup_navigation.emit(
+                        "claude-code-oauth-url-changed",
+                        serde_json::json!({
+                            "url": popup_url_value,
+                            "webviewLabel": label_for_popup_navigation,
+                        }),
+                    );
+                    if is_claude_code_callback_url(&popup_url_value)
+                        || is_google_gsi_transform_url(&popup_url_value)
+                    {
+                        let close_delay_ms = if is_google_gsi_transform_url(&popup_url_value) {
+                            1_000
+                        } else {
+                            300
+                        };
+                        let app_for_async_close = app_for_popup_close.clone();
+                        let popup_label_for_async_close = popup_label_for_navigation.clone();
+                        tauri::async_runtime::spawn(async move {
+                            tokio::time::sleep(tokio::time::Duration::from_millis(close_delay_ms))
+                                .await;
+                            if let Some(popup) =
+                                app_for_async_close.get_webview_window(&popup_label_for_async_close)
+                            {
+                                let _ = popup.close();
+                            }
+                        });
+                    }
+                    true
+                });
+
+                match builder.build() {
+                    Ok(window) => {
+                        tracing::info!(url = %url_value, "[claude-code-oauth] created Google OAuth popup");
+                        return tauri::webview::NewWindowResponse::Create { window };
+                    }
+                    Err(err) => {
+                        tracing::warn!(url = %url_value, error = %err, "[claude-code-oauth] failed to create Google OAuth popup");
+                        return tauri::webview::NewWindowResponse::Deny;
+                    }
                 }
             }
         }
@@ -258,12 +286,16 @@ fn is_google_accounts_url(value: &str) -> bool {
         .unwrap_or(false)
 }
 
+// Only used by the host-managed popup's navigation handler (macOS/Linux). On
+// Windows the native WebView2 popup is unmanaged, so these are not referenced.
+#[cfg(not(target_os = "windows"))]
 fn is_claude_code_callback_url(value: &str) -> bool {
     url::Url::parse(value)
         .map(|url| url.as_str().starts_with(REDIRECT_URI))
         .unwrap_or(false)
 }
 
+#[cfg(not(target_os = "windows"))]
 fn is_google_gsi_transform_url(value: &str) -> bool {
     url::Url::parse(value)
         .map(|url| url.domain() == Some("accounts.google.com") && url.path() == "/gsi/transform")
