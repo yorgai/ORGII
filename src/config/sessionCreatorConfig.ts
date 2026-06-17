@@ -8,8 +8,8 @@
 import {
   Infinity,
   Cloud,
-  GitBranch,
   Laptop,
+  ListPlus,
   ListTodo,
   Search,
 } from "lucide-react";
@@ -151,7 +151,7 @@ export const RUNNING_LOCATIONS: RunningLocationEntry[] = [
   },
   {
     id: "worktree",
-    icon: GitBranch,
+    icon: ListPlus,
     i18nKey: "planner.runningLocation.worktree",
     name: "New Worktree",
     description: "Run in a new git worktree",
