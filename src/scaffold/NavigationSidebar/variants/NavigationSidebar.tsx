@@ -78,6 +78,8 @@ export interface NavigationSidebarProps {
   preListContent?: React.ReactNode;
   /** Show loading placeholder instead of menu items */
   isLoading?: boolean;
+  /** Enable compact 32px navigation rows for dense sidebars. */
+  compactRows?: boolean;
   /** Enable collapse/expand on section headers (separator-based groups) */
   collapsibleSections?: boolean;
   /**
@@ -175,6 +177,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
     search,
     preListContent,
     isLoading = false,
+    compactRows = false,
     collapsibleSections = false,
     collapsedSectionIds,
     onCollapsedSectionsChange,
@@ -384,6 +387,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
               collapsed={false}
               defaultOpenKeys={resolvedDefaultOpenKeys}
               enableHoverIconAnimation={enableHoverIconAnimation}
+              compactRows={compactRows}
               onMenuItemClick={handleMenuItemClick}
               onMenuItemContextMenu={handleMenuItemContextMenu}
               renderMenuItemWrapper={renderMenuItemWrapper}
@@ -466,6 +470,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
                       collapsed={false}
                       defaultOpenKeys={resolvedDefaultOpenKeys}
                       enableHoverIconAnimation={enableHoverIconAnimation}
+                      compactRows={compactRows}
                       onMenuItemClick={handleMenuItemClick}
                       onMenuItemContextMenu={handleMenuItemContextMenu}
                       renderMenuItemWrapper={renderMenuItemWrapper}

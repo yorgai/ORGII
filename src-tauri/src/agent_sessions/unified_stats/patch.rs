@@ -117,7 +117,6 @@ pub struct SessionPatch {
     )]
     pub reply_target_event_id: Option<Option<String>>,
     /// Pin/unpin toggle (P5). `None` means "leave alone".
-    /// Only valid for agent sessions.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pinned: Option<bool>,
 }
@@ -310,13 +309,16 @@ pub fn apply_session_patch(session_id: &str, patch: &SessionPatch) -> Result<(),
         }
     }
     if let Some(pinned) = patch.pinned {
-        if location == SessionLocation::Cli {
-            return Err(format!(
-                "session_patch: pinned is not supported for CLI session {session_id}"
-            ));
+        match location {
+            SessionLocation::Agent => {
+                session_persistence::update_pinned(session_id, pinned)
+                    .map_err(|err| format!("session_patch update pinned (agent): {err}"))?;
+            }
+            SessionLocation::Cli => {
+                cli_persistence::update_pinned(session_id, pinned)
+                    .map_err(|err| format!("session_patch update pinned (cli): {err}"))?;
+            }
         }
-        session_persistence::update_pinned(session_id, pinned)
-            .map_err(|err| format!("session_patch update pinned: {err}"))?;
     }
 
     Ok(())

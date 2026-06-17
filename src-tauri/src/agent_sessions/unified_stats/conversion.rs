@@ -137,7 +137,7 @@ pub fn cli_session_to_aggregate_record(
         agent_exec_mode: session.agent_exec_mode,
         draft_text: session.draft_text,
         reply_target_event_id: session.reply_target_event_id,
-        pinned: false,
+        pinned: session.pinned,
         files_changed: None,
         lines_added: None,
         lines_removed: None,
