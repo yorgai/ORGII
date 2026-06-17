@@ -33,7 +33,13 @@
  * </Radio.Group>
  * ```
  */
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
@@ -298,13 +304,16 @@ const RadioGroup: React.FC<RadioGroupProps> = ({
     [controlledValue, onChange]
   );
 
-  const contextValue: RadioGroupContextValue = {
-    value,
-    disabled,
-    type,
-    size,
-    onChange: handleRadioChange,
-  };
+  const contextValue: RadioGroupContextValue = useMemo(
+    () => ({
+      value,
+      disabled,
+      type,
+      size,
+      onChange: handleRadioChange,
+    }),
+    [value, disabled, type, size, handleRadioChange]
+  );
 
   const groupClasses = [
     "radio-group",

@@ -25,7 +25,7 @@
  * </Form>
  * ```
  */
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 
 import "./index.scss";
 
@@ -222,11 +222,14 @@ const Form: React.FC<FormProps> & {
     .filter(Boolean)
     .join(" ");
 
-  const contextValue: FormContextValue = {
-    layout,
-    labelAlign,
-    colon,
-  };
+  const contextValue: FormContextValue = useMemo(
+    () => ({
+      layout,
+      labelAlign,
+      colon,
+    }),
+    [layout, labelAlign, colon]
+  );
 
   return (
     <FormContext.Provider value={contextValue}>

@@ -39,6 +39,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -293,11 +294,14 @@ const Collapse: React.FC<CollapseProps> & {
     [activeKeys, accordion, controlledActiveKey, onChange]
   );
 
-  const contextValue: CollapseContextValue = {
-    activeKeys,
-    accordion,
-    onChange: handleItemChange,
-  };
+  const contextValue: CollapseContextValue = useMemo(
+    () => ({
+      activeKeys,
+      accordion,
+      onChange: handleItemChange,
+    }),
+    [activeKeys, accordion, handleItemChange]
+  );
 
   const collapseClasses = [
     "collapse",

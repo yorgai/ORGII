@@ -37,6 +37,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -410,11 +411,14 @@ const CheckboxGroup: React.FC<CheckboxGroupProps> = ({
     [value, controlledValue, onChange]
   );
 
-  const contextValue: CheckboxGroupContextValue = {
-    value,
-    disabled,
-    onChange: handleCheckboxChange,
-  };
+  const contextValue: CheckboxGroupContextValue = useMemo(
+    () => ({
+      value,
+      disabled,
+      onChange: handleCheckboxChange,
+    }),
+    [value, disabled, handleCheckboxChange]
+  );
 
   const groupClassName = [
     "flex gap-4",

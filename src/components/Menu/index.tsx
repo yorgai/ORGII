@@ -29,7 +29,13 @@
  * ```
  */
 import { ChevronDown, ChevronRight } from "lucide-react";
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   createKeyboardActivationHandler,
@@ -325,13 +331,16 @@ const Menu: React.FC<MenuProps> & {
     .filter(Boolean)
     .join(" ");
 
-  const contextValue: MenuContextValue = {
-    selectedKeys,
-    openKeys,
-    mode,
-    onSelect: handleSelect,
-    onOpenChange: handleOpenChange,
-  };
+  const contextValue: MenuContextValue = useMemo(
+    () => ({
+      selectedKeys,
+      openKeys,
+      mode,
+      onSelect: handleSelect,
+      onOpenChange: handleOpenChange,
+    }),
+    [selectedKeys, openKeys, mode, handleSelect, handleOpenChange]
+  );
 
   return (
     <MenuContext.Provider value={contextValue}>
