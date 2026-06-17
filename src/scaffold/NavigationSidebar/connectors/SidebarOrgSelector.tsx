@@ -49,12 +49,12 @@ const SidebarOrgSelector: React.FC<SidebarOrgSelectorProps> = React.memo(
           onChange={handleChange}
           dropdownRender={renderDropdown}
           variant="ghost"
-          size="large"
+          size="small"
           radius="lg"
           dropdownWidthMode="match"
           dropdownAlign="left"
-          className="h-9"
-          selectorClassName="h-9 !px-2 text-[13px] font-normal [&_.select-suffix]:ml-1 [&_.select-value]:text-[13px]"
+          className="h-7"
+          selectorClassName="h-7 !px-2 text-[12px] font-normal [&_.select-suffix]:ml-1 [&_.select-value]:text-[12px]"
           dataTestId="sidebar-org-selector"
         />
       </div>
