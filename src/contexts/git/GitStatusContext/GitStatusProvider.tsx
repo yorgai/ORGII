@@ -23,6 +23,7 @@ import React, {
   createContext,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -347,25 +348,43 @@ export const GitStatusProvider: React.FC<{ children: React.ReactNode }> = ({
   // ============================================
 
   const hasActiveRepo = !!selectedRepoId && reposLoaded && !!currentRepo;
-  const scopedGitStatus =
-    gitStatus && statusRepoId && statusRepoPath
-      ? { repoId: statusRepoId, repoPath: statusRepoPath, status: gitStatus }
-      : null;
+  // Memoize the derived status objects so their references only change when the
+  // underlying git data does — otherwise the fresh object literals would defeat
+  // the `value` memo below and re-render every `useGitStatus()` consumer on each
+  // loading toggle / background ping.
+  const scopedGitStatus = useMemo(
+    () =>
+      gitStatus && statusRepoId && statusRepoPath
+        ? { repoId: statusRepoId, repoPath: statusRepoPath, status: gitStatus }
+        : null,
+    [gitStatus, statusRepoId, statusRepoPath]
+  );
   const currentGitStatus =
     scopedGitStatus?.repoId === selectedRepoId &&
     scopedGitStatus.repoPath === currentRepoPath
       ? scopedGitStatus.status
       : null;
 
-  const value: GitStatusContextValue = {
-    currentGitStatus,
-    scopedGitStatus,
-    gitSuggestedAction,
-    loading,
-    error,
-    forceRefresh,
-    hasActiveRepo,
-  };
+  const value = useMemo<GitStatusContextValue>(
+    () => ({
+      currentGitStatus,
+      scopedGitStatus,
+      gitSuggestedAction,
+      loading,
+      error,
+      forceRefresh,
+      hasActiveRepo,
+    }),
+    [
+      currentGitStatus,
+      scopedGitStatus,
+      gitSuggestedAction,
+      loading,
+      error,
+      forceRefresh,
+      hasActiveRepo,
+    ]
+  );
 
   return (
     <GitStatusContext.Provider value={value}>

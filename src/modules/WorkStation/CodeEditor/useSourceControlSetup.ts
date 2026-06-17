@@ -1,5 +1,5 @@
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useGitStatus } from "@src/contexts/git";
 import { useGitFiles } from "@src/hooks/git/sourceControl";
@@ -25,6 +25,7 @@ import {
   type SourceControlFilterMode,
 } from "../shared/SidebarModules";
 import { useWorkstationPr } from "./Panels/EditorPrimarySidebar/hooks/useWorkstationPr";
+import { resolveGitDiffSelection } from "./sourceControlSelection";
 import { useStashCount } from "./useStashCount";
 
 const logger = createLogger("SourceControlSetup");
@@ -251,26 +252,37 @@ export function useSourceControlSetup({
     [setGitDiffFiles]
   );
 
+  // `handleDiffSidebarFileSelect` is consumed by the memoized SidebarSlot
+  // context. Reading `activeTab` and `handleGitFileSelect` through refs keeps
+  // the callback identity stable across navigation so the warm Source Control
+  // tree does not re-render on every tab switch. (`handleGitFileSelect` is not
+  // stable on its own — it closes over the per-render `gitDiffState` object.)
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  const handleGitFileSelectRef = useRef(handleGitFileSelect);
+  useEffect(() => {
+    handleGitFileSelectRef.current = handleGitFileSelect;
+  }, [handleGitFileSelect]);
+
+  const setGitDiffFile = gitDiffState.setFile;
   const handleDiffSidebarFileSelect = useCallback(
     (file: GitFile) => {
-      const effectiveRepoPath = file.repoRoot ?? repoPath;
-      const absolutePath = file.path.startsWith("/")
-        ? file.path
-        : `${effectiveRepoPath}/${file.path}`;
-      const relativePath = file.path.startsWith(effectiveRepoPath)
-        ? file.path.slice(effectiveRepoPath.length + 1)
-        : file.path;
-
-      const isAllChangesView =
-        activeTab?.type === "source-control" &&
-        activeTab.data.mode === "all-changes";
+      const {
+        effectiveRepoPath,
+        absolutePath,
+        relativePath,
+        isAllChangesView,
+      } = resolveGitDiffSelection(file, repoPath, activeTabRef.current);
 
       if (!isAllChangesView) {
-        handleGitFileSelect(file);
+        handleGitFileSelectRef.current(file);
         return;
       }
 
-      gitDiffState.setFile(relativePath, {
+      setGitDiffFile(relativePath, {
         ...file,
         path: relativePath,
         repoRoot: effectiveRepoPath,
@@ -286,19 +298,13 @@ export function useSourceControlSetup({
       })
         .then((diffFile) => {
           if (!diffFile) return;
-          gitDiffState.setFile(relativePath, diffFile);
+          setGitDiffFile(relativePath, diffFile);
         })
         .catch((error) => {
           logger.error("Failed to load git diff:", error);
         });
     },
-    [
-      activeTab,
-      gitDiffState,
-      handleGitFileSelect,
-      repoPath,
-      setSourceControlFocusTarget,
-    ]
+    [repoPath, setGitDiffFile, setSourceControlFocusTarget]
   );
 
   return {
