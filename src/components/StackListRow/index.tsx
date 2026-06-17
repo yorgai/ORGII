@@ -30,7 +30,7 @@ function hasSecondaryColumn(secondary: React.ReactNode): boolean {
   return true;
 }
 
-export function StackListRow({
+function StackListRowComponent({
   title,
   leading,
   primary,
@@ -96,3 +96,5 @@ export function StackListRow({
     </div>
   );
 }
+
+export const StackListRow = React.memo(StackListRowComponent);

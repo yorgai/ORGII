@@ -183,7 +183,9 @@ function inferErrorTypeFromText(
   }
 
   if (
-    (normalizedOperation === "pull" || normalizedOperation === "sync") &&
+    (normalizedOperation === "pull" ||
+      normalizedOperation === "sync" ||
+      normalizedOperation === "checkout") &&
     includesAnyPattern(combinedText, UNCOMMITTED_CHANGES_PATTERNS)
   ) {
     return "uncommitted_changes";

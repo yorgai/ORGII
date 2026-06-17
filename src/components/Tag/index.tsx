@@ -277,4 +277,4 @@ const Tag: React.FC<TagProps> = ({
   );
 };
 
-export default Tag;
+export default React.memo(Tag);

@@ -164,8 +164,10 @@ const GlobalSpotlightInner: React.FC<
   );
 
   const handleBranchPickerSelect = useCallback(
-    (branchName: string) => {
-      void selectBranch(branchName);
+    async (branchName: string) => {
+      // Await the guarded checkout BEFORE tearing down the modal — otherwise
+      // closeModal() races the CheckoutConflictDialog selectBranch may open.
+      await selectBranch(branchName);
       setBranchPickerOpen(false);
       closeModal();
     },
@@ -179,12 +181,15 @@ const GlobalSpotlightInner: React.FC<
         return;
       }
 
+      // Create WITHOUT checking out, then route the checkout through
+      // selectBranch so a dirty working tree surfaces the CheckoutConflictDialog
+      // instead of the raw create+checkout bypassing the guard.
       const success = await gitApi.gitCreateBranch({
         repo_id: selectedRepoId,
         repo_path: currentRepo.path,
         name: branchName,
         start_point: startPoint ?? null,
-        checkout: true,
+        checkout: false,
       });
 
       if (!success) {
@@ -236,25 +241,16 @@ const GlobalSpotlightInner: React.FC<
       return;
     }
 
-    const result = await gitApi.gitCheckout({
-      repo_id: selectedRepoId,
-      repo_path: currentRepo.path,
-      ref: "HEAD",
-    });
-
-    if (!result.success) {
-      showGitActionDialogSafely(
-        result.error ?? t("selectors.branch.actions.checkoutDetachedFailed"),
-        "error"
-      );
-      return;
-    }
+    // Route through the guarded checkout flow (selectBranch special-cases
+    // HEAD-style refs) so a dirty tree surfaces the CheckoutConflictDialog
+    // rather than bypassing it with a raw gitCheckout. selectBranch reports its
+    // own failures; we keep the detached-HEAD success copy.
+    await selectBranch("HEAD");
 
     showGitActionDialogSafely(
       t("selectors.branch.actions.checkoutDetachedSuccess"),
       "info"
     );
-    await selectBranch("HEAD");
     await refreshBranches();
     setBranchPickerOpen(false);
     closeModal();

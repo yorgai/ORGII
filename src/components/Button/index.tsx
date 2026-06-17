@@ -31,7 +31,7 @@
  * ```
  */
 import { ChevronDown, Loader2 } from "lucide-react";
-import React, { forwardRef } from "react";
+import React, { forwardRef, useMemo } from "react";
 
 export type ButtonVariant =
   | "primary"
@@ -291,29 +291,36 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const hasSplitButton = dropdownMenu && onDropdownClick;
     const resolvedAppearance = appearance ?? defaultAppearanceFor(variant);
 
-    const getBorderRadius = () => {
+    const borderRadius = useMemo(() => {
       if (shape === "circle") return "50%";
       if (shape === "round") return "100px";
       return "8px";
-    };
+    }, [shape]);
 
-    const getIconOnlySize = () => {
-      if (iconOnly || shape === "circle") {
-        return sizeConfig.height;
-      }
-      return undefined;
-    };
-
-    const getButtonStyles = (): React.CSSProperties => ({
-      height: sizeConfig.height,
-      padding: iconOnly || shape === "circle" ? "0" : sizeConfig.padding,
-      width: long ? "100%" : getIconOnlySize(),
-      minWidth: long ? 0 : undefined,
-      fontSize: sizeConfig.fontSize,
-      gap: children && (icon || loading) && !iconOnly ? "8px" : undefined,
-      borderRadius: getBorderRadius(),
-      ...style,
-    });
+    const buttonStyles = useMemo<React.CSSProperties>(() => {
+      const iconOnlySize =
+        iconOnly || shape === "circle" ? sizeConfig.height : undefined;
+      return {
+        height: sizeConfig.height,
+        padding: iconOnly || shape === "circle" ? "0" : sizeConfig.padding,
+        width: long ? "100%" : iconOnlySize,
+        minWidth: long ? 0 : undefined,
+        fontSize: sizeConfig.fontSize,
+        gap: children && (icon || loading) && !iconOnly ? "8px" : undefined,
+        borderRadius,
+        ...style,
+      };
+    }, [
+      sizeConfig,
+      iconOnly,
+      shape,
+      long,
+      children,
+      icon,
+      loading,
+      borderRadius,
+      style,
+    ]);
 
     const renderIcon = () => {
       if (loading) {
@@ -358,8 +365,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {iconPosition === "right" && renderIcon()}
       </>
     );
-
-    const buttonStyles = getButtonStyles();
 
     const baseClasses =
       "inline-flex items-center justify-center font-medium whitespace-nowrap select-none no-underline outline-none transition-[border-color,box-shadow,background-color,color,opacity] duration-150";
@@ -530,8 +535,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                 alignItems: "center",
                 justifyContent: "center",
                 border: "none",
-                borderTopRightRadius: getBorderRadius(),
-                borderBottomRightRadius: getBorderRadius(),
+                borderTopRightRadius: borderRadius,
+                borderBottomRightRadius: borderRadius,
                 cursor: isDisabled ? "not-allowed" : "pointer",
                 opacity: isDisabled ? 0.5 : 1,
               }}

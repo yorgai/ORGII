@@ -21,10 +21,42 @@ import {
   useState,
 } from "react";
 
-import { GitWorkingDirectoryFile } from "@src/api/http/git";
-import { normalizeGitStatus } from "@src/config/gitStatus";
 import { useGitStatus } from "@src/contexts/git";
 import type { GitFile } from "@src/types/git/types";
+import type { GitRepositoryStatus } from "@src/types/session/steps";
+
+import { areBaseFileListsEqual, deriveBaseFiles } from "./gitFilesDerivation";
+
+/**
+ * Derive the base file list from a git status, returning the SAME array
+ * reference when a newly-fetched status describes a byte-identical working
+ * tree. Background status pings replace the `gitStatus` object on every poll;
+ * without this stabilization each poll cascades a fresh `files` reference into
+ * `useSourceControlState`'s state memo even when nothing changed.
+ *
+ * Mirrors the ref-cached `useMemo` pattern used by `useEventStoreSelector`.
+ */
+function useStableBaseFiles(
+  gitStatus: GitRepositoryStatus | null,
+  selectedRepoId: string | null
+): GitFile[] {
+  const prevRef = useRef<GitFile[]>([]);
+  return useMemo(() => {
+    const next =
+      !selectedRepoId || !gitStatus
+        ? []
+        : deriveBaseFiles(gitStatus.working_directory?.files || []);
+
+    // The equality gate compares every identity-bearing field, so any real
+    // working-tree change yields a fresh array and this can never stick stale.
+    if (areBaseFileListsEqual(prevRef.current, next)) {
+      return prevRef.current;
+    }
+    prevRef.current = next;
+    return next;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gitStatus, selectedRepoId]);
+}
 
 export interface UseGitFilesOptions {
   selectedRepoId: string | null;
@@ -67,33 +99,10 @@ export function useGitFiles(options: UseGitFilesOptions): UseGitFilesResult {
 
   const { currentGitStatus: gitStatus, forceRefresh, loading } = useGitStatus();
 
-  // Derive base files from gitStatus
-  const baseFiles = useMemo(() => {
-    // Skip if no repo selected
-    if (!selectedRepoId) {
-      return [];
-    }
-
-    // Skip if no git status available yet
-    if (!gitStatus) return [];
-
-    // Extract files from git status
-    const statusFiles = gitStatus.working_directory?.files || [];
-
-    // Convert to GitFile format
-    return statusFiles.map((file: GitWorkingDirectoryFile, index: number) => ({
-      id: `${file.path}-${index}`,
-      path: file.path,
-      status: normalizeGitStatus(file.status),
-      additions: 0,
-      deletions: 0,
-      staged: file.staged,
-      original_path: file.original_path,
-      // Content will be loaded lazily when file is selected
-      oldContent: undefined,
-      newContent: undefined,
-    }));
-  }, [gitStatus, selectedRepoId]);
+  // Derive base files from gitStatus, reusing the prior array reference when a
+  // new gitStatus object describes a byte-identical working tree (see
+  // useStableBaseFiles).
+  const baseFiles = useStableBaseFiles(gitStatus, selectedRepoId);
 
   // Merge base files with overrides (diff content + staged state) from local state
   // If repoId doesn't match, the cached data is stale and ignored

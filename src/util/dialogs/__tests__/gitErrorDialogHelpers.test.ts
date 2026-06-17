@@ -74,6 +74,28 @@ describe("buildGitErrorInfo — error type inference (errorType: 'unknown')", ()
     expect(info.errorType).toBe("uncommitted_changes");
   });
 
+  it("infers uncommitted_changes for checkout with 'would be overwritten by checkout'", () => {
+    const info = buildGitErrorInfo(
+      makeOptions({
+        operation: "checkout",
+        commandOutput:
+          "error: Your local changes to the following files would be overwritten by checkout:\n\tsrc/a.ts\nPlease commit your changes or stash them before you switch branches.",
+      })
+    );
+    expect(info.errorType).toBe("uncommitted_changes");
+  });
+
+  it("infers uncommitted_changes for checkout with 'please commit your changes or stash them'", () => {
+    const info = buildGitErrorInfo(
+      makeOptions({
+        operation: "checkout",
+        commandOutput:
+          "Please commit your changes or stash them before you switch branches.",
+      })
+    );
+    expect(info.errorType).toBe("uncommitted_changes");
+  });
+
   it("infers merge_conflicts for pull with 'automatic merge failed'", () => {
     const info = buildGitErrorInfo(
       makeOptions({
