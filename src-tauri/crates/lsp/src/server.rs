@@ -252,6 +252,10 @@ impl LspServer {
             cmd.env(key, value);
         }
 
+        // Suppress console window on Windows.
+        #[cfg(windows)]
+        cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+
         let mut process = cmd.spawn().map_err(|e| {
             format!(
                 "Failed to spawn {} LSP server: {}. Is {} installed?",

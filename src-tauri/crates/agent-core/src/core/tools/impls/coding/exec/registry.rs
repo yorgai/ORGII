@@ -523,8 +523,11 @@ pub async fn terminate_shell_process_tree(pid: u32) -> Result<String, String> {
         return Err("Refusing to kill PID 0".to_string());
     }
 
-    let output = tokio::process::Command::new("taskkill")
-        .args(["/PID", &pid.to_string(), "/T", "/F"])
+    let mut command = tokio::process::Command::new("taskkill");
+    command.args(["/PID", &pid.to_string(), "/T", "/F"]);
+    // Suppress the console window `taskkill` would otherwise flash.
+    command.creation_flags(app_platform::CREATE_NO_WINDOW);
+    let output = command
         .output()
         .await
         .map_err(|err| format!("Failed to kill process {}: {}", pid, err))?;

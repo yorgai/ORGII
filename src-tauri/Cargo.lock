@@ -4263,6 +4263,7 @@ name = "lsp"
 version = "0.1.0"
 dependencies = [
  "app_paths",
+ "app_platform",
  "app_utils",
  "bytes",
  "chrono",
@@ -7907,6 +7908,7 @@ name = "system_services"
 version = "0.1.0"
 dependencies = [
  "app_paths",
+ "app_platform",
  "app_window",
  "chrono",
  "core-foundation",

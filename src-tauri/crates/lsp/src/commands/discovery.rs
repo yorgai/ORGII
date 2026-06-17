@@ -70,9 +70,11 @@ pub fn command_exists(cmd: &str) -> bool {
     }
     #[cfg(windows)]
     {
-        Command::new("where")
-            .arg(cmd)
-            .env("PATH", &current_path)
+        let mut command = Command::new("where");
+        command.arg(cmd).env("PATH", &current_path);
+        // Suppress console window on Windows.
+        app_platform::hide_console(&mut command);
+        command
             .output()
             .map(|output| output.status.success())
             .unwrap_or(false)

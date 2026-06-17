@@ -270,10 +270,14 @@ async fn run_install_command(
 ) -> Result<PathBuf, InstallError> {
     tracing::info!("[lsp/auto_install] Running: {} {}", command, args.join(" "));
 
-    let output = Command::new(command)
-        .args(args)
+    let mut cmd = Command::new(command);
+    cmd.args(args)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    // Suppress console window on Windows.
+    #[cfg(windows)]
+    cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+    let output = cmd
         .spawn()
         .map_err(|e| InstallError::Other(format!("Failed to spawn {}: {}", command, e)))?
         .wait_with_output()

@@ -283,6 +283,16 @@ pub fn resolved_git_exec_path(git_executable: &Path) -> Option<PathBuf> {
     }
 }
 
+/// Windows `CREATE_NO_WINDOW` process creation flag.
+///
+/// The app binary is built with `windows_subsystem = "windows"`, so it has no
+/// console of its own. Every console subprocess we spawn (here: `git`) would
+/// otherwise allocate a *new* console window that flashes on screen. Because
+/// git status polling runs frequently (file watcher / status bar), the user
+/// sees terminals "keep coming out". Passing this flag suppresses the window.
+#[cfg(windows)]
+pub const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
 pub fn git_command() -> Result<Command, String> {
     let git_executable = resolved_git_executable_details()?;
     let mut command = Command::new(&git_executable.path);
@@ -290,6 +300,11 @@ pub fn git_command() -> Result<Command, String> {
         if let Some(path) = resolved_git_exec_path(&git_executable.path) {
             command.env(GIT_EXEC_PATH_ENV, path);
         }
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(CREATE_NO_WINDOW);
     }
     Ok(command)
 }
@@ -302,6 +317,9 @@ pub fn tokio_git_command() -> Result<tokio::process::Command, String> {
             command.env(GIT_EXEC_PATH_ENV, path);
         }
     }
+    // tokio's `Command` exposes `creation_flags` as an inherent method on Windows.
+    #[cfg(windows)]
+    command.creation_flags(CREATE_NO_WINDOW);
     Ok(command)
 }
 

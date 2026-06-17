@@ -64,6 +64,11 @@ impl McpClient {
                             }
                         }
 
+                        // Windows: stdio MCP servers are console programs; without
+                        // this each one would flash a console window on spawn.
+                        #[cfg(windows)]
+                        cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+
                         let child = TokioChildProcess::new(cmd)
                             .map_err(|err| format!("Failed to spawn '{}': {}", command, err))?;
                         handler

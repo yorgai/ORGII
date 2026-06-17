@@ -608,6 +608,11 @@ async fn probe_one(probe: &Probe) -> DependencyStatus {
         ProbeSource::SystemPath => tokio::process::Command::new(probe.binary),
     };
 
+    // Suppress the console window each version probe would flash on Windows
+    // (dependency detection spawns one per known tool — a visible burst).
+    #[cfg(windows)]
+    command.creation_flags(app_platform::CREATE_NO_WINDOW);
+
     let result = command
         .args(probe.version_flag.split_whitespace())
         .env("PATH", &current_path)
@@ -642,13 +647,16 @@ async fn probe_one(probe: &Probe) -> DependencyStatus {
                 ProbeSource::BundledGit => false,
                 ProbeSource::SystemPath => {
                     let which_cmd = if cfg!(windows) { "where" } else { "which" };
-                    let which_result = tokio::process::Command::new(which_cmd)
+                    let mut which_command = tokio::process::Command::new(which_cmd);
+                    which_command
                         .arg(probe.binary)
                         .env("PATH", &current_path)
                         .stdout(std::process::Stdio::piped())
-                        .stderr(std::process::Stdio::null())
-                        .output()
-                        .await;
+                        .stderr(std::process::Stdio::null());
+                    // Suppress the `where` console window on Windows.
+                    #[cfg(windows)]
+                    which_command.creation_flags(app_platform::CREATE_NO_WINDOW);
+                    let which_result = which_command.output().await;
 
                     matches!(which_result, Ok(ref out) if out.status.success())
                 }

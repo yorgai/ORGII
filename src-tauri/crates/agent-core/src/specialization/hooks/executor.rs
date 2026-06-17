@@ -280,6 +280,10 @@ impl HookExecutor {
         }
         cmd.env("ORGII_HOOK_EVENT", event.as_str());
 
+        // Windows: suppress the console window the hook shell would otherwise flash.
+        #[cfg(windows)]
+        cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+
         let result =
             match tokio::time::timeout(Duration::from_millis(timeout_ms), cmd.output()).await {
                 Ok(Ok(output)) => {

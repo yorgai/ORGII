@@ -59,14 +59,18 @@ pub fn run_eslint(file_path: &str) -> Result<Vec<EslintDiagnostic>, String> {
     log::info!("[ESLint] Running on: {}", file_path);
 
     // Run ESLint with JSON format
-    let output = Command::new(&eslint_cmd)
+    let mut command = Command::new(&eslint_cmd);
+    command
         .args([
             "--format",
             "json",
             "--no-error-on-unmatched-pattern",
             file_path,
         ])
-        .current_dir(path.parent().unwrap_or(Path::new("/")))
+        .current_dir(path.parent().unwrap_or(Path::new("/")));
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut command);
+    let output = command
         .output()
         .map_err(|e| format!("Failed to run ESLint: {}", e))?;
 
@@ -137,7 +141,8 @@ pub fn run_eslint_on_content(
     log::debug!("[ESLint] Using eslint at: {}", eslint_path);
 
     // Run ESLint with stdin and filename hint
-    let mut child = Command::new(&eslint_path)
+    let mut command = Command::new(&eslint_path);
+    command
         .args([
             "--format",
             "json",
@@ -149,7 +154,10 @@ pub fn run_eslint_on_content(
         .current_dir(&workspace_root)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut command);
+    let mut child = command
         .spawn()
         .map_err(|e| format!("Failed to spawn ESLint: {}", e))?;
 
@@ -249,7 +257,11 @@ fn find_eslint_with_root(file_path: &Path) -> Result<(String, std::path::PathBuf
 
     // Try global eslint - use current directory as workspace root
     log::debug!("[ESLint] Checking for global eslint...");
-    if let Ok(output) = Command::new("eslint").arg("--version").output() {
+    let mut version_check = Command::new("eslint");
+    version_check.arg("--version");
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut version_check);
+    if let Ok(output) = version_check.output() {
         if output.status.success() {
             log::info!("[ESLint] Found global eslint");
             // For global eslint, use file's parent or current dir
@@ -269,7 +281,11 @@ fn find_eslint_with_root(file_path: &Path) -> Result<(String, std::path::PathBuf
 pub fn get_eslint_version(workspace_path: &str) -> Option<String> {
     let eslint_cmd = find_eslint(Path::new(workspace_path)).ok()?;
 
-    let output = Command::new(&eslint_cmd).arg("--version").output().ok()?;
+    let mut command = Command::new(&eslint_cmd);
+    command.arg("--version");
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut command);
+    let output = command.output().ok()?;
 
     Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }

@@ -373,8 +373,11 @@ fn command_exists(cmd: &str) -> bool {
     }
     #[cfg(windows)]
     {
-        Command::new("where")
-            .arg(cmd)
+        let mut command = Command::new("where");
+        command.arg(cmd);
+        // Suppress console window on Windows.
+        app_platform::hide_console(&mut command);
+        command
             .output()
             .map(|output| output.status.success())
             .unwrap_or(false)
@@ -385,10 +388,11 @@ fn command_exists(cmd: &str) -> bool {
 fn get_tool_version(config: &LintToolConfig) -> Option<String> {
     // Special case for clippy which needs cargo clippy --version
     let output = if config.id == "clippy" {
-        Command::new("cargo")
-            .args(["clippy", "--version"])
-            .output()
-            .ok()?
+        let mut command = Command::new("cargo");
+        command.args(["clippy", "--version"]);
+        // Suppress console window on Windows.
+        app_platform::hide_console(&mut command);
+        command.output().ok()?
     } else if config.id == "gofmt" {
         // gofmt doesn't have version, just check existence
         return if command_exists("gofmt") {
@@ -397,10 +401,11 @@ fn get_tool_version(config: &LintToolConfig) -> Option<String> {
             None
         };
     } else {
-        Command::new(config.command)
-            .arg(config.version_arg)
-            .output()
-            .ok()?
+        let mut command = Command::new(config.command);
+        command.arg(config.version_arg);
+        // Suppress console window on Windows.
+        app_platform::hide_console(&mut command);
+        command.output().ok()?
     };
 
     if output.status.success() || !output.stdout.is_empty() {
