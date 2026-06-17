@@ -66,9 +66,21 @@ pub fn params_schema<T: JsonSchema>() -> Value {
     // Use Draft 7 (which OpenAI function-calling expects) with no meta_schema
     // URL.  OpenAPI 3.0 mode adds `$schema`, `nullable`, and `title` fields
     // that some proxies try to resolve, inflating token counts dramatically.
+    //
+    // `inline_subschemas = true` expands every nested struct/enum in place
+    // instead of hoisting it into a top-level `definitions` map referenced by
+    // `$ref`. This is the provider-agnostic contract: a schema with NO `$ref`
+    // is accepted by every function-calling endpoint, whereas the `$ref`
+    // dialect is balkanised — schemars' draft-07 default emits
+    // `#/definitions/X`, moonshot/kimi demand `#/$defs/X` (HTTP 400 otherwise),
+    // and Gemini rejects refs entirely. Inlining sidesteps all of it and
+    // satisfies `assert_llm_compatible_schema`, which forbids `$ref` outright.
+    // Tool params are shallow DTOs (no recursive/self-referential types), so
+    // inlining cannot blow up.
     let schema = schemars::generate::SchemaSettings::draft07()
         .with(|settings| {
             settings.meta_schema = None;
+            settings.inline_subschemas = true;
         })
         .into_generator()
         .into_root_schema_for::<T>();
@@ -82,8 +94,53 @@ pub fn params_schema<T: JsonSchema>() -> Value {
     // `parameter validation failed` error and no schema-level signal of
     // why. Same anti-pattern as the MCP tool input-schema sweep already
     // landed; pin the infallible contract via `expect`.
-    serde_json::to_value(schema)
-        .expect("schemars Schema serializes to JSON Object; infallible for any JsonSchema type")
+    let mut value = serde_json::to_value(schema)
+        .expect("schemars Schema serializes to JSON Object; infallible for any JsonSchema type");
+    collapse_nullable_type_arrays(&mut value);
+    value
+}
+
+/// Collapse nullable type arrays (`"type": ["string", "null"]`) emitted by
+/// schemars for `Option<T>` fields down to the single non-null scalar
+/// (`"type": "string"`).
+///
+/// This is the second provider-dialect footgun after `$ref` (see
+/// `params_schema`): draft-07 *permits* a `"type"` array, but several
+/// function-calling validators reject it outright — baidu/ernie returns
+/// HTTP 400 `not a valid jsonSchema` for any tool whose params contain a
+/// nullable field (e.g. `edit_file`'s `Option<String>` content/old_string/
+/// new_string). The plain scalar form is the least-common-denominator that
+/// every provider accepts. Optionality is already enforced at parse time by
+/// `Option<T>` + serde `default`, so dropping `"null"` from the wire schema
+/// changes nothing about how arguments deserialize — the model simply omits
+/// the field when it has no value.
+fn collapse_nullable_type_arrays(value: &mut Value) {
+    match value {
+        Value::Object(map) => {
+            if let Some(Value::Array(parts)) = map.get("type") {
+                let non_null: Vec<Value> = parts
+                    .iter()
+                    .filter(|p| p.as_str() != Some("null"))
+                    .cloned()
+                    .collect();
+                // Only collapse the common `[scalar, "null"]` shape: exactly
+                // one non-null type remains. Genuine multi-type unions (rare
+                // in tool params) are left intact rather than guessed at.
+                if non_null.len() == 1 && parts.len() > non_null.len() {
+                    map.insert("type".into(), non_null.into_iter().next().unwrap());
+                }
+            }
+            for child in map.values_mut() {
+                collapse_nullable_type_arrays(child);
+            }
+        }
+        Value::Array(items) => {
+            for child in items.iter_mut() {
+                collapse_nullable_type_arrays(child);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// Parse and validate tool parameters from JSON into a typed struct.
@@ -275,7 +332,138 @@ pub fn optional_bool(params: &Value, key: &str) -> Option<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use schemars::JsonSchema;
     use serde::Deserialize;
+
+    /// Nested DTO that, under schemars' draft-07 default, would be hoisted
+    /// into a top-level `definitions` map and referenced via
+    /// `$ref: "#/definitions/Nested"`. Mirrors `StepProposal` in
+    /// `suggest_next_steps`. With `inline_subschemas = true` it must be
+    /// expanded in place with no `$ref` anywhere.
+    #[derive(Debug, Deserialize, JsonSchema)]
+    struct Nested {
+        title: String,
+        command: String,
+    }
+
+    #[derive(Debug, Deserialize, JsonSchema)]
+    struct NestingParams {
+        items: Vec<Nested>,
+    }
+
+    fn contains_ref(value: &Value) -> bool {
+        match value {
+            Value::Object(map) => {
+                map.contains_key("$ref")
+                    || map.contains_key("$defs")
+                    || map.contains_key("definitions")
+                    || map.values().any(contains_ref)
+            }
+            Value::Array(items) => items.iter().any(contains_ref),
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn params_schema_inlines_nested_structs_without_refs() {
+        // The classic moonshot/kimi HTTP-400 trigger: a `Vec<Struct>` field.
+        // The generated schema must inline the nested struct and contain NO
+        // `$ref` / `$defs` / `definitions` — the provider-agnostic contract
+        // enforced by `assert_llm_compatible_schema`.
+        let schema = params_schema::<NestingParams>();
+        assert!(
+            !contains_ref(&schema),
+            "params_schema must inline subschemas (no $ref/$defs/definitions): {schema}"
+        );
+        // The nested struct's fields must be reachable inline.
+        let item = &schema["properties"]["items"]["items"];
+        assert!(item["properties"]["title"].is_object());
+        assert!(item["properties"]["command"].is_object());
+    }
+
+    #[test]
+    fn params_schema_output_satisfies_llm_compat_contract() {
+        let schema = params_schema::<NestingParams>();
+        assert_llm_compatible_schema(&schema)
+            .expect("inlined schema must satisfy the LLM-compat contract (no $ref)");
+    }
+
+    /// Mirrors `edit_file`'s params: `Option<String>` fields that schemars
+    /// renders as `"type": ["string", "null"]`. baidu/ernie rejects that
+    /// nullable type-array with HTTP 400 `not a valid jsonSchema`, so
+    /// `params_schema` must collapse it to the plain scalar `"string"`.
+    #[derive(Debug, Deserialize, JsonSchema)]
+    struct NullableParams {
+        required_path: String,
+        #[serde(default)]
+        maybe_text: Option<String>,
+        #[serde(default)]
+        flag: bool,
+    }
+
+    /// Walk the schema collecting every `"type"` value that is a JSON array
+    /// (i.e. a non-collapsed nullable/union type).
+    fn type_arrays(value: &Value) -> Vec<Value> {
+        let mut found = Vec::new();
+        fn walk(value: &Value, out: &mut Vec<Value>) {
+            match value {
+                Value::Object(map) => {
+                    if let Some(t @ Value::Array(_)) = map.get("type") {
+                        out.push(t.clone());
+                    }
+                    for child in map.values() {
+                        walk(child, out);
+                    }
+                }
+                Value::Array(items) => {
+                    for child in items {
+                        walk(child, out);
+                    }
+                }
+                _ => {}
+            }
+        }
+        walk(value, &mut found);
+        found
+    }
+
+    #[test]
+    fn params_schema_collapses_nullable_type_arrays() {
+        // The baidu/ernie HTTP-400 trigger: an `Option<String>` field whose
+        // schemars output is `"type": ["string", "null"]`. After collapse the
+        // schema must contain NO `"type"` arrays at all — every nullable type
+        // is reduced to its single non-null scalar.
+        let schema = params_schema::<NullableParams>();
+        assert!(
+            type_arrays(&schema).is_empty(),
+            "nullable type arrays must collapse to plain scalars: {schema}"
+        );
+        // The optional field must still be present, just with a scalar type,
+        // and must NOT be listed as required.
+        assert_eq!(
+            schema["properties"]["maybe_text"]["type"],
+            Value::String("string".into())
+        );
+        let required: Vec<&str> = schema["required"]
+            .as_array()
+            .map(|a| a.iter().filter_map(|v| v.as_str()).collect())
+            .unwrap_or_default();
+        assert!(required.contains(&"required_path"));
+        assert!(!required.contains(&"maybe_text"));
+    }
+
+    #[test]
+    fn collapsed_nullable_params_still_deserialize_when_field_omitted() {
+        // Dropping `"null"` from the wire schema must not change parsing:
+        // `Option<String>` + serde default still accepts an omitted field.
+        let parsed: NullableParams = parse_params(serde_json::json!({
+            "required_path": "/tmp/x",
+        }))
+        .expect("optional field may be omitted");
+        assert_eq!(parsed.required_path, "/tmp/x");
+        assert!(parsed.maybe_text.is_none());
+        assert!(!parsed.flag);
+    }
 
     /// Mirrors the agent-org task tools: strict params that reject any
     /// unknown LLM-supplied field.

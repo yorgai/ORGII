@@ -863,6 +863,80 @@ fn all_registered_tool_schemas_are_llm_compatible() {
 }
 
 #[test]
+fn nested_struct_tool_schemas_inline_without_refs() {
+    // Tools whose params nest another `JsonSchema`-deriving type (struct or
+    // enum) would, under schemars' draft-07 default, hoist the nested type
+    // into a top-level `definitions` map referenced via `#/definitions/X`.
+    // The moonshot/kimi family rejects that dialect with HTTP 400
+    // ("references must start with #/$defs/"), and Gemini rejects `$ref`
+    // entirely. `params_schema` sets `inline_subschemas = true` so the
+    // nested type is expanded in place — the schema must contain NO `$ref`,
+    // which `assert_llm_compatible_schema` enforces. This test pins the two
+    // real offenders so a future tool that re-introduces a hoisted ref is
+    // caught here rather than at runtime against a specific provider.
+    use crate::tools::traits::{assert_llm_compatible_schema, params_schema};
+
+    let schemas: Vec<(&str, Value)> = vec![
+        (
+            "suggest_next_steps",
+            params_schema::<
+                crate::tools::impls::orchestration::suggest_next_steps::SuggestNextStepsParams,
+            >(),
+        ),
+        (
+            "manage_code_map",
+            params_schema::<crate::tools::impls::coding::code_map::CodeMapToolParams>(),
+        ),
+    ];
+
+    for (name, schema) in schemas {
+        assert_llm_compatible_schema(&schema).unwrap_or_else(|err| {
+            panic!("{name} schema must inline subschemas (no $ref): {err}\n{schema}")
+        });
+    }
+}
+
+#[test]
+fn real_tool_schemas_have_no_nullable_type_arrays() {
+    // Tools with `Option<T>` fields (e.g. `edit_file`'s content/old_string/
+    // new_string) make schemars emit `"type": ["string", "null"]`. draft-07
+    // permits that, but baidu/ernie's function-call validator rejects any
+    // nullable type-array with HTTP 400 `not a valid jsonSchema`.
+    // `params_schema` collapses every `[scalar, "null"]` to the plain scalar,
+    // so the generated schema must contain NO `"type"` arrays at all. Pin the
+    // real offender (`edit_file`) plus a write-file params type so a future
+    // optional field that reintroduces a nullable array is caught here rather
+    // than at runtime against a specific provider.
+    use crate::tools::traits::params_schema;
+
+    fn has_type_array(value: &Value) -> bool {
+        match value {
+            Value::Object(map) => {
+                if matches!(map.get("type"), Some(Value::Array(_))) {
+                    return true;
+                }
+                map.values().any(has_type_array)
+            }
+            Value::Array(items) => items.iter().any(has_type_array),
+            _ => false,
+        }
+    }
+
+    let schemas: Vec<(&str, Value)> = vec![(
+        "edit_file",
+        params_schema::<crate::tools::impls::coding::edit_file::EditFileParams>(),
+    )];
+
+    for (name, schema) in schemas {
+        assert!(
+            !has_type_array(&schema),
+            "{name} schema must not contain nullable type arrays \
+             (baidu/ernie rejects them): {schema}"
+        );
+    }
+}
+
+#[test]
 fn llm_contract_rejects_tagged_enum_schema() {
     use crate::tools::traits::assert_llm_compatible_schema;
     use schemars::JsonSchema;
