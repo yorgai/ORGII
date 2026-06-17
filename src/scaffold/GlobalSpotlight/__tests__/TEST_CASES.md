@@ -51,12 +51,16 @@ working tree surfaces the `CheckoutConflictDialog` (stash / discard / cancel).
 - [x] Step 1: create-and-checkout uses `checkout: false` then `selectBranch`.
 - [x] Step 2: detached-HEAD routes through `selectBranch("HEAD")` (raw `gitCheckout` removed); success copy kept.
 - [x] Step 3: all three handlers `await selectBranch(...)` BEFORE `closeModal()`.
-- [x] Step 4: `gitErrorDialog` classifier detects `uncommitted_changes` for `checkout` (minimal fix; full ActionSystem reroute left as TODO).
+- [x] Step 4: `gitErrorDialog` classifier detects `uncommitted_changes` for `checkout`. Full ActionSystem reroute now done — `branchOps.checkoutWithDialog` routes through the shared `runGuardedCheckout` core (see `src/services/git/operations/__tests__/TEST_CASES.md`).
 - [ ] Step 5 (OUT OF SCOPE): "commit changes" conflict option NOT added — existing flow is stash/discard/cancel only.
 
 ## Notes / Follow-ups
 
 - The ActionSystem path (`gitBranchActions.zod.ts` → `branchOps.checkoutWithDialog`)
-  still uses its own dialog. Only the minimal classifier fix was applied; a full
-  reroute onto `selectBranch` would need to preserve the action's
-  `{ success, message, errorType }` result contract and is left as a TODO.
+  now shares the canonical guarded-checkout logic. The conflict-handling business
+  logic was extracted out of `useBranchCheckout` into the plain async core
+  `src/services/git/operations/guardedCheckout.ts` (`runGuardedCheckout`), which
+  both `useBranchCheckout.selectBranch` and `branchOps.checkoutWithDialog` call.
+  Both paths now surface the same `CheckoutConflictDialog`; the divergent
+  `showGitErrorDialog` checkout branch is gone. `checkoutWithDialog` maps the
+  core's result back onto the `{ success, message, errorType }` contract.

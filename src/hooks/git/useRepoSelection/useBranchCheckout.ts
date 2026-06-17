@@ -5,8 +5,9 @@ import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 
-import { gitApi } from "@src/api/http/git";
+import { CheckoutConflictDialog } from "@src/components/GitDialogs/CheckoutConflictDialog";
 import { createLogger } from "@src/hooks/logger";
+import { runGuardedCheckout } from "@src/services/git/operations/guardedCheckout";
 import {
   REPO_KIND,
   currentBranchAtom,
@@ -79,33 +80,31 @@ export function useBranchCheckout(): UseBranchCheckoutReturn {
         setCurrentBranch(branch);
       });
       try {
-        const result = await gitApi.gitCheckout({
-          repo_id: selectedRepoId,
-          repo_path: repoPath,
+        const result = await runGuardedCheckout({
+          repoId: selectedRepoId,
+          repoPath,
           ref: branch,
+          onConflict: (name) =>
+            CheckoutConflictDialog.open({ branchName: name }),
         });
 
         if (result.success) {
-          // Branch checkout successful
+          // Optimistic value already reflects the new branch (the stash/force
+          // recovery checked out the same ref), so keep it as-is.
+          if (result.outcome !== "checked-out" && result.message) {
+            showGitActionDialogSafely(result.message, "info");
+          }
         } else {
-          // Rollback on failure
+          // Rollback: nothing was checked out (error or user cancellation).
           setCurrentBranch(previousBranch);
-          log.error(
-            `[useBranchCheckout] Failed to checkout branch "${branch}":`,
-            result.error,
-            `errorType: ${result.errorType}`
-          );
-
-          if (result.errorType === "uncommitted_changes") {
-            await handleUncommittedChanges(
-              branch,
-              selectedRepoId,
-              repoPath,
-              setCurrentBranch
+          if (result.outcome !== "cancelled") {
+            log.error(
+              `[useBranchCheckout] Failed to checkout branch "${branch}":`,
+              result.message,
+              `errorType: ${result.errorType}`
             );
-          } else {
             showGitActionDialogSafely(
-              result.error || `Failed to checkout branch "${branch}"`,
+              result.message || `Failed to checkout branch "${branch}"`,
               "error"
             );
           }
@@ -131,96 +130,4 @@ export function useBranchCheckout(): UseBranchCheckoutReturn {
     checkoutLoading,
     selectBranch,
   };
-}
-
-/**
- * Handle uncommitted changes conflict during checkout
- */
-async function handleUncommittedChanges(
-  branch: string,
-  repoId: string,
-  repoPath: string,
-  setCurrentBranch: (branch: string) => void
-) {
-  const { CheckoutConflictDialog } = await import("@src/components/GitDialogs");
-  const choice = await CheckoutConflictDialog.open({
-    branchName: branch,
-  });
-
-  if (choice === "stash") {
-    await handleStashAndCheckout(branch, repoId, repoPath, setCurrentBranch);
-  } else if (choice === "force") {
-    await handleForceCheckout(branch, repoId, repoPath, setCurrentBranch);
-  }
-  // choice === "cancel" - do nothing
-}
-
-async function handleStashAndCheckout(
-  branch: string,
-  repoId: string,
-  repoPath: string,
-  setCurrentBranch: (branch: string) => void
-) {
-  try {
-    const stashResult = await gitApi.gitStashPush({
-      repo_id: repoId,
-      repo_path: repoPath,
-      message: `Auto-stash before switching to ${branch}`,
-      include_untracked: true,
-    });
-
-    if (!stashResult) {
-      showGitActionDialogSafely("Failed to stash changes", "error");
-      return;
-    }
-
-    const checkoutResult = await gitApi.gitCheckout({
-      repo_id: repoId,
-      repo_path: repoPath,
-      ref: branch,
-    });
-
-    if (checkoutResult.success) {
-      setCurrentBranch(branch);
-      showGitActionDialogSafely(
-        `Switched to ${branch}. Changes stashed.`,
-        "info"
-      );
-    } else {
-      showGitActionDialogSafely(
-        checkoutResult.error || "Failed to checkout after stash",
-        "error"
-      );
-    }
-  } catch {
-    showGitActionDialogSafely("Failed to stash and checkout", "error");
-  }
-}
-
-async function handleForceCheckout(
-  branch: string,
-  repoId: string,
-  repoPath: string,
-  setCurrentBranch: (branch: string) => void
-) {
-  try {
-    const forceResult = await gitApi.gitCheckout({
-      repo_id: repoId,
-      repo_path: repoPath,
-      ref: branch,
-      force: true,
-    });
-
-    if (forceResult.success) {
-      setCurrentBranch(branch);
-      showGitActionDialogSafely(`Switched to ${branch}`, "info");
-    } else {
-      showGitActionDialogSafely(
-        forceResult.error || "Failed to force checkout",
-        "error"
-      );
-    }
-  } catch {
-    showGitActionDialogSafely("Failed to force checkout", "error");
-  }
 }
