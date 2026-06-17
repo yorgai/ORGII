@@ -217,10 +217,11 @@ fn get_interface_status_linux(name: &str) -> String {
 
 #[cfg(target_os = "windows")]
 fn detect_vpn_interfaces() -> Vec<VpnInterface> {
-    let output = Command::new("netsh")
-        .args(["interface", "show", "interface"])
-        .output()
-        .ok();
+    let mut command = Command::new("netsh");
+    command.args(["interface", "show", "interface"]);
+    // Don't flash a console window during VPN/interface detection.
+    app_platform::hide_console(&mut command);
+    let output = command.output().ok();
 
     let Some(output) = output else { return vec![] };
     if !output.status.success() {

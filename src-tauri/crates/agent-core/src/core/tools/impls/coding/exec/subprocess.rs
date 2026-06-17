@@ -339,6 +339,11 @@ pub async fn execute_via_command(
         cmd.process_group(0);
     }
 
+    // Windows: `cmd /C …` would otherwise flash a console window for every
+    // agent shell command. The GUI binary has no console, so suppress it.
+    #[cfg(windows)]
+    cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+
     let mut child = cmd
         .spawn()
         .map_err(|err| ToolError::ExecutionFailed(format!("Failed to spawn command: {}", err)))?;

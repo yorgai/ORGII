@@ -25,6 +25,9 @@ pub fn run_command_with_custom_timeout(
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
 
+    // Suppress console window on Windows.
+    app_platform::hide_console(cmd);
+
     let mut child = cmd
         .spawn()
         .map_err(|err| format!("Failed to spawn process: {}", err))?;
@@ -70,8 +73,11 @@ pub fn command_exists(cmd: &str) -> bool {
     }
     #[cfg(windows)]
     {
-        Command::new("where")
-            .arg(cmd)
+        let mut command = Command::new("where");
+        command.arg(cmd);
+        // Suppress console window on Windows.
+        app_platform::hide_console(&mut command);
+        command
             .output()
             .map(|output| output.status.success())
             .unwrap_or(false)

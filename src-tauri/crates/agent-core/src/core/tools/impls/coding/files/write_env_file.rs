@@ -282,13 +282,16 @@ fn is_git_tracked(path: &Path) -> bool {
         Some(p) => p,
         None => return false,
     };
-    let output = std::process::Command::new("git")
+    let mut command = std::process::Command::new("git");
+    command
         .arg("-C")
         .arg(parent)
         .arg("ls-files")
         .arg("--error-unmatch")
-        .arg(path)
-        .output();
+        .arg(path);
+    // Suppress the console window this git check would flash on Windows.
+    app_platform::hide_console(&mut command);
+    let output = command.output();
     matches!(output, Ok(out) if out.status.success())
 }
 

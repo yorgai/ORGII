@@ -23,6 +23,7 @@ tauri-plugin-notification = "2"
 
 # Workspace crates this depends on
 app_paths = { path = "../app-paths" }       # ~/.orgii/dependencies cache path
+app_platform = { path = "../app-platform" } # hide_console / CREATE_NO_WINDOW (Windows)
 app_window = { path = "../app-window" }     # main-window recreate from tray
 integrations = { path = "../integrations" } # external IDE detection
 

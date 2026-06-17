@@ -443,6 +443,14 @@ fn run_worktree_setup_command(
         process
     };
 
+    // Suppress the transient console window the spawned `cmd` would otherwise
+    // flash on Windows (the GUI binary has no console of its own).
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        process.creation_flags(super::util::CREATE_NO_WINDOW);
+    }
+
     let output = process
         .current_dir(worktree_path)
         .env(ROOT_WORKTREE_PATH_ENV, repo_path)
