@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
 import {
   WIZARD_IDS,
-  buildAgentOrgsPath,
   buildIntegrationsPath,
   buildWizardPath,
 } from "@src/config/mainAppPaths";
@@ -428,15 +427,24 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       setWorkstationActiveSessionId,
     ]);
 
+    const handleStartPageExploreRepos = useCallback(() => {
+      setStartPageOpen(false);
+      navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.WORKSPACE_EXPLORE });
+      dispatchClearSession();
+      setWorkstationActiveSessionId(null);
+      setActiveSessionId(null);
+    }, [
+      dispatchClearSession,
+      navigateChatPanel,
+      setActiveSessionId,
+      setStartPageOpen,
+      setWorkstationActiveSessionId,
+    ]);
+
     const handleStartPageAddApiKey = useCallback(() => {
       setStartPageOpen(false);
       const accountsPath = `${buildIntegrationsPath({ category: "models" })}?modelsTab=my-accounts`;
       navigate(buildWizardPath(accountsPath, WIZARD_IDS.KEY_ADD));
-    }, [navigate, setStartPageOpen]);
-
-    const handleStartPageAgents = useCallback(() => {
-      setStartPageOpen(false);
-      navigate(buildWizardPath(buildAgentOrgsPath(), WIZARD_IDS.AGENT_ADD));
     }, [navigate, setStartPageOpen]);
 
     const shareSessionAvailable =
@@ -647,7 +655,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         handleChatPanelWorkItemCreated={handleChatPanelWorkItemCreated}
         handleRegionNoticeChange={handleRegionNoticeChange}
         handleStartPageAddApiKey={handleStartPageAddApiKey}
-        handleStartPageAgents={handleStartPageAgents}
+        handleStartPageExploreRepos={handleStartPageExploreRepos}
         handleStartPageNewSession={handleNewSession}
         handleStartPageNewWorkItem={handleStartPageNewWorkItem}
         handleStartPageSetupRepo={handleStartPageSetupRepo}

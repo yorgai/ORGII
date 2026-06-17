@@ -718,6 +718,13 @@
       },
       "agents": {
         "title": "Agents"
+      },
+      "tabs": {
+        "work": "Praca",
+        "explore": "Eksploruj"
+      },
+      "exploreRepos": {
+        "title": "Eksploruj Repos"
       }
     },
     "defaultTitle": "Czat",

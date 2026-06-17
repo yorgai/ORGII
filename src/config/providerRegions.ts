@@ -127,7 +127,7 @@ const GOOGLE_REGIONS: ReadonlySet<string> = new Set(GOOGLE_COUNTRIES);
 // ── Agent → Region Mapping ───────────────────────────────────
 //
 // Only providers with *documented* region policies are mapped.
-// Unmapped providers (gateways like OpenRouter/AiHubMix, self-hosted
+// Unmapped providers (gateways like OpenRouter, self-hosted
 // like vLLM, Chinese domestic APIs) return null from lookup functions.
 
 const AGENT_REGION_MAP: Partial<Record<ModelType, ReadonlySet<string>>> = {

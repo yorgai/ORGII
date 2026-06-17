@@ -298,7 +298,7 @@ fn spec_for_model_type(model_type: &ModelType) -> Option<&'static ProviderSpec> 
         ModelType::DashscopeApi => provider_id::DASHSCOPE,
         ModelType::MinimaxApi => provider_id::MINIMAX,
         ModelType::OpenrouterApi => provider_id::OPENROUTER,
-        ModelType::AihubmixApi => provider_id::AIHUBMIX,
+        ModelType::ZenmuxApi => provider_id::ZENMUX,
         ModelType::VllmApi => provider_id::VLLM,
         ModelType::AzureOpenaiApi => provider_id::AZURE_OPENAI,
         ModelType::CursorCli
@@ -771,7 +771,7 @@ fn find_api_key_for_provider(
         provider_id::MINIMAX => Some(ModelType::MinimaxApi),
         provider_id::MOONSHOT => Some(ModelType::MoonshotApi),
         provider_id::OPENROUTER => Some(ModelType::OpenrouterApi),
-        provider_id::AIHUBMIX => Some(ModelType::AihubmixApi),
+        provider_id::ZENMUX => Some(ModelType::ZenmuxApi),
         provider_id::VLLM => Some(ModelType::VllmApi),
         provider_id::AZURE_OPENAI => Some(ModelType::AzureOpenaiApi),
         _ => None,
@@ -866,7 +866,7 @@ mod tests {
 
     const ALL_PROVIDER_IDS: &[&str] = &[
         provider_id::OPENROUTER,
-        provider_id::AIHUBMIX,
+        provider_id::ZENMUX,
         provider_id::ANTHROPIC,
         provider_id::OPENAI,
         provider_id::DEEPSEEK,
@@ -905,7 +905,7 @@ mod tests {
             provider_id::MINIMAX,
             provider_id::MOONSHOT,
             provider_id::OPENROUTER,
-            provider_id::AIHUBMIX,
+            provider_id::ZENMUX,
             provider_id::VLLM,
             provider_id::AZURE_OPENAI,
         ];

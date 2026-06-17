@@ -32,7 +32,6 @@ import {
   OrgiiIcon,
 } from "@src/assets/modelIcons/agentIcons";
 // Static SVG imports (for providers without React components)
-import AiHubMixIcon from "@src/assets/modelIcons/aihubmix.svg";
 import AzureIcon from "@src/assets/modelIcons/azure.svg";
 import BaichuanIcon from "@src/assets/modelIcons/baichuan.svg";
 import ByteDanceIcon from "@src/assets/modelIcons/bytedance.svg";
@@ -49,6 +48,7 @@ import QwenIcon from "@src/assets/modelIcons/qwen.svg";
 import VllmIcon from "@src/assets/modelIcons/vllm.svg";
 import VolcengineIcon from "@src/assets/modelIcons/volcengine.svg";
 import YiIcon from "@src/assets/modelIcons/yi.svg";
+import ZenMuxIcon from "@src/assets/modelIcons/zenmux.svg";
 import ZhipuIcon from "@src/assets/modelIcons/zhipu.svg";
 
 // ============================================
@@ -88,7 +88,7 @@ export type IconProvider =
   | "minimax"
   | "doubao"
   | "openrouter"
-  | "aihubmix"
+  | "zenmux"
   | "vllm"
   | "orgii"
   // Inactive agents (kept for future use)
@@ -139,7 +139,7 @@ export const ICON_MAP: Record<
   minimax: MinimaxIcon,
   doubao: DoubaoIcon,
   openrouter: OpenRouterIcon,
-  aihubmix: AiHubMixIcon,
+  zenmux: ZenMuxIcon,
   vllm: VllmIcon,
   // Active agent
   opencode: OpenCodeIcon,
@@ -179,7 +179,7 @@ export const SELECTABLE_ICON_PROVIDERS: IconProvider[] = [
   "minimax",
   "doubao",
   "openrouter",
-  "aihubmix",
+  "zenmux",
   "vllm",
   "orgii",
   "opencode",
@@ -236,7 +236,7 @@ const MODEL_TYPE_TO_ICON: Record<ModelType, IconProvider> = {
   minimax_api: "minimax",
   moonshot_api: "kimi",
   openrouter_api: "openrouter",
-  aihubmix_api: "aihubmix",
+  zenmux_api: "zenmux",
   vllm_api: "vllm",
   azure_openai_api: "azure",
   azure_anthropic_api: "azure",
@@ -337,6 +337,11 @@ export function getIconProviderFromModelName(
     return "perplexity";
   }
 
+  // ZenMux provider/model slugs
+  if (lower.includes("zenmux")) {
+    return "zenmux";
+  }
+
   // Moonshot/Kimi models
   if (lower.includes("kimi") || lower.includes("moonshot")) {
     return "kimi";
@@ -406,6 +411,7 @@ export const THEMEABLE_ICONS = new Set<IconProvider>([
   "grok",
   "groq",
   "openrouter",
+  "zenmux",
   "yi",
   "orgii",
   // Inactive agents that use currentColor

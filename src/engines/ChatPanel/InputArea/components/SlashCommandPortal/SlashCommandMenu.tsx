@@ -161,12 +161,15 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     const handler = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
+      const portalContainer = portalContainerRef.current;
+      const ownerContainer = containerRef.current;
       if (
-        portalContainerRef.current &&
-        !portalContainerRef.current.contains(target)
+        portalContainer?.contains(target) ||
+        ownerContainer?.contains(target)
       ) {
-        onClose();
+        return;
       }
+      onClose();
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);

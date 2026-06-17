@@ -137,11 +137,11 @@ pub fn get_provider_config(model_type: &str) -> ProviderConfig {
             supports_base_url: true,
             default_base_url: Some("https://openrouter.ai/api/v1".to_string()),
         },
-        "aihubmix_api" => ProviderConfig {
-            api_key_env_var: "AIHUBMIX_API_KEY".to_string(),
+        "zenmux_api" => ProviderConfig {
+            api_key_env_var: "ZENMUX_API_KEY".to_string(),
             base_url_env_var: None,
             supports_base_url: true,
-            default_base_url: Some("https://aihubmix.com/v1".to_string()),
+            default_base_url: Some("https://zenmux.ai/api/v1".to_string()),
         },
         "minimax_api" => ProviderConfig {
             api_key_env_var: "MINIMAX_API_KEY".to_string(),
@@ -210,7 +210,7 @@ pub fn get_all_provider_configs() -> Vec<(String, ProviderConfig)> {
         "dashscope_api",
         "moonshot_api",
         "openrouter_api",
-        "aihubmix_api",
+        "zenmux_api",
         "minimax_api",
         "vllm_api",
         "azure_openai_api",
@@ -258,12 +258,25 @@ mod tests {
     }
 
     #[test]
+    fn test_get_provider_config_zenmux() {
+        let config = get_provider_config("zenmux_api");
+        assert_eq!(config.api_key_env_var, "ZENMUX_API_KEY");
+        assert!(config.base_url_env_var.is_none());
+        assert!(config.supports_base_url);
+        assert_eq!(
+            config.default_base_url,
+            Some("https://zenmux.ai/api/v1".to_string())
+        );
+    }
+
+    #[test]
     fn test_get_all_provider_configs() {
         let configs = get_all_provider_configs();
         assert!(!configs.is_empty());
         // Should have at least the main providers
         assert!(configs.iter().any(|(k, _)| k == "openai_api"));
         assert!(configs.iter().any(|(k, _)| k == "anthropic_api"));
+        assert!(configs.iter().any(|(k, _)| k == "zenmux_api"));
         assert!(configs.iter().any(|(k, _)| k == "cursor_cli"));
     }
 

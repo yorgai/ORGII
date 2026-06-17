@@ -23,7 +23,6 @@ import { MODEL_TABLE_CONTROL_SIZE, type ModelTableModelAlias } from "./types";
 import type { FlatRow } from "./useModelTableData";
 
 const ICON_PROVIDER_DISPLAY_LABELS: Partial<Record<IconProvider, string>> = {
-  aihubmix: "AiHubMix",
   aws: "AWS",
   baichuan: "Baichuan",
   bytedance: "ByteDance",

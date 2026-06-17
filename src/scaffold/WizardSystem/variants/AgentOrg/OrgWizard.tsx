@@ -191,10 +191,13 @@ const OrgWizard: React.FC<OrgWizardProps> = ({
         totalSteps={1}
         fillWidth
         noPadding
+        hideStepIndicator
+        contentWidthFooter
         actions={
           <>
             <Button
               variant="secondary"
+              size="small"
               data-testid="agent-orgs-org-wizard-cancel-button"
               onClick={onCancel}
             >
@@ -202,6 +205,7 @@ const OrgWizard: React.FC<OrgWizardProps> = ({
             </Button>
             <Button
               variant="primary"
+              size="small"
               disabled={!canSave}
               data-testid="agent-orgs-org-wizard-save-button"
               onClick={handleSave}

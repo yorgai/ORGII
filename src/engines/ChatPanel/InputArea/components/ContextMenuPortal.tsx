@@ -76,7 +76,7 @@ const VisibleContextMenuPortal: React.FC<
   keyboardOpened,
   repoPath,
   keyboardHandlerRef,
-  treePosition = "left",
+  treePosition = "right",
   placement = "prefer-up",
   anchorSelector,
 }) => {

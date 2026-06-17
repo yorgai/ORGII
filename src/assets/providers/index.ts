@@ -61,7 +61,6 @@ export const AGENT_TYPE_LIST: CliAgentType[] = [
 
 /** API key provider types in alphabetical order by label */
 export const API_KEY_PROVIDER_LIST: ApiProviderType[] = [
-  "aihubmix_api", // AiHubMix
   "anthropic_api", // Anthropic
   "azure_anthropic_api", // Azure Anthropic
   "azure_openai_api", // Azure OpenAI
@@ -76,6 +75,7 @@ export const API_KEY_PROVIDER_LIST: ApiProviderType[] = [
   "dashscope_api", // Qwen
   "orgii_orchestrator", // ORGII (Token Market)
   "vllm_api", // vLLM / Local
+  "zenmux_api", // ZenMux
   "zhipu_api", // Zhipu AI
 ];
 

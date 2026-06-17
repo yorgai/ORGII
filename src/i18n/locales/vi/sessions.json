@@ -710,6 +710,13 @@
       },
       "agents": {
         "title": "Agents"
+      },
+      "tabs": {
+        "work": "Làm việc",
+        "explore": "Khám phá"
+      },
+      "exploreRepos": {
+        "title": "Khám phá Repos"
       }
     },
     "defaultTitle": "Chat",

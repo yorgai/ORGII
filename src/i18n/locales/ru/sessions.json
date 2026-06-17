@@ -712,6 +712,13 @@
       },
       "agents": {
         "title": "Agents"
+      },
+      "tabs": {
+        "work": "Работа",
+        "explore": "Обзор"
+      },
+      "exploreRepos": {
+        "title": "Обзор Repos"
       }
     },
     "defaultTitle": "Чат",

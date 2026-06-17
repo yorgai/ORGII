@@ -225,7 +225,7 @@ export const SearchResultsPanel: React.FC<SearchResultsPanelProps> = memo(
     onHover,
     onHoverEnd,
     repoPath,
-    treePosition = "left",
+    treePosition = "right",
   }) => {
     const activeItem = results[activeIndex];
     const showTreePanel = results.length > 0 && activeItem;
@@ -317,7 +317,7 @@ export const SecondLayerPanel: React.FC<SecondLayerPanelProps> = memo(
     onHoverEnd,
     onBack,
     repoPath,
-    treePosition = "left",
+    treePosition = "right",
     titleOverride,
     recentFiles = [],
   }) => {

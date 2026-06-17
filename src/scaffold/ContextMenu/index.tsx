@@ -36,7 +36,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   repoPath,
   className = "",
   keyboardHandlerRef,
-  treePosition = "left",
+  treePosition = "right",
   keyboardOpened = false,
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);

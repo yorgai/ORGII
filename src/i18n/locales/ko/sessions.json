@@ -710,6 +710,13 @@
       },
       "agents": {
         "title": "Agents"
+      },
+      "tabs": {
+        "work": "작업",
+        "explore": "탐색"
+      },
+      "exploreRepos": {
+        "title": "Repos 탐색"
       }
     },
     "defaultTitle": "채팅",

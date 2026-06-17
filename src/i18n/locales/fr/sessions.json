@@ -710,6 +710,13 @@
       },
       "agents": {
         "title": "Agents"
+      },
+      "tabs": {
+        "work": "Travail",
+        "explore": "Explorer"
+      },
+      "exploreRepos": {
+        "title": "Explorer les Repos"
       }
     },
     "defaultTitle": "Chat",

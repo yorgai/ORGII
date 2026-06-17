@@ -710,6 +710,13 @@
       },
       "agents": {
         "title": "Agents"
+      },
+      "tabs": {
+        "work": "作業",
+        "explore": "探索"
+      },
+      "exploreRepos": {
+        "title": "Repo を探索"
       }
     },
     "defaultTitle": "チャット",

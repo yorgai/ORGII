@@ -710,6 +710,13 @@
       },
       "agents": {
         "title": "Agents"
+      },
+      "tabs": {
+        "work": "Çalışma",
+        "explore": "Keşfet"
+      },
+      "exploreRepos": {
+        "title": "Repos keşfet"
       }
     },
     "defaultTitle": "Sohbet",

@@ -19,7 +19,7 @@
 pub mod provider_id {
     // Aggregators
     pub const OPENROUTER: &str = "openrouter";
-    pub const AIHUBMIX: &str = "aihubmix";
+    pub const ZENMUX: &str = "zenmux";
 
     // Standard providers
     pub const ANTHROPIC: &str = "anthropic";
@@ -72,14 +72,14 @@ pub static PROVIDERS: &[ProviderSpec] = &[
         env_key: Some("OPENROUTER_API_KEY"),
     },
     ProviderSpec {
-        name: provider_id::AIHUBMIX,
-        display_name: "AiHubMix",
+        name: provider_id::ZENMUX,
+        display_name: "ZenMux",
         keywords: &[],
         litellm_prefix: None,
-        skip_prefixes: &[],
-        default_api_base: Some("https://aihubmix.com/v1"),
+        skip_prefixes: &["zenmux/"],
+        default_api_base: Some("https://zenmux.ai/api/v1"),
         is_local: false,
-        env_key: Some("AIHUBMIX_API_KEY"),
+        env_key: Some("ZENMUX_API_KEY"),
     },
     // ===== Standard Providers =====
     ProviderSpec {

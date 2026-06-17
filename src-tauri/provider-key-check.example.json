@@ -72,10 +72,6 @@
       "api_key_env": "OPENROUTER_API_KEY"
     },
     {
-      "agent_type": "aihubmix_api",
-      "api_key_env": "AIHUBMIX_API_KEY"
-    },
-    {
       "agent_type": "vllm_api",
       "api_key_env": "VLLM_API_KEY",
       "base_url_env": "VLLM_BASE_URL"

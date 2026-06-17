@@ -823,6 +823,16 @@ pub fn kiro_cli_profile_dir(account_id: &str) -> PathBuf {
     kiro_cli_profile_root().join(sanitize_path_segment(account_id))
 }
 
+/// Account-scoped OpenCode CLI profile root: `~/.orgii/opencode-cli-profiles/`.
+pub fn opencode_cli_profile_root() -> PathBuf {
+    orgii_root().join("opencode-cli-profiles")
+}
+
+/// Account-scoped OpenCode CLI HOME dir.
+pub fn opencode_cli_profile_dir(account_id: &str) -> PathBuf {
+    opencode_cli_profile_root().join(sanitize_path_segment(account_id))
+}
+
 /// Agent worktrees root: `~/.orgii/agent-worktrees/`.
 ///
 /// Each session worktree lives under

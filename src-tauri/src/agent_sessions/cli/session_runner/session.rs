@@ -14,7 +14,7 @@ use tokio::sync::Mutex;
 use crate::agent_sessions::cli::parsers::copilot;
 use crate::agent_sessions::cli::parsers::kiro;
 use crate::api::websocket_handler;
-use key_vault::key_store::{KeyService, ModelType, KEY_SERVICE};
+use key_vault::key_store::{KeyService, ModelKey, ModelType, KEY_SERVICE};
 
 use super::super::persistence;
 use super::super::types::{proxy_env, KeySource, SessionStatus};
@@ -41,6 +41,29 @@ use super::token_sync::{sync_codex_cli_auth_to_key_vault, sync_gemini_cli_auth_t
 const SPAWN_RETRY_ATTEMPTS: usize = 3;
 const SPAWN_RETRY_BASE_DELAY_MS: u64 = 250;
 const CLI_PLAN_GATE_NATURAL_EXIT_GRACE_SECS: u64 = 45;
+const OPENCODE_ZENMUX_PROVIDER_ID: &str = "zenmux";
+const OPENCODE_ZENMUX_BASE_URL: &str = "https://zenmux.ai/api/v1";
+const OPENCODE_DEFAULT_ZENMUX_MODEL: &str = "deepseek/deepseek-chat";
+const OPENCODE_ZENMUX_MODEL_IDS: &[&str] = &[
+    "inclusionai/ling-1t",
+    "inclusionai/ring-1t",
+    "anthropic/claude-haiku-4.5",
+    "anthropic/claude-opus-4.1",
+    "anthropic/claude-sonnet-4.5",
+    "deepseek/deepseek-chat",
+    "google/gemini-2.5-pro",
+    "kat-ai/kat-coder-pro-v1",
+    "moonshotai/kimi-k2-0905",
+    "openai/gpt-5-codex",
+    "openai/gpt-5",
+    "qwen/qwen3-coder-plus",
+    "x-ai/grok-4-fast-non-reasoning",
+    "x-ai/grok-4-fast",
+    "x-ai/grok-4",
+    "x-ai/grok-code-fast-1",
+    "z-ai/glm-4.5-air",
+    "z-ai/glm-4.6",
+];
 
 fn cli_exec_mode_bridge(mode: Option<&str>) -> Option<&'static str> {
     let mode = mode.and_then(AgentExecMode::parse)?;
@@ -95,6 +118,81 @@ fn transient_spawn_os_error(err: &io::Error) -> bool {
 #[cfg(not(unix))]
 fn transient_spawn_os_error(_err: &io::Error) -> bool {
     false
+}
+
+fn opencode_zenmux_model_id(session_model: Option<&str>, selected_key: &ModelKey) -> String {
+    session_model
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| selected_key.enabled_models.first().map(String::as_str))
+        .or_else(|| selected_key.available_models.first().map(String::as_str))
+        .unwrap_or(OPENCODE_DEFAULT_ZENMUX_MODEL)
+        .to_string()
+}
+
+fn opencode_zenmux_config_payload(model_id: &str) -> serde_json::Value {
+    let mut models = serde_json::Map::new();
+    for model in OPENCODE_ZENMUX_MODEL_IDS {
+        models.insert((*model).to_string(), serde_json::json!({}));
+    }
+    models.insert(model_id.to_string(), serde_json::json!({}));
+
+    serde_json::json!({
+        "$schema": "https://opencode.ai/config.json",
+        "provider": {
+            OPENCODE_ZENMUX_PROVIDER_ID: {
+                "npm": "@ai-sdk/openai-compatible",
+                "name": "ZenMux",
+                "options": {
+                    "baseURL": OPENCODE_ZENMUX_BASE_URL,
+                    "apiKey": "{env:ZENMUX_API_KEY}"
+                },
+                "models": models
+            }
+        },
+        "model": format!("{}/{}", OPENCODE_ZENMUX_PROVIDER_ID, model_id),
+        "small_model": format!("{}/{}", OPENCODE_ZENMUX_PROVIDER_ID, model_id)
+    })
+}
+
+fn opencode_auth_payload(api_key: &str) -> serde_json::Value {
+    serde_json::json!({
+        OPENCODE_ZENMUX_PROVIDER_ID: {
+            "type": "api",
+            "key": api_key
+        }
+    })
+}
+
+fn setup_opencode_zenmux_profile(
+    profile_home: &Path,
+    selected_key: &ModelKey,
+    session_model: Option<&str>,
+) -> Result<(), String> {
+    let api_key = selected_key
+        .api_key
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| "OpenCode ZenMux session requires a ZenMux API key".to_string())?;
+    let model_id = opencode_zenmux_model_id(session_model, selected_key);
+    let config_dir = profile_home.join(".config").join("opencode");
+    let data_dir = profile_home.join(".local").join("share").join("opencode");
+
+    std::fs::create_dir_all(&config_dir)
+        .map_err(|err| format!("Failed to create OpenCode config dir: {}", err))?;
+    std::fs::create_dir_all(&data_dir)
+        .map_err(|err| format!("Failed to create OpenCode data dir: {}", err))?;
+
+    let config_bytes = serde_json::to_vec_pretty(&opencode_zenmux_config_payload(&model_id))
+        .map_err(|err| err.to_string())?;
+    std::fs::write(config_dir.join("opencode.json"), config_bytes)
+        .map_err(|err| format!("Failed to write OpenCode config: {}", err))?;
+
+    let auth_bytes = serde_json::to_vec_pretty(&opencode_auth_payload(api_key))
+        .map_err(|err| err.to_string())?;
+    std::fs::write(data_dir.join("auth.json"), auth_bytes)
+        .map_err(|err| format!("Failed to write OpenCode auth: {}", err))?;
+
+    Ok(())
 }
 
 /// Run a code session: spawn CLI, parse stdout, broadcast events.
@@ -509,6 +607,39 @@ pub async fn run_session(
         env_vars.insert("GEMINI_CLI_HOME".to_string(), home_path);
     }
 
+    if matches!(agent, ModelType::OpenCode)
+        && session.key_source == KeySource::OwnKey
+        && selected_key
+            .as_ref()
+            .is_some_and(|key| key.model_type == ModelType::ZenmuxApi)
+    {
+        let Some(account_id) = account_id else {
+            return Err("OpenCode ZenMux own-key session requires account_id".to_string());
+        };
+        let selected_key = selected_key
+            .as_ref()
+            .ok_or_else(|| "OpenCode ZenMux session requires a selected ZenMux key".to_string())?;
+        let opencode_home = app_paths::opencode_cli_profile_dir(account_id);
+        setup_opencode_zenmux_profile(&opencode_home, selected_key, session.model.as_deref())
+            .map_err(|err| format!("Failed to setup OpenCode ZenMux profile: {}", err))?;
+
+        let home_path = opencode_home.to_string_lossy().to_string();
+        let config_home = opencode_home.join(".config").to_string_lossy().to_string();
+        let data_home = opencode_home
+            .join(".local")
+            .join("share")
+            .to_string_lossy()
+            .to_string();
+
+        tracing::info!("[CodeSession] OpenCode ZenMux HOME={}", home_path);
+        env_vars.insert("HOME".to_string(), home_path);
+        env_vars.insert("XDG_CONFIG_HOME".to_string(), config_home);
+        env_vars.insert("XDG_DATA_HOME".to_string(), data_home);
+        if let Some(api_key) = selected_key.api_key.as_deref() {
+            env_vars.insert("ZENMUX_API_KEY".to_string(), api_key.to_string());
+        }
+    }
+
     if matches!(agent, ModelType::Kiro) {
         let kiro_home = if session.key_source == KeySource::HostedKey {
             let proxy_token_val = session.proxy_token.as_deref().unwrap_or("");
@@ -680,8 +811,7 @@ pub async fn run_session(
             // Windows: don't flash a console window for `codex login`.
             #[cfg(windows)]
             login_cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
-            match login_cmd.spawn()
-            {
+            match login_cmd.spawn() {
                 Ok(mut login_child) => {
                     if let Some(mut stdin) = login_child.stdin.take() {
                         use tokio::io::AsyncWriteExt;
@@ -1740,6 +1870,63 @@ mod tests {
     fn read_json(path: &Path) -> Value {
         let text = std::fs::read_to_string(path).expect("read json file");
         serde_json::from_str(&text).expect("parse json file")
+    }
+
+    #[test]
+    fn opencode_zenmux_model_id_prefers_session_model() {
+        let mut key = ModelKey::new(ModelType::ZenmuxApi);
+        key.enabled_models = vec!["anthropic/claude-sonnet-4.5".to_string()];
+        key.available_models = vec!["deepseek/deepseek-chat".to_string()];
+
+        assert_eq!(
+            opencode_zenmux_model_id(Some("qwen/qwen3-coder-plus"), &key),
+            "qwen/qwen3-coder-plus"
+        );
+    }
+
+    #[test]
+    fn opencode_zenmux_model_id_falls_back_to_enabled_models() {
+        let mut key = ModelKey::new(ModelType::ZenmuxApi);
+        key.enabled_models = vec!["anthropic/claude-sonnet-4.5".to_string()];
+        key.available_models = vec!["deepseek/deepseek-chat".to_string()];
+
+        assert_eq!(
+            opencode_zenmux_model_id(None, &key),
+            "anthropic/claude-sonnet-4.5"
+        );
+    }
+
+    #[test]
+    fn setup_opencode_zenmux_profile_writes_config_and_auth() {
+        let temp_dir = tempfile::tempdir().expect("temp opencode profile");
+        let mut key = ModelKey::new(ModelType::ZenmuxApi);
+        key.api_key = Some("sk-ai-v1-test".to_string());
+        key.enabled_models = vec!["anthropic/claude-sonnet-4.5".to_string()];
+
+        setup_opencode_zenmux_profile(temp_dir.path(), &key, None).expect("setup profile");
+
+        let config = read_json(&temp_dir.path().join(".config/opencode/opencode.json"));
+        assert_eq!(
+            config["provider"]["zenmux"]["npm"].as_str(),
+            Some("@ai-sdk/openai-compatible")
+        );
+        assert_eq!(
+            config["provider"]["zenmux"]["options"]["baseURL"].as_str(),
+            Some("https://zenmux.ai/api/v1")
+        );
+        assert_eq!(
+            config["provider"]["zenmux"]["options"]["apiKey"].as_str(),
+            Some("{env:ZENMUX_API_KEY}")
+        );
+        assert_eq!(
+            config["model"].as_str(),
+            Some("zenmux/anthropic/claude-sonnet-4.5")
+        );
+        assert!(config["provider"]["zenmux"]["models"]["openai/gpt-5-codex"].is_object());
+
+        let auth = read_json(&temp_dir.path().join(".local/share/opencode/auth.json"));
+        assert_eq!(auth["zenmux"]["type"].as_str(), Some("api"));
+        assert_eq!(auth["zenmux"]["key"].as_str(), Some("sk-ai-v1-test"));
     }
 
     #[test]

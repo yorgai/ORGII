@@ -715,6 +715,13 @@
       },
       "agents": {
         "title": "Agents"
+      },
+      "tabs": {
+        "work": "工作",
+        "explore": "探索"
+      },
+      "exploreRepos": {
+        "title": "探索 Repos"
       }
     },
     "defaultTitle": "Session",

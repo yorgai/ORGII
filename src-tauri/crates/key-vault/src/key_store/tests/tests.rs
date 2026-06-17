@@ -1079,6 +1079,60 @@ fn test_cross_type_env_moonshot_as_claude_code() {
 }
 
 #[test]
+fn test_cross_type_env_zenmux_as_claude_code_uses_anthropic_endpoint() {
+    let temp_dir = tempdir().unwrap();
+    let service = KeyService::new(Some(temp_dir.path().to_path_buf()));
+
+    let mut zenmux_key = ModelKey::new(ModelType::ZenmuxApi);
+    zenmux_key.api_key = Some("sk-zenmux-test123".to_string());
+    zenmux_key.enabled_models = vec!["claude-sonnet-4-20250514".to_string()];
+    let key_id = zenmux_key.id.clone();
+    service.save_key(zenmux_key).unwrap();
+
+    let env = service.get_env_for_agent(&ModelType::ClaudeCode, Some(&key_id));
+    assert_eq!(
+        env.get("ANTHROPIC_API_KEY").map(|value| value.as_str()),
+        Some("sk-zenmux-test123"),
+    );
+    assert_eq!(
+        env.get("ANTHROPIC_BASE_URL").map(|value| value.as_str()),
+        Some("https://zenmux.ai/api/anthropic"),
+    );
+    assert_eq!(
+        env.get("ANTHROPIC_MODEL").map(|value| value.as_str()),
+        Some("claude-sonnet-4-20250514"),
+    );
+    assert_eq!(
+        env.get("CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS")
+            .map(|value| value.as_str()),
+        Some("1"),
+    );
+    assert!(!env.contains_key("ZENMUX_API_KEY"));
+}
+
+#[test]
+fn test_cross_type_env_zenmux_as_codex_uses_openai_endpoint() {
+    let temp_dir = tempdir().unwrap();
+    let service = KeyService::new(Some(temp_dir.path().to_path_buf()));
+
+    let mut zenmux_key = ModelKey::new(ModelType::ZenmuxApi);
+    zenmux_key.api_key = Some("sk-zenmux-test123".to_string());
+    let key_id = zenmux_key.id.clone();
+    service.save_key(zenmux_key).unwrap();
+
+    let env = service.get_env_for_agent(&ModelType::Codex, Some(&key_id));
+    assert_eq!(
+        env.get("OPENAI_API_KEY").map(|value| value.as_str()),
+        Some("sk-zenmux-test123"),
+    );
+    assert_eq!(
+        env.get("OPENAI_BASE_URL").map(|value| value.as_str()),
+        Some("https://zenmux.ai/api/v1"),
+    );
+    assert!(!env.contains_key("ZENMUX_API_KEY"));
+}
+
+#[test]
 fn test_cross_type_enabled_models_first_wins() {
     // Regression guard: when a key has both `available_models` (raw probe
     // result, possibly containing legacy names the proxy rejects) and

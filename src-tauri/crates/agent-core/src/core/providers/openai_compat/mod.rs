@@ -2,7 +2,7 @@
 //!
 //! Speaks the OpenAI chat completions API format, which is supported by
 //! most providers (OpenAI, Anthropic via proxy, DeepSeek, Groq, OpenRouter,
-//! AiHubMix, Moonshot, DashScope, Gemini, etc.).
+//! Moonshot, DashScope, Gemini, etc.).
 //!
 //! Reads API keys from `~/.orgii/credentials.json`
 //! via the validation module's `KeyService`.

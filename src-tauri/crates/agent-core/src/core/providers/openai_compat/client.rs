@@ -20,7 +20,7 @@ use crate::utils::build_http_client;
 /// An LLM client that speaks the OpenAI chat completions API format.
 ///
 /// Works with OpenAI, Anthropic (via OpenRouter/proxy), DeepSeek, Groq,
-/// OpenRouter, AiHubMix, Moonshot, DashScope, Gemini, and any
+/// OpenRouter, Moonshot, DashScope, Gemini, and any
 /// OpenAI-compatible server.
 pub struct OpenAICompatClient {
     /// HTTP client (reused for connection pooling).

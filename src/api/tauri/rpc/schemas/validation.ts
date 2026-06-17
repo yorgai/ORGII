@@ -46,7 +46,7 @@ export const ApiProviderTypeSchema = z.union([
   z.literal("dashscope_api"),
   z.literal("moonshot_api"),
   z.literal("openrouter_api"),
-  z.literal("aihubmix_api"),
+  z.literal("zenmux_api"),
   z.literal("minimax_api"),
   z.literal("vllm_api"),
   z.literal("azure_openai_api"),

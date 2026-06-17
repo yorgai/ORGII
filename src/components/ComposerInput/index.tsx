@@ -79,6 +79,18 @@ function findInlineAtMention(
   return { startOffset: atIndex + 1, query };
 }
 
+function findInlineSlashCommand(
+  text: string,
+  caretOffset: number
+): { startOffset: number; query: string } | null {
+  const beforeCaret = text.slice(0, caretOffset).replace(/\u200B/g, "");
+  const slashIndex = beforeCaret.lastIndexOf("/");
+  if (slashIndex < 0) return null;
+  const query = beforeCaret.slice(slashIndex + 1);
+  if (/\s/.test(query)) return null;
+  return { startOffset: slashIndex + 1, query };
+}
+
 const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
   function ComposerInput(props, ref) {
     const {
@@ -256,21 +268,36 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
           }
         }
 
-        if (slashCommandRef.current.active) {
+        {
           const range = rangeInsideHost(host);
           const caretOffset = caretTextOffset(host, range);
-          if (caretOffset < slashCommandRef.current.startOffset) {
-            slashCommandRef.current = { active: false, startOffset: 0 };
-            onSlashCommandCloseRef.current?.();
-          } else {
-            const query = text
-              .slice(slashCommandRef.current.startOffset, caretOffset)
-              .replace(/\u200B/g, "");
-            if (/\s/.test(query)) {
+          if (!slashCommandRef.current.active && !atMentionRef.current.active) {
+            const inlineSlashCommand = findInlineSlashCommand(
+              text,
+              caretOffset
+            );
+            if (inlineSlashCommand) {
+              slashCommandRef.current = {
+                active: true,
+                startOffset: inlineSlashCommand.startOffset,
+                hasTriggerChar: true,
+              };
+            }
+          }
+          if (slashCommandRef.current.active) {
+            if (caretOffset < slashCommandRef.current.startOffset) {
               slashCommandRef.current = { active: false, startOffset: 0 };
               onSlashCommandCloseRef.current?.();
             } else {
-              onSlashCommandRef.current?.(query);
+              const query = text
+                .slice(slashCommandRef.current.startOffset, caretOffset)
+                .replace(/\u200B/g, "");
+              if (/\s/.test(query)) {
+                slashCommandRef.current = { active: false, startOffset: 0 };
+                onSlashCommandCloseRef.current?.();
+              } else {
+                onSlashCommandRef.current?.(query);
+              }
             }
           }
         }

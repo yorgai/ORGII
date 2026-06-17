@@ -168,7 +168,7 @@ impl AutoEmbeddingProvider {
             ModelType::AzureOpenaiApi,
             ModelType::OpenaiApi,
             ModelType::OpenrouterApi,
-            ModelType::AihubmixApi,
+            ModelType::ZenmuxApi,
             ModelType::DeepseekApi,
         ];
 

@@ -59,7 +59,7 @@ export interface ContextMenuProps {
   className?: string;
   /** Ref to expose keyboard handler to parent */
   keyboardHandlerRef?: MutableRefObject<((e: KeyboardEvent) => boolean) | null>;
-  /** Position of file tree preview panel: "left" or "right" (default: "left") */
+  /** Position of file tree preview panel: "left" or "right" (default: "right") */
   treePosition?: "left" | "right";
   /** Highlight the first selectable item immediately when opened from keyboard typing. */
   keyboardOpened?: boolean;

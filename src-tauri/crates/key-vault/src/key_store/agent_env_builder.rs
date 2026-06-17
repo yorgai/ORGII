@@ -4,6 +4,9 @@ use super::service::KeyService;
 use super::types::{AuthMethod, ModelType};
 use core_types::providers::KIMI_CODE_URL_FRAGMENT;
 
+const ZENMUX_OPENAI_BASE_URL: &str = "https://zenmux.ai/api/v1";
+const ZENMUX_ANTHROPIC_BASE_URL: &str = "https://zenmux.ai/api/anthropic";
+
 impl KeyService {
     /// Get environment variables for running an agent
     pub fn get_env_for_agent(
@@ -78,6 +81,11 @@ impl KeyService {
                 }
                 if let Some(ref url) = entry.base_url {
                     env.insert("ANTHROPIC_BASE_URL".to_string(), url.clone());
+                } else if entry.model_type == ModelType::ZenmuxApi {
+                    env.insert(
+                        "ANTHROPIC_BASE_URL".to_string(),
+                        ZENMUX_ANTHROPIC_BASE_URL.to_string(),
+                    );
                 }
                 // When using a compatible provider key (e.g. moonshot_api), Claude Code's
                 // model validation rejects provider-specific model names like "kimi-for-coding".
@@ -154,6 +162,11 @@ impl KeyService {
                 }
                 if let Some(ref url) = entry.base_url {
                     env.insert("OPENAI_BASE_URL".to_string(), url.clone());
+                } else if entry.model_type == ModelType::ZenmuxApi {
+                    env.insert(
+                        "OPENAI_BASE_URL".to_string(),
+                        ZENMUX_OPENAI_BASE_URL.to_string(),
+                    );
                 }
             }
             ModelType::GeminiCli => {
@@ -302,7 +315,7 @@ impl KeyService {
             | ModelType::MoonshotApi
             | ModelType::MinimaxApi
             | ModelType::OpenrouterApi
-            | ModelType::AihubmixApi
+            | ModelType::ZenmuxApi
             | ModelType::VllmApi
             | ModelType::AzureOpenaiApi
             | ModelType::AzureAnthropicApi
@@ -327,7 +340,7 @@ impl KeyService {
                     ModelType::MoonshotApi => "MOONSHOT_API_KEY",
                     ModelType::MinimaxApi => "MINIMAX_API_KEY",
                     ModelType::OpenrouterApi => "OPENROUTER_API_KEY",
-                    ModelType::AihubmixApi => "AIHUBMIX_API_KEY",
+                    ModelType::ZenmuxApi => "ZENMUX_API_KEY",
                     ModelType::VllmApi => "VLLM_API_KEY",
                     ModelType::AzureOpenaiApi => "AZURE_OPENAI_API_KEY",
                     ModelType::AzureAnthropicApi => "AZURE_ANTHROPIC_API_KEY",
@@ -436,7 +449,7 @@ impl KeyService {
             | ModelType::MoonshotApi
             | ModelType::MinimaxApi
             | ModelType::OpenrouterApi
-            | ModelType::AihubmixApi
+            | ModelType::ZenmuxApi
             | ModelType::VllmApi
             | ModelType::AzureOpenaiApi
             | ModelType::AzureAnthropicApi
@@ -460,7 +473,7 @@ impl KeyService {
                     ModelType::MoonshotApi => "MOONSHOT_API_KEY",
                     ModelType::MinimaxApi => "MINIMAX_API_KEY",
                     ModelType::OpenrouterApi => "OPENROUTER_API_KEY",
-                    ModelType::AihubmixApi => "AIHUBMIX_API_KEY",
+                    ModelType::ZenmuxApi => "ZENMUX_API_KEY",
                     ModelType::VllmApi => "VLLM_API_KEY",
                     ModelType::AzureOpenaiApi => "AZURE_OPENAI_API_KEY",
                     ModelType::AzureAnthropicApi => "AZURE_ANTHROPIC_API_KEY",
