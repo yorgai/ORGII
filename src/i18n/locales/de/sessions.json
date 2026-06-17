@@ -693,6 +693,22 @@
     "multipleChoice": "Mehrfachauswahl",
     "typeYourAnswer": "Geben Sie Ihre Antwort ein…",
     "newSession": "Neue Sitzung",
+    "startPage": {
+      "title": "Was möchtest du tun?",
+      "back": "Zurück zur Startseite",
+      "newSession": {
+        "title": "Neue Sitzung",
+        "description": "Starte einen neuen Agent-Chat für Coding-Aufgaben"
+      },
+      "newWorkItem": {
+        "title": "Neues work item",
+        "description": "Erfasse eine Aufgabe und starte optional einen Agent dafür"
+      },
+      "setupRepo": {
+        "title": "Repo einrichten",
+        "description": "Wähle ein Repo und lasse einen Agent Setup-Schritte, Tools und App-Start prüfen"
+      }
+    },
     "defaultTitle": "Chat",
     "hideChatPanel": "Chat-Panel ausblenden",
     "compactDisplayMode": "Kompakter Modus",

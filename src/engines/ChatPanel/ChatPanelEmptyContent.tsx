@@ -21,6 +21,7 @@ import {
 } from "@src/store/workstation/projectManager";
 import { STORY_PERSONAL_ORG_FILTER_ID } from "@src/store/workstation/tabs";
 
+import { ChatPanelStartPage } from "./ChatPanelStartPage";
 import { BenchmarkRunBuilder } from "./panels/BenchmarkRunBuilder";
 import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
 
@@ -56,6 +57,7 @@ interface ChatPanelEmptyContentProps {
   createProjectContext: ChatPanelCreateProjectContext | null;
   createTarget: ChatPanelCreateTarget;
   creatorClassName: string;
+  showStartPage: boolean;
   creatorVariant: "default" | "fullScreen";
   defaultAiWorkItemAssignee: DefaultAiWorkItemAssignee | null;
   handleAiWorkItemSessionStart: NonNullable<
@@ -67,6 +69,9 @@ interface ChatPanelEmptyContentProps {
   handleChatPanelCollabOrgCreated: (result: CreatedOrgResult) => void;
   handleChatPanelWorkItemCreated: (result?: CreatedWorkItemResult) => void;
   handleRegionNoticeChange: (notice: ChatPanelRegionNotice | null) => void;
+  handleStartPageNewSession: () => void;
+  handleStartPageNewWorkItem: () => void;
+  handleStartPageSetupRepo: () => void;
   handleWorkItemAgentCreatorToggle: (enabled: boolean) => void;
   resolveAiWorkItemContext: NonNullable<
     React.ComponentProps<SessionCreatorSlot>["resolveWorkItemContext"]
@@ -84,6 +89,7 @@ export function ChatPanelEmptyContent({
   createProjectContext,
   createTarget,
   creatorClassName,
+  showStartPage,
   creatorVariant,
   defaultAiWorkItemAssignee,
   handleAiWorkItemSessionStart,
@@ -93,6 +99,9 @@ export function ChatPanelEmptyContent({
   handleChatPanelCollabOrgCreated,
   handleChatPanelWorkItemCreated,
   handleRegionNoticeChange,
+  handleStartPageNewSession,
+  handleStartPageNewWorkItem,
+  handleStartPageSetupRepo,
   handleWorkItemAgentCreatorToggle,
   resolveAiWorkItemContext,
   SessionCreatorSlot,
@@ -101,6 +110,17 @@ export function ChatPanelEmptyContent({
   showWorkItemAgentCreator,
   t,
 }: ChatPanelEmptyContentProps): React.ReactNode {
+  if (showStartPage) {
+    return (
+      <ChatPanelStartPage
+        onNewSession={handleStartPageNewSession}
+        onNewWorkItem={handleStartPageNewWorkItem}
+        onSetupRepo={handleStartPageSetupRepo}
+        t={t}
+      />
+    );
+  }
+
   if (createTarget === CHAT_PANEL_CREATE_TARGET.PROJECT) {
     const sessionCreatorContent =
       showProjectAgentCreator && SessionCreatorSlot ? (

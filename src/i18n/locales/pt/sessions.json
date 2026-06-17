@@ -699,6 +699,22 @@
     "multipleChoice": "Múltipla escolha",
     "typeYourAnswer": "Digite sua resposta…",
     "newSession": "Nova sessão",
+    "startPage": {
+      "title": "O que você quer fazer?",
+      "back": "Voltar à página inicial",
+      "newSession": {
+        "title": "Nova sessão",
+        "description": "Inicie um novo chat Agent para tarefas de código"
+      },
+      "newWorkItem": {
+        "title": "Novo work item",
+        "description": "Registre uma tarefa e, se quiser, inicie um Agent para trabalhar nela"
+      },
+      "setupRepo": {
+        "title": "Configurar Repo",
+        "description": "Escolha um Repo e deixe um Agent inspecionar configuração, ferramentas e inicialização do app"
+      }
+    },
     "defaultTitle": "Chat",
     "hideChatPanel": "Ocultar painel de chat",
     "compactDisplayMode": "Modo compacto",

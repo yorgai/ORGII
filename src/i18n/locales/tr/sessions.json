@@ -693,6 +693,22 @@
     "multipleChoice": "Çoklu seçim",
     "typeYourAnswer": "Cevabınızı yazın…",
     "newSession": "Yeni oturum",
+    "startPage": {
+      "title": "Ne yapmak istersiniz?",
+      "back": "Başlangıç sayfasına dön",
+      "newSession": {
+        "title": "Yeni oturum",
+        "description": "Kodlama görevleri için yeni bir Agent sohbeti başlatın"
+      },
+      "newWorkItem": {
+        "title": "Yeni work item",
+        "description": "Bir görevi kaydedin ve isterseniz üzerinde çalışması için Agent başlatın"
+      },
+      "setupRepo": {
+        "title": "Repo kur",
+        "description": "Bir Repo seçin ve Agent kurulum adımlarını, araçları ve app başlatmayı incelesin"
+      }
+    },
     "defaultTitle": "Sohbet",
     "hideChatPanel": "Sohbet panelini gizle",
     "compactDisplayMode": "Kompakt mod",

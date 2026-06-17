@@ -693,6 +693,22 @@
     "multipleChoice": "Selección múltiple",
     "typeYourAnswer": "Escriba su respuesta…",
     "newSession": "Nueva sesión",
+    "startPage": {
+      "title": "¿Qué quieres hacer?",
+      "back": "Volver a la página inicial",
+      "newSession": {
+        "title": "Nueva sesión",
+        "description": "Inicia un nuevo chat Agent para tareas de código"
+      },
+      "newWorkItem": {
+        "title": "Nuevo work item",
+        "description": "Registra una tarea y, si quieres, inicia un Agent para trabajar en ella"
+      },
+      "setupRepo": {
+        "title": "Configurar Repo",
+        "description": "Elige un Repo y deja que un Agent inspeccione configuración, herramientas e inicio de la app"
+      }
+    },
     "defaultTitle": "Chat",
     "hideChatPanel": "Ocultar panel de chat",
     "compactDisplayMode": "Modo compacto",

@@ -695,6 +695,22 @@
     "multipleChoice": "Несколько вариантов",
     "typeYourAnswer": "Введите ваш ответ…",
     "newSession": "Новая сессия",
+    "startPage": {
+      "title": "Что вы хотите сделать?",
+      "back": "Назад к стартовой странице",
+      "newSession": {
+        "title": "Новая сессия",
+        "description": "Запустите новый Agent-чат для задач по коду"
+      },
+      "newWorkItem": {
+        "title": "Новый work item",
+        "description": "Зафиксируйте задачу и при необходимости запустите Agent для работы над ней"
+      },
+      "setupRepo": {
+        "title": "Настроить Repo",
+        "description": "Выберите Repo и позвольте Agent проверить настройку, инструменты и запуск приложения"
+      }
+    },
     "defaultTitle": "Чат",
     "hideChatPanel": "Скрыть панель чата",
     "compactDisplayMode": "Компактный режим",

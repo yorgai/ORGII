@@ -35,6 +35,7 @@ export interface KeyboardShortcutTooltipContentProps {
   label?: ReactNode;
   shortcut?: string;
   rows?: KeyboardShortcutTooltipRow[];
+  noShortcut?: boolean;
   className?: string;
 }
 
@@ -292,9 +293,9 @@ KeyboardShortcut.displayName = "KeyboardShortcut";
 
 export const KeyboardShortcutTooltipContent =
   memo<KeyboardShortcutTooltipContentProps>(
-    ({ label, shortcut, rows, className = "" }) => {
+    ({ label, shortcut, rows, noShortcut = false, className = "" }) => {
       const resolvedRows =
-        rows ?? (label && shortcut ? [{ label, shortcut }] : []);
+        rows ?? (label && shortcut && !noShortcut ? [{ label, shortcut }] : []);
 
       if (resolvedRows.length === 1) {
         const [row] = resolvedRows;

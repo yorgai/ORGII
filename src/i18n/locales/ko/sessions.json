@@ -693,6 +693,22 @@
     "multipleChoice": "다중 선택",
     "typeYourAnswer": "답변을 입력하세요…",
     "newSession": "새 세션",
+    "startPage": {
+      "title": "무엇을 할까요?",
+      "back": "시작 페이지로 돌아가기",
+      "newSession": {
+        "title": "새 세션",
+        "description": "코딩 작업을 위한 새 Agent 채팅을 시작합니다"
+      },
+      "newWorkItem": {
+        "title": "새 work item",
+        "description": "작업을 기록하고 필요하면 Agent를 시작해 처리합니다"
+      },
+      "setupRepo": {
+        "title": "Repo 설정",
+        "description": "Repo를 선택하고 Agent가 설정 단계, 도구, 앱 실행을 확인하게 합니다"
+      }
+    },
     "defaultTitle": "채팅",
     "hideChatPanel": "채팅 패널 숨기기",
     "compactDisplayMode": "컴팩트 모드",

@@ -698,6 +698,22 @@
     "multipleChoice": "多选",
     "typeYourAnswer": "输入您的回答…",
     "newSession": "新建会话",
+    "startPage": {
+      "title": "你想做什么？",
+      "back": "返回起始页",
+      "newSession": {
+        "title": "新建会话",
+        "description": "为编码任务启动新的 Agent 聊天"
+      },
+      "newWorkItem": {
+        "title": "新建工作项",
+        "description": "记录任务，并可选择启动 Agent 处理它"
+      },
+      "setupRepo": {
+        "title": "设置 Repo",
+        "description": "选择 Repo，让 Agent 检查设置步骤、工具和应用启动"
+      }
+    },
     "defaultTitle": "Session",
     "hideChatPanel": "隐藏聊天面板",
     "compactDisplayMode": "紧凑模式",

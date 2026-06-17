@@ -693,6 +693,22 @@
     "multipleChoice": "Chọn nhiều",
     "typeYourAnswer": "Nhập câu trả lời của bạn…",
     "newSession": "Phiên mới",
+    "startPage": {
+      "title": "Bạn muốn làm gì?",
+      "back": "Quay lại trang bắt đầu",
+      "newSession": {
+        "title": "Phiên mới",
+        "description": "Bắt đầu một cuộc chat Agent mới cho tác vụ lập trình"
+      },
+      "newWorkItem": {
+        "title": "Work item mới",
+        "description": "Ghi lại tác vụ và tùy chọn khởi chạy Agent để xử lý"
+      },
+      "setupRepo": {
+        "title": "Thiết lập Repo",
+        "description": "Chọn Repo và để Agent kiểm tra các bước thiết lập, công cụ và khởi chạy app"
+      }
+    },
     "defaultTitle": "Chat",
     "hideChatPanel": "Ẩn bảng trò chuyện",
     "compactDisplayMode": "Chế độ gọn",

@@ -56,6 +56,7 @@ import {
   chatPanelSelectedProjectOrgAtom,
   chatPanelSelectedWorkItemAtom,
   chatPanelSelectedWorkspaceAtom,
+  chatPanelStartPageOpenAtom,
   chatPanelWorkspaceDashboardOpenAtom,
   chatTurnPaginationEnabledAtom,
   chatWidthAtom,
@@ -138,6 +139,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const [contentMode, setContentMode] = useAtom(chatPanelContentModeAtom);
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
+    const [startPageOpen, setStartPageOpen] = useAtom(
+      chatPanelStartPageOpenAtom
+    );
     const [workItemCreateDraft, setWorkItemCreateDraft] =
       useState<WorkItemDraft | null>(null);
     const [showWorkItemAgentCreator, setShowWorkItemAgentCreator] = useState(
@@ -292,6 +296,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     );
 
     const handleNewSession = useCallback(() => {
+      setStartPageOpen(false);
       navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.SESSION });
       dispatchClearSession();
       setWorkstationActiveSessionId(null);
@@ -300,6 +305,21 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       dispatchClearSession,
       navigateChatPanel,
       setActiveSessionId,
+      setStartPageOpen,
+      setWorkstationActiveSessionId,
+    ]);
+
+    const handleOpenStartPage = useCallback(() => {
+      navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.SESSION });
+      setStartPageOpen(true);
+      dispatchClearSession();
+      setWorkstationActiveSessionId(null);
+      setActiveSessionId(null);
+    }, [
+      dispatchClearSession,
+      navigateChatPanel,
+      setActiveSessionId,
+      setStartPageOpen,
       setWorkstationActiveSessionId,
     ]);
 
@@ -365,11 +385,40 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         sessionCreatorAvailable: Boolean(SessionCreatorSlot),
         setCreateTarget,
         setCreatorState,
+        setStartPageOpen,
         setShowProjectAgentCreator,
         setShowWorkItemAgentCreator,
         setWorkItemCreateDraft,
         t,
       });
+
+    const handleStartPageNewWorkItem = useCallback(() => {
+      setStartPageOpen(false);
+      navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM });
+      dispatchClearSession();
+      setWorkstationActiveSessionId(null);
+      setActiveSessionId(null);
+    }, [
+      dispatchClearSession,
+      navigateChatPanel,
+      setActiveSessionId,
+      setStartPageOpen,
+      setWorkstationActiveSessionId,
+    ]);
+
+    const handleStartPageSetupRepo = useCallback(() => {
+      setStartPageOpen(false);
+      navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.WORKSPACE_DASHBOARD });
+      dispatchClearSession();
+      setWorkstationActiveSessionId(null);
+      setActiveSessionId(null);
+    }, [
+      dispatchClearSession,
+      navigateChatPanel,
+      setActiveSessionId,
+      setStartPageOpen,
+      setWorkstationActiveSessionId,
+    ]);
 
     const shareSessionAvailable =
       activeSession?.category === DISPATCH_CATEGORY.CLI_AGENT ||
@@ -578,10 +627,14 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         handleChatPanelCollabOrgCreated={handleChatPanelCollabOrgCreated}
         handleChatPanelWorkItemCreated={handleChatPanelWorkItemCreated}
         handleRegionNoticeChange={handleRegionNoticeChange}
+        handleStartPageNewSession={handleNewSession}
+        handleStartPageNewWorkItem={handleStartPageNewWorkItem}
+        handleStartPageSetupRepo={handleStartPageSetupRepo}
         handleWorkItemAgentCreatorToggle={handleWorkItemAgentCreatorToggle}
         resolveAiWorkItemContext={resolveAiWorkItemContext}
         SessionCreatorSlot={SessionCreatorSlot}
         setWorkItemCreateDraft={setWorkItemCreateDraft}
+        showStartPage={startPageOpen}
         showProjectAgentCreator={showProjectAgentCreator}
         showWorkItemAgentCreator={showWorkItemAgentCreator}
         t={t}
@@ -629,6 +682,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           handleOpenSearch={handleOpenSearch}
           handleOpenShareSession={handleOpenShareSession}
           handleNewSession={handleNewSession}
+          handleOpenStartPage={handleOpenStartPage}
           handlePaginationToggle={handlePaginationToggle}
           handleProjectAgentCreatorToggle={handleProjectAgentCreatorToggle}
           handleProjectTitleChange={handleProjectTitleChange}
@@ -647,6 +701,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           isHeaderActionsPositioned={isHeaderActionsPositioned}
           isProjectTarget={contentState.isProjectTarget}
           paginationEnabled={paginationEnabled}
+          showStartPageBackButton={
+            !startPageOpen && !contentState.showSessionContent
+          }
           shareSessionAvailable={shareSessionAvailable}
           selectedProjectVisible={Boolean(selectedProject)}
           selectedWorkItemVisible={Boolean(selectedWorkItem)}
@@ -667,6 +724,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             contentState.showProjectAgentSwitchInHeader
           }
           showSessionContent={contentState.showSessionContent}
+          showStartPage={startPageOpen}
           showWorkItemAgentCreator={showWorkItemAgentCreator}
           showWorkItemAgentSwitchInHeader={
             contentState.showWorkItemAgentSwitchInHeader

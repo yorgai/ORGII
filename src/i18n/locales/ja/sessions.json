@@ -693,6 +693,22 @@
     "multipleChoice": "複数選択",
     "typeYourAnswer": "回答を入力…",
     "newSession": "新しいセッション",
+    "startPage": {
+      "title": "何をしますか？",
+      "back": "スタートページに戻る",
+      "newSession": {
+        "title": "新しいセッション",
+        "description": "コーディングタスク用の新しい Agent チャットを開始します"
+      },
+      "newWorkItem": {
+        "title": "新しい work item",
+        "description": "タスクを記録し、必要に応じて Agent を起動して作業します"
+      },
+      "setupRepo": {
+        "title": "Repo をセットアップ",
+        "description": "Repo を選び、Agent にセットアップ手順、ツール、アプリ起動を確認させます"
+      }
+    },
     "defaultTitle": "チャット",
     "hideChatPanel": "チャットパネルを非表示",
     "compactDisplayMode": "コンパクトモード",
