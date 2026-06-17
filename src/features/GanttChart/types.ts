@@ -3,6 +3,8 @@
  *
  * Shared types for the reusable GanttChart component.
  */
+import type React from "react";
+
 import type { CliAgentType } from "@src/api/types/keys";
 import type { Label } from "@src/types/core/shared";
 
@@ -62,6 +64,7 @@ export interface GanttTask {
   sessionId?: string;
   agentIconId?: string;
   cliAgentType?: CliAgentType;
+  sidebarMeta?: React.ReactNode;
   barLabel?: string;
   startClipped?: boolean;
   endClipped?: boolean;

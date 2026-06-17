@@ -131,6 +131,11 @@ const GanttSidebar: React.FC<GanttSidebarProps> = ({
                 <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-text-1">
                   {task.title}
                 </span>
+                {task.sidebarMeta && (
+                  <span className="ml-2 shrink-0 text-text-3">
+                    {task.sidebarMeta}
+                  </span>
+                )}
                 {showAssigneeLabel && task.assignee && (
                   <span className="ml-2 whitespace-nowrap rounded bg-fill-1 px-1.5 py-0.5 text-[10px] text-text-3">
                     {task.assignee}

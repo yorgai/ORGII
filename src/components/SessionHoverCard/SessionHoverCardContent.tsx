@@ -1,20 +1,28 @@
 import { useAtomValue } from "jotai";
 import {
   Clock,
+  Diff,
   Folder,
   GitBranch,
   GitCommitVertical,
   Grip,
   Timer,
 } from "lucide-react";
-import React, { memo, useMemo } from "react";
+import React, { memo, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  type CoreSessionSummary,
+  getOrgtrackSessionSummaries,
+} from "@src/api/tauri/lineage";
 import { isHostedKey } from "@src/api/tauri/session";
 import { CLI_AGENT, type CliAgentType } from "@src/api/types/keys";
 import { formatAgentType } from "@src/assets/providers";
 import ModelIcon from "@src/components/ModelIcon";
 import { resolveAgentIcon } from "@src/config/agentIcons";
+import TaskImpactLine from "@src/features/KanbanBoard/components/TaskImpactLine";
+import type { KanbanTask } from "@src/features/KanbanBoard/types";
+import { createLogger } from "@src/hooks/logger";
 import { useResolvedModelLabel } from "@src/hooks/models";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
 import { workspaceGitStatusMapAtom } from "@src/store/git/gitStatusAtom";
@@ -37,6 +45,8 @@ import {
   type SessionTurnOverview,
   useSessionTurnOverview,
 } from "./useSessionTurnOverview";
+
+const logger = createLogger("SessionHoverCard");
 
 interface AgentSessionInfo {
   icon: React.ReactNode;
@@ -98,6 +108,34 @@ export const SessionHoverCardContent: React.FC<SessionHoverCardContentProps> =
     const turnOverview: SessionTurnOverview | null =
       useSessionTurnOverview(sessionId);
     const repoPath = session?.repoPath;
+    const [orgtrackSummary, setOrgtrackSummary] =
+      useState<CoreSessionSummary | null>(null);
+
+    useEffect(() => {
+      let cancelled = false;
+
+      async function loadOrgtrackSummary(): Promise<void> {
+        const summaries = await getOrgtrackSessionSummaries({
+          workspacePath: session?.repoPath || session?.worktreePath,
+        });
+        if (cancelled) return;
+        setOrgtrackSummary(
+          summaries.find((summary) => summary.sessionId === sessionId) ?? null
+        );
+      }
+
+      loadOrgtrackSummary().catch((error: unknown) => {
+        logger.warn("failed to load orgtrack session summary", {
+          error,
+          sessionId,
+        });
+        if (!cancelled) setOrgtrackSummary(null);
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    }, [session?.repoPath, session?.worktreePath, sessionId]);
 
     const lastModel: LastModelSelection | null = useMemo(() => {
       if (!session) return creatorDefaultLastModel;
@@ -124,6 +162,63 @@ export const SessionHoverCardContent: React.FC<SessionHoverCardContentProps> =
       lastModel,
       []
     );
+
+    const impactTask = useMemo<KanbanTask | null>(() => {
+      if (!session) return null;
+      const sourceFilesChanged =
+        session.filesChanged && session.filesChanged > 0
+          ? session.filesChanged
+          : (session.touchedFiles?.length ?? 0);
+      const sourceLinesAdded = session.linesAdded ?? 0;
+      const sourceLinesRemoved = session.linesRemoved ?? 0;
+      const hasSummaryImpact = Boolean(
+        orgtrackSummary &&
+        (orgtrackSummary.filesChanged > 0 ||
+          orgtrackSummary.linesAdded > 0 ||
+          orgtrackSummary.linesRemoved > 0 ||
+          orgtrackSummary.relatedCommits > 0)
+      );
+      const filesChanged = hasSummaryImpact
+        ? (orgtrackSummary?.filesChanged ?? 0)
+        : sourceFilesChanged;
+      const linesAdded = hasSummaryImpact
+        ? (orgtrackSummary?.linesAdded ?? 0)
+        : sourceLinesAdded;
+      const linesRemoved = hasSummaryImpact
+        ? (orgtrackSummary?.linesRemoved ?? 0)
+        : sourceLinesRemoved;
+      const relatedCommits = hasSummaryImpact
+        ? (orgtrackSummary?.relatedCommits ?? 0)
+        : 0;
+      const committedRatePercent = hasSummaryImpact
+        ? (orgtrackSummary?.committedRatePercent ?? 0)
+        : 0;
+      if (
+        filesChanged === 0 &&
+        linesAdded === 0 &&
+        linesRemoved === 0 &&
+        relatedCommits === 0
+      ) {
+        return null;
+      }
+
+      return {
+        id: session.session_id,
+        title: session.name || session.session_id,
+        status: "in_progress",
+        orgtrackMetadata: {
+          filesChanged,
+          linesAdded,
+          linesRemoved,
+          relatedCommits,
+          committedFiles: Math.round(
+            (filesChanged * committedRatePercent) / 100
+          ),
+          committedRatePercent,
+          touchedFiles: session.touchedFiles,
+        },
+      };
+    }, [orgtrackSummary, session]);
 
     if (!session) return null;
 
@@ -211,6 +306,11 @@ export const SessionHoverCardContent: React.FC<SessionHoverCardContentProps> =
             <div className="truncate text-text-2">
               {formatCompactPath(repoPath)}
             </div>
+          </HoverCardRow>
+        )}
+        {impactTask && (
+          <HoverCardRow icon={<Diff size={13} strokeWidth={1.75} />}>
+            <TaskImpactLine task={impactTask} showUnavailable={false} />
           </HoverCardRow>
         )}
         {(workedDurationLabel ||

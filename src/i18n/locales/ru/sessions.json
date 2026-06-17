@@ -695,6 +695,25 @@
     "multipleChoice": "Несколько вариантов",
     "typeYourAnswer": "Введите ваш ответ…",
     "newSession": "Новая сессия",
+    "startPage": {
+      "title": "Что вы хотите сделать?",
+      "back": "Назад к стартовой странице",
+      "newSession": {
+        "title": "Новая сессия"
+      },
+      "newWorkItem": {
+        "title": "Новый work item"
+      },
+      "setupRepo": {
+        "title": "Настроить Repo"
+      },
+      "addApiKey": {
+        "title": "Добавить API key"
+      },
+      "agents": {
+        "title": "Agents"
+      }
+    },
     "defaultTitle": "Чат",
     "hideChatPanel": "Скрыть панель чата",
     "compactDisplayMode": "Компактный режим",

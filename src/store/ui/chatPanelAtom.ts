@@ -257,6 +257,9 @@ export const chatPanelCreateTargetAtom = atom<ChatPanelCreateTarget>(
 );
 chatPanelCreateTargetAtom.debugLabel = "chatPanelCreateTargetAtom";
 
+export const chatPanelStartPageOpenAtom = atom<boolean>(true);
+chatPanelStartPageOpenAtom.debugLabel = "chatPanelStartPageOpenAtom";
+
 export interface ChatPanelCreateProjectContext {
   orgId: string;
   scopeBreadcrumbLabel?: string;
@@ -497,6 +500,7 @@ export const chatPanelNavigateAtom = atom(
   (get, set, command: ChatPanelNavigateCommand) => {
     const currentWorkspaceOverviewTab = get(chatPanelWorkspaceOverviewTabAtom);
     resetChatPanelSurfaceState(set);
+    set(chatPanelStartPageOpenAtom, false);
 
     switch (command.kind) {
       case CHAT_PANEL_SURFACE_KIND.SESSION:

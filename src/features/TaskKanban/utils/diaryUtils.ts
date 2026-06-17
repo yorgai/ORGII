@@ -1,5 +1,5 @@
 import type { GitCommitInfo } from "@src/api/http/git/types";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import type { OrgtrackSessionEditArtifact } from "@src/api/tauri/lineage";
 import type { KanbanTask } from "@src/features/KanbanBoard/types";
 import { parseApiDate } from "@src/util/data/formatters/dateCore";
 
@@ -53,7 +53,7 @@ interface WorkInterval {
 }
 
 const MIN_TERMINAL_WORK_MS = 30 * 60 * 1000;
-const ROUND_INTERVAL_MERGE_GAP_MS = 10 * 60 * 1000;
+const ORGTRACK_ACTIVITY_SPLIT_GAP_MS = 60 * 60 * 1000;
 
 function getStartOfLocalDay(date: Date): Date {
   return new Date(
@@ -172,8 +172,11 @@ function calculateDedupedWorkMs(intervals: WorkInterval[]): number {
   );
 }
 
-function getEventTimeMs(event: SessionEvent, now: Date): number | null {
-  const parsed = parseApiDate(event.createdAt);
+function getOrgtrackArtifactTimeMs(
+  artifact: OrgtrackSessionEditArtifact,
+  now: Date
+): number | null {
+  const parsed = parseApiDate(artifact.timestamp);
   if (!parsed) return null;
   return Math.min(parsed.getTime(), now.getTime());
 }
@@ -256,59 +259,58 @@ function findNearestTaskForCommit(
   return bestTask;
 }
 
-function buildRoundWorkIntervals(
-  task: KanbanTask,
-  events: SessionEvent[] | undefined,
+function buildOrgtrackWorkIntervals(
+  artifacts: OrgtrackSessionEditArtifact[] | undefined,
+  fallbackInterval: WorkInterval,
   now: Date
 ): WorkInterval[] {
-  if (!events || events.length === 0) return [];
+  if (!artifacts || artifacts.length === 0) return [fallbackInterval];
 
-  const sortedEventTimes = events
-    .map((event) => getEventTimeMs(event, now))
+  const sortedArtifactTimes = artifacts
+    .map((artifact) => getOrgtrackArtifactTimeMs(artifact, now))
     .filter((timeMs): timeMs is number => timeMs !== null)
     .sort((firstTimeMs, secondTimeMs) => firstTimeMs - secondTimeMs);
 
-  if (sortedEventTimes.length === 0) return [];
+  if (sortedArtifactTimes.length < 2) return [fallbackInterval];
+
+  const splitIndexes = sortedArtifactTimes.flatMap((artifactTimeMs, index) => {
+    if (index === 0) return [];
+    const previousTimeMs = sortedArtifactTimes[index - 1];
+    return artifactTimeMs - previousTimeMs > ORGTRACK_ACTIVITY_SPLIT_GAP_MS
+      ? [index]
+      : [];
+  });
+
+  if (splitIndexes.length === 0) return [fallbackInterval];
 
   const intervals: WorkInterval[] = [];
-  let currentStartMs = sortedEventTimes[0];
-  let currentEndMs = sortedEventTimes[0];
+  let segmentStartMs = fallbackInterval.startMs;
 
-  for (const eventTimeMs of sortedEventTimes.slice(1)) {
-    if (eventTimeMs <= currentEndMs + ROUND_INTERVAL_MERGE_GAP_MS) {
-      currentEndMs = Math.max(currentEndMs, eventTimeMs);
-      continue;
-    }
-
-    if (currentEndMs > currentStartMs) {
-      intervals.push({ startMs: currentStartMs, endMs: currentEndMs });
-    }
-    currentStartMs = eventTimeMs;
-    currentEndMs = eventTimeMs;
+  for (const splitIndex of splitIndexes) {
+    const previousArtifactTimeMs = sortedArtifactTimes[splitIndex - 1];
+    intervals.push({
+      startMs: segmentStartMs,
+      endMs: Math.max(segmentStartMs, previousArtifactTimeMs),
+    });
+    segmentStartMs = sortedArtifactTimes[splitIndex];
   }
 
-  const terminalEnd = isTerminalTask(task)
-    ? parseApiDate(task.completed_at ?? task.updated_at ?? task.created_at)
-    : null;
-  if (terminalEnd) {
-    const terminalEndMs = Math.min(terminalEnd.getTime(), now.getTime());
-    if (terminalEndMs <= currentEndMs + ROUND_INTERVAL_MERGE_GAP_MS) {
-      currentEndMs = Math.max(currentEndMs, terminalEndMs);
-    }
-  }
+  intervals.push({
+    startMs: segmentStartMs,
+    endMs: Math.max(segmentStartMs, fallbackInterval.endMs),
+  });
 
-  if (currentEndMs > currentStartMs) {
-    intervals.push({ startMs: currentStartMs, endMs: currentEndMs });
-  }
-
-  return mergeWorkIntervals(intervals, ROUND_INTERVAL_MERGE_GAP_MS);
+  return intervals;
 }
 
 export function buildDiaryDaySummary(
   tasks: KanbanTask[],
   date: Date,
   now: Date = new Date(),
-  eventsBySessionId: ReadonlyMap<string, SessionEvent[]> = new Map(),
+  orgtrackArtifactsBySessionId: ReadonlyMap<
+    string,
+    OrgtrackSessionEditArtifact[]
+  > = new Map(),
   commits: GitCommitInfo[] = []
 ): DiaryDaySummary {
   const dayStart = getStartOfLocalDay(date);
@@ -329,15 +331,14 @@ export function buildDiaryDaySummary(
 
     if (!overlapsDay(start, end, dayStart, dayEnd)) continue;
 
-    const roundIntervals = buildRoundWorkIntervals(
-      task,
-      task.session_id ? eventsBySessionId.get(task.session_id) : undefined,
+    const fallbackInterval = { startMs: start.getTime(), endMs: end.getTime() };
+    const sourceIntervals = buildOrgtrackWorkIntervals(
+      task.session_id
+        ? orgtrackArtifactsBySessionId.get(task.session_id)
+        : undefined,
+      fallbackInterval,
       now
     );
-    const sourceIntervals =
-      roundIntervals.length > 0
-        ? roundIntervals
-        : [{ startMs: start.getTime(), endMs: end.getTime() }];
 
     for (const sourceInterval of sourceIntervals) {
       if (

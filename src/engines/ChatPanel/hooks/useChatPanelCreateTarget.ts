@@ -21,6 +21,7 @@ interface UseChatPanelCreateTargetOptions {
   setCreatorState: (
     updater: (previous: SessionCreatorState) => SessionCreatorState
   ) => void;
+  setStartPageOpen: (open: boolean) => void;
   setShowProjectAgentCreator: (enabled: boolean) => void;
   setShowWorkItemAgentCreator: (enabled: boolean) => void;
   setWorkItemCreateDraft: (draft: WorkItemDraft | null) => void;
@@ -33,6 +34,7 @@ export function useChatPanelCreateTarget({
   sessionCreatorAvailable,
   setCreateTarget,
   setCreatorState,
+  setStartPageOpen,
   setShowProjectAgentCreator,
   setShowWorkItemAgentCreator,
   setWorkItemCreateDraft,
@@ -73,6 +75,7 @@ export function useChatPanelCreateTarget({
     (value: string | number | (string | number)[]) => {
       if (Array.isArray(value)) return;
       const nextTarget = value as ChatPanelCreateTarget;
+      setStartPageOpen(false);
 
       if (nextTarget === CHAT_PANEL_CREATE_TARGET.CREATE_AGENT) {
         const adeManagerDef = allAgentDefs.find(
@@ -114,6 +117,7 @@ export function useChatPanelCreateTarget({
       sessionCreatorAvailable,
       setCreateTarget,
       setCreatorState,
+      setStartPageOpen,
       setShowProjectAgentCreator,
       setShowWorkItemAgentCreator,
       setWorkItemCreateDraft,

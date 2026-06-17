@@ -693,6 +693,25 @@
     "multipleChoice": "Çoklu seçim",
     "typeYourAnswer": "Cevabınızı yazın…",
     "newSession": "Yeni oturum",
+    "startPage": {
+      "title": "Ne yapmak istersiniz?",
+      "back": "Başlangıç sayfasına dön",
+      "newSession": {
+        "title": "Yeni oturum"
+      },
+      "newWorkItem": {
+        "title": "Yeni work item"
+      },
+      "setupRepo": {
+        "title": "Repo kur"
+      },
+      "addApiKey": {
+        "title": "API key ekle"
+      },
+      "agents": {
+        "title": "Agents"
+      }
+    },
     "defaultTitle": "Sohbet",
     "hideChatPanel": "Sohbet panelini gizle",
     "compactDisplayMode": "Kompakt mod",

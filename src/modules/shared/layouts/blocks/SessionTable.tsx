@@ -19,6 +19,7 @@ export interface SessionTableItem {
   modelLabel?: React.ReactNode;
   workspaceLabel?: React.ReactNode;
   workspaceTitle?: string;
+  impactLabel?: React.ReactNode;
   filesChangedLabel?: React.ReactNode;
   relatedCommitsLabel?: React.ReactNode;
   committedRateLabel?: React.ReactNode;
@@ -78,6 +79,7 @@ function matchesSessionSearch(
     toSearchText(item.agentLabel),
     toSearchText(item.modelLabel),
     toSearchText(item.workspaceLabel),
+    toSearchText(item.impactLabel),
     toSearchText(item.filesChangedLabel),
     toSearchText(item.relatedCommitsLabel),
     toSearchText(item.committedRateLabel),
@@ -174,6 +176,16 @@ export const SessionTable: React.FC<SessionTableProps> = ({
         renderCell: (item) => (
           <div className="truncate text-text-3" title={item.workspaceTitle}>
             {item.workspaceLabel ?? EMPTY_CELL}
+          </div>
+        ),
+      },
+      {
+        key: "impact",
+        label: t("sessions:simulator.impact.lines"),
+        width: "110px",
+        renderCell: (item) => (
+          <div className="truncate text-text-3">
+            {item.impactLabel ?? EMPTY_CELL}
           </div>
         ),
       },

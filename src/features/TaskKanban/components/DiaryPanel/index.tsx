@@ -8,6 +8,7 @@ import type {
   GanttMarkerRow,
   GanttTask,
 } from "@src/features/GanttChart";
+import TaskImpactLine from "@src/features/KanbanBoard/components/TaskImpactLine";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
 import type { DiaryDaySummary } from "../../utils/diaryUtils";
@@ -42,10 +43,25 @@ const DiaryPanel: React.FC<DiaryPanelProps> = ({
 }) => {
   const { t } = useTranslation("sessions");
 
-  const ganttTasks = useMemo<GanttTask[]>(
-    () => buildDiaryGanttTasks(summary),
-    [summary]
-  );
+  const ganttTasks = useMemo<GanttTask[]>(() => {
+    const taskByRowId = new Map(
+      summary.workIntervals.map((interval) => [
+        getDiaryGanttRowId(interval),
+        interval.task,
+      ])
+    );
+
+    return buildDiaryGanttTasks(summary).map((task) => {
+      const sourceTask = taskByRowId.get(task.id);
+      if (!sourceTask) return task;
+      return {
+        ...task,
+        sidebarMeta: (
+          <TaskImpactLine task={sourceTask} showUnavailable={false} />
+        ),
+      };
+    });
+  }, [summary]);
   const markerRows = useMemo<GanttMarkerRow[]>(
     () => buildDiaryCommitMarkerRows(summary, commitsRowTitle),
     [summary, commitsRowTitle]

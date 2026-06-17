@@ -693,6 +693,25 @@
     "multipleChoice": "Chọn nhiều",
     "typeYourAnswer": "Nhập câu trả lời của bạn…",
     "newSession": "Phiên mới",
+    "startPage": {
+      "title": "Bạn muốn làm gì?",
+      "back": "Quay lại trang bắt đầu",
+      "newSession": {
+        "title": "Phiên mới"
+      },
+      "newWorkItem": {
+        "title": "Work item mới"
+      },
+      "setupRepo": {
+        "title": "Thiết lập Repo"
+      },
+      "addApiKey": {
+        "title": "Thêm API key"
+      },
+      "agents": {
+        "title": "Agents"
+      }
+    },
     "defaultTitle": "Chat",
     "hideChatPanel": "Ẩn bảng trò chuyện",
     "compactDisplayMode": "Chế độ gọn",

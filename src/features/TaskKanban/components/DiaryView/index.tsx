@@ -5,8 +5,10 @@ import { useTranslation } from "react-i18next";
 
 import { getGitCommits } from "@src/api/http/git";
 import type { GitCommitInfo } from "@src/api/http/git/types";
-import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import {
+  type OrgtrackSessionEditArtifact,
+  getOrgtrackSessionEditArtifacts,
+} from "@src/api/tauri/lineage";
 import type { KanbanTask } from "@src/features/KanbanBoard";
 import { createLogger } from "@src/hooks/logger";
 import type { Session } from "@src/store/session";
@@ -109,70 +111,48 @@ const DiaryView: React.FC<DiaryViewProps> = ({ tasks, date, onTaskClick }) => {
     () => getCommitsRowTitle(repoPaths, sessionIds, sessionMap, t),
     [repoPaths, sessionIds, sessionMap, t]
   );
-  const snapshotEventsBySessionId = useMemo(() => {
-    const entries: Array<readonly [string, SessionEvent[]]> = [];
-
-    for (const sessionId of sessionIds) {
-      const snapshot = eventStoreProxy.getLatestSessionSnapshot(sessionId);
-      if (!snapshot) continue;
-
-      const events =
-        "events" in snapshot ? snapshot.events : snapshot.chatEvents;
-      entries.push([sessionId, events] as const);
-    }
-
-    return new Map(entries);
-  }, [sessionIds]);
-  const [loadedEventsBySessionId, setLoadedEventsBySessionId] = useState<
-    ReadonlyMap<string, SessionEvent[]>
-  >(() => new Map());
-  const eventsBySessionId = useMemo(() => {
-    const sessionIdSet = new Set(sessionIds);
-    const entries: Array<readonly [string, SessionEvent[]]> = [];
-
-    for (const sessionId of sessionIds) {
-      const events =
-        snapshotEventsBySessionId.get(sessionId) ??
-        loadedEventsBySessionId.get(sessionId);
-      if (events && sessionIdSet.has(sessionId)) {
-        entries.push([sessionId, events] as const);
-      }
-    }
-
-    return new Map(entries);
-  }, [loadedEventsBySessionId, sessionIds, snapshotEventsBySessionId]);
+  const [orgtrackArtifactsBySessionId, setOrgtrackArtifactsBySessionId] =
+    useState<ReadonlyMap<string, OrgtrackSessionEditArtifact[]>>(
+      () => new Map()
+    );
+  const sessionIdsKey = useMemo(() => sessionIds.join("\u0000"), [sessionIds]);
   const [commits, setCommits] = useState<GitCommitInfo[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    const sessionIdSet = new Set(sessionIds);
-    const missingSessionIds = sessionIds.filter(
-      (sessionId) => !snapshotEventsBySessionId.has(sessionId)
-    );
 
-    for (const sessionId of missingSessionIds) {
-      void (async () => {
-        try {
-          await eventStoreProxy.loadFromCache(sessionId);
-          const events = await eventStoreProxy.getEvents(sessionId);
-          if (cancelled) return;
+    async function loadOrgtrackArtifacts(): Promise<void> {
+      const currentSessionIds = sessionIdsKey
+        .split("\u0000")
+        .filter((sessionId): sessionId is string => Boolean(sessionId));
+      if (currentSessionIds.length === 0) {
+        setOrgtrackArtifactsBySessionId(new Map());
+        return;
+      }
 
-          setLoadedEventsBySessionId((current) => {
-            if (!sessionIdSet.has(sessionId)) return current;
-            const next = new Map(current);
-            next.set(sessionId, events);
-            return next;
+      const entries = await Promise.all(
+        currentSessionIds.map(async (sessionId) => {
+          const artifacts = await getOrgtrackSessionEditArtifacts({
+            sessionId,
           });
-        } catch (error: unknown) {
-          log.warn("[DiaryView] failed to load session events", error);
-        }
-      })();
+          return [sessionId, artifacts] as const;
+        })
+      );
+
+      if (!cancelled) {
+        setOrgtrackArtifactsBySessionId(new Map(entries));
+      }
     }
+
+    loadOrgtrackArtifacts().catch((error: unknown) => {
+      log.warn("[DiaryView] failed to load orgtrack edit artifacts", error);
+      if (!cancelled) setOrgtrackArtifactsBySessionId(new Map());
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [sessionIds, snapshotEventsBySessionId]);
+  }, [sessionIdsKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -220,8 +200,14 @@ const DiaryView: React.FC<DiaryViewProps> = ({ tasks, date, onTaskClick }) => {
 
   const summary = useMemo(
     () =>
-      buildDiaryDaySummary(tasks, date, new Date(), eventsBySessionId, commits),
-    [tasks, date, eventsBySessionId, commits]
+      buildDiaryDaySummary(
+        tasks,
+        date,
+        new Date(),
+        orgtrackArtifactsBySessionId,
+        commits
+      ),
+    [tasks, date, orgtrackArtifactsBySessionId, commits]
   );
 
   return (

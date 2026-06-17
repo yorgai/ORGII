@@ -693,6 +693,25 @@
     "multipleChoice": "다중 선택",
     "typeYourAnswer": "답변을 입력하세요…",
     "newSession": "새 세션",
+    "startPage": {
+      "title": "무엇을 할까요?",
+      "back": "시작 페이지로 돌아가기",
+      "newSession": {
+        "title": "새 세션"
+      },
+      "newWorkItem": {
+        "title": "새 work item"
+      },
+      "setupRepo": {
+        "title": "Repo 설정"
+      },
+      "addApiKey": {
+        "title": "API 키 추가"
+      },
+      "agents": {
+        "title": "Agents"
+      }
+    },
     "defaultTitle": "채팅",
     "hideChatPanel": "채팅 패널 숨기기",
     "compactDisplayMode": "컴팩트 모드",

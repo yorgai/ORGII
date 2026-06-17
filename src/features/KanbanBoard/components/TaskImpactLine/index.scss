@@ -1,0 +1,76 @@
+.task-impact-line {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  flex-shrink: 1;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-text-1);
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.task-impact-line__empty,
+.task-impact-line__loading,
+.task-impact-line__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-3);
+}
+
+.task-impact-line__action {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+
+  &:hover {
+    color: var(--color-primary-6);
+  }
+}
+
+.task-impact-line__loading svg {
+  animation: task-impact-line-spin 0.8s linear infinite;
+}
+
+@keyframes task-impact-line-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.task-impact-line__diff {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.task-impact-line__item,
+.task-impact-line__diff {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-impact-line__item {
+  font-size: 11px;
+}
+
+.task-impact-line__item svg {
+  flex-shrink: 0;
+}
+
+.task-impact-line__commit-icon {
+  transform: scale(1.17);
+}
+
+.task-impact-line__dot {
+  width: 2px;
+  height: 2px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--color-text-4);
+}

@@ -699,6 +699,25 @@
     "multipleChoice": "Múltipla escolha",
     "typeYourAnswer": "Digite sua resposta…",
     "newSession": "Nova sessão",
+    "startPage": {
+      "title": "O que você quer fazer?",
+      "back": "Voltar à página inicial",
+      "newSession": {
+        "title": "Nova sessão"
+      },
+      "newWorkItem": {
+        "title": "Novo work item"
+      },
+      "setupRepo": {
+        "title": "Configurar Repo"
+      },
+      "addApiKey": {
+        "title": "Adicionar chave API"
+      },
+      "agents": {
+        "title": "Agents"
+      }
+    },
     "defaultTitle": "Chat",
     "hideChatPanel": "Ocultar painel de chat",
     "compactDisplayMode": "Modo compacto",

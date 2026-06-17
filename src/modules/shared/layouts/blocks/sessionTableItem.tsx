@@ -3,6 +3,7 @@ import React from "react";
 import ModelIcon from "@src/components/ModelIcon";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import type { KanbanTask } from "@src/features/KanbanBoard";
+import TaskImpactLine from "@src/features/KanbanBoard/components/TaskImpactLine";
 import { KANBAN_RESULT_STATUS } from "@src/features/KanbanBoard/types";
 import { formatSmartDateTime } from "@src/util/data/formatters/date";
 import { formatModelNameFull } from "@src/util/formatModelName";
@@ -88,6 +89,7 @@ export function mapKanbanTaskToSessionTableItem({
       : undefined,
     workspaceLabel: task.workspaceName,
     workspaceTitle: task.workspaceName,
+    impactLabel: <TaskImpactLine task={task} showUnavailable={false} />,
     filesChangedLabel:
       orgtrackMetadata && orgtrackMetadata.filesChanged > 0
         ? orgtrackMetadata.filesChanged.toLocaleString()

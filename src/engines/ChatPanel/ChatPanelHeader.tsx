@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import { useAtomValue } from "jotai";
 import {
+  ChevronLeft,
   Clipboard,
   FolderOutput,
   GalleryThumbnails,
@@ -80,6 +81,7 @@ interface ChatPanelHeaderProps {
   handleOpenSearch: () => void;
   handleOpenShareSession: () => void;
   handleNewSession: () => void;
+  handleOpenStartPage: () => void;
   handlePaginationToggle: (checked: boolean) => void;
   handleProjectAgentCreatorToggle: (enabled: boolean) => void;
   handleProjectTitleChange: (title: string) => void;
@@ -98,6 +100,7 @@ interface ChatPanelHeaderProps {
   isHeaderActionsPositioned: boolean;
   isProjectTarget: boolean;
   paginationEnabled: boolean;
+  showStartPageBackButton: boolean;
   shareSessionAvailable: boolean;
   selectedProjectVisible: boolean;
   selectedWorkItemVisible: boolean;
@@ -112,6 +115,7 @@ interface ChatPanelHeaderProps {
   showProjectAgentCreator: boolean;
   showProjectAgentSwitchInHeader: boolean;
   showSessionContent: boolean;
+  showStartPage: boolean;
   showWorkItemAgentCreator: boolean;
   showWorkItemAgentSwitchInHeader: boolean;
   t: TFunction<["sessions", "common", "projects", "navigation"]>;
@@ -140,6 +144,7 @@ export function ChatPanelHeader({
   handleOpenSearch,
   handleOpenShareSession,
   handleNewSession,
+  handleOpenStartPage,
   handlePaginationToggle,
   handleProjectAgentCreatorToggle,
   handleProjectTitleChange,
@@ -158,6 +163,7 @@ export function ChatPanelHeader({
   isHeaderActionsPositioned,
   isProjectTarget,
   paginationEnabled,
+  showStartPageBackButton,
   shareSessionAvailable,
   selectedProjectVisible,
   selectedWorkItemVisible,
@@ -172,6 +178,7 @@ export function ChatPanelHeader({
   showProjectAgentCreator,
   showProjectAgentSwitchInHeader,
   showSessionContent,
+  showStartPage,
   showWorkItemAgentCreator,
   showWorkItemAgentSwitchInHeader,
   t,
@@ -476,7 +483,39 @@ export function ChatPanelHeader({
           <CollapsedSidebarButton />
         </div>
       ) : null}
+      {showStartPageBackButton ? (
+        <Tooltip
+          content={
+            <KeyboardShortcutTooltipContent
+              label={t("chat.startPage.back")}
+              noShortcut
+            />
+          }
+          position="bottom-start"
+          mouseEnterDelay={200}
+          framedPanel
+        >
+          <span className="inline-flex" style={CHAT_PANEL_HEADER_NO_DRAG_STYLE}>
+            <Button
+              htmlType="button"
+              variant="tertiary"
+              size="small"
+              iconOnly
+              onClick={handleOpenStartPage}
+              aria-label={t("chat.startPage.back")}
+              data-testid="chat-panel-start-page-back-button"
+              icon={
+                <ChevronLeft
+                  size={CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE}
+                  strokeWidth={2}
+                />
+              }
+            />
+          </span>
+        </Tooltip>
+      ) : null}
       {showNonSessionContent &&
+        !showStartPage &&
         !selectedWorkItemVisible &&
         !selectedProjectVisible && (
           <div

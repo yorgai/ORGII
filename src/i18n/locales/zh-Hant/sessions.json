@@ -697,6 +697,25 @@
     "multipleChoice": "多選",
     "typeYourAnswer": "輸入您的回答…",
     "newSession": "新建會話",
+    "startPage": {
+      "title": "你想做什麼？",
+      "back": "返回起始頁",
+      "newSession": {
+        "title": "新建會話"
+      },
+      "newWorkItem": {
+        "title": "新建工作項目"
+      },
+      "setupRepo": {
+        "title": "設定 Repo"
+      },
+      "addApiKey": {
+        "title": "新增 API 金鑰"
+      },
+      "agents": {
+        "title": "Agents"
+      }
+    },
     "defaultTitle": "Session",
     "hideChatPanel": "隱藏聊天面板",
     "compactDisplayMode": "精簡模式",

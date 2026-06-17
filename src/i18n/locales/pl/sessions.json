@@ -701,6 +701,25 @@
     "multipleChoice": "Wielokrotny wybór",
     "typeYourAnswer": "Wpisz odpowiedź…",
     "newSession": "Nowa sesja",
+    "startPage": {
+      "title": "Co chcesz zrobić?",
+      "back": "Wróć do strony startowej",
+      "newSession": {
+        "title": "Nowa sesja"
+      },
+      "newWorkItem": {
+        "title": "Nowy work item"
+      },
+      "setupRepo": {
+        "title": "Skonfiguruj Repo"
+      },
+      "addApiKey": {
+        "title": "Dodaj API key"
+      },
+      "agents": {
+        "title": "Agents"
+      }
+    },
     "defaultTitle": "Czat",
     "hideChatPanel": "Ukryj panel czatu",
     "compactDisplayMode": "Tryb kompaktowy",

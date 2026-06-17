@@ -693,6 +693,25 @@
     "multipleChoice": "複数選択",
     "typeYourAnswer": "回答を入力…",
     "newSession": "新しいセッション",
+    "startPage": {
+      "title": "何をしますか？",
+      "back": "スタートページに戻る",
+      "newSession": {
+        "title": "新しいセッション"
+      },
+      "newWorkItem": {
+        "title": "新しい work item"
+      },
+      "setupRepo": {
+        "title": "Repo をセットアップ"
+      },
+      "addApiKey": {
+        "title": "API キーを追加"
+      },
+      "agents": {
+        "title": "Agents"
+      }
+    },
     "defaultTitle": "チャット",
     "hideChatPanel": "チャットパネルを非表示",
     "compactDisplayMode": "コンパクトモード",
