@@ -286,8 +286,11 @@ fn which_executable(name: &str) -> Option<String> {
     #[cfg(target_os = "windows")]
     let cmd = "where";
 
-    std::process::Command::new(cmd)
-        .arg(name)
+    let mut command = std::process::Command::new(cmd);
+    command.arg(name);
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut command);
+    command
         .output()
         .ok()
         .and_then(|output| {

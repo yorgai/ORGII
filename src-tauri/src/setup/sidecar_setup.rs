@@ -265,11 +265,11 @@ async fn download_to(client: &reqwest::Client, url: &str, dest: &Path) -> Result
 
 /// Extract a .tar.gz archive into `dest_dir` using system `tar`.
 fn run_tar_extract(archive: &Path, dest_dir: &Path) -> Result<(), String> {
-    let status = std::process::Command::new("tar")
-        .arg("-xzf")
-        .arg(archive)
-        .arg("-C")
-        .arg(dest_dir)
+    let mut command = std::process::Command::new("tar");
+    command.arg("-xzf").arg(archive).arg("-C").arg(dest_dir);
+    // Suppress the console window on Windows.
+    app_platform::hide_console(&mut command);
+    let status = command
         .status()
         .map_err(|err| format!("tar failed to start: {err}"))?;
 
@@ -286,12 +286,16 @@ fn run_tar_extract(archive: &Path, dest_dir: &Path) -> Result<(), String> {
 
 /// Extract a .tar.gz archive stripping the first N path components.
 fn run_tar_extract_strip(archive: &Path, dest_dir: &Path, strip: u32) -> Result<(), String> {
-    let status = std::process::Command::new("tar")
+    let mut command = std::process::Command::new("tar");
+    command
         .arg("-xzf")
         .arg(archive)
         .arg("-C")
         .arg(dest_dir)
-        .arg(format!("--strip-components={strip}"))
+        .arg(format!("--strip-components={strip}"));
+    // Suppress the console window on Windows.
+    app_platform::hide_console(&mut command);
+    let status = command
         .status()
         .map_err(|err| format!("tar failed to start: {err}"))?;
 

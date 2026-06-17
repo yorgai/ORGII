@@ -72,12 +72,15 @@ pub async fn server_detect_ides() -> Result<Vec<serde_json::Value>, String> {
     let cli_futures: Vec<_> = cli_ides
         .iter()
         .map(|(ide_id, name, binary, category)| async move {
-            let which_output = AsyncCommand::new(which_cmd)
+            let mut which_cmd_builder = AsyncCommand::new(which_cmd);
+            which_cmd_builder
                 .arg(binary)
                 .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::null())
-                .output()
-                .await;
+                .stderr(std::process::Stdio::null());
+            // Suppress console window on Windows.
+            #[cfg(windows)]
+            which_cmd_builder.creation_flags(app_platform::CREATE_NO_WINDOW);
+            let which_output = which_cmd_builder.output().await;
 
             let (installed, binary_path) = match which_output {
                 Ok(output) if output.status.success() => {
@@ -184,13 +187,15 @@ async fn detect_ide_version(
 ) -> Option<String> {
     // Try CLI --version first (if binary name is known)
     if !binary.is_empty() {
-        if let Ok(output) = AsyncCommand::new(binary)
+        let mut version_cmd = AsyncCommand::new(binary);
+        version_cmd
             .arg("--version")
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .output()
-            .await
-        {
+            .stderr(std::process::Stdio::piped());
+        // Suppress console window on Windows.
+        #[cfg(windows)]
+        version_cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+        if let Ok(output) = version_cmd.output().await {
             if output.status.success() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -755,9 +760,11 @@ fn collect_app_ide_paths() -> Vec<(String, String, String)> {
 
 /// Try to open an app with 'open -a', returns true if successful
 fn try_open_app(app_name: &str, folder_path: &str) -> bool {
-    let result = Command::new("open")
-        .args(["-a", app_name, folder_path])
-        .output();
+    let mut cmd = Command::new("open");
+    cmd.args(["-a", app_name, folder_path]);
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut cmd);
+    let result = cmd.output();
 
     match result {
         Ok(output) => {
@@ -846,9 +853,11 @@ pub async fn open_in_external_ide(app_name: String, folder_path: String) -> Resu
         };
 
         if let Some(cli_name) = vscode_fork_cli {
-            let result = Command::new(cli_name)
-                .args(["--new-window", &folder_path])
-                .spawn();
+            let mut cmd = Command::new(cli_name);
+            cmd.args(["--new-window", &folder_path]);
+            // Suppress console window on Windows.
+            app_platform::hide_console(&mut cmd);
+            let result = cmd.spawn();
             match result {
                 Ok(_) => return Ok(()),
                 Err(e) => log::debug!("{} CLI failed: {}, trying open -a fallback", cli_name, e),
@@ -894,7 +903,11 @@ pub async fn show_in_folder(path: String) -> Result<(), String> {
 
         #[cfg(target_os = "windows")]
         {
-            let result = Command::new("explorer").args(["/select,", &path]).spawn();
+            let mut cmd = Command::new("explorer");
+            cmd.args(["/select,", &path]);
+            // Suppress console window on Windows.
+            app_platform::hide_console(&mut cmd);
+            let result = cmd.spawn();
 
             match result {
                 Ok(_) => Ok(()),
@@ -910,7 +923,11 @@ pub async fn show_in_folder(path: String) -> Result<(), String> {
                 .parent()
                 .ok_or_else(|| "Failed to get parent directory".to_string())?;
 
-            let result = Command::new("xdg-open").arg(parent).spawn();
+            let mut cmd = Command::new("xdg-open");
+            cmd.arg(parent);
+            // Suppress console window on Windows.
+            app_platform::hide_console(&mut cmd);
+            let result = cmd.spawn();
 
             match result {
                 Ok(_) => Ok(()),
@@ -937,18 +954,22 @@ pub async fn open_folder(path: String) -> Result<(), String> {
 
         #[cfg(target_os = "windows")]
         {
-            Command::new("explorer")
-                .arg(&path)
-                .spawn()
+            let mut cmd = Command::new("explorer");
+            cmd.arg(&path);
+            // Suppress console window on Windows.
+            app_platform::hide_console(&mut cmd);
+            cmd.spawn()
                 .map(|_| ())
                 .map_err(|e| format!("Failed to open in Explorer: {}", e))
         }
 
         #[cfg(target_os = "linux")]
         {
-            Command::new("xdg-open")
-                .arg(&path)
-                .spawn()
+            let mut cmd = Command::new("xdg-open");
+            cmd.arg(&path);
+            // Suppress console window on Windows.
+            app_platform::hide_console(&mut cmd);
+            cmd.spawn()
                 .map(|_| ())
                 .map_err(|e| format!("Failed to open file manager: {}", e))
         }

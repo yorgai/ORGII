@@ -68,15 +68,15 @@ impl CursorValidator {
 
     /// Try to get models via --list-models flag
     async fn try_list_models(&self, api_key: &str) -> Result<Vec<String>, String> {
-        let result = timeout(
-            self.cli_timeout,
-            Command::new("cursor")
-                .args(["agent", "--api-key", api_key, "--list-models"])
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output(),
-        )
-        .await;
+        let mut command = Command::new("cursor");
+        command
+            .args(["agent", "--api-key", api_key, "--list-models"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        // Suppress the console window on Windows.
+        #[cfg(windows)]
+        command.creation_flags(app_platform::CREATE_NO_WINDOW);
+        let result = timeout(self.cli_timeout, command.output()).await;
 
         match result {
             Ok(Ok(output)) => {
@@ -107,23 +107,23 @@ impl CursorValidator {
 
     /// Fallback: Use invalid model name to get error with available models
     async fn try_invalid_model_fallback(&self, api_key: &str) -> Result<Vec<String>, String> {
-        let result = timeout(
-            self.cli_timeout,
-            Command::new("cursor")
-                .args([
-                    "agent",
-                    "--api-key",
-                    api_key,
-                    "-p",
-                    "--model",
-                    "___invalid_model_name___",
-                    "hi",
-                ])
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output(),
-        )
-        .await;
+        let mut command = Command::new("cursor");
+        command
+            .args([
+                "agent",
+                "--api-key",
+                api_key,
+                "-p",
+                "--model",
+                "___invalid_model_name___",
+                "hi",
+            ])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        // Suppress the console window on Windows.
+        #[cfg(windows)]
+        command.creation_flags(app_platform::CREATE_NO_WINDOW);
+        let result = timeout(self.cli_timeout, command.output()).await;
 
         match result {
             Ok(Ok(output)) => {

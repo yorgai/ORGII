@@ -162,11 +162,14 @@ fn detect_gpu(chip_type: &str, total_ram_gb: f64) -> GpuDetection {
 }
 
 fn detect_nvidia_gpu() -> GpuDetection {
-    let output = Command::new("nvidia-smi")
-        .args([
-            "--query-gpu=name,memory.total",
-            "--format=csv,noheader,nounits",
-        ])
+    let mut cmd = Command::new("nvidia-smi");
+    cmd.args([
+        "--query-gpu=name,memory.total",
+        "--format=csv,noheader,nounits",
+    ]);
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut cmd);
+    let output = cmd
         .output()
         .map_err(|err| GpuAbsence {
             status: GPU_DETECTION_STATUS_NOT_AVAILABLE,

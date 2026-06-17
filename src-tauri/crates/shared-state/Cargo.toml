@@ -12,6 +12,7 @@ path = "src/lib.rs"
 
 [dependencies]
 app_paths = { path = "../app-paths" }
+app_platform = { path = "../app-platform" }
 
 tauri = { workspace = true }
 

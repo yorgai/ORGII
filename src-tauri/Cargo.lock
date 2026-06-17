@@ -272,6 +272,7 @@ dependencies = [
 name = "app_paths"
 version = "0.1.0"
 dependencies = [
+ "app_platform",
  "dirs",
  "libc",
  "tracing",
@@ -1374,6 +1375,7 @@ checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 name = "container"
 version = "0.1.0"
 dependencies = [
+ "app_platform",
  "bollard",
  "insta",
  "serde",
@@ -1679,6 +1681,7 @@ dependencies = [
 name = "cursor_bridge_app"
 version = "0.1.0"
 dependencies = [
+ "app_platform",
  "cursor_bridge",
  "reqwest 0.13.4",
  "rusqlite",
@@ -2922,6 +2925,7 @@ name = "git_api"
 version = "0.1.0"
 dependencies = [
  "agent_core",
+ "app_platform",
  "async-stream",
  "axum",
  "base64 0.22.1",
@@ -3748,6 +3752,7 @@ name = "integrations"
 version = "0.1.0"
 dependencies = [
  "app_paths",
+ "app_platform",
  "app_utils",
  "axum",
  "bytes",
@@ -3975,6 +3980,7 @@ name = "key_vault"
 version = "0.1.0"
 dependencies = [
  "app_paths",
+ "app_platform",
  "app_utils",
  "arboard",
  "base64 0.22.1",
@@ -5153,6 +5159,7 @@ dependencies = [
  "agent_core",
  "api_search",
  "app_paths",
+ "app_platform",
  "app_utils",
  "app_window",
  "assert_matches",
@@ -5451,6 +5458,7 @@ checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 name = "perf_utils"
 version = "0.1.0"
 dependencies = [
+ "app_platform",
  "base64 0.22.1",
  "blake3",
  "hex",
@@ -7300,6 +7308,7 @@ name = "shared_state"
 version = "0.1.0"
 dependencies = [
  "app_paths",
+ "app_platform",
  "base64 0.22.1",
  "libc",
  "serde_json",
@@ -8551,6 +8560,7 @@ dependencies = [
 name = "terminal"
 version = "0.1.0"
 dependencies = [
+ "app_platform",
  "chrono",
  "dirs",
  "libc",

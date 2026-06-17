@@ -32,12 +32,13 @@ pub async fn get_available_agents() -> Result<Vec<AvailableAgent>, String> {
 
     let mut results = Vec::new();
     for entry in &registry {
-        let output = tokio::process::Command::new(which_cmd)
-            .arg(entry.binary)
-            .env("PATH", &current_path)
-            .output()
-            .await
-            .ok();
+        let mut which_command = tokio::process::Command::new(which_cmd);
+        which_command.arg(entry.binary).env("PATH", &current_path);
+        // Suppress the console window each `where`/`which` probe would flash on
+        // Windows — this loops over every registered agent, so it's a burst.
+        #[cfg(windows)]
+        which_command.creation_flags(app_platform::CREATE_NO_WINDOW);
+        let output = which_command.output().await.ok();
 
         let installed = output.as_ref().map(|o| o.status.success()).unwrap_or(false);
         tracing::debug!(

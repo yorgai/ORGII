@@ -283,8 +283,11 @@ async fn launch_real_cursor_and_wait(port: u16) -> Result<EnsureRunningStatus, S
 }
 
 fn request_real_cursor_quit() -> Result<(), String> {
-    let status = Command::new("osascript")
-        .args(["-e", "tell application \"Cursor\" to quit"])
+    let mut cmd = Command::new("osascript");
+    cmd.args(["-e", "tell application \"Cursor\" to quit"]);
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut cmd);
+    let status = cmd
         .status()
         .map_err(|err| format!("spawn osascript to quit Cursor: {err}"))?;
 
@@ -355,11 +358,13 @@ fn launch_real_cursor_with_debug_port(port: u16) -> Result<(), String> {
 
     let user_data_dir = real_user_data_dir();
     let mut cmd = Command::new("open");
-    let status = cmd
-        .args(real_cursor_open_args())
+    cmd.args(real_cursor_open_args())
         .arg("--args")
         .arg(format!("--remote-debugging-port={port}"))
-        .arg(format!("--user-data-dir={}", user_data_dir.display()))
+        .arg(format!("--user-data-dir={}", user_data_dir.display()));
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut cmd);
+    let status = cmd
         .status()
         .map_err(|err| format!("spawn `open` for Cursor.app: {err}"))?;
 
@@ -544,8 +549,8 @@ fn seed_user_data_if_missing() -> Result<bool, String> {
     //    startup and start indexing them — which fires fs events
     //    on our own source tree and sends Tauri's `cargo dev`
     //    watcher into a rebuild loop.
-    let status = Command::new("rsync")
-        .arg("-a")
+    let mut cmd = Command::new("rsync");
+    cmd.arg("-a")
         .args([
             // Caches / scratch — rebuildable. These can appear nested
             // inside `Partitions/<name>/` too (Cursor uses one webview
@@ -604,7 +609,10 @@ fn seed_user_data_if_missing() -> Result<bool, String> {
         // "copy contents into destination" rather than "copy the
         // directory itself".
         .arg(format!("{}/", real_dir.display()))
-        .arg(format!("{}/", probe_dir.display()))
+        .arg(format!("{}/", probe_dir.display()));
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut cmd);
+    let status = cmd
         .status()
         .map_err(|err| format!("spawn rsync: {err}"))?;
 
@@ -641,6 +649,8 @@ fn launch_probe_instance(port: u16) -> Result<(), String> {
         .arg(format!("--user-data-dir={PROBE_DATA_DIR}"))
         .arg(format!("--extensions-dir={}", extensions_dir.display()))
         .arg(PROBE_WORKSPACE_DIR);
+    // Suppress console window on Windows.
+    app_platform::hide_console(&mut cmd);
 
     let status = cmd
         .status()

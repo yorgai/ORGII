@@ -18,6 +18,7 @@ path = "src/lib.rs"
 [dependencies]
 core_types = { path = "../types" }
 app_paths = { path = "../app-paths" }
+app_platform = { path = "../app-platform" } # hide_console / CREATE_NO_WINDOW (Windows)
 app_utils = { path = "../app-utils" }
 cursor_bridge_app = { path = "../cursor-bridge-app" }
 

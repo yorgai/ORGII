@@ -81,8 +81,12 @@ struct DockerContextRow {
 }
 
 pub async fn list_engine_candidates() -> Result<Vec<ContainerEngineCandidate>, String> {
-    let output = Command::new("docker")
-        .args(["context", "ls", "--format", "{{json .}}"])
+    let mut cmd = Command::new("docker");
+    cmd.args(["context", "ls", "--format", "{{json .}}"]);
+    // Suppress console window on Windows.
+    #[cfg(windows)]
+    cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+    let output = cmd
         .output()
         .await
         .map_err(|error| format!("Failed to run docker context ls: {error}"))?;

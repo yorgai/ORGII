@@ -170,9 +170,11 @@ pub fn clean_stale_lock(session_id: &str) {
     let is_dead = unsafe { libc::kill(pid, 0) } != 0;
     #[cfg(windows)]
     let is_dead = {
-        let out = std::process::Command::new("tasklist")
-            .args(["/FI", &format!("PID eq {}", pid), "/NH"])
-            .output();
+        let mut command = std::process::Command::new("tasklist");
+        command.args(["/FI", &format!("PID eq {}", pid), "/NH"]);
+        // Suppress the `tasklist` console window.
+        app_platform::hide_console(&mut command);
+        let out = command.output();
         !out.map(|o| String::from_utf8_lossy(&o.stdout).contains(&pid.to_string()))
             .unwrap_or(false)
     };

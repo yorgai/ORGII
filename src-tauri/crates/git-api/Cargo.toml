@@ -30,6 +30,7 @@ git2 = { version = "0.20", default-features = false, features = [
 
 # Workspace crates this depends on
 agent_core = { path = "../agent-core" }
+app_platform = { path = "../app-platform" }
 key_vault = { path = "../key-vault" }
 project_management = { path = "../project-management" }
 

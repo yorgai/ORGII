@@ -31,9 +31,11 @@ pub fn is_ca_installed() -> bool {
 
     #[cfg(target_os = "windows")]
     {
-        let output = Command::new("certutil")
-            .args(["-verifystore", "Root", "ORGII Proxy CA"])
-            .output();
+        let mut cmd = Command::new("certutil");
+        cmd.args(["-verifystore", "Root", "ORGII Proxy CA"]);
+        // Suppress console window on Windows.
+        app_platform::hide_console(&mut cmd);
+        let output = cmd.output();
         if let Ok(out) = output {
             return out.status.success();
         }
@@ -138,9 +140,11 @@ pub fn install_ca() -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        let output = Command::new("certutil")
-            .args(["-addstore", "Root", &cert_path_str])
-            .output();
+        let mut cmd = Command::new("certutil");
+        cmd.args(["-addstore", "Root", &cert_path_str]);
+        // Suppress console window on Windows.
+        app_platform::hide_console(&mut cmd);
+        let output = cmd.output();
 
         match output {
             Ok(out) if out.status.success() => {
@@ -196,9 +200,11 @@ pub fn uninstall_ca() -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        let _ = Command::new("certutil")
-            .args(["-delstore", "Root", "ORGII Proxy CA"])
-            .output();
+        let mut cmd = Command::new("certutil");
+        cmd.args(["-delstore", "Root", "ORGII Proxy CA"]);
+        // Suppress console window on Windows.
+        app_platform::hide_console(&mut cmd);
+        let _ = cmd.output();
         return Ok(());
     }
 
