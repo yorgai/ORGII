@@ -14,8 +14,8 @@ use std::time::{Duration, Instant};
 
 use database::db::get_connection;
 use orgtrack_core::canonical::{
-    CommitLinkRecord, SessionCheckpointFileStateRecord, SessionCheckpointRecord,
-    SessionDiffChunkRecord, SessionEditArtifactRecord, SessionFinalDiffRecord,
+    AgentMetadata, CommitLinkRecord, SessionCheckpointFileStateRecord, SessionCheckpointRecord,
+    SessionDiffChunkRecord, SessionEditArtifactRecord, SessionFinalDiffRecord, SessionRecord,
     SOURCE_ORGII_RUST_AGENTS,
 };
 use orgtrack_core::policy::{source_tier_policy, SourceTierPolicy};
@@ -407,6 +407,27 @@ pub async fn debug_seed_final_diff(
     tokio::task::spawn_blocking(move || {
         let conn = get_connection().map_err(|err| err.to_string())?;
         let store = SqliteRecordStore::new(&conn);
+        // Seed a minimal session record so on-demand reanalysis
+        // (`analyze_requested`) can find this session in `list_sessions` and
+        // act on it. Without a session row the reanalyze loop skips it and the
+        // seeded residue would never reconcile — which is exactly the path the
+        // restore-checkpoint Diff-reconcile spec exercises.
+        store.upsert_session(&SessionRecord {
+            schema_version: ORGTRACK_SCHEMA_VERSION,
+            source: source.clone(),
+            source_session_id: session_id.clone(),
+            session_id: session_id.clone(),
+            title: String::new(),
+            status: None,
+            created_at: Some(chrono::Utc::now().to_rfc3339()),
+            updated_at: Some(chrono::Utc::now().to_rfc3339()),
+            completed_at: None,
+            workspace_path: None,
+            branch: None,
+            parent_session_id: None,
+            org_member_id: None,
+            metadata: AgentMetadata::default(),
+        })?;
         let record_id = record_id(&["debug_seed_final_diff", &session_id, &file_path]);
         let words: Vec<&str> = diff.lines().collect();
         let lines_added = words

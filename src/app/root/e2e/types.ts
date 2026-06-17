@@ -573,6 +573,10 @@ export interface E2EHelpers {
     filePath: string;
     diff: string;
   }) => Promise<Result<{ sessionId: string; filePath: string }>>;
+  debugReadFinalDiffCountWire: (input: {
+    sessionId: string;
+    source?: string;
+  }) => Promise<Result<{ sessionId: string; count: number }>>;
   killSubagentJobWire: (handle: string) => Promise<{ ok: true } | Err>;
   listRunningSubagentJobsWire: () => Promise<Result<{ jobs: Json[] }>>;
   debugSeedChildSessionWire: (input: {
