@@ -1,8 +1,8 @@
 /**
- * IDE Context Collector
+ * ADE Context Collector
  *
- * Collects current IDE state from Jotai stores and returns a payload suitable
- * for passing to Tauri agent commands. Provides IDE awareness to both the
+ * Collects current ADE state from Jotai stores and returns a payload suitable
+ * for passing to Tauri agent commands. Provides ADE awareness to both the
  * built-in coding agent (system prompt) and external CLI agents (user message).
  *
  * Data collected:
@@ -17,7 +17,7 @@
  * Repo-scoped invariant: every atom this collector reads is global to the
  * toolbar repo (the editor opens one workspace, gitStatus is per-toolbar,
  * LSP diagnostics live in a single map keyed by the active workspace).
- * That means when a session running on repo A asks for IDE context while
+ * That means when a session running on repo A asks for ADE context while
  * the toolbar is pointed at repo B, the collector would otherwise leak
  * repo B's editor / git / LSP state into repo A's agent. Callers therefore
  * pass the session's persisted `repo_path` as `expectedRepoPath`; when it
@@ -66,7 +66,7 @@ const MAX_OPEN_FILES = 30;
 const MAX_CHANGED_FILES = 50;
 const MAX_LINTER_ERRORS = 20;
 
-export interface CollectIdeContextOptions {
+export interface CollectAdeContextOptions {
   /**
    * The session's persisted repo path. When supplied, the collector verifies
    * the global repo selection points at the same path before returning data;
@@ -125,8 +125,8 @@ function buildUserProfileWire(
   return Object.keys(profile).length > 0 ? profile : undefined;
 }
 
-export function collectIdeContext(
-  options: CollectIdeContextOptions = {}
+export function collectAdeContext(
+  options: CollectAdeContextOptions = {}
 ): WorkspaceSnapshot | undefined {
   try {
     const store = getInstrumentedStore();
@@ -307,7 +307,7 @@ export function collectIdeContext(
       /* active workspace root not available */
     }
 
-    // User-scoped ambient state ships on every turn even when the IDE has
+    // User-scoped ambient state ships on every turn even when the ADE has
     // nothing else to report. Read up front (above) so the cross-repo bail
     // path can still attach it.
     if (presenceWire) {
@@ -330,14 +330,14 @@ export function collectIdeContext(
 }
 
 /**
- * Async variant of `collectIdeContext` that additionally fetches full PR
+ * Async variant of `collectAdeContext` that additionally fetches full PR
  * details (diff stats, commits, body) for the current branch's PR via the
  * GitHub API. Safe to call from async agent dispatch paths.
  */
-export async function collectIdeContextAsync(
-  options: CollectIdeContextOptions = {}
+export async function collectAdeContextAsync(
+  options: CollectAdeContextOptions = {}
 ): Promise<WorkspaceSnapshot | undefined> {
-  const base = collectIdeContext(options);
+  const base = collectAdeContext(options);
 
   let currentPr: CurrentPullRequestSnapshot | undefined;
   try {

@@ -2,7 +2,7 @@
  * User Presence Types
  *
  * QQ-style availability the user controls from the sidebar footer. The
- * value travels with every agent turn (piggy-backing on the IDE context
+ * value travels with every agent turn (piggy-backing on the ADE context
  * payload) and surfaces in the system prompt via the
  * `user_presence` section so the agent can adapt its behavior to whether
  * the human is watching, hiding, or away.

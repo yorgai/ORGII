@@ -1,11 +1,11 @@
 /**
  * Context Collectors
  *
- * IDE context payloads for agents (see IdeContextCollector).
+ * ADE context payloads for agents (see AdeContextCollector).
  */
 
 export {
-  collectIdeContext,
-  collectIdeContextAsync,
-} from "./IdeContextCollector";
+  collectAdeContext,
+  collectAdeContextAsync,
+} from "./AdeContextCollector";
 export type { WorkspaceSnapshot } from "@src/services/context/workspaceSnapshot";

@@ -23,7 +23,7 @@ import {
 import { ROUTES } from "@src/config/routes";
 import { getAdapterForSession } from "@src/engines/SessionCore/sync";
 import { createLogger } from "@src/hooks/logger";
-import { collectIdeContext } from "@src/services/context/collectors";
+import { collectAdeContext } from "@src/services/context/collectors";
 import {
   type Session,
   type SessionStatus,
@@ -145,7 +145,7 @@ export const SessionService = {
     // when supplied and skip the gate when not — at create time there's
     // no persisted row to compare against yet.
     const expectedRepoPath = params.projectRepoPath || params.repoPath || null;
-    const ideContext = collectIdeContext({ expectedRepoPath });
+    const adeContext = collectAdeContext({ expectedRepoPath });
 
     const isCli = Boolean(params.cliAgentType);
     const category = isCli ? "cli_agent" : "rust_agent";
@@ -162,7 +162,7 @@ export const SessionService = {
       agentRole: params.agentRole || undefined,
       worktreePath: params.repoPath || undefined,
       keySource: params.keySource || undefined,
-      ideContext,
+      ideContext: adeContext,
       ...(params.projectSlug ? { projectSlug: params.projectSlug } : {}),
       ...(isCli
         ? { platform: params.cliAgentType }
@@ -297,12 +297,12 @@ export const SessionService = {
       clientMessageId,
       turnIntentId,
     } = params;
-    // Gate IDE context on the session row's persisted repo so a session
+    // Gate ADE context on the session row's persisted repo so a session
     // on repo A doesn't ship repo B's editor / git / LSP state when the
     // toolbar happens to point elsewhere. Legacy rows with no
     // `repoPath` fall through to the unconstrained path.
     const sessionRow = getInstrumentedStore().get(sessionByIdAtom(sessionId));
-    const ideContext = collectIdeContext({
+    const adeContext = collectAdeContext({
       expectedRepoPath: sessionRow?.repoPath ?? null,
     });
     const adapter = getAdapterForSession(sessionId);
@@ -325,7 +325,7 @@ export const SessionService = {
         isResume,
         clientMessageId,
         turnIntentId,
-        ideContext,
+        adeContext,
         sessionRepoPath: sessionRow?.repoPath ?? null,
       });
       // Float the row to the top of "today" in the sidebar without

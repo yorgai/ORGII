@@ -2,7 +2,7 @@ import {
   beginOptimisticTurn,
   failOptimisticTurn,
 } from "@src/engines/SessionCore/control/optimisticTurnStatus";
-import { collectIdeContext } from "@src/services/context/collectors";
+import { collectAdeContext } from "@src/services/context/collectors";
 import { retryInvokeTauri } from "@src/util/platform/tauri/retryInvoke";
 
 export interface ExecutePlanParams {
@@ -26,7 +26,7 @@ async function sendPlanMessage(
   content: string,
   params: Omit<ExecutePlanParams, "sessionId">
 ): Promise<void> {
-  const ideContext = collectIdeContext({
+  const adeContext = collectAdeContext({
     expectedRepoPath: params.workspacePath ?? null,
   });
   // Raw invoke bypasses useMessageDispatch — without the optimistic running
@@ -44,7 +44,7 @@ async function sendPlanMessage(
         ...(params.workspacePath
           ? { workspacePath: params.workspacePath }
           : {}),
-        ...(ideContext ? { ideContext } : {}),
+        ...(adeContext ? { ideContext: adeContext } : {}),
       },
       sessionId
     );

@@ -120,9 +120,9 @@ export interface SessionEventHandler {
 
 /**
  * Input passed to {@link SessionAdapter.sendMessage}. Mirrors the
- * caller's `SessionSendMessageParams` plus the IDE context snapshot
+ * caller's `SessionSendMessageParams` plus the ADE context snapshot
  * that `SessionService` collects up-front so each adapter doesn't
- * have to know about the IDE-context plumbing.
+ * have to know about the ADE-context plumbing.
  *
  * Adapters that don't care about a field (Cursor IDE has its own
  * IDE context, doesn't need ours; OS Agent ignores `mode`) just
@@ -144,8 +144,8 @@ export interface AdapterSendInput {
   accountId?: string;
   /** Optional agent exec mode (build/plan/explore/...). */
   mode?: string;
-  /** IDE context collected by `collectIdeContext()` before dispatch. */
-  ideContext?: WorkspaceSnapshot;
+  /** ADE context collected by `collectAdeContext()` before dispatch. */
+  adeContext?: WorkspaceSnapshot;
   /** Base64 image data URLs attached to this message. */
   imageDataUrls?: string[];
   /** Client-side idempotency key used to suppress duplicate sends. */
@@ -163,7 +163,7 @@ export interface AdapterSendInput {
   isResume?: boolean;
   /**
    * The session row's persisted workspace root path.
-   * Passed to agent adapters so they can gate IDE context on the correct repo.
+   * Passed to agent adapters so they can gate ADE context on the correct repo.
    */
   sessionRepoPath?: string | null;
 }

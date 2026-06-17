@@ -20,7 +20,7 @@ import {
 } from "@src/engines/SessionCore/core/atoms";
 import { SESSION_CREATOR_LAUNCH_MODE } from "@src/features/SessionCreator/types";
 import { createLogger } from "@src/hooks/logger";
-import { collectIdeContext } from "@src/services/context/collectors";
+import { collectAdeContext } from "@src/services/context/collectors";
 import {
   activeSessionIdAtom,
   dispatchCategoryAtom,
@@ -311,7 +311,7 @@ export function useSessionLaunch(
         : workItemContext;
       if (resolveWorkItemContext && !resolvedWorkItemContext) return false;
 
-      const ideContext = collectIdeContext({
+      const adeContext = collectAdeContext({
         expectedRepoPath: effectiveSource?.repoPath || null,
       });
       const { hasImages, launchParams, sessionUsesHostedKey } =
@@ -321,7 +321,7 @@ export function useSessionLaunch(
           advancedConfig,
           dispatchCategory,
           effectiveSource,
-          ideContext,
+          adeContext,
           imageDataUrls,
           isBackgroundLaunch,
           resolvedKeys,

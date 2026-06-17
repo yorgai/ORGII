@@ -3,7 +3,7 @@
  *
  * Includes editor, git, diagnostics, and workspace folder data.
  * Kept in a dependency-free module so `api/tauri/agent/types` and RPC schemas
- * do not import `collectors/IdeContextCollector` (which pulls Jotai stores).
+ * do not import `collectors/AdeContextCollector` (which pulls Jotai stores).
  */
 import type {
   DispatchCategory,
@@ -136,7 +136,7 @@ export interface WorkspaceSnapshot {
   workspaceFolders?: string[];
   /** The PR for the current branch, enriched with commits and description. */
   currentPullRequest?: CurrentPullRequestSnapshot;
-  /** Active repository path selected in the IDE toolbar. Maps to IdeContext.repo_path on the Rust side. */
+  /** Active repository path selected in the ADE toolbar. Maps to IdeContext.repo_path on the Rust side. */
   repoPath?: string;
   /**
    * QQ-style availability the user set in the sidebar footer. Shipped on

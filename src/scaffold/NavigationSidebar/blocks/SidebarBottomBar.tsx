@@ -4,7 +4,7 @@
  * Footer strip rendered inside any sidebar variant via the `bottomContent`
  * slot. Left side hosts the user presence pill — a QQ-style availability
  * control (Online / Invisible / Away) the user toggles from here. The
- * selected mode is shipped to every agent turn via the IDE context payload
+ * selected mode is shipped to every agent turn via the ADE context payload
  * and surfaced in the system prompt's `user_presence` section so the agent
  * can adapt to whether the human is at the keyboard.
  *

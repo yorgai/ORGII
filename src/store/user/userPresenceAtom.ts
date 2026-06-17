@@ -5,7 +5,7 @@
  * to `localStorage` so the chosen mode survives reloads. Read by:
  *
  * - `SidebarBottomBar` → renders the presence pill + menu.
- * - `IdeContextCollector` → ships the wire snapshot with every agent turn.
+ * - `AdeContextCollector` → ships the wire snapshot with every agent turn.
  *
  * The atom holds the local-only `UserPresenceState` (mode + back-at + label);
  * conversion to the wire shape happens in `selectUserPresenceWire` so the

@@ -920,7 +920,7 @@ export const cliAdapter: SessionAdapter = {
       accountId,
       mode,
       imageDataUrls,
-      ideContext,
+      adeContext,
       isResume,
     } = input;
     if (!isResume && content.trim()) {
@@ -942,7 +942,7 @@ export const cliAdapter: SessionAdapter = {
         ...(imageDataUrls && imageDataUrls.length > 0
           ? { images: imageDataUrls }
           : {}),
-        ...(ideContext ? { ideContext } : {}),
+        ...(adeContext ? { ideContext: adeContext } : {}),
       });
     } catch (error) {
       protectedRunningTurnBySession.delete(sessionId);

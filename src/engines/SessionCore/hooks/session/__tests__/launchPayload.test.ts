@@ -117,7 +117,7 @@ describe("launchPayload", () => {
         repoName: "Repo A",
         repoPath: "/workspace/repo-a",
       },
-      ideContext: undefined,
+      adeContext: undefined,
       imageDataUrls: undefined,
       isBackgroundLaunch: false,
       resolvedKeys: {
@@ -222,7 +222,7 @@ function baseLaunchOptions(): Parameters<typeof buildSessionLaunchPayload>[0] {
     advancedConfig: {},
     dispatchCategory: DISPATCH_CATEGORY.RUST_AGENT,
     effectiveSource: null,
-    ideContext: undefined,
+    adeContext: undefined,
     imageDataUrls: undefined,
     isBackgroundLaunch: false,
     resolvedKeys: {

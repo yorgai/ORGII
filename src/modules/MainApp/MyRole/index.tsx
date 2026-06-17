@@ -7,7 +7,7 @@
  * This page is where the user manages presence-mode guidance and adds
  * custom roles on top of the three built-ins (Online / Invisible /
  * Away). The active mode + its guidance string travel with every agent
- * turn via the IDE context payload (see `userPresenceWireAtom`).
+ * turn via the ADE context payload (see `userPresenceWireAtom`).
  *
  * Sidebar navigation lives in `SettingsSidebar` under the My Role
  * drill-down. This module is a full-width detail panel and has no

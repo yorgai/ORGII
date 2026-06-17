@@ -23,7 +23,7 @@ import type { PendingSessionProposal } from "@src/engines/SessionCore/hooks/useA
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
 import type { SpotlightItem } from "@src/scaffold/GlobalSpotlight/types";
-import { collectIdeContext } from "@src/services/context/collectors";
+import { collectAdeContext } from "@src/services/context/collectors";
 import { adeManagerPaletteAtom } from "@src/store/session/adeManagerPaletteAtom";
 import {
   creatorDefaultModelSelectionAtom,
@@ -171,7 +171,7 @@ export function useAgentControlPalette({
     setAdeManagerEnabled(true);
     const prompt = buildControlPrompt(text);
     const modelConfig = resolveControlModel(creatorDefaultLastModel);
-    const ideContext = collectIdeContext({ expectedRepoPath: null });
+    const adeContext = collectAdeContext({ expectedRepoPath: null });
     sendingRef.current = true;
     setRunStatus("sending");
 
@@ -191,7 +191,7 @@ export function useAgentControlPalette({
               ...(modelConfig.accountId
                 ? { accountId: modelConfig.accountId }
                 : {}),
-              ideContext,
+              ideContext: adeContext,
             });
           } catch (sendError) {
             failOptimisticTurn(existingSessionId);
@@ -208,7 +208,7 @@ export function useAgentControlPalette({
             ...(modelConfig.accountId
               ? { accountId: modelConfig.accountId }
               : {}),
-            ideContext,
+            ideContext: adeContext,
           });
           controlSessionIdRef.current = result.sessionId;
           setControlSessionId(result.sessionId);

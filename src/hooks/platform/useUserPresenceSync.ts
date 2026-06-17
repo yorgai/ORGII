@@ -9,8 +9,8 @@
  *   - re-arming auto-resolve deadlines on pending questions / plans,
  *   - starting/stopping the goal continuation loop.
  *
- * The per-message `IdeContext.userPresence` snapshot (collected in
- * IdeContextCollector) continues to feed prompt building.
+ * The per-message `IdeContext.userPresence` wire snapshot (collected in
+ * AdeContextCollector) continues to feed prompt building.
  */
 import { invoke } from "@tauri-apps/api/core";
 import { useAtomValue } from "jotai";

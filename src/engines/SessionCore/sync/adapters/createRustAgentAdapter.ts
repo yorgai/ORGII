@@ -546,7 +546,7 @@ export function createRustAgentAdapter(
         model,
         accountId,
         mode,
-        ideContext,
+        adeContext,
         imageDataUrls,
         isResume,
         clientMessageId,
@@ -574,7 +574,7 @@ export function createRustAgentAdapter(
           ...(imageDataUrls && imageDataUrls.length > 0
             ? { images: imageDataUrls }
             : {}),
-          ...(ideContext ? { ideContext } : {}),
+          ...(adeContext ? { ideContext: adeContext } : {}),
           ...(isResume ? { isResume: true } : {}),
           ...(clientMessageId ? { clientMessageId } : {}),
           ...(turnIntentId ? { turnIntentId } : {}),

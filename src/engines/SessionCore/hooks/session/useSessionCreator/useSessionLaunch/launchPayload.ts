@@ -37,7 +37,7 @@ export interface BuildSessionLaunchParamsOptions {
   advancedConfig: AdvancedConfig;
   dispatchCategory: DispatchCategory;
   effectiveSource: SessionSource | null;
-  ideContext: WorkspaceSnapshot | undefined;
+  adeContext: WorkspaceSnapshot | undefined;
   imageDataUrls: string[] | undefined;
   isBackgroundLaunch: boolean;
   resolvedKeys: ResolvedKeys;
@@ -61,7 +61,7 @@ function normalizePath(path: string): string {
 }
 
 /**
- * Loose comparison key for matching the session repo path against IDE
+ * Loose comparison key for matching the session repo path against ADE
  * workspace folder paths: trailing slashes stripped + case-insensitive
  * (macOS default filesystems are case-insensitive, and the two sides
  * may come from differently-cased sources). Canonical-path comparison
@@ -112,7 +112,7 @@ function getAdditionalDirectories(
     if (dropped.length > 0) {
       // Raw console.warn kept intentionally: asserted by launchPayload.test.ts.
       console.warn(
-        "[launchPayload] session repoPath is not among the IDE workspace folders — dropping additional directories",
+        "[launchPayload] session repoPath is not among the ADE workspace folders — dropping additional directories",
         { sessionRepoPath, droppedDirectories: dropped }
       );
     }
@@ -171,7 +171,7 @@ export function buildSessionLaunchPayload(
     advancedConfig,
     dispatchCategory,
     effectiveSource,
-    ideContext,
+    adeContext,
     imageDataUrls,
     isBackgroundLaunch,
     resolvedKeys,
@@ -210,7 +210,7 @@ export function buildSessionLaunchPayload(
     name: sessionName || undefined,
     background: isBackgroundLaunch,
     ...(hasImages ? { images: imageDataUrls } : {}),
-    ...(ideContext ? { ideContext } : {}),
+    ...(adeContext ? { ideContext: adeContext } : {}),
     ...getRustAgentIdentityFields({
       isRustAgent,
       selectedAgentDefId,
