@@ -33,6 +33,14 @@ interface BuildModelSelectionRowParams {
     baseModel: string,
     modelId: string
   ) => void;
+  /**
+   * Only supplied for the current-selection row. When the user edits the
+   * effort/variant of the model in use, re-select that variant as the active
+   * model so the displayed pill AND the model the session launches with both
+   * reflect the change immediately (the dispatch path uses the stored concrete
+   * model id, not the per-key default variant).
+   */
+  onReselectVariant?: (entry: RecentModelEntry, nextModelId: string) => void;
   modelAliasVersion: number;
 }
 
@@ -45,6 +53,7 @@ export function buildModelSelectionSpotlightItem({
   groupByModel,
   onSelect,
   persistDefaultVariantForAccount,
+  onReselectVariant,
   modelAliasVersion,
 }: BuildModelSelectionRowParams): SpotlightItem {
   void modelAliasVersion;
@@ -112,12 +121,18 @@ export function buildModelSelectionSpotlightItem({
       : entry.modelId;
   const handleApply =
     recentAccount && previewBaseModel
-      ? (nextModelId: string) =>
+      ? (nextModelId: string) => {
           persistDefaultVariantForAccount(
             recentAccount.id,
             previewBaseModel,
             nextModelId
-          )
+          );
+          // For the current selection, also make the in-use model become the
+          // chosen variant so the pill + launched model update immediately.
+          if (isCurrentSelection) {
+            onReselectVariant?.(entry, nextModelId);
+          }
+        }
       : undefined;
 
   const accountHasMultipleVariants = accountFamilyIds.length > 1;

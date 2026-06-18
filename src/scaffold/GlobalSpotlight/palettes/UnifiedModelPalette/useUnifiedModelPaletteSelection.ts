@@ -13,6 +13,7 @@ import {
 
 import { buildSourceOptions } from "./sourceItems";
 import type { SourceOption } from "./types";
+import { resolveVariantReselection } from "./variantReselect";
 
 type ActiveColumn = "models" | "sources";
 
@@ -169,8 +170,14 @@ export function useUnifiedModelPaletteSelection({
     [selectedModelLabel, applySourceSelection, resolveLaunchModelForSource]
   );
 
-  const handleRecentSelect = useCallback(
-    (entry: RecentModelEntry) => {
+  // Core apply path shared by an explicit recent pick and an in-place
+  // variant re-select. Rebinds the entry's account (by id, then by
+  // name+type), pushes the selection through `onConfigChange` +
+  // `recordRecent`, and closes the palette unless `close: false` is passed
+  // (the variant-edit case keeps the palette open so the user can keep
+  // tweaking after the properties dropdown closes itself).
+  const applyRecentEntry = useCallback(
+    (entry: RecentModelEntry, options?: { close?: boolean }) => {
       const currentAccount = accounts.find(
         (account) =>
           account.id === entry.accountId &&
@@ -213,9 +220,28 @@ export function useUnifiedModelPaletteSelection({
       });
 
       recordRecent(reboundEntry);
-      onClose();
+      if (options?.close !== false) onClose();
     },
     [accounts, advancedConfig, onConfigChange, onClose, recordRecent]
+  );
+
+  const handleRecentSelect = useCallback(
+    (entry: RecentModelEntry) => applyRecentEntry(entry),
+    [applyRecentEntry]
+  );
+
+  // Editing the effort/variant of the *currently selected* model should make
+  // the selected model become that variant — updating both the displayed
+  // pill and the model the session actually launches with (the dispatch path
+  // uses the stored concrete model id, not the per-key default variant). We
+  // reuse the select path with the new model id and keep the palette open.
+  const reselectVariant = useCallback(
+    (entry: RecentModelEntry, nextModelId: string) => {
+      const resolved = resolveVariantReselection(entry.modelId, nextModelId);
+      if (!resolved) return;
+      applyRecentEntry({ ...entry, modelId: resolved }, { close: false });
+    },
+    [applyRecentEntry]
   );
 
   const handleBack = useCallback(() => {
@@ -235,6 +261,7 @@ export function useUnifiedModelPaletteSelection({
     handleModelSelect,
     handleSourceSelect,
     handleRecentSelect,
+    reselectVariant,
     handleBack,
   };
 }

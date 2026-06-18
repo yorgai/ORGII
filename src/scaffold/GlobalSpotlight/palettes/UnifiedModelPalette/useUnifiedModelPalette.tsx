@@ -60,6 +60,7 @@ export function useUnifiedModelPalette({
     handleModelSelect,
     handleSourceSelect,
     handleRecentSelect,
+    reselectVariant,
     handleBack,
   } = useUnifiedModelPaletteSelection({
     isOpen,
@@ -98,6 +99,7 @@ export function useUnifiedModelPalette({
     handleModelPreview,
     handleSourceSelect,
     handleRecentSelect,
+    reselectVariant,
     saveKey,
     modelAliasVersion,
     tCommon,

@@ -49,6 +49,7 @@ interface UseUnifiedModelPaletteItemsParams {
   ) => void;
   handleSourceSelect: (source: SourceOption) => void;
   handleRecentSelect: (entry: RecentModelEntry) => void;
+  reselectVariant: (entry: RecentModelEntry, nextModelId: string) => void;
   saveKey: UnifiedModelPaletteData["saveKey"];
   modelAliasVersion: number;
   tCommon: (key: string) => string;
@@ -69,6 +70,7 @@ export function useUnifiedModelPaletteItems({
   handleModelPreview,
   handleSourceSelect,
   handleRecentSelect,
+  reselectVariant,
   saveKey,
   modelAliasVersion,
   tCommon,
@@ -208,6 +210,7 @@ export function useUnifiedModelPaletteItems({
       groupByModel,
       onSelect: handleRecentSelect,
       persistDefaultVariantForAccount,
+      onReselectVariant: reselectVariant,
       modelAliasVersion,
     });
   }, [
@@ -217,6 +220,7 @@ export function useUnifiedModelPaletteItems({
     handleRecentSelect,
     modelAliasVersion,
     persistDefaultVariantForAccount,
+    reselectVariant,
   ]);
 
   const resolveGroupLaunchModel = useCallback(
