@@ -16,6 +16,7 @@
  *  - A `cancelledRef` prevents setState after unmount.
  */
 import { invoke } from "@tauri-apps/api/core";
+import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
@@ -24,6 +25,8 @@ import {
   resolveSkillGroup,
 } from "@src/engines/ChatPanel/InputArea/components/SlashCommandPortal/slashItemUtils";
 import { createLogger } from "@src/hooks/logger";
+import { mergeInstalledSkills } from "@src/hooks/skills/installedSkillsMerge";
+import { installedSkillsAtom } from "@src/store/skills/installedSkillsAtom";
 import { type InstalledSkill, type SlashItem } from "@src/types/extensions";
 import { fuzzyMatch, fuzzyScore } from "@src/util/search/fuzzy";
 
@@ -58,6 +61,7 @@ export function useSlashItemsCache(
   options: UseSlashItemsCacheOptions
 ): UseSlashItemsCacheReturn {
   const { builtinItems } = options;
+  const setInstalledSkills = useSetAtom(installedSkillsAtom);
 
   const [filteredItems, setFilteredItems] = useState<SlashItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,6 +87,12 @@ export function useSlashItemsCache(
           return [];
         }),
       ]);
+
+      if (rawSkills.length > 0) {
+        setInstalledSkills((current) =>
+          mergeInstalledSkills([current, rawSkills])
+        );
+      }
 
       const skillItems: SlashItem[] = rawSkills
         .filter((s) => s.enabled && s.available)
@@ -140,7 +150,7 @@ export function useSlashItemsCache(
         setLoading(false);
       }
     }
-  }, []);
+  }, [setInstalledSkills]);
 
   const filterItems = useCallback(
     (query: string, items: SlashItem[]): SlashItem[] => {
