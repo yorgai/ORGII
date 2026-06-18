@@ -8,6 +8,7 @@
  * single source of truth so deep-links, refresh, the back button, and
  * Spotlight navigation all behave correctly.
  */
+import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { McpConfigScope } from "@src/api/tauri/rpc/schemas/mcp";
@@ -21,6 +22,7 @@ import {
   type McpConfigFile,
   useMcpServers,
 } from "@src/modules/MainApp/AgentOrgs/config/mcp/useMcpServers";
+import { reposAtom } from "@src/store/repo";
 
 import type { McpDetailState } from "../Mcp/types";
 import type { SkillEditorState, SkillsHubDetailState } from "../Skills/types";
@@ -90,7 +92,22 @@ export function useExtensionsState(
 
   const isAddonCategory = category === "externalSkillsets";
 
-  const skillsHubRaw = useSkillsHub({ enabled: isAddonCategory });
+  // Repo-scoped skills (`{repo}/.orgii/skills/`) only show up when their repo
+  // path is queried, so feed the open repos to the hub. Memoized + sorted into
+  // a stable identity so the hub's load effect doesn't re-run on every render.
+  const allRepos = useAtomValue(reposAtom);
+  const skillWorkspacePaths = useMemo(() => {
+    const paths = new Set<string>();
+    for (const repo of allRepos) {
+      if (repo.path) paths.add(repo.path);
+    }
+    return Array.from(paths).sort();
+  }, [allRepos]);
+
+  const skillsHubRaw = useSkillsHub({
+    enabled: isAddonCategory,
+    workspacePaths: skillWorkspacePaths,
+  });
   const skillEditorHook = useSkillEditor();
   const mcpServers = useMcpServers({ enabled: isAddonCategory });
 
@@ -205,9 +222,12 @@ export function useExtensionsState(
     closeWizard();
   }, [closeWizard]);
 
-  const handleImportSkillRefresh = useCallback(async () => {
-    await skillsHubRaw.refreshInstalled();
-  }, [skillsHubRaw]);
+  const handleImportSkillRefresh = useCallback(
+    async (importedRepoPaths?: string[]) => {
+      await skillsHubRaw.refreshInstalled(importedRepoPaths);
+    },
+    [skillsHubRaw]
+  );
 
   // ── MCP handlers ──
   //
