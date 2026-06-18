@@ -80,8 +80,8 @@ export function useBranchItems(
           tagLabel: branch.isCurrent ? labels.current : undefined,
           rightLabel: lastCommit,
         },
-        action: () => {
-          onSelect(branch.name, branch);
+        action: async () => {
+          await onSelect(branch.name, branch);
           onClose();
         },
       };
@@ -99,8 +99,8 @@ export function useBranchItems(
         icon: ICONS.create,
         type: "option" as const,
         data: { isActionItem: true, isSelector: true },
-        action: () => {
-          onCreateBranch(searchQuery.trim());
+        action: async () => {
+          await onCreateBranch(searchQuery.trim());
           onClose();
         },
       });

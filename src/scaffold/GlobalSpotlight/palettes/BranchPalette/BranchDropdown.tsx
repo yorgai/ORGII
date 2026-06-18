@@ -77,7 +77,7 @@ const BranchRow: React.FC<BranchRowProps> = ({
 export interface BranchDropdownProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (branchName: string, branch: BranchItem) => void;
+  onSelect: (branchName: string, branch: BranchItem) => void | Promise<void>;
   repoId: string;
   repoPath?: string;
   currentBranchName?: string;
@@ -179,8 +179,8 @@ export const BranchDropdown: React.FC<BranchDropdownProps> = ({
   );
 
   const handleSelect = useCallback(
-    (branch: BranchItem) => {
-      onSelect(branch.name, branch);
+    async (branch: BranchItem) => {
+      await onSelect(branch.name, branch);
       onClose();
     },
     [onSelect, onClose]

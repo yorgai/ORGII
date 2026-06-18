@@ -10,7 +10,7 @@ export type BranchPaletteMode = "checkout" | "add" | "add-from" | "remove";
 
 export interface BranchPaletteProps extends BasePaletteProps {
   /** Callback when a branch is selected (checkout) */
-  onSelect: (branchName: string, branch: BranchItem) => void;
+  onSelect: (branchName: string, branch: BranchItem) => void | Promise<void>;
   /** Repository ID to fetch branches for */
   repoId: string;
   /** Repository path (optional - will be looked up from atoms if not provided) */
@@ -20,7 +20,10 @@ export interface BranchPaletteProps extends BasePaletteProps {
   /** Currently selected branch name */
   currentBranchName?: string;
   /** Callback to create a new branch */
-  onCreateBranch?: (branchName: string, startPoint?: string) => void;
+  onCreateBranch?: (
+    branchName: string,
+    startPoint?: string
+  ) => void | Promise<void>;
   /** Callback to delete a branch */
   onDeleteBranch?: (branchName: string) => void | Promise<void>;
   /** Callback to checkout detached HEAD (current commit) */
@@ -52,8 +55,11 @@ export interface UseBranchPaletteOptions {
   repoId: string;
   repoPathProp?: string;
   currentBranchName?: string;
-  onSelect: (branchName: string, branch: BranchItem) => void;
-  onCreateBranch?: (branchName: string, startPoint?: string) => void;
+  onSelect: (branchName: string, branch: BranchItem) => void | Promise<void>;
+  onCreateBranch?: (
+    branchName: string,
+    startPoint?: string
+  ) => void | Promise<void>;
   onDeleteBranch?: (branchName: string) => void | Promise<void>;
   onCheckoutDetached?: () => void;
   onClose: () => void;
@@ -84,8 +90,11 @@ export interface UseBranchItemsOptions {
   searchQuery: string;
   currentBranchName?: string;
   effectiveShowRemoveMode: boolean;
-  onSelect: (branchName: string, branch: BranchItem) => void;
-  onCreateBranch?: (branchName: string, startPoint?: string) => void;
+  onSelect: (branchName: string, branch: BranchItem) => void | Promise<void>;
+  onCreateBranch?: (
+    branchName: string,
+    startPoint?: string
+  ) => void | Promise<void>;
   onDeleteBranch?: (branchName: string) => void | Promise<void>;
   onCheckoutDetached?: () => void;
   onClose: () => void;
