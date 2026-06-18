@@ -298,6 +298,7 @@ fn session_meta_to_cache_input(meta: CodexAppSessionMeta) -> ImportedHistoryCach
         branch: None,
         impact: meta.impact,
         listable: true,
+        source_metadata_json: None,
     }
 }
 

@@ -168,7 +168,7 @@ pub struct CursorIdeTurnWindow {
 /// delta-sync + subagent filter + ordering for us. We just translate cache
 /// rows into the frontend-ready `CursorIdeSessionRow` shape.
 pub fn list_cursor_ide_sessions_paginated(
-    cache_conn: &Connection,
+    cache_conn: &mut Connection,
     limit: usize,
     offset: usize,
 ) -> Result<CursorIdeSessionPage, String> {

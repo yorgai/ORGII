@@ -183,25 +183,6 @@ impl<'conn> SqliteRecordStore<'conn> {
     pub fn init_source_cache_tables(conn: &Connection) -> rusqlite::Result<()> {
         conn.execute_batch(
             "
-            CREATE TABLE IF NOT EXISTS cursor_session_cache (
-                id              TEXT PRIMARY KEY,
-                name            TEXT NOT NULL DEFAULT '',
-                created_at      INTEGER NOT NULL DEFAULT 0,
-                last_active_at  INTEGER NOT NULL DEFAULT 0,
-                status          TEXT NOT NULL DEFAULT '',
-                is_agentic      INTEGER NOT NULL DEFAULT 0,
-                mode            TEXT NOT NULL DEFAULT '',
-                model           TEXT NOT NULL DEFAULT '',
-                lines_added     INTEGER NOT NULL DEFAULT 0,
-                lines_removed   INTEGER NOT NULL DEFAULT 0,
-                files_changed   INTEGER NOT NULL DEFAULT 0,
-                tokens_used     INTEGER NOT NULL DEFAULT 0
-            );
-            CREATE INDEX IF NOT EXISTS idx_cursor_cache_created
-                ON cursor_session_cache(created_at);
-            CREATE INDEX IF NOT EXISTS idx_cursor_cache_status
-                ON cursor_session_cache(status);
-
             CREATE TABLE IF NOT EXISTS cursor_ide_turn_summaries (
                 session_id          TEXT NOT NULL,
                 composer_id         TEXT NOT NULL,
@@ -278,6 +259,7 @@ impl<'conn> SqliteRecordStore<'conn> {
                 lines_removed       INTEGER NOT NULL DEFAULT 0,
                 touched_files_json  TEXT NOT NULL DEFAULT '[]',
                 listable            INTEGER NOT NULL DEFAULT 1,
+                source_metadata_json TEXT NOT NULL DEFAULT '',
                 updated_at          TEXT NOT NULL DEFAULT '',
                 PRIMARY KEY (source, source_session_id)
             );
@@ -312,6 +294,12 @@ impl<'conn> SqliteRecordStore<'conn> {
             "imported_history_session_cache",
             "touched_files_json",
             "TEXT NOT NULL DEFAULT '[]'",
+        )?;
+        ensure_column(
+            conn,
+            "imported_history_session_cache",
+            "source_metadata_json",
+            "TEXT NOT NULL DEFAULT ''",
         )
     }
 

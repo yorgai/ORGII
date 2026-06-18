@@ -10,6 +10,7 @@ pub struct ImportedHistoryImpactStats {
 
 pub const SOURCE_CLAUDE_CODE: &str = "claude_code";
 pub const SOURCE_CODEX_APP: &str = "codex_app";
+pub const SOURCE_CURSOR_IDE: &str = "cursor_ide";
 pub const SOURCE_OPENCODE: &str = "opencode";
 pub const SOURCE_WINDSURF: &str = "windsurf";
 
@@ -34,6 +35,7 @@ pub struct ImportedHistoryCacheInput {
     pub branch: Option<String>,
     pub impact: ImportedHistoryImpactStats,
     pub listable: bool,
+    pub source_metadata_json: Option<String>,
 }
 
 #[derive(Debug, Clone)]

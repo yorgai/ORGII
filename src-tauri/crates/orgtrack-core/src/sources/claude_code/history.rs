@@ -333,6 +333,7 @@ fn session_meta_to_cache_input(meta: ClaudeCodeHistoryMeta) -> ImportedHistoryCa
         branch: meta.branch,
         impact: meta.impact,
         listable: true,
+        source_metadata_json: None,
     }
 }
 

@@ -30,8 +30,8 @@ pub async fn orgtrack_get_cursor_sessions(
     end_date: String,
 ) -> Result<Vec<cursor_db::CursorSession>, String> {
     tokio::task::spawn_blocking(move || {
-        let conn = open_cache_conn()?;
-        cursor_db::get_cursor_sessions(&conn, &start_date, &end_date)
+        let mut conn = open_cache_conn()?;
+        cursor_db::get_cursor_sessions(&mut conn, &start_date, &end_date)
     })
     .await
     .map_err(|err| format!("Task join error: {err}"))?
@@ -118,8 +118,8 @@ pub async fn cursor_ide_list_sessions(
     let limit = limit.unwrap_or(200);
     let offset = offset.unwrap_or(0);
     tokio::task::spawn_blocking(move || {
-        let conn = open_cache_conn()?;
-        cursor_db_history::list_cursor_ide_sessions_paginated(&conn, limit, offset)
+        let mut conn = open_cache_conn()?;
+        cursor_db_history::list_cursor_ide_sessions_paginated(&mut conn, limit, offset)
     })
     .await
     .map_err(|err| format!("Task join error: {err}"))?

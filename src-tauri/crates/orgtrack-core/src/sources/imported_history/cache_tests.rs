@@ -8,43 +8,9 @@ use crate::sources::imported_history::metadata::{
 
 fn fixture_conn() -> Connection {
     let conn = Connection::open_in_memory().expect("open in-memory db");
-    conn.execute_batch(
-        "
-        CREATE TABLE imported_history_session_cache (
-            source              TEXT NOT NULL,
-            source_session_id   TEXT NOT NULL,
-            session_id          TEXT NOT NULL,
-            source_path         TEXT NOT NULL DEFAULT '',
-            source_record_key   TEXT NOT NULL DEFAULT '',
-            source_mtime_ms     INTEGER NOT NULL DEFAULT 0,
-            source_size_bytes   INTEGER NOT NULL DEFAULT 0,
-            source_fingerprint  TEXT NOT NULL DEFAULT '',
-            parser_version      INTEGER NOT NULL DEFAULT 0,
-            name                TEXT NOT NULL DEFAULT '',
-            created_at_ms       INTEGER NOT NULL DEFAULT 0,
-            updated_at_ms       INTEGER NOT NULL DEFAULT 0,
-            model               TEXT NOT NULL DEFAULT '',
-            input_tokens        INTEGER NOT NULL DEFAULT 0,
-            output_tokens       INTEGER NOT NULL DEFAULT 0,
-            repo_path           TEXT NOT NULL DEFAULT '',
-            branch              TEXT NOT NULL DEFAULT '',
-            files_changed       INTEGER NOT NULL DEFAULT 0,
-            lines_added         INTEGER NOT NULL DEFAULT 0,
-            lines_removed       INTEGER NOT NULL DEFAULT 0,
-            touched_files_json  TEXT NOT NULL DEFAULT '[]',
-            listable            INTEGER NOT NULL DEFAULT 1,
-            updated_at          TEXT NOT NULL DEFAULT '',
-            PRIMARY KEY (source, source_session_id)
-        );
-        CREATE INDEX idx_imported_history_source_updated
-            ON imported_history_session_cache(source, updated_at_ms DESC);
-        CREATE INDEX idx_imported_history_source_repo
-            ON imported_history_session_cache(source, repo_path);
-        CREATE INDEX idx_imported_history_source_path
-            ON imported_history_session_cache(source, source_path);
-        ",
-    )
-    .expect("create cache table");
+    crate::store::sqlite::SqliteRecordStore::init_tables(&conn).expect("init core tables");
+    crate::store::sqlite::SqliteRecordStore::init_source_cache_tables(&conn)
+        .expect("init source cache tables");
     conn
 }
 
@@ -73,6 +39,7 @@ fn input(
         branch: Some("main".to_string()),
         impact: ImportedHistoryImpactStats::default(),
         listable: true,
+        source_metadata_json: None,
     }
 }
 
@@ -154,4 +121,55 @@ fn cache_recent_paths_are_deduped_and_limited() {
     assert_eq!(paths.len(), 1);
     assert_eq!(paths[0].path, "/tmp/shared");
     assert_eq!(paths[0].session_count, 2);
+}
+
+#[test]
+fn cache_single_session_lookup_returns_source_metadata() {
+    let mut conn = fixture_conn();
+    let mut cached = input(SOURCE_CODEX_APP, "with-metadata", 100);
+    cached.source_metadata_json = Some(r#"{"status":"completed","mode":"agent"}"#.to_string());
+    upsert_imported_session_cache_from_conn(&mut conn, &[cached]).expect("upsert");
+
+    let session = query_cached_session_from_conn(&conn, SOURCE_CODEX_APP, "with-metadata")
+        .expect("query")
+        .expect("session");
+
+    assert_eq!(session.source_session_id, "with-metadata");
+    assert_eq!(
+        session.source_metadata_json.as_deref(),
+        Some(r#"{"status":"completed","mode":"agent"}"#)
+    );
+}
+
+#[test]
+fn cache_source_list_filters_unlistable_sessions() {
+    let mut conn = fixture_conn();
+    let listed = input(SOURCE_CODEX_APP, "listed", 300);
+    let mut hidden = input(SOURCE_CODEX_APP, "hidden", 200);
+    hidden.listable = false;
+    upsert_imported_session_cache_from_conn(&mut conn, &[listed, hidden]).expect("upsert");
+
+    let sessions = query_cached_sessions_for_source_from_conn(&conn, SOURCE_CODEX_APP)
+        .expect("query source sessions");
+
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions[0].source_session_id, "listed");
+}
+
+#[test]
+fn cache_range_query_is_source_scoped_and_filters_unlistable_sessions() {
+    let mut conn = fixture_conn();
+    let inside = input(SOURCE_CODEX_APP, "inside", 200);
+    let outside = input(SOURCE_CODEX_APP, "outside", 500);
+    let other_source = input(SOURCE_OPENCODE, "other-source", 200);
+    let mut hidden = input(SOURCE_CODEX_APP, "hidden", 220);
+    hidden.listable = false;
+    upsert_imported_session_cache_from_conn(&mut conn, &[inside, outside, other_source, hidden])
+        .expect("upsert");
+
+    let sessions = query_cached_sessions_in_range_from_conn(&conn, SOURCE_CODEX_APP, 100, 300)
+        .expect("query range");
+
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions[0].source_session_id, "inside");
 }

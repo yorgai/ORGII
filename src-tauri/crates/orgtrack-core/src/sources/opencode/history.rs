@@ -259,6 +259,7 @@ fn session_meta_to_cache_input(meta: OpenCodeSessionMeta) -> ImportedHistoryCach
         branch: None,
         impact: ImportedHistoryImpactStats::default(),
         listable: true,
+        source_metadata_json: None,
     }
 }
 

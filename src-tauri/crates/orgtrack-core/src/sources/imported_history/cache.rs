@@ -1,10 +1,13 @@
 use std::collections::{HashMap, HashSet};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::canonical::{AgentMetadata, SessionRecord};
 use crate::privacy::ORGTRACK_SCHEMA_VERSION;
 use crate::store::{sqlite::SqliteRecordStore, RecordStore};
 use chrono::Utc;
-use rusqlite::{params, params_from_iter, types::Type, Connection, OptionalExtension};
+use rusqlite::{
+    params, params_from_iter, types::Type, types::Value as SqlValue, Connection, OptionalExtension,
+};
 
 use super::metadata::{
     ImportedHistoryCacheInput, ImportedHistoryImpactStats, ImportedHistoryRecordSignature,
@@ -34,6 +37,7 @@ pub struct ImportedHistoryCachedSession {
     pub branch: Option<String>,
     pub impact: ImportedHistoryImpactStats,
     pub listable: bool,
+    pub source_metadata_json: Option<String>,
 }
 
 impl ImportedHistoryCachedSession {
@@ -120,10 +124,10 @@ pub fn upsert_imported_session_cache_from_conn(
                     source_mtime_ms, source_size_bytes, source_fingerprint, parser_version,
                     name, created_at_ms, updated_at_ms, model, input_tokens, output_tokens,
                     repo_path, branch, files_changed, lines_added, lines_removed,
-                    touched_files_json, listable, updated_at
+                    touched_files_json, listable, source_metadata_json, updated_at
                 ) VALUES (
                     ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-                    ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23
+                    ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24
                 )
                 ON CONFLICT(source, source_session_id) DO UPDATE SET
                     session_id = excluded.session_id,
@@ -146,6 +150,7 @@ pub fn upsert_imported_session_cache_from_conn(
                     lines_removed = excluded.lines_removed,
                     touched_files_json = excluded.touched_files_json,
                     listable = excluded.listable,
+                    source_metadata_json = excluded.source_metadata_json,
                     updated_at = excluded.updated_at",
             )
             .map_err(|err| format!("Failed to prepare imported history cache upsert: {err}"))?;
@@ -175,6 +180,7 @@ pub fn upsert_imported_session_cache_from_conn(
                 input.impact.lines_removed,
                 touched_files_json,
                 if input.listable { 1_i64 } else { 0_i64 },
+                input.source_metadata_json.as_deref().unwrap_or_default(),
                 updated_at,
             ])
             .map_err(|err| format!("Failed to upsert imported history cache row: {err}"))?;
@@ -299,21 +305,46 @@ fn query_cached_sessions_from_conn(
     limit: usize,
     offset: usize,
 ) -> Result<Vec<ImportedHistoryCachedSession>, String> {
-    let mut stmt = conn
-        .prepare(
-            "SELECT source_session_id, session_id, source_path, source_record_key,
-                    source_mtime_ms, source_size_bytes, source_fingerprint, parser_version,
-                    name, created_at_ms, updated_at_ms, model, input_tokens, output_tokens,
-                    repo_path, branch, files_changed, lines_added, lines_removed,
-                    touched_files_json, listable
-             FROM imported_history_session_cache
-             WHERE source = ?1 AND listable = 1
-             ORDER BY updated_at_ms DESC, created_at_ms DESC, source_session_id ASC
-             LIMIT ?2 OFFSET ?3",
-        )
-        .map_err(|err| format!("Failed to prepare imported history cache query: {err}"))?;
+    query_cached_sessions_by_filter_from_conn(
+        conn,
+        source,
+        "listable = ?2",
+        &[SqlValue::from(1_i64)],
+        limit,
+        offset,
+    )
+}
+
+fn query_cached_sessions_by_filter_from_conn(
+    conn: &Connection,
+    source: &str,
+    filter_sql: &str,
+    filter_params: &[SqlValue],
+    limit: usize,
+    offset: usize,
+) -> Result<Vec<ImportedHistoryCachedSession>, String> {
+    let sql = format!(
+        "SELECT source_session_id, session_id, source_path, source_record_key,
+                source_mtime_ms, source_size_bytes, source_fingerprint, parser_version,
+                name, created_at_ms, updated_at_ms, model, input_tokens, output_tokens,
+                repo_path, branch, files_changed, lines_added, lines_removed,
+                touched_files_json, listable, source_metadata_json
+         FROM imported_history_session_cache
+         WHERE source = ?1 AND {filter_sql}
+         ORDER BY updated_at_ms DESC, created_at_ms DESC, source_session_id ASC
+         LIMIT ?{} OFFSET ?{}",
+        filter_params.len() + 2,
+        filter_params.len() + 3
+    );
+    let params = std::iter::once(SqlValue::from(source.to_string()))
+        .chain(filter_params.iter().cloned())
+        .chain([SqlValue::from(limit as i64), SqlValue::from(offset as i64)])
+        .collect::<Vec<_>>();
+    let mut stmt = conn.prepare(&sql).map_err(|err| {
+        format!("Failed to prepare imported history cache query for {source}: {err}")
+    })?;
     let rows = stmt
-        .query_map(params![source, limit as i64, offset as i64], |row| {
+        .query_map(params_from_iter(params), |row| {
             let model: String = row.get(11)?;
             let repo_path: String = row.get(14)?;
             let branch: String = row.get(15)?;
@@ -346,14 +377,18 @@ fn query_cached_sessions_from_conn(
                     touched_files,
                 },
                 listable: row.get::<_, i64>(20)? != 0,
+                source_metadata_json: non_empty_string(row.get(21)?),
             })
         })
-        .map_err(|err| format!("Failed to query imported history cache rows: {err}"))?;
+        .map_err(|err| {
+            format!("Failed to query imported history cache rows for {source}: {err}")
+        })?;
 
     let mut sessions = Vec::new();
     for row in rows {
-        sessions
-            .push(row.map_err(|err| format!("Failed to read imported history cache row: {err}"))?);
+        sessions.push(row.map_err(|err| {
+            format!("Failed to read imported history cache row for {source}: {err}")
+        })?);
     }
     Ok(sessions)
 }
@@ -366,6 +401,63 @@ pub fn sync_source_cache_from_conn(
 ) -> Result<(), String> {
     upsert_imported_session_cache_from_conn(conn, &inputs)?;
     prune_missing_records_from_conn(conn, source, &live_source_session_ids)
+}
+
+pub fn query_cached_session_from_conn(
+    conn: &Connection,
+    source: &str,
+    source_session_id: &str,
+) -> Result<Option<ImportedHistoryCachedSession>, String> {
+    let sessions = query_cached_sessions_by_filter_from_conn(
+        conn,
+        source,
+        "source_session_id = ?2",
+        &[SqlValue::from(source_session_id.to_string())],
+        1,
+        0,
+    )?;
+    Ok(sessions.into_iter().next())
+}
+
+pub fn query_cached_sessions_for_source_from_conn(
+    conn: &Connection,
+    source: &str,
+) -> Result<Vec<ImportedHistoryCachedSession>, String> {
+    query_cached_sessions_by_filter_from_conn(
+        conn,
+        source,
+        "listable = ?2",
+        &[SqlValue::from(1_i64)],
+        i64::MAX as usize,
+        0,
+    )
+}
+
+pub fn query_cached_sessions_in_range_from_conn(
+    conn: &Connection,
+    source: &str,
+    start_ms: i64,
+    end_ms: i64,
+) -> Result<Vec<ImportedHistoryCachedSession>, String> {
+    query_cached_sessions_by_filter_from_conn(
+        conn,
+        source,
+        "created_at_ms >= ?2 AND created_at_ms <= ?3 AND listable = ?4",
+        &[
+            SqlValue::from(start_ms),
+            SqlValue::from(end_ms),
+            SqlValue::from(1_i64),
+        ],
+        i64::MAX as usize,
+        0,
+    )
+}
+
+pub fn current_epoch_ms() -> Result<i64, String> {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|err| format!("System time is before Unix epoch: {err}"))
+        .map(|duration| duration.as_millis() as i64)
 }
 
 pub fn changed_records_from_conn<'a, T, F>(

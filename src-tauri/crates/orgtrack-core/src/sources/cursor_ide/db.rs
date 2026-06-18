@@ -1,43 +1,43 @@
-//! Cursor DB Scanner
+//! Cursor IDE metadata cache and delta sync.
 //!
-//! Reads Cursor's internal `state.vscdb` SQLite database (read-only) to extract
-//! AI session history — chat/agent sessions with name, model, lines changed, etc.
-//!
-//! DB location: `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`
-//! Table: `cursorDiskKV` (key TEXT, value BLOB)
-//! Relevant keys: `composerData:{uuid}` — JSON blobs with session metadata
-//!
-//! ## Caching
-//!
-//! Parsed sessions are cached in our own `sessions.db` (`cursor_session_cache`
-//! table). On each query we delta-sync: only parse composerData blobs for
-//! sessions that are new, active, or recently terminal.
+//! Cursor owns `state.vscdb`; this module opens it read-only, parses only
+//! composer metadata rows, and stores normalized session metadata in the shared
+//! external-history cache table. Full bubble/transcript content stays in
+//! Cursor's DB and is loaded lazily by `history.rs`.
 
 use std::collections::HashSet;
 use std::sync::Mutex;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime};
 
 use chrono::TimeZone;
-use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use crate::sources::imported_history::{
+    cache as source_cache,
+    metadata::{
+        ImportedHistoryCacheInput, ImportedHistoryImpactStats, ImportedHistoryRecordSignature,
+        SOURCE_CURSOR_IDE,
+    },
+};
+
+use super::io::cursor_db_path;
 
 static LAST_SYNC: Mutex<Option<SyncSnapshot>> = Mutex::new(None);
 const SYNC_COOLDOWN: Duration = Duration::from_secs(60);
 const RECENT_TERMINAL_RESYNC_WINDOW: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 const TERMINAL_STATUSES: &[&str] = &["completed", "aborted", "cancelled", "failed"];
+const CURSOR_IDE_METADATA_PARSER_VERSION: i64 = 2;
+const COMPOSER_KEY_PREFIX: &str = "composerData:";
+const BUBBLE_KEY_PREFIX: &str = "bubbleId:";
+const SOURCE_RECORD_KEY_PREFIX: &str = "cursorDiskKV:";
 
 #[derive(Debug, Clone, Copy)]
 struct SyncSnapshot {
     synced_at: Instant,
     cursor_db_modified_at: Option<SystemTime>,
 }
-
-// ============================================
-// Deserialization types (Cursor's state.vscdb)
-// ============================================
-
-const COMPOSER_KEY_PREFIX: &str = "composerData:";
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -68,10 +68,6 @@ struct RawComposerData {
     context_tokens_used: f64,
     #[serde(default)]
     full_conversation_headers_only: Vec<BubbleHeader>,
-    /// Set on subagent composers spawned by `task_v2`. Their parent surfaces
-    /// them inline via the Subagent block, so we never want them to appear
-    /// in the sidebar / dev record list as standalone sessions. Treated as
-    /// opaque — we only check presence.
     #[serde(default)]
     subagent_info: Option<Value>,
 }
@@ -97,9 +93,24 @@ struct ModelConfig {
     model_name: String,
 }
 
-// ============================================
-// Public type returned to frontend
-// ============================================
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct CursorCacheMetadata {
+    status: String,
+    is_agentic: bool,
+    mode: String,
+}
+
+#[derive(Debug, Clone)]
+struct CursorDiscoveredComposer {
+    source_session_id: String,
+    source_path: String,
+    source_record_key: String,
+    source_mtime_ms: i64,
+    source_size_bytes: i64,
+    source_fingerprint: String,
+    raw: RawComposerData,
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -118,37 +129,27 @@ pub struct CursorSession {
     pub tokens_used: i64,
 }
 
-// ============================================
-// Public API
-// ============================================
-
-/// Query cursor sessions within a date range.
-///
-/// 1. Delta-syncs from Cursor's state.vscdb into our cache
-/// 2. Queries the cache for the requested date range
 pub fn get_cursor_sessions(
-    cache_conn: &Connection,
+    cache_conn: &mut Connection,
     start_date: &str,
     end_date: &str,
 ) -> Result<Vec<CursorSession>, String> {
     delta_sync(cache_conn)?;
-    query_cache(cache_conn, start_date, end_date)
+    let start_epoch = date_str_to_epoch_ms(start_date);
+    let end_epoch = date_str_to_epoch_ms_end(end_date);
+    source_cache::query_cached_sessions_in_range_from_conn(
+        cache_conn,
+        SOURCE_CURSOR_IDE,
+        start_epoch,
+        end_epoch,
+    )?
+    .into_iter()
+    .map(cursor_session_from_cached)
+    .collect()
 }
 
-/// Paginated session list for the sidebar, ordered most-recent-first.
-///
-/// Shares the same delta-sync + cache pipeline as `get_cursor_sessions` so
-/// the sidebar's first call and the Dev Record's date-range queries both
-/// benefit from the same warm cache. Returns `(sessions, has_more)` where
-/// `has_more` indicates whether a `(limit, offset+limit)` follow-up call
-/// would yield additional rows — used by the frontend's per-category
-/// pagination state to decide whether to render a "Load more" row.
-///
-/// Subagent composers are filtered out at write time inside
-/// `parse_sessions_by_ids`, so the cache is already subagent-free by the
-/// time it's read here.
 pub fn list_for_sidebar(
-    cache_conn: &Connection,
+    cache_conn: &mut Connection,
     limit: usize,
     offset: usize,
 ) -> Result<(Vec<CursorSession>, bool), String> {
@@ -156,15 +157,17 @@ pub fn list_for_sidebar(
 }
 
 pub fn get_cached_session(
-    cache_conn: &Connection,
+    cache_conn: &mut Connection,
     session_id: &str,
 ) -> Result<Option<CursorSession>, String> {
     delta_sync(cache_conn)?;
-    query_cache_by_id(cache_conn, session_id)
+    source_cache::query_cached_session_from_conn(cache_conn, SOURCE_CURSOR_IDE, session_id)?
+        .map(cursor_session_from_cached)
+        .transpose()
 }
 
 pub fn list_for_sidebar_filtered<F>(
-    cache_conn: &Connection,
+    cache_conn: &mut Connection,
     limit: usize,
     offset: usize,
     mut include: F,
@@ -174,11 +177,13 @@ where
 {
     delta_sync(cache_conn)?;
 
-    let sessions = query_cache_for_sidebar(cache_conn)?;
+    let rows =
+        source_cache::query_cached_sessions_for_source_from_conn(cache_conn, SOURCE_CURSOR_IDE)?;
     let mut matched = Vec::with_capacity(limit.saturating_add(1));
     let mut skipped = 0usize;
 
-    for session in sessions {
+    for row in rows {
+        let session = cursor_session_from_cached(row)?;
         if !include(&session)? {
             continue;
         }
@@ -199,18 +204,7 @@ where
     Ok((matched, has_more))
 }
 
-// ============================================
-// Delta sync
-// ============================================
-
-/// Sync new/changed sessions from Cursor's DB into our cache.
-///
-/// Strategy:
-/// 1. Scan all `composerData:*` **keys** (cheap — no value blobs)
-/// 2. Compare against cached IDs; skip sessions already cached as "completed"
-/// 3. Fetch + parse values only for new and still-active sessions
-/// 4. Upsert into cache
-fn delta_sync(cache_conn: &Connection) -> Result<(), String> {
+fn delta_sync(cache_conn: &mut Connection) -> Result<(), String> {
     let now = Instant::now();
     let cursor_path = match cursor_db_path() {
         Some(path) => path,
@@ -231,27 +225,29 @@ fn delta_sync(cache_conn: &Connection) -> Result<(), String> {
         }
     }
 
-    let cursor_conn = Connection::open_with_flags(&cursor_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .map_err(|err| format!("Failed to open Cursor DB: {}", err))?;
-
-    let old_terminal_ids = get_old_terminal_cached_ids(cache_conn)?;
-
-    let all_keys = get_all_composer_keys(&cursor_conn)?;
-
-    let ids_to_sync: Vec<String> = all_keys
+    let cursor_conn = super::io::open_cursor_db()
+        .ok_or_else(|| "Failed to open Cursor DB for metadata sync".to_string())?;
+    let source_path = cursor_path.to_string_lossy().to_string();
+    let discovered = discover_cursor_composers(&cursor_conn, &source_path)?;
+    let signatures = discovered
         .iter()
-        .filter(|id| !old_terminal_ids.contains(*id))
-        .cloned()
-        .collect();
+        .map(CursorDiscoveredComposer::signature)
+        .collect::<Vec<_>>();
+    let live_ids = source_cache::live_ids_from_signatures(&signatures);
+    let old_terminal_ids = get_old_terminal_cached_ids(cache_conn)?;
+    let changed = source_cache::changed_records_from_conn(
+        cache_conn,
+        SOURCE_CURSOR_IDE,
+        &discovered,
+        CursorDiscoveredComposer::signature,
+    )?;
+    let inputs = changed
+        .into_iter()
+        .filter(|record| !old_terminal_ids.contains(&record.source_session_id))
+        .map(|record| composer_to_cache_input(&cursor_conn, record))
+        .collect::<Result<Vec<_>, _>>()?;
 
-    if ids_to_sync.is_empty() {
-        update_sync_snapshot(now, cursor_db_modified_at);
-        return Ok(());
-    }
-
-    let sessions = parse_sessions_by_ids(&cursor_conn, &ids_to_sync)?;
-
-    upsert_cache(cache_conn, &sessions)?;
+    source_cache::sync_source_cache_from_conn(cache_conn, SOURCE_CURSOR_IDE, live_ids, inputs)?;
     update_sync_snapshot(now, cursor_db_modified_at);
 
     Ok(())
@@ -267,334 +263,204 @@ fn update_sync_snapshot(synced_at: Instant, cursor_db_modified_at: Option<System
 }
 
 fn get_old_terminal_cached_ids(conn: &Connection) -> Result<HashSet<String>, String> {
-    let now_ms = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|err| format!("System time is before Unix epoch: {}", err))?
-        .as_millis() as i64;
+    let now_ms = source_cache::current_epoch_ms()?;
     let cutoff_ms = now_ms - RECENT_TERMINAL_RESYNC_WINDOW.as_millis() as i64;
-
-    let status_placeholders = TERMINAL_STATUSES
-        .iter()
-        .map(|_| "?")
-        .collect::<Vec<_>>()
-        .join(", ");
-    let sql = format!(
-        "SELECT id FROM cursor_session_cache WHERE status IN ({}) AND last_active_at < ?",
-        status_placeholders
-    );
-    let mut stmt = conn
-        .prepare(&sql)
-        .map_err(|err| format!("Failed to query cache: {}", err))?;
-
-    let params_iter = TERMINAL_STATUSES
-        .iter()
-        .map(|status| rusqlite::types::Value::from((*status).to_string()))
-        .chain(std::iter::once(rusqlite::types::Value::from(cutoff_ms)));
-    let ids = stmt
-        .query_map(rusqlite::params_from_iter(params_iter), |row| {
-            row.get::<_, String>(0)
-        })
-        .map_err(|err| format!("Failed to read cache: {}", err))?
-        .filter_map(|row_result| row_result.ok())
-        .collect();
-
+    let rows = source_cache::query_cached_sessions_for_source_from_conn(conn, SOURCE_CURSOR_IDE)?;
+    let mut ids = HashSet::new();
+    for row in rows {
+        if row.updated_at_ms >= cutoff_ms {
+            continue;
+        }
+        let metadata = cursor_metadata_from_cached(&row)?;
+        if TERMINAL_STATUSES.contains(&metadata.status.as_str()) {
+            ids.insert(row.source_session_id);
+        }
+    }
     Ok(ids)
 }
 
-/// Scan Cursor's DB for all composerData keys, returning the extracted IDs.
-fn get_all_composer_keys(cursor_conn: &Connection) -> Result<Vec<String>, String> {
-    let mut stmt = cursor_conn
-        .prepare("SELECT key FROM cursorDiskKV WHERE key LIKE 'composerData:%'")
-        .map_err(|err| format!("Failed to query Cursor DB keys: {}", err))?;
-
-    let keys: Vec<String> = stmt
-        .query_map([], |row| row.get::<_, String>(0))
-        .map_err(|err| format!("Failed to read Cursor DB keys: {}", err))?
-        .filter_map(|r| r.ok())
-        .filter_map(|key| key.strip_prefix(COMPOSER_KEY_PREFIX).map(String::from))
-        .collect();
-
-    Ok(keys)
-}
-
-/// Parse full composerData values for the given session IDs.
-fn parse_sessions_by_ids(
+fn discover_cursor_composers(
     cursor_conn: &Connection,
-    ids: &[String],
-) -> Result<Vec<CursorSession>, String> {
-    let mut sessions = Vec::with_capacity(ids.len());
+    source_path: &str,
+) -> Result<Vec<CursorDiscoveredComposer>, String> {
+    let mut stmt = cursor_conn
+        .prepare("SELECT key, value FROM cursorDiskKV WHERE key LIKE 'composerData:%'")
+        .map_err(|err| format!("Failed to query Cursor composer metadata: {err}"))?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|err| format!("Failed to read Cursor composer metadata: {err}"))?;
 
-    for id in ids {
-        let key = format!("{}{}", COMPOSER_KEY_PREFIX, id);
-        let json_str: String = match cursor_conn.query_row(
-            "SELECT value FROM cursorDiskKV WHERE key = ?1",
-            [&key],
-            |row| row.get(0),
-        ) {
-            Ok(val) => val,
-            Err(_) => continue,
+    let mut composers = Vec::new();
+    for row in rows {
+        let (key, value) =
+            row.map_err(|err| format!("Failed to read Cursor composer metadata row: {err}"))?;
+        let Some(source_session_id) = key.strip_prefix(COMPOSER_KEY_PREFIX) else {
+            continue;
         };
-
-        let raw: RawComposerData = match serde_json::from_str(&json_str) {
+        let raw: RawComposerData = match serde_json::from_str(&value) {
             Ok(parsed) => parsed,
             Err(_) => continue,
         };
-
         if raw.created_at == 0 || raw.composer_id.is_empty() {
             continue;
         }
+        let source_fingerprint = cursor_source_fingerprint(&raw);
+        composers.push(CursorDiscoveredComposer {
+            source_session_id: source_session_id.to_string(),
+            source_path: source_path.to_string(),
+            source_record_key: format!("{SOURCE_RECORD_KEY_PREFIX}{key}"),
+            source_mtime_ms: raw.last_updated_at.max(raw.created_at),
+            source_size_bytes: value.len() as i64,
+            source_fingerprint,
+            raw,
+        });
+    }
+    Ok(composers)
+}
 
-        // Subagent composers are children of a parent's `task_v2` tool call.
-        // The Subagent chat block on the parent already replays them inline,
-        // so listing them as standalone rows in the sidebar / dev record
-        // would double-count them. We never write subagent rows to the cache
-        // — once filtered here, all readers (sidebar `list_for_sidebar`,
-        // dev record `query_cache`) get a subagent-free view for free.
-        if raw.subagent_info.is_some() {
-            continue;
-        }
+fn composer_to_cache_input(
+    cursor_conn: &Connection,
+    record: &CursorDiscoveredComposer,
+) -> Result<ImportedHistoryCacheInput, String> {
+    let raw = &record.raw;
+    let model = raw
+        .model_config
+        .as_ref()
+        .map(|config| config.model_name.trim())
+        .filter(|model_name| !model_name.is_empty())
+        .map(str::to_string);
+    let last_active_at = cursor_last_active_at(cursor_conn, raw)?;
+    let metadata = CursorCacheMetadata {
+        status: raw.status.clone(),
+        is_agentic: raw.is_agentic,
+        mode: raw.unified_mode.clone(),
+    };
+    let source_metadata_json = serde_json::to_string(&metadata)
+        .map_err(|err| format!("Failed to encode Cursor metadata cache payload: {err}"))?;
 
-        let model = raw
-            .model_config
-            .as_ref()
-            .map(|mc| mc.model_name.clone())
-            .unwrap_or_default();
+    Ok(ImportedHistoryCacheInput {
+        source: SOURCE_CURSOR_IDE,
+        source_session_id: record.source_session_id.clone(),
+        session_id: record.source_session_id.clone(),
+        source_path: record.source_path.clone(),
+        source_record_key: record.source_record_key.clone(),
+        source_mtime_ms: record.source_mtime_ms,
+        source_size_bytes: record.source_size_bytes,
+        source_fingerprint: record.source_fingerprint.clone(),
+        parser_version: CURSOR_IDE_METADATA_PARSER_VERSION,
+        name: raw.name.clone(),
+        created_at_ms: raw.created_at,
+        updated_at_ms: last_active_at,
+        model,
+        input_tokens: raw.context_tokens_used as i64,
+        output_tokens: 0,
+        repo_path: None,
+        branch: None,
+        impact: ImportedHistoryImpactStats {
+            files_changed: raw.files_changed_count,
+            lines_added: raw.total_lines_added,
+            lines_removed: raw.total_lines_removed,
+            touched_files: Vec::new(),
+        },
+        listable: raw.subagent_info.is_none(),
+        source_metadata_json: Some(source_metadata_json),
+    })
+}
 
-        let mut last_active_at = raw.created_at.max(raw.last_updated_at);
-        if let Some(last_header) = raw.full_conversation_headers_only.last() {
-            if !last_header.bubble_id.is_empty() {
-                let bubble_key = format!("bubbleId:{}:{}", raw.composer_id, last_header.bubble_id);
-                if let Ok(bubble_json) = cursor_conn.query_row(
-                    "SELECT value FROM cursorDiskKV WHERE key = ?1",
-                    [&bubble_key],
-                    |row| row.get::<_, String>(0),
-                ) {
-                    if let Ok(bt) = serde_json::from_str::<BubbleTimestamp>(&bubble_json) {
-                        let ts = parse_iso_to_epoch_ms(&bt.created_at);
-                        if ts > 0 {
-                            last_active_at = last_active_at.max(ts);
-                        }
-                    }
+fn cursor_last_active_at(cursor_conn: &Connection, raw: &RawComposerData) -> Result<i64, String> {
+    let mut last_active_at = raw.created_at.max(raw.last_updated_at);
+    if let Some(last_header) = raw
+        .full_conversation_headers_only
+        .last()
+        .filter(|header| !header.bubble_id.is_empty())
+    {
+        let bubble_key = format!(
+            "{BUBBLE_KEY_PREFIX}{}:{}",
+            raw.composer_id, last_header.bubble_id
+        );
+        let bubble_json: Option<String> = cursor_conn
+            .query_row(
+                "SELECT value FROM cursorDiskKV WHERE key = ?1",
+                params![bubble_key],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(|err| format!("Failed to read Cursor latest bubble timestamp: {err}"))?;
+        if let Some(value) = bubble_json {
+            if let Ok(timestamp) = serde_json::from_str::<BubbleTimestamp>(&value) {
+                let bubble_active_at = parse_iso_to_epoch_ms(&timestamp.created_at);
+                if bubble_active_at > 0 {
+                    last_active_at = last_active_at.max(bubble_active_at);
                 }
             }
         }
-
-        sessions.push(CursorSession {
-            id: raw.composer_id,
-            name: raw.name,
-            created_at: raw.created_at,
-            last_active_at,
-            status: raw.status,
-            is_agentic: raw.is_agentic,
-            mode: raw.unified_mode,
-            model,
-            lines_added: raw.total_lines_added,
-            lines_removed: raw.total_lines_removed,
-            files_changed: raw.files_changed_count,
-            tokens_used: raw.context_tokens_used as i64,
-        });
     }
-
-    Ok(sessions)
+    Ok(last_active_at)
 }
 
-/// Upsert sessions into the cache table.
-fn upsert_cache(conn: &Connection, sessions: &[CursorSession]) -> Result<(), String> {
-    let mut stmt = conn
-        .prepare(
-            "INSERT INTO cursor_session_cache
-                (id, name, created_at, last_active_at, status, is_agentic, mode, model,
-                 lines_added, lines_removed, files_changed, tokens_used)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
-             ON CONFLICT(id) DO UPDATE SET
-                name = excluded.name,
-                last_active_at = excluded.last_active_at,
-                status = excluded.status,
-                is_agentic = excluded.is_agentic,
-                mode = excluded.mode,
-                model = excluded.model,
-                lines_added = excluded.lines_added,
-                lines_removed = excluded.lines_removed,
-                files_changed = excluded.files_changed,
-                tokens_used = excluded.tokens_used",
-        )
-        .map_err(|err| format!("Failed to prepare upsert: {}", err))?;
-
-    for session in sessions {
-        stmt.execute(params![
-            session.id,
-            session.name,
-            session.created_at,
-            session.last_active_at,
-            session.status,
-            session.is_agentic as i32,
-            session.mode,
-            session.model,
-            session.lines_added,
-            session.lines_removed,
-            session.files_changed,
-            session.tokens_used,
-        ])
-        .map_err(|err| format!("Failed to upsert session {}: {}", session.id, err))?;
-    }
-
-    Ok(())
-}
-
-// ============================================
-// Cache query
-// ============================================
-
-/// Query the local cache for sessions within a date range.
-fn query_cache(
-    conn: &Connection,
-    start_date: &str,
-    end_date: &str,
-) -> Result<Vec<CursorSession>, String> {
-    let start_epoch = date_str_to_epoch_ms(start_date);
-    let end_epoch = date_str_to_epoch_ms_end(end_date);
-
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, name, created_at, last_active_at, status, is_agentic,
-                    mode, model, lines_added, lines_removed, files_changed, tokens_used
-             FROM cursor_session_cache
-             WHERE created_at >= ?1 AND created_at <= ?2
-             ORDER BY created_at DESC",
-        )
-        .map_err(|err| format!("Failed to query cache: {}", err))?;
-
-    let sessions = stmt
-        .query_map(params![start_epoch, end_epoch], |row| {
-            Ok(CursorSession {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                created_at: row.get(2)?,
-                last_active_at: row.get(3)?,
-                status: row.get(4)?,
-                is_agentic: row.get::<_, i32>(5)? != 0,
-                mode: row.get(6)?,
-                model: row.get(7)?,
-                lines_added: row.get(8)?,
-                lines_removed: row.get(9)?,
-                files_changed: row.get(10)?,
-                tokens_used: row.get(11)?,
-            })
-        })
-        .map_err(|err| format!("Failed to read cache results: {}", err))?
-        .filter_map(|r| r.ok())
-        .collect();
-
-    Ok(sessions)
-}
-
-fn query_cache_by_id(conn: &Connection, session_id: &str) -> Result<Option<CursorSession>, String> {
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, name, created_at, last_active_at, status, is_agentic,
-                    mode, model, lines_added, lines_removed, files_changed, tokens_used
-             FROM cursor_session_cache
-             WHERE id = ?1",
-        )
-        .map_err(|err| format!("Failed to prepare cursor cache session query: {}", err))?;
-
-    stmt.query_row(params![session_id], |row| {
-        Ok(CursorSession {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            created_at: row.get(2)?,
-            last_active_at: row.get(3)?,
-            status: row.get(4)?,
-            is_agentic: row.get::<_, i32>(5)? != 0,
-            mode: row.get(6)?,
-            model: row.get(7)?,
-            lines_added: row.get(8)?,
-            lines_removed: row.get(9)?,
-            files_changed: row.get(10)?,
-            tokens_used: row.get(11)?,
-        })
+fn cursor_session_from_cached(
+    row: source_cache::ImportedHistoryCachedSession,
+) -> Result<CursorSession, String> {
+    let metadata = cursor_metadata_from_cached(&row)?;
+    Ok(CursorSession {
+        id: row.source_session_id,
+        name: row.name,
+        created_at: row.created_at_ms,
+        last_active_at: row.updated_at_ms,
+        status: metadata.status,
+        is_agentic: metadata.is_agentic,
+        mode: metadata.mode,
+        model: row.model.unwrap_or_default(),
+        lines_added: row.impact.lines_added,
+        lines_removed: row.impact.lines_removed,
+        files_changed: row.impact.files_changed,
+        tokens_used: row.input_tokens + row.output_tokens,
     })
-    .optional()
-    .map_err(|err| format!("Failed to query cursor cache session: {}", err))
 }
 
-fn query_cache_for_sidebar(conn: &Connection) -> Result<Vec<CursorSession>, String> {
-    let mut stmt = conn
-        .prepare(
-            "SELECT id, name, created_at, last_active_at, status, is_agentic,
-                    mode, model, lines_added, lines_removed, files_changed, tokens_used
-             FROM cursor_session_cache
-             ORDER BY last_active_at DESC, created_at DESC",
-        )
-        .map_err(|err| format!("Failed to prepare sidebar query: {}", err))?;
-
-    let sessions = stmt
-        .query_map([], |row| {
-            Ok(CursorSession {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                created_at: row.get(2)?,
-                last_active_at: row.get(3)?,
-                status: row.get(4)?,
-                is_agentic: row.get::<_, i32>(5)? != 0,
-                mode: row.get(6)?,
-                model: row.get(7)?,
-                lines_added: row.get(8)?,
-                lines_removed: row.get(9)?,
-                files_changed: row.get(10)?,
-                tokens_used: row.get(11)?,
-            })
-        })
-        .map_err(|err| format!("Failed to read sidebar query results: {}", err))?
-        .filter_map(|row_result| row_result.ok())
-        .collect();
-
-    Ok(sessions)
+fn cursor_metadata_from_cached(
+    row: &source_cache::ImportedHistoryCachedSession,
+) -> Result<CursorCacheMetadata, String> {
+    let Some(source_metadata_json) = row.source_metadata_json.as_deref() else {
+        return Ok(CursorCacheMetadata::default());
+    };
+    serde_json::from_str(source_metadata_json)
+        .map_err(|err| format!("Failed to decode Cursor metadata cache payload: {err}"))
 }
 
-// ============================================
-// Cursor DB helpers
-// ============================================
+fn cursor_source_fingerprint(raw: &RawComposerData) -> String {
+    [
+        raw.composer_id.as_str(),
+        raw.name.as_str(),
+        raw.status.as_str(),
+        raw.unified_mode.as_str(),
+        &raw.created_at.to_string(),
+        &raw.last_updated_at.to_string(),
+        &raw.is_agentic.to_string(),
+        &raw.total_lines_added.to_string(),
+        &raw.total_lines_removed.to_string(),
+        &raw.files_changed_count.to_string(),
+        &raw.context_tokens_used.to_string(),
+        &raw.full_conversation_headers_only.len().to_string(),
+        &raw.subagent_info.is_some().to_string(),
+    ]
+    .join("|")
+}
 
-fn cursor_db_path() -> Option<std::path::PathBuf> {
-    let home = dirs::home_dir()?;
-
-    #[cfg(target_os = "macos")]
-    let path = home
-        .join("Library")
-        .join("Application Support")
-        .join("Cursor")
-        .join("User")
-        .join("globalStorage")
-        .join("state.vscdb");
-
-    #[cfg(target_os = "linux")]
-    let path = home
-        .join(".config")
-        .join("Cursor")
-        .join("User")
-        .join("globalStorage")
-        .join("state.vscdb");
-
-    #[cfg(target_os = "windows")]
-    let path = home
-        .join("AppData")
-        .join("Roaming")
-        .join("Cursor")
-        .join("User")
-        .join("globalStorage")
-        .join("state.vscdb");
-
-    if path.exists() {
-        Some(path)
-    } else {
-        None
+impl CursorDiscoveredComposer {
+    fn signature(&self) -> ImportedHistoryRecordSignature {
+        ImportedHistoryRecordSignature {
+            source_session_id: self.source_session_id.clone(),
+            source_path: self.source_path.clone(),
+            source_mtime_ms: self.source_mtime_ms,
+            source_size_bytes: self.source_size_bytes,
+            source_fingerprint: self.source_fingerprint.clone(),
+            parser_version: CURSOR_IDE_METADATA_PARSER_VERSION,
+        }
     }
 }
-
-// ============================================
-// Date / time helpers
-// ============================================
 
 fn date_str_to_epoch_ms(date_str: &str) -> i64 {
     let parts: Vec<&str> = date_str.split('-').collect();
@@ -646,16 +512,6 @@ fn parse_iso_to_epoch_ms(iso: &str) -> i64 {
         .unwrap_or(0)
 }
 
-// ============================================================================
-// Tests — subagent_info wire shape
-//
-// `parse_sessions_by_ids` skips composers whose `subagentInfo` field is set,
-// so we lock in the deserialize behaviour here. Without these tests a serde
-// rename or a Cursor schema change could silently flip subagents back into
-// the cache, polluting the sidebar with the same nested rows the parent
-// composer already replays inline.
-// ============================================================================
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -703,5 +559,20 @@ mod tests {
         }"#;
         let row: RawComposerData = serde_json::from_str(json).expect("parse");
         assert!(row.subagent_info.is_none());
+    }
+
+    #[test]
+    fn cursor_cache_metadata_round_trips() {
+        let metadata = CursorCacheMetadata {
+            status: "completed".to_string(),
+            is_agentic: true,
+            mode: "agent".to_string(),
+        };
+        let encoded = serde_json::to_string(&metadata).expect("encode");
+        let decoded: CursorCacheMetadata = serde_json::from_str(&encoded).expect("decode");
+
+        assert_eq!(decoded.status, "completed");
+        assert!(decoded.is_agentic);
+        assert_eq!(decoded.mode, "agent");
     }
 }
