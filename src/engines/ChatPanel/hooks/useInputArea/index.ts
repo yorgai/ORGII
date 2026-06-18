@@ -306,6 +306,7 @@ export function useInputArea(
 
   useInputAreaEffects({
     composerInputRef: refs.composerInputRef,
+    containerRef: refs.containerRef,
     dropTargetId,
     hasContentRef: refs.hasContentRef,
     showContextMenu: state.showContextMenu,

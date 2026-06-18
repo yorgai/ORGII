@@ -24,6 +24,7 @@ import CollapsedInlineRow, {
 } from "./InputArea/components/CollapsedInlineRow";
 import CompactFileChanges, {
   type FileChangeVisibleStats,
+  type FileChangesResult,
 } from "./InputArea/components/CompactFileChanges";
 import CursorIdeFocusPoller from "./InputArea/components/CursorIdeFocusPoller";
 import QueueEditModeCard from "./InputArea/components/QueueEditModeCard";
@@ -83,6 +84,7 @@ interface ChatFloatingComposerProps {
   onToggleProcess: () => void;
   onProcessVisibleCountChange: (count: number) => void;
   onFileChangeStatsChange: (stats: FileChangeVisibleStats) => void;
+  initialFileChanges?: FileChangesResult;
   /** Idle-reload signal for the files pill (session/round/idle transitions). */
   filesReloadKey: string;
   groupChatPendingMessage: GroupChatPendingMessageView | null;
@@ -131,6 +133,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
     onToggleProcess,
     onProcessVisibleCountChange,
     onFileChangeStatsChange,
+    initialFileChanges,
     filesReloadKey,
     groupChatPendingMessage,
     groupChatViewActive,
@@ -240,6 +243,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
           <CompactFileChanges
             key={`files-tracker-${inputAreaSessionId}`}
             sessionIdOverride={inputAreaSessionId}
+            initialData={initialFileChanges}
             reloadKey={filesReloadKey}
             onVisibleStatsChange={onFileChangeStatsChange}
           />

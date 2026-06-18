@@ -24,6 +24,10 @@ pub trait RecordStore {
         session_id: &str,
     ) -> Result<(), String>;
     fn list_commit_links(&self) -> Result<Vec<CommitLinkRecord>, String>;
+    fn list_commit_links_for_session(
+        &self,
+        session_id: &str,
+    ) -> Result<Vec<CommitLinkRecord>, String>;
     fn list_edit_artifacts(
         &self,
         source: Option<&str>,

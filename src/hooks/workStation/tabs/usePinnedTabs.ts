@@ -10,10 +10,11 @@
  * It is intentionally idempotent — calling it from multiple places is safe.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import {
   type WorkStationTab,
+  mainPaneActiveTabIdAtom,
   mainPaneTabsAtom,
   workstationLayoutAtom,
 } from "@src/store/workstation/tabs";
@@ -25,6 +26,8 @@ interface UsePinnedTabsOptions {
   pinnedTabs: WorkStationTab[];
   /** Tab to activate when seeding a fresh pane. Defaults to the first pinned tab. */
   initialActiveTabId?: string;
+  /** Whether to switch to the initial tab when the active tab is itself pinned. */
+  preferInitialTabWhenActivePinned?: boolean;
 }
 
 /**
@@ -35,9 +38,12 @@ export function usePinnedTabs({
   enabled,
   pinnedTabs,
   initialActiveTabId,
+  preferInitialTabWhenActivePinned = false,
 }: UsePinnedTabsOptions) {
   const tabs = useAtomValue(mainPaneTabsAtom);
+  const activeTabId = useAtomValue(mainPaneActiveTabIdAtom);
   const setLayout = useSetAtom(workstationLayoutAtom);
+  const preferredInitialTabAppliedRef = useRef(false);
 
   const pinnedKey = useMemo(
     () => pinnedTabs.map((tab) => tab.id).join("|"),
@@ -84,7 +90,22 @@ export function usePinnedTabs({
       (tab, idx: number) => currentPinnedSlice[idx] !== tab
     );
 
-    if (!orderChanged && !refreshed) return;
+    const shouldPreferInitialTab = Boolean(
+      !preferredInitialTabAppliedRef.current &&
+      preferInitialTabWhenActivePinned &&
+      initialActiveTabId &&
+      activeTabId &&
+      activeTabId !== initialActiveTabId &&
+      pinnedIdSet.has(activeTabId) &&
+      tabs.length > 0 &&
+      tabs.every((tab) => pinnedIdSet.has(tab.id)) &&
+      tabs.some((tab) => tab.id === initialActiveTabId)
+    );
+
+    if (!orderChanged && !refreshed && !shouldPreferInitialTab) return;
+    if (shouldPreferInitialTab) {
+      preferredInitialTabAppliedRef.current = true;
+    }
 
     setLayout((prev) => {
       const nextTabs = [...desiredPinned, ...nonPinned];
@@ -92,15 +113,27 @@ export function usePinnedTabs({
       const hasActiveTab = Boolean(
         prevActiveTabId && nextTabs.some((tab) => tab.id === prevActiveTabId)
       );
+      const activePinnedTabIsOnlyPinnedState = shouldPreferInitialTab;
       return {
         ...prev,
         mainPane: {
           tabs: nextTabs,
-          activeTabId: hasActiveTab
-            ? prevActiveTabId
-            : (initialActiveTabId ?? desiredPinned[0]?.id ?? null),
+          activeTabId: activePinnedTabIsOnlyPinnedState
+            ? initialActiveTabId
+            : hasActiveTab
+              ? prevActiveTabId
+              : (initialActiveTabId ?? desiredPinned[0]?.id ?? null),
         },
       };
     });
-  }, [enabled, initialActiveTabId, pinnedKey, pinnedTabs, setLayout, tabs]);
+  }, [
+    activeTabId,
+    enabled,
+    initialActiveTabId,
+    pinnedKey,
+    pinnedTabs,
+    preferInitialTabWhenActivePinned,
+    setLayout,
+    tabs,
+  ]);
 }

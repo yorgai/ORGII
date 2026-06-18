@@ -38,6 +38,10 @@ export function useFileWatchOutputIntegration(
   const channelIdRef = useRef<string | null>(null);
   const initializedRef = useRef(false);
   const previousFilesRef = useRef<Map<string, GitFile>>(new Map());
+  // Dedup repeated watcher_health lines: a single flaky/non-git repo otherwise
+  // floods the Filesync channel with identical "Health: degraded" lines on the
+  // watcher's 60s loop. Key = `${status}:${reason}` of the last logged event.
+  const lastHealthSignatureRef = useRef<string | null>(null);
 
   // Store outputState functions in refs to avoid dependency issues
   // This prevents the infinite loop caused by outputState.channels changing on every append
@@ -113,6 +117,7 @@ export function useFileWatchOutputIntegration(
 
     // Reset previous files when repo changes (prevent stale state)
     previousFilesRef.current.clear();
+    lastHealthSignatureRef.current = null;
 
     // Listen to repo:status_updated events - parse file changes
     const unsubscribe1 = ws.on("repo:status_updated", (data) => {
@@ -200,6 +205,13 @@ export function useFileWatchOutputIntegration(
       if (payload.repo_id !== repoId) return;
 
       const status = payload.status;
+
+      // Suppress consecutive duplicate health events for the same repo so a
+      // single degraded/failed repo doesn't spam the channel every poll cycle.
+      const signature = `${status}:${payload.reason ?? ""}`;
+      if (lastHealthSignatureRef.current === signature) return;
+      lastHealthSignatureRef.current = signature;
+
       let color = "\x1b[32m";
       if (status === "degraded") color = "\x1b[33m";
       else if (status === "failed") color = "\x1b[31m";

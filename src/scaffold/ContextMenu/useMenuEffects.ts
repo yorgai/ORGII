@@ -1,8 +1,8 @@
 /**
  * ContextMenu Effects & Handlers
  *
- * Encapsulates visibility management, keyboard handler ref assignment,
- * click-outside detection, and menu item selection callbacks.
+ * Encapsulates visibility reset, keyboard handler ref assignment,
+ * and menu item selection callbacks.
  */
 import React, { useCallback, useEffect } from "react";
 
@@ -11,8 +11,6 @@ import type { SearchResultItem } from "./types";
 
 interface UseMenuEffectsOptions {
   visible: boolean;
-  onClose: () => void;
-  dropdownRef: React.RefObject<HTMLDivElement | null>;
   keyboardHandlerRef?: React.MutableRefObject<
     ((e: React.KeyboardEvent) => boolean) | null
   >;
@@ -30,8 +28,6 @@ interface UseMenuEffectsOptions {
 
 export function useMenuEffects({
   visible,
-  onClose,
-  dropdownRef,
   keyboardHandlerRef,
   handleKeyDown,
   handleSelect,
@@ -56,25 +52,6 @@ export function useMenuEffects({
       keyboardHandlerRef.current = handleKeyDown;
     }
   }, [keyboardHandlerRef, handleKeyDown]);
-
-  // Handle click outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
-        onClose();
-      }
-    };
-
-    if (visible) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [visible, onClose, dropdownRef]);
 
   // Handle menu item click
   const handleMenuItemClick = useCallback(

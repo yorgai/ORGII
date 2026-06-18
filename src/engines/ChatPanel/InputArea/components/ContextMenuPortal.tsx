@@ -7,7 +7,6 @@
 import {
   type MenuItemId,
   type RecentFile,
-  STYLE_CONFIG,
 } from "@/src/scaffold/ContextMenu/config";
 import { ContextMenu } from "@/src/scaffold/ContextMenu/exports";
 import type {
@@ -48,6 +47,7 @@ interface ContextMenuPortalProps {
 }
 
 const ESTIMATED_DROPDOWN_HEIGHT = 260;
+const MAX_CONTEXT_MENU_WIDTH = 600;
 
 function getOpenedTabRecentFiles(
   workstationTabs: ReadonlyArray<WorkStationTab>
@@ -93,17 +93,17 @@ const VisibleContextMenuPortal: React.FC<
     ],
     [workstationTabs, customMentionOptions]
   );
-  const dropdownWidth = Number.parseFloat(STYLE_CONFIG.dropdownWidth);
-  const { portalPosition, isPositioned } = useFloatingPortalPosition({
-    visible: true,
-    containerRef,
-    floatingRef: portalRef,
-    floatingWidth: dropdownWidth,
-    fallbackHeight: ESTIMATED_DROPDOWN_HEIGHT,
-    placement,
-    anchorSelector,
-    updateKey: searchQuery,
-  });
+  const { portalPosition, portalWidth, isPositioned } =
+    useFloatingPortalPosition({
+      visible: true,
+      containerRef,
+      floatingRef: portalRef,
+      fallbackHeight: ESTIMATED_DROPDOWN_HEIGHT,
+      placement,
+      anchorSelector,
+      updateKey: searchQuery,
+      maxWidth: MAX_CONTEXT_MENU_WIDTH,
+    });
 
   if (!isPositioned || !portalPosition) return null;
 
@@ -121,7 +121,7 @@ const VisibleContextMenuPortal: React.FC<
         top: portalPosition.top,
         bottom: portalPosition.bottom,
         left: portalPosition.left,
-        width: STYLE_CONFIG.dropdownWidth,
+        width: portalWidth,
       }}
     >
       <ContextMenu

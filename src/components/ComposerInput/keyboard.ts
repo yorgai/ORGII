@@ -509,8 +509,9 @@ export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
 
     if (event.key === "@") {
       // Let the character land in the editor, then mark the mention as
-      // active.
+      // active if the input event did not already activate it.
       setTimeout(() => {
+        if (ctx.getAtMention().active) return;
         const liveHost = ctx.host();
         if (!liveHost) return;
         const range = rangeInsideHost(liveHost);
@@ -526,10 +527,12 @@ export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
 
     if (event.key === "/" && !ctx.getAtMention().active) {
       // Let the character land in the editor, then mark the slash command as
-      // active. This intentionally mirrors @ mention behavior: slash commands
-      // are triggerable from non-empty input too, with the query starting after
-      // the typed `/`.
+      // active if the input event did not already activate it. This
+      // intentionally mirrors @ mention behavior: slash commands are
+      // triggerable from non-empty input too, with the query starting after the
+      // typed `/`.
       setTimeout(() => {
+        if (ctx.getSlashCommand().active || ctx.getAtMention().active) return;
         const liveHost = ctx.host();
         if (!liveHost) return;
         const range = rangeInsideHost(liveHost);

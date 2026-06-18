@@ -124,6 +124,12 @@ export async function getOrgtrackSessionSummaries(
   return rpc.lineage.orgtrackGetSessionSummaries(input);
 }
 
+export async function getOrgtrackSessionSummary(
+  sessionId: string
+): Promise<CoreSessionSummary | null> {
+  return rpc.lineage.orgtrackGetSessionSummary({ sessionId });
+}
+
 export async function analyzeOrgtrackSessions(
   input: {
     workspacePath?: string;

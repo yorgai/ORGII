@@ -18,6 +18,7 @@ export interface NavigationMenuProps {
   collapsed?: boolean;
   defaultOpenKeys?: string[];
   enableHoverIconAnimation?: boolean;
+  compactRows?: boolean;
 }
 
 export type NavigationMenuIconRenderer = (

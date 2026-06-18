@@ -53,6 +53,7 @@ import {
   chatPanelCreateTargetAtom,
   chatPanelMaximizedAtom,
   chatPanelSelectedWorkItemAtom,
+  chatPanelStartPageOpenAtom,
   chatWidthAtom,
 } from "@src/store/ui/chatPanelAtom";
 import {
@@ -209,6 +210,11 @@ export function createSessionHelpers(store: E2EStore) {
       store.set(workstationActiveSessionIdAtom, null);
       store.set(stationModeAtom, "my-station");
       store.set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.SESSION);
+      // The chat-panel start page (Work/Explore landing, commit 8db3bb76)
+      // defaults open for every fresh session. Without forcing it closed the
+      // SessionCreator composer never mounts and resetToNewSession times out
+      // waiting for chat-input — close it so the composer renders.
+      store.set(chatPanelStartPageOpenAtom, false);
       store.set(chatPanelCreateTargetAtom, DEFAULT_CHAT_PANEL_CREATE_TARGET);
       store.set(chatPanelSelectedWorkItemAtom, null);
       store.set(chatPanelMaximizedAtom, true);
@@ -618,6 +624,7 @@ export function createSessionHelpers(store: E2EStore) {
     debugSeedSubagentJobWire: seeders.debugSeedSubagentJobWire,
     debugSeedCommitLinkWire: seeders.debugSeedCommitLinkWire,
     debugSeedFinalDiffWire: seeders.debugSeedFinalDiffWire,
+    debugReadFinalDiffCountWire: seeders.debugReadFinalDiffCountWire,
     killSubagentJobWire: seeders.killSubagentJobWire,
     listRunningSubagentJobsWire: seeders.listRunningSubagentJobsWire,
     debugSeedChildSessionWire: seeders.debugSeedChildSessionWire,

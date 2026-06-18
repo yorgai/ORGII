@@ -63,17 +63,31 @@ const FlyoutSubmenu: React.FC<FlyoutSubmenuProps> = ({
     itemEls[highlightIndex]?.scrollIntoView({ block: "nearest" });
   }, [highlightIndex]);
 
-  // Close on click outside the flyout panel
+  // Close on click outside the flyout panel.
   useEffect(() => {
+    let portalReady = false;
+    const readyFrame = window.requestAnimationFrame(() => {
+      portalReady = true;
+    });
+
     const handler = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
-      if (panelRef.current && !panelRef.current.contains(target)) {
-        onClose();
+
+      const panel = panelRef.current;
+      if (!panel && !portalReady) return;
+      if (panel?.contains(target)) return;
+      if (document.querySelector("[data-slash-portal]")?.contains(target)) {
+        return;
       }
+
+      onClose();
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    return () => {
+      window.cancelAnimationFrame(readyFrame);
+      document.removeEventListener("mousedown", handler);
+    };
   }, [onClose]);
 
   return createPortal(

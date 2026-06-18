@@ -78,6 +78,37 @@ pub async fn get_status(
 ) -> GitApiResult<Json<GitStatusResponse>> {
     let repo_path = resolve_repo_path(&repo_id, query.path.as_deref())?;
 
+    // A tracked folder the user created directly (never `git init`'d) has no
+    // `.git`. Running `git status` on it fails with "not a git repository",
+    // which the frontend would otherwise surface as a recurring error popup.
+    // Treat the absence of `.git` as a benign, first-class "no git" state
+    // (HTTP 200, `exists: false`) so the UI can render it cleanly instead of
+    // entering an infinite error-retry loop. Real git failures (corrupt repo,
+    // permission errors) still propagate through the error path below.
+    if !repo_path.join(".git").exists() {
+        return Ok(Json(GitStatusResponse {
+            status: 0,
+            data: GitStatus {
+                current_branch: String::new(),
+                current_upstream_branch: None,
+                current_tip: String::new(),
+                branch_ahead_behind: None,
+                exists: false,
+                merge_head_found: false,
+                squash_msg_found: false,
+                rebase_in_progress: false,
+                cherry_pick_in_progress: false,
+                working_directory: WorkingDirectory {
+                    files: Vec::new(),
+                    staged_count: 0,
+                    unstaged_count: 0,
+                    untracked_count: 0,
+                },
+                do_conflicted_files_exist: false,
+            },
+        }));
+    }
+
     let rust_status = refresh_git_status_sync(&repo_path).map_err(GitApiError::from_git_error)?;
 
     // A silent empty-Vec fallback would render a "no changes"

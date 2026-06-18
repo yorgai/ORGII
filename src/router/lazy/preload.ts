@@ -54,13 +54,6 @@ function runLoaders(loader: RouteLoader | RouteLoader[]): void {
 }
 
 const _preloadedRoutes = new Set<string>();
-
-/** Safari/WebKit WebView (used by Tauri on macOS) lacks requestIdleCallback. */
-const scheduleIdle: (cb: () => void) => void =
-  typeof requestIdleCallback === "function"
-    ? requestIdleCallback
-    : (cb) => setTimeout(cb, 50);
-
 /**
  * Preload a single route's chunk based on its full path (e.g. "/orgii/app/changelog").
  * Deduplicates so each chunk is only fetched once.
@@ -96,18 +89,5 @@ export function preloadRouteByPath(routePath: string): void {
       workstationSegment,
       WORKSTATION_ROUTE_LOADERS
     );
-  }
-}
-
-/**
- * Background-preload all MainApp route chunks during idle time.
- * Call once after authentication completes so subsequent navigation is instant.
- */
-export function preloadMainAppRoutes(): void {
-  for (const [route, loader] of Object.entries(APP_ROUTE_LOADERS)) {
-    _preloadedRoutes.add(`app:${route}`);
-    scheduleIdle(() => {
-      runLoaders(loader);
-    });
   }
 }

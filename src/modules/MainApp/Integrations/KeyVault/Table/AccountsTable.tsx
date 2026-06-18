@@ -33,7 +33,6 @@ import {
 } from "../../Tables/TrademarkDisclaimer";
 import type { DetailMode } from "../../types";
 import MyAccountsTableSection from "../Accounts/Table/MyAccountsTableSection";
-import LocalModelsTabSection from "../LocalModels/LocalModelsTabSection";
 import ModelWikiTableSection from "../ModelWiki/ModelWikiTableSection";
 import ModelsTableSection from "../Models/Table/ModelsTableSection";
 
@@ -468,16 +467,15 @@ export const AccountsTable: React.FC<AccountsTableProps> = ({
       { key: "models", label: t("modelsTabs.models", "Models") },
       { key: "my-accounts", label: t("modelsTabs.myAccounts", "My Keys") },
       { key: "model-wiki", label: t("modelsTabs.modelWiki", "Model Wiki") },
-      {
-        key: "local-models",
-        label: t("modelsTabs.localModels", "On prem"),
-      },
     ];
   }, [t]);
 
   const [activeTabLocal, setActiveTabLocal] = useState("models");
   const activeTabRaw = modelsActiveTabProp ?? activeTabLocal;
-  const activeTab = activeTabRaw === "token-market" ? "models" : activeTabRaw;
+  const activeTab =
+    activeTabRaw === "token-market" || activeTabRaw === "local-models"
+      ? "models"
+      : activeTabRaw;
 
   const setActiveTab = useCallback(
     (tab: string) => {
@@ -558,8 +556,6 @@ export const AccountsTable: React.FC<AccountsTableProps> = ({
               />
             ) : activeTab === "model-wiki" ? (
               <ModelWikiTableSection />
-            ) : activeTab === "local-models" ? (
-              <LocalModelsTabSection />
             ) : (
               <MyAccountsTableSection
                 accounts={filteredAdjustedAccounts}

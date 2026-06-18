@@ -77,6 +77,7 @@ impl ContextUsageSnapshot {
         used_tokens: i64,
         cache_read_tokens: i64,
         cache_write_tokens: i64,
+        max_tokens: Option<i64>,
     ) -> Self {
         let mut items = Vec::new();
 
@@ -133,10 +134,15 @@ impl ContextUsageSnapshot {
             });
         }
 
+        let percent_used = match max_tokens {
+            Some(max) if max > 0 => Some((used_tokens as f64 / max as f64) * 100.0),
+            _ => None,
+        };
+
         Self {
             used_tokens,
-            max_tokens: None,
-            percent_used: None,
+            max_tokens,
+            percent_used,
             updated_at: chrono::Utc::now().to_rfc3339(),
             sections,
             cache_read_tokens,
@@ -430,7 +436,7 @@ mod tests {
     #[test]
     fn adds_unattributed_difference() {
         let messages = vec![json!({"role":"user","content":"hello"})];
-        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 100, 0, 0);
+        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 100, 0, 0, None);
         assert!(snapshot
             .sections
             .iter()
@@ -457,7 +463,7 @@ mod tests {
                 "content":[{"type":"text","text":"# Scratchpad Directory", ORGII_SYSTEM_CACHE_SCOPE_KEY: "volatile"}]
             }),
         ];
-        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0, 0, 0);
+        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0, 0, 0, None);
         assert!(snapshot
             .sections
             .iter()
@@ -471,7 +477,7 @@ mod tests {
     #[test]
     fn tool_messages_are_not_conversation() {
         let messages = vec![json!({"role":"tool","name":"read_file","content":"file body"})];
-        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0, 0, 0);
+        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0, 0, 0, None);
         assert!(snapshot
             .sections
             .iter()
@@ -485,7 +491,7 @@ mod tests {
     #[test]
     fn cache_tokens_are_not_added_to_active_context() {
         let messages = vec![json!({"role":"user","content":"hello"})];
-        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0, 0, 0);
+        let snapshot = ContextUsageSnapshot::from_payload(&messages, &[], 0, 0, 0, None);
         assert_eq!(
             snapshot
                 .sections
@@ -494,5 +500,14 @@ mod tests {
                 .sum::<i64>(),
             snapshot.sections[0].estimated_tokens
         );
+    }
+
+    #[test]
+    fn fills_percent_used_from_max_tokens() {
+        let messages = vec![json!({"role":"user","content":"hello"})];
+        let snapshot =
+            ContextUsageSnapshot::from_payload(&messages, &[], 100_000, 0, 0, Some(1_000_000));
+        assert_eq!(snapshot.max_tokens, Some(1_000_000));
+        assert_eq!(snapshot.percent_used, Some(10.0));
     }
 }

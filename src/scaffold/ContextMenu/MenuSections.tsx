@@ -36,6 +36,28 @@ import type { SearchResultItem } from "./types";
 /** Tree panel width (220px) + gap (8px ml-2) */
 const TREE_PANEL_RESERVED = 228;
 
+function normalizePathForDisplay(path: string): string {
+  return path.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/$/, "");
+}
+
+function getWorkspaceRelativeDisplayPath(item: SearchResultItem): string {
+  const normalizedPath = normalizePathForDisplay(item.path);
+  const normalizedRootPath = item.repoPath
+    ? normalizePathForDisplay(item.repoPath)
+    : undefined;
+  const rootName =
+    item.repoName ||
+    (normalizedRootPath ? getFileName(normalizedRootPath) : undefined);
+
+  if (!normalizedRootPath || !rootName) return normalizedPath;
+  if (normalizedPath === normalizedRootPath) return rootName;
+
+  const rootPrefix = `${normalizedRootPath}/`;
+  if (!normalizedPath.startsWith(rootPrefix)) return normalizedPath;
+
+  return `${rootName}/${normalizedPath.slice(rootPrefix.length)}`;
+}
+
 // ============================================
 // Recent Files Section
 // ============================================
@@ -133,6 +155,8 @@ interface ResultItemRowProps {
 const ResultItemRow: React.FC<ResultItemRowProps> = memo(
   ({ item, index, activeIndex, onSelect, onHover, onHoverEnd, itemRef }) => {
     const displayName = item.name || getFileName(item.path);
+    const displayPath = getWorkspaceRelativeDisplayPath(item);
+    const showDisplayPath = item.iconType !== "session";
     const rowActive = activeIndex === index;
     return (
       <div
@@ -149,9 +173,14 @@ const ResultItemRow: React.FC<ResultItemRowProps> = memo(
         onMouseLeave={onHoverEnd}
       >
         <ResultItemIcon item={item} displayName={displayName} />
-        <span className="min-w-0 flex-1 truncate text-[13px] text-text-1">
+        <span className="min-w-0 shrink-0 truncate text-[13px] text-text-1">
           {displayName}
         </span>
+        {showDisplayPath && (
+          <span className="min-w-0 flex-1 truncate text-right text-[12px] text-text-3">
+            {displayPath}
+          </span>
+        )}
       </div>
     );
   }
@@ -253,7 +282,7 @@ export const SearchResultsPanel: React.FC<SearchResultsPanelProps> = memo(
 
         <div
           className={`relative ${DROPDOWN_CLASSES.panel}`}
-          style={{ width: STYLE_CONFIG.secondLayerWidth }}
+          style={{ width: "100%" }}
         >
           <div
             className={DROPDOWN_CLASSES.optionsContainer}
@@ -350,7 +379,7 @@ export const SecondLayerPanel: React.FC<SecondLayerPanelProps> = memo(
 
         <div
           className={`relative ${DROPDOWN_CLASSES.panel}`}
-          style={{ width: STYLE_CONFIG.secondLayerWidth }}
+          style={{ width: "100%" }}
         >
           {/* Header with back button */}
           <DropdownHeader>

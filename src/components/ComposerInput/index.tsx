@@ -64,6 +64,7 @@ export type {
 } from "./types";
 
 const IME_COMPOSITION_END_ENTER_GRACE_MS = 30;
+const TRIGGER_CLOSE_GRACE_MS = 120;
 
 function findInlineAtMention(
   text: string,
@@ -160,6 +161,8 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       active: false,
       startOffset: 0,
     });
+    const atMentionOpenedAtRef = useRef(0);
+    const slashCommandOpenedAtRef = useRef(0);
 
     // ===== Mention/slash reset helper =====
     const resetMentionState = useCallback(() => {
@@ -244,19 +247,27 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
                 startOffset: inlineMention.startOffset,
                 hasAtChar: true,
               };
+              atMentionOpenedAtRef.current = performance.now();
             }
           }
           if (atMentionRef.current.active) {
+            const openedRecently =
+              performance.now() - atMentionOpenedAtRef.current <
+              TRIGGER_CLOSE_GRACE_MS;
             if (caretOffset < atMentionRef.current.startOffset) {
-              atMentionRef.current = { active: false, startOffset: 0 };
-              onAtMentionCloseRef.current?.();
+              if (!openedRecently) {
+                atMentionRef.current = { active: false, startOffset: 0 };
+                onAtMentionCloseRef.current?.();
+              }
             } else {
               const query = text
                 .slice(atMentionRef.current.startOffset, caretOffset)
                 .replace(/\u200B/g, "");
               if (/\s/.test(query)) {
-                atMentionRef.current = { active: false, startOffset: 0 };
-                onAtMentionCloseRef.current?.();
+                if (!openedRecently) {
+                  atMentionRef.current = { active: false, startOffset: 0 };
+                  onAtMentionCloseRef.current?.();
+                }
               } else {
                 const rect = range.getBoundingClientRect();
                 onAtMentionRef.current?.(query, {
@@ -282,19 +293,27 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
                 startOffset: inlineSlashCommand.startOffset,
                 hasTriggerChar: true,
               };
+              slashCommandOpenedAtRef.current = performance.now();
             }
           }
           if (slashCommandRef.current.active) {
+            const openedRecently =
+              performance.now() - slashCommandOpenedAtRef.current <
+              TRIGGER_CLOSE_GRACE_MS;
             if (caretOffset < slashCommandRef.current.startOffset) {
-              slashCommandRef.current = { active: false, startOffset: 0 };
-              onSlashCommandCloseRef.current?.();
+              if (!openedRecently) {
+                slashCommandRef.current = { active: false, startOffset: 0 };
+                onSlashCommandCloseRef.current?.();
+              }
             } else {
               const query = text
                 .slice(slashCommandRef.current.startOffset, caretOffset)
                 .replace(/\u200B/g, "");
               if (/\s/.test(query)) {
-                slashCommandRef.current = { active: false, startOffset: 0 };
-                onSlashCommandCloseRef.current?.();
+                if (!openedRecently) {
+                  slashCommandRef.current = { active: false, startOffset: 0 };
+                  onSlashCommandCloseRef.current?.();
+                }
               } else {
                 onSlashCommandRef.current?.(query);
               }
@@ -389,10 +408,13 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
           getAtMention: () => atMentionRef.current,
           setAtMention: (state) => {
             atMentionRef.current = state;
+            if (state.active) atMentionOpenedAtRef.current = performance.now();
           },
           getSlashCommand: () => slashCommandRef.current,
           setSlashCommand: (state) => {
             slashCommandRef.current = state;
+            if (state.active)
+              slashCommandOpenedAtRef.current = performance.now();
           },
           getOnKeyDownForDropdown: () => onKeyDownForDropdownRef.current,
           getOnKeyDownForSlashDropdown: () =>
@@ -461,11 +483,13 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       };
       const handlePasteEvent = (event: ClipboardEvent) => {
         ops.markHistoryBoundary();
-        handlePaste(event);
-        ops.commitHistoryBoundary();
-        handleInput();
+        if (handlePaste(event)) {
+          ops.commitHistoryBoundary();
+          handleInput();
+        }
       };
       const handleDropEvent = (event: DragEvent) => {
+        ops.markHistoryBoundary();
         if (handleDrop(event)) {
           ops.commitHistoryBoundary();
           handleInput();
@@ -610,6 +634,8 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
             if (host) onContentChangeRef.current?.(extractPlainText(host));
           },
           isHostEmpty: ops.isHostEmpty,
+          isInlineMenuActive: () =>
+            atMentionRef.current.active || slashCommandRef.current.active,
           triggerAtMention: () => {
             const host = hostRef.current;
             if (!host) return;
@@ -621,6 +647,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
               startOffset: caretOffset,
               hasAtChar: false,
             };
+            atMentionOpenedAtRef.current = performance.now();
             const rect = range.getBoundingClientRect();
             onAtMentionRef.current?.("", {
               x: rect.left,
@@ -638,6 +665,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
               startOffset: caretOffset,
               hasTriggerChar: false,
             };
+            slashCommandOpenedAtRef.current = performance.now();
             onSlashCommandRef.current?.("");
           },
           getSlashCommandState: () => ({

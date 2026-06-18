@@ -24,6 +24,7 @@ import {
   isBinaryByExtension,
   isBinaryContent,
 } from "@src/util/file/binaryDetection";
+import { toFsPluginPath } from "@src/util/file/pathUtils";
 
 const log = createLogger("useCodeEditor");
 
@@ -83,7 +84,7 @@ export function useFileContent(): UseFileContentReturn {
           return;
         }
 
-        const content = await readTextFile(filePath);
+        const content = await readTextFile(toFsPluginPath(filePath));
 
         // Check if content is binary
         if (isBinaryContent(content)) {

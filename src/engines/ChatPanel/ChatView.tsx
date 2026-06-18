@@ -33,7 +33,10 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getOrgtrackSessionSummaries } from "@src/api/tauri/lineage";
+import {
+  type CoreSessionSummary,
+  getOrgtrackSessionSummary,
+} from "@src/api/tauri/lineage";
 import { useShowInteractArea } from "@src/contexts/workspace/ChatContext";
 import { AgentMessageClampProvider } from "@src/engines/ChatPanel/blocks";
 import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatStatusBanners";
@@ -47,7 +50,8 @@ import { activeGuestShareConnectionsAtom } from "@src/features/SessionSharing/st
 import { useFileReviewSync } from "@src/hooks/fileReview";
 import { createLogger } from "@src/hooks/logger";
 import { useSessionWorkspaceSync } from "@src/hooks/session/useSessionWorkspaceSync";
-import { activeSessionIdAtom } from "@src/store/session";
+import { activeSessionIdAtom, sessionByIdAtom } from "@src/store/session";
+import type { Session } from "@src/store/session";
 import {
   isSessionActiveAtom,
   sessionRuntimeStatusAtom,
@@ -72,6 +76,7 @@ import {
   simulatorSelectedAppAtom,
   stationModeAtom,
 } from "@src/store/ui/simulatorAtom";
+import { getFileName } from "@src/util/file/pathUtils";
 import {
   isCursorIdeSession,
   isExternalHistorySession,
@@ -85,6 +90,7 @@ import { AgentEventsTap } from "./ChatHistory/GroupChatView/useGroupChatMergedEv
 import { ChatHistoryOverrideContext } from "./ChatHistoryOverrideContext";
 import { ChatSessionContext } from "./ChatSessionContext";
 import AgentOrgOverviewPanel from "./InputArea/components/AgentOrgOverviewPanel";
+import type { FileChangesResult } from "./InputArea/components/CompactFileChanges";
 import GitDiffActionsMenu from "./InputArea/components/GitDiffActionsMenu";
 import {
   buildCompactFilesReloadKey,
@@ -101,6 +107,66 @@ import { useFollowAgent } from "./hooks/useFollowAgent";
 const logger = createLogger("ChatView");
 
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
+
+function impactFileChanges(input: {
+  filesChanged?: number;
+  linesAdded?: number;
+  linesRemoved?: number;
+  touchedFiles?: readonly string[];
+}): FileChangesResult | undefined {
+  const touchedFiles = input.touchedFiles ?? [];
+  const filesChanged = input.filesChanged ?? touchedFiles.length;
+  const totalAdditions = input.linesAdded ?? 0;
+  const totalDeletions = input.linesRemoved ?? 0;
+  if (filesChanged === 0 && totalAdditions === 0 && totalDeletions === 0) {
+    return undefined;
+  }
+
+  const displayPaths =
+    touchedFiles.length > 0
+      ? touchedFiles
+      : Array.from(
+          { length: filesChanged },
+          (_unused, fileIndex) => `Changed file ${fileIndex + 1}`
+        );
+  const files = displayPaths.map((path, fileIndex) => ({
+    path,
+    fileName: getFileName(path),
+    status: "M",
+    additions: fileIndex === 0 ? totalAdditions : 0,
+    deletions: fileIndex === 0 ? totalDeletions : 0,
+    lineCount: fileIndex === 0 ? totalAdditions + totalDeletions : 0,
+  }));
+
+  return {
+    files,
+    totalAdditions,
+    totalDeletions,
+    stats: { added: 0, modified: filesChanged, deleted: 0 },
+  };
+}
+
+function sourceImpactFileChanges(
+  session: Session | undefined
+): FileChangesResult | undefined {
+  return impactFileChanges({
+    filesChanged: session?.filesChanged,
+    linesAdded: session?.linesAdded,
+    linesRemoved: session?.linesRemoved,
+    touchedFiles: session?.touchedFiles,
+  });
+}
+
+function summaryImpactFileChanges(
+  summary: CoreSessionSummary | null
+): FileChangesResult | undefined {
+  if (!summary) return undefined;
+  return impactFileChanges({
+    filesChanged: summary.filesChanged,
+    linesAdded: summary.linesAdded,
+    linesRemoved: summary.linesRemoved,
+  });
+}
 
 export interface ChatViewProps {
   /** Session ID to display. Sync bridges and events load for this session. */
@@ -191,6 +257,35 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const isExternalHistory = isExternalHistorySession(sessionId);
     const isRemoteShared = isRemoteSharedSession(sessionId);
     const isReadOnlySurface = readOnly || isExternalHistory || isRemoteShared;
+    const currentSession = useAtomValue(sessionByIdAtom(sessionId));
+    const [orgtrackSummary, setOrgtrackSummary] =
+      useState<CoreSessionSummary | null>(null);
+
+    useEffect(() => {
+      let cancelled = false;
+      void getOrgtrackSessionSummary(sessionId)
+        .then((summary) => {
+          if (!cancelled) setOrgtrackSummary(summary);
+        })
+        .catch((error: unknown) => {
+          if (!cancelled) {
+            logger.warn("failed to load orgtrack session summary", error);
+            setOrgtrackSummary(null);
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, [sessionId]);
+
+    const initialFileChanges = useMemo(
+      () =>
+        isCursorIde || isExternalHistory
+          ? (summaryImpactFileChanges(orgtrackSummary) ??
+            sourceImpactFileChanges(currentSession))
+          : undefined,
+      [currentSession, isCursorIde, isExternalHistory, orgtrackSummary]
+    );
 
     // Backend `agent_session_list_workspaces` only resolves sessions whose
     // runtime is currently attached. Historical sessions (status
@@ -257,32 +352,13 @@ const ChatView: React.FC<ChatViewProps> = memo(
     )?.current;
     const chatEvents = useAtomValue(chatEventsAtom);
     const isAgentWorking = useAtomValue(isSessionActiveAtom);
-    const [relatedCommitCount, setRelatedCommitCount] = useState(0);
-
-    useEffect(() => {
-      let cancelled = false;
-      void getOrgtrackSessionSummaries()
-        .then((summaries) => {
-          if (cancelled) return;
-          const summary = summaries.find(
-            (item) => item.sessionId === sessionId
-          );
-          setRelatedCommitCount(summary?.relatedCommits ?? 0);
-        })
-        .catch((error: unknown) => {
-          if (!cancelled) {
-            logger.warn("failed to load orgtrack commit summary", error);
-            setRelatedCommitCount(0);
-          }
-        });
-      return () => {
-        cancelled = true;
-      };
-    }, [sessionId]);
 
     const gitArtifactStats = useMemo(
-      () => ({ commitCount: relatedCommitCount, pullRequestCount: 0 }),
-      [relatedCommitCount]
+      () => ({
+        commitCount: orgtrackSummary?.relatedCommits ?? 0,
+        pullRequestCount: 0,
+      }),
+      [orgtrackSummary?.relatedCommits]
     );
     const planViewState = useMemo(
       () =>
@@ -729,6 +805,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
               onToggleProcess={toggleProcess}
               onProcessVisibleCountChange={setProcessVisibleCount}
               onFileChangeStatsChange={setFileChangeStats}
+              initialFileChanges={initialFileChanges}
               filesReloadKey={composerFilesReloadKey}
               groupChatPendingMessage={groupChatPendingMessage}
               groupChatViewActive={groupChatViewActive}

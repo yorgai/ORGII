@@ -242,7 +242,7 @@ const LoginPage: React.FC = () => {
     sessionExpired?: boolean;
   } | null;
   const from = locationState?.from?.pathname;
-  const redirectPath = from || ROUTES.app.home.start.path;
+  const redirectPath = from || ROUTES.workStation.base.path;
 
   // Check if user was redirected due to session expiration
   const sessionExpired = locationState?.sessionExpired === true;

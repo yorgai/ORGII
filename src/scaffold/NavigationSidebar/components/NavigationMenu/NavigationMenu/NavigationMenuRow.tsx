@@ -35,6 +35,7 @@ interface NavigationMenuParentRowProps extends Omit<
   ) => void;
   onRowMouseEnter: NavigationMenuRowMouseEnterHandler;
   onToggleSubmenu: (key: string) => void;
+  compactRows: boolean;
 }
 
 export const NavigationMenuParentRow = React.forwardRef<
@@ -54,6 +55,7 @@ export const NavigationMenuParentRow = React.forwardRef<
     onMenuItemContextMenu,
     onRowMouseEnter,
     onToggleSubmenu,
+    compactRows,
     onMouseEnter,
     onMouseLeave,
     ...rootProps
@@ -75,6 +77,7 @@ export const NavigationMenuParentRow = React.forwardRef<
     },
     [resetImmediateCursor, onMouseLeave]
   );
+  const rowHeightClass = compactRows ? "h-8" : "min-h-[36px]";
 
   return (
     <div
@@ -94,7 +97,7 @@ export const NavigationMenuParentRow = React.forwardRef<
       {dragState && <NavItemDragGhost dragState={dragState} />}
       <div
         data-testid={item.dataTestId}
-        className={`group flex min-h-[36px] items-center justify-between rounded-lg transition-colors duration-150 ${
+        className={`group flex ${rowHeightClass} items-center justify-between rounded-lg transition-colors duration-150 ${
           isChild ? "pl-5 pr-2" : "px-2"
         } ${submenuSelected ? "cursor-default bg-fill-2 text-primary-6" : cursorReset ? "cursor-default text-text-1 hover:bg-fill-2" : "cursor-pointer text-text-1 hover:bg-fill-2"}`}
         onClick={() => {
@@ -187,6 +190,7 @@ interface NavigationMenuLeafRowProps extends Omit<
   ) => void;
   onRowMouseEnter: NavigationMenuRowMouseEnterHandler;
   onRowActionClick: NavigationMenuRowActionClickHandler;
+  compactRows: boolean;
 }
 
 export const NavigationMenuLeafRow = React.forwardRef<
@@ -204,6 +208,7 @@ export const NavigationMenuLeafRow = React.forwardRef<
     onMenuItemContextMenu,
     onRowMouseEnter,
     onRowActionClick,
+    compactRows,
     onMouseEnter,
     onMouseLeave,
     ...rootProps
@@ -235,6 +240,7 @@ export const NavigationMenuLeafRow = React.forwardRef<
     },
     [resetImmediateCursor, onMouseLeave]
   );
+  const rowHeightClass = compactRows ? "h-8" : "min-h-[36px]";
 
   return (
     <div
@@ -251,7 +257,7 @@ export const NavigationMenuLeafRow = React.forwardRef<
       {dragState && <NavItemDragGhost dragState={dragState} />}
       <div
         data-testid={item.dataTestId}
-        className={`group flex min-h-[36px] items-center justify-between overflow-hidden rounded-lg transition-colors duration-150 ${
+        className={`group flex ${rowHeightClass} items-center justify-between overflow-hidden rounded-lg transition-colors duration-150 ${
           isChild ? "pl-5 pr-2" : "px-2"
         } ${item.subtitle ? "py-1.5" : ""} ${
           item.disabled

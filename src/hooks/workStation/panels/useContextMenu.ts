@@ -124,7 +124,7 @@ export function useContextMenu(
     opts.externalSearchQuery !== undefined &&
     (opts.inlineSearchOnEmpty || opts.externalSearchQuery.length > 0);
   const secondLayer: SecondLayerId | null = hasExternalQuery
-    ? "files"
+    ? (internalSecondLayer ?? "files")
     : internalSecondLayer;
   const searchQuery: string =
     opts.externalSearchQuery !== undefined

@@ -524,10 +524,15 @@
   }
 
   .table-pagination-wrapper,
-  > div:last-child.flex.h-12 {
+  > div:last-child.flex.h-12,
+  + .settings-table-empty-footer {
     border-bottom-right-radius: 12px;
     border-bottom-left-radius: 12px;
     background: var(--settings-table-surface);
+  }
+
+  + .settings-table-empty-footer {
+    min-height: 12px;
   }
 
   .table-expanded-row + .table-row .table-td {

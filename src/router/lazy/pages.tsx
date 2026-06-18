@@ -18,16 +18,12 @@ export const SelectRepoPage = React.lazy(
 
 export const ChangelogPage = React.lazy(
   () =>
-    import(
-      /* webpackChunkName: "changelog", webpackPrefetch: true */ "@src/modules/MainApp/Changelog"
-    )
+    import(/* webpackChunkName: "changelog" */ "@src/modules/MainApp/Changelog")
 );
 
 export const Settings = React.lazy(
   () =>
-    import(
-      /* webpackChunkName: "settings", webpackPrefetch: true */ "@/src/modules/MainApp/Settings"
-    )
+    import(/* webpackChunkName: "settings" */ "@/src/modules/MainApp/Settings")
 );
 
 export const AgentOrgsPage = React.lazy(

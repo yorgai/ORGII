@@ -3,7 +3,7 @@
  *
  * Redirects users to the appropriate page based on their login status:
  * - Not logged in → Login page
- * - Logged in → Start page
+ * - Logged in → WorkStation
  *
  * Repo selection is restored by RepoLoader/useRepoLoader from the current
  * window state, the last-used repo, cached recent repos, or the first repo.
@@ -28,5 +28,5 @@ export const AuthRedirect: React.FC = () => {
     return <Navigate to={ROUTES.auth.login.path} replace />;
   }
 
-  return <Navigate to={ROUTES.app.home.start.path} replace />;
+  return <Navigate to={ROUTES.workStation.base.path} replace />;
 };

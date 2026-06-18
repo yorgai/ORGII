@@ -28,8 +28,6 @@ import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout
 import { getChatPanelBackgroundStyle } from "@src/modules/shared/layouts/viewContainerTokens";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";
 import { GUIDE_TARGETS } from "@src/scaffold/Tutorials";
-import { EditorTabService } from "@src/services/workStation";
-import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
 import {
   collabConnectionStatesAtom,
   collabMembersAtom,
@@ -74,7 +72,6 @@ import {
 } from "@src/store/ui/collapseStateAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
 import type { WorkItemDraft } from "@src/store/workstation/projectManager";
-import { createBenchmarkTab } from "@src/store/workstation/tabs";
 
 import { useReloadSession } from "./ChatHistory/hooks/useReloadSession";
 import { ChatPanelContent } from "./ChatPanelContent";
@@ -91,7 +88,6 @@ import { useChatPanelResize } from "./hooks/useChatPanelResize";
 import { useChatPanelSessionModals } from "./hooks/useChatPanelSessionModals";
 import { usePanelTitle } from "./hooks/usePanelTitle";
 import { useProjectWorkItemHandlers } from "./hooks/useProjectWorkItemHandlers";
-import { useBenchmarkSessionCreatorSlots } from "./panels/useBenchmarkSessionCreatorSlots";
 import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
 
 const COLLAB_HEADER_STATUS_COLOR: Record<CollabConnectionStatus, string> = {
@@ -244,7 +240,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const setCreatorState = useSetAtom(sessionCreatorStateAtom);
     const bumpProjectListRefresh = useSetAtom(projectListRefreshAtom);
     const allAgentDefs = useAtomValue(allAgentDefsAtom);
-    const benchmarkBatchStatus = useAtomValue(benchmarkAgentBatchStatusAtom);
     const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
 
     const allBlocksCollapsed =
@@ -442,19 +437,14 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     ]);
 
     const handleStartPageAddApiKey = useCallback(() => {
-      setStartPageOpen(false);
       const accountsPath = `${buildIntegrationsPath({ category: "models" })}?modelsTab=my-accounts`;
       navigate(buildWizardPath(accountsPath, WIZARD_IDS.KEY_ADD));
-    }, [navigate, setStartPageOpen]);
+    }, [navigate]);
 
     const shareSessionAvailable =
       activeSession?.category === DISPATCH_CATEGORY.CLI_AGENT ||
       activeSession?.category === DISPATCH_CATEGORY.RUST_AGENT;
     const sessionSidebarVisible = sessionSidebarWidth > 0;
-    const benchmarkMasterSessionId = benchmarkBatchStatus?.masterSessionId;
-    const benchmarkSessionGroupTitle =
-      benchmarkBatchStatus?.masterSessionName ??
-      t("creator.benchmark.sessionGroupTitle");
     const collabOrgHeader = React.useMemo(() => {
       if (!selectedCollabOrg) return null;
       const org = collabOrgs.find(
@@ -529,9 +519,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     ]);
     const contentState = useChatPanelContentState({
       active,
-      activeSession,
-      benchmarkMasterSessionId,
-      benchmarkSessionGroupTitle,
       contentMode,
       createTarget,
       currentSessionId: currentSessionId ?? null,
@@ -546,27 +533,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       selectedWorkItem,
       selectedWorkspace,
       workspaceDashboardOpen,
-      setActiveSessionId,
-      setContentMode,
-      setWorkstationActiveSessionId,
       showChatFocusToggle,
       sidebarCollapsed,
       sessionCreatorAvailable: Boolean(SessionCreatorSlot),
       sessionSidebarVisible,
       viewMode,
     });
-
-    const handleOpenBenchmarkTab = useCallback(() => {
-      EditorTabService.openTab(createBenchmarkTab());
-      if (isChatFocus) {
-        toggleChatFocus();
-      }
-    }, [isChatFocus, toggleChatFocus]);
-    const { bodySlot: benchmarkPanel, footerSlot: benchmarkFooter } =
-      useBenchmarkSessionCreatorSlots({
-        enabled: contentState.isBenchmarkTarget,
-        onOpenBenchmarkTab: handleOpenBenchmarkTab,
-      });
 
     const {
       handleCancelCollabOrgCreate,
@@ -640,8 +612,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const creatorClassName = "min-h-0 flex-1";
     const emptyChatContent = (
       <ChatPanelEmptyContent
-        benchmarkFooter={benchmarkFooter}
-        benchmarkPanel={benchmarkPanel}
         createProjectContext={createProjectContext}
         createTarget={createTarget}
         creatorClassName={creatorClassName}

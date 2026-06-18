@@ -145,7 +145,19 @@
     },
     {
       "identifier": "fs:allow-read-file",
-      "allow": [{ "path": "$TEMP/**" }]
+      "allow": [{ "path": "**" }, { "path": "$TEMP/**" }]
+    },
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [{ "path": "**" }, { "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "**" }, { "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "**" }, { "path": "$HOME/**" }]
     }
   ]
 }

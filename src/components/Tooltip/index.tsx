@@ -605,6 +605,7 @@ const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
 
     // Clone child and attach event handlers
     type ElementProps = {
+      ref?: React.Ref<HTMLElement>;
       onMouseEnter?: (e: React.MouseEvent) => void;
       onMouseLeave?: (e: React.MouseEvent) => void;
       onClick?: (e: React.MouseEvent) => void;
@@ -634,8 +635,7 @@ const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
       // used for dropdown positioning). Without this, wrapping an element
       // in Tooltip would silently break refs like useDropdownEngine's
       // triggerRef, causing click-to-open dropdowns to never position.
-      const childRef = (children as unknown as { ref?: React.Ref<HTMLElement> })
-        .ref;
+      const childRef = originalProps.ref;
       const composedRef = (node: HTMLElement | null) => {
         triggerRef(node);
         applyRef(childRef, node);

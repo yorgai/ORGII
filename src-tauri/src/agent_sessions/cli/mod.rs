@@ -218,6 +218,11 @@ pub fn init_cli_agent_tables(conn: &Connection) -> SqliteResult<()> {
         [],
     )
     .ok();
+    conn.execute(
+        "ALTER TABLE code_sessions ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0",
+        [],
+    )
+    .ok();
 
     // Multi-root extra workspace folders. JSON array of absolute paths,
     // forwarded as `--add-dir <path>` for `claude_code` / `codex` and

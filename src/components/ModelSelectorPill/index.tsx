@@ -137,13 +137,13 @@ const ModelSelectorPill = forwardRef<HTMLButtonElement, ModelSelectorPillProps>(
     const modelLabelContent = useMemo(() => {
       const hasVariantInfo =
         displayParts.thinking || Boolean(displayParts.variantInfo);
-      if (!hasVariantInfo) return modelLabel;
+      if (!hasVariantInfo) return undefined;
 
       const accentClass = active ? "text-primary-6" : "text-text-3";
 
       return (
         <span
-          className={`inline-flex min-w-0 items-center gap-1.5 ${PILL_SM_LABEL_CLASS}`}
+          className={`inline-flex min-w-0 items-center gap-1.5 whitespace-nowrap ${PILL_SM_LABEL_CLASS}`}
         >
           <span className={`min-w-0 truncate ${PILL_SM_LABEL_CLASS}`}>
             {displayParts.label}
@@ -164,7 +164,7 @@ const ModelSelectorPill = forwardRef<HTMLButtonElement, ModelSelectorPillProps>(
           )}
         </span>
       );
-    }, [displayParts, modelLabel, active]);
+    }, [displayParts, active]);
 
     return (
       <SelectorPill

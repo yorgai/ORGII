@@ -4,13 +4,7 @@
  * Reusable item-level components for rendering menu items,
  * search result icons, and empty/loading states.
  */
-import {
-  Code,
-  FolderKanban,
-  History,
-  ListChecks,
-  Terminal,
-} from "lucide-react";
+import { Code, FolderKanban, ListChecks, Terminal } from "lucide-react";
 import React, { memo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -21,6 +15,7 @@ import {
 } from "@src/components/Dropdown/tokens";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { resolveSessionRowIcon } from "@src/util/session/sessionSidebarRow";
 
 import { ICON_CONFIG, type SecondLayerId } from "./config";
 import type { SearchResultItem } from "./types";
@@ -100,13 +95,17 @@ export const ResultItemIcon: React.FC<{
   }
 
   if (item.iconType === "session") {
-    return (
-      <History
-        size={DROPDOWN_ITEM.iconSize}
-        strokeWidth={1.75}
-        className={iconAccent}
-      />
-    );
+    const SessionIcon = resolveSessionRowIcon({
+      session_id: item.path,
+      user_input: item.userInput,
+      agentIconId: item.agentIconId,
+      cliAgentType: item.cliAgentType,
+    });
+    return React.createElement(SessionIcon, {
+      size: DROPDOWN_ITEM.iconSize,
+      strokeWidth: 1.75,
+      className: iconAccent,
+    });
   }
 
   if (item.iconType === "repo") {

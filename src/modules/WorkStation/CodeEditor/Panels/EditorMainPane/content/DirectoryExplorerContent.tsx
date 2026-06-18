@@ -16,6 +16,7 @@ import {
   workstationLayoutAtom,
 } from "@src/store/workstation/tabs";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
+import { toFsPluginPath } from "@src/util/file/pathUtils";
 import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 const MAX_GIT_META_ENTRIES = 80;
@@ -59,11 +60,16 @@ function getParentPath(path: string): string | null {
 async function loadDirectoryEntries(
   directoryPath: string
 ): Promise<DirectoryEntryRow[]> {
-  const entries = await readDir(directoryPath);
+  // On Windows the repo path arrives canonicalized as `\\?\C:\…`, which the
+  // Tauri fs plugin can't read (readDir returns nothing → "top level but no
+  // children"). Strip the verbatim prefix before reading, and build child
+  // paths from the cleaned dir so they're usable too.
+  const dir = toFsPluginPath(directoryPath).replace(/\/+$/, "");
+  const entries = await readDir(dir);
   return entries
     .map((entry) => ({
       name: entry.name,
-      path: `${directoryPath.replace(/\/+$/, "")}/${entry.name}`,
+      path: `${dir}/${entry.name}`,
       type: entry.isDirectory ? ("directory" as const) : ("file" as const),
     }))
     .sort((left, right) => {

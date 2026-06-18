@@ -1742,7 +1742,7 @@
   "creator": {
     "createTarget": {
       "agentSession": "Phiên Agent",
-      "createAgent": "Tạo Agent / Skill",
+      "manageAgents": "Quản lý Agents / Skills",
       "project": "Tạo dự án",
       "workItem": "Tạo Work Item",
       "benchmark": "Benchmark (Beta)"

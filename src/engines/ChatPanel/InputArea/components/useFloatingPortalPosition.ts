@@ -7,20 +7,24 @@ import {
   computeFloatingPosition,
 } from "./floatingPlacement";
 
+const MAX_POSITION_RETRY_FRAMES = 4;
+
 export interface UseFloatingPortalPositionOptions {
   visible: boolean;
   containerRef: React.RefObject<HTMLElement | null>;
   floatingRef: React.RefObject<HTMLElement | null>;
-  floatingWidth: number;
+  floatingWidth?: number;
   fallbackHeight: number;
   placement?: FloatingPlacementStrategy;
   anchorSelector?: string;
   updateKey?: string | number;
+  maxWidth?: number;
   maxHeight?: number;
 }
 
 export interface UseFloatingPortalPositionResult {
   portalPosition: FloatingPosition | null;
+  portalWidth: number;
   portalMaxHeight: number;
   isPositioned: boolean;
   updatePortalPosition: () => void;
@@ -35,11 +39,13 @@ export function useFloatingPortalPosition({
   placement = "prefer-up",
   anchorSelector,
   updateKey,
+  maxWidth,
   maxHeight,
 }: UseFloatingPortalPositionOptions): UseFloatingPortalPositionResult {
   const [portalPosition, setPortalPosition] = useState<FloatingPosition | null>(
     null
   );
+  const [portalWidth, setPortalWidth] = useState(floatingWidth ?? 0);
   const [portalMaxHeight, setPortalMaxHeight] = useState(
     maxHeight ?? fallbackHeight
   );
@@ -58,22 +64,30 @@ export function useFloatingPortalPosition({
         ? container.querySelector<HTMLElement>(anchorSelector)
         : null;
     const anchorRect = (anchorElement ?? container)?.getBoundingClientRect();
-    if (!anchorRect) {
+    const anchorReady = Boolean(
+      anchorRect && anchorRect.width > 0 && anchorRect.height > 0
+    );
+    if (!anchorRect || !anchorReady) {
       setIsPositioned(false);
       setPortalPosition(null);
       return;
     }
 
+    const measuredFloatingWidth = floatingWidth ?? anchorRect.width;
+    const resolvedFloatingWidth = maxWidth
+      ? Math.min(measuredFloatingWidth, maxWidth)
+      : measuredFloatingWidth;
     const floatingHeight =
       floatingRef.current?.getBoundingClientRect().height ?? fallbackHeight;
     const nextPosition = computeFloatingPosition({
       anchorRect,
-      floatingWidth,
+      floatingWidth: resolvedFloatingWidth,
       floatingHeight,
       placement,
     });
 
     setPortalPosition(nextPosition);
+    setPortalWidth(resolvedFloatingWidth);
     setPortalMaxHeight(
       Math.min(maxHeight ?? fallbackHeight, nextPosition.availableHeight)
     );
@@ -85,6 +99,7 @@ export function useFloatingPortalPosition({
     floatingRef,
     floatingWidth,
     maxHeight,
+    maxWidth,
     placement,
     visible,
   ]);
@@ -93,8 +108,19 @@ export function useFloatingPortalPosition({
   // `isPositioned`, so scheduling this avoids a fallback-coordinate flash
   // without synchronously setting state inside the effect body.
   useLayoutEffect(() => {
-    const animationFrameId = window.requestAnimationFrame(updatePortalPosition);
-    return () => window.cancelAnimationFrame(animationFrameId);
+    const frameIds: number[] = [];
+    let frameCount = 0;
+    const measure = () => {
+      updatePortalPosition();
+      frameCount += 1;
+      if (frameCount < MAX_POSITION_RETRY_FRAMES) {
+        frameIds.push(window.requestAnimationFrame(measure));
+      }
+    };
+    frameIds.push(window.requestAnimationFrame(measure));
+    return () => {
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
+    };
   }, [updatePortalPosition]);
 
   // Re-measure after content changes that can change the floating height.
@@ -129,6 +155,7 @@ export function useFloatingPortalPosition({
 
   return {
     portalPosition,
+    portalWidth,
     portalMaxHeight,
     isPositioned,
     updatePortalPosition,

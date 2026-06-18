@@ -314,6 +314,123 @@ export function createWorkspaceHelpers(store: E2EStore) {
     }
   };
 
+  // ============================================================
+  // Git non-repo + code-map folder-workspace e2e support
+  // ============================================================
+
+  /**
+   * Fetch git status for an arbitrary path by hitting the IDE server's git
+   * route directly (respecting the e2e base URL / port). Used to assert the
+   * benign `exists: false` response for non-git folders — distinct from a
+   * transport error — which is the fix for recurring git error popups.
+   */
+  const getGitStatusForPath = async (
+    repoPath: string
+  ): Promise<Result<{ exists: boolean; httpStatus: number; raw: Json }>> => {
+    try {
+      const repoId = `e2e-status-${btoa(repoPath)
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .slice(0, 24)}`;
+      const query = new URLSearchParams({
+        include_untracked: "true",
+        path: repoPath,
+      });
+      const response = await fetch(
+        e2eUrl(
+          `/git/api/git/repo/${encodeURIComponent(repoId)}/status?${query.toString()}`
+        ),
+        { method: "GET" }
+      );
+      const httpStatus = response.status;
+      let body: unknown = null;
+      try {
+        body = await response.json();
+      } catch {
+        body = null;
+      }
+      const data = (body as { data?: { exists?: boolean } })?.data ?? null;
+      return {
+        ok: true,
+        exists: data?.exists ?? false,
+        httpStatus,
+        raw: (body ?? null) as unknown as Json,
+      };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  /**
+   * Pin a NON-git folder as the active workspace (kind=folder). Mirrors
+   * `ensureRepoSelected` but registers a folder workspace so code-map and
+   * git-status code paths exercise the folder branch.
+   */
+  const pinFolderWorkspace = async (
+    folderPath: string,
+    folderName?: string
+  ): Promise<Result<{ folderId: string; path: string }>> => {
+    try {
+      const path = folderPath.replace(/\/+$/, "");
+      const folderId = `e2e-folder-${btoa(path)
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .slice(0, 24)}`;
+      const name =
+        folderName ?? path.split(/[\\/]/).filter(Boolean).pop() ?? "E2E Folder";
+      const folder = {
+        id: folderId,
+        name,
+        path,
+        uri: `file://${path}`,
+        isPrimary: true,
+        repoId: folderId,
+        kind: REPO_KIND.FOLDER,
+      };
+      store.set(workspaceFoldersAtom, [folder]);
+      store.set(activeWorkspaceIdAtom, folderId);
+      store.set(activeWorkspaceNameAtom, name);
+      store.set(activeFolderIdAtom, folderId);
+      store.set(repositoryIdAtom, folderId);
+      store.set(repositoryNameAtom, name);
+      store.set(repoPathAtom, path);
+      return { ok: true, folderId, path };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  /**
+   * Read code-map status for a path (read-only). Lets specs assert that the
+   * code map is usable for folder workspaces and that auto-indexing moves the
+   * status off `not_indexed`.
+   */
+  const getCodeMapStatusForPath = async (
+    workspacePath: string
+  ): Promise<Result<{ status: Json }>> => {
+    try {
+      const status = (await invoke("code_map_get_status", {
+        workspacePath,
+      })) as Json;
+      return { ok: true, status };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  /** Trigger a (non-forced) code-map index for a path. */
+  const startCodeMapIndexForPath = async (
+    workspacePath: string
+  ): Promise<Result<{ status: Json }>> => {
+    try {
+      const status = (await invoke("code_map_start_index", {
+        workspacePath,
+        force: false,
+      })) as Json;
+      return { ok: true, status };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   return {
     getOrgiiRoot,
     getSelectedRepoPath,
@@ -322,5 +439,9 @@ export function createWorkspaceHelpers(store: E2EStore) {
     clearWorkspaceRepos,
     setActiveWorkspaceFolderForTest,
     readSessionWorkspaceFromDb,
+    getGitStatusForPath,
+    pinFolderWorkspace,
+    getCodeMapStatusForPath,
+    startCodeMapIndexForPath,
   };
 }

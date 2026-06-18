@@ -47,6 +47,8 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
       cacheReadTokens,
       cacheWriteTokens,
       remainingTokens,
+      cacheHitRate,
+      cacheSavedTokens,
     } = useContextUsageInfo();
 
     const { panelPos, triggerRef, panelRef, toggle, close } = useContextPanel();
@@ -57,6 +59,14 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
     const cornerLabelClass =
       ringTone === "unused" ? "text-text-4" : "text-text-2";
     const hasCache = cacheReadTokens > 0 || cacheWriteTokens > 0;
+    // Surface the cache savings as the hero line whenever there is a
+    // meaningful hit rate — this is ORGII's cost advantage over CC / Codex /
+    // Cursor and the thing the user should notice first.
+    const showCacheHero = cacheHitRate > 0.05 && cacheSavedTokens > 0;
+    // Keep the corner pill calm: only show the running percentage once we are
+    // actually approaching the auto-compaction zone, otherwise the gauge sits
+    // quietly without a number nagging the user.
+    const showCornerPercent = percentage >= 90;
 
     const categories: PanelCategory[] = useMemo(() => {
       const colors: Record<string, string> = {
@@ -100,7 +110,7 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
             aria-expanded={panelPos !== null}
           >
             <ProgressRing percentage={displayPct} tone={ringTone} />
-            {!compact && (
+            {!compact && showCornerPercent && (
               <span
                 className={`text-[12px] tabular-nums leading-none ${cornerLabelClass}`}
               >
@@ -147,20 +157,40 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
 
                 <p className="mt-0.5 text-[11px] text-text-3">{tokenLabel}</p>
 
-                {hasCache && (
-                  <p className="mt-0.5 text-[11px] text-green-600">
-                    {t("contextInfo.cacheSaved", {
-                      read: formatTokenCount(cacheReadTokens),
-                      write: formatTokenCount(cacheWriteTokens),
+                {showCacheHero ? (
+                  <div className="mt-2 rounded-lg bg-green-500/10 px-2.5 py-1.5">
+                    <p className="text-[12px] font-semibold text-green-600">
+                      {t("contextInfo.cacheHero", {
+                        pct: Math.round(cacheHitRate * 100),
+                        tokens: formatTokenCount(cacheSavedTokens),
+                      })}
+                    </p>
+                    <p className="mt-0.5 text-[10.5px] leading-snug text-text-3">
+                      {t("contextInfo.cacheHeroSub")}
+                    </p>
+                  </div>
+                ) : (
+                  hasCache && (
+                    <p className="mt-0.5 text-[11px] text-green-600">
+                      {t("contextInfo.cacheSaved", {
+                        read: formatTokenCount(cacheReadTokens),
+                        write: formatTokenCount(cacheWriteTokens),
+                      })}
+                    </p>
+                  )
+                )}
+
+                {maxTokens > 0 && (
+                  <p className="mt-1 text-[11px] text-text-3">
+                    {t("contextInfo.headroom", {
+                      tokens: formatTokenCount(remainingTokens),
                     })}
                   </p>
                 )}
 
-                {maxTokens > 0 && (
-                  <p className="mt-0.5 text-[11px] text-text-3">
-                    {t("contextInfo.remaining", {
-                      tokens: formatTokenCount(remainingTokens),
-                    })}
+                {ringTone !== "unused" && ringTone !== "normal" && (
+                  <p className="mt-1 text-[11px] leading-snug text-text-3">
+                    {t("contextInfo.autoCompactNote")}
                   </p>
                 )}
 

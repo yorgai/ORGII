@@ -123,6 +123,10 @@ export const OrgtrackSessionSummariesInput = z.object({
   workspacePath: z.string().optional(),
 });
 
+export const OrgtrackSessionSummaryInput = z.object({
+  sessionId: z.string(),
+});
+
 export const OrgtrackAnalyzeSessionsInput = z.object({
   workspacePath: z.string().optional(),
   sessionId: z.string().optional(),

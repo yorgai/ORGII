@@ -1,9 +1,7 @@
-import React, { useCallback } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 
-import SessionHoverCard from "@src/components/SessionHoverCard";
 import { ChatPanelHeaderBreadcrumb } from "@src/engines/ChatPanel/header";
-import type { Session } from "@src/store/session";
 import {
   CHAT_PANEL_CONTENT_MODE,
   CHAT_PANEL_CREATE_TARGET,
@@ -18,9 +16,6 @@ import {
 
 interface UseChatPanelContentStateOptions {
   active: boolean;
-  activeSession: Session | undefined;
-  benchmarkMasterSessionId: string | undefined;
-  benchmarkSessionGroupTitle: string;
   contentMode: ChatPanelContentMode;
   createTarget: ChatPanelCreateTarget;
   currentSessionId: string | null;
@@ -35,9 +30,6 @@ interface UseChatPanelContentStateOptions {
   selectedWorkItem: ChatPanelSelectedWorkItem | null;
   selectedWorkspace: ChatPanelSelectedWorkspace | null;
   workspaceDashboardOpen: boolean;
-  setActiveSessionId: (sessionId: string | null) => void;
-  setContentMode: (mode: ChatPanelContentMode) => void;
-  setWorkstationActiveSessionId: (sessionId: string | null) => void;
   showChatFocusToggle: boolean;
   sidebarCollapsed: boolean;
   sessionCreatorAvailable: boolean;
@@ -46,13 +38,10 @@ interface UseChatPanelContentStateOptions {
 }
 
 export interface ChatPanelContentState {
-  handleBenchmarkSessionGroupHeaderClick: () => void;
   headerTitle: string;
   headerTitleContent: React.ReactNode | undefined;
-  isBenchmarkTarget: boolean;
   isProjectTarget: boolean;
   isWorkItemTarget: boolean;
-  showBenchmarkChildSessionContent: boolean;
   showBenchmarkSessionGroupContent: boolean;
   showCollabOrgContent: boolean;
   showCreatorPresenceInHeader: boolean;
@@ -75,9 +64,6 @@ export interface ChatPanelContentState {
 
 export function useChatPanelContentState({
   active,
-  activeSession,
-  benchmarkMasterSessionId,
-  benchmarkSessionGroupTitle,
   contentMode,
   createTarget,
   currentSessionId,
@@ -92,9 +78,6 @@ export function useChatPanelContentState({
   selectedWorkItem,
   selectedWorkspace,
   workspaceDashboardOpen,
-  setActiveSessionId,
-  setContentMode,
-  setWorkstationActiveSessionId,
   showChatFocusToggle,
   sidebarCollapsed,
   sessionCreatorAvailable,
@@ -205,108 +188,67 @@ export function useChatPanelContentState({
     selectedProjectOrg?.orgName || t("projects:orgs.title");
   const workspaceTitle =
     selectedWorkspace?.name || t("navigation:labels.workspace");
-  const showBenchmarkChildSessionContent =
-    showSessionContent &&
-    Boolean(activeSession?.parentSessionId) &&
-    activeSession?.parentSessionId === benchmarkMasterSessionId;
   const headerTitle = showBenchmarkSessionGroupContent
-    ? benchmarkSessionGroupTitle
-    : showBenchmarkChildSessionContent
-      ? `${benchmarkSessionGroupTitle} > ${panelTitle}`
-      : selectedWorkItem
-        ? currentSessionId
-          ? `${workItemTitle} » ${panelTitle}`
-          : workItemTitle
-        : selectedProject
-          ? projectTitle
-          : selectedProjectOrg
-            ? projectOrgTitle
-            : showWorkspaceDashboardContent
-              ? t("navigation:launchpad.dashboard")
-              : showExploreContent
-                ? t("navigation:explore.title", { defaultValue: "Explore" })
-                : showCollabOrgContent
-                  ? (collabOrgHeaderTitle ??
-                    t("navigation:collaboration.orgDemoTitle"))
-                  : createTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG
-                    ? t("navigation:collaboration.addOrg")
-                    : selectedWorkspace
-                      ? workspaceTitle
-                      : panelTitle;
+    ? t("creator.benchmark.sessionGroupTitle")
+    : selectedWorkItem
+      ? currentSessionId
+        ? `${workItemTitle} » ${panelTitle}`
+        : workItemTitle
+      : selectedProject
+        ? projectTitle
+        : selectedProjectOrg
+          ? projectOrgTitle
+          : showWorkspaceDashboardContent
+            ? t("navigation:launchpad.dashboard")
+            : showExploreContent
+              ? t("navigation:explore.title", { defaultValue: "Explore" })
+              : showCollabOrgContent
+                ? (collabOrgHeaderTitle ??
+                  t("navigation:collaboration.orgDemoTitle"))
+                : createTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG
+                  ? t("navigation:collaboration.addOrg")
+                  : selectedWorkspace
+                    ? workspaceTitle
+                    : panelTitle;
 
-  const handleBenchmarkSessionGroupHeaderClick = useCallback(() => {
-    if (!benchmarkMasterSessionId) return;
-    setActiveSessionId(benchmarkMasterSessionId);
-    setWorkstationActiveSessionId(benchmarkMasterSessionId);
-    setContentMode(CHAT_PANEL_CONTENT_MODE.BENCHMARK_SESSION_GROUP);
-  }, [
-    benchmarkMasterSessionId,
-    setActiveSessionId,
-    setContentMode,
-    setWorkstationActiveSessionId,
-  ]);
-
-  const headerTitleContent = showBenchmarkChildSessionContent ? (
-    <ChatPanelHeaderBreadcrumb
-      items={[
-        {
-          key: "benchmark-group",
-          label: benchmarkSessionGroupTitle,
-          onClick: (event) => {
-            event.stopPropagation();
-            handleBenchmarkSessionGroupHeaderClick();
+  const headerTitleContent =
+    showWorkItemContent && selectedWorkItem ? (
+      <ChatPanelHeaderBreadcrumb
+        items={[
+          {
+            key: "org",
+            label: selectedWorkItem.orgName || t("projects:orgs.personalOrg"),
           },
-        },
-        {
-          key: "benchmark-session",
-          label: currentSessionId ? (
-            <SessionHoverCard sessionId={currentSessionId}>
-              <span className="min-w-0 truncate">{panelTitle}</span>
-            </SessionHoverCard>
-          ) : (
-            panelTitle
-          ),
-        },
-      ]}
-    />
-  ) : showWorkItemContent && selectedWorkItem ? (
-    <ChatPanelHeaderBreadcrumb
-      items={[
-        {
-          key: "org",
-          label: selectedWorkItem.orgName || t("projects:orgs.personalOrg"),
-        },
-        {
-          key: "project",
-          label:
-            selectedWorkItem.projectName ||
-            selectedWorkItem.workItem.project?.name ||
-            t("projects.dashboardTitle"),
-        },
-        {
-          key: "work-item",
-          label: workItemTitle,
-        },
-      ]}
-    />
-  ) : showProjectOrgContent && selectedProjectOrg ? (
-    <ChatPanelHeaderBreadcrumb
-      items={[{ key: "org", label: selectedProjectOrg.orgName }]}
-    />
-  ) : showCollabOrgContent && collabOrgHeaderTitleContent ? (
-    collabOrgHeaderTitleContent
-  ) : showWorkspaceDashboardContent ||
-    showExploreContent ||
-    showCollabOrgContent ||
-    showWorkspaceOverviewContent ? (
-    <ChatPanelHeaderBreadcrumb
-      items={[{ key: "surface", label: headerTitle }]}
-    />
-  ) : undefined;
+          {
+            key: "project",
+            label:
+              selectedWorkItem.projectName ||
+              selectedWorkItem.workItem.project?.name ||
+              t("projects.dashboardTitle"),
+          },
+          {
+            key: "work-item",
+            label: workItemTitle,
+          },
+        ]}
+      />
+    ) : showProjectOrgContent && selectedProjectOrg ? (
+      <ChatPanelHeaderBreadcrumb
+        items={[{ key: "org", label: selectedProjectOrg.orgName }]}
+      />
+    ) : showCollabOrgContent && collabOrgHeaderTitleContent ? (
+      collabOrgHeaderTitleContent
+    ) : showWorkspaceDashboardContent ||
+      showExploreContent ||
+      showCollabOrgContent ||
+      showWorkspaceOverviewContent ? (
+      <ChatPanelHeaderBreadcrumb
+        items={[{ key: "surface", label: headerTitle }]}
+      />
+    ) : undefined;
 
   const showNewSessionButton =
     showSessionContent && sidebarCollapsed && !sessionSidebarVisible;
-  const isBenchmarkTarget = createTarget === CHAT_PANEL_CREATE_TARGET.BENCHMARK;
   const isProjectTarget = createTarget === CHAT_PANEL_CREATE_TARGET.PROJECT;
   const isWorkItemTarget = createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM;
   const isCollabOrgTarget =
@@ -320,7 +262,6 @@ export function useChatPanelContentState({
     !selectedWorkspace &&
     !selectedCollabOrg &&
     !showExploreContent &&
-    !isBenchmarkTarget &&
     !isProjectTarget &&
     !isWorkItemTarget &&
     !isCollabOrgTarget;
@@ -357,13 +298,10 @@ export function useChatPanelContentState({
     showChatFocusToggle;
 
   return {
-    handleBenchmarkSessionGroupHeaderClick,
     headerTitle,
     headerTitleContent,
-    isBenchmarkTarget,
     isProjectTarget,
     isWorkItemTarget,
-    showBenchmarkChildSessionContent,
     showBenchmarkSessionGroupContent,
     showCollabOrgContent,
     showCreatorPresenceInHeader,

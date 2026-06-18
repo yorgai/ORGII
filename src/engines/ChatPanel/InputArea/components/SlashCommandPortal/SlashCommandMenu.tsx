@@ -41,6 +41,7 @@ import { useKeyboard } from "./useKeyboard";
 const PANEL_WIDTH = 280;
 const MAX_PANEL_HEIGHT = 300;
 const MAX_SKILLS_SECTION_HEIGHT = 200;
+const OUTSIDE_CLICK_GRACE_MS = 120;
 
 const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   visible,
@@ -67,6 +68,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   const portalContainerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const menuOpenedAtRef = useRef(0);
   const tauriSelectAll = useTauriSelectAllShortcut();
 
   // Build the unified entry list
@@ -158,11 +160,25 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   // Click outside → close (but not when clicking inside a flyout portal)
   useEffect(() => {
     if (!visible || !isPositioned) return;
+
+    menuOpenedAtRef.current = performance.now();
+    let portalReady = false;
+    const readyFrame = window.requestAnimationFrame(() => {
+      portalReady = true;
+    });
+
     const handler = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
+      if (
+        performance.now() - menuOpenedAtRef.current <
+        OUTSIDE_CLICK_GRACE_MS
+      ) {
+        return;
+      }
       const portalContainer = portalContainerRef.current;
       const ownerContainer = containerRef.current;
+      if (!portalContainer && !portalReady) return;
       if (
         portalContainer?.contains(target) ||
         ownerContainer?.contains(target)
@@ -172,8 +188,11 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
       onClose();
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [visible, isPositioned, onClose]);
+    return () => {
+      window.cancelAnimationFrame(readyFrame);
+      document.removeEventListener("mousedown", handler);
+    };
+  }, [visible, isPositioned, containerRef, onClose, searchQuery]);
 
   const menuReady = visible && isPositioned && Boolean(portalPosition);
   const mouseMovedRef = useMouseMoved(menuReady);

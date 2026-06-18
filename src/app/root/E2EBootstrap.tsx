@@ -153,6 +153,10 @@ export const E2EBootstrap: FC = () => {
       clearWorkspaceRepos,
       setActiveWorkspaceFolderForTest,
       readSessionWorkspaceFromDb,
+      getGitStatusForPath,
+      pinFolderWorkspace,
+      getCodeMapStatusForPath,
+      startCodeMapIndexForPath,
     } = createWorkspaceHelpers(store);
 
     const { readSessionPromptEnvironmentBlock, readSdeTranscript } =
@@ -234,6 +238,7 @@ export const E2EBootstrap: FC = () => {
       debugSeedSubagentJobWire,
       debugSeedCommitLinkWire,
       debugSeedFinalDiffWire,
+      debugReadFinalDiffCountWire,
       killSubagentJobWire,
       listRunningSubagentJobsWire,
       debugSeedChildSessionWire,
@@ -340,6 +345,10 @@ export const E2EBootstrap: FC = () => {
       clearWorkspaceRepos,
       setActiveWorkspaceFolderForTest,
       readSessionWorkspaceFromDb,
+      getGitStatusForPath,
+      pinFolderWorkspace,
+      getCodeMapStatusForPath,
+      startCodeMapIndexForPath,
       readSessionPromptEnvironmentBlock,
       readSdeTranscript,
       writeProject,
@@ -427,6 +436,7 @@ export const E2EBootstrap: FC = () => {
       debugSeedSubagentJobWire,
       debugSeedCommitLinkWire,
       debugSeedFinalDiffWire,
+      debugReadFinalDiffCountWire,
       killSubagentJobWire,
       listRunningSubagentJobsWire,
       debugSeedChildSessionWire,

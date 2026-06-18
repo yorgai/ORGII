@@ -1742,7 +1742,7 @@
   "creator": {
     "createTarget": {
       "agentSession": "Agent-Sitzung",
-      "createAgent": "Agent / Skill erstellen",
+      "manageAgents": "Agents / Skills verwalten",
       "project": "Projekt erstellen",
       "workItem": "Work Item erstellen",
       "benchmark": "Benchmark (Beta)"

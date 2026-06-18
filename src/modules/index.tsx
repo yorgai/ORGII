@@ -30,7 +30,6 @@ import { useRouteViewMode } from "@src/config/routeViewModeConfig";
 import { ROUTES } from "@src/config/routes";
 import { BrowserProvider, TerminalProvider } from "@src/contexts/workstation";
 import { useAgentADEActions } from "@src/engines/SessionCore/hooks/useAgentADEActions";
-import { useServiceAuthState } from "@src/hooks/auth";
 import { useProjectDataChangedListener } from "@src/hooks/project";
 import { useBackgroundImage } from "@src/hooks/theme/useBackgroundImage";
 import { useOpenUrlInBrowser } from "@src/hooks/workStation/browser/useOpenUrlInBrowser";
@@ -39,7 +38,6 @@ import { useNarrowChatFocus } from "@src/hooks/workStation/useNarrowChatFocus";
 import WorkStationPage from "@src/modules/WorkStation";
 import { useGlobalBrowserWebviewLayering } from "@src/modules/WorkStation/Browser/hooks";
 import { SharedBrowserApp } from "@src/modules/WorkStation/Browser/shared";
-import { preloadMainAppRoutes } from "@src/router/lazy/preload";
 import {
   CODE_EDITOR_TOUR_EVENT,
   CodeEditorTour,
@@ -116,7 +114,6 @@ const BrowserEventBridge: React.FC = () => {
 
 const AppShell = () => {
   const location = useLocation();
-  const { isAuthenticated } = useServiceAuthState();
 
   const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
   const currentBackgroundImage = useBackgroundImage();
@@ -141,13 +138,6 @@ const AppShell = () => {
   // overlay (dropdown, modal, spotlight) is visible. See
   // `docs/workstation/Browser/webview-layering--0418.md`.
   useGlobalBrowserWebviewLayering();
-
-  // === Preload MainApp route chunks in the background ===
-  useEffect(() => {
-    if (isAuthenticated) {
-      preloadMainAppRoutes();
-    }
-  }, [isAuthenticated]);
 
   // === Navigation Bridge ===
   // App-level navigation actions dispatch CustomEvents because they can't use

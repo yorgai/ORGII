@@ -51,6 +51,34 @@ export function decodeOctalPath(path: string): string {
 }
 
 /**
+ * Strip the Windows extended-length ("verbatim") `\\?\` prefix (and a leading
+ * `file://` scheme) so a path can be passed to the Tauri fs plugin
+ * (`@tauri-apps/plugin-fs`), which cannot parse `\\?\` paths.
+ *
+ * Repo paths arrive in `\\?\C:\…` form because the Rust backend canonicalizes
+ * them (`std::fs::canonicalize` returns verbatim paths on Windows). The fs
+ * plugin then silently fails on them — e.g. `readDir` returns nothing (file
+ * tree shows the root but no children) and `exists` rejects. This is a no-op on
+ * already-normal paths (macOS/Linux, or Windows paths without the prefix), so
+ * it's safe to apply unconditionally before any fs-plugin call.
+ *
+ * NOTE: only for filesystem-plugin calls — do NOT use this to derive repo
+ * identity/keys (the `\\?\` form is part of the stored repo id).
+ *
+ * @example
+ * toFsPluginPath("\\\\?\\C:\\Projects\\ORGII") // "C:\\Projects\\ORGII"
+ * toFsPluginPath("\\\\?\\UNC\\srv\\share")      // "\\\\srv\\share"
+ * toFsPluginPath("/Users/me/repo")               // "/Users/me/repo"
+ */
+export function toFsPluginPath(path: string): string {
+  if (!path) return "";
+  const withoutScheme = path.startsWith("file://") ? path.slice(7) : path;
+  return withoutScheme
+    .replace(/^\\\\\?\\UNC\\/, "\\\\") // \\?\UNC\srv\share -> \\srv\share
+    .replace(/^\\\\\?\\/, ""); // \\?\C:\dir         -> C:\dir
+}
+
+/**
  * Get file extension from file path
  * @param filePath - Full file path or filename
  * @returns File extension (without dot) or empty string if no extension

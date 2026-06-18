@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useRouteAppMode } from "@src/config/routeViewModeConfig";
 import { activeWorkspaceRootAtom } from "@src/store/workspace";
+import { toFsPluginPath } from "@src/util/file/pathUtils";
 
 const getFolderName = (path: string): string => {
   if (!path) return "";
@@ -14,7 +15,9 @@ const getFolderName = (path: string): string => {
 
 const normalizePath = (path: string): string => {
   if (!path) return "";
-  return path.startsWith("file://") ? path.replace("file://", "") : path;
+  // Strip `file://` and the Windows `\\?\` verbatim prefix so the fs plugin's
+  // `exists()` gets a path it can parse.
+  return toFsPluginPath(path);
 };
 
 export interface AppShellRepoState {
@@ -66,8 +69,13 @@ export function useAppShellRepo(): AppShellRepoState {
         }
       } catch (_pathCheckError) {
         if (cancelled) return;
-        setPathExists(false);
-        setLastSeenPath(normalizedPath);
+        // `exists()` (Tauri fs plugin) throws for reasons other than a missing
+        // path — notably when the path is outside the plugin's $HOME scope, or
+        // is an extended-length `\\?\` path from canonicalize(). Both are common
+        // on Windows, where repos often live outside the home dir (C:\Projects\…).
+        // Treat a throw as "unknown", not "missing", so a valid out-of-home repo
+        // still renders instead of showing a false "Cannot find".
+        setPathExists(null);
       }
     };
 

@@ -190,8 +190,5 @@ export function useKeyboard({
 
   useEffect(() => {
     keyboardHandlerRef.current = handleKeyDown;
-    return () => {
-      keyboardHandlerRef.current = null;
-    };
   }, [handleKeyDown, keyboardHandlerRef]);
 }

@@ -1742,7 +1742,7 @@
   "creator": {
     "createTarget": {
       "agentSession": "Agent セッション",
-      "createAgent": "Agent / Skill を作成",
+      "manageAgents": "Agents / Skills を管理",
       "project": "プロジェクトを作成",
       "workItem": "Work Item を作成",
       "benchmark": "Benchmark (Beta)"

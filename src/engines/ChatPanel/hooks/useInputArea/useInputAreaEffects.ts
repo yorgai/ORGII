@@ -4,7 +4,12 @@
  * Manages all side effects for the InputArea
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { type MutableRefObject, type RefObject, useEffect } from "react";
+import {
+  type MutableRefObject,
+  type RefObject,
+  useEffect,
+  useRef,
+} from "react";
 
 import type { ComposerInputRef } from "@src/components/ComposerInput";
 import Message from "@src/components/Message";
@@ -28,9 +33,12 @@ import { prewarmFileIndex } from "@src/util/platform/tauri/fileSearch";
 import { isImageName } from "./imageExtensions";
 import { useImageAttachment } from "./useImageAttachment";
 
+const MENU_OUTSIDE_CLICK_GRACE_MS = 120;
+
 interface UseInputAreaEffectsOptions {
   // Refs
   composerInputRef: RefObject<ComposerInputRef | null>;
+  containerRef: RefObject<HTMLDivElement | null>;
   dropTargetId: string;
   hasContentRef: MutableRefObject<boolean>;
 
@@ -54,6 +62,7 @@ interface UseInputAreaEffectsOptions {
 export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
   const {
     composerInputRef,
+    containerRef,
     dropTargetId,
     hasContentRef,
     showContextMenu,
@@ -158,27 +167,45 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     hasContentRef,
   ]);
 
+  const menuOpenedAtRef = useRef(0);
+
   // Click outside handler for @ dropdown. The menu is rendered through a
-  // document.body portal, so check the portal shell directly.
+  // document.body portal, so check both the portal shell and the composer shell.
   useEffect(() => {
+    if (!showContextMenu) return;
+
+    menuOpenedAtRef.current = performance.now();
+    let portalReady = false;
+    const readyFrame = window.requestAnimationFrame(() => {
+      portalReady = true;
+    });
+
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
+      if (
+        performance.now() - menuOpenedAtRef.current <
+        MENU_OUTSIDE_CLICK_GRACE_MS
+      ) {
+        return;
+      }
+
+      const ownerContainer = containerRef.current;
+      if (ownerContainer?.contains(target)) return;
 
       const portalShell = document.querySelector("[data-context-menu-portal]");
+      if (!portalShell && !portalReady) return;
       if (portalShell?.contains(target)) return;
-
       setShowContextMenu(false);
     };
 
-    if (showContextMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
+    document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
+      window.cancelAnimationFrame(readyFrame);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showContextMenu, setShowContextMenu]);
+  }, [containerRef, showContextMenu, setShowContextMenu]);
 
   // Pre-warm file search index when workspace path changes.
   // Starting immediately avoids the common cold-search race where the user

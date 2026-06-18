@@ -2011,7 +2011,11 @@
     "dangerHint": "Context is nearly full. Start a new session to avoid losing detail.",
     "startNewSession": "Start new session",
     "cacheSaved": "Cache saved: {{read}} read, {{write}} write",
-    "remaining": "Free: {{tokens}} remaining"
+    "remaining": "Free: {{tokens}} remaining",
+    "cacheHero": "{{pct}}% served from cache · ~{{tokens}} reused this turn",
+    "cacheHeroSub": "Prompt caching cuts the cost of the reused prefix to roughly 1/10.",
+    "headroom": "{{tokens}} of room left",
+    "autoCompactNote": "ORGII automatically tidies older context as it fills — your work won't be lost."
   },
   "relativeDate": {
     "today": "Today",

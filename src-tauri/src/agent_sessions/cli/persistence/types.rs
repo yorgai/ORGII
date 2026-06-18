@@ -53,6 +53,8 @@ pub struct CodeSession {
     /// Per-session reply target event id. Mirror of the field on
     /// `agent_sessions`. `None` means no reply banner is open.
     pub reply_target_event_id: Option<String>,
+    /// Whether this session is pinned to the top of the sidebar.
+    pub pinned: bool,
     /// Extra workspace folders granted at launch time (multi-root IDE
     /// workspaces). `None` or empty for single-repo launches. Stored as
     /// a JSON array of absolute paths; for `claude_code` and `codex`,

@@ -58,6 +58,11 @@ export const lineage = {
     .output(z.array(schemas.lineage.CoreSessionSummarySchema))
     .build(),
 
+  orgtrackGetSessionSummary: defineProcedure("orgtrack_get_session_summary")
+    .input(schemas.lineage.OrgtrackSessionSummaryInput)
+    .output(schemas.lineage.CoreSessionSummarySchema.nullable())
+    .build(),
+
   orgtrackAnalyzeSessions: defineProcedure("orgtrack_analyze_sessions")
     .input(schemas.lineage.OrgtrackAnalyzeSessionsInput)
     .output(schemas.lineage.OrgtrackAnalysisBackfillStatsSchema)

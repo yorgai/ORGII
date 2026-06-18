@@ -58,12 +58,64 @@ const MODEL_INFO_ENTRIES: Array<{ pattern: string; info: ModelInfo }> = [
     info: {
       provider: "Anthropic",
       providerKey: "anthropic",
-      contextWindow: 200,
+      contextWindow: 1000,
       maxOutput: 32,
       vision: true,
       reasoning: true,
       strengthKeys: ["coding", "agentic", "reasoning", "planning"],
       pricingTier: "expensive",
+    },
+  },
+  {
+    pattern: "claude-sonnet-4.5",
+    info: {
+      provider: "Anthropic",
+      providerKey: "anthropic",
+      contextWindow: 200,
+      maxOutput: 16,
+      vision: true,
+      reasoning: true,
+      strengthKeys: ["coding", "balanced", "agentic", "speed"],
+      pricingTier: "moderate",
+    },
+  },
+  {
+    pattern: "claude-sonnet-4-5",
+    info: {
+      provider: "Anthropic",
+      providerKey: "anthropic",
+      contextWindow: 200,
+      maxOutput: 16,
+      vision: true,
+      reasoning: true,
+      strengthKeys: ["coding", "balanced", "agentic", "speed"],
+      pricingTier: "moderate",
+    },
+  },
+  {
+    pattern: "claude-sonnet-4.6",
+    info: {
+      provider: "Anthropic",
+      providerKey: "anthropic",
+      contextWindow: 1000,
+      maxOutput: 16,
+      vision: true,
+      reasoning: true,
+      strengthKeys: ["coding", "balanced", "agentic", "speed"],
+      pricingTier: "moderate",
+    },
+  },
+  {
+    pattern: "claude-sonnet-4-6",
+    info: {
+      provider: "Anthropic",
+      providerKey: "anthropic",
+      contextWindow: 1000,
+      maxOutput: 16,
+      vision: true,
+      reasoning: true,
+      strengthKeys: ["coding", "balanced", "agentic", "speed"],
+      pricingTier: "moderate",
     },
   },
   {
@@ -139,13 +191,41 @@ const MODEL_INFO_ENTRIES: Array<{ pattern: string; info: ModelInfo }> = [
       pricingTier: "budget",
     },
   },
-  // Generic Claude fallback
+  // claude-fable-5 / claude-mythos: 1M context window (Anthropic).
+  {
+    pattern: "claude-fable",
+    info: {
+      provider: "Anthropic",
+      providerKey: "anthropic",
+      contextWindow: 1000,
+      maxOutput: 32,
+      vision: true,
+      reasoning: true,
+      strengthKeys: ["coding", "agentic", "reasoning", "planning"],
+      pricingTier: "expensive",
+    },
+  },
+  {
+    pattern: "claude-mythos",
+    info: {
+      provider: "Anthropic",
+      providerKey: "anthropic",
+      contextWindow: 1000,
+      maxOutput: 32,
+      vision: true,
+      reasoning: true,
+      strengthKeys: ["coding", "agentic", "reasoning", "planning"],
+      pricingTier: "expensive",
+    },
+  },
+  // Generic Claude fallback — all current/new Anthropic models ship with a
+  // 1M window, so the catch-all matches the backend FAMILY_RULES default.
   {
     pattern: "claude",
     info: {
       provider: "Anthropic",
       providerKey: "anthropic",
-      contextWindow: 200,
+      contextWindow: 1000,
       vision: true,
       strengthKeys: ["coding", "reasoning"],
       pricingTier: "moderate",

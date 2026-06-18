@@ -1748,7 +1748,7 @@
   "creator": {
     "createTarget": {
       "agentSession": "Agent 会话",
-      "createAgent": "创建 Agent / Skill",
+      "manageAgents": "管理 Agent / Skills",
       "project": "创建项目",
       "workItem": "创建 Work Item",
       "benchmark": "Benchmark (Beta)"

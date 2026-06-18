@@ -361,12 +361,21 @@ pub async fn execute_turn(
 
         if !response.usage.is_empty() {
             usage.accumulate(&response.usage, session_id);
+            // Authoritative context window: the FAMILY_RULES resolver knows the
+            // model's real window (e.g. opus-4.x = 1M), so the frontend gauge no
+            // longer divides by a stale 200K and falsely shows "red / full".
+            // account_id is irrelevant here — KeyVault only upgrades thinking
+            // support, never the context window.
+            let context_window =
+                crate::core::providers::model_capabilities::resolve(&config.model, None)
+                    .context_window as i64;
             let snapshot = ContextUsageSnapshot::from_payload(
                 &llm_messages,
                 &tool_defs,
                 usage.last_prompt,
                 usage.cache_read,
                 usage.cache_write,
+                Some(context_window),
             );
             handler.on_context_usage(session_id, &snapshot);
             context_usage_snapshot = Some(snapshot);

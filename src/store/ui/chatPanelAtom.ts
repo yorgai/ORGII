@@ -239,7 +239,7 @@ export type ChatPanelMode = "session" | "settings";
 
 export const CHAT_PANEL_CREATE_TARGET = {
   AGENT_SESSION: "agentSession",
-  CREATE_AGENT: "createAgent",
+  MANAGE_AGENTS: "manageAgents",
   PROJECT: "project",
   WORK_ITEM: "workItem",
   COLLAB_ORG: "collabOrg",

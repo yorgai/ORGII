@@ -126,7 +126,7 @@ export function ChatPanelStartPage({
             onChange={(key) => setActiveTab(key as StartPageTabKey)}
           />
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
           {actions.map((action) => (
             <StartPageActionCard key={action.id} action={action} />
           ))}

@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   type CoreSessionSummary,
-  getOrgtrackSessionSummaries,
+  getOrgtrackSessionSummary,
 } from "@src/api/tauri/lineage";
 import { isHostedKey } from "@src/api/tauri/session";
 import { CLI_AGENT, type CliAgentType } from "@src/api/types/keys";
@@ -114,28 +114,22 @@ export const SessionHoverCardContent: React.FC<SessionHoverCardContentProps> =
     useEffect(() => {
       let cancelled = false;
 
-      async function loadOrgtrackSummary(): Promise<void> {
-        const summaries = await getOrgtrackSessionSummaries({
-          workspacePath: session?.repoPath || session?.worktreePath,
+      getOrgtrackSessionSummary(sessionId)
+        .then((summary) => {
+          if (!cancelled) setOrgtrackSummary(summary);
+        })
+        .catch((error: unknown) => {
+          logger.warn("failed to load orgtrack session summary", {
+            error,
+            sessionId,
+          });
+          if (!cancelled) setOrgtrackSummary(null);
         });
-        if (cancelled) return;
-        setOrgtrackSummary(
-          summaries.find((summary) => summary.sessionId === sessionId) ?? null
-        );
-      }
-
-      loadOrgtrackSummary().catch((error: unknown) => {
-        logger.warn("failed to load orgtrack session summary", {
-          error,
-          sessionId,
-        });
-        if (!cancelled) setOrgtrackSummary(null);
-      });
 
       return () => {
         cancelled = true;
       };
-    }, [session?.repoPath, session?.worktreePath, sessionId]);
+    }, [sessionId]);
 
     const lastModel: LastModelSelection | null = useMemo(() => {
       if (!session) return creatorDefaultLastModel;

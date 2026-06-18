@@ -48,9 +48,9 @@ export function useChatPanelCreateTarget({
         dataTestId: "chat-panel-create-target-agent-session-option",
       },
       {
-        value: CHAT_PANEL_CREATE_TARGET.CREATE_AGENT,
-        label: t("creator.createTarget.createAgent"),
-        dataTestId: "chat-panel-create-target-create-agent-option",
+        value: CHAT_PANEL_CREATE_TARGET.MANAGE_AGENTS,
+        label: t("creator.createTarget.manageAgents"),
+        dataTestId: "chat-panel-create-target-manage-agents-option",
       },
       {
         value: CHAT_PANEL_CREATE_TARGET.PROJECT,
@@ -62,11 +62,6 @@ export function useChatPanelCreateTarget({
         label: t("creator.createTarget.workItem"),
         dataTestId: "chat-panel-create-target-work-item-option",
       },
-      {
-        value: CHAT_PANEL_CREATE_TARGET.BENCHMARK,
-        label: t("creator.createTarget.benchmark"),
-        dataTestId: "chat-panel-create-target-benchmark-option",
-      },
     ],
     [t]
   );
@@ -77,7 +72,7 @@ export function useChatPanelCreateTarget({
       const nextTarget = value as ChatPanelCreateTarget;
       setStartPageOpen(false);
 
-      if (nextTarget === CHAT_PANEL_CREATE_TARGET.CREATE_AGENT) {
+      if (nextTarget === CHAT_PANEL_CREATE_TARGET.MANAGE_AGENTS) {
         const adeManagerDef = allAgentDefs.find(
           (definition) => definition.id === ADE_MANAGER_DEF_ID
         );
@@ -92,7 +87,7 @@ export function useChatPanelCreateTarget({
           cliAgentType: null,
         }));
         handleNewSession();
-        setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+        setCreateTarget(CHAT_PANEL_CREATE_TARGET.MANAGE_AGENTS);
         setWorkItemCreateDraft(null);
         setShowWorkItemAgentCreator(sessionCreatorAvailable);
         setShowProjectAgentCreator(sessionCreatorAvailable);

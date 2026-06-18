@@ -37,6 +37,7 @@ export interface ImperativeApiContext {
   placeCaretAtPoint: (x: number, y: number) => boolean;
   removePillByPath: (filePath: string) => void;
   isHostEmpty: () => boolean;
+  isInlineMenuActive: () => boolean;
   triggerAtMention: () => void;
   triggerSlashContext: () => void;
   /** Pulls the currently-active mention state (used by insertFilePill) */
@@ -119,6 +120,7 @@ export function buildImperativeApi(
     },
     placeCaretAtPoint: (x, y) => ctx.placeCaretAtPoint(x, y),
     isEmpty: () => ctx.isHostEmpty(),
+    isInlineMenuActive: () => ctx.isInlineMenuActive(),
     insertMentionText: (text: string) => {
       const mention = ctx.getAtMentionState();
       ctx.markHistoryBoundary();

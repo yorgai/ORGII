@@ -240,6 +240,22 @@ export function useGitStatusFetch({
         }
         const message =
           err instanceof Error ? err.message : "Failed to fetch status";
+        // A folder the user never `git init`'d is not an error condition.
+        // The backend now returns a benign `exists: false` (HTTP 200), but
+        // guard the error path too so any residual "not a git repository"
+        // surface renders a clean "no git" state instead of an error popup.
+        const isNotGitRepo = /not a git repository|not_a_git_repo/i.test(
+          message
+        );
+        if (isNotGitRepo) {
+          setGitStatus(null);
+          setStatusRepoId(fetchRepoId);
+          setStatusRepoPath(repoPath);
+          setGitSuggestedAction(null);
+          setGitStatusAtom(null);
+          setGitSuggestedActionAtom(null);
+          return;
+        }
         setError(message);
       } finally {
         if (intendedRepoIdRef.current === fetchRepoId) {

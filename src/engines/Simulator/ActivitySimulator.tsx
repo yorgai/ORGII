@@ -22,7 +22,9 @@ import { replayModeAtom } from "@src/engines/SessionCore";
 import type { ReplayMode } from "@src/engines/SessionCore/core/types";
 import { chatVisibleAtom } from "@src/store/ui/chatPanelAtom";
 import {
+  bumpSimulatorDiffRefreshNonceAtom,
   simulatorAutoLayoutAtom,
+  simulatorDiffScopeRequestAtom,
   simulatorEffectiveDockAppAtom,
   simulatorFollowAppLockAtom,
   simulatorInlineChatInputCollapsedAtom,
@@ -66,6 +68,8 @@ const ActivitySimulator: React.FC = memo(() => {
   ) => void;
   const setEffectiveDockApp = useSetAtom(simulatorEffectiveDockAppAtom);
   const followAppLock = useAtomValue(simulatorFollowAppLockAtom);
+  const setDiffScope = useSetAtom(simulatorDiffScopeRequestAtom);
+  const refreshDiff = useSetAtom(bumpSimulatorDiffRefreshNonceAtom);
 
   const floatingDockComposerAlignClass =
     workStationLayoutMode === "left" ? "items-end" : "items-start";
@@ -163,9 +167,19 @@ const ActivitySimulator: React.FC = memo(() => {
       if (replayMode === "follow") {
         setReplayMode("replay");
       }
+      // Manually opening the Diff app from the dock is the "whole-session
+      // diff" entry point — clear any per-round scope left over from a chat
+      // `TurnFilesFooter` "Review" click (which only the composer files-pill
+      // otherwise clears) and refresh so the full view reflects the latest
+      // working tree. Without this the file list stays narrowed to the
+      // reviewed round while the tab badge shows the full session count.
+      if ((appId as AppType) === AppType.DIFF) {
+        setDiffScope(null);
+        refreshDiff();
+      }
       setSelectedApp(appId as AppType);
     },
-    [replayMode, setReplayMode, setSelectedApp]
+    [replayMode, setReplayMode, setSelectedApp, setDiffScope, refreshDiff]
   );
 
   const handleDockAppContextMenu = useCallback(

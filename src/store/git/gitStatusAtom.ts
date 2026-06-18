@@ -195,6 +195,13 @@ export interface RepoGitStatusSummary {
    * and may render an "unavailable" state.
    */
   error?: boolean;
+  /**
+   * Set when the repo path is not a git repository (no `.git`). This is a
+   * benign terminal state — distinct from `error` — and must NOT trigger the
+   * negative-cache retry backoff, since the path will never become a git repo
+   * on its own. Consumers render a clean "no git" state with no error UI.
+   */
+  notGit?: boolean;
 }
 
 /**
@@ -271,6 +278,7 @@ export function computeGitStatusRetryDelay(errorCount: number): number {
 /**
  * Whether a cached repo git status entry should be refetched.
  * - Missing entry → stale.
+ * - Not-a-git-repo terminal entry → never stale (path won't become git on its own).
  * - Negative-cache entry (error) → stale only once its retryAt backoff has elapsed.
  * - Successful entry → stale when older than its TTL (priority repos refresh faster).
  */
@@ -280,6 +288,12 @@ export function isRepoGitStatusStale(
   now: number = Date.now()
 ): boolean {
   if (!cached) return true;
+
+  // Terminal "no git" state: never refetch — avoids the infinite error-retry
+  // loop that previously hammered git status on folders the user never init'd.
+  if (cached.status.notGit) {
+    return false;
+  }
 
   if (cached.status.error) {
     return now >= (cached.retryAt ?? 0);

@@ -1,12 +1,13 @@
 import { useAtomValue } from "jotai";
-import React, { memo, useEffect, useMemo } from "react";
+import React, { Suspense, memo, useEffect, useMemo } from "react";
 
-import BrowserCore from "@src/engines/BrowserCore";
 import { useBrowserContextAdapter } from "@src/engines/BrowserCore/hooks/useBrowserContextAdapter";
 import { dispatchWebviewLayoutChanged } from "@src/hooks/platform/useInlineWebview/webviewLayoutEvents";
 import { webviewOverlayBlockedAtom } from "@src/store/ui/overlayAtom";
 
 import { activeSharedBrowserHostAtom } from "./sharedBrowserHostAtoms";
+
+const BrowserCore = React.lazy(() => import("@src/engines/BrowserCore"));
 
 const OFFSCREEN_STYLE: React.CSSProperties = {
   position: "fixed",
@@ -46,13 +47,15 @@ export const SharedBrowserApp: React.FC = memo(() => {
   return (
     <div aria-hidden="true" style={hostStyle}>
       {hasBrowserSessions && (
-        <BrowserCore
-          browserState={browserState}
-          respectModalBlocking={false}
-          hidden={!activeRect || isWebviewBlocked}
-          manageWebviews
-          bypassStationModeBlocking
-        />
+        <Suspense fallback={null}>
+          <BrowserCore
+            browserState={browserState}
+            respectModalBlocking={false}
+            hidden={!activeRect || isWebviewBlocked}
+            manageWebviews
+            bypassStationModeBlocking
+          />
+        </Suspense>
       )}
     </div>
   );

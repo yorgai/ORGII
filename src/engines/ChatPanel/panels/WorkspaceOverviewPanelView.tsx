@@ -98,6 +98,13 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
     const isRepo = selectedWorkspace.kind === "repo";
     const detailsTabAvailable = isRepo && Boolean(selectedRepo);
 
+    // The Overview body (code map + tools readiness) works on any workspace
+    // path — the Rust code-map engine indexes plain folders, not just git
+    // repos. Resolve the path from the selected repo when present, otherwise
+    // fall back to the folder workspace's own path so non-git folders also get
+    // the code map panel instead of an empty Overview.
+    const overviewPath = selectedRepo?.path ?? selectedWorkspace.path ?? null;
+
     // Force back to Overview when the selected workspace cannot show details
     // (workspace-kind, or repo not yet hydrated). Prevents a stale "details"
     // selection from showing a blank panel after switching workspaces.
@@ -160,7 +167,7 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
 
     const recentSessionBody =
       resolvedActiveTab === WORKSPACE_OVERVIEW_TAB.RECENT_SESSION &&
-      selectedRepo ? (
+      selectedRepo?.path ? (
         <RecentSessionsPanelView
           repoPath={selectedRepo.path}
           repoName={selectedRepo.name}
@@ -169,13 +176,13 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
 
     const agentBlameBody =
       resolvedActiveTab === WORKSPACE_OVERVIEW_TAB.AGENT_BLAME &&
-      selectedRepo ? (
+      selectedRepo?.path ? (
         <AgentBlamePanelView repoPath={selectedRepo.path} />
       ) : null;
 
     const overviewBody =
-      resolvedActiveTab === WORKSPACE_OVERVIEW_TAB.OVERVIEW && selectedRepo ? (
-        <WorkspaceOverviewBody repoPath={selectedRepo.path} />
+      resolvedActiveTab === WORKSPACE_OVERVIEW_TAB.OVERVIEW && overviewPath ? (
+        <WorkspaceOverviewBody repoPath={overviewPath} />
       ) : null;
 
     const actionFooter =

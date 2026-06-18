@@ -823,6 +823,29 @@ impl RecordStore for SqliteRecordStore<'_> {
         Ok(records)
     }
 
+    fn list_commit_links_for_session(
+        &self,
+        session_id: &str,
+    ) -> Result<Vec<CommitLinkRecord>, String> {
+        let mut records = Vec::new();
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT payload_json FROM orgtrack_core_commit_links WHERE EXISTS (
+                    SELECT 1 FROM json_each(orgtrack_core_commit_links.payload_json, '$.sessionIds')
+                    WHERE json_each.value = ?1
+                ) ORDER BY linked_at DESC",
+            )
+            .map_err(|err| err.to_string())?;
+        let rows = stmt
+            .query_map(params![session_id], |row| row.get::<_, String>(0))
+            .map_err(|err| err.to_string())?;
+        for row in rows {
+            records.push(Self::from_json(row.map_err(|err| err.to_string())?)?);
+        }
+        Ok(records)
+    }
+
     fn get_checkpoint(&self, source: &str) -> Result<Option<ScanCheckpoint>, String> {
         self.conn
             .query_row(

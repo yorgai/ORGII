@@ -88,6 +88,9 @@ export function searchSessions(
       name: truncatedGoal,
       type: "file" as const,
       iconType: "session" as const,
+      agentIconId: session.agentIconId,
+      cliAgentType: session.cliAgentType,
+      userInput: session.user_input,
     };
   });
 }

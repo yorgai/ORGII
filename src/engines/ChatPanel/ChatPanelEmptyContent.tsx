@@ -1,14 +1,10 @@
 import type { TFunction } from "i18next";
 import { useAtomValue } from "jotai";
-import React from "react";
+import React, { Suspense } from "react";
 
 import { SESSION_CREATOR_LAUNCH_MODE } from "@src/features/SessionCreator/types";
-import CreateCollabOrgView from "@src/features/TeamCollaboration/components/CreateCollabOrgView";
 import type { CreatedOrgResult } from "@src/features/TeamCollaboration/components/CreateCollabOrgView";
-import CreateProjectView from "@src/modules/ProjectManager/Projects/components/CreateProjectView";
-import CreateWorkItemView, {
-  type CreatedWorkItemResult,
-} from "@src/modules/ProjectManager/WorkItems/components/CreateWorkItemView";
+import type { CreatedWorkItemResult } from "@src/modules/ProjectManager/WorkItems/components/CreateWorkItemView";
 import {
   CHAT_PANEL_CREATE_TARGET,
   type ChatPanelCreateProjectContext,
@@ -22,8 +18,24 @@ import {
 import { STORY_PERSONAL_ORG_FILTER_ID } from "@src/store/workstation/tabs";
 
 import { ChatPanelStartPage } from "./ChatPanelStartPage";
-import { BenchmarkRunBuilder } from "./panels/BenchmarkRunBuilder";
 import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
+
+const CreateCollabOrgView = React.lazy(
+  () => import("@src/features/TeamCollaboration/components/CreateCollabOrgView")
+);
+const CreateProjectView = React.lazy(
+  () =>
+    import("@src/modules/ProjectManager/Projects/components/CreateProjectView")
+);
+const CreateWorkItemView = React.lazy(
+  () =>
+    import("@src/modules/ProjectManager/WorkItems/components/CreateWorkItemView")
+);
+const BenchmarkRunBuilder = React.lazy(() =>
+  import("./panels/BenchmarkRunBuilder").then((module) => ({
+    default: module.BenchmarkRunBuilder,
+  }))
+);
 
 type SessionCreatorSlot = NonNullable<ChatPanelProps["sessionCreatorSlot"]>;
 
@@ -52,8 +64,6 @@ function WorkspaceScopedContent({
 }
 
 interface ChatPanelEmptyContentProps {
-  benchmarkFooter: React.ReactNode;
-  benchmarkPanel: React.ReactNode;
   createProjectContext: ChatPanelCreateProjectContext | null;
   createTarget: ChatPanelCreateTarget;
   creatorClassName: string;
@@ -86,8 +96,6 @@ interface ChatPanelEmptyContentProps {
 }
 
 export function ChatPanelEmptyContent({
-  benchmarkFooter,
-  benchmarkPanel,
   createProjectContext,
   createTarget,
   creatorClassName,
@@ -146,21 +154,23 @@ export function ChatPanelEmptyContent({
         {({ workspaceName, workspacePath }) => (
           <div className={`flex flex-col overflow-hidden ${creatorClassName}`}>
             <div className="shrink-0 overflow-hidden">
-              <CreateProjectView
-                tabId={PROJECT_CREATOR_DRAFT_ID}
-                repoPath={workspacePath ?? undefined}
-                repoName={workspaceName}
-                scopeBreadcrumbLabel={
-                  createProjectContext?.scopeBreadcrumbLabel ??
-                  t("projects:orgs.personalOrg")
-                }
-                orgId={
-                  createProjectContext?.orgId ?? STORY_PERSONAL_ORG_FILTER_ID
-                }
-                onSetUnsaved={() => undefined}
-                onProjectCreated={handleChatPanelProjectCreated}
-                aiGenerateMode={showProjectAgentCreator}
-              />
+              <Suspense fallback={null}>
+                <CreateProjectView
+                  tabId={PROJECT_CREATOR_DRAFT_ID}
+                  repoPath={workspacePath ?? undefined}
+                  repoName={workspaceName}
+                  scopeBreadcrumbLabel={
+                    createProjectContext?.scopeBreadcrumbLabel ??
+                    t("projects:orgs.personalOrg")
+                  }
+                  orgId={
+                    createProjectContext?.orgId ?? STORY_PERSONAL_ORG_FILTER_ID
+                  }
+                  onSetUnsaved={() => undefined}
+                  onProjectCreated={handleChatPanelProjectCreated}
+                  aiGenerateMode={showProjectAgentCreator}
+                />
+              </Suspense>
             </div>
             {sessionCreatorContent ? (
               <div className="min-h-0 flex-1 overflow-hidden pt-6">
@@ -192,22 +202,24 @@ export function ChatPanelEmptyContent({
       <WorkspaceScopedContent>
         {({ workspacePath }) => {
           const workItemCreator = (
-            <CreateWorkItemView
-              repoPath={workspacePath}
-              onCancel={handleCancelWorkItemCreate}
-              onSetUnsaved={() => undefined}
-              onWorkItemCreated={handleChatPanelWorkItemCreated}
-              onDraftChange={setWorkItemCreateDraft}
-              showCloseAction={false}
-              propertiesOpen={false}
-              showPropertiesAction={false}
-              aiGenerateMode={showWorkItemAgentCreator}
-              onAiGenerateModeChange={handleWorkItemAgentCreatorToggle}
-              showAiModePanel={false}
-              showFooter
-              chatPanelFooter
-              defaultAiAssignee={defaultAiWorkItemAssignee}
-            />
+            <Suspense fallback={null}>
+              <CreateWorkItemView
+                repoPath={workspacePath}
+                onCancel={handleCancelWorkItemCreate}
+                onSetUnsaved={() => undefined}
+                onWorkItemCreated={handleChatPanelWorkItemCreated}
+                onDraftChange={setWorkItemCreateDraft}
+                showCloseAction={false}
+                propertiesOpen={false}
+                showPropertiesAction={false}
+                aiGenerateMode={showWorkItemAgentCreator}
+                onAiGenerateModeChange={handleWorkItemAgentCreatorToggle}
+                showAiModePanel={false}
+                showFooter
+                chatPanelFooter
+                defaultAiAssignee={defaultAiWorkItemAssignee}
+              />
+            </Suspense>
           );
 
           if (sessionCreatorContent) {
@@ -238,21 +250,21 @@ export function ChatPanelEmptyContent({
   if (createTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG) {
     return (
       <div className={`flex overflow-hidden ${creatorClassName}`}>
-        <CreateCollabOrgView
-          onCancel={handleCancelCollabOrgCreate}
-          onCreated={handleChatPanelCollabOrgCreated}
-        />
+        <Suspense fallback={null}>
+          <CreateCollabOrgView
+            onCancel={handleCancelCollabOrgCreate}
+            onCreated={handleChatPanelCollabOrgCreated}
+          />
+        </Suspense>
       </div>
     );
   }
 
   if (createTarget === CHAT_PANEL_CREATE_TARGET.BENCHMARK) {
     return (
-      <BenchmarkRunBuilder
-        className={creatorClassName}
-        bodySlot={benchmarkPanel}
-        footerSlot={benchmarkFooter}
-      />
+      <Suspense fallback={null}>
+        <BenchmarkRunBuilder className={creatorClassName} />
+      </Suspense>
     );
   }
 

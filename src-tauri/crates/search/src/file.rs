@@ -71,9 +71,49 @@ struct FileIndex {
 /// Cache TTL — 5 minutes.  The old 30 s TTL caused a cold re-walk every time
 /// the user paused for half a minute between @ searches.
 const CACHE_TTL_SECS: u64 = 300;
+const MAX_CACHED_FILE_INDEXES: usize = 4;
 
 static FILE_INDEX_CACHE: std::sync::LazyLock<Arc<Mutex<HashMap<String, FileIndex>>>> =
     std::sync::LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
+
+fn prune_file_index_cache(cache: &mut HashMap<String, FileIndex>) {
+    cache.retain(|_, index| {
+        index
+            .indexed_at
+            .elapsed()
+            .map(|elapsed| elapsed.as_secs() < CACHE_TTL_SECS)
+            .unwrap_or(false)
+    });
+
+    while cache.len() > MAX_CACHED_FILE_INDEXES {
+        let Some(oldest_key) = cache
+            .iter()
+            .min_by_key(|(_, index)| index.indexed_at)
+            .map(|(root_path, _)| root_path.clone())
+        else {
+            break;
+        };
+        cache.remove(&oldest_key);
+    }
+}
+
+fn insert_file_index_cache_entry(
+    root_path: String,
+    entries: Vec<FileEntry>,
+    indexed_at: std::time::SystemTime,
+) {
+    let mut cache = FILE_INDEX_CACHE.lock().unwrap();
+    prune_file_index_cache(&mut cache);
+    cache.insert(
+        root_path.clone(),
+        FileIndex {
+            entries,
+            _root_path: root_path,
+            indexed_at,
+        },
+    );
+    prune_file_index_cache(&mut cache);
+}
 
 // ============================================
 // Directory Traversal
@@ -158,7 +198,8 @@ fn build_file_index(root_path: &str, exclude_dirs: &[String]) -> Vec<FileEntry> 
 fn get_file_index(root_path: &str, exclude_dirs: &[String]) -> Vec<FileEntry> {
     // 1. Quick check under the lock — return cached entries if fresh.
     {
-        let cache = FILE_INDEX_CACHE.lock().unwrap();
+        let mut cache = FILE_INDEX_CACHE.lock().unwrap();
+        prune_file_index_cache(&mut cache);
         if let Some(index) = cache.get(root_path) {
             if let Ok(elapsed) = index.indexed_at.elapsed() {
                 if elapsed.as_secs() < CACHE_TTL_SECS {
@@ -183,17 +224,11 @@ fn get_file_index(root_path: &str, exclude_dirs: &[String]) -> Vec<FileEntry> {
     let entries = build_file_index(root_path, exclude_dirs);
 
     // 4. Re-acquire lock to store.
-    {
-        let mut cache = FILE_INDEX_CACHE.lock().unwrap();
-        cache.insert(
-            root_path.to_string(),
-            FileIndex {
-                entries: entries.clone(),
-                _root_path: root_path.to_string(),
-                indexed_at: std::time::SystemTime::now(),
-            },
-        );
-    }
+    insert_file_index_cache_entry(
+        root_path.to_string(),
+        entries.clone(),
+        std::time::SystemTime::now(),
+    );
 
     entries
 }
@@ -407,18 +442,7 @@ pub async fn index_project_files(
         let entries = build_file_index(&root_path, &exclude_dirs);
         let count = entries.len();
 
-        // Cache it
-        {
-            let mut cache = FILE_INDEX_CACHE.lock().unwrap();
-            cache.insert(
-                root_path.clone(),
-                FileIndex {
-                    entries,
-                    _root_path: root_path,
-                    indexed_at: std::time::SystemTime::now(),
-                },
-            );
-        }
+        insert_file_index_cache_entry(root_path, entries, std::time::SystemTime::now());
 
         let duration = start.elapsed();
         info!(entries = count, ?duration, "search::file: indexed entries");
@@ -447,7 +471,8 @@ pub async fn prewarm_file_index(root_path: String) -> Result<usize, String> {
 
         // Check if already cached and fresh — skip the walk entirely.
         {
-            let cache = FILE_INDEX_CACHE.lock().unwrap();
+            let mut cache = FILE_INDEX_CACHE.lock().unwrap();
+            prune_file_index_cache(&mut cache);
             if let Some(index) = cache.get(&root_path) {
                 if let Ok(elapsed) = index.indexed_at.elapsed() {
                     if elapsed.as_secs() < CACHE_TTL_SECS {
@@ -482,17 +507,7 @@ pub async fn prewarm_file_index(root_path: String) -> Result<usize, String> {
         let entries = build_file_index(&root_path, &default_excludes);
         let count = entries.len();
 
-        {
-            let mut cache = FILE_INDEX_CACHE.lock().unwrap();
-            cache.insert(
-                root_path.clone(),
-                FileIndex {
-                    entries,
-                    _root_path: root_path,
-                    indexed_at: std::time::SystemTime::now(),
-                },
-            );
-        }
+        insert_file_index_cache_entry(root_path, entries, std::time::SystemTime::now());
 
         info!(entries = count, "search::file: prewarm complete");
         Ok(count)

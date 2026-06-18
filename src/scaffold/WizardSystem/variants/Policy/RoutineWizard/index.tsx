@@ -714,7 +714,13 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
       onCancel={onCancel}
       testId="routine-wizard-root"
     >
-      <WizardStepLayout currentStep={1} totalSteps={1} actions={actions}>
+      <WizardStepLayout
+        currentStep={1}
+        totalSteps={1}
+        actions={actions}
+        hideStepIndicator
+        contentWidthFooter
+      >
         <div className={SECTION_GAP_CLASSES}>
           <SectionContainer>
             <SectionRow label={t("routineFields.name")} required>

@@ -22,12 +22,37 @@ export interface ContextUsageInfo {
   cacheWriteTokens: number;
   /** Remaining available tokens (maxTokens - displayTokens excluding cache). */
   remainingTokens: number;
+  /**
+   * Prompt-cache hit rate in [0, 1]: `cacheRead / (cacheRead + billableInput)`.
+   * Matches the backend `cache_hit_rate` cost metric — at 0.9 the prompt costs
+   * ~10% of full price. 0 when there is no cache activity.
+   */
+  cacheHitRate: number;
+  /** Tokens served from cache this turn (i.e. cacheReadTokens), surfaced as savings. */
+  cacheSavedTokens: number;
 }
 
 export function formatTokenCount(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
   if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
   return `${count}`;
+}
+
+/**
+ * Prompt-cache hit rate `cacheRead / (cacheRead + billableInput)`.
+ *
+ * Mirrors the Rust `cache_hit_rate` helper. `billableInput` is the
+ * non-cached input the provider charged full price for this turn. Returns 0
+ * when both inputs are zero (no usage yet) so it is safe to render
+ * unconditionally.
+ */
+export function computeCacheHitRate(
+  cacheReadTokens: number,
+  billableInputTokens: number
+): number {
+  const denom = Math.max(0, cacheReadTokens) + Math.max(0, billableInputTokens);
+  if (denom <= 0) return 0;
+  return Math.max(0, cacheReadTokens) / denom;
 }
 
 export function useContextUsageInfo(): ContextUsageInfo {
@@ -61,6 +86,19 @@ export function useContextUsageInfo(): ContextUsageInfo {
   const cacheWriteTokens = contextUsage?.cacheWriteTokens ?? 0;
   const remainingTokens = Math.max(0, maxTokens - displayTokens);
 
+  // displayTokens (== last_prompt) = billableInput + cacheRead + cacheWrite,
+  // so the non-cached input the provider charged full price for is the
+  // remainder. The hit-rate denominator is cacheRead + billableInput.
+  const billableInputTokens = Math.max(
+    0,
+    displayTokens - cacheReadTokens - cacheWriteTokens
+  );
+  const cacheHitRate = computeCacheHitRate(
+    cacheReadTokens,
+    billableInputTokens
+  );
+  const cacheSavedTokens = cacheReadTokens;
+
   return {
     percentage,
     clampedPercentage,
@@ -70,5 +108,7 @@ export function useContextUsageInfo(): ContextUsageInfo {
     cacheReadTokens,
     cacheWriteTokens,
     remainingTokens,
+    cacheHitRate,
+    cacheSavedTokens,
   };
 }

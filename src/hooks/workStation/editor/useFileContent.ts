@@ -12,6 +12,7 @@ import {
   isBinaryByExtension,
   isBinaryContent,
 } from "@src/util/file/binaryDetection";
+import { toFsPluginPath } from "@src/util/file/pathUtils";
 
 import {
   cacheFileMetadata,
@@ -179,7 +180,7 @@ export function useFileContent(
 
       // Read file content from disk
       // Note: OS file cache makes repeated reads fast (~1-5ms for recently accessed files)
-      const fileContent = await readTextFile(filePath);
+      const fileContent = await readTextFile(toFsPluginPath(filePath));
 
       // Check for stale response
       if (currentFilePathRef.current !== filePath) {

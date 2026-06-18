@@ -201,7 +201,30 @@ export const MultiRepoGitStatusProvider: React.FC<{
           branch_ahead_behind?: { ahead?: number; behind?: number };
           do_conflicted_files_exist?: boolean;
           current_upstream_branch?: string;
+          exists?: boolean;
         };
+
+        // The backend returns a benign `exists: false` (HTTP 200) for tracked
+        // folders that are not git repositories. Write a TERMINAL cache entry
+        // with no `retryAt` so it is never refetched — this breaks the infinite
+        // error-retry loop that previously surfaced recurring git error popups.
+        if (typedStatus.exists === false) {
+          setCache((prev) => {
+            const updated = new Map(prev);
+            updated.set(repoId, {
+              status: {
+                uncommittedFiles: 0,
+                ahead: 0,
+                behind: 0,
+                notGit: true,
+              },
+              fetchedAt: Date.now(),
+              lastAccessed: Date.now(),
+            });
+            return updated;
+          });
+          return;
+        }
 
         const uncommittedFiles =
           typedStatus.working_directory?.files?.length || 0;

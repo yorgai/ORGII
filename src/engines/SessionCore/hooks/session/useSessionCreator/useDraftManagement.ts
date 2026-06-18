@@ -127,6 +127,10 @@ export function useDraftManagement(options: UseDraftManagementOptions) {
       const plainText = currentDraft.editorContent;
 
       const applyRestore = (ref: ComposerInputRef) => {
+        if (ref.isInlineMenuActive()) {
+          return;
+        }
+
         if (snapshot) {
           ref.setContent(snapshot);
           logger.debug("restored editor from snapshot with pills");

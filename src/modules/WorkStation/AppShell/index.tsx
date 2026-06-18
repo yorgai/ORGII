@@ -36,7 +36,6 @@ import { useAppShellActions } from "./hooks/useAppShellActions";
 import { useAppShellDerivedState } from "./hooks/useAppShellDerivedState";
 import { useAppShellDock } from "./hooks/useAppShellDock";
 import { useAppShellDockFilterSync } from "./hooks/useAppShellDockFilterSync";
-import { useAppShellPreload } from "./hooks/useAppShellPreload";
 import { useAppShellRepo } from "./hooks/useAppShellRepo";
 import { useAppShellSimulatorPanelSync } from "./hooks/useAppShellSimulatorPanelSync";
 import { useAppShellStationMode } from "./hooks/useAppShellStationMode";
@@ -98,7 +97,6 @@ const AppShell = React.memo(
 
     const workStationPanels = useWorkStationPanels();
     useAppShellSimulatorPanelSync({ isAgentStation, workStationPanels });
-    useAppShellPreload();
 
     const { handleSelectRepo, handleOpenSettings } = useAppShellActions();
 

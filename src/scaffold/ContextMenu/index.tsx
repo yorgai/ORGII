@@ -39,6 +39,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   treePosition = "right",
   keyboardOpened = false,
 }) => {
+  const menuWidthStyle = { width: "100%" };
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mouseMovedRef = useMouseMoved(visible);
 
@@ -124,8 +125,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const { handleMenuItemClick, handleSearchResultSelect } = useMenuEffects({
     visible,
-    onClose,
-    dropdownRef,
     keyboardHandlerRef,
     handleKeyDown,
     handleSelect,
@@ -171,10 +170,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     >
       {/* Inline search results (when user types after @) */}
       {showInlineSearch && filteredCustomMentionOptions.length > 0 && (
-        <div
-          className={DROPDOWN_CLASSES.panel}
-          style={{ width: STYLE_CONFIG.dropdownWidth }}
-        >
+        <div className={DROPDOWN_CLASSES.panel} style={menuWidthStyle}>
           <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
             {filteredCustomMentionOptions.map((option, optionIndex) => (
               <MenuItemRow
@@ -232,10 +228,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 
       {/* Main menu - shown when user just types @ without any text after */}
       {!showInlineSearch && !showSecondLayerPanel && (
-        <div
-          className={DROPDOWN_CLASSES.panel}
-          style={{ width: STYLE_CONFIG.dropdownWidth }}
-        >
+        <div className={DROPDOWN_CLASSES.panel} style={menuWidthStyle}>
           {filteredCustomMentionOptions.length > 0 && (
             <>
               <div className={DROPDOWN_CLASSES.itemsColumnPadded}>

@@ -1952,7 +1952,11 @@
     "dangerHint": "上下文几乎已满。请开始新会话，避免丢失细节。",
     "startNewSession": "开始新会话",
     "cacheSaved": "缓存节省：读取 {{read}}，写入 {{write}}",
-    "remaining": "剩余可用：{{tokens}}"
+    "remaining": "剩余可用：{{tokens}}",
+    "cacheHero": "{{pct}}% 来自缓存 · 本轮复用约 {{tokens}}",
+    "cacheHeroSub": "Prompt 缓存让复用前缀的费用降到约 1/10。",
+    "headroom": "还剩 {{tokens}} 空间",
+    "autoCompactNote": "上下文填满前 ORGII 会自动整理较早的内容——你的工作不会丢失。"
   },
   "relativeDate": {
     "today": "今天",

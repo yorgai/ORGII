@@ -174,7 +174,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
     const currentInputEmpty = isInputEmpty() && !hasImages;
     const stopSuppressedForEmptyInput =
       disableStopWhenEmpty && currentInputEmpty && !isWpGeneWorking;
-    const mentionTreePosition = "right";
+    const mentionTreePosition = chatPanelPosition === "left" ? "right" : "left";
     const voiceFeatureEnabled = useAtomValue(voiceInputEnabledAtom);
 
     const {

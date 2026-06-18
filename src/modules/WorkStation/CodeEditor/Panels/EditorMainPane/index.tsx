@@ -55,7 +55,6 @@ import {
   TabBarBottomPanelToggle,
 } from "@src/modules/WorkStation/shared";
 import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
-import { repoSelectorOpenAtom } from "@src/store/ui/overlayAtom";
 import { workStationPrimarySidebarCollapsedAtom } from "@src/store/ui/workStationAtom";
 import { gitReviewNavigationAtom } from "@src/store/workstation/codeEditor/gitReviewNavigationAtom";
 import {
@@ -802,12 +801,6 @@ const EditorContent: React.FC<EditorContentProps> = memo(
       workStationPrimarySidebarCollapsedAtom
     );
 
-    const setRepoSelectorOpen = useSetAtom(repoSelectorOpenAtom);
-
-    const handleOpenAddWorkspace = useCallback(() => {
-      setRepoSelectorOpen(true);
-    }, [setRepoSelectorOpen]);
-
     // Quick actions from config
     const editorQuickActions = useMemo(
       () =>
@@ -815,9 +808,8 @@ const EditorContent: React.FC<EditorContentProps> = memo(
           t,
           dispatch,
           sidebarCollapsed,
-          onAddWorkspace: handleOpenAddWorkspace,
         }),
-      [t, dispatch, sidebarCollapsed, handleOpenAddWorkspace]
+      [t, dispatch, sidebarCollapsed]
     );
 
     // ============================================

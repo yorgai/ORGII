@@ -12,10 +12,19 @@ export const RING_TONE_STROKE: Record<RingTone, string> = {
   critical: "stroke-red-500",
 };
 
-/** Determine ring tone from the real (unclamped) percentage. */
+/**
+ * Determine ring tone from the real (unclamped) percentage.
+ *
+ * The comfort zone is deliberately wide. ORGII auto-compacts older context
+ * around the budget's ~80% mark, so the window never actually overflows in
+ * normal use — a calm blue ring for the vast majority of a session is the
+ * honest signal. Yellow only appears as we approach that auto-compaction
+ * point (a "ORGII will tidy up" hint, not "about to fail"), and red is
+ * reserved for a genuine, rare overflow past 100%.
+ */
 export function ringToneForPercentage(pct: number): RingTone {
   if (pct <= 0) return "unused";
-  if (pct < 80) return "normal";
+  if (pct < 90) return "normal";
   if (pct <= 100) return "warning";
   return "critical";
 }

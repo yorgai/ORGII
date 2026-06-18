@@ -5,7 +5,9 @@
  */
 import type { KeyboardEvent, MutableRefObject } from "react";
 
-import { MenuItemId, RecentFile, SecondLayerId } from "./config";
+import type { CliAgentType } from "@src/api/types/keys";
+
+import type { MenuItemId, RecentFile, SecondLayerId } from "./config";
 
 // ============================================
 // Search Result Item (moved from SearchFile)
@@ -22,6 +24,12 @@ export interface SearchResultItem {
   repoName?: string;
   /** Optional icon type for special items (terminal, session, repo, project, work item) */
   iconType?: "terminal" | "session" | "repo" | "project" | "workitem";
+  /** Explicit Rust/agent icon id for session rows. */
+  agentIconId?: string;
+  /** CLI agent type for session rows. */
+  cliAgentType?: CliAgentType;
+  /** Original session prompt, used by shared session icon resolution. */
+  userInput?: string;
 }
 
 // ============================================

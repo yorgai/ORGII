@@ -14,7 +14,7 @@
  * Performance Architecture:
  * - Sidebar: DYNAMIC (changes per route via prop)
  * - Content: DYNAMIC (via children)
- * - ChatPanel: ALWAYS mounted (hidden via CSS when inactive to preserve state)
+ * - ChatPanel: STABLE layer - stays mounted across view switches
  */
 import { HoverSidebar } from "@/src/scaffold/NavigationSidebar";
 import { useAtomValue } from "jotai";

@@ -4,10 +4,57 @@ use rmcp::transport::{StreamableHttpClientTransport, TokioChildProcess};
 use rmcp::ServiceExt;
 use serde::Serialize;
 use serde_json::Value;
+use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, AtomicI64, AtomicUsize};
+use std::sync::{Arc, Mutex as StdMutex};
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command as TokioCommand;
 use tokio::sync::{mpsc, Mutex};
 use tracing::info;
+
+/// Keep at most this many trailing stderr lines from a stdio MCP child so a
+/// failed handshake can surface the server's actual diagnostic (missing dep,
+/// traceback, "command not found") instead of an opaque timeout/init error.
+const STDERR_RING_LINES: usize = 32;
+
+/// Drain a child's stderr into a bounded ring buffer of the most recent lines.
+/// Returns a handle the caller reads after a spawn / handshake failure.
+fn spawn_stderr_drain(stderr: tokio::process::ChildStderr) -> Arc<StdMutex<Vec<String>>> {
+    let ring: Arc<StdMutex<Vec<String>>> = Arc::new(StdMutex::new(Vec::new()));
+    let ring_writer = Arc::clone(&ring);
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(stderr).lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            if let Ok(mut buf) = ring_writer.lock() {
+                buf.push(line);
+                let len = buf.len();
+                if len > STDERR_RING_LINES {
+                    buf.drain(0..len - STDERR_RING_LINES);
+                }
+            }
+        }
+    });
+    ring
+}
+
+/// Snapshot the captured stderr tail as a single string, or `None` if empty.
+fn stderr_tail(ring: &Arc<StdMutex<Vec<String>>>) -> Option<String> {
+    let buf = ring.lock().ok()?;
+    if buf.is_empty() {
+        return None;
+    }
+    Some(buf.join("\n"))
+}
+
+/// Append the captured stderr tail to a connection error so the surfaced
+/// message is actionable instead of opaque.
+fn with_stderr(mut err: String, ring: &Arc<StdMutex<Vec<String>>>) -> String {
+    if let Some(tail) = stderr_tail(ring) {
+        err.push_str("\n--- server stderr ---\n");
+        err.push_str(&tail);
+    }
+    err
+}
 
 use super::{resolve_connect_timeout, McpClient, McpToolDef, ServerCapabilities};
 use crate::specialization::mcp::config::{McpServerConfig, McpTransportType};
@@ -53,10 +100,33 @@ impl McpClient {
                         })?;
                         let args = expanded.args.as_deref().unwrap_or(&[]);
 
-                        let mut cmd = TokioCommand::new(command);
+                        // Resolve the command to an absolute path against the
+                        // (startup-augmented) PATH. A bare name like `npx` /
+                        // `uvx` / `codegraph` otherwise fails with an opaque
+                        // ENOENT when it lives in a dir the login-shell PATH
+                        // probe missed (pipx/uv/cargo/`~/.local/bin`). On miss,
+                        // return an actionable "not found in PATH" error.
+                        let resolved_command = which::which(command).map_err(|_| {
+                            format!(
+                                "command '{}' not found in PATH (is the MCP server installed and on your PATH?)",
+                                command
+                            )
+                        })?;
+
+                        let mut cmd = TokioCommand::new(&resolved_command);
                         cmd.args(args);
                         if let Some(cwd) = expanded.cwd.as_deref() {
-                            cmd.current_dir(cwd);
+                            // Validate cwd before handing it to the spawn —
+                            // a missing/invalid working dir otherwise fails the
+                            // spawn with an unhelpful error.
+                            let cwd_path = std::path::Path::new(cwd);
+                            if !cwd_path.is_dir() {
+                                return Err(format!(
+                                    "stdio MCP working directory '{}' does not exist or is not a directory",
+                                    cwd
+                                ));
+                            }
+                            cmd.current_dir(cwd_path);
                         }
                         if let Some(env) = expanded.env.as_ref() {
                             for (k, v) in env {
@@ -69,12 +139,23 @@ impl McpClient {
                         #[cfg(windows)]
                         cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
 
-                        let child = TokioChildProcess::new(cmd)
-                            .map_err(|err| format!("Failed to spawn '{}': {}", command, err))?;
-                        handler
-                            .serve(child)
-                            .await
-                            .map_err(|err| format!("MCP initialize failed for '{}': {}", name, err))
+                        // Capture the child's stderr so a failed handshake can
+                        // surface the server's real diagnostic instead of an
+                        // opaque "MCP initialize failed" / timeout message.
+                        let (child, stderr) = TokioChildProcess::builder(cmd)
+                            .stderr(Stdio::piped())
+                            .spawn()
+                            .map_err(|err| {
+                                format!("Failed to spawn '{}': {}", command, err)
+                            })?;
+                        let stderr_ring = stderr.map(spawn_stderr_drain).unwrap_or_default();
+
+                        handler.serve(child).await.map_err(|err| {
+                            with_stderr(
+                                format!("MCP initialize failed for '{}': {}", name, err),
+                                &stderr_ring,
+                            )
+                        })
                     }
                     McpTransportType::StreamableHttp | McpTransportType::Sse => {
                         let url = expanded.url.as_deref().ok_or_else(|| {

@@ -134,6 +134,8 @@ export interface ComposerInputRef {
   placeCaretAtPoint: (x: number, y: number) => boolean;
   /** True if the editor has no text and no pills */
   isEmpty: () => boolean;
+  /** True while an inline @ or / menu is active. */
+  isInlineMenuActive: () => boolean;
   /** Insert plain mention text, replacing the active @ query if present. */
   insertMentionText: (text: string) => void;
   /** Insert a file/folder pill at the current selection */

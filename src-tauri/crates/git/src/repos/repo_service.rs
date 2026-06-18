@@ -25,6 +25,32 @@ fn canonical_string(path: &std::path::Path) -> Result<String, String> {
         .map_err(|e| format!("Failed to canonicalize '{}': {}", path.display(), e))
 }
 
+/// Strip the Windows extended-length ("verbatim") `\\?\` prefix from a path.
+///
+/// `std::fs::canonicalize` returns verbatim paths on Windows (`\\?\C:\…`), and
+/// they get persisted as the repo `path`. The frontend Tauri fs plugin cannot
+/// parse `\\?\` paths, so `readDir`/`exists` silently fail and the file tree
+/// won't expand. We hand the frontend a plain path instead. No-op elsewhere.
+fn strip_verbatim_prefix(path: &str) -> String {
+    #[cfg(windows)]
+    {
+        if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+            return format!(r"\\{rest}");
+        }
+        if let Some(rest) = path.strip_prefix(r"\\?\") {
+            return rest.to_string();
+        }
+    }
+    path.to_string()
+}
+
+/// Make a record's `path` safe for the frontend fs plugin. `repo_id` is left
+/// untouched so repo identity / persisted selection stays stable.
+fn fs_safe_record(mut record: RepoRecord) -> RepoRecord {
+    record.path = strip_verbatim_prefix(&record.path);
+    record
+}
+
 fn basename_or(default: &str, path: &str) -> String {
     std::path::Path::new(path)
         .file_name()
@@ -59,12 +85,14 @@ where
 
 /// List all tracked repositories (git + work folders), most recent first.
 pub async fn list() -> Result<Vec<RepoRecord>, String> {
-    run_blocking(repo_db::list_repos).await
+    let records = run_blocking(repo_db::list_repos).await?;
+    Ok(records.into_iter().map(fs_safe_record).collect())
 }
 
 /// Look up a single repository by id (usually a canonical path).
 pub async fn get(repo_id: String) -> Result<Option<RepoRecord>, String> {
-    run_blocking(move || repo_db::get_repo(&repo_id)).await
+    let record = run_blocking(move || repo_db::get_repo(&repo_id)).await?;
+    Ok(record.map(fs_safe_record))
 }
 
 // ============================================

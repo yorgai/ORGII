@@ -2,7 +2,6 @@ export * from "./useAppShellActions";
 export * from "./useAppShellDerivedState";
 export * from "./useAppShellDock";
 export * from "./useAppShellDockFilterSync";
-export * from "./useAppShellPreload";
 export * from "./useAppShellRepo";
 export * from "./useAppShellSimulatorPanelSync";
 export * from "./useAppShellStationMode";

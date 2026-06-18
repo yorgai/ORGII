@@ -2,6 +2,8 @@
 //! pending rows. Spawned once from `lib.rs::setup` via
 //! `spawn_consolidation_tick`.
 
+use std::sync::atomic::{AtomicU64, Ordering};
+
 use rusqlite::Connection;
 use tracing::{info, warn};
 
@@ -10,6 +12,10 @@ use super::triggers::{
     forced_trigger_ready, idle_trigger_ready, is_e2e_learnings_test_scope, lazy_trigger_ready,
 };
 use super::types::ConsolidationTrigger;
+
+const CONSOLIDATION_IDLE_LOG_EVERY_TICKS: u64 = 10;
+
+static CONSOLIDATION_TICK_COUNT: AtomicU64 = AtomicU64::new(0);
 
 /// Spawn the consolidation tick. Called once from `lib.rs::setup`. Polls
 /// every 60 seconds; when a trigger fires, it drains **every** scope with
@@ -79,9 +85,24 @@ async fn run_tick() -> Result<(), String> {
             .collect()
     };
 
+    let tick_count = CONSOLIDATION_TICK_COUNT.fetch_add(1, Ordering::Relaxed) + 1;
     if scopes.is_empty() {
+        if tick_count % CONSOLIDATION_IDLE_LOG_EVERY_TICKS == 0 {
+            info!(
+                tick_count,
+                "[consolidation] tick scanned pending scopes: none"
+            );
+        }
         return Ok(());
     }
+
+    info!(
+        tick_count,
+        pending_scope_count = scopes.len(),
+        forced,
+        idle,
+        "[consolidation] tick scanned pending scopes"
+    );
 
     drive_scopes(&conn, scopes, forced, idle).await;
     Ok(())

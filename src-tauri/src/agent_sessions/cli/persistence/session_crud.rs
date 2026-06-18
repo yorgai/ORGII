@@ -110,7 +110,7 @@ const SESSION_COLUMNS: &str =
      COALESCE(cs.background, 0),
      COALESCE(cs.key_source, 'own_key'),
      cs.agent_exec_mode, cs.draft_text, cs.reply_target_event_id,
-     cs.additional_directories,
+     COALESCE(cs.pinned, 0), cs.additional_directories,
      cs.parent_session_id, cs.org_member_id,
      COALESCE(cs.org_id, 'personal-org'), cs.project_id, cs.project_name,
      cs.project_slug, cs.work_item_id, cs.agent_role,
@@ -507,6 +507,16 @@ pub fn update_reply_target_event_id(
     Ok(affected > 0)
 }
 
+/// Update the sidebar pin state on a CLI session row.
+pub fn update_pinned(session_id: &str, pinned: bool) -> SqliteResult<bool> {
+    let conn = get_connection()?;
+    let affected = conn.execute(
+        "UPDATE code_sessions SET pinned = ?2 WHERE session_id = ?1",
+        params![session_id, pinned],
+    )?;
+    Ok(affected > 0)
+}
+
 /// Update proxy credentials (token, URL, proxy_session_id) after re-allocation.
 /// Token rotation is config — does not bump `updated_at`.
 pub fn update_proxy_credentials(
@@ -642,20 +652,21 @@ fn row_to_session(row: &rusqlite::Row) -> rusqlite::Result<CodeSession> {
         agent_exec_mode,
         draft_text: row.get(27)?,
         reply_target_event_id: row.get(28)?,
+        pinned: row.get::<_, bool>(29).unwrap_or(false),
         additional_directories: row
-            .get::<_, Option<String>>(29)?
+            .get::<_, Option<String>>(30)?
             .as_deref()
             .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
             .filter(|v| !v.is_empty()),
-        parent_session_id: row.get(30)?,
-        org_member_id: row.get(31)?,
-        org_id: row.get(32)?,
-        project_id: row.get(33)?,
-        project_name: row.get(34)?,
-        project_slug: row.get(35)?,
-        work_item_id: row.get(36)?,
-        agent_role: row.get(37)?,
-        created_at: row.get(38)?,
-        updated_at: row.get(39)?,
+        parent_session_id: row.get(31)?,
+        org_member_id: row.get(32)?,
+        org_id: row.get(33)?,
+        project_id: row.get(34)?,
+        project_name: row.get(35)?,
+        project_slug: row.get(36)?,
+        work_item_id: row.get(37)?,
+        agent_role: row.get(38)?,
+        created_at: row.get(39)?,
+        updated_at: row.get(40)?,
     })
 }

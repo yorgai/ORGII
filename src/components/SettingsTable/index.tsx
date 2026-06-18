@@ -497,7 +497,9 @@ export default function SettingsTable<RowData>({
   );
 
   const needsPagination = pageSize != null && rows.length > pageSize;
-  const hasBottomFooter = needsPagination || resolvedFooter != null;
+  const showEmptyFooter = !needsPagination && resolvedFooter == null;
+  const hasBottomFooter =
+    needsPagination || resolvedFooter != null || showEmptyFooter;
   const containedScroll = fillHeight || maxHeight != null;
   const heightClass = headerHeight === "tall" ? "table-settings-tall" : "";
   const denseClass = dense ? "table-settings-dense" : "";
@@ -628,6 +630,7 @@ export default function SettingsTable<RowData>({
         }
       />
       {resolvedFooter}
+      {showEmptyFooter && <div className="settings-table-empty-footer" />}
     </div>
   );
 }

@@ -1,11 +1,10 @@
 import { GalleryThumbnails } from "lucide-react";
-import React from "react";
+import React, { Suspense } from "react";
 
 import Button from "@src/components/Button";
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import Tooltip from "@src/components/Tooltip";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
-import { BenchmarkPanel } from "@src/features/BenchmarkPanel";
 import type {
   ChatHistoryDisplayMode,
   ChatPanelSelectedCollabOrg,
@@ -16,13 +15,31 @@ import type {
 } from "@src/store/ui/chatPanelAtom";
 
 import ChatView from "./ChatView";
-import CollabOrgPanelView from "./panels/CollabOrgPanelView";
-import ProjectOrgPanelView from "./panels/ProjectOrgPanelView";
-import ProjectPanelView from "./panels/ProjectPanelView";
-import WorkItemPanelView from "./panels/WorkItemPanelView";
-import WorkspaceDashboardPanelView from "./panels/WorkspaceDashboardPanelView";
-import WorkspaceExplorePanelView from "./panels/WorkspaceExplorePanelView";
-import WorkspaceOverviewPanelView from "./panels/WorkspaceOverviewPanelView";
+
+const BenchmarkPanel = React.lazy(() =>
+  import("@src/features/BenchmarkPanel").then((module) => ({
+    default: module.BenchmarkPanel,
+  }))
+);
+const CollabOrgPanelView = React.lazy(
+  () => import("./panels/CollabOrgPanelView")
+);
+const ProjectOrgPanelView = React.lazy(
+  () => import("./panels/ProjectOrgPanelView")
+);
+const ProjectPanelView = React.lazy(() => import("./panels/ProjectPanelView"));
+const WorkItemPanelView = React.lazy(
+  () => import("./panels/WorkItemPanelView")
+);
+const WorkspaceDashboardPanelView = React.lazy(
+  () => import("./panels/WorkspaceDashboardPanelView")
+);
+const WorkspaceExplorePanelView = React.lazy(
+  () => import("./panels/WorkspaceExplorePanelView")
+);
+const WorkspaceOverviewPanelView = React.lazy(
+  () => import("./panels/WorkspaceOverviewPanelView")
+);
 
 interface ChatPanelContentProps {
   chatFocusLabel: string;
@@ -87,21 +104,37 @@ export function ChatPanelContent({
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       {!showPanelContent ? null : showBenchmarkSessionGroupContent ? (
-        <BenchmarkPanel surface="runList" />
+        <Suspense fallback={null}>
+          <BenchmarkPanel surface="runList" />
+        </Suspense>
       ) : showWorkItemContent && selectedWorkItem ? (
-        <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
+        <Suspense fallback={null}>
+          <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
+        </Suspense>
       ) : showProjectContent && selectedProject ? (
-        <ProjectPanelView selectedProject={selectedProject} />
+        <Suspense fallback={null}>
+          <ProjectPanelView selectedProject={selectedProject} />
+        </Suspense>
       ) : showProjectOrgContent && selectedProjectOrg ? (
-        <ProjectOrgPanelView selectedProjectOrg={selectedProjectOrg} />
+        <Suspense fallback={null}>
+          <ProjectOrgPanelView selectedProjectOrg={selectedProjectOrg} />
+        </Suspense>
       ) : showWorkspaceDashboardContent ? (
-        <WorkspaceDashboardPanelView />
+        <Suspense fallback={null}>
+          <WorkspaceDashboardPanelView />
+        </Suspense>
       ) : showExploreContent ? (
-        <WorkspaceExplorePanelView />
+        <Suspense fallback={null}>
+          <WorkspaceExplorePanelView />
+        </Suspense>
       ) : showCollabOrgContent && selectedCollabOrg ? (
-        <CollabOrgPanelView selectedCollabOrg={selectedCollabOrg} />
+        <Suspense fallback={null}>
+          <CollabOrgPanelView selectedCollabOrg={selectedCollabOrg} />
+        </Suspense>
       ) : showWorkspaceOverviewContent && selectedWorkspace ? (
-        <WorkspaceOverviewPanelView selectedWorkspace={selectedWorkspace} />
+        <Suspense fallback={null}>
+          <WorkspaceOverviewPanelView selectedWorkspace={selectedWorkspace} />
+        </Suspense>
       ) : showSessionContent && currentSessionId ? (
         <ChatView
           sessionId={currentSessionId}

@@ -6,12 +6,17 @@
  * SpotlightShell — this wrapper is now just an open-state binding +
  * a scoped MultiRepoGitStatusProvider for the spotlight's repo features.
  */
-import { GlobalSpotlight } from "@/src/scaffold/GlobalSpotlight";
 import { useAtom } from "jotai";
-import React from "react";
+import React, { Suspense } from "react";
 
 import { MultiRepoGitStatusProvider } from "@src/contexts/git";
 import { spotlightOpenAtom } from "@src/store";
+
+const GlobalSpotlight = React.lazy(() =>
+  import("@/src/scaffold/GlobalSpotlight").then((module) => ({
+    default: module.GlobalSpotlight,
+  }))
+);
 
 export const GlobalSpotlightPortal: React.FC = () => {
   const [spotlightOpen, setSpotlightOpen] = useAtom(spotlightOpenAtom);
@@ -20,7 +25,12 @@ export const GlobalSpotlightPortal: React.FC = () => {
 
   return (
     <MultiRepoGitStatusProvider>
-      <GlobalSpotlight isOpen={true} onClose={() => setSpotlightOpen(false)} />
+      <Suspense fallback={null}>
+        <GlobalSpotlight
+          isOpen={true}
+          onClose={() => setSpotlightOpen(false)}
+        />
+      </Suspense>
     </MultiRepoGitStatusProvider>
   );
 };

@@ -7,7 +7,10 @@ import type { TFunction } from "i18next";
 
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import type { QuickAction } from "@src/modules/WorkStation/shared";
-import { openEditorSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
+import {
+  openEditorSpotlight,
+  openWorkspaceSpotlight,
+} from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import type { PanelState } from "@src/store/workstation/tabs";
 
 // ============================================
@@ -22,7 +25,6 @@ export interface EditorQuickActionsOptions {
     source: "system" | "user" | "ai"
   ) => void;
   sidebarCollapsed: boolean;
-  onAddWorkspace: () => void;
 }
 
 // ============================================
@@ -107,13 +109,13 @@ export const TAB_TYPE_CONFIG = {
 export function createEditorQuickActions(
   options: EditorQuickActionsOptions
 ): QuickAction[] {
-  const { t, dispatch, sidebarCollapsed, onAddWorkspace } = options;
+  const { t, dispatch, sidebarCollapsed } = options;
 
   return [
     {
       id: "add-workspace",
       label: t("commands.switchWorkspace"),
-      onAction: onAddWorkspace,
+      onAction: () => openWorkspaceSpotlight("switch"),
     },
     {
       id: "search-files",

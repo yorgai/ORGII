@@ -4,7 +4,16 @@ import { useLocation } from "react-router-dom";
 
 import { useRouteAppMode } from "@src/config/routeViewModeConfig";
 import { ROUTES } from "@src/config/routes";
-import { type DockFilter, dockFilterAtom } from "@src/store/workstation";
+import {
+  restoreChatWidthAtom,
+  stationChatVisibilityAtom,
+} from "@src/store/ui/chatPanelAtom";
+import { STATION_MODE, stationModeAtom } from "@src/store/ui/simulatorAtom";
+import {
+  DEFAULT_DOCK_FILTER,
+  type DockFilter,
+  dockFilterAtom,
+} from "@src/store/workstation";
 
 function appModeToDockFilter(
   appMode: ReturnType<typeof useRouteAppMode>
@@ -24,6 +33,9 @@ export function useAppShellDockFilterSync(): DockFilter {
   const appMode = useRouteAppMode();
   const dockFilter = useAtomValue(dockFilterAtom);
   const setDockFilter = useSetAtom(dockFilterAtom);
+  const restoreChatWidth = useSetAtom(restoreChatWidthAtom);
+  const setStationChatVisibility = useSetAtom(stationChatVisibilityAtom);
+  const setStationMode = useSetAtom(stationModeAtom);
   const location = useLocation();
   const isWorkstationBasePath =
     location.pathname === ROUTES.workStation.base.path;
@@ -35,11 +47,28 @@ export function useAppShellDockFilterSync(): DockFilter {
   const isSettingsRoute = location.pathname.startsWith("/orgii/app/settings");
 
   useEffect(() => {
-    if (isWorkstationBasePath) return;
+    if (isWorkstationBasePath) {
+      setDockFilter(DEFAULT_DOCK_FILTER);
+      setStationMode(STATION_MODE.MY_STATION);
+      setStationChatVisibility((prev) => ({
+        ...prev,
+        [STATION_MODE.MY_STATION]: true,
+      }));
+      restoreChatWidth();
+      return;
+    }
     if (isSettingsRoute) return;
     const nextDockFilter = appModeToDockFilter(appMode);
     setDockFilter(nextDockFilter);
-  }, [isWorkstationBasePath, isSettingsRoute, appMode, setDockFilter]);
+  }, [
+    isWorkstationBasePath,
+    isSettingsRoute,
+    appMode,
+    restoreChatWidth,
+    setDockFilter,
+    setStationChatVisibility,
+    setStationMode,
+  ]);
 
   return dockFilter;
 }
