@@ -102,7 +102,8 @@ pub fn params_schema<T: JsonSchema>() -> Value {
 
 /// Collapse nullable type arrays (`"type": ["string", "null"]`) emitted by
 /// schemars for `Option<T>` fields down to the single non-null scalar
-/// (`"type": "string"`).
+/// (`"type": "string"`), and strip the matching `null` entry from a sibling
+/// `enum` array.
 ///
 /// This is the second provider-dialect footgun after `$ref` (see
 /// `params_schema`): draft-07 *permits* a `"type"` array, but several
@@ -110,13 +111,24 @@ pub fn params_schema<T: JsonSchema>() -> Value {
 /// HTTP 400 `not a valid jsonSchema` for any tool whose params contain a
 /// nullable field (e.g. `edit_file`'s `Option<String>` content/old_string/
 /// new_string). The plain scalar form is the least-common-denominator that
-/// every provider accepts. Optionality is already enforced at parse time by
-/// `Option<T>` + serde `default`, so dropping `"null"` from the wire schema
-/// changes nothing about how arguments deserialize — the model simply omits
-/// the field when it has no value.
+/// every provider accepts.
+///
+/// `Option<Enum>` fields (e.g. `use_code_map`'s `kind: Option<CodeMapNodeKind>`)
+/// are a sharper version of the same trap: schemars emits both
+/// `"type": ["string", "null"]` AND `"enum": [..variants, null]`. Collapsing
+/// only the `type` leaves a `null` in the `enum` array, which moonshot/MiniMax
+/// reject with HTTP 400 `enum value (<nil>) does not match any type in
+/// [string]` (GitHub #23). So whenever we collapse the type to a non-null
+/// scalar we also drop the `null` member from any sibling `enum`.
+///
+/// Optionality is already enforced at parse time by `Option<T>` + serde
+/// `default`, so dropping `"null"` from the wire schema changes nothing about
+/// how arguments deserialize — the model simply omits the field when it has no
+/// value.
 fn collapse_nullable_type_arrays(value: &mut Value) {
     match value {
         Value::Object(map) => {
+            let mut collapsed_to_non_null = false;
             if let Some(Value::Array(parts)) = map.get("type") {
                 let non_null: Vec<Value> = parts
                     .iter()
@@ -128,6 +140,15 @@ fn collapse_nullable_type_arrays(value: &mut Value) {
                 // in tool params) are left intact rather than guessed at.
                 if non_null.len() == 1 && parts.len() > non_null.len() {
                     map.insert("type".into(), non_null.into_iter().next().unwrap());
+                    collapsed_to_non_null = true;
+                }
+            }
+            // After collapsing a nullable type to a scalar, a sibling `enum`
+            // for an `Option<Enum>` field still carries a trailing `null` that
+            // no longer matches the scalar `type` — strip it.
+            if collapsed_to_non_null {
+                if let Some(Value::Array(values)) = map.get_mut("enum") {
+                    values.retain(|v| !v.is_null());
                 }
             }
             for child in map.values_mut() {
@@ -239,6 +260,7 @@ fn schema_summary(schema: &Value) -> String {
 /// - top level must be `type: "object"` with a `properties` key
 /// - no `oneOf` / `anyOf` / `allOf` / `$ref` anywhere in the schema
 /// - every name in `required` must exist in `properties`
+/// - no `enum` array may contain a `null` member
 pub fn assert_llm_compatible_schema(schema: &Value) -> Result<(), String> {
     let obj = schema
         .as_object()
@@ -264,7 +286,8 @@ pub fn assert_llm_compatible_schema(schema: &Value) -> Result<(), String> {
         }
     }
 
-    scan_for_forbidden_keywords(schema, "$")
+    scan_for_forbidden_keywords(schema, "$")?;
+    scan_for_null_enum_members(schema, "$")
 }
 
 fn scan_for_forbidden_keywords(value: &Value, path: &str) -> Result<(), String> {
@@ -286,6 +309,48 @@ fn scan_for_forbidden_keywords(value: &Value, path: &str) -> Result<(), String> 
         Value::Array(items) => {
             for (idx, child) in items.iter().enumerate() {
                 scan_for_forbidden_keywords(child, &format!("{}[{}]", path, idx))?;
+            }
+            Ok(())
+        }
+        _ => Ok(()),
+    }
+}
+
+/// Reject any `enum` array that carries a `null` member.
+///
+/// schemars renders an `Option<Enum>` field as both `"type": ["string",
+/// "null"]` AND `"enum": [..variants, null]`. After `collapse_nullable_type_arrays`
+/// reduces the `type` to a plain scalar, a stray `null` left in the sibling
+/// `enum` no longer matches the declared scalar type — moonshot/MiniMax/kimi
+/// reject it with HTTP 400 `enum value (<nil>) does not match any type in
+/// [string]` (GitHub #23). `params_schema` strips it at generation time; this
+/// is the contract-level backstop that catches any future schema (hand-rolled,
+/// or produced after a schemars upgrade that changes behavior) which slips a
+/// `null` back into an enum.
+fn scan_for_null_enum_members(value: &Value, path: &str) -> Result<(), String> {
+    match value {
+        Value::Object(map) => {
+            for (key, child) in map {
+                if key == "enum" {
+                    if let Value::Array(members) = child {
+                        if members.iter().any(|m| m.is_null()) {
+                            return Err(format!(
+                                "`enum` at {}.enum contains a `null` member, which moonshot/\
+                                 MiniMax/kimi reject (HTTP 400 `enum value (<nil>) does not match \
+                                 any type`); drop the null (an optional field omits the value \
+                                 rather than sending null)",
+                                path
+                            ));
+                        }
+                    }
+                }
+                scan_for_null_enum_members(child, &format!("{}.{}", path, key))?;
+            }
+            Ok(())
+        }
+        Value::Array(items) => {
+            for (idx, child) in items.iter().enumerate() {
+                scan_for_null_enum_members(child, &format!("{}[{}]", path, idx))?;
             }
             Ok(())
         }
@@ -463,6 +528,98 @@ mod tests {
         assert_eq!(parsed.required_path, "/tmp/x");
         assert!(parsed.maybe_text.is_none());
         assert!(!parsed.flag);
+    }
+
+    /// Mirrors `use_code_map`'s `kind: Option<CodeMapNodeKind>`: an optional
+    /// enum field. schemars renders this as BOTH `"type": ["string", "null"]`
+    /// AND `"enum": [..variants, null]`. moonshot/MiniMax reject the trailing
+    /// `null` in the enum with HTTP 400 `enum value (<nil>) does not match any
+    /// type in [string]` (GitHub #23), so `params_schema` must strip it.
+    #[derive(Debug, Deserialize, JsonSchema)]
+    #[serde(rename_all = "snake_case")]
+    enum SampleKind {
+        Alpha,
+        Beta,
+        Gamma,
+    }
+
+    #[derive(Debug, Deserialize, JsonSchema)]
+    struct OptionalEnumParams {
+        required_name: String,
+        #[serde(default)]
+        kind: Option<SampleKind>,
+    }
+
+    #[test]
+    fn params_schema_strips_null_from_optional_enum() {
+        let schema = params_schema::<OptionalEnumParams>();
+        let kind = &schema["properties"]["kind"];
+        // The nullable type array must have collapsed to a plain scalar.
+        assert_eq!(kind["type"], Value::String("string".into()));
+        // And the sibling enum must no longer carry a `null` member —
+        // every entry must be a non-null string variant.
+        let variants = kind["enum"]
+            .as_array()
+            .expect("optional enum field must keep its enum constraint");
+        assert!(
+            variants.iter().all(|v| v.is_string()),
+            "enum must contain no null after collapse: {schema}"
+        );
+        assert_eq!(variants.len(), 3, "all three variants must survive: {schema}");
+        // No `"type"` arrays must remain anywhere in the schema.
+        assert!(
+            type_arrays(&schema).is_empty(),
+            "nullable type arrays must collapse to plain scalars: {schema}"
+        );
+    }
+
+    #[test]
+    fn collapsed_optional_enum_still_deserializes() {
+        let parsed: OptionalEnumParams = parse_params(serde_json::json!({
+            "required_name": "x",
+            "kind": "beta",
+        }))
+        .expect("present optional enum must deserialize");
+        assert_eq!(parsed.required_name, "x");
+        assert!(matches!(parsed.kind, Some(SampleKind::Beta)));
+
+        let omitted: OptionalEnumParams = parse_params(serde_json::json!({
+            "required_name": "y",
+        }))
+        .expect("omitted optional enum must deserialize");
+        assert!(omitted.kind.is_none());
+    }
+
+    #[test]
+    fn optional_enum_schema_satisfies_llm_contract() {
+        // The generation-time fix (`collapse_nullable_type_arrays` stripping
+        // the null) and the contract backstop must agree: a real
+        // `Option<Enum>` params type must pass `assert_llm_compatible_schema`.
+        let schema = params_schema::<OptionalEnumParams>();
+        assert_llm_compatible_schema(&schema)
+            .expect("Option<Enum> schema must satisfy the LLM-compat contract after null strip");
+    }
+
+    #[test]
+    fn llm_contract_rejects_null_enum_member() {
+        // Backstop: a hand-rolled (or future schemars-produced) schema that
+        // leaves a `null` in an enum array — the GitHub #23 trigger — must be
+        // rejected by the contract, not silently shipped to the provider.
+        let bad = serde_json::json!({
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": ["file", "function", null]
+                }
+            }
+        });
+        let err = assert_llm_compatible_schema(&bad)
+            .expect_err("enum carrying a null member must be rejected");
+        assert!(
+            err.contains("null"),
+            "rejection must name the null enum member: {err}"
+        );
     }
 
     /// Mirrors the agent-org task tools: strict params that reject any
