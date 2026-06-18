@@ -1,4 +1,4 @@
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::session::prompt::cache::ORGII_SYSTEM_CACHE_SCOPE_KEY;
 use crate::tools::metadata::strip_tool_schema_cache_scope;
@@ -16,6 +16,58 @@ pub fn strip_tool_schema_cache_scopes(tools: &[Value]) -> Vec<Value> {
 
 pub fn sanitize_openai_compat_messages(messages: &[Value]) -> Vec<Value> {
     messages.iter().map(sanitize_message).collect()
+}
+
+/// Merge every `system`/`developer` message into a single `system` message at
+/// index 0, preserving the order of all other messages.
+///
+/// vLLM's OpenAI-compatible endpoint rejects any `system` message that is not
+/// `messages[0]` ("system message must be at the beginning"). ORGII emits the
+/// system prompt as several inline system messages (a stable prompt plus a
+/// per-turn dynamic-sections block, and sometimes more from compaction or
+/// reconstructed history); most OpenAI-compatible servers accept that, but vLLM
+/// does not. Applied only on the vLLM send path so other providers are
+/// unchanged.
+///
+/// Assumes `system`/`developer` content has already been flattened to a string
+/// by [`sanitize_openai_compat_messages`]; falls back to flattening defensively.
+pub fn coalesce_system_messages_to_front(messages: Vec<Value>) -> Vec<Value> {
+    let mut system_texts: Vec<String> = Vec::new();
+    let mut others: Vec<Value> = Vec::with_capacity(messages.len());
+
+    for message in messages {
+        let role = message
+            .get("role")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        if role == "system" || role == "developer" {
+            let content = message.get("content");
+            let text = content
+                .and_then(Value::as_str)
+                .map(str::to_string)
+                .or_else(|| content.and_then(flatten_text_content));
+            if let Some(text) = text {
+                if !text.trim().is_empty() {
+                    system_texts.push(text);
+                }
+            }
+        } else {
+            others.push(message);
+        }
+    }
+
+    if system_texts.is_empty() {
+        return others;
+    }
+
+    let mut result = Vec::with_capacity(others.len() + 1);
+    result.push(json!({
+        "role": "system",
+        "content": system_texts.join("\n\n"),
+    }));
+    result.extend(others);
+    result
 }
 
 pub fn sanitize_deepseek_messages(messages: &[Value]) -> Vec<Value> {
@@ -149,6 +201,41 @@ mod tests {
         assert!(sanitized[0]["content"][0]
             .get(ORGII_SYSTEM_CACHE_SCOPE_KEY)
             .is_none());
+    }
+
+    #[test]
+    fn coalesce_system_messages_to_front_merges_and_relocates() {
+        // Stable + volatile leading system messages, plus a mid-array system
+        // (e.g. from compaction/history) — vLLM rejects all but messages[0].
+        let messages = vec![
+            json!({ "role": "system", "content": "A" }),
+            json!({ "role": "system", "content": "B" }),
+            json!({ "role": "user", "content": "hi" }),
+            json!({ "role": "system", "content": "C" }),
+            json!({ "role": "assistant", "content": "yo" }),
+        ];
+
+        let result = coalesce_system_messages_to_front(messages);
+
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0]["role"], "system");
+        assert_eq!(result[0]["content"], "A\n\nB\n\nC");
+        assert_eq!(result[1]["role"], "user");
+        assert_eq!(result[1]["content"], "hi");
+        assert_eq!(result[2]["role"], "assistant");
+        assert_eq!(result[2]["content"], "yo");
+    }
+
+    #[test]
+    fn coalesce_system_messages_to_front_is_noop_without_system() {
+        let messages = vec![
+            json!({ "role": "user", "content": "hi" }),
+            json!({ "role": "assistant", "content": "yo" }),
+        ];
+
+        let result = coalesce_system_messages_to_front(messages.clone());
+
+        assert_eq!(result, messages);
     }
 
     #[test]
