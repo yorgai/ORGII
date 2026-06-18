@@ -884,6 +884,14 @@
         "importReadFailed": "Không thể đọc tệp JSON.",
         "importFailed": "Không thể nhập Session JSON."
       }
+    },
+    "turnFiles": {
+      "filesChangedCount_one": "Đã thay đổi {{count}} tệp trong vòng này",
+      "filesChangedCount_other": "Đã thay đổi {{count}} tệp trong vòng này",
+      "review": "Xem lại",
+      "showLess": "Thu gọn",
+      "showMore_one": "Hiển thị thêm {{count}}",
+      "showMore_other": "Hiển thị thêm {{count}}"
     }
   },
   "chatStatus": {
@@ -2134,6 +2142,7 @@
     "build": "Bắt đầu build",
     "skip": "Bỏ qua",
     "buildFailed": "Không thể bắt đầu build",
+    "saveFailed": "Không thể lưu kế hoạch",
     "emptyPlan": "(kế hoạch trống)",
     "edit": "Chỉnh sửa",
     "cancelEdit": "Hủy",

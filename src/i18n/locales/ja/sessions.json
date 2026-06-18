@@ -884,6 +884,14 @@
         "importReadFailed": "JSON ファイルを読み取れませんでした。",
         "importFailed": "Session JSON をインポートできませんでした。"
       }
+    },
+    "turnFiles": {
+      "filesChangedCount_one": "このラウンドで {{count}} 件のファイルを変更",
+      "filesChangedCount_other": "このラウンドで {{count}} 件のファイルを変更",
+      "review": "確認",
+      "showLess": "表示を減らす",
+      "showMore_one": "他 {{count}} 件を表示",
+      "showMore_other": "他 {{count}} 件を表示"
     }
   },
   "chatStatus": {
@@ -2134,6 +2142,7 @@
     "build": "ビルド開始",
     "skip": "スキップ",
     "buildFailed": "ビルド開始に失敗しました",
+    "saveFailed": "プランの保存に失敗しました",
     "emptyPlan": "（プランは空です）",
     "edit": "編集",
     "cancelEdit": "キャンセル",

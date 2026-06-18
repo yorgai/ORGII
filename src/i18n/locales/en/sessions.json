@@ -736,6 +736,14 @@
     "replay": {
       "follow": "Follow"
     },
+    "turnFiles": {
+      "filesChangedCount_one": "{{count}} file changed this round",
+      "filesChangedCount_other": "{{count}} files changed this round",
+      "review": "Review",
+      "showLess": "Show less",
+      "showMore_one": "Show {{count}} more",
+      "showMore_other": "Show {{count}} more"
+    },
     "readOnlyBannerCursorIde": "Read-only Cursor IDE history. Open Cursor to continue this chat.",
     "cursorControl": {
       "enableButton": "Enable sending",
@@ -2160,6 +2168,7 @@
     "build": "Build",
     "skip": "Skip",
     "buildFailed": "Failed to start Build",
+    "saveFailed": "Failed to save plan",
     "emptyPlan": "(plan is empty)",
     "edit": "Edit",
     "cancelEdit": "Cancel",

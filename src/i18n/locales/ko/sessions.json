@@ -884,6 +884,14 @@
         "importReadFailed": "JSON 파일을 읽을 수 없습니다.",
         "importFailed": "Session JSON을 가져올 수 없습니다."
       }
+    },
+    "turnFiles": {
+      "filesChangedCount_one": "이번 라운드에서 파일 {{count}}개 변경됨",
+      "filesChangedCount_other": "이번 라운드에서 파일 {{count}}개 변경됨",
+      "review": "검토",
+      "showLess": "간략히 보기",
+      "showMore_one": "{{count}}개 더 보기",
+      "showMore_other": "{{count}}개 더 보기"
     }
   },
   "chatStatus": {
@@ -2135,6 +2143,7 @@
     "build": "빌드 시작",
     "skip": "건너뛰기",
     "buildFailed": "빌드 시작 실패",
+    "saveFailed": "계획 저장 실패",
     "emptyPlan": "(계획이 비어 있습니다)",
     "edit": "편집",
     "cancelEdit": "취소",

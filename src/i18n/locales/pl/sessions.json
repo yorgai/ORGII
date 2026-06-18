@@ -892,6 +892,18 @@
         "importReadFailed": "Nie udało się odczytać pliku JSON.",
         "importFailed": "Nie udało się zaimportować Session JSON."
       }
+    },
+    "turnFiles": {
+      "filesChangedCount_one": "Zmieniono {{count}} plik w tej rundzie",
+      "filesChangedCount_few": "Zmieniono {{count}} pliki w tej rundzie",
+      "filesChangedCount_many": "Zmieniono {{count}} plików w tej rundzie",
+      "filesChangedCount_other": "Zmieniono {{count}} pliku w tej rundzie",
+      "review": "Przejrzyj",
+      "showLess": "Pokaż mniej",
+      "showMore_one": "Pokaż {{count}} więcej",
+      "showMore_few": "Pokaż {{count}} więcej",
+      "showMore_many": "Pokaż {{count}} więcej",
+      "showMore_other": "Pokaż {{count}} więcej"
     }
   },
   "chatStatus": {
@@ -2158,6 +2170,7 @@
     "build": "Buduj",
     "skip": "Pomiń",
     "buildFailed": "Nie udało się uruchomić budowania",
+    "saveFailed": "Nie udało się zapisać planu",
     "emptyPlan": "(plan jest pusty)",
     "edit": "Edytuj",
     "cancelEdit": "Anuluj",

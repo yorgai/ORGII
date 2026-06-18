@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { resolvePlanMarkdownContent } from "@src/engines/SessionCore/derived/planContentPersistence";
 import {
   type PlanSurfaceState,
   asPlanApprovalStatus,
@@ -65,13 +66,13 @@ export function getPlanDocStatusViewModel(
   return { readyForReview, approvalStatus, label };
 }
 
-export function getPlanDocViewModel(event: SessionEvent): PlanDocViewModel {
+export function getPlanDocViewModel(
+  event: SessionEvent,
+  pendingPlan?: PendingPlanApproval | null
+): PlanDocViewModel {
   const args = event.args as Record<string, unknown> | undefined;
   const result = event.result as Record<string, unknown> | undefined;
-  const content =
-    asStringArg(args?.["streamContent"]) ||
-    asStringArg(args?.["content"]) ||
-    asStringArg(result?.["content"]);
+  const content = resolvePlanMarkdownContent(event, pendingPlan);
   const title = derivePlanTitle(
     asStringArg(args?.["title"]) || asStringArg(result?.["title"]),
     content

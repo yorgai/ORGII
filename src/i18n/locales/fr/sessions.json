@@ -884,6 +884,14 @@
         "importReadFailed": "Impossible de lire le fichier JSON.",
         "importFailed": "Impossible d'importer la Session JSON."
       }
+    },
+    "turnFiles": {
+      "filesChangedCount_one": "{{count}} fichier modifié dans ce tour",
+      "filesChangedCount_other": "{{count}} fichiers modifiés dans ce tour",
+      "review": "Examiner",
+      "showLess": "Afficher moins",
+      "showMore_one": "Afficher {{count}} de plus",
+      "showMore_other": "Afficher {{count}} de plus"
     }
   },
   "chatStatus": {
@@ -2134,6 +2142,7 @@
     "build": "Construire",
     "skip": "Ignorer",
     "buildFailed": "Échec du lancement",
+    "saveFailed": "Échec de l'enregistrement du plan",
     "emptyPlan": "(le plan est vide)",
     "edit": "Modifier",
     "cancelEdit": "Annuler",

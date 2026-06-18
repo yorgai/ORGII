@@ -252,10 +252,10 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     controlledActivePlanMessage ?? selectedPlanMessage ?? latestPlanMessage;
 
   if (viewMode === "preview" && activePlanMessage) {
-    const plan = getPlanDocViewModel(activePlanMessage.event);
     const pendingPlan = approvalMap.get(
       activePlanMessage.event.sessionId
     )?.current;
+    const plan = getPlanDocViewModel(activePlanMessage.event, pendingPlan);
     const statusView = getPlanDocStatusViewModel(
       activePlanMessage.event,
       pendingPlan,

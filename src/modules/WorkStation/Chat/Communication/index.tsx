@@ -42,6 +42,7 @@ import {
 import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
 import { simulatorEffectiveDockAppAtom } from "@src/store/ui/simulatorAtom";
 import type { BackendEvent } from "@src/types/session/steps";
+import { openFileInWorkStation } from "@src/util/ui/openFileInWorkStation";
 
 import {
   FileHeader,
@@ -50,6 +51,7 @@ import {
   buildPrimarySidebarConfig,
 } from "../../shared";
 import MessageViewer from "./MessageViewer";
+import PlanApprovalActions from "./PlanApprovalActions";
 import {
   type PlanIntentOverride,
   computeEffectivePlanPreview,
@@ -129,12 +131,28 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
     interactionMessages,
   ]);
 
-  const { activePlanMessage, pendingPlanId, isPlanDoc, isPlanPending } =
-    usePlanApproval({
-      interactionMessages,
-      selectedMessage: state.selectedMessage,
-      viewMode,
-    });
+  const {
+    activePlanMessage,
+    pendingPlanId,
+    planPath,
+    isPlanDoc,
+    isPlanPending,
+    isEditing,
+    editedContent,
+    submitting,
+    buildDisabled,
+    setEditedContent,
+    handleEditToggle,
+    handleSave,
+  } = usePlanApproval({
+    interactionMessages,
+    selectedMessage: state.selectedMessage,
+    viewMode,
+  });
+
+  const handleOpenPlanInMyStation = useCallback(() => {
+    if (planPath) openFileInWorkStation(planPath, { defaultPreviewMode: true });
+  }, [planPath]);
 
   // Plan-scoped user intent. When the user explicitly picks a replay view or
   // flips the source/preview toggle while a plan is pending, we tag that choice
@@ -234,19 +252,39 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
     [jumpToMessage, previewMessages, handleViewModeChange]
   );
 
+  // Entering edit forces the preview surface so the plan textarea is actually
+  // rendered (the plan doc only mounts in "preview" view).
+  const handlePlanEditToggle = useCallback(() => {
+    if (!isEditing) handleViewModeChange("preview");
+    handleEditToggle();
+  }, [isEditing, handleViewModeChange, handleEditToggle]);
+
   const planTrailingSlot =
     isPlanDoc && isPlanPending ? (
       <div className="flex h-full items-center gap-2 px-2">
-        <TabPill
-          activeTab={effectivePreviewMode ? "preview" : "source"}
-          tabs={[
-            { key: "source", label: t("common:common.sourceCode") },
-            { key: "preview", label: t("common:common.preview") },
-          ]}
-          onChange={(key) => handlePreviewToggle(key === "preview")}
-          variant="pill"
-          fillWidth={false}
-          size="small"
+        {/* Source/Preview toggle is irrelevant while editing — hide it so the
+            row stays focused on Cancel/Save (issue #28). */}
+        {!isEditing && (
+          <TabPill
+            activeTab={effectivePreviewMode ? "preview" : "source"}
+            tabs={[
+              { key: "source", label: t("common:common.sourceCode") },
+              { key: "preview", label: t("common:common.preview") },
+            ]}
+            onChange={(key) => handlePreviewToggle(key === "preview")}
+            variant="pill"
+            fillWidth={false}
+            size="small"
+          />
+        )}
+        <PlanApprovalActions
+          isEditing={isEditing}
+          submitting={submitting}
+          saveDisabled={buildDisabled}
+          canOpenInMyStation={Boolean(planPath)}
+          onEditToggle={handlePlanEditToggle}
+          onSave={handleSave}
+          onOpenInMyStation={handleOpenPlanInMyStation}
         />
       </div>
     ) : null;
@@ -327,6 +365,11 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
           orgMembers={orgMembers}
           sessionReplayMode={mode}
           planPreviewMode={isPlanDoc ? effectivePreviewMode : undefined}
+          planEditState={
+            isPlanDoc && isPlanPending && isEditing
+              ? { value: editedContent, onChange: setEditedContent }
+              : undefined
+          }
           planDocPending={isPlanDoc && isPlanPending}
           activePlanMessage={activePlanMessage}
           selectedMessage={state.selectedMessage}

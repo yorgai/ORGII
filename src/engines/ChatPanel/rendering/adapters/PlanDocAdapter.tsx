@@ -12,6 +12,7 @@ import { useAtomValue } from "jotai";
 import React from "react";
 
 import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
+import { resolvePlanMarkdownContent } from "@src/engines/SessionCore/derived/planContentPersistence";
 import {
   asPlanApprovalStatus,
   derivePlanApprovalViewState,
@@ -27,14 +28,25 @@ function asString(value: unknown): string {
 }
 
 export const PlanDocAdapter: React.FC<UniversalEventProps> = (props) => {
-  const content =
-    asString(props.args?.["streamContent"]) ||
-    asString(props.args?.["content"]);
-  const title = asString(props.args?.["title"]);
   const approvalMap = useAtomValue(pendingPlanApprovalsAtom);
   const pendingPlan = props.sessionId
     ? approvalMap.get(props.sessionId)?.current
     : null;
+  const chatEvents = useAtomValue(chatEventsAtom);
+  const eventForIdentity = chatEvents.find(
+    (event) => event.id === props.eventId
+  );
+  const content = eventForIdentity
+    ? resolvePlanMarkdownContent(eventForIdentity, pendingPlan)
+    : pendingPlan &&
+        props.callId &&
+        (pendingPlan.planRevisionId === props.callId ||
+          pendingPlan.toolCallId === props.callId ||
+          pendingPlan.originToolCallId === props.callId)
+      ? pendingPlan.planContent
+      : asString(props.args?.["streamContent"]) ||
+        asString(props.args?.["content"]);
+  const title = asString(props.args?.["title"]);
   const submittedMatchesPending = Boolean(
     getPlanSubmittedPayloadFromResult(props.result)?.submitted_for_review ===
       true &&
@@ -53,15 +65,11 @@ export const PlanDocAdapter: React.FC<UniversalEventProps> = (props) => {
     asString(props.result?.["planRevisionId"]) ||
     (submittedMatchesPending ? (pendingPlan?.planRevisionId ?? "") : "");
   const approvalStatus = asPlanApprovalStatus(props.result?.["status"]);
-  const chatEvents = useAtomValue(chatEventsAtom);
   const planViewState = derivePlanApprovalViewState({
     pendingPlan,
     chatEvents,
     displayEvents: chatEvents,
   });
-  const eventForIdentity = chatEvents.find(
-    (event) => event.id === props.eventId
-  );
   const planSurface = props.planSurface ?? "transcript";
   const surfaceState = eventForIdentity
     ? planViewState.getEventState(eventForIdentity, planSurface)

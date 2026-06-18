@@ -889,6 +889,14 @@
         "importReadFailed": "无法读取 JSON 文件。",
         "importFailed": "无法导入 Session JSON。"
       }
+    },
+    "turnFiles": {
+      "filesChangedCount_one": "本轮更改了 {{count}} 个文件",
+      "filesChangedCount_other": "本轮更改了 {{count}} 个文件",
+      "review": "查看",
+      "showLess": "收起",
+      "showMore_one": "显示其余 {{count}} 个",
+      "showMore_other": "显示其余 {{count}} 个"
     }
   },
   "chatStatus": {
@@ -2141,6 +2149,7 @@
     "build": "开始构建",
     "skip": "跳过",
     "buildFailed": "开始构建失败",
+    "saveFailed": "保存计划失败",
     "emptyPlan": "（计划为空）",
     "edit": "编辑",
     "cancelEdit": "取消",

@@ -2,7 +2,9 @@
  * CreatePlanCard — Card-style plan display for the `create_plan` tool.
  *
  * Inline editing: "Edit" replaces the markdown preview with a textarea.
- * "Build" approves the plan; "Skip" rejects it without starting Build.
+ * "Save" persists the edited plan (file + plan event + pending snapshot) and
+ * exits edit mode WITHOUT approving/building. "Build" approves the (persisted)
+ * plan and starts execution; "Skip" rejects it without starting Build.
  */
 import type { TFunction } from "i18next";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -19,13 +21,20 @@ import {
   beginOptimisticTurn,
   failOptimisticTurn,
 } from "@src/engines/SessionCore/control/optimisticTurnStatus";
+import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import {
+  persistEditedPlanContent,
+  updatePendingPlanContent,
+} from "@src/engines/SessionCore/derived/planContentPersistence";
 import {
   type PlanApprovalStatus,
   type PlanSurface,
   type PlanSurfaceState,
+  getPendingPlanAliases,
   shouldDefaultCollapsePlanCard,
 } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { useMountedCleanup } from "@src/hooks/lifecycle/useMounted";
+import { FileService } from "@src/services/file";
 import { sessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultModelSelectionAtom } from "@src/store/session/creatorDefaultModelAtom";
 import {
@@ -290,6 +299,49 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
       );
     }, [isEditing, hasEdits, editedContent, handleSubmit]);
 
+    // Save persists the edited plan to its backing store (plan file + the plan
+    // event the preview re-reads + the pending snapshot) and exits edit mode,
+    // WITHOUT approving or building. A later Build approves the persisted plan.
+    const pendingSnapshot = state?.current ?? null;
+    const handleSave = useCallback(async () => {
+      if (!sessionId || !interactive || submittingRef.current) return;
+      submittingRef.current = true;
+      setSubmitting(true);
+      try {
+        await persistEditedPlanContent({
+          sessionId,
+          planPath: pendingSnapshot?.planPath ?? null,
+          pendingAliases: getPendingPlanAliases(pendingSnapshot),
+          content: editedContent,
+          io: {
+            saveFile: (path, content) => FileService.save(path, content),
+            getEvents: (id) => eventStoreProxy.getEvents(id),
+            patchEvent: (id, args, sid) =>
+              eventStoreProxy.updateById(id, { args }, sid),
+            saveCache: (id) => eventStoreProxy.saveToCache(id),
+          },
+        });
+        setPendingPlanApprovals((prev) =>
+          updatePendingPlanContent(prev, sessionId, editedContent)
+        );
+        if (mountedRef.current) setIsEditing(false);
+      } catch (err) {
+        Message.error(
+          err instanceof Error ? err.message : t("planDoc.saveFailed")
+        );
+      } finally {
+        submittingRef.current = false;
+        if (mountedRef.current) setSubmitting(false);
+      }
+    }, [
+      sessionId,
+      interactive,
+      pendingSnapshot,
+      editedContent,
+      setPendingPlanApprovals,
+      t,
+    ]);
+
     const handleSkip = useCallback(() => {
       void handleSubmit("reject");
     }, [handleSubmit]);
@@ -399,7 +451,13 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
 
         {ownsActions && (
           <div className="flex items-center justify-end gap-2 border-t border-fill-3 px-3 py-2">
-            {ready && (
+            {/*
+              While editing, keep the action row focused on the edit itself —
+              hide unrelated actions (Skip) and the separate Build, leaving only
+              Cancel + Save. Outside edit mode, show the full Skip/Edit/Build
+              row. (Issue #28)
+            */}
+            {ready && !isEditing && (
               <Button
                 size="mini"
                 data-testid="create-plan-skip"
@@ -421,18 +479,29 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
                 {isEditing ? t("planDoc.cancelEdit") : t("planDoc.edit")}
               </Button>
             )}
-            <Button
-              variant="primary"
-              size="mini"
-              data-testid="create-plan-build"
-              onClick={handleBuild}
-              disabled={!interactive || submitting}
-              icon={<CheckCircle2 size={12} />}
-            >
-              {isEditing && hasEdits
-                ? t("planDoc.editAndBuild")
-                : t("planDoc.build")}
-            </Button>
+            {isEditing ? (
+              <Button
+                variant="primary"
+                size="mini"
+                data-testid="create-plan-save"
+                onClick={() => void handleSave()}
+                disabled={!interactive || submitting}
+                icon={<CheckCircle2 size={12} />}
+              >
+                {t("common:actions.save")}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="mini"
+                data-testid="create-plan-build"
+                onClick={handleBuild}
+                disabled={!interactive || submitting}
+                icon={<CheckCircle2 size={12} />}
+              >
+                {t("planDoc.build")}
+              </Button>
+            )}
           </div>
         )}
       </div>

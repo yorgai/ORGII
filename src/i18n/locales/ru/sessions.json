@@ -886,6 +886,18 @@
         "importReadFailed": "Не удалось прочитать JSON-файл.",
         "importFailed": "Не удалось импортировать Session JSON."
       }
+    },
+    "turnFiles": {
+      "filesChangedCount_one": "{{count}} файл изменён в этом раунде",
+      "filesChangedCount_few": "{{count}} файла изменено в этом раунде",
+      "filesChangedCount_many": "{{count}} файлов изменено в этом раунде",
+      "filesChangedCount_other": "{{count}} файла изменено в этом раунде",
+      "review": "Просмотреть",
+      "showLess": "Показать меньше",
+      "showMore_one": "Показать ещё {{count}}",
+      "showMore_few": "Показать ещё {{count}}",
+      "showMore_many": "Показать ещё {{count}}",
+      "showMore_other": "Показать ещё {{count}}"
     }
   },
   "chatStatus": {
@@ -2142,6 +2154,7 @@
     "build": "Запустить сборку",
     "skip": "Пропустить",
     "buildFailed": "Не удалось запустить сборку",
+    "saveFailed": "Не удалось сохранить план",
     "emptyPlan": "(план пуст)",
     "edit": "Редактировать",
     "cancelEdit": "Отмена",

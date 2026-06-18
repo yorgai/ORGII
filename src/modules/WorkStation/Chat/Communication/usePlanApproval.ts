@@ -4,6 +4,12 @@ import { useTranslation } from "react-i18next";
 
 import { respondPlanApproval } from "@src/api/tauri/agent";
 import Message from "@src/components/Message";
+import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import {
+  persistEditedPlanContent,
+  resolvePlanMarkdownContent,
+  updatePendingPlanContent,
+} from "@src/engines/SessionCore/derived/planContentPersistence";
 import {
   derivePlanApprovalViewState,
   getPendingPlanAliases,
@@ -11,6 +17,7 @@ import {
   isPlanDisplayEvent,
   planAliasesContain,
 } from "@src/engines/SessionCore/derived/planDisplayEvents";
+import { FileService } from "@src/services/file";
 import { sessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultModelSelectionAtom } from "@src/store/session/creatorDefaultModelAtom";
 import {
@@ -42,6 +49,8 @@ export interface PlanApprovalState {
    * user view/preview overrides on.
    */
   pendingPlanId: string | null;
+  /** Absolute path of the active plan file, or null when unresolved. */
+  planPath: string | null;
   isPlanDoc: boolean;
   isPlanPending: boolean;
   isEditing: boolean;
@@ -54,6 +63,8 @@ export interface PlanApprovalState {
   setIsPreviewMode: (v: boolean) => void;
   setEditedContent: (v: string) => void;
   handleEditToggle: () => void;
+  /** Persist the edited plan and exit edit mode WITHOUT approving / building. */
+  handleSave: () => Promise<void>;
   handleBuild: () => Promise<void>;
 }
 
@@ -193,20 +204,34 @@ export function usePlanApproval({
   const planIdentity = isPlanDoc
     ? getPlanEventAliases(activePlanMessage!.event)
     : [];
-  const planRawContent =
-    asStringArg(planArgs?.["streamContent"]) ||
-    asStringArg(planArgs?.["content"]) ||
-    asStringArg(planResult?.["content"]);
 
   const approvalState = planSessionId
     ? approvalMap.get(planSessionId)
     : undefined;
+
+  const planRawContent = isPlanDoc
+    ? resolvePlanMarkdownContent(
+        activePlanMessage!.event,
+        approvalState?.current
+      )
+    : "";
+  const planPath =
+    asStringArg(planArgs?.["planPath"]) ||
+    asStringArg(planResult?.["planPath"]) ||
+    null;
+
   const planApprovalAliases = getPendingPlanAliases(approvalState?.current);
   const matchesCurrentPendingPlan = planIdentity.some((identity) =>
     planAliasesContain(planApprovalAliases, identity)
   );
-  const isPlanPending =
-    matchesCurrentPendingPlan && planViewState.currentSurfaceVisible;
+  // A plan that matches the session's pending approval is awaiting review and
+  // must be editable/buildable in the Agent Station preview. The earlier
+  // `currentSurfaceVisible` gate is a chat-composer concept (it stays false
+  // for a freshly-pending plan with no user reply after it), which wrongly
+  // disabled Edit/Save here even though the badge read "Ready for review".
+  // The dedicated preview surface owns the single pending plan, so matching
+  // the pending approval is the correct, sufficient condition (issue #28).
+  const isPlanPending = matchesCurrentPendingPlan;
   const pendingPlanId = currentPendingPlan
     ? currentPendingPlan.planRevisionId ||
       currentPendingPlan.toolCallId ||
@@ -224,6 +249,46 @@ export function usePlanApproval({
     }
     setIsEditing((prev) => !prev);
   }, [isEditing, planRawContent]);
+
+  const handleSave = useCallback(async () => {
+    if (!planSessionId || buildDisabled || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      await persistEditedPlanContent({
+        sessionId: planSessionId,
+        planPath,
+        pendingAliases: planApprovalAliases,
+        content: editedContent,
+        io: {
+          saveFile: (path, content) => FileService.save(path, content),
+          getEvents: (sessionId) => eventStoreProxy.getEvents(sessionId),
+          patchEvent: (id, args, sessionId) =>
+            eventStoreProxy.updateById(id, { args }, sessionId),
+          saveCache: (sessionId) => eventStoreProxy.saveToCache(sessionId),
+        },
+      });
+      setPendingPlanApprovals((prev) =>
+        updatePendingPlanContent(prev, planSessionId, editedContent)
+      );
+      setIsEditing(false);
+    } catch (err) {
+      Message.error(
+        err instanceof Error ? err.message : t("planDoc.saveFailed")
+      );
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  }, [
+    planSessionId,
+    buildDisabled,
+    planPath,
+    planApprovalAliases,
+    editedContent,
+    setPendingPlanApprovals,
+    t,
+  ]);
 
   const handleBuild = useCallback(async () => {
     if (!planSessionId || buildDisabled || submittingRef.current) return;
@@ -297,6 +362,7 @@ export function usePlanApproval({
   return {
     activePlanMessage,
     pendingPlanId,
+    planPath,
     isPlanDoc,
     isPlanPending,
     isEditing,
@@ -309,6 +375,7 @@ export function usePlanApproval({
     setIsPreviewMode,
     setEditedContent,
     handleEditToggle,
+    handleSave,
     handleBuild,
   };
 }

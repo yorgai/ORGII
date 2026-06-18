@@ -888,6 +888,14 @@
         "importReadFailed": "無法讀取 JSON 檔案。",
         "importFailed": "無法匯入 Session JSON。"
       }
+    },
+    "turnFiles": {
+      "filesChangedCount_one": "本輪變更了 {{count}} 個檔案",
+      "filesChangedCount_other": "本輪變更了 {{count}} 個檔案",
+      "review": "檢視",
+      "showLess": "收合",
+      "showMore_one": "顯示其餘 {{count}} 個",
+      "showMore_other": "顯示其餘 {{count}} 個"
     }
   },
   "chatStatus": {
@@ -2138,6 +2146,7 @@
     "build": "開始構建",
     "skip": "跳過",
     "buildFailed": "開始構建失敗",
+    "saveFailed": "儲存計畫失敗",
     "emptyPlan": "（計劃爲空）",
     "edit": "編輯",
     "cancelEdit": "取消",

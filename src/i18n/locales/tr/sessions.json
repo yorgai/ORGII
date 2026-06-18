@@ -884,6 +884,14 @@
         "importReadFailed": "JSON dosyası okunamadı.",
         "importFailed": "Session JSON içe aktarılamadı."
       }
+    },
+    "turnFiles": {
+      "filesChangedCount_one": "Bu turda {{count}} dosya değişti",
+      "filesChangedCount_other": "Bu turda {{count}} dosya değişti",
+      "review": "İncele",
+      "showLess": "Daha az göster",
+      "showMore_one": "{{count}} tane daha göster",
+      "showMore_other": "{{count}} tane daha göster"
     }
   },
   "chatStatus": {
@@ -2135,6 +2143,7 @@
     "build": "Build başlat",
     "skip": "Atla",
     "buildFailed": "Build başlatılamadı",
+    "saveFailed": "Plan kaydedilemedi",
     "emptyPlan": "(plan boş)",
     "edit": "Düzenle",
     "cancelEdit": "İptal",
