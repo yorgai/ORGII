@@ -17,7 +17,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
-import type { AppType } from "@src/engines/Simulator/types/appTypes";
+import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { NoTabsPlaceholder } from "@src/modules/WorkStation/shared";
 import { globalLayoutMethodAtom } from "@src/store/ui/uiAtom";
 
@@ -50,6 +50,8 @@ export const SimulatorSingleView: React.FC<SimulatorSingleViewProps> = ({
     hasSession && !displayContent && !isBootingEvent;
 
   const showRounded = !hideHeader && !isFullMode;
+  const showFloatingReplayControls =
+    hasSession && mainContentAppType && mainContentAppType !== AppType.DIFF;
 
   return (
     <div
@@ -68,7 +70,7 @@ export const SimulatorSingleView: React.FC<SimulatorSingleViewProps> = ({
         )}
       </div>
 
-      {hasSession && mainContentAppType && <FloatingReplayContainer />}
+      {showFloatingReplayControls && <FloatingReplayContainer />}
     </div>
   );
 };
