@@ -19,6 +19,11 @@ import { useTranslation } from "react-i18next";
 import { getToolIcon } from "@src/config/toolIcons";
 
 import {
+  OrgTaskDependencyBadge,
+  OrgTaskMetaRows,
+  OrgTaskOwnerChangedBadge,
+} from "../../OrgTaskBadges";
+import {
   EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES,
   EVENT_SNIPPET_INNER_PADDING_CLASS,
   EventBlockHeader,
@@ -276,23 +281,12 @@ function TaskListRow({ task }: { task: TaskUpdateCardData }) {
         <span className="min-w-0 flex-1 truncate" title={title}>
           {title}
         </span>
-        {task.ownerChanged && (
-          <span
-            className="shrink-0 rounded-full bg-primary-6/10 px-1.5 py-0.5 text-[10px] text-primary-6"
-            data-testid="org-task-card-owner-changed"
-          >
-            owner changed
-          </span>
-        )}
-        {dependencyCount > 0 && (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-fill-4 px-1.5 py-0.5 text-[10px] text-text-4">
-            <GitBranch size={10} /> {dependencyCount} deps
-          </span>
-        )}
+        {task.ownerChanged && <OrgTaskOwnerChangedBadge />}
+        <OrgTaskDependencyBadge count={dependencyCount} />
       </div>
 
       {hasMetaRows && (
-        <div className="mt-1 flex flex-wrap items-center gap-y-0.5 text-[13px] leading-normal [&>*+*]:relative [&>*+*]:ml-2 [&>*+*]:pl-2 [&>*+*]:before:absolute [&>*+*]:before:left-0 [&>*+*]:before:top-1/2 [&>*+*]:before:h-3 [&>*+*]:before:w-px [&>*+*]:before:-translate-y-1/2 [&>*+*]:before:bg-border-1">
+        <OrgTaskMetaRows>
           {task.owner && (
             <div
               className="flex min-w-0 items-center gap-2"
@@ -322,7 +316,7 @@ function TaskListRow({ task }: { task: TaskUpdateCardData }) {
               </span>
             </div>
           )}
-        </div>
+        </OrgTaskMetaRows>
       )}
     </div>
   );

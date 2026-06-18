@@ -8,6 +8,7 @@
 export {
   eventsAtom,
   eventCountAtom,
+  hasReplayableEventsAtom,
   eventStoreVersionAtom,
   editTruncationTimestampAtom,
   eventIndexAtom,

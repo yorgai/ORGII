@@ -937,6 +937,45 @@ fn real_tool_schemas_have_no_nullable_type_arrays() {
 }
 
 #[test]
+fn real_tool_schemas_have_no_null_enum_members() {
+    // Tools with `Option<Enum>` fields (e.g. `use_code_map`'s
+    // `kind: Option<CodeMapNodeKind>` and `language: Option<CodeMapLanguage>`)
+    // make schemars emit `"enum": [..variants, null]` alongside a nullable
+    // type array. moonshot/MiniMax/kimi reject the trailing `null` with HTTP
+    // 400 `enum value (<nil>) does not match any type in [string]` (GitHub #23).
+    // `params_schema` strips it at generation time and
+    // `assert_llm_compatible_schema` enforces it as a contract. Pin the real
+    // offender so a future optional-enum field that reintroduces a null is
+    // caught here rather than at runtime against a specific provider.
+    use crate::tools::traits::{assert_llm_compatible_schema, params_schema};
+
+    fn enum_has_null(value: &Value) -> bool {
+        match value {
+            Value::Object(map) => {
+                if let Some(Value::Array(members)) = map.get("enum") {
+                    if members.iter().any(|m| m.is_null()) {
+                        return true;
+                    }
+                }
+                map.values().any(enum_has_null)
+            }
+            Value::Array(items) => items.iter().any(enum_has_null),
+            _ => false,
+        }
+    }
+
+    let schema = params_schema::<crate::tools::impls::coding::code_map::CodeMapToolParams>();
+    assert!(
+        !enum_has_null(&schema),
+        "use_code_map schema must not contain null enum members \
+         (moonshot/MiniMax/kimi reject them): {schema}"
+    );
+    assert_llm_compatible_schema(&schema).unwrap_or_else(|err| {
+        panic!("use_code_map schema violates LLM contract: {err}\n{schema}")
+    });
+}
+
+#[test]
 fn llm_contract_rejects_tagged_enum_schema() {
     use crate::tools::traits::assert_llm_compatible_schema;
     use schemars::JsonSchema;

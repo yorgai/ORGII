@@ -167,6 +167,18 @@ impl SkillsLoader {
             self.scan_skills_dir(&workspace_skills_dir, "workspace", &mut skills);
         }
 
+        if self.load_workspace_resources {
+            for source_dir in self.default_workspace_skill_source_dirs() {
+                if source_dir.exists() {
+                    self.scan_supplemental_dir_recursive(
+                        &source_dir,
+                        "external-source",
+                        &mut skills,
+                    );
+                }
+            }
+        }
+
         if let Some(ref builtin_dir) = self.builtin_dir {
             if builtin_dir.exists() {
                 self.scan_supplemental_dir(builtin_dir, "builtin", &mut skills);
@@ -180,6 +192,16 @@ impl SkillsLoader {
         }
 
         skills
+    }
+
+    fn default_workspace_skill_source_dirs(&self) -> Vec<PathBuf> {
+        let Some(workspace_root) = self.workspace.parent() else {
+            return Vec::new();
+        };
+        vec![
+            workspace_root.join(".cursor").join("skills"),
+            workspace_root.join(".claude").join("skills"),
+        ]
     }
 
     fn apply_disabled_skills(&self, skills: &mut [SkillInfo]) {
@@ -214,6 +236,16 @@ impl SkillsLoader {
             }
         }
 
+        if self.load_workspace_resources {
+            for source_dir in self.default_workspace_skill_source_dirs() {
+                if let Some(contents) =
+                    self.load_skill_from_source_dir(&source_dir, name, "external-source")
+                {
+                    return Some(contents);
+                }
+            }
+        }
+
         if let Some(ref builtin_dir) = self.builtin_dir {
             let builtin_path = builtin_dir.join(name).join("SKILL.md");
             if builtin_path.exists() {
@@ -239,25 +271,10 @@ impl SkillsLoader {
         }
 
         for source_dir in &self.extra_source_dirs {
-            if let Some(source_path) = self.find_skill_file_recursive(source_dir, name) {
-                match fs::read_to_string(&source_path) {
-                    Ok(contents) => {
-                        let meta = self.parse_skill_metadata(&contents);
-                        if self.skill_metadata_applies_to_agent(&meta) {
-                            return Some(contents);
-                        }
-                        return None;
-                    }
-                    Err(err) => {
-                        tracing::warn!(
-                            "Failed to read agent-source skill {} at {}: {}",
-                            name,
-                            source_path.display(),
-                            err
-                        );
-                        return None;
-                    }
-                }
+            if let Some(contents) =
+                self.load_skill_from_source_dir(source_dir, name, "agent-source")
+            {
+                return Some(contents);
             }
         }
 
@@ -538,6 +555,30 @@ impl SkillsLoader {
             missing_env: m_env,
             bundled_files,
         });
+    }
+
+    fn load_skill_from_source_dir(&self, dir: &Path, name: &str, source: &str) -> Option<String> {
+        let source_path = self.find_skill_file_recursive(dir, name)?;
+        match fs::read_to_string(&source_path) {
+            Ok(contents) => {
+                let meta = self.parse_skill_metadata(&contents);
+                if self.skill_metadata_applies_to_agent(&meta) {
+                    Some(contents)
+                } else {
+                    None
+                }
+            }
+            Err(err) => {
+                tracing::warn!(
+                    "Failed to read {} skill {} at {}: {}",
+                    source,
+                    name,
+                    source_path.display(),
+                    err
+                );
+                None
+            }
+        }
     }
 
     fn find_skill_file_recursive(&self, dir: &Path, name: &str) -> Option<PathBuf> {
@@ -892,6 +933,50 @@ mod include_filter_tests {
         );
 
         let loader = SkillsLoader::new(&ws).with_load_workspace_resources(false);
+
+        assert!(loader.list_skills().is_empty());
+    }
+
+    #[test]
+    fn workspace_source_skills_are_auto_loaded() {
+        let repo = temp_workspace("workspace_sources_repo");
+        let cursor_skill_dir = repo.join(".cursor/skills/cursor-audit");
+        fs::create_dir_all(&cursor_skill_dir).expect("mkdir cursor skill");
+        fs::write(
+            cursor_skill_dir.join("SKILL.md"),
+            skill_doc("cursor-audit", "Cursor repo skill"),
+        )
+        .expect("write cursor skill");
+
+        let loader = SkillsLoader::new(&repo.join(".orgii"));
+        let names = loader
+            .list_skills()
+            .into_iter()
+            .map(|skill| (skill.name, skill.source))
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            names,
+            vec![("cursor-audit".to_string(), "external-source".to_string())]
+        );
+        assert!(loader
+            .load_skill("cursor-audit")
+            .unwrap_or_default()
+            .contains("Cursor repo skill"));
+    }
+
+    #[test]
+    fn workspace_toggle_skips_workspace_source_skills() {
+        let repo = temp_workspace("workspace_sources_toggle");
+        let cursor_skill_dir = repo.join(".cursor/skills/cursor-audit");
+        fs::create_dir_all(&cursor_skill_dir).expect("mkdir cursor skill");
+        fs::write(
+            cursor_skill_dir.join("SKILL.md"),
+            skill_doc("cursor-audit", "Cursor repo skill"),
+        )
+        .expect("write cursor skill");
+
+        let loader = SkillsLoader::new(&repo.join(".orgii")).with_load_workspace_resources(false);
 
         assert!(loader.list_skills().is_empty());
     }

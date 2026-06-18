@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useMounted } from "@src/hooks/lifecycle/useMounted";
 import { createLogger } from "@src/hooks/logger";
+import { mergeInstalledSkills } from "@src/hooks/skills/installedSkillsMerge";
 import {
   installedSkillsAtom,
   installedSkillsLoadingAtom,
@@ -28,9 +29,21 @@ const log = createLogger("SkillsHub");
 interface UseSkillsHubOptions {
   /** When false, skips the initial installed-skills fetch (no Tauri IPC on mount). */
   enabled?: boolean;
+  /**
+   * Repo/workspace paths to query ALONGSIDE the global scope, on every load
+   * and refresh. Repo-scoped skills live in `{repo}/.orgii/skills/` and are
+   * only returned when their repo path is queried, so the Integrations page
+   * passes the open repos here to keep workspace-imported skills visible
+   * (not just immediately after import). Other consumers omit this and stay
+   * global-only. Callers should memoize this array to keep the load stable.
+   */
+  workspacePaths?: string[];
 }
 
-export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
+export function useSkillsHub({
+  enabled = true,
+  workspacePaths,
+}: UseSkillsHubOptions = {}) {
   const [installedSkills, setInstalledSkills] = useAtom(installedSkillsAtom);
   const [installedLoading, setInstalledLoading] = useAtom(
     installedSkillsLoadingAtom
@@ -46,30 +59,76 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
 
   const mountedRef = useMounted();
 
-  const listInstalledSkills = useCallback(async () => {
-    return invoke<InstalledSkill[]>("skills_list", {
-      workspacePath: null,
-    });
+  // Serialize the configured workspace paths into a stable primitive so the
+  // load effect and refresh callbacks don't churn on each render when the
+  // caller passes a fresh array reference. Reconstructed where needed.
+  const workspacePathsKey = (workspacePaths ?? []).join("\0");
+
+  const listInstalledSkills = useCallback(async (workspacePaths?: string[]) => {
+    // Always query the global scope; additionally query any workspace/repo
+    // paths so freshly-imported repo-scoped skills (written to
+    // `{repo}/.orgii/skills/`) appear in the list — `skills_list(null)` only
+    // returns global + builtin skills.
+    const tasks: Promise<InstalledSkill[]>[] = [
+      invoke<InstalledSkill[]>("skills_list", { workspacePath: null }),
+    ];
+    for (const path of workspacePaths ?? []) {
+      if (!path) continue;
+      tasks.push(
+        invoke<InstalledSkill[]>("skills_list", { workspacePath: path })
+      );
+    }
+
+    const results = await Promise.allSettled(tasks);
+    const lists: InstalledSkill[][] = [];
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        lists.push(result.value);
+      } else {
+        log.error("[SkillsHub] skills_list failed:", result.reason);
+      }
+    }
+    return mergeInstalledSkills(lists);
   }, []);
 
-  const refreshInstalled = useCallback(async () => {
-    setInstalledLoading(true);
-    try {
-      const result = await listInstalledSkills();
-      setInstalledSkills(result);
-    } catch (err) {
-      log.error("[SkillsHub] Failed to list installed skills:", err);
-    } finally {
-      setInstalledLoading(false);
-    }
-  }, [listInstalledSkills, setInstalledSkills, setInstalledLoading]);
+  const refreshInstalled = useCallback(
+    async (extraWorkspacePaths?: string[]) => {
+      // Always re-query the configured workspace scopes (so a refresh never
+      // narrows the list back to global-only), unioned with any extra paths
+      // a caller passes (e.g. the just-imported repo paths).
+      const configuredPaths = workspacePathsKey
+        ? workspacePathsKey.split("\0")
+        : [];
+      const scopePaths = Array.from(
+        new Set([...configuredPaths, ...(extraWorkspacePaths ?? [])])
+      );
+      setInstalledLoading(true);
+      try {
+        const result = await listInstalledSkills(scopePaths);
+        setInstalledSkills(result);
+      } catch (err) {
+        log.error("[SkillsHub] Failed to list installed skills:", err);
+      } finally {
+        setInstalledLoading(false);
+      }
+    },
+    [
+      listInstalledSkills,
+      workspacePathsKey,
+      setInstalledSkills,
+      setInstalledLoading,
+    ]
+  );
 
   const refreshInstalledAfterDelete = useCallback(
     async (deletedName: string) => {
+      // Query the same scopes the list is displaying so the re-fetch doesn't
+      // drop repo-scoped skills while polling for the deleted one to vanish.
+      const scopePaths = workspacePathsKey ? workspacePathsKey.split("\0") : [];
       const retryDelaysMs = [100, 300, 700];
       for (const delayMs of retryDelaysMs) {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
-        const result = await listInstalledSkills();
+        const result = await listInstalledSkills(scopePaths);
         if (!result.some((skill) => skill.name === deletedName)) {
           setInstalledSkills(result);
           return;
@@ -79,7 +138,7 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
         current.filter((skill) => skill.name !== deletedName)
       );
     },
-    [listInstalledSkills, setInstalledSkills]
+    [listInstalledSkills, workspacePathsKey, setInstalledSkills]
   );
 
   useEffect(() => {
@@ -88,11 +147,12 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
       return;
     }
     let cancelled = false;
+    const scopePaths = workspacePathsKey ? workspacePathsKey.split("\0") : [];
 
     const load = async () => {
       setInstalledLoading(true);
       try {
-        const result = await listInstalledSkills();
+        const result = await listInstalledSkills(scopePaths);
         if (!cancelled) setInstalledSkills(result);
       } catch (err) {
         if (!cancelled)
@@ -106,7 +166,13 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, listInstalledSkills, setInstalledLoading, setInstalledSkills]);
+  }, [
+    enabled,
+    listInstalledSkills,
+    workspacePathsKey,
+    setInstalledLoading,
+    setInstalledSkills,
+  ]);
 
   const fetchDetail = useCallback(async (slug: string) => {
     setDetailLoading(true);

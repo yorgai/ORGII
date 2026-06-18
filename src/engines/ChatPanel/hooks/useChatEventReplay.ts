@@ -8,7 +8,8 @@
  * User manually controls which tab they're viewing.
  */
 import dayjs from "dayjs";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue } from "jotai";
+import { useAtomCallback } from "jotai/utils";
 import { useCallback } from "react";
 
 import { REPLAY_CONFIG } from "@src/config/workspace/replayConfig";
@@ -16,6 +17,7 @@ import {
   currentEventIdAtom,
   eventIndexAtom,
   eventSecondaryLookupAtom,
+  hasReplayableEventsAtom,
   replayBarValueAtom,
   replayModeAtom,
   replayTimeRangeAtom,
@@ -57,26 +59,25 @@ export interface UseChatEventReplayReturn {
  * filtered from chat but still need to be navigable in the simulator.
  */
 export function useChatEventReplay(): UseChatEventReplayReturn {
-  const sortedEvents = useAtomValue(sortedEventsAtom);
-  const eventIndex = useAtomValue(eventIndexAtom);
-  const eventSecondaryLookup = useAtomValue(eventSecondaryLookupAtom);
-  const timeRange = useAtomValue(replayTimeRangeAtom);
-  const setCurrentEventId = useSetAtom(currentEventIdAtom);
-  const setReplayBarValue = useSetAtom(replayBarValueAtom);
-  const setReplayTimeRange = useSetAtom(replayTimeRangeAtom);
-  const setReplayMode = useSetAtom(replayModeAtom);
-  const setSelectedApp = useSetAtom(simulatorSelectedAppAtom);
-  const setFollowAppLock = useSetAtom(simulatorFollowAppLockAtom);
-  const setStationMode = useSetAtom(stationModeAtom);
+  // Only subscribe to a boolean flag that flips once (empty → non-empty).
+  // Reading the live event/replay atoms here would re-render every subscriber
+  // (every chat block via `useBlockLocate`) on each streamed event.
+  const canReplay = useAtomValue(hasReplayableEventsAtom);
 
-  const canReplay = sortedEvents.length > 0;
-
-  const replayEventById = useCallback(
-    (eventId: string) => {
+  // Read the live atoms lazily at click time via the jotai store instead of
+  // subscribing. This keeps `replayEventById` stable and decouples chat block
+  // re-renders from the streaming event list / replay time range.
+  const replayEventById = useAtomCallback(
+    useCallback((get, set, eventId: string) => {
       if (!eventId) {
         log.warn("[ChatEventReplay] No event_id provided");
         return;
       }
+
+      const sortedEvents = get(sortedEventsAtom);
+      const eventIndex = get(eventIndexAtom);
+      const eventSecondaryLookup = get(eventSecondaryLookupAtom);
+      const timeRange = get(replayTimeRangeAtom);
 
       // Extract original ID if prefixed (e.g., "group:stageoutput:intake:uuid")
       let lookupId = eventId;
@@ -109,13 +110,13 @@ export function useChatEventReplay(): UseChatEventReplayReturn {
       }
       const resolvedEventId = event.id;
 
-      setStationMode("agent-station");
+      set(stationModeAtom, "agent-station");
 
       // Set event first — this is the primary navigation action.
       // Order matters: replayMode must be "replay" before currentEventId
       // so appendEventsAtom (which checks mode) doesn't auto-follow.
-      setReplayMode("replay");
-      setCurrentEventId(resolvedEventId);
+      set(replayModeAtom, "replay");
+      set(currentEventIdAtom, resolvedEventId);
 
       // Clear user-forced app filters so locating a chat event follows the
       // clicked event across apps instead of staying restricted to a prior
@@ -131,8 +132,8 @@ export function useChatEventReplay(): UseChatEventReplayReturn {
         );
       }
 
-      setSelectedApp(null);
-      setFollowAppLock(null);
+      set(simulatorSelectedAppAtom, null);
+      set(simulatorFollowAppLockAtom, null);
 
       // Compute bar position from the existing time range when valid,
       // otherwise derive it from sortedEvents (already O(1) sorted).
@@ -150,7 +151,7 @@ export function useChatEventReplay(): UseChatEventReplayReturn {
         if (startTime === endTime) {
           endTime = dayjs(endTime).add(1, "minute").toISOString();
         }
-        setReplayTimeRange({ start: startTime, end: endTime });
+        set(replayTimeRangeAtom, { start: startTime, end: endTime });
       }
 
       const startMs = dayjs(startTime).valueOf();
@@ -161,24 +162,12 @@ export function useChatEventReplay(): UseChatEventReplayReturn {
         const eventMs = dayjs(event.createdAt).valueOf();
         const barValue =
           ((eventMs - startMs) / timeRangeMs) * REPLAY_CONFIG.MAX_VALUE;
-        setReplayBarValue(
+        set(
+          replayBarValueAtom,
           Math.max(0, Math.min(REPLAY_CONFIG.MAX_VALUE, barValue))
         );
       }
-    },
-    [
-      sortedEvents,
-      eventIndex,
-      eventSecondaryLookup,
-      timeRange,
-      setCurrentEventId,
-      setReplayBarValue,
-      setReplayTimeRange,
-      setReplayMode,
-      setSelectedApp,
-      setFollowAppLock,
-      setStationMode,
-    ]
+    }, [])
   );
 
   return {

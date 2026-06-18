@@ -281,9 +281,25 @@ fn apply_skill_import(
             .map_err(|err| format!("Failed to create target skill directory: {}", err))?;
     }
 
-    if selection.source_path.is_dir() {
+    let source_bundle_dir = if selection
+        .source_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        == Some("SKILL.md")
+    {
+        selection.source_path.parent()
+    } else {
+        None
+    };
+
+    if let Some(source_dir) = source_bundle_dir.or_else(|| {
+        selection
+            .source_path
+            .is_dir()
+            .then_some(selection.source_path.as_path())
+    }) {
         // Bundled skill — copy the whole directory tree.
-        copy_dir_recursive(&selection.source_path, &target_root)?;
+        copy_dir_recursive(source_dir, &target_root)?;
         // Make sure SKILL.md ended up where we expect; if the source
         // dir was structured around a different filename we surface
         // that as an error rather than silently produce a half-broken
@@ -291,7 +307,7 @@ fn apply_skill_import(
         if !target_skill_md.exists() {
             return Err(format!(
                 "Source directory '{}' does not contain a SKILL.md",
-                selection.source_path.display()
+                source_dir.display()
             ));
         }
     } else {

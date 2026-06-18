@@ -13,7 +13,8 @@ use crate::providers::registry::provider_id;
 use crate::providers::safe_truncate::safe_truncate_utf8;
 use crate::providers::traits::{finish_reason as finish, LLMResponse, ProviderError};
 use crate::providers::wire_sanitize::{
-    sanitize_deepseek_messages, sanitize_openai_compat_messages, strip_tool_schema_cache_scopes,
+    coalesce_system_messages_to_front, sanitize_deepseek_messages, sanitize_openai_compat_messages,
+    strip_tool_schema_cache_scopes,
 };
 use crate::utils::http_retry::extract_retry_after_secs;
 
@@ -38,6 +39,13 @@ pub(super) async fn run_chat(
         sanitize_deepseek_messages(&sanitized_messages)
     } else {
         super::super::wire_expand::expand_tool_images_for_openai_wire(&sanitized_messages)
+    };
+    // vLLM strictly requires a single `system` message at index 0; ORGII emits
+    // several inline system messages, so coalesce them on the vLLM path only.
+    let wire_messages = if this.provider_spec.name == provider_id::VLLM {
+        coalesce_system_messages_to_front(wire_messages)
+    } else {
+        wire_messages
     };
 
     info!(

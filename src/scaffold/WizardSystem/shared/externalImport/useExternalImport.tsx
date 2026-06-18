@@ -96,8 +96,13 @@ interface UseExternalImportOptions {
   cursorRepos?: CursorRepo[];
   /** Called after a successful batch apply so the parent can dismiss. */
   onCompleted: () => void;
-  /** Called after the catalog refreshes so the parent can reload its lists. */
-  onRefresh?: () => void | Promise<void>;
+  /**
+   * Called after a successful apply so the parent can reload its lists.
+   * Receives the distinct destination repo paths that were imported into
+   * (repo-scoped imports), so the parent can refresh those workspace scopes
+   * in addition to the global one. Global-only imports pass an empty array.
+   */
+  onRefresh?: (importedRepoPaths: string[]) => void | Promise<void>;
   /** Localized column labels (kind-specific item header). */
   labels: ExternalImportColumnLabels;
 }
@@ -199,7 +204,15 @@ export function useExternalImport({
   );
 
   useEffect(() => {
-    if (!active) return;
+    if (!active) {
+      // The panel/wizard closed (or never opened). Reset the detection
+      // loading flag so a previously in-flight detection that was superseded
+      // here doesn't leave the import UI stuck on a spinner — the `.finally`
+      // below skips its reset when `cancelled` is true, which would otherwise
+      // require a full page refresh to recover.
+      setImportLoading(false);
+      return;
+    }
 
     let cancelled = false;
     setImportLoading(true);
@@ -315,6 +328,17 @@ export function useExternalImport({
       });
     }
 
+    // Distinct repo destinations touched by this batch, so the parent can
+    // refresh those workspace scopes (repo-scoped skills only show up when
+    // their repo path is queried). Empty for global-only imports.
+    const importedRepoPaths = Array.from(
+      new Set(
+        selections
+          .map((selection) => selection.targetRepoPath)
+          .filter((path): path is string => Boolean(path))
+      )
+    );
+
     setImporting(true);
     setImportError(null);
     setImportErrors([]);
@@ -333,13 +357,13 @@ export function useExternalImport({
         );
         if (failures.length < selections.length) {
           setSelected(new Set());
-          await onRefresh?.();
+          await onRefresh?.(importedRepoPaths);
           setDetectionRefreshKey((current) => current + 1);
         }
         return;
       }
       setSelected(new Set());
-      await onRefresh?.();
+      await onRefresh?.(importedRepoPaths);
       setDetectionRefreshKey((current) => current + 1);
       onCompleted();
     } catch (err: unknown) {

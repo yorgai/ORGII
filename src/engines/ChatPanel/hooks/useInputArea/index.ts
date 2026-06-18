@@ -48,6 +48,7 @@ import {
   writeImageDraft,
 } from "../../InputArea/utils/imageDraftCache";
 import { applyParsedContent } from "../../InputArea/utils/pillContentParser";
+import { resolveDraftRestoreAction } from "./draftRestore";
 import type { UseInputAreaOptions, UseInputAreaReturn } from "./types";
 import { useAtMention } from "./useAtMention";
 import { useCiteCode } from "./useCiteCode";
@@ -151,6 +152,13 @@ export function useInputArea(
   const state = useInputAreaState();
   const { isDark } = useCurrentTheme();
   const citeCode = useCiteCode();
+
+  // Mirror the current slash/@ menu open state into a ref so the draft-restore
+  // effect can avoid clobbering live input WITHOUT re-running whenever a menu
+  // toggles. When a menu is open the user is actively typing into a mounted
+  // editor, so a late restore must not clear/re-seed it (see draftRestore.ts).
+  const mentionMenuOpenRef = useRef(false);
+  mentionMenuOpenRef.current = state.showSlashMenu || state.showContextMenu;
 
   // ============================================
   // Per-session Draft Persistence (P3)
@@ -360,36 +368,51 @@ export function useInputArea(
   // editor — the optimistic upsert in `useSessionPatch` writes back
   // into `sessionByIdAtom`) leave the live editor alone.
   useEffect(() => {
-    if (!draftSessionId) {
-      seededSessionRef.current = null;
-      return;
-    }
-    if (seededSessionRef.current === draftSessionId) return;
     const editor = refs.composerInputRef.current;
-    if (!editor) return;
-    if (!persistedDraft) {
-      editor.clear();
-      refs.setHasContent(false);
-      seededSessionRef.current = draftSessionId;
-      return;
-    }
+    const skipReason = persistedDraft
+      ? getDraftRestoreSkipReason(persistedDraft)
+      : null;
+    const action = resolveDraftRestoreAction({
+      draftSessionId,
+      seededSessionId: seededSessionRef.current,
+      hasEditor: Boolean(editor),
+      mentionMenuOpen: mentionMenuOpenRef.current,
+      persistedDraft: persistedDraft ?? null,
+      skipReason,
+    });
 
-    const skipReason = getDraftRestoreSkipReason(persistedDraft);
-    if (skipReason) {
-      logger.warn("skipping persisted draft restore", {
-        draftSessionId,
-        persistedDraftLength: persistedDraft.length,
-        reason: skipReason,
-      });
-      editor.clear();
-      refs.setHasContent(false);
-      seededSessionRef.current = draftSessionId;
-      return;
+    switch (action) {
+      case "reset-seed":
+        seededSessionRef.current = null;
+        return;
+      case "skip":
+      case "wait":
+        return;
+      case "skip-open-menu":
+        // User is mid slash/@ interaction — do not clobber live input.
+        // Mark seeded so a later render doesn't re-seed and close the menu.
+        seededSessionRef.current = draftSessionId;
+        return;
+      case "clear":
+        if (skipReason) {
+          logger.warn("skipping persisted draft restore", {
+            draftSessionId,
+            persistedDraftLength: persistedDraft?.length ?? 0,
+            reason: skipReason,
+          });
+        }
+        editor?.clear();
+        refs.setHasContent(false);
+        seededSessionRef.current = draftSessionId;
+        return;
+      case "restore":
+        if (editor && persistedDraft) {
+          applyParsedContent(editor, persistedDraft);
+          refs.setHasContent(true);
+          seededSessionRef.current = draftSessionId;
+        }
+        return;
     }
-
-    applyParsedContent(editor, persistedDraft);
-    refs.setHasContent(true);
-    seededSessionRef.current = draftSessionId;
   }, [draftSessionId, persistedDraft, refs]);
 
   const isInputEmpty = useCallback(() => {

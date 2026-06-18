@@ -426,3 +426,22 @@ export const eventCountAtom = atom<number>((get) => {
   return snap?.eventCount ?? 0;
 });
 eventCountAtom.debugLabel = "session/eventCount";
+
+/**
+ * Boolean "is there anything to replay?" flag.
+ *
+ * Derived from `sortedEventsAtom` (NOT `eventCountAtom`) so it exactly matches
+ * the legacy `sortedEvents.length > 0` semantics used for `canReplay`. The two
+ * diverge during live streaming: `eventCount` rises monotonically while
+ * `sortedSimulatorEvents` is omitted from streaming snapshots (so
+ * `sortedEventsAtom` is empty mid-stream). Using `sortedEventsAtom` keeps
+ * replay availability correct.
+ *
+ * Although this recomputes on every append, the boolean output only flips once
+ * (empty → non-empty), so jotai's value-equality bail-out means subscribers
+ * (e.g. every chat block via `useChatEventReplay`) do NOT re-render per event.
+ */
+export const hasReplayableEventsAtom = atom<boolean>(
+  (get) => get(sortedEventsAtom).length > 0
+);
+hasReplayableEventsAtom.debugLabel = "session/hasReplayableEvents";

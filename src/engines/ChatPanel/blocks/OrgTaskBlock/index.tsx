@@ -6,7 +6,7 @@
  * Reuses TaskCard's CSS class names and KanbanBoard utilities for visual
  * consistency with the Kanban board.
  */
-import { CheckCircle2, CircleDot, GitBranch, PlayCircle } from "lucide-react";
+import { CheckCircle2, CircleDot, PlayCircle } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +14,11 @@ import { getToolIconComponent } from "@src/config/toolIcons";
 import { PriorityIndicator } from "@src/features/KanbanBoard/utils/priority";
 import { formatSmartDateTime } from "@src/util/data/formatters/date";
 
+import {
+  OrgTaskDependencyBadge,
+  OrgTaskMetaRows,
+  OrgTaskOwnerChangedBadge,
+} from "../OrgTaskBadges";
 import {
   EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES,
   EventBlockHeader,
@@ -188,19 +193,8 @@ function CompactTaskCard({
           {getStatusIcon(status)}
           <span className="min-w-0 truncate">{title}</span>
         </div>
-        {ownerChanged && (
-          <span
-            className="shrink-0 rounded-full bg-primary-6/10 px-1.5 py-0.5 text-[10px] text-primary-6"
-            data-testid="org-task-card-owner-changed"
-          >
-            owner changed
-          </span>
-        )}
-        {dependencyCount > 0 && (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-fill-4 px-1.5 py-0.5 text-[10px] text-text-4">
-            <GitBranch size={10} /> {dependencyCount} deps
-          </span>
-        )}
+        {ownerChanged && <OrgTaskOwnerChangedBadge />}
+        <OrgTaskDependencyBadge count={dependencyCount} />
       </div>
 
       {/* Description */}
@@ -212,7 +206,7 @@ function CompactTaskCard({
 
       {/* Meta rows: Assigned to / Updated at / Status — inline with vertical separators when there is room, wraps to multiple lines otherwise. */}
       {hasMetaRows && (
-        <div className="mt-1 flex flex-wrap items-center gap-y-0.5 text-[13px] leading-normal [&>*+*]:relative [&>*+*]:ml-2 [&>*+*]:pl-2 [&>*+*]:before:absolute [&>*+*]:before:left-0 [&>*+*]:before:top-1/2 [&>*+*]:before:h-3 [&>*+*]:before:w-px [&>*+*]:before:-translate-y-1/2 [&>*+*]:before:bg-border-1">
+        <OrgTaskMetaRows>
           {showAssignedRow && (
             <div
               className="flex min-w-0 items-center gap-2"
@@ -264,7 +258,7 @@ function CompactTaskCard({
               </span>
             </div>
           )}
-        </div>
+        </OrgTaskMetaRows>
       )}
     </div>
   );
