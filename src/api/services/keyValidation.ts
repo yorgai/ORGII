@@ -52,6 +52,11 @@ export type {
 
 export type { ModelAliasInfo } from "@src/api/types/keys";
 
+function cleanOptionalString(value?: string): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 // ============================================================================
 // Validation
 // ============================================================================
@@ -71,10 +76,10 @@ export async function validateKey(
 ): Promise<ValidationResult> {
   return rpc.validation.validateKey({
     agentType,
-    apiKey,
-    baseUrl: baseUrl ?? null,
-    sessionToken: sessionToken ?? null,
-    testModel: testModel ?? null,
+    apiKey: apiKey.trim(),
+    baseUrl: cleanOptionalString(baseUrl),
+    sessionToken: cleanOptionalString(sessionToken),
+    testModel: cleanOptionalString(testModel),
   });
 }
 
@@ -89,9 +94,10 @@ export async function testModelAvailability(
   agentType: ModelType
 ): Promise<{ available: boolean; message: string }> {
   return rpc.validation.testModelAvailability({
-    apiKey,
-    baseUrl,
-    model,
+    // Trim all incoming string parameters
+    apiKey: apiKey.trim(),
+    baseUrl: baseUrl.trim(),
+    model: model.trim(),
     agentType,
   });
 }
@@ -103,7 +109,7 @@ export async function fetchKeyQuota(
 ): Promise<QuotaInfo> {
   return rpc.validation.fetchKeyQuota({
     agentType,
-    apiKey,
+    apiKey: apiKey.trim(),
   });
 }
 
