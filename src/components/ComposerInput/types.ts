@@ -82,6 +82,8 @@ export interface ComposerInputProps {
   onSlashCommandClose?: () => void;
   /** Keyboard handler for the slash-trigger dropdown */
   onKeyDownForSlashDropdown?: (event: KeyboardEvent) => boolean;
+  /** Called when the editable surface receives a pointer down. */
+  onInputMouseDown?: () => void;
   /**
    * Slash behavior: both modes open wherever `/` is typed, like @ mentions.
    * The mode is kept so consumers can distinguish command vs context surfaces.

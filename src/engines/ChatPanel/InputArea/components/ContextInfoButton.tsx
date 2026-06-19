@@ -40,7 +40,6 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
     const { t } = useTranslation();
     const {
       percentage,
-      clampedPercentage,
       tokenLabel,
       maxTokens,
       contextUsage,

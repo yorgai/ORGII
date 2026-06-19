@@ -21,6 +21,7 @@ import {
   DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
+import FileTreePreview from "@src/components/FileTreePreview";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
 import { useMouseMoved } from "@src/hooks/ui/useMouseMoved";
 
@@ -40,7 +41,6 @@ import { useKeyboard } from "./useKeyboard";
 
 const PANEL_WIDTH = 280;
 const MAX_PANEL_HEIGHT = 300;
-const MAX_SKILLS_SECTION_HEIGHT = 200;
 const OUTSIDE_CLICK_GRACE_MS = 120;
 
 const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
@@ -81,6 +81,15 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   });
 
   const [highlightIndex, setHighlightIndex] = useState(0);
+  const activeEntry = entries.find(
+    (entry) => "flatIndex" in entry && entry.flatIndex === highlightIndex
+  );
+  const activeSkillItem =
+    activeEntry?.kind === "item" &&
+    activeEntry.item.category === "skill" &&
+    activeEntry.item.skillPath
+      ? activeEntry.item
+      : null;
   const [keyboardNavigated, setKeyboardNavigated] = useState(!isHeaderMode);
   const [openFlyout, setOpenFlyout] = useState<OpenFlyoutState | null>(null);
   const [flyoutHighlightIndex, setFlyoutHighlightIndex] = useState(0);
@@ -250,6 +259,15 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
       className="fixed z-[99999] flex flex-col gap-2"
       style={portalStyle}
     >
+      {activeSkillItem?.skillPath && (
+        <div
+          className="absolute left-full top-0 ml-2"
+          style={{ pointerEvents: "auto" }}
+        >
+          <FileTreePreview path={activeSkillItem.skillPath} itemType="file" />
+        </div>
+      )}
+
       {/* Main panel */}
       <div
         ref={listRef}
@@ -401,33 +419,6 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
                     );
                   }}
                 />
-              );
-            }
-
-            if (entry.kind === "skill-items-group") {
-              return (
-                <div
-                  key="skills-list"
-                  className="scrollbar-overlay overflow-y-auto"
-                  style={{ maxHeight: MAX_SKILLS_SECTION_HEIGHT }}
-                >
-                  {entry.items.map(({ item, flatIndex }) => (
-                    <SlashItemRow
-                      key={`${item.category}-${item.source}-${item.name}`}
-                      item={item}
-                      isActive={
-                        keyboardNavigated && flatIndex === highlightIndex
-                      }
-                      onMouseEnter={() => {
-                        if (!mouseMovedRef.current) return;
-                        setKeyboardNavigated(false);
-                        setHighlightIndex(flatIndex);
-                        setOpenFlyout(null);
-                      }}
-                      onClick={() => onSelect(item)}
-                    />
-                  ))}
-                </div>
               );
             }
 

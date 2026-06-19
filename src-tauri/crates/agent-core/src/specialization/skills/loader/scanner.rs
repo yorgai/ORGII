@@ -11,6 +11,26 @@ use super::types::{DescriptionQuality, SkillInfo, SkillListingEntry, SkillMetada
 use crate::utils::swr_cache::SwrCache;
 
 const SKILL_SCAN_CACHE_TTL: Duration = Duration::from_secs(2);
+const DISCOVERED_SKILL_ROOT_MAX_DEPTH: usize = 4;
+const DISCOVERED_SKILL_ROOT_MAX_ENTRIES: usize = 500;
+const IGNORED_HIDDEN_SKILL_ROOTS: &[&str] = &[
+    ".git",
+    ".hg",
+    ".svn",
+    ".cache",
+    ".cargo",
+    ".rustup",
+    ".npm",
+    ".pnpm-store",
+    ".yarn",
+    ".bun",
+    ".venv",
+    ".vscode",
+    ".idea",
+    ".vs",
+    ".next",
+    ".turbo",
+];
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct SkillScanKey {
@@ -195,13 +215,111 @@ impl SkillsLoader {
     }
 
     fn default_workspace_skill_source_dirs(&self) -> Vec<PathBuf> {
-        let Some(workspace_root) = self.workspace.parent() else {
-            return Vec::new();
-        };
-        vec![
+        let is_orgii_workspace = self
+            .workspace
+            .file_name()
+            .is_some_and(|name| name == ".orgii");
+        let workspace_root = is_orgii_workspace
+            .then(|| self.workspace.parent())
+            .flatten()
+            .unwrap_or(&self.workspace);
+        let is_home_root = dirs::home_dir()
+            .as_deref()
+            .is_some_and(|home| workspace_root == home);
+        let mut dirs = vec![
             workspace_root.join(".cursor").join("skills"),
             workspace_root.join(".claude").join("skills"),
-        ]
+            workspace_root.join(".codex").join("skills"),
+            workspace_root.join(".opencode").join("skills"),
+            workspace_root.join(".gemini").join("skills"),
+            workspace_root.join(".agents").join("skills"),
+        ];
+        if is_home_root {
+            dirs.push(workspace_root.join(".cursor").join("skills-cursor"));
+            dirs.push(workspace_root.join(".hermes").join("skills"));
+            dirs.push(workspace_root.join(".openclaw").join("skills"));
+        } else if is_orgii_workspace {
+            dirs.push(workspace_root.join("skills"));
+        }
+        dirs.extend(self.discover_skill_source_dirs(workspace_root, is_home_root));
+        dirs.sort();
+        dirs.dedup();
+        dirs
+    }
+
+    fn discover_skill_source_dirs(&self, root: &Path, include_home_roots: bool) -> Vec<PathBuf> {
+        let Ok(entries) = fs::read_dir(root) else {
+            return Vec::new();
+        };
+        entries
+            .filter_map(Result::ok)
+            .filter_map(|entry| {
+                let file_type = entry.file_type().ok()?;
+                if !file_type.is_dir() {
+                    return None;
+                }
+                let name = entry.file_name();
+                let name = name.to_str()?;
+                if name == "skills" {
+                    return (!include_home_roots && self.skill_root_has_skill_md(&entry.path()))
+                        .then(|| entry.path());
+                }
+                if !include_home_roots
+                    && (!name.starts_with('.') || IGNORED_HIDDEN_SKILL_ROOTS.contains(&name))
+                {
+                    return None;
+                }
+                if include_home_roots
+                    && (!name.starts_with('.')
+                        || name == ".orgii"
+                        || IGNORED_HIDDEN_SKILL_ROOTS.contains(&name))
+                {
+                    return None;
+                }
+                let skills_dir = entry.path().join("skills");
+                self.skill_root_has_skill_md(&skills_dir)
+                    .then_some(skills_dir)
+            })
+            .collect()
+    }
+
+    fn skill_root_has_skill_md(&self, root: &Path) -> bool {
+        if !root.is_dir() {
+            return false;
+        }
+        let mut visited_entries = 0;
+        Self::skill_root_has_skill_md_inner(root, 0, &mut visited_entries)
+    }
+
+    fn skill_root_has_skill_md_inner(
+        root: &Path,
+        depth: usize,
+        visited_entries: &mut usize,
+    ) -> bool {
+        if depth > DISCOVERED_SKILL_ROOT_MAX_DEPTH
+            || *visited_entries >= DISCOVERED_SKILL_ROOT_MAX_ENTRIES
+        {
+            return false;
+        }
+        let Ok(entries) = fs::read_dir(root) else {
+            return false;
+        };
+        for entry in entries.filter_map(Result::ok) {
+            *visited_entries += 1;
+            if *visited_entries >= DISCOVERED_SKILL_ROOT_MAX_ENTRIES {
+                return false;
+            }
+            let path = entry.path();
+            if path.file_name().and_then(|name| name.to_str()) == Some("SKILL.md") {
+                return true;
+            }
+            if entry.file_type().is_ok_and(|file_type| file_type.is_dir())
+                && Self::skill_root_has_skill_md_inner(&path, depth + 1, visited_entries)
+            {
+                return true;
+            }
+        }
+        false
     }
 
     fn apply_disabled_skills(&self, skills: &mut [SkillInfo]) {
@@ -947,6 +1065,55 @@ mod include_filter_tests {
             skill_doc("cursor-audit", "Cursor repo skill"),
         )
         .expect("write cursor skill");
+        let opencode_skill_dir = repo.join(".opencode/skills/opencode-review");
+        fs::create_dir_all(&opencode_skill_dir).expect("mkdir opencode skill");
+        fs::write(
+            opencode_skill_dir.join("SKILL.md"),
+            skill_doc("opencode-review", "OpenCode repo skill"),
+        )
+        .expect("write opencode skill");
+        let gemini_skill_dir = repo.join(".gemini/skills/gemini-review");
+        fs::create_dir_all(&gemini_skill_dir).expect("mkdir gemini skill");
+        fs::write(
+            gemini_skill_dir.join("SKILL.md"),
+            skill_doc("gemini-review", "Gemini repo skill"),
+        )
+        .expect("write gemini skill");
+        let agents_skill_dir = repo.join(".agents/skills/agent-review");
+        fs::create_dir_all(&agents_skill_dir).expect("mkdir agent skill");
+        fs::write(
+            agents_skill_dir.join("SKILL.md"),
+            skill_doc("agent-review", "Agent repo skill"),
+        )
+        .expect("write agent skill");
+        let unknown_skill_dir = repo.join(".windsurf/skills/windsurf-review");
+        fs::create_dir_all(&unknown_skill_dir).expect("mkdir unknown skill");
+        fs::write(
+            unknown_skill_dir.join("SKILL.md"),
+            skill_doc("windsurf-review", "Unknown repo skill"),
+        )
+        .expect("write unknown skill");
+        let ignored_skill_dir = repo.join(".cache/skills/cache-review");
+        fs::create_dir_all(&ignored_skill_dir).expect("mkdir ignored skill");
+        fs::write(
+            ignored_skill_dir.join("SKILL.md"),
+            skill_doc("cache-review", "Ignored repo skill"),
+        )
+        .expect("write ignored skill");
+        let vscode_skill_dir = repo.join(".vscode/skills/vscode-review");
+        fs::create_dir_all(&vscode_skill_dir).expect("mkdir vscode skill");
+        fs::write(
+            vscode_skill_dir.join("SKILL.md"),
+            skill_doc("vscode-review", "Editor metadata skill"),
+        )
+        .expect("write vscode skill");
+        let root_skill_dir = repo.join("skills/root-review");
+        fs::create_dir_all(&root_skill_dir).expect("mkdir root skill");
+        fs::write(
+            root_skill_dir.join("SKILL.md"),
+            skill_doc("root-review", "Root repo skill"),
+        )
+        .expect("write root skill");
 
         let loader = SkillsLoader::new(&repo.join(".orgii"));
         let names = loader
@@ -957,12 +1124,53 @@ mod include_filter_tests {
 
         assert_eq!(
             names,
-            vec![("cursor-audit".to_string(), "external-source".to_string())]
+            vec![
+                ("agent-review".to_string(), "external-source".to_string()),
+                ("cursor-audit".to_string(), "external-source".to_string()),
+                ("gemini-review".to_string(), "external-source".to_string()),
+                ("opencode-review".to_string(), "external-source".to_string()),
+                ("windsurf-review".to_string(), "external-source".to_string()),
+                ("root-review".to_string(), "external-source".to_string()),
+            ]
         );
-        assert!(loader
-            .load_skill("cursor-audit")
-            .unwrap_or_default()
-            .contains("Cursor repo skill"));
+        assert!(
+            loader
+                .load_skill("cursor-audit")
+                .unwrap_or_default()
+                .contains("Cursor repo skill")
+        );
+        assert!(
+            loader
+                .load_skill("opencode-review")
+                .unwrap_or_default()
+                .contains("OpenCode repo skill")
+        );
+        assert!(
+            loader
+                .load_skill("gemini-review")
+                .unwrap_or_default()
+                .contains("Gemini repo skill")
+        );
+        assert!(
+            loader
+                .load_skill("agent-review")
+                .unwrap_or_default()
+                .contains("Agent repo skill")
+        );
+        assert!(
+            loader
+                .load_skill("windsurf-review")
+                .unwrap_or_default()
+                .contains("Unknown repo skill")
+        );
+        assert!(
+            loader
+                .load_skill("root-review")
+                .unwrap_or_default()
+                .contains("Root repo skill")
+        );
+        assert!(loader.load_skill("cache-review").is_none());
+        assert!(loader.load_skill("vscode-review").is_none());
     }
 
     #[test]

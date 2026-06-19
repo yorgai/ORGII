@@ -59,6 +59,8 @@ export interface InputEditorProps {
   onSlashCommand?: (query: string) => void;
   /** Slash command close handler */
   onSlashCommandClose?: () => void;
+  /** Called when the user clicks into the editable input surface. */
+  onInputMouseDown?: () => void;
   /** Slash trigger behavior for this editor surface. */
   slashTriggerMode?: "command" | "context";
   /** Single-line height for compact composer row */
@@ -93,6 +95,7 @@ const InputEditor: React.FC<InputEditorProps> = memo(
     plusSlashCommandKeyboardHandlerRef,
     onSlashCommand,
     onSlashCommandClose,
+    onInputMouseDown,
     slashTriggerMode = "command",
     compact = false,
     onBeforeNewline,
@@ -183,6 +186,7 @@ const InputEditor: React.FC<InputEditorProps> = memo(
           onKeyDownForDropdown={handleKeyDownForDropdown}
           onSlashCommand={onSlashCommand}
           onSlashCommandClose={onSlashCommandClose}
+          onInputMouseDown={onInputMouseDown}
           onKeyDownForSlashDropdown={handleKeyDownForSlashDropdown}
           slashTriggerMode={slashTriggerMode}
           onImagePaste={onImagePaste}

@@ -41,6 +41,8 @@ import {
 } from "@src/store/session/cliSessionStatusAtom";
 import { sessionByIdAtom } from "@src/store/session/sessionAtom/atoms";
 import { wpReadOnlyAtom } from "@src/store/ui/chatPanelAtom";
+import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
+import { activeWorkspaceRootPathAtom } from "@src/store/workspace";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import {
@@ -203,9 +205,23 @@ export function useInputArea(
   // has since navigated to a different project. Falls back to the global
   // selection value for creator mode and older session rows without repo_path.
   const activeSession = useAtomValue(sessionByIdAtom(activeSessionId ?? ""));
+  const activeWorkspaceRootPath = useAtomValue(activeWorkspaceRootPathAtom);
+  const workspaceFolders = useAtomValue(workspaceFoldersAtom);
   const currentRepoPath = activeSessionId
     ? (activeSession?.repoPath ?? workspaceRepoPath)
     : workspaceRepoPath;
+  const skillWorkspacePaths = useMemo(() => {
+    const roots = new Set<string>();
+    for (const folder of workspaceFolders) {
+      const normalizedPath = folder.path.replace(/\/+$/, "");
+      if (normalizedPath) roots.add(normalizedPath);
+    }
+    for (const path of [currentRepoPath, activeWorkspaceRootPath]) {
+      const normalizedPath = path?.replace(/\/+$/, "");
+      if (normalizedPath) roots.add(normalizedPath);
+    }
+    return [...roots];
+  }, [activeWorkspaceRootPath, currentRepoPath, workspaceFolders]);
   const {
     draftText: persistedDraft,
     setDraft,
@@ -243,6 +259,7 @@ export function useInputArea(
     composerInputRef: refs.composerInputRef,
     setShowSlashMenu: state.setShowSlashMenu,
     setSlashQuery: state.setSlashQuery,
+    workspacePaths: skillWorkspacePaths,
   });
 
   const imageAttachment = useImageAttachment(dropTargetId);
@@ -573,6 +590,7 @@ export function useInputArea(
     setReplyInfo: setReplyInfoBridge as (info: unknown) => void,
     localContextList,
     currentRepoPath,
+    skillWorkspacePaths,
 
     // Image attachments
     attachedImages: imageAttachment.images,

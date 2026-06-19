@@ -1,10 +1,15 @@
 import type { TFunction } from "i18next";
+import { Code2, Home, User } from "lucide-react";
 
 import { SETTINGS_TABLE_CELL } from "@src/components/SettingsTable";
 import type { CursorRepo } from "@src/hooks/policies";
+import { SKILL_SOURCE } from "@src/types/extensions";
 
-import { StatusDot } from "../../Tables/shared";
-import { getSkillResolvedSourceLabel } from "../skillSourceLabel";
+import {
+  getSkillResolvedSourceLabel,
+  getSkillStorageLocationLabel,
+  isRepoSkill,
+} from "../skillSourceLabel";
 
 export interface SkillTableRow {
   name: string;
@@ -26,9 +31,18 @@ interface SkillSourceCellProps<
   cursorRepos?: CursorRepo[];
 }
 
-export function skillStatusRank(skill: SkillTableRow): number {
-  if (!skill.enabled) return 0;
-  return skill.available ? 2 : 1;
+function renderSourceIcon<TSkill extends SkillTableRow>(
+  skill: TSkill,
+  cursorRepos?: CursorRepo[]
+) {
+  const className = "shrink-0 text-text-3";
+  if (skill.source === SKILL_SOURCE.EMBEDDED_BUILTIN) {
+    return <Home size={14} className={className} aria-hidden />;
+  }
+  if (isRepoSkill(skill, cursorRepos)) {
+    return <Code2 size={14} className={className} aria-hidden />;
+  }
+  return <User size={14} className={className} aria-hidden />;
 }
 
 export function SkillNameCell<TSkill extends SkillTableRow>({
@@ -47,25 +61,23 @@ export function SkillSourceCell<TSkill extends SkillTableRow>({
   cursorRepos,
 }: SkillSourceCellProps<TSkill>) {
   return (
-    <span className={SETTINGS_TABLE_CELL.value}>
-      {getSkillResolvedSourceLabel(t, skill, cursorRepos)}
+    <span
+      className={`${SETTINGS_TABLE_CELL.value} inline-flex items-center gap-2 whitespace-nowrap`}
+    >
+      {renderSourceIcon(skill, cursorRepos)}
+      <span>{getSkillResolvedSourceLabel(t, skill, cursorRepos)}</span>
     </span>
   );
 }
 
-export function SkillStatusCell<TSkill extends SkillTableRow>({
+export function SkillStorageCell<TSkill extends SkillTableRow>({
   skill,
   t,
-}: SkillCellProps<TSkill> & { t: TFunction }) {
-  const color = skill.enabled
-    ? skill.available
-      ? "bg-success-6"
-      : "bg-warning-6"
-    : "bg-fill-3";
-  const label = skill.enabled
-    ? skill.available
-      ? t("status.enabled")
-      : t("status.unavailable")
-    : t("status.disabled");
-  return <StatusDot color={color} label={label} />;
+  cursorRepos,
+}: SkillSourceCellProps<TSkill>) {
+  return (
+    <span className={`${SETTINGS_TABLE_CELL.value} whitespace-nowrap`}>
+      {getSkillStorageLocationLabel(t, skill, cursorRepos)}
+    </span>
+  );
 }

@@ -13,8 +13,8 @@ use super::scanner::SkillsLoader;
 use super::types::SkillInfo;
 use crate::specialization::skills::builtin;
 
-use crate::core::definitions::store::AgentDefinitionsStore;
 use crate::core::definitions::AgentSkillsConfig;
+use crate::core::definitions::store::AgentDefinitionsStore;
 use crate::session::prompt::cache::PromptCacheInvalidationReason;
 use crate::state::AgentAppState;
 
@@ -60,10 +60,17 @@ pub fn global_skills_dir() -> PathBuf {
     app_paths::global_skills_dir()
 }
 
-/// Build a SkillsLoader for a workspace (workspace `.orgii/` + global builtin).
+/// Build a SkillsLoader for a workspace (workspace `.orgii/` plus in-place skill roots and global/user roots).
 pub(super) fn loader_for_workspace(workspace_path: Option<&str>) -> SkillsLoader {
     let base = match workspace_path {
-        Some(path) => PathBuf::from(path).join(".orgii"),
+        Some(path) => {
+            let path = PathBuf::from(path);
+            if path.file_name().and_then(|name| name.to_str()) == Some(".orgii") {
+                path
+            } else {
+                path.join(".orgii")
+            }
+        }
         None => global_skills_dir()
             .parent()
             .map(|p| p.to_path_buf())
@@ -118,6 +125,7 @@ pub async fn skills_list(
     workspace_path: Option<String>,
     agent_id: Option<String>,
 ) -> Result<Vec<SkillInfo>, String> {
+    SkillsLoader::invalidate_all_caches();
     let mut disabled = crate::state::integrations_store::integrations_store()
         .snapshot()
         .excluded_skills;

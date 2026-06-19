@@ -65,9 +65,18 @@ export function useEntries({
               fuzzyMatch(query, mode.id)
           )
         : [];
-      const matchedSkillItems = items.filter(
+      const matchedWorkspaceSkillItems = items.filter(
         (entry) =>
           entry.category === "skill" &&
+          entry.skillScope === "workspace" &&
+          (!query ||
+            fuzzyMatch(query, entry.name) ||
+            fuzzyMatch(query, entry.description ?? ""))
+      );
+      const matchedUserSkillItems = items.filter(
+        (entry) =>
+          entry.category === "skill" &&
+          entry.skillScope !== "workspace" &&
           (!query ||
             fuzzyMatch(query, entry.name) ||
             fuzzyMatch(query, entry.description ?? ""))
@@ -89,27 +98,75 @@ export function useEntries({
         }
       }
 
-      if (matchedSkillItems.length > 0) {
+      if (matchedWorkspaceSkillItems.length > 0) {
         if (result.length > 0) result.push({ kind: "divider" });
         result.push({
           kind: "header",
-          label: CATEGORY_LABELS.skill,
-          translationKey: "creator.slashMenu.skills",
+          label: "Workspace Skills",
+          translationKey: "creator.slashMenu.workspaceSkills",
         });
+        for (const item of matchedWorkspaceSkillItems) {
+          result.push({ kind: "item", item, flatIndex: idx++ });
+        }
+      }
+
+      if (matchedUserSkillItems.length > 0) {
+        if (result.length > 0) result.push({ kind: "divider" });
         result.push({
-          kind: "skill-items-group",
-          items: matchedSkillItems.map((item) => ({
-            kind: "item",
-            item,
-            flatIndex: idx++,
-          })),
+          kind: "header",
+          label: "User Skills",
+          translationKey: "creator.slashMenu.userSkills",
         });
+        for (const item of matchedUserSkillItems) {
+          result.push({ kind: "item", item, flatIndex: idx++ });
+        }
       }
 
       return { entries: result, totalFlat: idx };
     }
 
     // ── Inline / search path ─────────────────────────────────────────────────
+
+    const query = searchQuery.trim();
+    const matchedWorkspaceSkillItems = items.filter(
+      (entry) =>
+        entry.category === "skill" &&
+        entry.skillScope === "workspace" &&
+        (!query ||
+          fuzzyMatch(query, entry.name) ||
+          fuzzyMatch(query, entry.description ?? ""))
+    );
+    const matchedUserSkillItems = items.filter(
+      (entry) =>
+        entry.category === "skill" &&
+        entry.skillScope !== "workspace" &&
+        (!query ||
+          fuzzyMatch(query, entry.name) ||
+          fuzzyMatch(query, entry.description ?? ""))
+    );
+
+    if (matchedWorkspaceSkillItems.length > 0) {
+      result.push({
+        kind: "header",
+        label: "Workspace Skills",
+        translationKey: "creator.slashMenu.workspaceSkills",
+      });
+      for (const item of matchedWorkspaceSkillItems) {
+        result.push({ kind: "item", item, flatIndex: idx++ });
+      }
+    }
+
+    if (matchedUserSkillItems.length > 0) {
+      if (result.length > 0) result.push({ kind: "divider" });
+      result.push({
+        kind: "header",
+        label: "User Skills",
+        translationKey: "creator.slashMenu.userSkills",
+      });
+      for (const item of matchedUserSkillItems) {
+        result.push({ kind: "item", item, flatIndex: idx++ });
+      }
+    }
 
     // Mode rows when showActionFlyouts=false and searching (filter by query)
     if (showModeRows && !showActionFlyouts && isSearching) {
@@ -130,6 +187,7 @@ export function useEntries({
 
     // Slash item categories (flat when searching, flyout when not)
     for (const category of CATEGORY_ORDER) {
+      if (category === "skill") continue;
       const catItems = items.filter((item) => item.category === category);
       if (catItems.length === 0) continue;
 

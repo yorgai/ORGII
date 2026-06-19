@@ -17,6 +17,7 @@ interface TopRowsProps {
     typeof PinnedActionsBar
   >["composerInputRef"];
   sessionId?: string;
+  skillWorkspacePaths?: string[];
 }
 
 export const InputAreaTopRows: React.FC<TopRowsProps> = ({
@@ -26,6 +27,7 @@ export const InputAreaTopRows: React.FC<TopRowsProps> = ({
   topRowTrailingContent,
   composerInputRef,
   sessionId,
+  skillWorkspacePaths,
 }) => (
   <>
     {!isEditMode && !omitChatHeader && <ChatHeader />}
@@ -34,6 +36,7 @@ export const InputAreaTopRows: React.FC<TopRowsProps> = ({
         <PinnedActionsBar
           composerInputRef={composerInputRef}
           sessionId={sessionId}
+          workspacePaths={skillWorkspacePaths ?? undefined}
           leadingContent={topRowPills}
           trailingContent={topRowTrailingContent}
         />

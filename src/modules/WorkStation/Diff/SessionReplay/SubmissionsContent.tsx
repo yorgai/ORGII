@@ -13,9 +13,12 @@ import {
 } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
+export type SubmissionArtifactOrigin = "created" | "mentioned";
+
 export type SubmissionArtifact = ExtractedGitArtifactData & {
   repoId?: string;
   repoPath?: string;
+  origin?: SubmissionArtifactOrigin;
   /** Event ID where this artifact was extracted from (for replay navigation). */
   eventId?: string;
 };
@@ -27,6 +30,7 @@ export type SubmissionCommit = Pick<
   author?: GitCommitInfo["author"] | null;
   repoId?: string;
   repoPath?: string;
+  origin?: SubmissionArtifactOrigin;
   /** Event ID where this commit was first mentioned (extracted from text/shell, not orgtrack-linked). */
   mentionedEventId?: string;
 };
@@ -39,6 +43,12 @@ export interface PullRequestSubmission {
   prTitle?: string;
   sourceBranch?: string;
   targetBranch?: string;
+  origin?: SubmissionArtifactOrigin;
+  /** Normalized PR status (`open` / `merged` / `closed` / `draft`).
+   * Injected by the parent after a batch GitHub fetch; defaults to `open` for
+   * rows whose status hasn't been resolved (in flight / no creds / missing
+   * repoFullName-or-prNumber). */
+  statusKey?: string;
 }
 
 export interface SubmissionsData {
@@ -79,6 +89,7 @@ function commitFromArtifact(
     author: null,
     repoId: artifact.repoId,
     repoPath: artifact.repoPath,
+    origin: artifact.origin,
     mentionedEventId: artifact.eventId,
   };
 }
@@ -123,10 +134,37 @@ export function deriveSubmissionsData(
       prTitle: artifact.prTitle,
       sourceBranch: artifact.sourceBranch,
       targetBranch: artifact.targetBranch,
+      origin: artifact.origin,
     });
   }
 
   return { commits, pullRequests };
+}
+
+function SubmissionArtifactLabel({
+  kind,
+  origin,
+}: {
+  kind: "commit" | "pullRequest";
+  origin?: SubmissionArtifactOrigin;
+}) {
+  const { t } = useTranslation("sessions");
+  const label = t(
+    `simulator.replay.diffApp.submissions.labels.${origin === "created" ? "created" : "mentioned"}.${kind}`,
+    origin === "created"
+      ? kind === "commit"
+        ? "Created commit"
+        : "Created PR"
+      : kind === "commit"
+        ? "Mentioned commit"
+        : "Mentioned PR"
+  );
+
+  return (
+    <span className="shrink-0 rounded-full border border-border-2 bg-fill-1 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-text-3">
+      {label}
+    </span>
+  );
 }
 
 const PullRequestSubmissionRow: React.FC<{
@@ -140,12 +178,16 @@ const PullRequestSubmissionRow: React.FC<{
       ? `${pullRequest.sourceBranch} → ${pullRequest.targetBranch}`
       : pullRequest.sourceBranch
     : null;
-  const statusKey = "open";
+  const statusKey = pullRequest.statusKey ?? "open";
 
   return (
     <div className="border-b border-fill-2 px-3 py-2">
       <div className="flex min-w-0 items-center gap-2">
         <PrStatusBadge status={statusKey} showDot size="sm" />
+        <SubmissionArtifactLabel
+          kind="pullRequest"
+          origin={pullRequest.origin}
+        />
         {numberLabel && (
           <span
             className={`${TYPOGRAPHY.secondary} font-medium tabular-nums text-text-3`}
@@ -197,19 +239,42 @@ export const SubmissionCommitsContent: React.FC<SubmissionCommitsContentProps> =
       [onCommitSelect]
     );
 
-    const commitRows = useMemo(
-      () =>
-        commits.map((commit) => (
-          <GitCommitRow
-            key={commit.sha}
-            commit={commit}
-            isSelected={commit.sha === selectedCommitSha}
-            onSelect={handleCommitSelect}
-            showGraphPlaceholder
-          />
-        )),
-      [commits, handleCommitSelect, selectedCommitSha]
-    );
+    const commitRows = useMemo(() => {
+      // Group consecutive rows by `origin` and render the label once per group
+      // (group header), not per row — repeating the same "MENTIONED COMMIT"
+      // chip above every entry is visual noise when N entries share an origin.
+      const rendered: React.ReactNode[] = [];
+      let previousOrigin: SubmissionArtifactOrigin | undefined | "__none__" =
+        "__none__";
+
+      for (const commit of commits) {
+        const originKey = commit.origin ?? undefined;
+        if (originKey !== previousOrigin) {
+          rendered.push(
+            <div
+              key={`origin-${commit.sha}`}
+              className="flex items-center px-3 pb-1 pt-2"
+            >
+              <SubmissionArtifactLabel kind="commit" origin={originKey} />
+            </div>
+          );
+          previousOrigin = originKey;
+        }
+
+        rendered.push(
+          <div key={commit.sha} className="border-b border-fill-2">
+            <GitCommitRow
+              commit={commit}
+              isSelected={commit.sha === selectedCommitSha}
+              onSelect={handleCommitSelect}
+              showGraphPlaceholder
+            />
+          </div>
+        );
+      }
+
+      return rendered;
+    }, [commits, handleCommitSelect, selectedCommitSha]);
 
     if (commits.length === 0) {
       return (

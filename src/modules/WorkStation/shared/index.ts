@@ -195,18 +195,22 @@ export type { SessionReplayPlaceholderMode } from "./useSimulatorPlaceholderActi
 
 // Session-replay shared building blocks (tab bar, sidebar selection helpers, …)
 export {
+  ReplayEventFilter,
   ReplayTabBar,
   ReplayShellLayout,
   ReplayShellPlaceholder,
   SimulatorReplayChrome,
   SimulatorWorkstationTabHeader,
   capNewestWithActive,
+  filterReplayTabsBySelection,
   gateByActiveKind,
   MAX_REPLAY_TABS,
   mergeNewestFirstByTimestamp,
   useReplayShell,
   type ActiveSelectionKind,
   type KnownReplayTabKind,
+  type ReplayEventFilterCategory,
+  type ReplayEventFilterSelection,
   type ReplayShellLayoutProps,
   type ReplayShellPlaceholderProps,
   type ReplayShellWorkstationConfig,

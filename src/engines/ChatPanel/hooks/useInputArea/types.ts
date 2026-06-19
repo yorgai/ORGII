@@ -245,6 +245,7 @@ export interface UseInputAreaReturn {
   setReplyInfo: (info: { isReply: boolean }) => void;
   localContextList: unknown[];
   currentRepoPath: string | undefined;
+  skillWorkspacePaths: string[];
 
   // Image attachments
   attachedImages: ChatImageAttachment[];

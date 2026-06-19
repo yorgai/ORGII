@@ -16,6 +16,7 @@
  *  - A `cancelledRef` prevents setState after unmount.
  */
 import { invoke } from "@tauri-apps/api/core";
+import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
@@ -24,10 +25,75 @@ import {
   resolveSkillGroup,
 } from "@src/engines/ChatPanel/InputArea/components/SlashCommandPortal/slashItemUtils";
 import { createLogger } from "@src/hooks/logger";
+import { mergeInstalledSkills } from "@src/hooks/skills/installedSkillsMerge";
+import { installedSkillsAtom } from "@src/store/skills/installedSkillsAtom";
 import { type InstalledSkill, type SlashItem } from "@src/types/extensions";
-import { fuzzyMatch, fuzzyScore } from "@src/util/search/fuzzy";
 
 const logger = createLogger("useSlashItemsCache");
+const MAX_SLASH_ITEMS_SCOPE_CACHE_SIZE = 12;
+const slashItemsCacheByScope = new Map<string, SlashItem[]>();
+
+function normalizeWorkspacePath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
+function getUniqueWorkspacePaths(paths?: string[]): string[] {
+  const uniquePaths = new Set<string>();
+  for (const path of paths ?? []) {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (normalizedPath) uniquePaths.add(normalizedPath);
+  }
+  return [...uniquePaths];
+}
+
+function isWorkspaceSkill(
+  skill: InstalledSkill,
+  workspacePaths: string[]
+): boolean {
+  const skillPath = normalizeWorkspacePath(skill.path);
+  return workspacePaths.some((workspacePath) => {
+    const workspacePrefix = `${workspacePath}/`;
+    if (!skillPath.startsWith(workspacePrefix)) return false;
+    const relativePath = skillPath.slice(workspacePrefix.length);
+    return (
+      relativePath.startsWith("skills/") ||
+      /^\.[^/]+\/skills\//.test(relativePath)
+    );
+  });
+}
+
+function getSlashItemIdentity(item: SlashItem): string {
+  return [
+    item.category,
+    item.name,
+    item.description,
+    item.source,
+    item.acceptsArgs ? "args" : "no-args",
+    item.skillName ?? "",
+    item.skillPath ? normalizeWorkspacePath(item.skillPath) : "",
+    item.skillScope ?? "",
+    item.serverName ?? "",
+  ].join("\0");
+}
+
+function slashItemsEqual(left: SlashItem[], right: SlashItem[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every(
+    (item, index) =>
+      getSlashItemIdentity(item) === getSlashItemIdentity(right[index])
+  );
+}
+
+function setScopedSlashItemsCache(scopeKey: string, items: SlashItem[]): void {
+  if (!slashItemsCacheByScope.has(scopeKey)) {
+    while (slashItemsCacheByScope.size >= MAX_SLASH_ITEMS_SCOPE_CACHE_SIZE) {
+      const oldestKey = slashItemsCacheByScope.keys().next().value;
+      if (oldestKey === undefined) break;
+      slashItemsCacheByScope.delete(oldestKey);
+    }
+  }
+  slashItemsCacheByScope.set(scopeKey, items);
+}
 
 export interface UseSlashItemsCacheOptions {
   /**
@@ -35,10 +101,12 @@ export interface UseSlashItemsCacheOptions {
    * Each consumer passes a different subset of SLASH_ACTIONS.
    */
   builtinItems: SlashItem[];
+  /** Repo/workspace scopes whose root `skills/` or hidden `.tool/skills/` roots should appear. */
+  workspacePaths?: string[];
 }
 
 export interface UseSlashItemsCacheReturn {
-  /** Current filtered item list (matches the latest query). */
+  /** Current full item list for the active workspace scope. Renderers apply query filtering. */
   filteredItems: SlashItem[];
   /** True while a backend fetch is in flight. */
   loading: boolean;
@@ -47,22 +115,24 @@ export interface UseSlashItemsCacheReturn {
    * backend fetch and update `filteredItems` when it resolves.
    */
   prefetch: (query: string) => void;
-  /**
-   * Fire a fresh backend fetch unconditionally and return the full list.
-   * Does not update `filteredItems` — use `prefetch` for that.
-   */
+  /** Fire a fresh backend fetch unconditionally, update the full item list when it changed, and return it. */
   fetchFresh: () => Promise<SlashItem[]>;
 }
 
 export function useSlashItemsCache(
   options: UseSlashItemsCacheOptions
 ): UseSlashItemsCacheReturn {
-  const { builtinItems } = options;
+  const { builtinItems, workspacePaths } = options;
+  const setInstalledSkills = useSetAtom(installedSkillsAtom);
+  const workspacePathsKey = getUniqueWorkspacePaths(workspacePaths).join("\0");
 
   const [filteredItems, setFilteredItems] = useState<SlashItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const itemsCacheRef = useRef<SlashItem[]>([]);
+  const itemsCacheRef = useRef<SlashItem[]>(
+    slashItemsCacheByScope.get(workspacePathsKey) ?? []
+  );
+  const fetchSeqRef = useRef(0);
   const cancelledRef = useRef(false);
   // Keep a stable ref to builtinItems so fetch doesn't need it in deps
   const builtinItemsRef = useRef(builtinItems);
@@ -71,21 +141,46 @@ export function useSlashItemsCache(
   const doFetch = useCallback(async (): Promise<SlashItem[]> => {
     setLoading(true);
     try {
-      const [rawSkills, mcpServers] = await Promise.all([
-        invoke<InstalledSkill[]>("skills_list", { workspacePath: null }).catch(
-          (err) => {
-            logger.warn("Failed to list skills for slash menu:", err);
-            return [] as InstalledSkill[];
-          }
+      const scopePaths = workspacePathsKey ? workspacePathsKey.split("\0") : [];
+      const skillListTasks = [
+        invoke<InstalledSkill[]>("skills_list", { workspacePath: null }),
+        ...scopePaths.map((path) =>
+          invoke<InstalledSkill[]>("skills_list", { workspacePath: path })
         ),
+      ];
+      const [skillResults, mcpServers] = await Promise.all([
+        Promise.allSettled(skillListTasks),
         rpc.mcp.listServers({}).catch((err) => {
           logger.warn("Failed to list MCP servers for slash menu:", err);
           return [];
         }),
       ]);
 
+      const rawSkills = mergeInstalledSkills(
+        skillResults.flatMap((result) => {
+          if (result.status === "fulfilled") return [result.value];
+          logger.warn("Failed to list skills for slash menu:", result.reason);
+          return [];
+        })
+      );
+      const workspaceSkillRoots = scopePaths.map(normalizeWorkspacePath);
+      logger.rateLimited("slash-skills-scan", 5_000, "slash skills fetched", {
+        workspacePaths: workspaceSkillRoots,
+        skillCount: rawSkills.length,
+        workspaceSkillCount: rawSkills.filter((skill) =>
+          isWorkspaceSkill(skill, workspaceSkillRoots)
+        ).length,
+        skillPaths: rawSkills.map((skill) => skill.path),
+      });
+
+      if (rawSkills.length > 0) {
+        setInstalledSkills((current) =>
+          mergeInstalledSkills([current, rawSkills])
+        );
+      }
+
       const skillItems: SlashItem[] = rawSkills
-        .filter((s) => s.enabled && s.available)
+        .filter((s) => s.enabled)
         .map((s) => ({
           name: s.name,
           skillName: s.name,
@@ -94,6 +189,9 @@ export function useSlashItemsCache(
           category: "skill" as const,
           source: resolveSkillGroup(s),
           acceptsArgs: false,
+          skillScope: isWorkspaceSkill(s, workspaceSkillRoots)
+            ? "workspace"
+            : "user",
         }));
 
       const connectedServers = mcpServers.filter(
@@ -131,6 +229,7 @@ export function useSlashItemsCache(
         ...toolItems,
       ];
 
+      setScopedSlashItemsCache(workspacePathsKey, assembled);
       if (!cancelledRef.current) {
         itemsCacheRef.current = assembled;
       }
@@ -140,52 +239,60 @@ export function useSlashItemsCache(
         setLoading(false);
       }
     }
-  }, []);
-
-  const filterItems = useCallback(
-    (query: string, items: SlashItem[]): SlashItem[] => {
-      if (!query) return items;
-      return items
-        .filter(
-          (item) =>
-            fuzzyMatch(query, item.name) || fuzzyMatch(query, item.description)
-        )
-        .sort((a, b) => fuzzyScore(query, b.name) - fuzzyScore(query, a.name));
-    },
-    []
-  );
+  }, [setInstalledSkills, workspacePathsKey]);
 
   const prefetch = useCallback(
-    (query: string) => {
-      if (itemsCacheRef.current.length > 0) {
-        setFilteredItems(filterItems(query, itemsCacheRef.current));
+    (_query: string) => {
+      const currentFetchSeq = fetchSeqRef.current + 1;
+      fetchSeqRef.current = currentFetchSeq;
+      const cachedItems = slashItemsCacheByScope.get(workspacePathsKey) ?? [];
+      if (cachedItems.length > 0) {
+        itemsCacheRef.current = cachedItems;
+        setFilteredItems(cachedItems);
       }
       doFetch().then((items) => {
-        if (!cancelledRef.current) {
-          setFilteredItems(filterItems(query, items));
+        if (cancelledRef.current || fetchSeqRef.current !== currentFetchSeq) {
+          return;
+        }
+        if (cachedItems.length === 0 || !slashItemsEqual(cachedItems, items)) {
+          setFilteredItems(items);
         }
       });
     },
-    [doFetch, filterItems]
+    [doFetch, workspacePathsKey]
   );
 
-  const fetchFresh = useCallback((): Promise<SlashItem[]> => {
-    return doFetch();
+  const fetchFresh = useCallback(async (): Promise<SlashItem[]> => {
+    const currentItems = itemsCacheRef.current;
+    const items = await doFetch();
+    if (!cancelledRef.current && !slashItemsEqual(currentItems, items)) {
+      setFilteredItems(items);
+    }
+    return items;
   }, [doFetch]);
 
-  // Warm the cache on mount so the first open is instant.
+  // Warm the cache and refresh when the active repo/workspace scope changes.
   useEffect(() => {
     cancelledRef.current = false;
+    const currentFetchSeq = fetchSeqRef.current + 1;
+    fetchSeqRef.current = currentFetchSeq;
+    const cachedItems = slashItemsCacheByScope.get(workspacePathsKey) ?? [];
+    if (cachedItems.length > 0) {
+      itemsCacheRef.current = cachedItems;
+      setFilteredItems(cachedItems);
+    }
     doFetch().then((items) => {
-      if (!cancelledRef.current) {
+      if (cancelledRef.current || fetchSeqRef.current !== currentFetchSeq) {
+        return;
+      }
+      if (cachedItems.length === 0 || !slashItemsEqual(cachedItems, items)) {
         setFilteredItems(items);
       }
     });
     return () => {
       cancelledRef.current = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [doFetch, workspacePathsKey]);
 
   return { filteredItems, loading, prefetch, fetchFresh };
 }

@@ -109,6 +109,8 @@ export interface UseComposerInputOptions {
    * pill is not silently rewritten by typing `/` in the creator.
    */
   creatorDefaultMode?: boolean;
+  /** Repo/workspace roots whose workspace skills should appear in `/`. */
+  workspacePaths?: string[];
 }
 
 export interface UseComposerInputReturn {
@@ -179,6 +181,7 @@ export function useComposerInput(
     onContentChange: _onContentChange,
     onContextItemsChange,
     creatorDefaultMode = false,
+    workspacePaths,
   } = options;
 
   // ============================================
@@ -226,6 +229,7 @@ export function useComposerInput(
     setShowSlashMenu,
     setSlashQuery,
     creatorDefaultMode,
+    workspacePaths,
   });
 
   // ============================================

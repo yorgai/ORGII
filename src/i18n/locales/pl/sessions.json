@@ -1810,7 +1810,9 @@
       "uploadImage": "Prześlij obraz",
       "mode": "Tryb",
       "models": "Modele",
-      "skills": "Skills"
+      "skills": "Skills",
+      "workspaceSkills": "Workspace Skills",
+      "userSkills": "User Skills"
     },
     "diffMenu": {
       "gitActions": "Akcje GIT",

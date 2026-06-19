@@ -30,6 +30,7 @@ interface SharedComposerBarProps {
   >;
   onSlashCommand: (query: string) => void;
   onSlashCommandClose: () => void;
+  onPlusSlashClose: () => void;
   onAtMention: (query: string, position: { x: number; y: number }) => void;
   onAtMentionClose: () => void;
   onFocus: () => void;
@@ -106,6 +107,7 @@ export const EditComposerBar: React.FC<EditComposerBarProps> = ({
   plusSlashCommandKeyboardHandlerRef,
   onSlashCommand,
   onSlashCommandClose,
+  onPlusSlashClose,
   onContentChange,
   onAtMention,
   onAtMentionClose,
@@ -162,6 +164,7 @@ export const EditComposerBar: React.FC<EditComposerBarProps> = ({
           }
           onSlashCommand={onSlashCommand}
           onSlashCommandClose={onSlashCommandClose}
+          onInputMouseDown={onPlusSlashClose}
           slashTriggerMode="command"
           onContentChange={onContentChange}
           onAtMention={onAtMention}
@@ -285,6 +288,7 @@ export const NormalComposerContent: React.FC<NormalComposerContentProps> = ({
   plusSlashCommandKeyboardHandlerRef,
   onSlashCommand,
   onSlashCommandClose,
+  onPlusSlashClose,
   onContentChange,
   onAtMention,
   onAtMentionClose,
@@ -363,6 +367,7 @@ export const NormalComposerContent: React.FC<NormalComposerContentProps> = ({
               }
               onSlashCommand={onSlashCommand}
               onSlashCommandClose={onSlashCommandClose}
+              onInputMouseDown={onPlusSlashClose}
               onContentChange={onContentChange}
               onAtMention={onAtMention}
               onAtMentionClose={onAtMentionClose}

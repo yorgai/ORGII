@@ -8,7 +8,7 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 import { useAtom } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useMounted } from "@src/hooks/lifecycle/useMounted";
 import { createLogger } from "@src/hooks/logger";
@@ -26,16 +26,31 @@ import type {
 
 const log = createLogger("SkillsHub");
 
+function normalizeWorkspacePath(pathValue: string): string {
+  return pathValue.replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
+function getUniqueWorkspacePaths(paths: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const uniquePaths: string[] = [];
+  for (const path of paths) {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (!normalizedPath || seen.has(normalizedPath)) continue;
+    seen.add(normalizedPath);
+    uniquePaths.push(normalizedPath);
+  }
+  return uniquePaths;
+}
+
 interface UseSkillsHubOptions {
   /** When false, skips the initial installed-skills fetch (no Tauri IPC on mount). */
   enabled?: boolean;
   /**
    * Repo/workspace paths to query ALONGSIDE the global scope, on every load
-   * and refresh. Repo-scoped skills live in `{repo}/.orgii/skills/` and are
-   * only returned when their repo path is queried, so the Integrations page
-   * passes the open repos here to keep workspace-imported skills visible
-   * (not just immediately after import). Other consumers omit this and stay
-   * global-only. Callers should memoize this array to keep the load stable.
+   * and refresh. Repo-scoped skills live in `{repo}/.orgii/skills/` or are
+   * parsed in place from `{repo}/.<tool>/skills/` and `{repo}/skills/`; they are
+   * only returned when their repo path is queried. Other consumers omit this
+   * and stay global-only. Callers should memoize this array to keep the load stable.
    */
   workspacePaths?: string[];
 }
@@ -58,22 +73,24 @@ export function useSkillsHub({
   const [updating, setUpdating] = useState<string | null>(null);
 
   const mountedRef = useMounted();
+  const refreshSeqRef = useRef(0);
 
   // Serialize the configured workspace paths into a stable primitive so the
   // load effect and refresh callbacks don't churn on each render when the
   // caller passes a fresh array reference. Reconstructed where needed.
-  const workspacePathsKey = (workspacePaths ?? []).join("\0");
+  const workspacePathsKey = getUniqueWorkspacePaths(workspacePaths ?? []).join(
+    "\0"
+  );
 
   const listInstalledSkills = useCallback(async (workspacePaths?: string[]) => {
     // Always query the global scope; additionally query any workspace/repo
-    // paths so freshly-imported repo-scoped skills (written to
-    // `{repo}/.orgii/skills/`) appear in the list — `skills_list(null)` only
-    // returns global + builtin skills.
+    // paths so repo-scoped skills (`.<tool>/skills` and root `skills`)
+    // appear in the list — `skills_list(null)` only returns global + builtin skills.
+    const uniqueWorkspacePaths = getUniqueWorkspacePaths(workspacePaths ?? []);
     const tasks: Promise<InstalledSkill[]>[] = [
       invoke<InstalledSkill[]>("skills_list", { workspacePath: null }),
     ];
-    for (const path of workspacePaths ?? []) {
-      if (!path) continue;
+    for (const path of uniqueWorkspacePaths) {
       tasks.push(
         invoke<InstalledSkill[]>("skills_list", { workspacePath: path })
       );
@@ -92,24 +109,32 @@ export function useSkillsHub({
   }, []);
 
   const refreshInstalled = useCallback(
-    async (extraWorkspacePaths?: string[]) => {
-      // Always re-query the configured workspace scopes (so a refresh never
-      // narrows the list back to global-only), unioned with any extra paths
-      // a caller passes (e.g. the just-imported repo paths).
+    async (extraWorkspacePaths?: string[], options?: { scoped?: boolean }) => {
+      // Default refresh re-queries configured workspace scopes, unioned with
+      // any extra paths. Scoped refresh intentionally uses only the supplied
+      // paths, so a selected source tab can revalidate just that scope.
       const configuredPaths = workspacePathsKey
         ? workspacePathsKey.split("\0")
         : [];
-      const scopePaths = Array.from(
-        new Set([...configuredPaths, ...(extraWorkspacePaths ?? [])])
-      );
+      const scopePaths = options?.scoped
+        ? getUniqueWorkspacePaths(extraWorkspacePaths ?? [])
+        : getUniqueWorkspacePaths([
+            ...configuredPaths,
+            ...(extraWorkspacePaths ?? []),
+          ]);
+      const refreshSeq = ++refreshSeqRef.current;
       setInstalledLoading(true);
       try {
         const result = await listInstalledSkills(scopePaths);
-        setInstalledSkills(result);
+        if (refreshSeq === refreshSeqRef.current) {
+          setInstalledSkills(result);
+        }
       } catch (err) {
         log.error("[SkillsHub] Failed to list installed skills:", err);
       } finally {
-        setInstalledLoading(false);
+        if (refreshSeq === refreshSeqRef.current) {
+          setInstalledLoading(false);
+        }
       }
     },
     [
@@ -150,15 +175,20 @@ export function useSkillsHub({
     const scopePaths = workspacePathsKey ? workspacePathsKey.split("\0") : [];
 
     const load = async () => {
+      const refreshSeq = ++refreshSeqRef.current;
       setInstalledLoading(true);
       try {
         const result = await listInstalledSkills(scopePaths);
-        if (!cancelled) setInstalledSkills(result);
+        if (!cancelled && refreshSeq === refreshSeqRef.current) {
+          setInstalledSkills(result);
+        }
       } catch (err) {
         if (!cancelled)
           log.error("[SkillsHub] Failed to list installed skills:", err);
       } finally {
-        if (!cancelled) setInstalledLoading(false);
+        if (!cancelled && refreshSeq === refreshSeqRef.current) {
+          setInstalledLoading(false);
+        }
       }
     };
     load();

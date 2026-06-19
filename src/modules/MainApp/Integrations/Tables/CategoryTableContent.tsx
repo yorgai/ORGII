@@ -121,6 +121,10 @@ export interface CategoryTableContentProps {
   onToggleSkill?: (name: string, enabled: boolean) => void;
   onEditSkill?: (name: string) => void;
   onUninstallSkill?: (name: string) => Promise<void> | void;
+  onRefreshSkills?: (
+    workspacePaths?: string[],
+    options?: { scoped?: boolean }
+  ) => Promise<void> | void;
   skillsCursorRepos?: CursorRepo[];
   skillsImportExpanded?: boolean;
   onSkillsImportCompleted?: () => void;
@@ -259,6 +263,7 @@ export const CategoryTableContent: React.FC<CategoryTableContentProps> = (
           hubDetail={props.skillsHubDetail}
           onToggleSkill={props.onToggleSkill}
           onUninstallSkill={props.onUninstallSkill}
+          onRefreshSkills={props.onRefreshSkills}
           cursorRepos={props.skillsCursorRepos}
           importExpanded={props.skillsImportExpanded}
           onImportCompleted={props.onSkillsImportCompleted}

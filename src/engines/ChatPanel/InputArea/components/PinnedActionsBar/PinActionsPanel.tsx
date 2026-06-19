@@ -16,6 +16,7 @@ import {
   DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
+import FileTreePreview from "@src/components/FileTreePreview";
 import { useDropdownEngine } from "@src/hooks/dropdown";
 import type { PinnedAction } from "@src/store/session/pinnedActionsAtom";
 import type { SlashItem } from "@src/types/extensions";
@@ -145,6 +146,15 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
           )
           .sort((a, b) => fuzzyScore(query, b.name) - fuzzyScore(query, a.name))
       : displayItems;
+    const workspaceSkillItems = filteredItems.filter(
+      (item) => item.category === "skill" && item.skillScope === "workspace"
+    );
+    const userSkillItems = filteredItems.filter(
+      (item) => item.category === "skill" && item.skillScope !== "workspace"
+    );
+    const nonSkillItems = filteredItems.filter(
+      (item) => item.category !== "skill"
+    );
 
     const handleToggle = useCallback(
       (item: SlashItem) => {
@@ -177,6 +187,15 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
         },
       });
 
+    const activeItem =
+      keyboard.selectedIndex >= 0
+        ? filteredItems[keyboard.selectedIndex]
+        : null;
+    const activeSkillItem =
+      activeItem?.category === "skill" && activeItem.skillPath
+        ? activeItem
+        : null;
+
     if (!visible || !isPositioned) return null;
 
     const PANEL_WIDTH = 240;
@@ -205,6 +224,63 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
       positionStyle = { left: clampedLeft };
     }
 
+    const renderItem = (item: SlashItem) => {
+      const key = actionKey(item);
+      const isPinned = pinnedKeys.has(key);
+      const renderKey = `${key}|${item.skillPath ?? item.source}`;
+      return (
+        <button
+          key={renderKey}
+          type="button"
+          className={`${DROPDOWN_CLASSES.menuControlItem} min-w-0`}
+          {...keyboard.getItemProps(filteredItems.indexOf(item))}
+        >
+          <div className="flex min-w-0 items-center">
+            <span className="truncate text-[12px] font-medium text-text-1">
+              {item.name}
+            </span>
+          </div>
+          <span className="flex shrink-0 items-center gap-2">
+            <span
+              role="button"
+              tabIndex={-1}
+              aria-label={t("input.pinnedActions.insert")}
+              className="text-text-3 transition-colors duration-150 hover:text-primary-6"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleInsert(item);
+              }}
+            >
+              <ArrowUp size={DROPDOWN_ITEM.iconSize} strokeWidth={2} />
+            </span>
+            <span
+              className={`transition-colors duration-150 ${
+                isPinned ? "text-primary-6" : "text-text-3 hover:text-text-2"
+              }`}
+            >
+              {isPinned ? (
+                <PinOff size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
+              ) : (
+                <Pin size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
+              )}
+            </span>
+          </span>
+        </button>
+      );
+    };
+
+    const renderSection = (label: string, sectionItems: SlashItem[]) => {
+      if (sectionItems.length === 0) return null;
+      return (
+        <React.Fragment key={label}>
+          <div className={`${DROPDOWN_CLASSES.sectionLabel} first:pt-1`}>
+            {label}
+          </div>
+          {sectionItems.map(renderItem)}
+        </React.Fragment>
+      );
+    };
+
     return createPortal(
       <div
         ref={panelRef}
@@ -216,6 +292,15 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
           width: PANEL_WIDTH,
         }}
       >
+        {activeSkillItem?.skillPath && (
+          <div
+            className="absolute left-full top-0 ml-2"
+            style={{ pointerEvents: "auto" }}
+          >
+            <FileTreePreview path={activeSkillItem.skillPath} itemType="file" />
+          </div>
+        )}
+
         {/* Search header */}
         <div className={DROPDOWN_CLASSES.searchContainer}>
           <Search
@@ -250,54 +335,17 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
               {t("input.pinnedActions.empty")}
             </div>
           )}
-          {filteredItems.map((item) => {
-            const key = actionKey(item);
-            const isPinned = pinnedKeys.has(key);
-            return (
-              <button
-                key={key}
-                type="button"
-                className={`${DROPDOWN_CLASSES.menuControlItem} min-w-0`}
-                {...keyboard.getItemProps(filteredItems.indexOf(item))}
-              >
-                <div className="flex min-w-0 items-center">
-                  <span className="truncate text-[12px] font-medium text-text-1">
-                    {item.name}
-                  </span>
-                </div>
-                <span className="flex shrink-0 items-center gap-2">
-                  <span
-                    role="button"
-                    tabIndex={-1}
-                    aria-label={t("input.pinnedActions.insert")}
-                    className="text-text-3 transition-colors duration-150 hover:text-primary-6"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleInsert(item);
-                    }}
-                  >
-                    <ArrowUp size={DROPDOWN_ITEM.iconSize} strokeWidth={2} />
-                  </span>
-                  <span
-                    className={`transition-colors duration-150 ${
-                      isPinned
-                        ? "text-primary-6"
-                        : "text-text-3 hover:text-text-2"
-                    }`}
-                  >
-                    {isPinned ? (
-                      <PinOff
-                        size={DROPDOWN_ITEM.iconSize}
-                        strokeWidth={1.75}
-                      />
-                    ) : (
-                      <Pin size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
-                    )}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
+          {renderSection(
+            t("creator.slashMenu.workspaceSkills", {
+              defaultValue: "Workspace Skills",
+            }),
+            workspaceSkillItems
+          )}
+          {renderSection(
+            t("creator.slashMenu.userSkills", { defaultValue: "User Skills" }),
+            userSkillItems
+          )}
+          {nonSkillItems.map(renderItem)}
         </div>
 
         {/* Footer */}

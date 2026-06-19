@@ -1800,7 +1800,9 @@
       "uploadImage": "Enviar imagem",
       "mode": "Modo",
       "models": "Modelos",
-      "skills": "Skills"
+      "skills": "Skills",
+      "workspaceSkills": "Workspace Skills",
+      "userSkills": "User Skills"
     },
     "diffMenu": {
       "gitActions": "Ações GIT",

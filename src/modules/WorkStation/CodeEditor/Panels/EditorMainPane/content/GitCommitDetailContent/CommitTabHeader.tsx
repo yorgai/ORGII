@@ -48,9 +48,21 @@ export const CommitTabHeader: React.FC<CommitTabHeaderProps> = memo(
       [commitDiff]
     );
 
+    // The caller-supplied `commitMessage` can be a placeholder (the short SHA
+    // itself) when the commit was selected before its `summary` had resolved
+    // — that would render the breadcrumb as `21b1bc64 / 21b1bc64`. Prefer the
+    // authoritative message from `commitDiff` once it has loaded, and fall
+    // back to the caller's value only while the diff is still in flight.
+    const resolvedMessage = commitDiff?.summary?.trim() || commitMessage;
+    const breadcrumbTitle =
+      resolvedMessage && resolvedMessage !== shortSha ? resolvedMessage : "";
+    const breadcrumbPath = breadcrumbTitle
+      ? `${shortSha}/${breadcrumbTitle}`
+      : shortSha;
+
     return (
       <FileHeader
-        filePath={`${shortSha}/${commitMessage}`}
+        filePath={breadcrumbPath}
         useFileTypeIcon={false}
         disableNavigation
         plainTitle={false}

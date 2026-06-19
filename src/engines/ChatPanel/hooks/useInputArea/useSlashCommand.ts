@@ -24,6 +24,7 @@ interface UseSlashCommandOptions {
   composerInputRef: RefObject<ComposerInputRef | null>;
   setShowSlashMenu: (show: boolean) => void;
   setSlashQuery: (query: string) => void;
+  workspacePaths?: string[];
   /**
    * When `true`, `/mode` always reads + writes `creatorDefaultExecModeAtom`
    * even if there is an active session in the route. Set by callers that
@@ -59,6 +60,7 @@ export function useSlashCommand(
     composerInputRef,
     setShowSlashMenu,
     setSlashQuery,
+    workspacePaths,
     creatorDefaultMode: forceCreatorDefault = false,
   } = options;
 
@@ -97,6 +99,7 @@ export function useSlashCommand(
     prefetch,
   } = useSlashItemsCache({
     builtinItems: BUILTIN_SLASH_ITEMS,
+    workspacePaths,
   });
 
   const prefetchItems = useCallback(

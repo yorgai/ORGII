@@ -9,8 +9,8 @@ use super::commands::apply_selections;
 use super::detect::detect_all;
 use super::external_import_detect;
 use super::types::{
-    readonly_excluded_tool_names, FidelityWarning, ImportSelection, ImportStatus, ItemKind,
-    SourceAgent, SourceScope,
+    FidelityWarning, ImportSelection, ImportStatus, ItemKind, SourceAgent, SourceScope,
+    readonly_excluded_tool_names,
 };
 use crate::core::definitions::store::AgentDefinitionsStore;
 
@@ -50,11 +50,12 @@ fn detects_cursor_rules_in_project() {
     assert_eq!(foo.kind, ItemKind::Policy);
     assert!(foo.fidelity_warnings.is_empty());
     assert_eq!(foo.preview.summary, "Foo body line");
-    assert!(foo
-        .preview
-        .frontmatter
-        .iter()
-        .any(|(k, _)| k == "description"));
+    assert!(
+        foo.preview
+            .frontmatter
+            .iter()
+            .any(|(k, _)| k == "description")
+    );
 
     let bar = cursor_items
         .iter()
@@ -70,10 +71,12 @@ fn detects_claude_code_workspace_memory() {
     write_file(&repo.join("CLAUDE.md"), "# Project\nbody\n");
 
     let items = detect_all(Some(repo));
-    assert!(items
-        .iter()
-        .any(|i| matches!(i.source_agent, SourceAgent::ClaudeCode)
-            && matches!(i.source_scope, SourceScope::WorkspaceLocal { .. })));
+    assert!(
+        items
+            .iter()
+            .any(|i| matches!(i.source_agent, SourceAgent::ClaudeCode)
+                && matches!(i.source_scope, SourceScope::WorkspaceLocal { .. }))
+    );
 }
 
 #[test]
@@ -95,9 +98,11 @@ fn detects_copilot_single_and_scoped_instructions() {
         .filter(|i| matches!(i.source_agent, SourceAgent::Copilot))
         .collect();
     assert_eq!(copilot.len(), 2);
-    assert!(copilot
-        .iter()
-        .any(|i| i.suggested_name == "copilot-instructions"));
+    assert!(
+        copilot
+            .iter()
+            .any(|i| i.suggested_name == "copilot-instructions")
+    );
     assert!(copilot.iter().any(|i| i.suggested_name == "copilot-rust"));
 }
 
@@ -250,11 +255,13 @@ async fn apply_rejects_unsafe_target_names() {
     let store = AgentDefinitionsStore::new();
     let report = apply_selections(vec![bad], &store);
     assert_eq!(report.items[0].status, ImportStatus::Failed);
-    assert!(report.items[0]
-        .error
-        .as_deref()
-        .unwrap_or_default()
-        .contains("Invalid target name"));
+    assert!(
+        report.items[0]
+            .error
+            .as_deref()
+            .unwrap_or_default()
+            .contains("Invalid target name")
+    );
 }
 
 // ============================================================
@@ -288,11 +295,13 @@ fn detects_claude_code_subagents_in_project() {
     let agent = agents[0];
     assert_eq!(agent.suggested_name, "code-reviewer");
     assert_eq!(agent.preview.summary, "You review code carefully.");
-    assert!(agent
-        .preview
-        .frontmatter
-        .iter()
-        .any(|(k, v)| k == "name" && v == "code-reviewer"));
+    assert!(
+        agent
+            .preview
+            .frontmatter
+            .iter()
+            .any(|(k, v)| k == "name" && v == "code-reviewer")
+    );
     assert!(matches!(agent.source_agent, SourceAgent::ClaudeCode));
 }
 
@@ -394,9 +403,11 @@ fn detects_gemini_subagents_in_project_and_user_home() {
         })
         .collect();
     assert_eq!(gemini_repo_agents.len(), 1);
-    assert!(gemini_repo_agents
-        .iter()
-        .any(|item| item.suggested_name == "planner"));
+    assert!(
+        gemini_repo_agents
+            .iter()
+            .any(|item| item.suggested_name == "planner")
+    );
 
     let global_items = detect_all(None);
     let gemini_global_agents: Vec<_> = global_items
@@ -407,9 +418,11 @@ fn detects_gemini_subagents_in_project_and_user_home() {
         })
         .collect();
     assert_eq!(gemini_global_agents.len(), 1);
-    assert!(gemini_global_agents
-        .iter()
-        .any(|item| item.suggested_name == "explorer"));
+    assert!(
+        gemini_global_agents
+            .iter()
+            .any(|item| item.suggested_name == "explorer")
+    );
 }
 
 #[test]
@@ -452,12 +465,16 @@ fn detects_copilot_agent_and_chatmode_files() {
         2,
         "expected one .agent.md + one .chatmode.md"
     );
-    assert!(copilot_agents
-        .iter()
-        .any(|i| i.suggested_name == "code-review"));
-    assert!(copilot_agents
-        .iter()
-        .any(|i| i.suggested_name == "research"));
+    assert!(
+        copilot_agents
+            .iter()
+            .any(|i| i.suggested_name == "code-review")
+    );
+    assert!(
+        copilot_agents
+            .iter()
+            .any(|i| i.suggested_name == "research")
+    );
 }
 
 #[test]
@@ -491,9 +508,11 @@ fn detects_codex_subagents_in_project_and_user_home() {
         })
         .collect();
     assert_eq!(codex_repo_agents.len(), 1);
-    assert!(codex_repo_agents
-        .iter()
-        .any(|item| item.suggested_name == "auditor"));
+    assert!(
+        codex_repo_agents
+            .iter()
+            .any(|item| item.suggested_name == "auditor")
+    );
 
     let global_items = detect_all(None);
     let codex_global_agents: Vec<_> = global_items
@@ -504,9 +523,11 @@ fn detects_codex_subagents_in_project_and_user_home() {
         })
         .collect();
     assert_eq!(codex_global_agents.len(), 1);
-    assert!(codex_global_agents
-        .iter()
-        .any(|item| item.suggested_name == "researcher"));
+    assert!(
+        codex_global_agents
+            .iter()
+            .any(|item| item.suggested_name == "researcher")
+    );
 }
 
 #[test]
@@ -534,7 +555,7 @@ fn detects_claude_code_skills_dir_and_commands_file() {
 }
 
 #[test]
-fn applies_claude_code_skill_dir_into_orgii_skills() {
+fn skips_workspace_local_claude_skill_import_without_copying_to_orgii() {
     let tmp = TempDir::new().unwrap();
     let orgii_home = tmp.path().join("home");
     fs::create_dir_all(&orgii_home).unwrap();
@@ -569,17 +590,15 @@ fn applies_claude_code_skill_dir_into_orgii_skills() {
 
     let store = AgentDefinitionsStore::new();
     let report = apply_selections(vec![selection], &store);
-    assert_eq!(
-        report.items[0].status,
-        ImportStatus::Imported,
-        "import failed: {:?}",
-        report.items[0].error
-    );
+    assert_eq!(report.items[0].status, ImportStatus::Skipped);
 
     let target_skill = repo.join(".orgii/skills/refactor/SKILL.md");
     let target_example = repo.join(".orgii/skills/refactor/examples/before.txt");
-    assert!(target_skill.is_file(), "SKILL.md not copied");
-    assert!(target_example.is_file(), "bundled example not copied");
+    assert!(!target_skill.exists(), "workspace skill must not be copied");
+    assert!(
+        !target_example.exists(),
+        "bundled example must not be copied"
+    );
 }
 
 #[test]
@@ -629,11 +648,13 @@ fn applies_claude_code_agent_definition_via_store() {
         .expect("poet not in in-memory store");
     assert_eq!(imported.name, "poet");
     assert_eq!(imported.description.as_deref(), Some("Writes haikus"));
-    assert!(imported
-        .soul_content
-        .as_deref()
-        .unwrap_or_default()
-        .contains("haikus on demand"));
+    assert!(
+        imported
+            .soul_content
+            .as_deref()
+            .unwrap_or_default()
+            .contains("haikus on demand")
+    );
     assert!(!imported.built_in);
 
     // On-disk JSON file contains the agent.
@@ -679,11 +700,13 @@ fn agent_definition_import_rejects_collision_without_overwrite() {
 
     let second = apply_selections(vec![mk(false)], &store);
     assert_eq!(second.items[0].status, ImportStatus::Failed);
-    assert!(second.items[0]
-        .error
-        .as_deref()
-        .unwrap_or_default()
-        .contains("already exists"));
+    assert!(
+        second.items[0]
+            .error
+            .as_deref()
+            .unwrap_or_default()
+            .contains("already exists")
+    );
 
     let third = apply_selections(vec![mk(true)], &store);
     assert_eq!(third.items[0].status, ImportStatus::Imported);
@@ -854,22 +877,28 @@ fn detects_cursor_skills_in_project() {
         "expected 2 cursor skills, got {:?}",
         cursor_skills
     );
-    assert!(cursor_skills
-        .iter()
-        .any(|i| i.suggested_name == "architecture-audit"));
-    assert!(cursor_skills
-        .iter()
-        .any(|i| i.suggested_name == "wiring-checklist"));
+    assert!(
+        cursor_skills
+            .iter()
+            .any(|i| i.suggested_name == "architecture-audit")
+    );
+    assert!(
+        cursor_skills
+            .iter()
+            .any(|i| i.suggested_name == "wiring-checklist")
+    );
 
     let audit = cursor_skills
         .iter()
         .find(|i| i.suggested_name == "architecture-audit")
         .unwrap();
-    assert!(audit
-        .preview
-        .frontmatter
-        .iter()
-        .any(|(k, _)| k == "description"));
+    assert!(
+        audit
+            .preview
+            .frontmatter
+            .iter()
+            .any(|(k, _)| k == "description")
+    );
     assert!(matches!(
         audit.source_scope,
         SourceScope::WorkspaceLocal { .. }
@@ -906,7 +935,7 @@ fn cursor_skill_loose_md_in_skills_dir_is_ignored() {
 }
 
 #[test]
-fn applies_cursor_skill_dir_into_orgii_skills() {
+fn skips_workspace_local_cursor_skill_import_without_copying_to_orgii() {
     let tmp = TempDir::new().unwrap();
     let orgii_home = tmp.path().join("home");
     fs::create_dir_all(&orgii_home).unwrap();
@@ -917,7 +946,6 @@ fn applies_cursor_skill_dir_into_orgii_skills() {
         &repo.join(".cursor/skills/babysit/SKILL.md"),
         "---\nname: babysit\ndescription: Keep PR merge-ready\n---\nBabysit the PR.\n",
     );
-    // Bundled sibling — must travel with the skill.
     write_file(
         &repo.join(".cursor/skills/babysit/examples/checklist.md"),
         "1. fix CI\n2. resolve conflicts\n",
@@ -937,8 +965,6 @@ fn applies_cursor_skill_dir_into_orgii_skills() {
         })
         .expect("babysit cursor skill detected");
 
-    // Apply uses the bundle directory (parent of SKILL.md), the same
-    // contract the wizard uses for Claude Code skills.
     let selection = ImportSelection {
         source_agent: skill.source_agent,
         source_scope: skill.source_scope.clone(),
@@ -951,19 +977,14 @@ fn applies_cursor_skill_dir_into_orgii_skills() {
 
     let store = AgentDefinitionsStore::new();
     let report = apply_selections(vec![selection], &store);
-    assert_eq!(
-        report.items[0].status,
-        ImportStatus::Imported,
-        "import failed: {:?}",
-        report.items[0].error
-    );
+    assert_eq!(report.items[0].status, ImportStatus::Skipped);
 
     let target_skill = repo.join(".orgii/skills/babysit/SKILL.md");
     let target_example = repo.join(".orgii/skills/babysit/examples/checklist.md");
-    assert!(target_skill.is_file(), "SKILL.md not copied");
+    assert!(!target_skill.exists(), "workspace skill must not be copied");
     assert!(
-        target_example.is_file(),
-        "bundled cursor skill sibling not copied"
+        !target_example.exists(),
+        "bundled sibling must not be copied"
     );
 }
 

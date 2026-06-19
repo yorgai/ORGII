@@ -21,7 +21,10 @@ export interface SkillsHubDetailState {
   onCheckUpdates: () => void;
   onUpdateSkill: (slug: string) => Promise<boolean>;
   updatingSlug: string | null;
-  onRefreshInstalled: () => Promise<void>;
+  onRefreshInstalled: (
+    workspacePaths?: string[],
+    options?: { scoped?: boolean }
+  ) => Promise<void>;
 }
 
 export interface SkillEditorState {

@@ -23,12 +23,15 @@ import {
 import type { BackendEvent } from "@src/types/session/steps";
 
 import {
+  ReplayEventFilter,
+  type ReplayEventFilterSelection,
   type ReplayTab,
   SimulatorReplayChrome,
   type TimestampedReplayTab,
   WorkStationShell,
   buildPrimarySidebarConfig,
   capNewestWithActive,
+  filterReplayTabsBySelection,
   mergeNewestFirstByTimestamp,
 } from "../../shared";
 import { CodePanel } from "./CodePanel";
@@ -114,6 +117,8 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
 
   // Track whether user explicitly selected a tool item (under terminal tab)
   const [userPickedTool, setUserPickedTool] = useState(false);
+  const [eventFilterSelection, setEventFilterSelection] =
+    useState<ReplayEventFilterSelection>("all");
 
   // File tab — sidebar click lives inside the explore tab's file list, so we
   // only need to flip the explore/file vs search switch here. The sidebar
@@ -349,6 +354,11 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
     allToolOperations,
   ]);
 
+  const filteredReplayTabsOrdered = useMemo(
+    () => filterReplayTabsBySelection(replayTabsOrdered, eventFilterSelection),
+    [eventFilterSelection, replayTabsOrdered]
+  );
+
   // The active tab mirrors whichever selection drives the current CodePanel
   // mode — so the strip highlights the tab corresponding to what's on screen,
   // regardless of kind.
@@ -373,8 +383,8 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
   ]);
 
   const replayTabs = useMemo(
-    () => capNewestWithActive(replayTabsOrdered, replayActiveEventId),
-    [replayTabsOrdered, replayActiveEventId]
+    () => capNewestWithActive(filteredReplayTabsOrdered, replayActiveEventId),
+    [filteredReplayTabsOrdered, replayActiveEventId]
   );
 
   // Map eventId → kind so the click handler can dispatch to the right
@@ -422,6 +432,12 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
         tabs={replayTabs}
         activeEventId={replayActiveEventId}
         onTabClick={onReplayTabClick}
+        trailingSlot={
+          <ReplayEventFilter
+            value={eventFilterSelection}
+            onChange={setEventFilterSelection}
+          />
+        }
       >
         <div className="flex min-h-0 flex-1">
           <WorkStationShell

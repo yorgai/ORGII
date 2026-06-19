@@ -34,6 +34,11 @@ const logger = createLogger("useKeyValidation");
 
 const VALIDATE_KEY_FIRST_MESSAGE = "Please enter an API key first";
 
+function cleanInput(value?: string): string | undefined {
+  const cleaned = value?.trim();
+  return cleaned ? cleaned : undefined;
+}
+
 /**
  * Quota shape carried back to the wizard. Either the strict-null Tauri
  * `QuotaInfo` or the legacy flat `QuotaSnapshot`.
@@ -180,7 +185,7 @@ export function useKeyValidation(
 
   useEffect(() => {
     if (lastValidatedKeyRef.current === null && !keyValidated) return;
-    if (keyValidated && rawKeyInput !== lastValidatedKeyRef.current) {
+    if (keyValidated && rawKeyInput.trim() !== lastValidatedKeyRef.current) {
       resetValidation();
     }
   }, [rawKeyInput, keyValidated, resetValidation]);
@@ -196,8 +201,12 @@ export function useKeyValidation(
       const effectiveTestModel =
         typeof overrideTestModel === "string" ? overrideTestModel : undefined;
 
-      if (!rawKeyInput) {
-        if (agentType === LOCAL_MODEL_PROVIDER && baseUrl) {
+      const cleanRawKeyInput = rawKeyInput.trim();
+      const cleanBaseUrl = cleanInput(baseUrl);
+      const cleanCursorSessionToken = cleanInput(cursorSessionToken);
+
+      if (!cleanRawKeyInput) {
+        if (agentType === LOCAL_MODEL_PROVIDER && cleanBaseUrl) {
           setValidationError(
             "Please enter a local API key placeholder for this endpoint."
           );
@@ -218,11 +227,11 @@ export function useKeyValidation(
         try {
           result = await validateKeyDirect({
             agent_type: agentType,
-            api_key: rawKeyInput,
-            base_url: baseUrl,
+            api_key: cleanRawKeyInput,
+            base_url: cleanBaseUrl,
             session_token:
               agentType === CLI_AGENT.CURSOR || agentType === CLI_AGENT.CODEX
-                ? cursorSessionToken
+                ? cleanCursorSessionToken
                 : undefined,
             test_model: effectiveTestModel ?? testModel,
           });
@@ -236,7 +245,7 @@ export function useKeyValidation(
         }
 
         if (result.valid) {
-          lastValidatedKeyRef.current = rawKeyInput;
+          lastValidatedKeyRef.current = cleanRawKeyInput;
 
           const envVars =
             (result as { extracted_env_vars?: EnvVar[] }).extracted_env_vars ??

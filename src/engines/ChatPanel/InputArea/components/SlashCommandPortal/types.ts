@@ -90,19 +90,13 @@ export interface DividerEntry {
   kind: "divider";
 }
 
-export interface SkillItemsGroupEntry {
-  kind: "skill-items-group";
-  items: SlashEntry[];
-}
-
 export type ListEntry =
   | ModeEntry
   | SlashEntry
   | SectionHeader
   | FlyoutEntry
   | ImageEntry
-  | DividerEntry
-  | SkillItemsGroupEntry;
+  | DividerEntry;
 
 // ── Open-flyout state ─────────────────────────────────────────────────────────
 

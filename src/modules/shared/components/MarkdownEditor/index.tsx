@@ -35,6 +35,7 @@ export interface MarkdownEditorProps {
   showTokenCount?: boolean;
   previewEmptyText?: string;
   placeholder?: string;
+  emptyLineCount?: number;
   className?: string;
   dataTestId?: string;
   hideHeader?: boolean;
@@ -86,6 +87,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>(
       showTokenCount = true,
       previewEmptyText,
       placeholder,
+      emptyLineCount = 0,
       className,
       dataTestId,
       hideHeader = false,
@@ -115,6 +117,10 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>(
     const tokenCount = useMemo(() => estimateTokens(value), [value]);
     const tabs = useMarkdownEditorTabs();
     const emptyText = previewEmptyText ?? t("common:common.nothingToPreview");
+    const editorValue = useMemo(() => {
+      if (value.length > 0 || emptyLineCount <= 1) return value;
+      return "\n".repeat(emptyLineCount - 1);
+    }, [emptyLineCount, value]);
 
     const focusEditor = useCallback(() => {
       const editableElement =
@@ -122,12 +128,30 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>(
       editableElement?.focus();
     }, []);
 
+    const handleEditorChromeClick = useCallback(
+      (event: React.MouseEvent<HTMLDivElement>) => {
+        if (readOnly || currentTab !== "edit") return;
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (target.closest(".cm-content")) return;
+        focusEditor();
+      },
+      [currentTab, focusEditor, readOnly]
+    );
+
     const updateValue = useCallback(
       (nextValue: string) => {
         valueRef.current = nextValue;
         onChange?.(nextValue);
       },
       [onChange]
+    );
+
+    const handleEditorChange = useCallback(
+      (nextValue: string) => {
+        updateValue(nextValue.trim().length === 0 ? "" : nextValue);
+      },
+      [updateValue]
     );
 
     const insertImage = useCallback(
@@ -218,10 +242,14 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>(
 
         <div className="markdown-editor-wrapper">
           {currentTab === "edit" && !readOnly ? (
-            <div className="markdown-editor-content" style={contentStyle}>
+            <div
+              className="markdown-editor-content"
+              style={contentStyle}
+              onMouseDown={handleEditorChromeClick}
+            >
               <CodeMirrorEditor
-                value={value}
-                onChange={onChange}
+                value={editorValue}
+                onChange={handleEditorChange}
                 language="markdown"
                 height="100%"
                 enableMinimap={false}

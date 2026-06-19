@@ -22,6 +22,11 @@ import type { WizardData } from "../types";
 
 // Per-agent env-var names that hold OAuth tokens after a successful sign-in.
 // Adding a new OAuth-capable provider requires only a row here.
+function cleanInput(value?: string): string | undefined {
+  const cleaned = value?.trim();
+  return cleaned ? cleaned : undefined;
+}
+
 const OAUTH_ENV_VARS_BY_AGENT: Record<
   string,
   { refresh?: string; idToken?: string; accessToken?: string }
@@ -131,17 +136,21 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
       Boolean(oauthRefreshToken || oauthIdToken || oauthAccessTokenFromEnv);
 
     const isCursorCli = data.agent_type === CLI_AGENT.CURSOR;
-    const rawApiKeyForRequest = data.extracted_api_key || data.raw_key_input;
+    const rawApiKeyForRequest = cleanInput(
+      data.extracted_api_key || data.raw_key_input
+    );
     const apiKeyForRequest =
-      (isCursorCli || !isOAuth) && rawApiKeyForRequest.trim()
+      (isCursorCli || !isOAuth) && rawApiKeyForRequest
         ? rawApiKeyForRequest
         : undefined;
 
     const sessionTokenForRequest = isOAuth
-      ? oauthAccessTokenFromEnv ||
-        data.oauth_session_token ||
-        data.cursor_session_token
-      : data.cursor_session_token;
+      ? cleanInput(
+          oauthAccessTokenFromEnv ||
+            data.oauth_session_token ||
+            data.cursor_session_token
+        )
+      : cleanInput(data.cursor_session_token);
 
     if (isCursorCli && !sessionTokenForRequest?.trim()) {
       throw new Error("Cursor requires a session token before saving.");
@@ -219,7 +228,7 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
       agent_type: data.agent_type as ModelType,
       api_key: apiKeyForRequest,
       session_token: sessionTokenForRequest,
-      base_url: data.extracted_base_url,
+      base_url: cleanInput(data.extracted_base_url),
       env_vars: Object.keys(envVarRecord).length > 0 ? envVarRecord : undefined,
       available_models:
         allAvailableModels.length > 0 ? allAvailableModels : allowedModels,

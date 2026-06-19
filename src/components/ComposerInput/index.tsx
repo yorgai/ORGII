@@ -112,6 +112,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       onSlashCommand,
       onSlashCommandClose,
       onKeyDownForSlashDropdown,
+      onInputMouseDown,
       onImagePaste,
       onBeforeNewline,
       slashTriggerMode = "command",
@@ -142,6 +143,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
     const onSlashCommandRef = useRef(onSlashCommand);
     const onSlashCommandCloseRef = useRef(onSlashCommandClose);
     const onKeyDownForSlashDropdownRef = useRef(onKeyDownForSlashDropdown);
+    const onInputMouseDownRef = useRef(onInputMouseDown);
     const onImagePasteRef = useRef(onImagePaste);
     const onBeforeNewlineRef = useRef(onBeforeNewline);
     useEffect(() => {
@@ -153,6 +155,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       onSlashCommandRef.current = onSlashCommand;
       onSlashCommandCloseRef.current = onSlashCommandClose;
       onKeyDownForSlashDropdownRef.current = onKeyDownForSlashDropdown;
+      onInputMouseDownRef.current = onInputMouseDown;
       onImagePasteRef.current = onImagePaste;
       onBeforeNewlineRef.current = onBeforeNewline;
     });
@@ -834,6 +837,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
             autoCapitalize="off"
             spellCheck={false}
             onInput={(event) => handleInput(event.nativeEvent)}
+            onMouseDown={() => onInputMouseDownRef.current?.()}
           />
         </div>
         {pillPortals}

@@ -1780,7 +1780,9 @@
       "uploadImage": "Téléverser une image",
       "mode": "Mode",
       "models": "Modèles",
-      "skills": "Skills"
+      "skills": "Skills",
+      "workspaceSkills": "Workspace Skills",
+      "userSkills": "User Skills"
     },
     "diffMenu": {
       "gitActions": "Actions GIT",

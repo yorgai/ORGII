@@ -346,11 +346,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
     },
     [
       projectSlug,
-      selectedProject.project.id,
-      selectedProject.orgId,
-      selectedProject.orgName,
-      selectedProject.project.name,
-      selectedProject.projectSlug,
+      selectedProject,
       navigateChatPanel,
       workItemShortIds,
       workItems,

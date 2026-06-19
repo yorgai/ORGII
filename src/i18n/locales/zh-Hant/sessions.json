@@ -1784,7 +1784,9 @@
       "uploadImage": "上傳圖片",
       "mode": "模式",
       "models": "模型",
-      "skills": "Skills"
+      "skills": "Skills",
+      "workspaceSkills": "Workspace Skills",
+      "userSkills": "User Skills"
     },
     "diffMenu": {
       "gitActions": "GIT 操作",

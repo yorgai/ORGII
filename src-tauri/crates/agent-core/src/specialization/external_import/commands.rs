@@ -4,17 +4,17 @@ use std::path::{Path, PathBuf};
 
 use super::detect::detect_all;
 use super::types::{
-    frontmatter_declares_readonly, readonly_excluded_tool_names, DetectedItem, ImportItemReport,
-    ImportReport, ImportSelection, ImportStatus, ItemKind,
+    DetectedItem, ImportItemReport, ImportReport, ImportSelection, ImportStatus, ItemKind,
+    SourceScope, frontmatter_declares_readonly, readonly_excluded_tool_names,
 };
 use crate::core::definitions::schema::{AgentDefinition, AgentTier, AgentToolSelection};
 use crate::core::definitions::store::AgentDefinitionsStore;
 use crate::specialization::mcp::config::{
-    global_config_path, workspace_config_path, McpConfigFile,
+    McpConfigFile, global_config_path, workspace_config_path,
 };
 use crate::specialization::policies::config::PolicyConfig;
 use crate::specialization::policies::{
-    config_for_source, policies_dir_for_source, save_config_for_source, PolicySource,
+    PolicySource, config_for_source, policies_dir_for_source, save_config_for_source,
 };
 use crate::specialization::skills::loader::SkillsLoader;
 
@@ -35,14 +35,15 @@ pub async fn external_import_detect(
     .map_err(|err| format!("Task join error: {}", err))?
 }
 
-/// Apply a list of `ImportSelection`s, copying each source artifact to
-/// the corresponding ORGII primitive directory. Returns a per-item
-/// report so partial failures are visible to the wizard.
+/// Apply a list of `ImportSelection`s to ORGII-managed targets. Returns
+/// a per-item report so partial failures are visible to the wizard.
 ///
 /// `AgentDefinition` imports route through the live
 /// `AgentDefinitionsStore` so the new agent is visible in-process
-/// immediately (no app restart needed). Policy + Skill imports write
-/// directly to disk because no in-memory store mediates those paths.
+/// immediately (no app restart needed). Policy imports write directly to
+/// disk. User-global skill imports can still be copied into ORGII's user
+/// skill directory, but workspace-local skills are parsed in place by the
+/// skill loader and are not forked into `.orgii/skills`.
 #[tauri::command]
 pub async fn external_import_apply(
     selections: Vec<ImportSelection>,
@@ -97,22 +98,36 @@ fn apply_single(selection: ImportSelection, store: &AgentDefinitionsStore) -> Im
                 error: Some(err),
             },
         },
-        ItemKind::Skill => match apply_skill_import(&selection, target_repo_path) {
-            Ok(()) => ImportItemReport {
-                source_path,
-                target_name,
-                kind,
-                status: ImportStatus::Imported,
-                error: None,
-            },
-            Err(err) => ImportItemReport {
-                source_path,
-                target_name,
-                kind,
-                status: ImportStatus::Failed,
-                error: Some(err),
-            },
-        },
+        ItemKind::Skill => {
+            if matches!(selection.source_scope, SourceScope::WorkspaceLocal { .. }) {
+                return ImportItemReport {
+                    source_path,
+                    target_name,
+                    kind,
+                    status: ImportStatus::Skipped,
+                    error: Some(
+                        "Workspace-local skills are loaded in place and are not copied into .orgii/skills"
+                            .to_string(),
+                    ),
+                };
+            }
+            match apply_skill_import(&selection, target_repo_path) {
+                Ok(()) => ImportItemReport {
+                    source_path,
+                    target_name,
+                    kind,
+                    status: ImportStatus::Imported,
+                    error: None,
+                },
+                Err(err) => ImportItemReport {
+                    source_path,
+                    target_name,
+                    kind,
+                    status: ImportStatus::Failed,
+                    error: Some(err),
+                },
+            }
+        }
         ItemKind::Mcp => match apply_mcp_import(&selection, target_repo_path) {
             Ok(()) => ImportItemReport {
                 source_path,
@@ -246,8 +261,9 @@ fn is_safe_target_name(name: &str) -> bool {
 // Skill import
 // ============================================================
 
-/// Imports a skill source into the target repo's `.orgii/skills/<target_name>/SKILL.md`,
-/// or into global skills when no target repo is supplied.
+/// Imports a user-global skill source into ORGII's skill directory.
+/// Workspace-local skills are loaded directly from their source workspace
+/// directories and must not be copied into `.orgii/skills`.
 ///
 /// Two source layouts are supported:
 ///   1. Directory layout — `<dir>/SKILL.md` (Claude Code skills dir).

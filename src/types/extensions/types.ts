@@ -74,15 +74,19 @@ export type DescriptionQuality =
 /** Where a skill came from. Mirrors the Rust `&'static str` value
  * threaded through `SkillsLoader::scan_skills_dir` (`scanner.rs`).
  *
- * - `WORKSPACE`        — `<workspace>/.orgii/skills/<name>/`
+ * - `WORKSPACE`        — `<repo>/.orgii/skills/<name>/`
  * - `BUILTIN`          — `~/.orgii/skills/<name>/` (per-user, default)
  * - `EMBEDDED_BUILTIN` — binary-embedded skills that ship with ORGII
+ * - `EXTERNAL_SOURCE`  — auto-scanned repo/user `.<tool>/skills` and root `skills` directories
+ * - `AGENT_SOURCE`     — agent definition read-only skill source dirs
  * - `SKILLS_SH`        — skills installed from skills.sh snapshots
  * - `GITHUB`           — skills installed from GitHub-backed directory entries */
 export const SKILL_SOURCE = {
   WORKSPACE: "workspace",
   BUILTIN: "builtin",
   EMBEDDED_BUILTIN: "embedded_builtin",
+  EXTERNAL_SOURCE: "external-source",
+  AGENT_SOURCE: "agent-source",
   SKILLS_SH: "skills_sh",
   GITHUB: "github",
 } as const;
@@ -151,6 +155,8 @@ export interface SlashItem {
   skillName?: string;
   /** Absolute path to the skill directory when available. */
   skillPath?: string;
+  /** Slash-menu grouping for skill rows. */
+  skillScope?: "workspace" | "user";
 }
 
 /** Built-in slash action names. */

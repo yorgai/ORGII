@@ -107,6 +107,7 @@ export function useIntegrationsCategoryTableProps(
       onSelectSkill: extensions.handleExtensionSelect,
       onToggleSkill: extensions.skillsHub.onToggleSkill,
       onUninstallSkill: extensions.skillsHub.onUninstallSkill,
+      onRefreshSkills: extensions.skillsHub.onRefreshInstalled,
       onSkillsAfterImport: extensions.skillsHub.onRefreshInstalled,
       markdownRules: policies.markdownRules,
       routines: routines.routines,

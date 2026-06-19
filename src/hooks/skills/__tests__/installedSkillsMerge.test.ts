@@ -88,4 +88,20 @@ describe("mergeInstalledSkills", () => {
     const merged = mergeInstalledSkills([[skill, { ...skill }]]);
     expect(merged).toHaveLength(1);
   });
+
+  it("treats a skill directory and its SKILL.md file as the same location", () => {
+    const directoryForm = createSkill({
+      name: "e2e-testing",
+      path: "/repo/.orgii/skills/e2e-testing/",
+    });
+    const fileForm = createSkill({
+      name: "e2e-testing",
+      path: "/repo/.orgii/skills/e2e-testing/SKILL.md",
+    });
+
+    const merged = mergeInstalledSkills([[directoryForm], [fileForm]]);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].path).toBe(directoryForm.path);
+  });
 });

@@ -104,75 +104,6 @@ export function useSessionCreator(
     getRustAgentType(selectedAgentDefinitionId) === "os";
 
   // ============================================
-  // ComposerInput Input Hook
-  // ============================================
-
-  const {
-    composerInputRef,
-    contextMenuKeyboardHandlerRef,
-    slashCommandKeyboardHandlerRef,
-    showContextMenu,
-    setShowContextMenu,
-    atSearchQuery,
-    setAtSearchQuery,
-    handleAtMention,
-    handleAtMentionClose,
-    handleAtSelect,
-    handleAtMentionClick,
-    isDark,
-    showSlashMenu,
-    slashQuery,
-    handleSlashCommand,
-    handleSlashCommandClose,
-    handleSlashSelect: baseHandleSlashSelect,
-    handleModeSelect,
-    currentMode,
-    filteredSlashItems: baseFilteredSlashItems,
-    slashLoading,
-    prefetchSlashItems,
-  } = useComposerInput({
-    onContentChange: (content) => {
-      setEditorContent(content);
-    },
-    // SessionCreator configures a *new* session — `useSessionId()` would
-    // otherwise resolve to the previously-active session's id and a
-    // `/mode` pick here would silently rewrite that session's
-    // ModePill on the row.
-    creatorDefaultMode: true,
-  });
-
-  // Insert file/line references from WorkStation "Add to agent" menu.
-  useAddToAgentInsertion(composerInputRef);
-
-  // ── Variant-supplied slash extras ────────────────────────────────────────
-  // `extraSlashItems` lets variants (currently the Inbox variant) inject
-  // synthetic commands into the `/` menu without forking the slash
-  // pipeline. They get filtered alongside backend items by `slashQuery` so
-  // the dropdown stays a single ranked list.
-  const filteredSlashItems = useMemo<SlashItem[]>(() => {
-    if (!extraSlashItems || extraSlashItems.length === 0) {
-      return baseFilteredSlashItems;
-    }
-    const query = slashQuery.trim().toLowerCase();
-    const extras = query
-      ? extraSlashItems.filter(
-          (item) =>
-            item.name.toLowerCase().includes(query) ||
-            item.description.toLowerCase().includes(query)
-        )
-      : extraSlashItems;
-    return [...extras, ...baseFilteredSlashItems];
-  }, [extraSlashItems, baseFilteredSlashItems, slashQuery]);
-
-  const handleSlashSelect = useCallback(
-    (item: SlashItem) => {
-      if (onSlashSelectIntercept?.(item)) return;
-      baseHandleSlashSelect(item);
-    },
-    [onSlashSelectIntercept, baseHandleSlashSelect]
-  );
-
-  // ============================================
   // Repo Selection
   // ============================================
 
@@ -192,21 +123,6 @@ export function useSessionCreator(
 
   const isMultiRoot = useAtomValue(isMultiRootWorkspaceAtom);
   const primaryFolder = useAtomValue(primaryFolderAtom);
-
-  // When the global repo selection changes, clear any session-specific
-  // divergence so the creator follows the new selection. We only clear when
-  // the stored draft
-  // points to a *different* repo — if it matches (e.g. handleRepoChange
-  // just synced them), we keep the draft so the branch is preserved.
-  const prevGlobalRepoIdRef = useRef(globalRepoId);
-  useEffect(() => {
-    if (prevGlobalRepoIdRef.current !== globalRepoId) {
-      prevGlobalRepoIdRef.current = globalRepoId;
-      if (sessionSource && sessionSource.repoId !== globalRepoId) {
-        setSessionSource(null);
-      }
-    }
-  }, [globalRepoId, sessionSource, setSessionSource]);
 
   // `effectiveSource` is what launch + display both consume. When no
   // divergence is stored, synthesize it live from the global repo selection so
@@ -253,6 +169,100 @@ export function useSessionCreator(
     globalBranch,
     repos,
   ]);
+
+  const creatorSkillWorkspacePaths = useMemo(() => {
+    const roots = new Set<string>();
+    for (const path of [effectiveSource?.repoPath, primaryFolder?.path]) {
+      const normalizedPath = path?.replace(/\/+$/, "");
+      if (normalizedPath) roots.add(normalizedPath);
+    }
+    return [...roots];
+  }, [effectiveSource?.repoPath, primaryFolder?.path]);
+
+  // ============================================
+  // ComposerInput Input Hook
+  // ============================================
+
+  const {
+    composerInputRef,
+    contextMenuKeyboardHandlerRef,
+    slashCommandKeyboardHandlerRef,
+    showContextMenu,
+    setShowContextMenu,
+    atSearchQuery,
+    setAtSearchQuery,
+    handleAtMention,
+    handleAtMentionClose,
+    handleAtSelect,
+    handleAtMentionClick,
+    isDark,
+    showSlashMenu,
+    slashQuery,
+    handleSlashCommand,
+    handleSlashCommandClose,
+    handleSlashSelect: baseHandleSlashSelect,
+    handleModeSelect,
+    currentMode,
+    filteredSlashItems: baseFilteredSlashItems,
+    slashLoading,
+    prefetchSlashItems,
+  } = useComposerInput({
+    onContentChange: (content) => {
+      setEditorContent(content);
+    },
+    // SessionCreator configures a *new* session — `useSessionId()` would
+    // otherwise resolve to the previously-active session's id and a
+    // `/mode` pick here would silently rewrite that session's
+    // ModePill on the row.
+    creatorDefaultMode: true,
+    workspacePaths: creatorSkillWorkspacePaths,
+  });
+
+  // Insert file/line references from WorkStation "Add to agent" menu.
+  useAddToAgentInsertion(composerInputRef);
+
+  // ── Variant-supplied slash extras ────────────────────────────────────────
+  // `extraSlashItems` lets variants (currently the Inbox variant) inject
+  // synthetic commands into the `/` menu without forking the slash
+  // pipeline. They get filtered alongside backend items by `slashQuery` so
+  // the dropdown stays a single ranked list.
+  const filteredSlashItems = useMemo<SlashItem[]>(() => {
+    if (!extraSlashItems || extraSlashItems.length === 0) {
+      return baseFilteredSlashItems;
+    }
+    const query = slashQuery.trim().toLowerCase();
+    const extras = query
+      ? extraSlashItems.filter(
+          (item) =>
+            item.name.toLowerCase().includes(query) ||
+            item.description.toLowerCase().includes(query)
+        )
+      : extraSlashItems;
+    return [...extras, ...baseFilteredSlashItems];
+  }, [extraSlashItems, baseFilteredSlashItems, slashQuery]);
+
+  const handleSlashSelect = useCallback(
+    (item: SlashItem) => {
+      if (onSlashSelectIntercept?.(item)) return;
+      baseHandleSlashSelect(item);
+    },
+    [onSlashSelectIntercept, baseHandleSlashSelect]
+  );
+
+  // When the global repo selection changes, clear any session-specific
+  // divergence so the creator follows the new selection. We only clear when
+  // the stored draft
+  // points to a *different* repo — if it matches (e.g. handleRepoChange
+  // just synced them), we keep the draft so the branch is preserved.
+  const prevGlobalRepoIdRef = useRef(globalRepoId);
+  useEffect(() => {
+    if (prevGlobalRepoIdRef.current !== globalRepoId) {
+      prevGlobalRepoIdRef.current = globalRepoId;
+      if (sessionSource && sessionSource.repoId !== globalRepoId) {
+        setSessionSource(null);
+      }
+    }
+  }, [globalRepoId, sessionSource, setSessionSource]);
 
   // Pure branch setter for the session-scoped pill: writes to the draft
   // atom only, no git checkout. If there's no active draft yet we

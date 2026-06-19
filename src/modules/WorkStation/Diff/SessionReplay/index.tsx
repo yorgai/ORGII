@@ -19,13 +19,7 @@ import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getGitCommits } from "@src/api/http/git";
-import type { GitCommitInfo } from "@src/api/http/git/types";
-import {
-  type OrgtrackCommitLink,
-  type OrgtrackSessionFinalDiff,
-  getOrgtrackSessionCommitLinks,
-  getOrgtrackSessionFinalDiffs,
-} from "@src/api/tauri/lineage";
+import { type OrgtrackSessionFinalDiff } from "@src/api/tauri/lineage";
 import Button from "@src/components/Button";
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
@@ -55,7 +49,6 @@ import {
 } from "@src/modules/WorkStation/shared/PrimarySidebarLayout";
 import type { ReplayTab } from "@src/modules/WorkStation/shared/SessionReplay/ReplayTabBar";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { getGitArtifactsFromEvent } from "@src/shared/git/sessionGitArtifacts";
 import { reposAtom } from "@src/store/repo/atoms";
 import { sessionByIdAtom } from "@src/store/session";
 import {
@@ -71,33 +64,20 @@ import type { SourceControlHistorySelection } from "@src/store/workstation/tabs"
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
 
 import {
-  type SubmissionArtifact,
   type SubmissionCommit,
   SubmissionCommitsContent,
   SubmissionPullRequestsContent,
-  deriveSubmissionsData,
 } from "./SubmissionsContent";
 import { isDiffScopeActive, resolveScopedSelectedPath } from "./diffScope";
 import type { DiffReplayTab } from "./types";
 import { useDiff } from "./useDiff";
+import {
+  type SubmissionRepoContext,
+  useSubmissionsData,
+} from "./useSubmissionsData";
 
 const SUBMISSION_COMMIT_RESOLVE_LIMIT = 200;
 const logger = createLogger("SessionReplayDiff");
-
-function commitLinkToSubmissionCommit(
-  link: OrgtrackCommitLink,
-  fallbackRepoContext: SubmissionRepoContext
-): SubmissionCommit {
-  const shortSha = link.commitSha.slice(0, 7);
-  return {
-    sha: link.commitSha,
-    short_sha: shortSha,
-    summary: shortSha,
-    author: null,
-    repoId: fallbackRepoContext.repoId,
-    repoPath: fallbackRepoContext.repoPath,
-  };
-}
 
 /** Exported for unit testing. */
 export function finalDiffToSection(
@@ -154,11 +134,6 @@ const TAB_BY_ID: Record<string, DiffReplayTab> = {
   [TAB_IDS.submissions]: "submissions",
 };
 
-interface SubmissionRepoContext {
-  repoId?: string;
-  repoPath?: string;
-}
-
 function hasRepoContext(context: SubmissionRepoContext | null): boolean {
   return Boolean(context?.repoId || context?.repoPath);
 }
@@ -209,77 +184,6 @@ function getRepoContextKey(context: SubmissionRepoContext): string | null {
   return context.repoPath ?? context.repoId ?? null;
 }
 
-function commitMatchesSubmission(
-  candidate: GitCommitInfo,
-  submission: SubmissionCommit
-): boolean {
-  const sha = submission.sha.toLowerCase();
-  return (
-    candidate.sha.toLowerCase().startsWith(sha) ||
-    candidate.short_sha.toLowerCase() === sha
-  );
-}
-
-function mergeResolvedCommit(
-  submission: SubmissionCommit,
-  resolved: GitCommitInfo | undefined,
-  context: SubmissionRepoContext
-): SubmissionCommit {
-  if (!resolved) {
-    return {
-      ...submission,
-      repoId: submission.repoId ?? context.repoId,
-      repoPath: submission.repoPath ?? context.repoPath,
-    };
-  }
-
-  return {
-    ...submission,
-    sha: resolved.sha,
-    short_sha: resolved.short_sha,
-    summary: resolved.summary,
-    author: resolved.author,
-    // The commit was actually found in `context`'s git history, so that
-    // context is authoritative — the submission's own repo context may be
-    // a wrong session-level fallback (e.g. a non-git working directory).
-    repoId: context.repoId ?? submission.repoId,
-    repoPath: context.repoPath ?? submission.repoPath,
-  };
-}
-
-// Non-canonical submission-card extraction. Final AI Blame commit counts come
-// from Rust Orgtrack summaries; this only preserves clickable replay references.
-function collectSubmissionArtifacts(
-  events: readonly SessionEvent[],
-  fallbackRepoContext: SubmissionRepoContext
-): SubmissionArtifact[] {
-  const artifacts: SubmissionArtifact[] = [];
-  const lockedRepoContext = hasRepoContext(fallbackRepoContext)
-    ? fallbackRepoContext
-    : null;
-  let nearestRepoContext: SubmissionRepoContext | null = lockedRepoContext;
-
-  for (const event of events) {
-    if (!lockedRepoContext && (event.repoId || event.repoPath)) {
-      nearestRepoContext = {
-        repoId: event.repoId ?? event.repoPath,
-        repoPath: event.repoPath,
-      };
-    }
-
-    const artifactRepoContext = lockedRepoContext ?? nearestRepoContext;
-    artifacts.push(
-      ...getGitArtifactsFromEvent(event).map((artifact) => ({
-        ...artifact,
-        repoId: artifactRepoContext?.repoId,
-        repoPath: artifactRepoContext?.repoPath,
-        eventId: event.id,
-      }))
-    );
-  }
-  return artifacts;
-}
-
 const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   currentEvent,
   mode = "simulation",
@@ -315,77 +219,30 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   // Replay-cursor entries feed only the cumulative fallback consolidation
   // below; the per-event "focus" view was removed for issue #24.
   const { entries } = useDiff();
-  const [orgtrackFinalDiffs, setOrgtrackFinalDiffs] = useState<
-    OrgtrackSessionFinalDiff[]
-  >([]);
-  const [orgtrackFinalDiffsLoading, setOrgtrackFinalDiffsLoading] =
-    useState(false);
-  const [orgtrackCommitLinks, setOrgtrackCommitLinks] = useState<
-    OrgtrackCommitLink[]
-  >([]);
 
-  useEffect(() => {
-    if (!sessionId) {
-      setOrgtrackFinalDiffs([]);
-      return;
-    }
+  const fallbackRepoContext = useMemo(() => {
+    const sessionRepoContext = sessionRepoPath
+      ? { repoId: sessionRepoPath, repoPath: sessionRepoPath }
+      : {};
+    if (hasRepoContext(sessionRepoContext)) return sessionRepoContext;
+    const currentEventRepoContext = getRepoContextFromUnknown(currentEvent);
+    if (hasRepoContext(currentEventRepoContext)) return currentEventRepoContext;
+    return resolveLatestRepoContext(simulatorEvents, {});
+  }, [currentEvent, sessionRepoPath, simulatorEvents]);
 
-    let cancelled = false;
-    setOrgtrackFinalDiffsLoading(true);
-    void getOrgtrackSessionFinalDiffs({ sessionId })
-      .then((finalDiffs) => {
-        if (!cancelled) {
-          setOrgtrackFinalDiffs(finalDiffs);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          logger.warn("failed to load orgtrack final diffs", {
-            err,
-            sessionId,
-          });
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setOrgtrackFinalDiffsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionId]);
-
-  useEffect(() => {
-    if (!sessionId) {
-      setOrgtrackCommitLinks([]);
-      return;
-    }
-
-    let cancelled = false;
-    void getOrgtrackSessionCommitLinks({ sessionId })
-      .then((commitLinks) => {
-        if (!cancelled) {
-          setOrgtrackCommitLinks(commitLinks);
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          logger.warn("failed to load orgtrack commit links", {
-            error,
-            sessionId,
-          });
-          setOrgtrackCommitLinks([]);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // `diffRefreshNonce` re-runs this load on each chat→Diff navigation so the
-    // canonical final diffs reflect the latest working tree (not a stale cache).
-  }, [sessionId, diffRefreshNonce]);
+  const {
+    orgtrackFinalDiffs,
+    orgtrackFinalDiffsLoading,
+    submissionCommits,
+    pullRequestsWithStatus,
+    submissionsData,
+  } = useSubmissionsData({
+    sessionId,
+    simulatorEvents,
+    fallbackRepoContext,
+    repos,
+    diffRefreshNonce,
+  });
 
   const canonicalFinalSections = useMemo(
     () => orgtrackFinalDiffs.map(finalDiffToSection),
@@ -495,35 +352,10 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     [activeTab, handleUndoAll, canUndoAll, handleCollapseAll, tCommon]
   );
 
-  const fallbackRepoContext = useMemo(() => {
-    const sessionRepoContext = sessionRepoPath
-      ? { repoId: sessionRepoPath, repoPath: sessionRepoPath }
-      : {};
-    if (hasRepoContext(sessionRepoContext)) return sessionRepoContext;
-    const currentEventRepoContext = getRepoContextFromUnknown(currentEvent);
-    if (hasRepoContext(currentEventRepoContext)) return currentEventRepoContext;
-    return resolveLatestRepoContext(simulatorEvents, {});
-  }, [currentEvent, sessionRepoPath, simulatorEvents]);
-  const submissionsData = useMemo(
-    () =>
-      deriveSubmissionsData(
-        collectSubmissionArtifacts(simulatorEvents, fallbackRepoContext)
-      ),
-    [fallbackRepoContext, simulatorEvents]
-  );
-  const orgtrackSubmissionCommits = useMemo(
-    () =>
-      orgtrackCommitLinks.map((link) =>
-        commitLinkToSubmissionCommit(link, fallbackRepoContext)
-      ),
-    [fallbackRepoContext, orgtrackCommitLinks]
-  );
-
   useEffect(() => {
     logger.info("submission artifacts derived", {
       eventCount: simulatorEvents.length,
-      commitCount: orgtrackSubmissionCommits.length,
-      replayCommitCount: submissionsData.commits.length,
+      submissionCommitCount: submissionCommits.length,
       pullRequestCount: submissionsData.pullRequests.length,
       fallbackRepoContext,
       currentRepoContext: getRepoContextFromUnknown(currentEvent),
@@ -536,151 +368,8 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     sessionId,
     sessionRepoPath,
     simulatorEvents.length,
-    orgtrackSubmissionCommits.length,
-    submissionsData.commits.length,
+    submissionCommits.length,
     submissionsData.pullRequests.length,
-  ]);
-
-  const [resolvedSubmissionCommits, setResolvedSubmissionCommits] = useState<
-    SubmissionCommit[]
-  >([]);
-  const [resolvedForCommits, setResolvedForCommits] = useState<
-    SubmissionCommit[] | null
-  >(null);
-  const submissionsResolved = resolvedForCommits === orgtrackSubmissionCommits;
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function resolveSubmissionsAgainstGitHistory() {
-      logger.info("resolving submission commits against git history", {
-        submissionCount: orgtrackSubmissionCommits.length,
-        fallbackRepoContext,
-      });
-
-      const resolvedByContextKey = new Map<string, GitCommitInfo[]>();
-
-      async function loadHistory(
-        context: SubmissionRepoContext,
-        contextKey: string
-      ): Promise<GitCommitInfo[]> {
-        let commits = resolvedByContextKey.get(contextKey);
-        if (commits) return commits;
-        const result = await getGitCommits({
-          repo_id: context.repoId ?? context.repoPath ?? "",
-          repo_path: context.repoPath,
-          limit: SUBMISSION_COMMIT_RESOLVE_LIMIT,
-        });
-        commits = result?.commits ?? [];
-        resolvedByContextKey.set(contextKey, commits);
-        logger.info("git history loaded for submission commit resolve", {
-          repoId: context.repoId ?? context.repoPath ?? "",
-          repoPath: context.repoPath,
-          loadedCommitCount: commits.length,
-          firstCommitSha: commits[0]?.sha,
-        });
-        return commits;
-      }
-
-      const nextCommits = await Promise.all(
-        orgtrackSubmissionCommits.map(async (submission) => {
-          const primaryContext = {
-            repoId: submission.repoId ?? fallbackRepoContext.repoId,
-            repoPath: submission.repoPath ?? fallbackRepoContext.repoPath,
-          };
-
-          // The session's repo context can point at a non-git working
-          // directory (or the wrong repo) — e.g. a chat session whose cwd
-          // is not where the agent actually committed. Search the primary
-          // context first, then fall back to every known workspace repo so
-          // the commit card still resolves to the repo that owns the SHA.
-          const candidateContexts: SubmissionRepoContext[] = [];
-          const seenKeys = new Set<string>();
-          const pushCandidate = (context: SubmissionRepoContext) => {
-            const key = getRepoContextKey(context);
-            if (!key || seenKeys.has(key)) return;
-            seenKeys.add(key);
-            candidateContexts.push(context);
-          };
-          pushCandidate(primaryContext);
-          for (const repo of repos) {
-            const path = repo.fs_uri ?? repo.path;
-            if (path) pushCandidate({ repoId: repo.id, repoPath: path });
-          }
-
-          if (candidateContexts.length === 0) {
-            logger.warn("submission commit missing repo context", {
-              parsedSha: submission.sha,
-              parsedSummary: submission.summary,
-              fallbackRepoContext,
-            });
-            return mergeResolvedCommit(submission, undefined, primaryContext);
-          }
-
-          for (const context of candidateContexts) {
-            const contextKey = getRepoContextKey(context);
-            if (!contextKey) continue;
-            const commits = await loadHistory(context, contextKey);
-            const resolvedCommit = commits.find((candidate) =>
-              commitMatchesSubmission(candidate, submission)
-            );
-            if (resolvedCommit) {
-              logger.info("submission commit matched git history", {
-                parsedSha: submission.sha,
-                resolvedSha: resolvedCommit.sha,
-                resolvedShortSha: resolvedCommit.short_sha,
-                resolvedSummary: resolvedCommit.summary,
-                context,
-              });
-              return mergeResolvedCommit(submission, resolvedCommit, context);
-            }
-          }
-
-          logger.warn("submission commit did not match any repo history", {
-            parsedSha: submission.sha,
-            parsedSummary: submission.summary,
-            candidateCount: candidateContexts.length,
-          });
-          return mergeResolvedCommit(submission, undefined, primaryContext);
-        })
-      );
-
-      if (!cancelled) {
-        logger.info("submission commits resolved", {
-          resolvedCount: nextCommits.length,
-          commits: nextCommits.map((commit) => ({
-            sha: commit.sha,
-            shortSha: commit.short_sha,
-            summary: commit.summary,
-            repoId: commit.repoId,
-            repoPath: commit.repoPath,
-          })),
-        });
-        setResolvedSubmissionCommits(nextCommits);
-        setResolvedForCommits(orgtrackSubmissionCommits);
-      }
-    }
-
-    void resolveSubmissionsAgainstGitHistory();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [fallbackRepoContext, orgtrackSubmissionCommits, repos]);
-
-  const submissionCommits = useMemo(() => {
-    if (submissionsResolved) {
-      return resolvedSubmissionCommits.filter(
-        (commit) => commit.author !== null
-      );
-    }
-    return resolvedSubmissionCommits.length > 0
-      ? resolvedSubmissionCommits
-      : orgtrackSubmissionCommits;
-  }, [
-    resolvedSubmissionCommits,
-    orgtrackSubmissionCommits,
-    submissionsResolved,
   ]);
   const hasSubmissions =
     submissionCommits.length > 0 || submissionsData.pullRequests.length > 0;
@@ -886,17 +575,17 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
           ),
           defaultFlexGrow: 2,
           collapsible: true,
-          resizable: submissionsData.pullRequests.length > 0,
+          resizable: pullRequestsWithStatus.length > 0,
         },
       ];
 
-      if (submissionsData.pullRequests.length > 0) {
+      if (pullRequestsWithStatus.length > 0) {
         sections.push({
           key: "submission-prs",
           title: t("simulator.replay.diffApp.submissions.pr", "PR"),
           content: (
             <SubmissionPullRequestsContent
-              pullRequests={submissionsData.pullRequests}
+              pullRequests={pullRequestsWithStatus}
               emptyLabel={t(
                 "simulator.replay.diffApp.submissions.noPullRequests",
                 "No Pull Requests yet"
@@ -943,7 +632,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   }, [
     activeTab,
     submissionCommits,
-    submissionsData.pullRequests,
+    pullRequestsWithStatus,
     handleSubmissionCommitSelect,
     sidebarItems,
     historySelection,

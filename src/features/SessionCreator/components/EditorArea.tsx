@@ -510,6 +510,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           onKeyDownForDropdown={handleKeyDownForDropdown}
           onSlashCommand={onSlashCommand}
           onSlashCommandClose={onSlashCommandClose}
+          onInputMouseDown={handlePlusSlashClose}
           onKeyDownForSlashDropdown={handleKeyDownForSlashDropdown}
           onImagePaste={onImagePaste}
         />

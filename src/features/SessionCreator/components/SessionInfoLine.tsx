@@ -25,6 +25,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { gitApi } from "@src/api/http/git";
+import { CheckoutConflictDialog } from "@src/components/GitDialogs/CheckoutConflictDialog";
 import PillGroup, { type PillGroupVariant } from "@src/components/PillGroup";
 import RunningLocationDropdownPanel from "@src/components/RunningLocationDropdownPanel";
 import {
@@ -40,6 +41,7 @@ import { BranchPalette } from "@src/scaffold/GlobalSpotlight/palettes/BranchPale
 import { BranchDropdown } from "@src/scaffold/GlobalSpotlight/palettes/BranchPalette/BranchDropdown";
 import { WorkspacePalette } from "@src/scaffold/GlobalSpotlight/palettes/WorkspacePalette";
 import { WorkspaceDropdown } from "@src/scaffold/GlobalSpotlight/palettes/WorkspacePalette/WorkspaceDropdown";
+import { runGuardedCheckout } from "@src/services/git/operations/guardedCheckout";
 import { REPO_KIND, type RepoKind } from "@src/store/repo/types";
 import { modelPickerStyleAtom } from "@src/store/ui/chatPanelAtom";
 import {
@@ -49,6 +51,7 @@ import {
 } from "@src/store/ui/overlayAtom";
 import { isMultiRootWorkspaceAtom } from "@src/store/ui/workspaceFoldersAtom";
 import { workspaceNameAtom } from "@src/store/workspace/derived";
+import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
 
 import {
   buildSessionInfoSegments,
@@ -242,11 +245,37 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
   const systemPathSourceItems = useSystemPathRepoItems(includeSystemPaths, t);
 
   const handleBranchSelect = useCallback(
-    (branch: string) => {
-      onBranchChange?.(branch);
-      setIsBranchSelectorOpen(false);
+    async (branch: string) => {
+      if (!repoId || !repoPath || repoKind === REPO_KIND.FOLDER) {
+        onBranchChange?.(branch);
+        setIsBranchSelectorOpen(false);
+        return;
+      }
+
+      const result = await runGuardedCheckout({
+        repoId,
+        repoPath,
+        ref: branch,
+        onConflict: (name) => CheckoutConflictDialog.open({ branchName: name }),
+      });
+
+      if (result.success) {
+        onBranchChange?.(branch);
+        if (result.outcome !== "checked-out" && result.message) {
+          showGitActionDialogSafely(result.message, "info");
+        }
+        setIsBranchSelectorOpen(false);
+        return;
+      }
+
+      if (result.outcome !== "cancelled") {
+        showGitActionDialogSafely(
+          result.message || `Failed to checkout branch "${branch}"`,
+          "error"
+        );
+      }
     },
-    [onBranchChange]
+    [onBranchChange, repoId, repoKind, repoPath]
   );
 
   const handleCreateBranch = useCallback(
@@ -257,13 +286,12 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
         repo_path: repoPath,
         name: branch,
         start_point: startPoint ?? null,
-        checkout: true,
+        checkout: false,
       });
       if (!success) return;
-      onBranchChange?.(branch);
-      setIsBranchSelectorOpen(false);
+      await handleBranchSelect(branch);
     },
-    [onBranchChange, repoId, repoPath]
+    [handleBranchSelect, repoId, repoPath]
   );
 
   const handleBranchClose = useCallback(() => {

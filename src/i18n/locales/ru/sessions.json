@@ -1793,7 +1793,9 @@
       "uploadImage": "Загрузить изображение",
       "mode": "Режим",
       "models": "Модели",
-      "skills": "Skills"
+      "skills": "Skills",
+      "workspaceSkills": "Workspace Skills",
+      "userSkills": "User Skills"
     },
     "diffMenu": {
       "gitActions": "Действия GIT",

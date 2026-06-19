@@ -232,13 +232,15 @@ export function useExternalImport({
     }>[] = [
       externalImportDetect().then((items) => ({ targetRepoPath: null, items })),
     ];
-    for (const repo of cursorRepos ?? []) {
-      tasks.push(
-        externalImportDetect(repo.path).then((items) => ({
-          targetRepoPath: repo.path,
-          items,
-        }))
-      );
+    if (kind !== "skill") {
+      for (const repo of cursorRepos ?? []) {
+        tasks.push(
+          externalImportDetect(repo.path).then((items) => ({
+            targetRepoPath: repo.path,
+            items,
+          }))
+        );
+      }
     }
 
     Promise.allSettled(tasks)
@@ -255,6 +257,12 @@ export function useExternalImport({
           }
           for (const item of result.value.items) {
             if (item.kind !== kind) continue;
+            if (
+              kind === "skill" &&
+              item.sourceScope.kind === "workspace_local"
+            ) {
+              continue;
+            }
             const targetRepoPath =
               item.kind === "agent_definition"
                 ? null

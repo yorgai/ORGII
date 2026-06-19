@@ -1,5 +1,5 @@
-import { Plus, Trash2 } from "lucide-react";
-import React, { useCallback, useMemo, useState } from "react";
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
@@ -10,6 +10,8 @@ import SettingsTable, {
 import Switch from "@src/components/Switch";
 import TabPill, { type TabPillItem } from "@src/components/TabPill";
 import type { CursorRepo } from "@src/hooks/policies";
+import { getInstalledSkillIdentity } from "@src/hooks/skills/installedSkillsMerge";
+import { useRefreshSpin } from "@src/hooks/ui";
 import {
   DETAIL_PANEL_TOKENS,
   ScrollPreservation,
@@ -22,7 +24,10 @@ import { selectedRowClassName } from "../../Tables/shared";
 import type { DetailMode } from "../../types";
 import {
   getSkillResolvedSourceLabel,
-  resolveSkillWorkspace,
+  getSkillStorageLocationLabel,
+  isUserSkill,
+  normalizeSkillPath,
+  resolveSkillWorkspacePath,
 } from "../skillSourceLabel";
 import FindSkillsSection from "./FindSkillsSection";
 import InlineExternalSkillsImport from "./InlineExternalSkillsImport";
@@ -30,8 +35,7 @@ import SkillInlineExpandedCard from "./SkillInlineExpandedCard";
 import {
   SkillNameCell,
   SkillSourceCell,
-  SkillStatusCell,
-  skillStatusRank,
+  SkillStorageCell,
 } from "./SkillTableParts";
 import SkillViewButton from "./SkillViewButton";
 
@@ -46,6 +50,10 @@ interface SkillsTableProps {
   hubDetail?: HubSkillDetail | null;
   onToggleSkill?: (name: string, enabled: boolean) => void;
   onUninstallSkill?: (name: string) => Promise<void> | void;
+  onRefreshSkills?: (
+    workspacePaths?: string[],
+    options?: { scoped?: boolean }
+  ) => Promise<void> | void;
   cursorRepos?: CursorRepo[];
   importExpanded?: boolean;
   onImportCompleted?: () => void;
@@ -68,20 +76,31 @@ export const SkillsTable: React.FC<SkillsTableProps> = ({
   hubDetail,
   onToggleSkill,
   onUninstallSkill,
+  onRefreshSkills,
 }) => {
   const { t } = useTranslation("integrations");
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilterKey>("all");
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const [refreshingSkills, setRefreshingSkills] = useState(false);
   const [uninstallingSkillNames, setUninstallingSkillNames] = useState<
     Set<string>
   >(new Set());
 
   const sourceTabs = useMemo<TabPillItem[]>(() => {
-    const workspaceTabs = (cursorRepos ?? []).map((repo) => ({
-      key: `workspace:${repo.path}`,
-      label: repo.name.length > 20 ? `${repo.name.slice(0, 20)}…` : repo.name,
-    }));
+    const seenWorkspacePaths = new Set<string>();
+    const workspaceTabs = (cursorRepos ?? []).flatMap((repo) => {
+      const workspacePath = normalizeSkillPath(repo.path);
+      if (seenWorkspacePaths.has(workspacePath)) return [];
+      seenWorkspacePaths.add(workspacePath);
+      return [
+        {
+          key: `workspace:${workspacePath}`,
+          label:
+            repo.name.length > 20 ? `${repo.name.slice(0, 20)}…` : repo.name,
+        },
+      ];
+    });
 
     return [
       { key: "all", label: t("common:actions.all") },
@@ -95,13 +114,14 @@ export const SkillsTable: React.FC<SkillsTableProps> = ({
     const query = searchQuery.toLowerCase();
     return skills.filter((skill) => {
       if (uninstallingSkillNames.has(skill.name)) return false;
-      const workspace = resolveSkillWorkspace(skill, cursorRepos);
+      const workspacePath = resolveSkillWorkspacePath(skill);
       const isBuiltIn = skill.source === SKILL_SOURCE.EMBEDDED_BUILTIN;
       const matchesSource =
         sourceFilter === "all" ||
         (sourceFilter === "builtIn" && isBuiltIn) ||
-        (sourceFilter === "user" && !workspace && !isBuiltIn) ||
-        (workspace != null && sourceFilter === `workspace:${workspace.path}`);
+        (sourceFilter === "user" && isUserSkill(skill, cursorRepos)) ||
+        (workspacePath != null &&
+          sourceFilter === `workspace:${workspacePath}`);
       if (!matchesSource) return false;
       if (!query) return true;
 
@@ -124,6 +144,14 @@ export const SkillsTable: React.FC<SkillsTableProps> = ({
     t,
     uninstallingSkillNames,
   ]);
+
+  useEffect(() => {
+    const validRowKeys = new Set(filtered.map(getInstalledSkillIdentity));
+    setExpandedKeys((current) => {
+      const next = current.filter((key) => validRowKeys.has(key));
+      return next.length === current.length ? current : next;
+    });
+  }, [filtered]);
 
   const handleUninstallSkill = useCallback(
     async (skill: InstalledSkill) => {
@@ -175,11 +203,16 @@ export const SkillsTable: React.FC<SkillsTableProps> = ({
         ),
       },
       {
-        key: "status",
-        label: t("common:labels.status"),
+        key: "storage",
+        label: t("skillPreview.location"),
         width: SETTINGS_TABLE_COL.valueLg,
-        sorter: (rowA, rowB) => skillStatusRank(rowB) - skillStatusRank(rowA),
-        renderCell: (skill) => <SkillStatusCell skill={skill} t={t} />,
+        sorter: (rowA, rowB) =>
+          getSkillStorageLocationLabel(t, rowA, cursorRepos).localeCompare(
+            getSkillStorageLocationLabel(t, rowB, cursorRepos)
+          ),
+        renderCell: (skill) => (
+          <SkillStorageCell skill={skill} t={t} cursorRepos={cursorRepos} />
+        ),
       },
       {
         key: "actions",
@@ -242,23 +275,57 @@ export const SkillsTable: React.FC<SkillsTableProps> = ({
     ]
   );
 
-  const createSkillButton = (
-    <Button
-      variant="secondary"
-      size="default"
-      icon={<Plus size={14} />}
-      onClick={onCreate}
-      data-testid="integrations-skills-create-button"
-    >
-      {t("addOptions.createSkill")}
-    </Button>
+  const handleRefreshSkills = useCallback(async () => {
+    if (!onRefreshSkills) return;
+    const workspacePrefix = "workspace:";
+    const scopedWorkspacePaths = sourceFilter.startsWith(workspacePrefix)
+      ? [sourceFilter.slice(workspacePrefix.length)]
+      : [];
+    const scopedRefresh = sourceFilter !== "all";
+    setRefreshingSkills(true);
+    try {
+      await onRefreshSkills(scopedWorkspacePaths, { scoped: scopedRefresh });
+    } finally {
+      setRefreshingSkills(false);
+    }
+  }, [onRefreshSkills, sourceFilter]);
+
+  const { spinClass: refreshSpinClass, handleClick: handleRefreshClick } =
+    useRefreshSpin(handleRefreshSkills, refreshingSkills || loading);
+
+  const tableActions = (
+    <div className="flex items-center gap-2">
+      {onRefreshSkills ? (
+        <Button
+          variant="secondary"
+          size="default"
+          icon={<RefreshCw size={14} className={refreshSpinClass} />}
+          iconOnly
+          disabled={refreshingSkills || loading}
+          aria-label={t("common:actions.refresh")}
+          title={t("common:actions.refresh")}
+          onClick={handleRefreshClick}
+          data-testid="integrations-skills-refresh-button"
+        />
+      ) : null}
+      <Button
+        variant="secondary"
+        size="default"
+        icon={<Plus size={14} />}
+        onClick={onCreate}
+        data-testid="integrations-skills-create-button"
+      >
+        {t("addOptions.createSkill")}
+      </Button>
+    </div>
   );
 
   const handleRowClick = useCallback(
     (skill: InstalledSkill) => {
+      const skillIdentity = getInstalledSkillIdentity(skill);
       onSelect(skill.name);
       setExpandedKeys((current) =>
-        current.includes(skill.name) ? [] : [skill.name]
+        current.includes(skillIdentity) ? [] : [skillIdentity]
       );
     },
     [onSelect]
@@ -273,7 +340,7 @@ export const SkillsTable: React.FC<SkillsTableProps> = ({
             loading={loading}
             columns={columns}
             rows={filtered}
-            getRowKey={(skill) => skill.name}
+            getRowKey={getInstalledSkillIdentity}
             onRowClick={handleRowClick}
             rowClassName={selectedRowClassName(
               (sk: InstalledSkill) => sk.name,
@@ -285,7 +352,7 @@ export const SkillsTable: React.FC<SkillsTableProps> = ({
               onSearchChange: setSearchQuery,
               searchPlaceholder: t("skillsHub.searchPlaceholder"),
               allowSearchClear: true,
-              rightContent: createSkillButton,
+              rightContent: tableActions,
               tabPills: (
                 <TabPill
                   tabs={sourceTabs}

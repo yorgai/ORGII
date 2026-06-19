@@ -160,6 +160,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
       replyInfo,
       setReplyInfo,
       currentRepoPath,
+      skillWorkspacePaths,
       attachedImages,
       handleImagePaste,
       hasImages,
@@ -323,6 +324,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
             topRowTrailingContent={topRowTrailingContent}
             composerInputRef={composerInputRef}
             sessionId={sessionId}
+            skillWorkspacePaths={skillWorkspacePaths}
           />
           <QuietEditStatus
             isEditMode={isEditMode}
@@ -379,6 +381,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
                 }
                 onSlashCommand={handleSlashCommand}
                 onSlashCommandClose={handleSlashCommandClose}
+                onPlusSlashClose={handlePlusSlashClose}
                 onContentChange={handleContentChange}
                 onAtMention={handleKeyboardAtMention}
                 onAtMentionClose={handleAtMentionClose}
@@ -425,6 +428,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
                 }
                 onSlashCommand={handleSlashCommand}
                 onSlashCommandClose={handleSlashCommandClose}
+                onPlusSlashClose={handlePlusSlashClose}
                 onContentChange={onEditorContentChange}
                 onAtMention={handleKeyboardAtMention}
                 onAtMentionClose={handleAtMentionClose}

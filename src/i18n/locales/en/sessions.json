@@ -383,6 +383,15 @@
           "viewStructured": "Structured",
           "viewRaw": "Raw",
           "emptySelectCommand": "Select a command to view"
+        },
+        "eventFilters": {
+          "all": "All events",
+          "keyInteractions": "Key interactions",
+          "fileChanges": "File changes",
+          "terminal": "Terminal events",
+          "explore": "Explore",
+          "other": "Other",
+          "selectedCount": "{{count}} filters"
         }
       },
       "diffApp": {
@@ -397,7 +406,17 @@
           "empty": "No submissions yet",
           "selectSubmission": "Select a submission to view details",
           "noCommits": "No Commits yet",
-          "noPullRequests": "No Pull Requests yet"
+          "noPullRequests": "No Pull Requests yet",
+          "labels": {
+            "created": {
+              "commit": "Created commit",
+              "pullRequest": "Created PR"
+            },
+            "mentioned": {
+              "commit": "Mentioned commit",
+              "pullRequest": "Mentioned PR"
+            }
+          }
         }
       },
       "channelsSidebar": {
@@ -1806,7 +1825,9 @@
       "uploadImage": "Upload image",
       "mode": "Mode",
       "models": "Models",
-      "skills": "Skills"
+      "skills": "Skills",
+      "workspaceSkills": "Workspace Skills",
+      "userSkills": "User Skills"
     },
     "diffMenu": {
       "gitActions": "Git Actions",

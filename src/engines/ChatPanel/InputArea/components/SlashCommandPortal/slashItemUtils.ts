@@ -25,10 +25,14 @@ export function normalizeSkillDescription(skill: InstalledSkill): string {
  * Derive a human-readable group label from a skill's file path.
  *
  * Path patterns:
- *   ~/.cursor/skills/<name>/SKILL.md           → "Cursor Skills"
- *   ~/.orgii/skills/<name>/SKILL.md            → "Global Skills"
+ *   ~/.cursor/skills-cursor/<name>/SKILL.md   → "Cursor Skills"
+ *   ~/.gemini/skills/<name>/SKILL.md           → "Gemini Skills"
+ *   ~/.hermes/skills/<name>/SKILL.md           → "Hermes Skills"
+ *   ~/.orgii/skills/<name>/SKILL.md            → "ORGII Skills"
  *   /repo/path/.orgii/skills/<name>/SKILL.md   → repo folder name (last segment)
  *   /repo/path/.cursor/skills/<name>/SKILL.md  → repo folder name (last segment)
+ *   /repo/path/.tool/skills/<name>/SKILL.md    → repo folder name (last segment)
+ *   /repo/path/skills/<name>/SKILL.md          → repo folder name (last segment)
  * Falls back to the raw `source` field when the path doesn't match any pattern.
  */
 export function resolveSkillGroup(skill: InstalledSkill): string {
@@ -39,14 +43,33 @@ export function resolveSkillGroup(skill: InstalledSkill): string {
 
   if (home) {
     if (normalized.startsWith(`${home}/.cursor/skills`)) return "Cursor Skills";
-    if (normalized.startsWith(`${home}/.orgii/skills`)) return "Global Skills";
+    if (normalized.startsWith(`${home}/.claude/skills`)) return "Claude Skills";
+    if (normalized.startsWith(`${home}/.codex/skills`)) return "Codex Skills";
+    if (normalized.startsWith(`${home}/.opencode/skills`))
+      return "OpenCode Skills";
+    if (normalized.startsWith(`${home}/.gemini/skills`)) return "Gemini Skills";
+    if (normalized.startsWith(`${home}/.agents/skills`)) return "Agent Skills";
+    if (normalized.startsWith(`${home}/.hermes/skills`)) return "Hermes Skills";
+    if (normalized.startsWith(`${home}/.openclaw/skills`))
+      return "OpenClaw Skills";
+    if (normalized.startsWith(`${home}/.orgii/skills`)) return "ORGII Skills";
+    const homeRelativePath = normalized.slice(home.length + 1);
+    const homeDiscoveredMatch = homeRelativePath.match(/^(\.[^/]+)\/skills\//);
+    if (homeDiscoveredMatch) {
+      return `${homeDiscoveredMatch[1].slice(1)} Skills`;
+    }
   }
 
-  const workspaceMatch = normalized.match(
-    /^(.*?)\/(?:\.orgii|\.cursor)\/skills\//
-  );
+  const workspaceMatch = normalized.match(/^(.*?)\/\.[^/]+\/skills\//);
   if (workspaceMatch) {
     const repoPath = workspaceMatch[1];
+    const segments = repoPath.split("/").filter(Boolean);
+    return segments[segments.length - 1] ?? skill.source;
+  }
+
+  const workspaceRootSkillsMatch = normalized.match(/^(.*?)\/skills\//);
+  if (workspaceRootSkillsMatch) {
+    const repoPath = workspaceRootSkillsMatch[1];
     const segments = repoPath.split("/").filter(Boolean);
     return segments[segments.length - 1] ?? skill.source;
   }

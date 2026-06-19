@@ -21,10 +21,10 @@ import Switch from "@src/components/Switch";
 import {
   SkillNameCell,
   SkillSourceCell,
-  SkillStatusCell,
-  skillStatusRank,
+  SkillStorageCell,
 } from "@src/modules/MainApp/Integrations/Skills/Table/SkillTableParts";
 import SkillViewButton from "@src/modules/MainApp/Integrations/Skills/Table/SkillViewButton";
+import { getSkillStorageLocationLabel } from "@src/modules/MainApp/Integrations/Skills/skillSourceLabel";
 
 import type { SkillInfo } from "./useSkills";
 
@@ -114,11 +114,14 @@ const AgentSkillsTable: React.FC<AgentSkillsTableProps> = ({
         renderCell: (row) => <SkillSourceCell skill={row} t={tIntegrations} />,
       },
       {
-        key: "status",
-        label: t("common:labels.status"),
+        key: "storage",
+        label: tIntegrations("skillPreview.location"),
         width: SETTINGS_TABLE_COL.valueLg,
-        sorter: (rowA, rowB) => skillStatusRank(rowB) - skillStatusRank(rowA),
-        renderCell: (row) => <SkillStatusCell skill={row} t={tIntegrations} />,
+        sorter: (rowA, rowB) =>
+          getSkillStorageLocationLabel(tIntegrations, rowA).localeCompare(
+            getSkillStorageLocationLabel(tIntegrations, rowB)
+          ),
+        renderCell: (row) => <SkillStorageCell skill={row} t={tIntegrations} />,
       },
       {
         key: "actions",

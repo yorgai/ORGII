@@ -21,7 +21,7 @@ pub struct SkillInfo {
     pub name: String,
     /// Full path to SKILL.md.
     pub path: PathBuf,
-    /// Source: "workspace" or "builtin".
+    /// Source: "workspace", "builtin", "external-source", "agent-source", or "embedded_builtin".
     pub source: String,
     /// Whether the skill is always loaded into context.
     pub always: bool,

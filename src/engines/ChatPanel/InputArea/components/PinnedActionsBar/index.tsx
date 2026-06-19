@@ -16,7 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import type { ComposerInputRef } from "@src/components/ComposerInput";
-import Tooltip from "@src/components/Tooltip";
+import { FileTreeHoverPreview } from "@src/components/FileTreePreview/exports";
 import UserActionButton from "@src/engines/ChatPanel/InputArea/components/UserActionButton";
 import { useSlashItemsCache } from "@src/engines/ChatPanel/hooks/useInputArea/useSlashItemsCache";
 import { EditorTabService } from "@src/services/workStation";
@@ -25,6 +25,7 @@ import {
   type PinnedAction,
   pinnedActionsAtom,
 } from "@src/store/session/pinnedActionsAtom";
+import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
 import { mainPaneTabsAtom } from "@src/store/workstation/tabs";
 import {
   createCanvasPreviewTab,
@@ -74,15 +75,14 @@ const ActionPill: React.FC<ActionPillProps> = memo(
     if (action.category !== "skill" || !action.skillPath) return button;
 
     return (
-      <Tooltip
-        content={<span className="break-all">{action.skillPath}</span>}
-        position="top"
-        mouseEnterDelay={200}
-        framedPanel
-        smartPlacement
+      <FileTreeHoverPreview
+        path={action.skillPath}
+        itemType="file"
+        as="div"
+        display="inline-block"
       >
         {button}
-      </Tooltip>
+      </FileTreeHoverPreview>
     );
   }
 );
@@ -99,6 +99,7 @@ export interface PinnedActionsBarProps {
    * session has a live canvas payload and the canvas tab is not already open.
    */
   sessionId?: string | null;
+  workspacePaths?: string[];
   leadingContent?: React.ReactNode;
   trailingContent?: React.ReactNode;
   manageButtonPlacement?: "after-actions" | "after-leading";
@@ -109,6 +110,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
   ({
     composerInputRef,
     sessionId,
+    workspacePaths,
     leadingContent,
     trailingContent,
     manageButtonPlacement = "after-actions",
@@ -116,6 +118,13 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
   }) => {
     const { t } = useTranslation("sessions");
     const [pinnedActions, setPinnedActions] = useAtom(pinnedActionsAtom);
+    const workspaceFolders = useAtomValue(workspaceFoldersAtom);
+    const effectiveWorkspacePaths = useMemo(() => {
+      if (workspacePaths) return workspacePaths;
+      return workspaceFolders
+        .map((folder) => folder.path.replace(/\/+$/, ""))
+        .filter(Boolean);
+    }, [workspaceFolders, workspacePaths]);
 
     // ── Canvas pill ───────────────────────────────────────────────────────────
 
@@ -162,7 +171,10 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
       filteredItems: availableItems,
       loading: loadingItems,
       fetchFresh,
-    } = useSlashItemsCache({ builtinItems: BUILTIN_SLASH_ITEMS });
+    } = useSlashItemsCache({
+      builtinItems: BUILTIN_SLASH_ITEMS,
+      workspacePaths: effectiveWorkspacePaths,
+    });
 
     const skillPathByName = useMemo(() => {
       const map = new Map<string, string>();
