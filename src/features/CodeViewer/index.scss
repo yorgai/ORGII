@@ -49,6 +49,8 @@ $font-mono: var(
   background: transparent;
   border: none;
   border-radius: 0;
+  contain: none;
+  overflow: visible;
 }
 
 // Stats bar - fixed height, no shrink (shared by both)

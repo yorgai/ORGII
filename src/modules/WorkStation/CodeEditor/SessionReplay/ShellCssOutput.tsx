@@ -95,10 +95,17 @@ const SimulatorShellCssOutputComponent: React.FC<
       ) : null}
       {isLoading ? (
         <div
-          className={`mt-1${plainOutput ? "animate-pulse" : ""}`}
-          style={{ ...typography, color: mutedForeground }}
+          className="simulator-shell-loading mt-1 inline-flex items-center gap-1.5"
+          style={typography}
         >
-          {t("simulator.replay.ide.shell.outputInProgress")}
+          <span className="animate-shimmer-text bg-gradient-to-r from-primary-6/60 via-primary-6 to-primary-6/60 bg-[length:260%_100%] bg-clip-text font-bold text-transparent">
+            {t("simulator.replay.ide.shell.outputInProgress")}
+          </span>
+          <span className="simulator-shell-loading__dots" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
         </div>
       ) : null}
       {!isLoading && exitCode !== undefined ? (
