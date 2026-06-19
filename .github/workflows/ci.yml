@@ -1,4 +1,4 @@
-# CI — runs on every pull request to main / master.
+# CI — runs on every pull request to release / master.
 #
 # Two parallel jobs:
 #   frontend  — TypeScript typecheck + ESLint + Vitest unit tests
@@ -12,7 +12,7 @@ name: "CI"
 on:
   pull_request:
     branches:
-      - main
+      - release
       - master
 
 jobs:
