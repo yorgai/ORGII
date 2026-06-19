@@ -52,6 +52,11 @@ export type {
 
 export type { ModelAliasInfo } from "@src/api/types/keys";
 
+function cleanOptionalString(value?: string): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 // ============================================================================
 // Validation
 // ============================================================================
@@ -71,12 +76,10 @@ export async function validateKey(
 ): Promise<ValidationResult> {
   return rpc.validation.validateKey({
     agentType,
-    // Trim the mandatory API key
     apiKey: apiKey.trim(),
-    // Safely trim optional strings before falling back to null
-    baseUrl: baseUrl?.trim() ?? null,
-    sessionToken: sessionToken?.trim() ?? null,
-    testModel: testModel?.trim() ?? null,
+    baseUrl: cleanOptionalString(baseUrl),
+    sessionToken: cleanOptionalString(sessionToken),
+    testModel: cleanOptionalString(testModel),
   });
 }
 
