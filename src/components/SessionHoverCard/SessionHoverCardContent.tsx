@@ -217,12 +217,15 @@ export const SessionHoverCardContent: React.FC<SessionHoverCardContentProps> =
     if (!session) return null;
 
     const repoName = session.repo_name || (repoPath ? basename(repoPath) : "");
+    const worktreePath = session.worktreePath;
     const normalizedRepoPath = repoPath ? normalizePath(repoPath) : undefined;
     const workspaceGitStatus = normalizedRepoPath
       ? workspaceGitStatusMap.get(normalizedRepoPath)
       : undefined;
+    const worktreePathLabel = worktreePath ? basename(worktreePath) : "";
     const branchLabel =
       formatBranchLabel(session.worktreeBranch) ||
+      (worktreePath ? worktreePathLabel : "") ||
       formatBranchLabel(session.branch) ||
       formatBranchLabel(session.baseBranch) ||
       formatBranchLabel(workspaceGitStatus?.current_branch);

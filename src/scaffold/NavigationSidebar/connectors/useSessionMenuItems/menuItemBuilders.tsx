@@ -1,10 +1,6 @@
-import { GitFork } from "lucide-react";
-import type { ReactNode } from "react";
-
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { Session } from "@src/store/session";
 import { isTerminalStatus } from "@src/types/session/session";
-import { formatBranchLabel } from "@src/util/git/branchLabel";
 import { isSessionInProgress } from "@src/util/session/sessionInProgress";
 import { getSessionSearchText } from "@src/util/session/sessionSearch";
 import {
@@ -32,22 +28,8 @@ export function isSessionCompletedUnread(
   return !visitedSessions.has(session.session_id);
 }
 
-function worktreeSubtitle(branch: string | undefined): ReactNode {
-  const label = formatBranchLabel(branch) || "worktree";
-  return (
-    <>
-      <GitFork size={10} strokeWidth={2} className="shrink-0" />
-      <span className="truncate">{label}</span>
-    </>
-  );
-}
-
 export function isBenchmarkSessionRow(session: Session): boolean {
   return session.user_input?.startsWith("Benchmark run coordinator") ?? false;
-}
-
-function shouldShowWorktreeSubtitle(session: Session): boolean {
-  return !isBenchmarkSessionRow(session) && Boolean(session.worktreePath);
 }
 
 interface BuildSessionMenuItemParams {
@@ -79,9 +61,6 @@ export function buildSessionMenuItem({
     label: displayName,
     searchText: getSessionSearchText(session, untitledSession),
     dataTestId: `sidebar-session-item-${session.session_id}`,
-    subtitle: shouldShowWorktreeSubtitle(session)
-      ? worktreeSubtitle(session.worktreeBranch)
-      : undefined,
     icon: resolveSessionRowIcon(session),
     workingIndicator:
       inProgress && !pendingAsking ? renderBreathingStatusDot() : undefined,
