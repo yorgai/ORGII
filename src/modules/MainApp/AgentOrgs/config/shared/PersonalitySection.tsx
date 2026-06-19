@@ -136,6 +136,7 @@ const PersonalitySection: React.FC<PersonalitySectionProps> = ({
           dataTestId="agent-orgs-personality-editor"
           minHeight={220}
           maxHeight={360}
+          emptyLineCount={10}
           showTokenCount={false}
           previewEmptyText={t("sharedAgentConfig.personality.emptyPreview")}
           hideHeader

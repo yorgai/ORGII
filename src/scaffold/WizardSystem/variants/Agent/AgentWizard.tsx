@@ -141,32 +141,6 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
             <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>
               <div className={SECTION_GAP_CLASSES}>
                 <SectionContainer>
-                  <div className="flex flex-col gap-2 py-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className={SECTION_LABEL_CLASSES}>
-                          {tSettings("sharedAgentConfig.personality.label")}
-                        </div>
-                        <div className={SECTION_DESCRIPTION_CLASSES}>
-                          {tSettings(
-                            "sharedAgentConfig.personality.description"
-                          )}
-                        </div>
-                      </div>
-                      {soulEditorTabs}
-                    </div>
-                    <MarkdownEditor
-                      value={w.soulContent}
-                      onChange={w.setSoulContent}
-                      dataTestId="agent-orgs-agent-wizard-soul-editor"
-                      hideHeader
-                      activeTab={w.soulTab}
-                      onTabChange={w.setSoulTab}
-                    />
-                  </div>
-                </SectionContainer>
-
-                <SectionContainer>
                   <SectionRow
                     label={t("agentOrgs.agentWizard.nameLabel")}
                     description={t("agentOrgs.agentWizard.nameDesc")}
@@ -199,6 +173,33 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                       autoSize={{ minRows: 3, maxRows: 6 }}
                     />
                   </SectionRow>
+                </SectionContainer>
+
+                <SectionContainer>
+                  <div className="flex flex-col gap-2 py-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className={SECTION_LABEL_CLASSES}>
+                          {tSettings("sharedAgentConfig.personality.label")}
+                        </div>
+                        <div className={SECTION_DESCRIPTION_CLASSES}>
+                          {tSettings(
+                            "sharedAgentConfig.personality.description"
+                          )}
+                        </div>
+                      </div>
+                      {soulEditorTabs}
+                    </div>
+                    <MarkdownEditor
+                      value={w.soulContent}
+                      onChange={w.setSoulContent}
+                      dataTestId="agent-orgs-agent-wizard-soul-editor"
+                      emptyLineCount={10}
+                      hideHeader
+                      activeTab={w.soulTab}
+                      onTabChange={w.setSoulTab}
+                    />
+                  </div>
                 </SectionContainer>
               </div>
             </div>
