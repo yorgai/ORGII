@@ -39,8 +39,15 @@ export type ReadFileBlockProps = UniversalEventProps & {
 export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
   const { eventId, status } = props;
 
-  const { filePath, fileName } = useMemo(() => extractFileData(props), [props]);
+  const { filePath, fileName, lineCount, startLine } = useMemo(
+    () => extractFileData(props),
+    [props]
+  );
 
+  const lineRange =
+    startLine !== undefined && lineCount !== undefined
+      ? `${startLine}-${startLine + lineCount - 1}`
+      : undefined;
   const baseName = fileName || getFileName(filePath) || "file";
   const skillName = useMemo(
     () => extractSkillNameFromPath(filePath),
@@ -127,6 +134,14 @@ export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
           >
             {displayName}
           </span>
+          {lineRange && !isSkill && (
+            <span
+              data-testid="read-file-line-range"
+              className={`ml-2 shrink-0 ${isLoading ? EVENT_LOADING_SHIMMER_TEXT_CLASSES : "text-text-4"}`.trim()}
+            >
+              {lineRange}
+            </span>
+          )}
         </EventBlockHeaderSubtitle>
       </EventBlockHeader>
     </div>

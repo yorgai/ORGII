@@ -34,7 +34,6 @@ import EventFileHoverPreview from "../EventFileHoverPreview";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
-  EventBlockHeaderInfo,
   EventBlockHeaderSubtitle,
   EventBlockHeaderTitle,
   FailedEventRow,
@@ -288,22 +287,20 @@ const CompactSegmentView: React.FC<CompactSegmentViewProps> = ({
             className="mr-1.5 shrink-0"
           />
           <span className="min-w-0 truncate text-text-1">{displayTitle}</span>
+          {hasInfo && (
+            <span className="ml-2 inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+              <DiffStatsBadge
+                additions={linesAdded}
+                deletions={linesRemoved}
+                variant="plain"
+                className="translate-y-px gap-0"
+              />
+              {segment.isDeleted && (
+                <span className="text-danger-6">{t("tools.deleted")}</span>
+              )}
+            </span>
+          )}
         </EventBlockHeaderSubtitle>
-        {hasInfo && (
-          <EventBlockHeaderInfo
-            isLoading={isLoading}
-            className="inline-flex items-center gap-1 whitespace-nowrap"
-          >
-            <DiffStatsBadge
-              additions={linesAdded}
-              deletions={linesRemoved}
-              variant="plain"
-            />
-            {segment.isDeleted && (
-              <span className="text-danger-6">{t("tools.deleted")}</span>
-            )}
-          </EventBlockHeaderInfo>
-        )}
       </EventBlockHeader>
     </div>
   );
