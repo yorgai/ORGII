@@ -1,6 +1,6 @@
 /**
  * HierarchyModeSelector — picks how the org's reports-to hierarchy is
- * interpreted at runtime. Used by both `OrgWizard` (creation flow) and
+ * interpreted at runtime. Used by both `AgentTeamWizard` (creation flow) and
  * `OrgDetailView` (edit flow).
  *
  * Three modes (`flat` / `soft` / `strict`) map 1:1 to backend

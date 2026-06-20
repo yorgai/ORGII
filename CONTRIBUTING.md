@@ -45,7 +45,7 @@ Tauri starts the webpack dev server through its `beforeDevCommand`; contributors
 For fast desktop iteration against a built app bundle, use:
 
 ```bash
-pnpm run tauri:build:fast:open
+pnpm run tauri:build:fast
 ```
 
 This is the fast iteration mode for validating local Tauri changes outside the dev server: it cleans only the app target for the local development profile, rebuilds the app bundle, and opens it immediately.

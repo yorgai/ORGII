@@ -1,11 +1,11 @@
 /**
- * OrgWizard — Single-page wizard for creating or editing an agent
+ * AgentTeamWizard — Single-page wizard for creating or editing an agent
  * team. Sections: Team name, Coordinator (root agent), Preview, and
  * Team members.
  *
  * Follows the WizardShell → WizardStepLayout → SectionLayout pattern.
  *
- * The form body itself lives in `OrgFormSections` so OrgWizard and
+ * The form body itself lives in `AgentTeamFormSections` so this wizard and
  * OrgDetailView render the exact same controls; this file owns only the
  * single-step submit chrome and the inline-create AgentWizard overlay.
  */
@@ -33,12 +33,14 @@ import {
 } from "@src/scaffold/WizardSystem/primitives";
 import AgentWizard from "@src/scaffold/WizardSystem/variants/Agent/AgentWizard";
 
-import OrgFormSections, { isOrgDraftValid } from "./OrgFormSections";
+import AgentTeamFormSections, {
+  isOrgDraftValid,
+} from "./AgentTeamFormSections";
 import { buildOrgTreeFromMembers, flattenOrgToMembers } from "./orgTree";
 
 // ── Types ──
 
-interface OrgWizardProps {
+interface AgentTeamWizardProps {
   onSave: (org: OrgMember) => void;
   onCancel: () => void;
   /** When provided, wizard opens in single-step edit mode */
@@ -55,7 +57,7 @@ interface OrgWizardProps {
 
 // ── Component ──
 
-const OrgWizard: React.FC<OrgWizardProps> = ({
+const AgentTeamWizard: React.FC<AgentTeamWizardProps> = ({
   onSave,
   onCancel,
   initialOrg,
@@ -221,7 +223,7 @@ const OrgWizard: React.FC<OrgWizardProps> = ({
             data-testid="agent-orgs-org-wizard-content"
           >
             <div className={SECTION_GAP_CLASSES}>
-              <OrgFormSections
+              <AgentTeamFormSections
                 orgName={orgName}
                 onOrgNameChange={setOrgName}
                 orgDescription={orgDescription}
@@ -248,4 +250,4 @@ const OrgWizard: React.FC<OrgWizardProps> = ({
   );
 };
 
-export default OrgWizard;
+export default AgentTeamWizard;

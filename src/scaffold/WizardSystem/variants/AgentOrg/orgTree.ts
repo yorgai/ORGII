@@ -1,5 +1,5 @@
 /**
- * Tree <-> flat list helpers shared between OrgWizard (creation/editing
+ * Tree <-> flat list helpers shared between AgentTeamWizard (creation/editing
  * inside the wizard) and OrgDetailView (always-editable detail panel).
  *
  * The on-disk shape is a tree (`OrgMember` with `children`); the table UI

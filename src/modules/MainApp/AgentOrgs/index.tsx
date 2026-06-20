@@ -31,7 +31,7 @@ import {
   ScrollPreservation,
 } from "@src/modules/shared/layouts/blocks";
 import AgentWizard from "@src/scaffold/WizardSystem/variants/Agent/AgentWizard";
-import OrgWizard from "@src/scaffold/WizardSystem/variants/AgentOrg/OrgWizard";
+import AgentTeamWizard from "@src/scaffold/WizardSystem/variants/AgentOrg/AgentTeamWizard";
 import { reposAtom } from "@src/store/repo/atoms";
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
 
@@ -152,7 +152,7 @@ const AgentOrgsPage: React.FC = () => {
   }, [fetchInstalledCliAgents]);
 
   const { wizard, entityId, openWizard, closeWizard } = useWizardParam();
-  const orgWizardMode =
+  const teamWizardMode =
     wizard === WIZARD_IDS.ORG_ADD || wizard === WIZARD_IDS.ORG_EDIT;
   const orgEditId = wizard === WIZARD_IDS.ORG_EDIT ? entityId : null;
   const agentWizardMode = wizard === WIZARD_IDS.AGENT_ADD;
@@ -191,7 +191,7 @@ const AgentOrgsPage: React.FC = () => {
     openWizard(WIZARD_IDS.ORG_ADD);
   }, [openWizard]);
 
-  const handleOrgWizardSave = useCallback(
+  const handleTeamWizardSave = useCallback(
     async (org: OrgMember) => {
       const isUpdate = orgs.some((existing) => existing.id === org.id);
       const orgJson = JSON.stringify(org);
@@ -315,11 +315,11 @@ const AgentOrgsPage: React.FC = () => {
   };
 
   const renderWizardContent = () => {
-    if (orgWizardMode) {
+    if (teamWizardMode) {
       return (
-        <OrgWizard
+        <AgentTeamWizard
           key={editingOrg?.id ?? "new"}
-          onSave={handleOrgWizardSave}
+          onSave={handleTeamWizardSave}
           onCancel={closeWizard}
           initialOrg={editingOrg}
           customAgents={customAgents}

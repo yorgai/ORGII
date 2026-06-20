@@ -3,7 +3,7 @@
  *
  * Used from:
  * 1. The "Agents" tab (full-page via WizardShell)
- * 2. The OrgWizard "+ Add agent" action (as a modal overlay)
+ * 2. The AgentTeamWizard "+ Add agent" action (as a modal overlay)
  *
  * Tabs: Core | Models | Sub-Agents. Personality (`soulContent`) lives at the top of Core.
  *

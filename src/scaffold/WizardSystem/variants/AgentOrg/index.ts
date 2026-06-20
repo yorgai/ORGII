@@ -1,6 +1,9 @@
-export { default as OrgWizard } from "./OrgWizard";
-export { default as OrgFormSections, isOrgDraftValid } from "./OrgFormSections";
-export type { OrgFormSectionsProps } from "./OrgFormSections";
+export { default as AgentTeamWizard } from "./AgentTeamWizard";
+export {
+  default as AgentTeamFormSections,
+  isOrgDraftValid,
+} from "./AgentTeamFormSections";
+export type { AgentTeamFormSectionsProps } from "./AgentTeamFormSections";
 export { default as HierarchyModeSelector } from "./HierarchyModeSelector";
 export { ReachabilityPreview } from "./ReachabilityPreview";
 export {

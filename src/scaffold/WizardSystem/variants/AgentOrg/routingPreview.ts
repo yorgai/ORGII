@@ -1,5 +1,5 @@
 /**
- * Pure routing-rule preview shared by `OrgWizard` and `OrgDetailView`.
+ * Pure routing-rule preview shared by `AgentTeamWizard` and `OrgDetailView`.
  *
  * This is a TS mirror of `AgentOrgRunContext::check_routing` in
  * `src-tauri/src/agent_core/core/coordination/agent_org_runs.rs`. The

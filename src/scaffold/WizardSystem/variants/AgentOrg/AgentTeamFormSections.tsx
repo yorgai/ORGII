@@ -1,20 +1,20 @@
 /**
- * OrgFormSections — Shared body of the org create/edit form.
+ * AgentTeamFormSections — Shared body of the team create/edit form.
  *
- * Renders the four sections that both `OrgWizard` (creation flow) and
- * `OrgDetailView` (inline edit on a saved org) need: name + description,
+ * Renders the four sections that both `AgentTeamWizard` (creation flow) and
+ * `OrgDetailView` (inline edit on a saved team) need: name + description,
  * coordinator + hierarchy mode, members (Edit / Preview), and the
  * strict-mode reachability preview. Owning the form chrome here keeps
  * the two surfaces visually identical and prevents drift when, e.g., a
  * new validation hint is added to one path but not the other.
  *
  * State remains hoisted to the parent (controlled props) so that
- * OrgWizard can keep its single-step submit pattern and OrgDetailView
+ * AgentTeamWizard can keep its single-step submit pattern and OrgDetailView
  * can keep its dirty-buffer + sticky-footer pattern.
  *
- * Note on the agent-creation entry point: only OrgWizard supports
+ * Note on the agent-creation entry point: only AgentTeamWizard supports
  * inline agent creation (`onAddAgent`). OrgDetailView omits it so that
- * row creation here doesn't fork into an Agent wizard from a saved-org
+ * row creation here doesn't fork into an Agent wizard from a saved-team
  * surface; passing `onAddAgent={undefined}` simply hides the inline
  * "+ New agent" affordance in `TeamMemberTable`.
  */
@@ -52,7 +52,7 @@ type AgentOption = ReturnType<
   typeof import("@src/modules/MainApp/AgentOrgs/components/org/config").buildAgentOptions
 >[number];
 
-export interface OrgFormSectionsProps {
+export interface AgentTeamFormSectionsProps {
   // Controlled fields
   orgName: string;
   onOrgNameChange: (value: string) => void;
@@ -93,10 +93,10 @@ export interface OrgFormSectionsProps {
 }
 
 /**
- * Renders the four shared org-form sections. Caller owns state and the
+ * Renders the four shared team-form sections. Caller owns state and the
  * surrounding scroll/footer chrome.
  */
-const OrgFormSections: React.FC<OrgFormSectionsProps> = ({
+const AgentTeamFormSections: React.FC<AgentTeamFormSectionsProps> = ({
   orgName,
   onOrgNameChange,
   orgDescription,
@@ -362,7 +362,7 @@ const OrgFormSections: React.FC<OrgFormSectionsProps> = ({
 // Stable noop reference so OrgChart memoization isn't busted on every render.
 const NOOP = () => {};
 
-export default OrgFormSections;
+export default AgentTeamFormSections;
 
 /**
  * Shared validation predicate. A draft is "valid" iff:

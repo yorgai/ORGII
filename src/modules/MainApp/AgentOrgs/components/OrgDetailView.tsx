@@ -1,7 +1,7 @@
 /**
  * OrgDetailView — Inline-editable detail view for a saved Agent Team.
  *
- * Layout mirrors OrgWizard (same `OrgFormSections` body — see that file).
+ * Layout mirrors AgentTeamWizard (same `AgentTeamFormSections` body — see that file).
  * Edits are buffered locally; a sticky Save / Cancel footer appears once
  * the form is dirty (same UX as the markdown / JSON editors in this app).
  * Cancel reverts to the persisted value; Save invokes `onOrgSave`.
@@ -25,9 +25,9 @@ import {
   InternalHeader,
   PanelFooter,
 } from "@src/modules/shared/layouts/blocks";
-import OrgFormSections, {
+import AgentTeamFormSections, {
   isOrgDraftValid,
-} from "@src/scaffold/WizardSystem/variants/AgentOrg/OrgFormSections";
+} from "@src/scaffold/WizardSystem/variants/AgentOrg/AgentTeamFormSections";
 import {
   buildOrgTreeFromMembers,
   flattenOrgToMembers,
@@ -222,7 +222,7 @@ const OrgDetailView: React.FC<OrgDetailViewProps> = ({
       <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
         <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>
           <div className={SECTION_GAP_CLASSES}>
-            <OrgFormSections
+            <AgentTeamFormSections
               orgName={orgName}
               onOrgNameChange={setOrgName}
               orgDescription={orgDescription}
