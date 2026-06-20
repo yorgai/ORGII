@@ -1932,6 +1932,7 @@
     },
     "warningHint": "Ngữ cảnh đang đầy dần. Hãy sớm bắt đầu phiên mới để có kết quả tốt hơn.",
     "dangerHint": "Ngữ cảnh gần đầy. Hãy bắt đầu phiên mới để tránh mất chi tiết.",
+    "autoCompactNote": "Ngữ cảnh sẽ sớm được tóm tắt",
     "startNewSession": "Bắt đầu phiên mới"
   },
   "relativeDate": {

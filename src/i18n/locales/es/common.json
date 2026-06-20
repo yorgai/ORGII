@@ -1931,6 +1931,7 @@
     },
     "warningHint": "El contexto se está llenando. Inicia pronto una nueva sesión para obtener mejores resultados.",
     "dangerHint": "El contexto está casi lleno. Inicia una nueva sesión para evitar perder detalles.",
+    "autoCompactNote": "El contexto se resumirá pronto",
     "startNewSession": "Iniciar nueva sesión"
   },
   "relativeDate": {

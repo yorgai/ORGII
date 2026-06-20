@@ -1949,6 +1949,7 @@
     },
     "warningHint": "上下文即將填滿。建議盡快開始新會話以獲得更好的結果。",
     "dangerHint": "上下文幾乎已滿。請開始新會話，避免遺失細節。",
+    "autoCompactNote": "即將自動摘要上下文",
     "startNewSession": "開始新會話"
   },
   "relativeDate": {

@@ -1931,6 +1931,7 @@
     },
     "warningHint": "Kontekst się zapełnia. Wkrótce rozpocznij nową sesję, aby uzyskać lepsze wyniki.",
     "dangerHint": "Kontekst jest prawie pełny. Rozpocznij nową sesję, aby uniknąć utraty szczegółów.",
+    "autoCompactNote": "Kontekst zostanie wkrótce podsumowany",
     "startNewSession": "Rozpocznij nową sesję"
   },
   "relativeDate": {

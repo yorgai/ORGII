@@ -1957,7 +1957,7 @@
     "cacheHero": "{{pct}}% 来自缓存 · 本轮复用约 {{tokens}}",
     "cacheHeroSub": "Prompt 缓存让复用前缀的费用降到约 1/10。",
     "headroom": "还剩 {{tokens}} 空间",
-    "autoCompactNote": "上下文填满前 ORGII 会自动整理较早的内容——你的工作不会丢失。"
+    "autoCompactNote": "即将自动总结上下文"
   },
   "relativeDate": {
     "today": "今天",
