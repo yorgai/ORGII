@@ -1939,6 +1939,7 @@
     },
     "warningHint": "Der Kontext füllt sich. Starten Sie bald eine neue Sitzung für bessere Ergebnisse.",
     "dangerHint": "Der Kontext ist fast voll. Starten Sie eine neue Sitzung, um Detailverlust zu vermeiden.",
+    "autoCompactNote": "Kontext wird bald zusammengefasst",
     "startNewSession": "Neue Sitzung starten"
   },
   "relativeDate": {

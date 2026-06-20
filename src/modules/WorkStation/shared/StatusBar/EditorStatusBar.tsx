@@ -83,6 +83,8 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = memo(
     const language = getLanguageFromPath(filePath);
     const hasSelection = cursor?.selectedChars && cursor.selectedChars > 0;
 
+    const repoPath = useAtomValue(activeWorkspaceRootPathAtom);
+
     const {
       workspaceLabel,
       workspaceTooltip,
@@ -92,12 +94,12 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = memo(
       needsPublish,
       isSyncBusy,
       isPublishing,
+      canSyncDisplayedRepo,
       syncSpinClass,
       handleSyncClick,
       checkoutLoading,
-    } = useEditorStatusBarGit({ repoName, branchName });
+    } = useEditorStatusBarGit({ repoName, repoPath, branchName });
 
-    const repoPath = useAtomValue(activeWorkspaceRootPathAtom);
     const { isGitInitialized } = useRepoGitInitialization(repoPath);
 
     const sessionRepoHint = useAtomValue(sessionRepoHintAtom);
@@ -228,7 +230,7 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = memo(
           {showGitControls && branchName && (
             <StatusBarButton
               onClick={handleSyncClick}
-              disabled={isSyncBusy}
+              disabled={isSyncBusy || !canSyncDisplayedRepo}
               title={
                 needsPublish
                   ? t("workstation.publishBranchToOrigin", {
@@ -351,6 +353,7 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = memo(
         needsPublish,
         isSyncBusy,
         isPublishing,
+        canSyncDisplayedRepo,
         behindCount,
         aheadCount,
         onRepoClick,

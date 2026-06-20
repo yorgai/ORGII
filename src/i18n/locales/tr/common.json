@@ -1936,6 +1936,7 @@
     },
     "warningHint": "Bağlam doluyor. En iyi sonuçlar için yakında yeni bir oturum başlatın.",
     "dangerHint": "Bağlam neredeyse dolu. Ayrıntı kaybetmemek için yeni bir oturum başlatın.",
+    "autoCompactNote": "Bağlam yakında özetlenecek",
     "startNewSession": "Yeni oturum başlat"
   },
   "relativeDate": {
