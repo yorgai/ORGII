@@ -136,7 +136,7 @@ unsafe fn set_draws_background_recursive(view: *mut AnyObject, draws: bool) {
 
 /// Default traffic light position for native macOS window chrome.
 pub const TRAFFIC_LIGHT_X: f64 = 20.0;
-pub const TRAFFIC_LIGHT_Y: f64 = 22.0;
+pub const TRAFFIC_LIGHT_Y: f64 = 24.0;
 
 // ============================================
 // macOS Traffic Light Positioning
