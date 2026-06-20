@@ -74,80 +74,6 @@ function getEventCallId(event: SessionEvent): string | undefined {
   );
 }
 
-/**
- * Mark assistant-message items that are mid-turn narration: an assistant
- * message item that is followed — before the turn ends (next user message) —
- * by a tool-call/activity item. These are the "Now let me…", "Next I'll…"
- * lines the SDE prompt mandates between tool calls; the main chat collapses
- * them into a think-style block so they don't read as loud final prose. The
- * LAST assistant message of a turn (no following tool call) is left full
- * brightness because it's the turn's actual conclusion.
- *
- * Mutates items in place (sets `collapsedNarration`).
- */
-function markInterToolNarration(items: OptimizedChatItem[]): void {
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    if (item.type !== "activity" || !item.event) continue;
-    if (!isAssistantMessageItemEvent(item.event)) continue;
-
-    // Scan forward to the next content-bearing item within the same turn.
-    let followedByToolCall = false;
-    for (let j = i + 1; j < items.length; j++) {
-      const next = items[j];
-      const nextEvent = next.event;
-      // A user message ends the turn — anything after belongs to the next turn.
-      if (nextEvent && nextEvent.source === "user") break;
-      // Another assistant message before any tool call: the current message
-      // was a standalone paragraph, not pre-tool narration. Stop.
-      if (
-        next.type === "activity" &&
-        nextEvent &&
-        isAssistantMessageItemEvent(nextEvent)
-      ) {
-        break;
-      }
-      // Any grouped/tool activity counts as "a tool call follows".
-      if (next.type !== "activity" || isToolActivityEvent(nextEvent)) {
-        followedByToolCall = true;
-        break;
-      }
-    }
-
-    if (followedByToolCall) {
-      item.collapsedNarration = true;
-    }
-  }
-}
-
-function isAssistantMessageItemEvent(event: SessionEvent): boolean {
-  if (
-    event.displayVariant === "summary" ||
-    event.functionName === "turn_summary" ||
-    event.uiCanonical === "turn_summary"
-  ) {
-    return false;
-  }
-  if (event.source !== "assistant") return false;
-  return (
-    event.actionType === "assistant" ||
-    event.functionName === "assistant_message" ||
-    event.functionName === "agent_message" ||
-    event.functionName === "message" ||
-    event.displayVariant === "message"
-  );
-}
-
-function isToolActivityEvent(event: SessionEvent | undefined): boolean {
-  if (!event) return false;
-  return (
-    event.actionType === "tool_call" ||
-    event.actionType === "tool_result" ||
-    event.actionType === "tool_call_start" ||
-    event.actionType === "tool_call_update"
-  );
-}
-
 function getStableActivityItemId(event: SessionEvent): string {
   const callId = getEventCallId(event);
   if (
@@ -508,10 +434,6 @@ export function processChatItems(
   flushReadFileBuffer();
   flushBrowserBuffer();
   flushPartialBuffer();
-
-  if (opts.collapseInterToolNarration) {
-    markInterToolNarration(result);
-  }
 
   return { items: result, stats };
 }
