@@ -609,7 +609,7 @@
     "selectSource": "Chọn nguồn",
     "selectAgent": "Chọn Agent",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Chọn Agent hoặc Agent org...",
+    "searchAgentOrOrg": "Chọn Agent hoặc Nhóm Agent...",
     "tplSelectAgentOrOrg": "Chọn {agent}",
     "cliAgent": "CLI Agent",
     "placeholderModel": "mô hình",

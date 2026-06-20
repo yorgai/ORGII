@@ -85,8 +85,8 @@ export interface DispatchCategoryPaletteProps extends BasePaletteProps {
   currentAgentOrgId?: string;
   currentCliAgentType?: CliAgentType;
   /**
-   * When true the Agent Orgs group is omitted entirely. Used by member-row
-   * pickers inside an org panel where selecting another org makes no sense.
+   * When true the Agent Teams group is omitted entirely. Used by member-row
+   * pickers inside a team panel where selecting another team makes no sense.
    */
   hideOrgs?: boolean;
   /**

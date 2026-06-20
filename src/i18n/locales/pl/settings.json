@@ -39,7 +39,7 @@
     "storage": "Pamięć masowa",
     "projectUsage": "Project i użycie",
     "agentMemory": "Pamięć Agent",
-    "agentOrg": "ORG Agent"
+    "agentOrg": "Zespół Agent"
   },
   "coreSidebar": {
     "groups": {
@@ -1166,10 +1166,10 @@
     "noAgentsSubtitle": "Utwórz lub zaimportuj Agenta, aby skonfigurować ewolucję."
   },
   "org": {
-    "linkTitle": "Agent Orgs",
-    "description": "Zdefiniuj hierarchię i role swojej organizacji Agent.",
-    "emptyTitle": "Brak zdefiniowanej organizacji",
-    "createOrg": "Utwórz organizację",
+    "linkTitle": "Zespoły agentów",
+    "description": "Zdefiniuj hierarchię i role zespołu agentów.",
+    "emptyTitle": "Nie zdefiniowano zespołu agentów",
+    "createOrg": "Utwórz zespół",
     "addMember": "Dodaj członka",
     "editMember": "Edytuj członka",
     "addChild": "Dodaj podwładnego",
@@ -1180,7 +1180,7 @@
     "fieldStatus": "Status",
     "namePlaceholder": "Wprowadź nazwę członka",
     "deleteConfirm": "Usunąć tego członka i wszystkich podwładnych?",
-    "openAgentOrgs": "Otwórz Agent Orgs"
+    "openAgentOrgs": "Otwórz zespoły agentów"
   },
   "learningsBrowser": {
     "title": "Przeglądarka wniosków",

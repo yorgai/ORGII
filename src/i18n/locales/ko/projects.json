@@ -873,7 +873,7 @@
     "localTeams": "로컬 팀",
     "linearTeams": "Linear 팀",
     "personalOrg": "Personal Org",
-    "agentOrgs": "Agent Orgs",
+    "agentOrgs": "Agent 팀",
     "emptyLinearTeams": "Linear 팀을 찾을 수 없습니다",
     "empty": "팀을 찾을 수 없습니다"
   },

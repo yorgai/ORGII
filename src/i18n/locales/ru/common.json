@@ -609,7 +609,7 @@
     "selectSource": "Выбрать источник",
     "selectAgent": "Выбрать Agent",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Выбрать Agent или Agent org...",
+    "searchAgentOrOrg": "Выбрать Agent или Команду Agent...",
     "tplSelectAgentOrOrg": "Выбрать {agent}",
     "cliAgent": "CLI Agent",
     "placeholderModel": "модель",

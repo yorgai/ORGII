@@ -39,7 +39,7 @@
     "storage": "Lưu trữ",
     "projectUsage": "Project & Sử dụng",
     "agentMemory": "Bộ nhớ Agent",
-    "agentOrg": "Tổ chức Agent"
+    "agentOrg": "Nhóm Agent"
   },
   "coreSidebar": {
     "groups": {
@@ -1163,10 +1163,10 @@
     "noAgentsSubtitle": "Tạo hoặc nhập Agent để cấu hình Tiến hóa."
   },
   "org": {
-    "linkTitle": "Tổ chức Agent",
-    "description": "Xác định cấu trúc phân cấp và vai trò tổ chức Agent.",
-    "emptyTitle": "Chưa có tổ chức nào được định nghĩa",
-    "createOrg": "Tạo tổ chức",
+    "linkTitle": "Nhóm Agent",
+    "description": "Xác định phân cấp và vai trò của nhóm Agent.",
+    "emptyTitle": "Chưa định nghĩa nhóm Agent",
+    "createOrg": "Tạo nhóm",
     "addMember": "Thêm thành viên",
     "editMember": "Sửa thành viên",
     "addChild": "Thêm cấp dưới",
@@ -1177,7 +1177,7 @@
     "fieldStatus": "Trạng thái",
     "namePlaceholder": "Nhập tên thành viên",
     "deleteConfirm": "Xóa thành viên này và tất cả cấp dưới?",
-    "openAgentOrgs": "Mở tổ chức Agent"
+    "openAgentOrgs": "Mở nhóm Agent"
   },
   "learningsBrowser": {
     "title": "Trình duyệt Learnings",

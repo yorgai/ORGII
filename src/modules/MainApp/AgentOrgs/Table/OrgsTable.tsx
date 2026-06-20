@@ -1,7 +1,7 @@
 /**
- * OrgsTable — Lists every saved Agent Org.
+ * OrgsTable — Lists every saved Agent Team.
  *
- * Replaces the second-level sidebar list of orgs. Each row opens a
+ * Replaces the second-level sidebar list of teams. Each row opens a
  * WorkStation `agent-config` tab (`variant: "org"`) hosting the existing
  * `OrgDetailView`, so editing semantics stay identical to before.
  */
@@ -135,7 +135,7 @@ const OrgsTable: React.FC<OrgsTableProps> = ({
     [handleView, onDeleteOrg, t]
   );
 
-  const addOrgLabel = t("agentOrgs.addOrg", { defaultValue: "Add Org" });
+  const addOrgLabel = t("agentOrgs.addOrg", { defaultValue: "Add Agent Team" });
   const addButton = (
     <Button
       variant="secondary"
@@ -163,7 +163,7 @@ const OrgsTable: React.FC<OrgsTableProps> = ({
         searchValue: searchQuery,
         onSearchChange: setSearchQuery,
         searchPlaceholder: t("agentOrgs.searchOrgs", {
-          defaultValue: "Search orgs…",
+          defaultValue: "Search teams…",
         }),
         allowSearchClear: true,
         rightContent: addButton,

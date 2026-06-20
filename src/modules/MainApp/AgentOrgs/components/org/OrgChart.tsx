@@ -1,5 +1,5 @@
 /**
- * OrgChart — recursive tree renderer for the org hierarchy.
+ * OrgChart — recursive tree renderer for the team hierarchy.
  *
  * Renders OrgNodeCard per member with CSS-based connector lines.
  * Uses classes from index.scss for vertical/horizontal connectors.

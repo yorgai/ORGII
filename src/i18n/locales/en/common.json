@@ -634,7 +634,7 @@
     "selectSource": "Select source",
     "selectAgent": "Select agent",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Select an agent or Agent org...",
+    "searchAgentOrOrg": "Select an agent or Agent team...",
     "tplSelectAgentOrOrg": "Select {agent}",
     "cliAgent": "CLI agent",
     "placeholderModel": "model",

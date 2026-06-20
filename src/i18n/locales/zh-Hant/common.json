@@ -621,7 +621,7 @@
     "selectSource": "選擇來源",
     "selectAgent": "選擇 Agent",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "選擇 Agent 或 Agent org...",
+    "searchAgentOrOrg": "選擇 Agent 或 Agent 團隊...",
     "tplSelectAgentOrOrg": "選擇 {agent}",
     "cliAgent": "CLI Agent",
     "placeholderModel": "模型",

@@ -609,7 +609,7 @@
     "selectSource": "Kaynak seç",
     "selectAgent": "Agent seç",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Agent veya Agent org seç...",
+    "searchAgentOrOrg": "Agent veya Agent ekibi seç...",
     "tplSelectAgentOrOrg": "{agent} seç",
     "cliAgent": "CLI Agent",
     "placeholderModel": "model",

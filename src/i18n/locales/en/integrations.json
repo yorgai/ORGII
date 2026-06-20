@@ -1582,7 +1582,7 @@
     "deleteConfirmMessage": "This will remove the server from the config file. Running sessions will be disconnected."
   },
   "agentOrgs": {
-    "title": "Agent Orgs",
+    "title": "Agent Teams",
     "running": "Running",
     "activeRules": "active",
     "fires": "fires",
@@ -1636,13 +1636,13 @@
     "disabled": "Disabled",
     "noRulesOrRoutines": "No rules or routines yet",
     "noTemplates": "No templates yet",
-    "addOrg": "Add Org",
+    "addOrg": "Add Agent Team",
     "addAgent": "Add Agent",
     "agentSections": {
       "builtInAgents": "Built-in Agents",
       "customAgents": "Custom Agents",
       "cli": "CLI Agents",
-      "orgs": "Orgs"
+      "orgs": "Teams"
     },
     "memorySections": {
       "personalMemory": "Personal",
@@ -1834,13 +1834,14 @@
     "noMemory": "No memory items yet",
     "memoryDescription": "Memory stores knowledge and context that members can reference across sessions.",
     "tabs": {
-      "org": "ORG",
+      "org": "Team",
       "agents": "Members",
       "integrations": "Integrations",
-      "rules": "Rules"
+      "rules": "Rules",
+      "orgs": "Teams"
     },
     "searchPlaceholder": "Search rules…",
-    "searchOrgsPlaceholder": "Search orgs...",
+    "searchOrgsPlaceholder": "Search teams...",
     "searchAgentsPlaceholder": "Search members...",
     "searchMemoryPlaceholder": "Search memory...",
     "searchIntegrationsPlaceholder": "Search integrations...",
@@ -1910,18 +1911,18 @@
       }
     },
     "orgWizard": {
-      "title": "Add Org",
-      "orgName": "Org Name",
-      "orgNameDesc": "Name for this agent org",
+      "title": "Add Agent Team",
+      "orgName": "Team name",
+      "orgNameDesc": "Name for this agent team",
       "orgNamePlaceholder": "e.g. Engineering Team",
       "orgDescription": "Description",
-      "orgDescriptionDesc": "Optional summary of what this org does",
-      "orgDescriptionPlaceholder": "What does this org do?",
+      "orgDescriptionDesc": "Optional summary of what this agent team does",
+      "orgDescriptionPlaceholder": "What does this agent team do?",
       "members": "Members",
       "addMember": "Add Member",
       "editMember": "Edit Member",
-      "noMembers": "Add members to build your org hierarchy",
-      "previewEmpty": "Add agents to see the org chart preview",
+      "noMembers": "Add members to build your team hierarchy",
+      "previewEmpty": "Add agents to see the team chart preview",
       "hierarchyMode": {
         "label": "Hierarchy mode",
         "description": "How the reports-to relationships between members are interpreted at runtime",
@@ -1953,7 +1954,7 @@
       "membersDesc": "Each row is a routing alias. The coordinator addresses members by name; names must be unique. Role is a specialty hint shown to the LLM",
       "memberName": "Name",
       "memberNamePlaceholder": "Unique routing name (e.g. SDE-1)",
-      "memberNameDuplicate": "Another member already uses this name. Names must be unique within the org.",
+      "memberNameDuplicate": "Another member already uses this name. Names must be unique within the team.",
       "role": "Role",
       "rolePlaceholder": "Specialty (e.g. backend dev)",
       "agent": "Agent",
@@ -1961,16 +1962,16 @@
       "reportsToCoordinator": "Coordinator (top level)",
       "status": "Status",
       "coordinator": "Coordinator",
-      "coordinatorDesc": "Lead agent that owns the coordinator session for this org run",
+      "coordinatorDesc": "Lead agent that owns the coordinator session for this team run",
       "coordinatorPlaceholder": "Select coordinator agent",
       "tabs": {
         "edit": "Edit",
         "previewDiagram": "Preview Diagram"
       },
       "dangerZone": "Danger Zone",
-      "deleteOrg": "Delete this org",
-      "deleteOrgDesc": "Permanently delete this agent org. Member agents are not affected. This action cannot be undone",
-      "deleteThisOrg": "Delete this org"
+      "deleteOrg": "Delete this team",
+      "deleteOrgDesc": "Permanently delete this agent team. Member agents are not affected. This action cannot be undone",
+      "deleteThisOrg": "Delete this team"
     },
     "agentWizard": {
       "title": "Config Agent",
@@ -2271,18 +2272,18 @@
         "skip": "Skip and continue"
       }
     },
-    "emptySelectionTitle": "Select a member or an Agent Org",
-    "emptySelectionSubtitle": "Choose an Agent or Agent Org from the sidebar to view and configure it.",
+    "emptySelectionTitle": "Select a member or an Agent Team",
+    "emptySelectionSubtitle": "Choose an Agent or Agent Team from the sidebar to view and configure it.",
     "applicableWorkspace": "Applicable Workspace",
     "tableTabs": {
       "agents": "Agents",
-      "orgs": "Orgs",
+      "orgs": "Teams",
       "clis": "CLIs"
     },
     "searchAgents": "Search agents…",
-    "searchOrgs": "Search orgs…",
+    "searchOrgs": "Search teams…",
     "noAgents": "No agents yet",
-    "noOrgs": "No orgs yet",
+    "noOrgs": "No teams yet",
     "orgMembers": "Members",
     "agentLoadFailed": "Failed to load agent definitions",
     "agentSaved": "Agent saved",
@@ -2291,12 +2292,12 @@
     "agentDeleteFailed": "Failed to delete agent",
     "deleteAgentTitle": "Delete agent?",
     "deleteAgentMessage": "\"{{name}}\" will be permanently removed. This cannot be undone.",
-    "orgCreated": "Organization created",
-    "orgUpdated": "Organization updated",
-    "orgDeleted": "Organization deleted",
-    "orgSaveFailed": "Failed to save organization",
-    "orgDeleteFailed": "Failed to delete organization",
-    "deleteOrgTitle": "Delete organization?",
+    "orgCreated": "Team created",
+    "orgUpdated": "Team updated",
+    "orgDeleted": "Team deleted",
+    "orgSaveFailed": "Failed to save team",
+    "orgDeleteFailed": "Failed to delete team",
+    "deleteOrgTitle": "Delete team?",
     "deleteOrgMessage": "\"{{name}}\" will be permanently removed. This cannot be undone."
   },
   "tableHeaders": {
@@ -2471,7 +2472,7 @@
     "noProjects": "No projects available",
     "target": "Target",
     "agentResponsible": "Agent responsible for this routine",
-    "agentResponsiblePlaceholder": "Pick an agent or agent org",
+    "agentResponsiblePlaceholder": "Pick an agent or agent team",
     "workspacePathPlaceholder": "Pick a workspace",
     "prompt": "Prompt",
     "promptPlaceholder": "Tell the agent what to do when this routine fires...",

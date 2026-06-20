@@ -1576,7 +1576,7 @@
     "deleteConfirmMessage": "Máy chủ sẽ bị xóa khỏi file cấu hình. Các phiên đang hoạt động sẽ bị ngắt kết nối."
   },
   "agentOrgs": {
-    "title": "Tổ chức Agent",
+    "title": "Nhóm Agent",
     "running": "Đang chạy",
     "fires": "lần kích hoạt",
     "addRoutine": "Thêm Routine",
@@ -1619,13 +1619,13 @@
     "enabledDesc": "Bật hoặc tắt chính sách này",
     "disabled": "Đã tắt",
     "noTemplates": "Chưa có mẫu",
-    "addOrg": "Thêm tổ chức",
+    "addOrg": "Thêm nhóm Agent",
     "addAgent": "Thêm Agent",
     "agentSections": {
       "builtInAgents": "Agents tích hợp sẵn",
       "customAgents": "Agents tùy chỉnh",
       "cli": "CLI Agents",
-      "orgs": "Tổ chức"
+      "orgs": "Nhóm"
     },
     "memorySections": {
       "personalMemory": "Cá nhân",
@@ -1815,13 +1815,14 @@
       "fsDenyRead": "Từ chối đọc hệ thống tệp"
     },
     "tabs": {
-      "org": "ORG",
+      "org": "Nhóm",
       "agents": "Thành viên",
       "integrations": "Tích hợp",
-      "rules": "Quy tắc"
+      "rules": "Quy tắc",
+      "orgs": "Nhóm"
     },
     "searchPlaceholder": "Tìm quy tắc…",
-    "searchOrgsPlaceholder": "Tìm kiếm tổ chức...",
+    "searchOrgsPlaceholder": "Tìm nhóm...",
     "searchAgentsPlaceholder": "Tìm kiếm thành viên...",
     "searchMemoryPlaceholder": "Tìm kiếm Memory...",
     "searchIntegrationsPlaceholder": "Tìm kiếm Integrations...",
@@ -1893,7 +1894,7 @@
     "orgWizard": {
       "title": "Thêm Org",
       "orgName": "Tên Org",
-      "orgNameDesc": "Tên cho tổ chức Agent này",
+      "orgNameDesc": "Tên của nhóm Agent này",
       "orgNamePlaceholder": "vd. Đội Kỹ thuật",
       "orgDescription": "Mô tả",
       "orgDescriptionDesc": "Tóm tắt tùy chọn về công việc của tổ chức này",
@@ -1950,7 +1951,7 @@
       },
       "dangerZone": "Vùng nguy hiểm",
       "deleteOrg": "Xóa Org này",
-      "deleteOrgDesc": "Xóa vĩnh viễn Agent Org này. Các Agent thành viên không bị ảnh hưởng. Không thể hoàn tác hành động này",
+      "deleteOrgDesc": "Xóa vĩnh viễn Nhóm Agent này. Các Agent thành viên không bị ảnh hưởng. Không thể hoàn tác hành động này",
       "deleteThisOrg": "Xóa Org này"
     },
     "agentWizard": {
@@ -2265,18 +2266,18 @@
         "skip": "Skip and continue"
       }
     },
-    "emptySelectionTitle": "Chọn một thành viên hoặc Agent Org",
-    "emptySelectionSubtitle": "Chọn một Agent hoặc Agent Org từ thanh bên để xem và cấu hình.",
+    "emptySelectionTitle": "Chọn một thành viên hoặc Nhóm Agent",
+    "emptySelectionSubtitle": "Chọn một Agent hoặc Nhóm Agent từ thanh bên để xem và cấu hình.",
     "applicableWorkspace": "Workspace áp dụng",
     "tableTabs": {
       "agents": "Agents",
-      "orgs": "Orgs",
+      "orgs": "Nhóm",
       "clis": "CLIs"
     },
     "searchAgents": "Tìm Agents…",
-    "searchOrgs": "Tìm orgs…",
+    "searchOrgs": "Tìm nhóm…",
     "noAgents": "Chưa có Agents",
-    "noOrgs": "Chưa có orgs",
+    "noOrgs": "Chưa có nhóm",
     "orgMembers": "Thành viên",
     "agentLoadFailed": "Không tải được định nghĩa Agent",
     "agentSaved": "Đã lưu Agent",
@@ -2285,12 +2286,12 @@
     "agentDeleteFailed": "Không xóa được Agent",
     "deleteAgentTitle": "Xóa Agent?",
     "deleteAgentMessage": "\"{{name}}\" sẽ bị xóa vĩnh viễn. Không thể hoàn tác thao tác này.",
-    "orgCreated": "Đã tạo tổ chức",
-    "orgUpdated": "Đã cập nhật tổ chức",
-    "orgDeleted": "Đã xóa tổ chức",
-    "orgSaveFailed": "Không lưu được tổ chức",
-    "orgDeleteFailed": "Không xóa được tổ chức",
-    "deleteOrgTitle": "Xóa tổ chức?",
+    "orgCreated": "Đã tạo nhóm",
+    "orgUpdated": "Đã cập nhật nhóm",
+    "orgDeleted": "Đã xóa nhóm",
+    "orgSaveFailed": "Không thể lưu nhóm",
+    "orgDeleteFailed": "Không thể xóa nhóm",
+    "deleteOrgTitle": "Xóa nhóm?",
     "deleteOrgMessage": "\"{{name}}\" sẽ bị xóa vĩnh viễn. Không thể hoàn tác thao tác này."
   },
   "databases": {
@@ -2453,7 +2454,7 @@
     "noProjects": "Không có Project khả dụng",
     "target": "Target",
     "agentResponsible": "Agent phụ trách routine này",
-    "agentResponsiblePlaceholder": "Chọn Agent hoặc Agent Org",
+    "agentResponsiblePlaceholder": "Chọn Agent hoặc Nhóm Agent",
     "workspacePathPlaceholder": "Chọn workspace",
     "prompt": "Prompt",
     "promptPlaceholder": "Tell the agent what to do when this routine fires...",

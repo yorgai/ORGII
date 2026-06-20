@@ -39,7 +39,7 @@
     "storage": "Хранилище",
     "projectUsage": "Project и использование",
     "agentMemory": "Память Agent",
-    "agentOrg": "Орг Agent"
+    "agentOrg": "Команда Agent"
   },
   "coreSidebar": {
     "groups": {
@@ -1164,10 +1164,10 @@
     "noAgentsSubtitle": "Создайте или импортируйте Agent, чтобы настроить эволюцию."
   },
   "org": {
-    "linkTitle": "Орг Agent",
-    "description": "Определите иерархию и роли организации Agent.",
-    "emptyTitle": "Орг не определена",
-    "createOrg": "Создать организацию",
+    "linkTitle": "Команды агентов",
+    "description": "Определите иерархию и роли команды агентов.",
+    "emptyTitle": "Команда агентов не определена",
+    "createOrg": "Создать команду",
     "addMember": "Добавить участника",
     "editMember": "Редактировать участника",
     "addChild": "Добавить подчинённого",
@@ -1178,7 +1178,7 @@
     "fieldStatus": "Статус",
     "namePlaceholder": "Введите имя участника",
     "deleteConfirm": "Удалить этого участника и всех подчинённых?",
-    "openAgentOrgs": "Открыть организации Agent"
+    "openAgentOrgs": "Открыть команды агентов"
   },
   "learningsBrowser": {
     "title": "Браузер Learnings",

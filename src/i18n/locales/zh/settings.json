@@ -39,7 +39,7 @@
     "storage": "存储",
     "projectUsage": "项目与用量",
     "agentMemory": "Agent 记忆",
-    "agentOrg": "Agent 组织"
+    "agentOrg": "Agent 团队"
   },
   "coreSidebar": {
     "groups": {
@@ -1163,10 +1163,10 @@
     "noAgentsSubtitle": "创建或导入 Agent 以配置进化。"
   },
   "org": {
-    "linkTitle": "Agent 组织",
-    "description": "定义 Agent 组织层级和角色。",
-    "emptyTitle": "尚未定义组织",
-    "createOrg": "创建组织",
+    "linkTitle": "Agent团队",
+    "description": "定义你的Agent团队层级和角色。",
+    "emptyTitle": "尚未定义Agent团队",
+    "createOrg": "创建团队",
     "addMember": "添加成员",
     "editMember": "编辑成员",
     "addChild": "添加下属",
@@ -1177,7 +1177,7 @@
     "fieldStatus": "状态",
     "namePlaceholder": "输入成员名称",
     "deleteConfirm": "删除此成员及其所有下属？",
-    "openAgentOrgs": "打开 Agent 组织"
+    "openAgentOrgs": "打开Agent团队"
   },
   "learningsBrowser": {
     "title": "Learnings 浏览器",

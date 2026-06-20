@@ -351,7 +351,7 @@ export const ACTIONS: NavDestination[] = [
     {
       labelKey: "integrations:agentOrgs.addOrg",
       overrideIcon: getSegmentIcon("org") ?? undefined,
-      keywords: ["org", "team member", "hierarchy", "add org"],
+      keywords: ["team", "team member", "hierarchy", "add team"],
     }
   ),
   wizardDest(

@@ -1,5 +1,5 @@
 /**
- * WingmanDetailView — Agent Org detail panel for the built-in Wingman
+ * WingmanDetailView — Agent Team detail panel for the built-in Wingman
  * agent.
  *
  * Wingman is a singleton, screen-observation agent. Its config surface

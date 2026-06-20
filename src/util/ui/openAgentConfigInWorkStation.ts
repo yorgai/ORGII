@@ -1,13 +1,13 @@
 /**
- * Open an Agent / Org configuration tab in the WorkStation Code Editor
+ * Open an Agent / Team configuration tab in the WorkStation Code Editor
  * surface.
  *
  * Mirrors `openFileInWorkStation` but produces an `agent-config` tab
  * driven by the {@link AgentConfigTabData} payload. The tab id is keyed
  * by `<variant>:<entityId>` (see `agentConfigTabFactory`), so re-opening
- * the same agent / org focuses the existing tab instead of duplicating.
+ * the same agent / team focuses the existing tab instead of duplicating.
  *
- * Called from the Agent Orgs page table rows (Agents / Orgs / CLIs tabs)
+ * Called from the Agent Teams page table rows (Agents / Teams / CLIs tabs)
  * and from the row "View" buttons.
  */
 import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";

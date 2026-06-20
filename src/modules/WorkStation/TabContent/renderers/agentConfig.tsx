@@ -1,8 +1,8 @@
 /**
  * Renderer wrapper for `agent-config` tabs.
  *
- * Hosts the multi-tab agent / org detail view inside the WorkStation Code
- * Editor surface. Opened from the Agent Orgs page table rows via
+ * Hosts the multi-tab agent / team detail view inside the WorkStation Code
+ * Editor surface. Opened from the Agent Teams page table rows via
  * `openAgentConfigInWorkStation`, mirroring how skill previews are opened.
  *
  * The component dispatches on `tab.data.variant`:
@@ -13,7 +13,7 @@
  *   - "org"                        → OrgDetailView
  *
  * All data fetched here lives on shared Jotai atoms / module-scoped RPC
- * hooks so opening the tab does not require the Agent Orgs page to be
+ * hooks so opening the tab does not require the Agent Teams page to be
  * mounted.
  */
 import { useAtomValue } from "jotai";
@@ -184,16 +184,14 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
         setOrgs(refreshed);
         Message.success(
           t(isUpdate ? "agentOrgs.orgUpdated" : "agentOrgs.orgCreated", {
-            defaultValue: isUpdate
-              ? "Organization updated"
-              : "Organization created",
+            defaultValue: isUpdate ? "Team updated" : "Team created",
           })
         );
       } catch (err) {
         logger.error("org save failed", err);
         Message.error(
           t("agentOrgs.orgSaveFailed", {
-            defaultValue: "Failed to save organization",
+            defaultValue: "Failed to save team",
           })
         );
       }
@@ -206,11 +204,11 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
       const target = orgs.find((o) => o.id === orgId);
       const confirmed = await confirmDestructiveAction({
         title: t("agentOrgs.deleteOrgTitle", {
-          defaultValue: "Delete organization?",
+          defaultValue: "Delete team?",
         }),
         message: t("agentOrgs.deleteOrgMessage", {
-          name: target?.name ?? "this organization",
-          defaultValue: `"${target?.name ?? "this organization"}" will be permanently removed. This cannot be undone.`,
+          name: target?.name ?? "this team",
+          defaultValue: `"${target?.name ?? "this team"}" will be permanently removed. This cannot be undone.`,
         }),
         okLabel: t("common.delete", { defaultValue: "Delete" }),
         cancelLabel: t("common.cancel", { defaultValue: "Cancel" }),
@@ -221,13 +219,13 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
         const refreshed = await loadOrgs();
         setOrgs(refreshed);
         Message.success(
-          t("agentOrgs.orgDeleted", { defaultValue: "Organization deleted" })
+          t("agentOrgs.orgDeleted", { defaultValue: "Team deleted" })
         );
       } catch (err) {
         logger.error("org delete failed", err);
         Message.error(
           t("agentOrgs.orgDeleteFailed", {
-            defaultValue: "Failed to delete organization",
+            defaultValue: "Failed to delete team",
           })
         );
       }

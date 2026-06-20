@@ -59,8 +59,8 @@ export type WorkStationTabType =
   | "chat-session"
   // Subagent detail tab (chat-like view of subagent activities + result)
   | "subagent-detail"
-  // Agent / Org configuration tab — hosts the multi-tab agent/org detail
-  // view inside the Code Editor surface (opened from the Agent Orgs page
+  // Agent / Team configuration tab — hosts the multi-tab agent/team detail
+  // view inside the Code Editor surface (opened from the Agent Teams page
   // table rows; mirrors how skills are previewed).
   | "agent-config"
   // Ops Control station tabs
@@ -328,7 +328,7 @@ export interface SubagentDetailTabData {
 /**
  * Variant of the entity hosted inside an `agent-config` tab. The renderer
  * dispatches on this field to mount the matching detail view that
- * previously lived inside the Agent Orgs page right-hand panel.
+ * previously lived inside the Agent Teams page right-hand panel.
  */
 export type AgentConfigTabVariant =
   | "builtin-os"
@@ -339,10 +339,10 @@ export type AgentConfigTabVariant =
   | "org";
 
 /**
- * Data stored in agent-config tabs (opened from the Agent Orgs page
+ * Data stored in agent-config tabs (opened from the Agent Teams page
  * table rows via `openAgentConfigInWorkStation`).
  *
- * The tab is keyed by `entityId` so re-opening the same agent / org from
+ * The tab is keyed by `entityId` so re-opening the same agent / team from
  * the list focuses the existing tab instead of creating a duplicate.
  */
 export interface AgentConfigTabData {

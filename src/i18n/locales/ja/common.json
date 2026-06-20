@@ -609,7 +609,7 @@
     "selectSource": "ソースを選択",
     "selectAgent": "Agent を選択",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Agent または Agent org を選択...",
+    "searchAgentOrOrg": "Agent または Agent チームを選択...",
     "tplSelectAgentOrOrg": "{agent} を選択",
     "cliAgent": "CLI Agent",
     "placeholderModel": "モデル",

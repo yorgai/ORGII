@@ -1565,7 +1565,7 @@
     "deleteConfirmMessage": "Isso removerá o servidor do arquivo de configuração. As sessões ativas serão desconectadas."
   },
   "agentOrgs": {
-    "title": "Agent Orgs",
+    "title": "Equipes de agentes",
     "running": "Em execução",
     "activeRules": "ativas",
     "fires": "disparos",
@@ -1619,13 +1619,13 @@
     "disabled": "Desativada",
     "noRulesOrRoutines": "Nenhuma regra ou rotina ainda",
     "noTemplates": "Nenhum template ainda",
-    "addOrg": "Adicionar Org",
+    "addOrg": "Adicionar equipe de agentes",
     "addAgent": "Adicionar Agent",
     "agentSections": {
       "builtInAgents": "Agents integrados",
       "customAgents": "Agents personalizados",
       "cli": "CLI Agents",
-      "orgs": "Organizações"
+      "orgs": "Equipes"
     },
     "memorySections": {
       "personalMemory": "Pessoal",
@@ -1817,13 +1817,14 @@
     "noMemory": "Nenhum item de memória ainda",
     "memoryDescription": "A memória armazena conhecimento e contexto que os membros podem referenciar entre sessões.",
     "tabs": {
-      "org": "ORG",
+      "org": "Equipe",
       "agents": "Membros",
       "integrations": "Integrações",
-      "rules": "Regras"
+      "rules": "Regras",
+      "orgs": "Equipes"
     },
     "searchPlaceholder": "Buscar regras…",
-    "searchOrgsPlaceholder": "Buscar Orgs...",
+    "searchOrgsPlaceholder": "Buscar equipes...",
     "searchAgentsPlaceholder": "Buscar membros...",
     "searchMemoryPlaceholder": "Buscar memória...",
     "searchIntegrationsPlaceholder": "Buscar integrações...",
@@ -1895,16 +1896,16 @@
     "orgWizard": {
       "title": "Adicionar Org",
       "orgName": "Nome da Org",
-      "orgNameDesc": "Nome para esta Org de Agent",
+      "orgNameDesc": "Nome desta equipe Agent",
       "orgNamePlaceholder": "ex.: Time de Engenharia",
       "orgDescription": "Descrição",
-      "orgDescriptionDesc": "Resumo opcional do que esta Org faz",
-      "orgDescriptionPlaceholder": "O que esta Org faz?",
+      "orgDescriptionDesc": "Resumo opcional do que esta equipe faz",
+      "orgDescriptionPlaceholder": "O que esta equipe faz?",
       "members": "Membros",
       "addMember": "Adicionar membro",
       "editMember": "Editar membro",
-      "noMembers": "Adicione membros para montar a hierarquia da sua Org",
-      "previewEmpty": "Adicione Agents para ver a pré-visualização do org chart",
+      "noMembers": "Adicione membros para montar a hierarquia da sua equipe",
+      "previewEmpty": "Adicione Agents para ver a pré-visualização do gráfico da equipe",
       "hierarchyMode": {
         "label": "Modo de hierarquia",
         "description": "Como as relações 'reporta a' entre membros são interpretadas em tempo de execução",
@@ -1952,7 +1953,7 @@
       },
       "dangerZone": "Zona de Perigo",
       "deleteOrg": "Excluir este Org",
-      "deleteOrgDesc": "Exclui permanentemente este Agent Org. Os Agents membros não são afetados. Esta ação não pode ser desfeita",
+      "deleteOrgDesc": "Exclui permanentemente esta Equipe Agent. Os Agents membros não são afetados. Esta ação não pode ser desfeita",
       "deleteThisOrg": "Excluir este Org"
     },
     "agentWizard": {
@@ -2254,18 +2255,18 @@
         "skip": "Pular e continuar"
       }
     },
-    "emptySelectionTitle": "Selecione um membro ou um Agent Org",
-    "emptySelectionSubtitle": "Escolha um Agent ou Agent Org na barra lateral para visualizar e configurar.",
+    "emptySelectionTitle": "Selecione um membro ou uma Equipe Agent",
+    "emptySelectionSubtitle": "Escolha um Agent ou Equipe Agent na barra lateral para visualizar e configurar.",
     "applicableWorkspace": "Workspace aplicável",
     "tableTabs": {
       "agents": "Agents",
-      "orgs": "Orgs",
+      "orgs": "Equipes",
       "clis": "CLIs"
     },
     "searchAgents": "Pesquisar Agents…",
-    "searchOrgs": "Pesquisar orgs…",
+    "searchOrgs": "Buscar equipes…",
     "noAgents": "Ainda não há Agents",
-    "noOrgs": "Ainda não há orgs",
+    "noOrgs": "Ainda não há equipes",
     "orgMembers": "Membros",
     "agentLoadFailed": "Falha ao carregar definições de Agent",
     "agentSaved": "Agent salvo",
@@ -2274,12 +2275,12 @@
     "agentDeleteFailed": "Falha ao excluir Agent",
     "deleteAgentTitle": "Excluir Agent?",
     "deleteAgentMessage": "\"{{name}}\" será removido permanentemente. Esta ação não pode ser desfeita.",
-    "orgCreated": "Organização criada",
-    "orgUpdated": "Organização atualizada",
-    "orgDeleted": "Organização excluída",
-    "orgSaveFailed": "Falha ao salvar organização",
-    "orgDeleteFailed": "Falha ao excluir organização",
-    "deleteOrgTitle": "Excluir organização?",
+    "orgCreated": "Equipe criada",
+    "orgUpdated": "Equipe atualizada",
+    "orgDeleted": "Equipe excluída",
+    "orgSaveFailed": "Falha ao salvar equipe",
+    "orgDeleteFailed": "Falha ao excluir equipe",
+    "deleteOrgTitle": "Excluir equipe?",
     "deleteOrgMessage": "\"{{name}}\" será removida permanentemente. Esta ação não pode ser desfeita."
   },
   "tableHeaders": {
@@ -2453,7 +2454,7 @@
     "noProjects": "Nenhuma project disponível",
     "target": "Target",
     "agentResponsible": "Agent responsável por esta rotina",
-    "agentResponsiblePlaceholder": "Escolha um Agent ou um Agent Org",
+    "agentResponsiblePlaceholder": "Escolha um Agent ou uma Equipe Agent",
     "workspacePathPlaceholder": "Escolha um workspace",
     "prompt": "Prompt",
     "promptPlaceholder": "Tell the agent what to do when this routine fires...",
