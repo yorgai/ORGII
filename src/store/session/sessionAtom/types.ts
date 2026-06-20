@@ -81,13 +81,13 @@ export interface Session {
   workItemId?: string;
   /** Agent role in the work item lifecycle */
   agentRole?: AgentRole | string;
-  /** Parent/root session id for child sessions such as Agent Org member sessions. */
+  /** Parent/root session id for child sessions such as Agent Team member sessions. */
   parentSessionId?: string;
-  /** Agent Org roster member id for org member session rows. */
+  /** Agent Team roster member id for team member session rows. */
   orgMemberId?: string;
-  /** Agent Org definition id for root/coordinator rows launched from an org. */
+  /** Agent Team definition id for root/coordinator rows launched from a team. */
   agentOrgId?: string;
-  /** Agent Org display name for root/coordinator rows launched from an org. */
+  /** Agent Team display name for root/coordinator rows launched from a team. */
   agentOrgName?: string;
   /** Rust-native agent definition ID returned by the backend. */
   agentDefinitionId?: string;

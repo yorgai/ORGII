@@ -104,7 +104,7 @@ export interface MessageViewerProps {
   /** Canvas payload from agent's render_inline_canvas; rendered as the last item in the stream. */
   canvasPayload?: CanvasInlinePayload | null;
   /**
-   * Switch the Communication view mode. Used by the Agent Org task-list
+   * Switch the Communication view mode. Used by the Agent Team task-list
    * card's navigate arrow to jump from the chat stream to the Todo Kanban
    * tab without forcing a manual tab click.
    */

@@ -1,7 +1,7 @@
 /**
  * TurnPaginationControls
  *
- * Top-of-history toolbar that hosts the Agent Org member label, round
+ * Top-of-history toolbar that hosts the Agent Team member label, round
  * selector, current time-range label, and previous / next / last-round
  * buttons.
  */
@@ -65,7 +65,7 @@ interface TurnPaginationControlsProps {
    */
   trailingActions?: React.ReactNode;
   /**
-   * When true, the chat surface is rendering the Agent Org group chat
+   * When true, the chat surface is rendering the Agent Team group chat
    * view instead of the per-member `ChatHistory`. The agent dropdown
    * shows this as a checked first-row option ("Group chat") and the
    * trigger label is replaced by the group label so the user can see
@@ -80,7 +80,7 @@ interface TurnPaginationControlsProps {
   onGroupChatViewToggle?: (active: boolean) => void;
   /**
    * When false, the "Group chat" option is hidden (e.g. the active
-   * session is not an Agent Org run or has no eligible members).
+   * session is not an Agent Team run or has no eligible members).
    */
   groupChatViewAvailable?: boolean;
 }

@@ -77,7 +77,7 @@ const AgentOrgOverviewPanel: React.FC<AgentOrgOverviewPanelProps> = memo(
         await pauseAgentOrgRun(currentSessionId);
         await onRefresh();
       } catch (err: unknown) {
-        logger.error("Failed to pause Agent Org run:", err);
+        logger.error("Failed to pause Agent Team run:", err);
       } finally {
         setIsTogglingPause(false);
       }
@@ -90,7 +90,7 @@ const AgentOrgOverviewPanel: React.FC<AgentOrgOverviewPanelProps> = memo(
         await resumeAgentOrgRun(currentSessionId);
         await onRefresh();
       } catch (err: unknown) {
-        logger.error("Failed to resume Agent Org run:", err);
+        logger.error("Failed to resume Agent Team run:", err);
       } finally {
         setIsTogglingPause(false);
       }

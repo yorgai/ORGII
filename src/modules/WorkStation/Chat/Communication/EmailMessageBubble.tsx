@@ -5,7 +5,7 @@
  * Communication > Messages tab. Currently used by three Rust tools (all
  * routed to AppChannels · Message · CbSentMessage):
  *
- *   - `org_send_message`  — inter-agent typed messages inside an Agent Org run
+ *   - `org_send_message`  — inter-agent typed messages inside an Agent Team run
  *   - `send_message`      — outbound chat-channel sends (Telegram/Discord/etc.)
  *   - `send_to_inbox`     — agent → user inbox (notifications / messages)
  *

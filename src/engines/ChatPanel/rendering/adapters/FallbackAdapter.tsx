@@ -72,7 +72,7 @@ function extractManageAgentDefProps(props: UniversalEventProps): {
   const action = ((args.action as string | undefined) ??
     "list") as ManageAgentDefAction;
 
-  // Try to pull the agent/org name from args first, then result content
+  // Try to pull the agent/team name from args first, then result content
   const agentName =
     (args.name as string | undefined) ?? (result.name as string | undefined);
 

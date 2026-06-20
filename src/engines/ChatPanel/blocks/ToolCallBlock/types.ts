@@ -181,7 +181,7 @@ export interface CommandResultData {
 }
 
 /**
- * Inter-agent message sent via the Agent Org messaging tool.
+ * Inter-agent message sent via the Agent Team messaging tool.
  * Rendered as a compact speech-bubble card with recipient, kind, and summary.
  */
 export interface AgentMessageDeliveryRow {

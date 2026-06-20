@@ -12,13 +12,13 @@ const defaultAgentOrgState: SessionCreatorState = {
   source: null,
   selectedAgentDefinitionId: null,
   selectedAgentOrgId: "default:sde-feature-team",
-  agentName: "Default Agent Org",
+  agentName: "Default Agent Team",
   agentIconId: "network",
   cliAgentType: null,
 };
 
 describe("normalizeSessionCreatorState", () => {
-  it("uses SDE Agent instead of the built-in default Agent Org", () => {
+  it("uses SDE Agent instead of the built-in default Agent Team", () => {
     const normalized = normalizeSessionCreatorState(defaultAgentOrgState);
 
     expect(normalized.dispatchCategory).toBe("rust_agent");
@@ -29,7 +29,7 @@ describe("normalizeSessionCreatorState", () => {
     expect(normalized.agentIconId).toBe("code");
   });
 
-  it("preserves a custom Agent Org selection", () => {
+  it("preserves a custom Agent Team selection", () => {
     const customOrgState: SessionCreatorState = {
       ...defaultAgentOrgState,
       selectedAgentOrgId: "custom-org",

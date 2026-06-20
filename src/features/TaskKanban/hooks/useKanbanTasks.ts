@@ -49,9 +49,9 @@ export interface UseKanbanTasksOptions {
    * When provided, only sessions whose `session_id` is in this set are
    * included on the board.
    *
-   * Used by org-scoped Kanban embeds (e.g. the `Kanban` sub-tab in the
-   * Inbox per-org panel) to restrict the board to sessions linked to a
-   * specific Agent Org run without forking the hook.
+   * Used by team-scoped Kanban embeds (e.g. the `Kanban` sub-tab in the
+   * Inbox per-team panel) to restrict the board to sessions linked to a
+   * specific Agent Team run without forking the hook.
    */
   sessionIdFilter?: ReadonlySet<string>;
 }

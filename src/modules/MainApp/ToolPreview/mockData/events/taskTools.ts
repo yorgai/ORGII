@@ -52,7 +52,7 @@ export const taskToolsEvents: Record<string, SessionEvent> = {
       kind: "task_assignment",
       title: "Wire Playground mock coverage",
       content:
-        "Please add representative fixtures for the newly registered chat blocks so visual QA can exercise them without a live Agent Org run.",
+        "Please add representative fixtures for the newly registered chat blocks so visual QA can exercise them without a live Agent Team run.",
     },
     {
       success: true,
@@ -269,7 +269,7 @@ export const taskToolsEvents: Record<string, SessionEvent> = {
         "",
         "## Steps",
         "1. Add representative raw args/results for fallback blocks.",
-        "2. Include extracted task payloads for Agent Org task cards.",
+        "2. Include extracted task payloads for Agent Team task cards.",
         "3. Verify the dev-mode sync warning no longer appears.",
       ].join("\n"),
       planId: "plan-playground-sync",
@@ -312,7 +312,7 @@ export const taskToolsEvents: Record<string, SessionEvent> = {
     {
       content: [
         "- **Chat panel visual polish** (slug: chat-panel-visual-polish) — in_progress · high",
-        "- **Agent org onboarding** (slug: agent-org-onboarding) — planned · medium",
+        "- **Agent team onboarding** (slug: agent-org-onboarding) — planned · medium",
         "- **Work item scheduling** (slug: work-item-scheduling) — backlog · medium",
         "- **Marketplace source selector** (slug: marketplace-source-selector) — in_review · high",
         "- **Key Vault cleanup** (slug: key-vault-cleanup) — completed · low",

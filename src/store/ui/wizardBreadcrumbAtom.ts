@@ -34,8 +34,8 @@ export const wizardBreadcrumbTitleAtom = atom<string | null>(null);
  *
  * Same bridge pattern, but for the *selection* leaf — what the user has
  * clicked on inside a section that lives inside Settings (currently:
- * Agents & Orgs, where the user picks one OS / SDE / CLI / custom agent
- * or one organization in the sidebar).
+ * Agent Teams, where the user picks one OS / SDE / CLI / custom agent
+ * or one team in the sidebar).
  *
  * The breadcrumb renders the wizard title if present, otherwise this
  * selection title. They are conceptually exclusive: pages that own a

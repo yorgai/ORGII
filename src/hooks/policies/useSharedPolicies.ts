@@ -1,5 +1,5 @@
 /**
- * Unified policies hook — shared between Settings and Agent Org.
+ * Unified policies hook — shared between Settings and Agent Teams.
  *
  * Wraps the `policies_*` Tauri commands for CRUD operations on
  * `.orgii/rules/` files + per-rule agent scope in `rules-config.json`.

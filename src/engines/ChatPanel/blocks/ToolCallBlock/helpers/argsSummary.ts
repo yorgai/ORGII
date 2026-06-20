@@ -93,7 +93,7 @@ function formatBrowserArgsSummary(
 }
 
 /**
- * Build a one-line summary for Agent Org inter-agent comms.
+ * Build a one-line summary for Agent Team inter-agent comms.
  * Goal: the chat panel's tool-call header subtitle should at a glance
  * tell the user "who is talking to whom about what".
  */

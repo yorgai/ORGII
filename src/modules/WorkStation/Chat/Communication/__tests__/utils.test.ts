@@ -120,7 +120,7 @@ describe("getMessageSender", () => {
     ).toBe("agent");
   });
 
-  it("returns agent for Agent Org inbox transcripts persisted as user messages", () => {
+  it("returns agent for Agent Team inbox transcripts persisted as user messages", () => {
     expect(
       getMessageSender(
         minimalSessionEvent({

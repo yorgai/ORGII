@@ -1,6 +1,6 @@
 /**
  * LearningsBrowserPage — standalone full-page shell (e.g. dev / deep links).
- * Primary UI: Agent Orgs → Integrations → Memory → Learnings tab.
+ * Primary UI: Agent Teams → Integrations → Memory → Learnings tab.
  */
 import React from "react";
 

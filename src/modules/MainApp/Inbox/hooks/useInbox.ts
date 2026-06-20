@@ -8,7 +8,7 @@
  * - Channel selection + message grouping by date.
  * - Search filtering within the selected channel.
  *
- * Agent Orgs are loaded separately by `useInboxOrgs` — they don't share
+ * Agent Teams are loaded separately by `useInboxOrgs` — they don't share
  * the static-channel persistence layer, just the left-list UI.
  */
 import { useAtomValue, useSetAtom } from "jotai";

@@ -44,7 +44,7 @@ export type ManageAgentDefAction =
 
 export interface ManageAgentDefBlockProps {
   action: ManageAgentDefAction;
-  /** Agent / org name */
+  /** Agent / team name */
   agentName?: string;
   /** Agent description (shown as body text) */
   description?: string;

@@ -8,7 +8,7 @@ import type { SettingsSectionSlotId } from "@src/config/settingsUiManifest/slotI
  * Tab discriminator for {@link SETTINGS_UI_SECTIONS}. The Settings page
  * only ever queries `"app"` — the `"agent"` and `"integrations"` values
  * exist as parity-assertion placeholders so schema keys whose UI lives in
- * Agent Orgs or Integrations still have matching "covered" manifest entries.
+ * Agent Teams or Integrations still have matching "covered" manifest entries.
  */
 export type SettingsTabId = "app" | "agent" | "integrations";
 

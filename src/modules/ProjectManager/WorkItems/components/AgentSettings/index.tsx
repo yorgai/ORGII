@@ -32,7 +32,7 @@ interface AgentSettingsProps {
   config: OrchestratorConfig;
   isWorkflowActive: boolean;
   onUpdateConfig: (updates: Partial<OrchestratorConfig>) => void;
-  /** Custom agents from Agent Orgs (for sub-agent selection) */
+  /** Custom agents from Agent Teams (for sub-agent selection) */
   availableAgents?: AgentDefinition[];
 }
 

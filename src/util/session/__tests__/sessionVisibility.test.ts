@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { isPrimarySessionListSession } from "@src/util/session/sessionVisibility";
 
 describe("isPrimarySessionListSession", () => {
-  it("keeps Agent Org coordinator root sessions visible", () => {
+  it("keeps Agent Team coordinator root sessions visible", () => {
     expect(
       isPrimarySessionListSession({
         session_id: "sdeagent-root",
@@ -13,7 +13,7 @@ describe("isPrimarySessionListSession", () => {
     ).toBe(true);
   });
 
-  it("hides Agent Org member child sessions", () => {
+  it("hides Agent Team member child sessions", () => {
     expect(
       isPrimarySessionListSession({
         session_id: "sdeagent-root:subagent:planner",

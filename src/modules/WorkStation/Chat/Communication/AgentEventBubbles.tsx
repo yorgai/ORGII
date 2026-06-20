@@ -65,7 +65,7 @@ const EMPTY_EVENT_PAYLOAD: Record<string, unknown> = {};
 
 /**
  * Function names whose payloads carry an `extracted.kind === "orgTask"`
- * (or otherwise belong to the Agent Org task family). Keep the routing
+ * (or otherwise belong to the Agent Team task family). Keep the routing
  * decision here so both `MessageBubbleRenderer` and downstream filters
  * can share the same predicate.
  */

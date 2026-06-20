@@ -121,7 +121,7 @@ export function resolveSessionCreatorAgentHeroContent(options: {
   if (targetKind === SESSION_TARGET_KIND.AGENT_ORG && selectedAgentOrgId) {
     const org = orgs.find((member) => member.id === selectedAgentOrgId);
     return {
-      name: org?.name ?? resolvedAgentName ?? "Agent org",
+      name: org?.name ?? resolvedAgentName ?? "Agent team",
       description: resolveOrgDescription(selectedAgentOrgId, orgs),
       danger: false,
     };

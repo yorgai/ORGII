@@ -149,7 +149,7 @@ function parseGroupChatRoute(
     return candidateNames.includes(token);
   });
   if (!member) {
-    throw new Error(`Unknown Agent Org mention: @${tokenMatch?.[1] ?? ""}`);
+    throw new Error(`Unknown Agent Team mention: @${tokenMatch?.[1] ?? ""}`);
   }
   return {
     targetMemberId: member.isCoordinator ? null : member.memberId,
@@ -302,7 +302,7 @@ export function useAgentOrgGroupChatController({
       await resumeAgentOrgRun(sessionId);
       await refreshAgentOrgRunView();
     } catch (err: unknown) {
-      logger.error("Failed to resume Agent Org run from group chat:", err);
+      logger.error("Failed to resume Agent Team run from group chat:", err);
     } finally {
       setIsResumingGroupChat(false);
     }
@@ -326,7 +326,7 @@ export function useAgentOrgGroupChatController({
         throw new Error("Group chat does not support image attachments yet");
       }
       if (!route.body.trim()) {
-        throw new Error("Agent Org group chat message content is required");
+        throw new Error("Agent Team group chat message content is required");
       }
       const targetMember = route.targetMemberId
         ? agentOrgRunView.members.find(
@@ -334,7 +334,7 @@ export function useAgentOrgGroupChatController({
           )
         : agentOrgRunView.members.find((member) => member.isCoordinator);
       if (!targetMember) {
-        throw new Error("Agent Org group chat target member was not found");
+        throw new Error("Agent Team group chat target member was not found");
       }
       const optimisticRowId = nextOptimisticInboxRowIdRef.current--;
       const optimisticRow = makeOptimisticInboxRow({
@@ -380,7 +380,7 @@ export function useAgentOrgGroupChatController({
         });
         void refreshAgentOrgRunView().catch((err: unknown) => {
           logger.error(
-            "Failed to refresh Agent Org run after group chat send:",
+            "Failed to refresh Agent Team run after group chat send:",
             err
           );
         });

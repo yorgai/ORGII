@@ -161,7 +161,7 @@ export const activeStationChatVisibleAtom = atom(
 activeStationChatVisibleAtom.debugLabel = "activeStationChatVisibleAtom";
 
 /**
- * Per-session opt-in for the Agent Org group chat view. Holds the
+ * Per-session opt-in for the Agent Team group chat view. Holds the
  * coordinator session id whose ChatPanel is currently rendering the
  * group view (or `null` for none). Non-persistent: closing or
  * switching session reverts to the per-member ChatHistory default,

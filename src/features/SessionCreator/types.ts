@@ -98,8 +98,8 @@ export interface AdvancedConfig {
   selectedSourceLabel?: string;
   /** Model/provider type of the selected source — used for icon display */
   selectedSourceModelType?: ModelType;
-  /** Per-Agent-Org-member launch overrides keyed by org member id. */
+  /** Per-Agent-Team-member launch overrides keyed by team member id. */
   agentOrgMemberOverrides?: Record<string, OrgMemberLaunchOverride>;
-  /** Persist Agent Org member overrides back to the org definition after successful launch. */
+  /** Persist Agent Team member overrides back to the team definition after successful launch. */
   applyAgentOrgMemberOverridesForFuture?: boolean;
 }

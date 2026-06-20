@@ -14,7 +14,7 @@ const pendingMemberSessionId = (memberId: string) =>
 
 /**
  * Build the ordered agent list for a run: coordinator first, then every
- * configured member. Historical/restarted Agent Org views often hydrate the
+ * configured member. Historical/restarted Agent Team views often hydrate the
  * durable run roster before every member runtime is attached again; the group
  * chat must still open immediately instead of waiting on runtime session ids.
  */

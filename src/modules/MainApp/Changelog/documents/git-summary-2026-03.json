@@ -189,19 +189,19 @@
     {
       "date": "2026-03-10",
       "commitCount": 58,
-      "summary": "Work focused on agent/runtime work, session and workspace changes, key/auth/marketplace updates, with most changes touching Frontend app, Internationalization, Agent org settings. The commits synthesize feature iteration, fixes, and cleanup from commit subjects and changed paths rather than a line-by-line commit listing.",
+      "summary": "Work focused on agent/runtime work, session and workspace changes, key/auth/marketplace updates, with most changes touching Frontend app, Internationalization, Agent team settings. The commits synthesize feature iteration, fixes, and cleanup from commit subjects and changed paths rather than a line-by-line commit listing.",
       "frontendChangeBullets": [
         "Added per-repository sync scope settings for AI usage data.",
         "Added per-repository sync scope settings for session usage data.",
         "Improved Agent Skills search behavior in settings.",
         "Improved Agent Skills count styling so totals are easier to read.",
-        "Enhanced Agent Orgs tables with hierarchy information and cleaner headers."
+        "Enhanced Agent Teams tables with hierarchy information and cleaner headers."
       ],
       "backendChangeBullets": [
         "Added backend support for per-repository sync scopes in usage data.",
         "Added agent mode selection support for SDE sessions.",
         "Improved model resolution for SDE session runtime behavior.",
-        "Updated Agent Orgs data structures used by hierarchy-aware tables.",
+        "Updated Agent Teams data structures used by hierarchy-aware tables.",
         "Cleaned up session and workspace paths tied to repository-scoped synchronization."
       ],
       "modelsUsed": ["Opus 4.5", "Sonnet 4.5"]
@@ -215,13 +215,13 @@
         "Aligned OS Agent workspace styling with sync worktree surfaces.",
         "Connected @Session mentions so selected session context can be sent to agents.",
         "Connected @Browser mentions so selected browser context can be sent to agents.",
-        "Added Rules versus Behaviors selection and a shared Markdown editor for Agent Orgs."
+        "Added Rules versus Behaviors selection and a shared Markdown editor for Agent Teams."
       ],
       "backendChangeBullets": [
         "Added backend handling for @Session mention context passed into agent workflows.",
         "Added backend handling for @Browser mention context passed into agent workflows.",
         "Improved session polling behavior for work item review summaries.",
-        "Updated Agent Orgs data paths for rules and behavior management.",
+        "Updated Agent Teams data paths for rules and behavior management.",
         "Improved workspace handling behind the read-only OS Agent workspace setting."
       ],
       "modelsUsed": ["Opus 4.5", "Sonnet 4.5"]
@@ -233,15 +233,15 @@
       "frontendChangeBullets": [
         "Added agent selection inside Agent Settings.",
         "Added sub-agent display inside Agent Settings.",
-        "Improved Agent Orgs policy and behavior management with repository lists.",
+        "Improved Agent Teams policy and behavior management with repository lists.",
         "Added rules tables for clearer policy and behavior review.",
         "Added localized sub-agent labels across supported languages."
       ],
       "backendChangeBullets": [
         "Introduced backend support for spawning sub-agents from coding workflows.",
         "Updated agent runtime work to recognize selected agents and sub-agents.",
-        "Improved repository list data support for Agent Orgs management.",
-        "Updated rules and behavior data paths used by Agent Orgs tables.",
+        "Improved repository list data support for Agent Teams management.",
+        "Updated rules and behavior data paths used by Agent Teams tables.",
         "Expanded documentation and runtime support around sub-agent workflow behavior."
       ],
       "modelsUsed": ["Opus 4.5", "Sonnet 4.5"]
@@ -249,7 +249,7 @@
     {
       "date": "2026-03-13",
       "commitCount": 46,
-      "summary": "Work focused on agent/runtime work, session and workspace changes, key/auth/marketplace updates, with most changes touching Frontend app, Internationalization, Agent org settings. The commits synthesize feature iteration, fixes, and cleanup from commit subjects and changed paths rather than a line-by-line commit listing.",
+      "summary": "Work focused on agent/runtime work, session and workspace changes, key/auth/marketplace updates, with most changes touching Frontend app, Internationalization, Agent team settings. The commits synthesize feature iteration, fixes, and cleanup from commit subjects and changed paths rather than a line-by-line commit listing.",
       "frontendChangeBullets": [
         "Improved session synchronization with shared hooks.",
         "Unified session ID resolution in frontend session flows.",
@@ -274,7 +274,7 @@
         "Improved the Integrations wizard with clearer GitHub setup flows.",
         "Improved the Integrations wizard with clearer Copilot setup flows.",
         "Aligned API key setup screens with the shared setup layout pattern.",
-        "Removed outdated agent organization tabs from Settings.",
+        "Removed outdated agent team tabs from Settings.",
         "Removed outdated connectivity tabs from Settings to simplify configuration."
       ],
       "backendChangeBullets": [
@@ -492,7 +492,7 @@
       "summary": "Work focused on agent/runtime work, session and workspace changes, key/auth/marketplace updates, with most changes touching Frontend app, Documentation, Tauri/Rust backend. The commits synthesize feature iteration, fixes, and cleanup from commit subjects and changed paths rather than a line-by-line commit listing.",
       "frontendChangeBullets": [
         "Improved chat block UX for clearer session timelines.",
-        "Polished Agent Orgs surfaces with cleaner interaction patterns.",
+        "Polished Agent Teams surfaces with cleaner interaction patterns.",
         "Improved settings localization across affected configuration pages.",
         "Added a session file bar header for better file context in chat.",
         "Improved editor canvas background for chat tool outputs."
@@ -502,7 +502,7 @@
         "Improved verification harnesses for coding repository workflows.",
         "Updated session history data used by polished headers and list rows.",
         "Improved backend support for file context shown in session file bars.",
-        "Touched Tauri and Rust backend paths supporting Agent Orgs and chat tool behavior."
+        "Touched Tauri and Rust backend paths supporting Agent Teams and chat tool behavior."
       ],
       "modelsUsed": ["Opus 4.5", "Sonnet 4.5"]
     },
@@ -571,7 +571,7 @@
       "commitCount": 29,
       "summary": "Work focused on agent/runtime work, session and workspace changes, UI configuration work, with most changes touching Frontend app, Internationalization, Tauri/Rust backend. The commits synthesize feature iteration, fixes, and cleanup from commit subjects and changed paths rather than a line-by-line commit listing.",
       "frontendChangeBullets": [
-        "Moved Agent Memory into Agent Orgs for a more focused configuration location.",
+        "Moved Agent Memory into Agent Teams for a more focused configuration location.",
         "Removed the outdated Settings Agent tab.",
         "Renamed browser tools for clearer product language.",
         "Added internal browser automation support to user-facing browser workflows.",
@@ -579,7 +579,7 @@
       ],
       "backendChangeBullets": [
         "Simplified session streaming internals to reduce duplicated accumulator logic.",
-        "Updated backend paths for Agent Memory under Agent Orgs.",
+        "Updated backend paths for Agent Memory under Agent Teams.",
         "Added internal browser automation support in runtime tooling.",
         "Improved shared session record types used by history rendering.",
         "Cleaned up settings and agent runtime paths left behind by the removed Agent tab."
