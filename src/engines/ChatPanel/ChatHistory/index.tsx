@@ -81,11 +81,66 @@ import {
 import "./index.scss";
 
 // ============================================
+// PlanningIndicatorBridge
+// ============================================
+
+/**
+ * Thin wrapper that owns the `usePlanningIndicator` subscription so that the
+ * hot `eventStoreVersionAtom` ticker does not cause `ChatHistory` (the
+ * orchestrator) to re-render on every streaming token.
+ *
+ * All props that would otherwise be threaded through the orchestrator are
+ * forwarded directly to `ChatHistoryList`. The planning values produced here
+ * are purely for display; the orchestrator gets only the binary 0/1 count
+ * back (via `onPlanningIndicatorCount`) so `useChatFooterSpacer` can
+ * re-measure when the footer appears / disappears.
+ */
+interface PlanningIndicatorBridgeProps extends Omit<
+  React.ComponentProps<typeof ChatHistoryList>,
+  "planningIndicatorCount" | "planningShowSlowHint" | "planningVariantIndex"
+> {
+  planningIndicatorScope: { sessionId: string; isLive: boolean } | null;
+  /**
+   * Called whenever the visible count (0 or 1) changes. Stable identity —
+   * created once with `useCallback([], [])` in the orchestrator.
+   */
+  onPlanningIndicatorCount: (count: 0 | 1) => void;
+}
+
+const PlanningIndicatorBridge: React.FC<PlanningIndicatorBridgeProps> = ({
+  planningIndicatorScope,
+  onPlanningIndicatorCount,
+  ...chatHistoryListProps
+}) => {
+  const { count, showSlowHint, variantIndex } = usePlanningIndicator(
+    planningIndicatorScope
+  );
+
+  // Notify the orchestrator whenever the count flips so useChatFooterSpacer
+  // can schedule a re-measurement.
+  useEffect(() => {
+    onPlanningIndicatorCount(count);
+  }, [count, onPlanningIndicatorCount]);
+
+  return (
+    <ChatHistoryList
+      {...chatHistoryListProps}
+      planningIndicatorCount={count}
+      planningShowSlowHint={showSlowHint}
+      planningVariantIndex={variantIndex}
+    />
+  );
+};
+
+PlanningIndicatorBridge.displayName = "PlanningIndicatorBridge";
+
+// ============================================
 // Component
 // ============================================
 
 const renderNoGroupHeader = () => <div aria-hidden style={{ minHeight: 1 }} />;
 const TAIL_TURN_COLLAPSE_IDLE_MS = 60_000;
+const EMPTY_ORG_MEMBERS: AgentOrgRunMemberView[] = [];
 const BOTTOM_OVERLAY_FADE_PX = 32;
 const SCROLL_NAV_SPACER_CAP_PX = 160;
 const SCROLL_NAV_SHOW_THRESHOLD_PX = 48;
@@ -206,7 +261,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   surfaceBgClass = "bg-chat-pane",
   agentOrgCurrentMemberName = null,
   agentOrgCurrentMemberId = null,
-  agentOrgMembers = [],
+  agentOrgMembers = EMPTY_ORG_MEMBERS,
   agentOrgOverviewPanel,
   onAgentOrgMemberSelect,
   onAgentOrgRunViewRefresh,
@@ -352,11 +407,19 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     return () => window.clearTimeout(timeoutId);
   }, [tailIdleKey]);
 
-  const {
-    count: planningIndicatorCount,
-    showSlowHint: planningShowSlowHint,
-    variantIndex: planningVariantIndex,
-  } = usePlanningIndicator(planningIndicatorScope);
+  // planningIndicatorCount is hoisted up via a stable callback so
+  // useChatFooterSpacer can re-measure when the planning footer appears /
+  // disappears. The count itself is 0 or 1, so this setter is called at most
+  // twice per session; it does NOT subscribe to eventStoreVersionAtom here.
+  // showSlowHint and variantIndex stay inside PlanningIndicatorBridge.
+  const [planningIndicatorCount, setPlanningIndicatorCount] = useState<0 | 1>(
+    0
+  );
+  const handlePlanningIndicatorCount = useCallback((count: 0 | 1) => {
+    setPlanningIndicatorCount((previous) =>
+      previous === count ? previous : count
+    );
+  }, []);
 
   // --- Grouping for GroupedVirtuoso ---
   //
@@ -1042,7 +1105,9 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
               >
                 {optimizedChatHistory.length > 0 ? (
                   <>
-                    <ChatHistoryList
+                    <PlanningIndicatorBridge
+                      planningIndicatorScope={planningIndicatorScope}
+                      onPlanningIndicatorCount={handlePlanningIndicatorCount}
                       flatItems={displayFlatItems}
                       groupCounts={displayGroupCounts}
                       totalFlatItems={displayTotalFlatItems}
@@ -1051,9 +1116,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                       }
                       codeBlockContainerWidth={codeBlockContainerWidth ?? 0}
                       footerSpacerHeight={footerSpacerHeight}
-                      planningIndicatorCount={planningIndicatorCount}
-                      planningShowSlowHint={planningShowSlowHint}
-                      planningVariantIndex={planningVariantIndex}
                       virtuosoRef={
                         virtuosoRef as React.RefObject<GroupedVirtuosoHandle>
                       }

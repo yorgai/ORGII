@@ -7,7 +7,7 @@
  *
  * Receives all data and callbacks as props — no atom reads here.
  */
-import React, { memo, useMemo } from "react";
+import React, { memo, useMemo, useRef } from "react";
 import {
   type Components,
   GroupedVirtuoso,
@@ -19,6 +19,7 @@ import { PlanningFooter } from "@src/engines/ChatPanel/blocks/primitives";
 
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
 import { CHAT_FOOTER_SPACER } from "../config/chatFooterSpacer";
+import { getUnloadedTurnMeta } from "../hooks/useChatGroups";
 import { GroupItemRenderer } from "../renderers";
 
 const STATIC_RENDER_ITEM_LIMIT = 24;
@@ -259,6 +260,21 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
     staticScrollerRef,
     newEventDividerLabel = null,
   }) => {
+    // Planning indicator state in refs so polling ticks don't invalidate
+    // renderGroupItem's useCallback (Root Cause 2 fix).
+    const planningIndicatorCountRef = useRef(planningIndicatorCount);
+    planningIndicatorCountRef.current = planningIndicatorCount;
+    const planningShowSlowHintRef = useRef(planningShowSlowHint);
+    planningShowSlowHintRef.current = planningShowSlowHint;
+    const planningVariantIndexRef = useRef(planningVariantIndex);
+    planningVariantIndexRef.current = planningVariantIndex;
+
+    // flatItems and previousChatItems in refs so renderGroupItem's useCallback
+    // is not re-created on every token during streaming (Root Cause 1 fix).
+    const flatItemsRef = useRef(flatItems);
+    flatItemsRef.current = flatItems;
+    const previousChatItemsRef = useRef<(OptimizedChatItem | undefined)[]>([]);
+
     // When the planning indicator is active, inject it as a virtual item
     // in the last group so it renders under the latest turn's sticky
     // header — not as the global Virtuoso Footer which visually attaches
@@ -272,6 +288,31 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
       return adjusted;
     }, [hasPlanningItem, groupCounts]);
     const effectiveTotalFlatItems = totalFlatItems + (hasPlanningItem ? 1 : 0);
+
+    // For each flat index, the nearest preceding qualifying item — non-structural,
+    // non-unloaded, with an event. Pre-computed once per flatItems change so
+    // GroupItemRenderer doesn't run an O(N) backward scan on every render
+    // (Root Cause 3 fix / Root Cause 1 fix combined).
+    const previousChatItems = useMemo<(OptimizedChatItem | undefined)[]>(() => {
+      const result: (OptimizedChatItem | undefined)[] = new Array(
+        flatItems.length
+      ).fill(undefined);
+      let lastQualifying: OptimizedChatItem | undefined = undefined;
+      for (let i = 0; i < flatItems.length; i++) {
+        result[i] = lastQualifying;
+        const item = flatItems[i];
+        if (
+          item &&
+          !item.structuralOnly &&
+          getUnloadedTurnMeta(item) === null &&
+          item.event
+        ) {
+          lastQualifying = item;
+        }
+      }
+      previousChatItemsRef.current = result;
+      return result;
+    }, [flatItems]);
 
     const useStaticRendering =
       effectiveTotalFlatItems <= STATIC_RENDER_ITEM_LIMIT;
@@ -292,6 +333,27 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
       });
     }, [useStaticRendering, effectiveGroupCounts]);
 
+    // Keep footerSpacerHeight in a ref so the Footer component can read the
+    // latest value without being re-created. Virtuoso unmounts and remounts
+    // Footer whenever `components` changes identity, so keeping Footer stable
+    // avoids that churn even as footerSpacerHeight updates.
+    const footerSpacerHeightRef = useRef(footerSpacerHeight);
+    footerSpacerHeightRef.current = footerSpacerHeight;
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const FooterComponent = useMemo(
+      () =>
+        function ChatFooterSpacer() {
+          return <div style={{ height: footerSpacerHeightRef.current }} />;
+        },
+      // Empty deps: FooterComponent is intentionally stable for the lifetime
+      // of this ChatHistoryList instance. It reads footerSpacerHeightRef.current
+      // on each Virtuoso-triggered render, so footerSpacerHeight changes are
+      // still reflected without recreating the component.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      []
+    );
+
     const virtuosoComponents = useMemo(() => {
       const List = React.forwardRef<
         HTMLDivElement,
@@ -309,19 +371,20 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
       return {
         Scroller: ChatScroller,
         List,
-        Footer: () => <div style={{ height: footerSpacerHeight }} />,
+        Footer: FooterComponent,
       };
-    }, [ChatScroller, footerSpacerHeight]);
+    }, [ChatScroller, FooterComponent]);
 
     const renderGroupItem = React.useCallback(
       (flatIndex: number, groupIndex: number) => {
-        if (flatIndex >= flatItems.length) {
+        const currentFlatItems = flatItemsRef.current;
+        if (flatIndex >= currentFlatItems.length) {
           return (
             <PlanningFooter
               key={`planning-footer-${flatIndex}`}
-              count={planningIndicatorCount}
-              showSlowHint={planningShowSlowHint}
-              variantIndex={planningVariantIndex}
+              count={planningIndicatorCountRef.current}
+              showSlowHint={planningShowSlowHintRef.current}
+              variantIndex={planningVariantIndexRef.current}
             />
           );
         }
@@ -329,7 +392,8 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
           <GroupItemRenderer
             flatIndex={flatIndex}
             groupIndex={groupIndex}
-            flatItems={flatItems}
+            chatItem={currentFlatItems[flatIndex]}
+            previousChatItem={previousChatItemsRef.current[flatIndex]}
             groupCounts={effectiveGroupCounts}
             lastAssistantFlatIndexPerItem={lastAssistantFlatIndexPerItem}
             isWpGeneWorking={getIsWpGeneWorking()}
@@ -344,7 +408,6 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         );
       },
       [
-        flatItems,
         effectiveGroupCounts,
         lastAssistantFlatIndexPerItem,
         codeBlockContainerWidth,
@@ -355,9 +418,6 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         onSkip,
         onEditUserMessage,
         newEventDividerLabel,
-        planningIndicatorCount,
-        planningShowSlowHint,
-        planningVariantIndex,
       ]
     );
 
@@ -411,7 +471,8 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
                       key={itemKey}
                       flatIndex={itemFlatIndex}
                       groupIndex={groupIndex}
-                      flatItems={flatItems}
+                      chatItem={flatItems[itemFlatIndex]}
+                      previousChatItem={previousChatItems[itemFlatIndex]}
                       groupCounts={effectiveGroupCounts}
                       lastAssistantFlatIndexPerItem={
                         lastAssistantFlatIndexPerItem

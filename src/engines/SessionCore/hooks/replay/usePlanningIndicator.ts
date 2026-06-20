@@ -46,15 +46,15 @@
  * cold starts.)
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import {
-  derivedSnapshotAtom,
-  eventStoreVersionAtom,
-} from "@src/engines/SessionCore/core/atoms/events";
+import { eventStoreVersionAtom } from "@src/engines/SessionCore/core/atoms/events";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
-import { isInteractiveTool } from "@src/engines/SessionCore/core/interactiveTools";
-import { hasLiveRuntimeResourceInLatestTurn } from "@src/engines/SessionCore/core/runningEventGate";
+import {
+  globalAnyRunningAtom,
+  globalHasAwaitingUserInteractionAtom,
+  globalLastIsSettledAssistantMessageAtom,
+} from "@src/engines/SessionCore/derived/planningIndicatorAtoms";
 import {
   noopSessionScopedPlanningMetaAtom,
   sessionScopedPlanningMetaAtomFamily,
@@ -175,7 +175,6 @@ export function usePlanningIndicator(
   const globalIsSessionActive = useAtomValue(isSessionActiveAtom);
   const globalIsPendingCancel = useAtomValue(isPendingCancelAtom);
   const globalRuntimeStatus = useAtomValue(sessionRuntimeStatusAtom);
-  const snapshot = useAtomValue(derivedSnapshotAtom);
   const globalVersion = useAtomValue(eventStoreVersionAtom);
   const sessionId = useAtomValue(sessionIdAtom);
   const subagentJobMap = useAtomValue(subagentJobMapAtom);
@@ -199,26 +198,14 @@ export function usePlanningIndicator(
     : globalRuntimeStatus;
   const version = scoped ? scopedMeta.version : globalVersion;
 
-  const globalAnyRunning = useMemo(() => {
-    if (scoped) return false;
-    if (!snapshot || !("chatEvents" in snapshot)) return false;
-    // Latest-turn scan: zombie running events from old turns (dropped
-    // terminal merges, frozen shellProcessStatus) must not suppress the
-    // footer for the rest of the session.
-    return hasLiveRuntimeResourceInLatestTurn(snapshot.chatEvents);
-  }, [scoped, snapshot]);
+  // Derived atoms only notify when the boolean flips, not on every token.
+  // Scoped surfaces use scopedMeta instead of the global atoms.
+  const globalAnyRunning = useAtomValue(globalAnyRunningAtom);
   const anyRunning = scoped ? scopedMeta.anyRunning : globalAnyRunning;
 
-  const globalHasAwaitingUserInteraction = useMemo(() => {
-    if (scoped) return false;
-    if (!snapshot || !("events" in snapshot)) return false;
-    return snapshot.events.some(
-      (event) =>
-        event.displayStatus === "awaiting_user" &&
-        event.activityStatus !== "processed" &&
-        isInteractiveTool(event.functionName)
-    );
-  }, [scoped, snapshot]);
+  const globalHasAwaitingUserInteraction = useAtomValue(
+    globalHasAwaitingUserInteractionAtom
+  );
   const hasAwaitingUserInteraction = scoped
     ? scopedMeta.hasAwaitingUserInteraction
     : globalHasAwaitingUserInteraction;
@@ -227,20 +214,13 @@ export function usePlanningIndicator(
   // assistant message that has already settled. In this state the user
   // has seen the final reply, so showing a planning footer is misleading
   // even if the backend terminal event is still winding down.
-  const lastIsSettledAssistantMessage = useMemo(() => {
-    if (scoped || !snapshot) return false;
-    const chat =
-      "chatEvents" in snapshot && Array.isArray(snapshot.chatEvents)
-        ? snapshot.chatEvents
-        : [];
-    const last = chat[chat.length - 1];
-    if (!last) return false;
-    return (
-      last.actionType === "assistant" &&
-      last.displayStatus === "completed" &&
-      !last.isDelta
-    );
-  }, [scoped, snapshot]);
+  // The derived atom only fires when the value actually changes, not every token.
+  const globalLastIsSettledAssistantMessage = useAtomValue(
+    globalLastIsSettledAssistantMessageAtom
+  );
+  const lastIsSettledAssistantMessage = scoped
+    ? false
+    : globalLastIsSettledAssistantMessage;
 
   const [idleAfterVersion, setIdleAfterVersion] = useState<number | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
