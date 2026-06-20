@@ -1,8 +1,14 @@
-# ORG-II
+# ORG-2
+
+**Cursor 스타일의 open-source Agent IDE — 단지 더 빠른 코딩이 아니라 리뷰 가능성, 추적 가능성, 제어를 위해 만들어졌습니다.**
+
+Rust와 Tauri로 구축되어 100MB 미만의 디스크 사용량으로 local-first 실행을 지원합니다. Agent trajectory livestream과 replay를 지원합니다. 따라가기 쉽고 리뷰하기 쉽습니다.
 
 [English](../../README.md) · [Français](README.fr.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [Español](README.es.md) · [Русский](README.ru.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Türkçe](README.tr.md) · [Tiếng Việt](README.vi.md) · [Polski](README.pl.md)
 
-ORG-II는 Rust와 Tauri로 구축된 open-source agentic development framework이며, 100MB 미만의 디스크 사용량으로 local-first 실행을 지원합니다.
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a" controls width="720"></video>
+</p>
 
 이것은 단순한 AI 코딩 도구가 아니라 human/Agent 조직과 org-level alignment에 대한 실험입니다. Agents는 점점 더 좋아지고 있지만 collaboration, observability, 구조, 공유 accountability는 따라가지 못하고 있으며, 어떤 경우에는 더 나빠지고 있습니다. Cursor, Claude Code 및 유사한 도구들은 Agents를 외부 보조 인력처럼 다루는 경우가 많습니다. 결과물에는 유용하지만 시스템 수준에서 감사, 조정, alignment, 진화를 수행하기 어렵습니다.
 
@@ -20,13 +26,13 @@ ORG-II는 다른 모델을 탐구합니다. 구조화된 조직 안에서 Agents
 - 인간, Agents, 목표, accountability를 조정하기 위한 org-level alignment surfaces (WIP).
 - self-hosted Supabase를 통한 session collaboration 및 그룹 issue workflows (WIP).
 
-## 데모
+<p align="center">
+  <img src="../../assets/github-browser-demo.png" alt="ORGII GitHub 브라우저 데모" width="720" />
+</p>
 
-https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a
-
-![ORGII GitHub 브라우저 데모](../../assets/github-browser-demo.png)
-
-![ORGII Agent scheduling 데모](../../assets/agent-scheduling-demo.png)
+<p align="center">
+  <img src="../../assets/agent-scheduling-demo.png" alt="ORGII Agent scheduling 데모" width="720" />
+</p>
 
 ## 다운로드
 

@@ -1,8 +1,14 @@
-# ORG-II
+# ORG-2
+
+**開源的 Cursor 風格 Agent IDE——但它為可審查性、可追蹤性與控制而建構，而不只是為了更快寫程式。**
+
+基於 Rust 與 Tauri 建構，面向 local-first 執行，磁碟占用低於 100MB。支援 Agent 軌跡直播與重播，易於追蹤與審查。
 
 [English](../../README.md) · [Français](README.fr.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [Español](README.es.md) · [Русский](README.ru.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Türkçe](README.tr.md) · [Tiếng Việt](README.vi.md) · [Polski](README.pl.md)
 
-ORG-II 是一個開源的 Agentic 開發框架，基於 Rust 和 Tauri 建構，面向 local-first 執行，磁碟占用低於 100MB。
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a" controls width="720"></video>
+</p>
 
 它不只是另一個 AI 程式開發工具；它是一次關於人類/Agent 組織與組織級對齊的實驗。Agent 正在變得更強，但協作、可觀測性、結構化流程與共享責任並沒有同步跟上——在某些情況下甚至變得更差。Cursor、Claude Code 與類似工具通常把 Agent 當成外包助手：它們對產出很有幫助，但很難在系統層級進行稽核、協調、對齊或演進。
 
@@ -20,13 +26,13 @@ ORG-II 探索另一種模式：把 Agent 視為結構化組織中持久且可觀
 - 面向組織級對齊的介面，用於協調人類、Agent、目標與責任歸屬（WIP）。
 - 透過自託管 Supabase 支援會話協作與群組 issue 工作流（WIP）。
 
-## 示範
+<p align="center">
+  <img src="../../assets/github-browser-demo.png" alt="ORGII GitHub 瀏覽器示範" width="720" />
+</p>
 
-https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a
-
-![ORGII GitHub 瀏覽器示範](../../assets/github-browser-demo.png)
-
-![ORGII Agent 排程示範](../../assets/agent-scheduling-demo.png)
+<p align="center">
+  <img src="../../assets/agent-scheduling-demo.png" alt="ORGII Agent 排程示範" width="720" />
+</p>
 
 ## 下載
 

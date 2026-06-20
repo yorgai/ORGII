@@ -1,8 +1,14 @@
-# ORG-II
+# ORG-2
+
+**Open-source Agent IDE im Stil von Cursor — aber für Reviewbarkeit, Nachvollziehbarkeit und Kontrolle gebaut, nicht nur für schnelleres Coding.**
+
+Gebaut mit Rust und Tauri für local-first Ausführung mit weniger als 100 MB auf der Festplatte. Unterstützt Livestream und Replay von Agent-Trajektorien. Leicht zu verfolgen und zu prüfen.
 
 [English](../../README.md) · [Français](README.fr.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [Español](README.es.md) · [Русский](README.ru.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Türkçe](README.tr.md) · [Tiếng Việt](README.vi.md) · [Polski](README.pl.md)
 
-ORG-II ist ein open-source agentic Development Framework, gebaut mit Rust und Tauri für local-first Ausführung mit weniger als 100 MB auf der Festplatte.
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a" controls width="720"></video>
+</p>
 
 Es ist nicht nur ein weiteres AI-Coding-Tool; es ist ein Experiment zu Mensch/Agent-Organisationen und org-level Alignment. Agents werden besser, aber Zusammenarbeit, Observability, Struktur und geteilte Verantwortung halten nicht Schritt — und werden in manchen Fällen schlechter. Cursor, Claude Code und ähnliche Tools behandeln Agents oft wie ausgelagerte Assistenten: nützlich für Output, aber schwer zu auditieren, zu koordinieren, auszurichten oder auf Systemebene weiterzuentwickeln.
 
@@ -20,13 +26,13 @@ ORG-II untersucht ein anderes Modell: Agents als persistente, beobachtbare Kolle
 - Oberflächen für org-level Alignment zur Koordination von Menschen, Agents, Zielen und Verantwortlichkeit (WIP).
 - Session-Zusammenarbeit und Gruppen-issue-workflows über selbst gehostetes Supabase (WIP).
 
-## Demo
+<p align="center">
+  <img src="../../assets/github-browser-demo.png" alt="ORGII GitHub-Browser-Demo" width="720" />
+</p>
 
-https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a
-
-![ORGII GitHub-Browser-Demo](../../assets/github-browser-demo.png)
-
-![ORGII Agent-Scheduling-Demo](../../assets/agent-scheduling-demo.png)
+<p align="center">
+  <img src="../../assets/agent-scheduling-demo.png" alt="ORGII Agent-Scheduling-Demo" width="720" />
+</p>
 
 ## Download
 
