@@ -8,19 +8,18 @@
  * - The outer CollapsibleSection header ("ISSUES") is provided by the sidebar module
  */
 import { useSetAtom } from "jotai";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import type { GitHubIssue } from "@src/api/tauri/github";
-import { TreeRowBase, type TreeRowNode } from "@src/components/TreeRow";
 import { buildIntegrationsPath } from "@src/config/mainAppPaths/integrations";
 import { SectionFilterInput } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/components/SectionFilterInput";
 import {
-  COUNT_BADGE,
-  getCountBadgeSizeClass,
-} from "@src/modules/WorkStation/shared/tokens";
+  type SectionStatus,
+  SectionStatusRow,
+} from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/components/SectionStatusRow";
+import { TreeSectionHeader } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/components/TreeSectionHeader";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { workstationIssueCallbackAtom } from "@src/store/workstation/codeEditor/workstationIssueAtom";
 import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
@@ -179,40 +178,6 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
       });
     }, [closedLoadState, fetchClosed]);
 
-    const openSectionNode: TreeRowNode = {
-      id: "open-issues",
-      name: "Open",
-      path: "open-issues",
-      type: "directory",
-      expanded: !openCollapsed,
-      icon: (
-        <div className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center">
-          {openCollapsed ? (
-            <ChevronRight size={14} className="text-text-3" />
-          ) : (
-            <ChevronDown size={14} className="text-text-3" />
-          )}
-        </div>
-      ),
-    };
-
-    const closedSectionNode: TreeRowNode = {
-      id: "closed-issues",
-      name: "Closed",
-      path: "closed-issues",
-      type: "directory",
-      expanded: !closedCollapsed,
-      icon: (
-        <div className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center">
-          {closedCollapsed ? (
-            <ChevronRight size={14} className="text-text-3" />
-          ) : (
-            <ChevronDown size={14} className="text-text-3" />
-          )}
-        </div>
-      ),
-    };
-
     const handleOpenIssue = useCallback(
       (issue: GitHubIssue) => {
         selectIssue(issue);
@@ -226,42 +191,11 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
       [onHistorySelectionChange, selectIssue]
     );
 
-    const renderSectionHeader = (
-      node: TreeRowNode,
-      count: number | null,
-      onToggle: () => void
-    ) => (
-      <TreeRowBase
-        node={node}
-        depth={0}
-        onClick={onToggle}
-        showIndentGuides={false}
-        className="[&_.min-w-0]:text-[11px] [&_.min-w-0]:font-medium [&_.min-w-0]:uppercase [&_.min-w-0]:text-text-2"
-      >
-        {count !== null && (
-          <span
-            className={`${COUNT_BADGE.base} ${getCountBadgeSizeClass(count)} ${COUNT_BADGE.primary}`}
-          >
-            {count}
-          </span>
-        )}
-      </TreeRowBase>
-    );
-
     // ── Render ────────────────────────────────────────────────────────────────
 
     let listContent: React.ReactNode;
 
-    if (isInitialLoading) {
-      listContent = (
-        <Placeholder
-          variant="loading"
-          placement="sidebar"
-          title={t("placeholders.loadingChanges", "Loading issues…")}
-          fillParentHeight
-        />
-      );
-    } else if (needsReAuth) {
+    if (needsReAuth) {
       listContent = (
         <Placeholder
           variant="error"
@@ -293,65 +227,67 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
         />
       );
     } else {
+      const failedToLoad = t("git.issues.failedToLoad", "Failed to load");
+      const loadingLabel = t("actions.loading", "Loading…");
+      const noIssuesLabel = t("labels.noIssues", "No issues");
+
+      const openStatus: SectionStatus | null = isInitialLoading
+        ? { kind: "loading", message: loadingLabel }
+        : openLoadState === "error"
+          ? { kind: "error", message: openError ?? failedToLoad }
+          : openIssues.length === 0
+            ? { kind: "empty", message: noIssuesLabel }
+            : null;
+
+      const closedStatus: SectionStatus | null =
+        closedLoadState === "loading"
+          ? { kind: "loading", message: loadingLabel }
+          : closedLoadState === "error"
+            ? { kind: "error", message: closedError ?? failedToLoad }
+            : closedLoadState === "ready" && closedIssues.length === 0
+              ? { kind: "empty", message: noIssuesLabel }
+              : null;
+
+      const renderIssueRow = (issue: GitHubIssue) => (
+        <IssueRow
+          key={issue.number}
+          issue={issue}
+          depth={1}
+          isSelected={false}
+          onClick={() => handleOpenIssue(issue)}
+        />
+      );
+
       listContent = (
         <div ref={listRef} className="flex flex-1 flex-col overflow-y-auto">
           {/* Open section */}
-          {renderSectionHeader(openSectionNode, openIssues.length, () =>
-            setOpenCollapsed((prev) => !prev)
-          )}
+          <TreeSectionHeader
+            id="open-issues"
+            title="Open"
+            collapsed={openCollapsed}
+            count={openIssues.length}
+            onToggle={() => setOpenCollapsed((prev) => !prev)}
+          />
           {!openCollapsed &&
-            (openLoadState === "error" ? (
-              <p className="text-text-error px-3 py-2 text-[11px]">
-                {openError ?? t("git.issues.failedToLoad", "Failed to load")}
-              </p>
-            ) : openIssues.length === 0 ? (
-              <p className="px-3 py-2 text-[11px] text-text-3">
-                {t("labels.noIssues", "No issues")}
-              </p>
+            (openStatus ? (
+              <SectionStatusRow status={openStatus} />
             ) : (
-              openIssues.map((issue) => (
-                <IssueRow
-                  key={issue.number}
-                  issue={issue}
-                  depth={1}
-                  isSelected={false}
-                  onClick={() => handleOpenIssue(issue)}
-                />
-              ))
+              openIssues.map(renderIssueRow)
             ))}
 
           {/* Closed section — lazy loaded on first expand */}
-          {renderSectionHeader(
-            closedSectionNode,
-            closedLoadState === "ready" ? closedIssues.length : null,
-            handleToggleClosed
-          )}
+          <TreeSectionHeader
+            id="closed-issues"
+            title="Closed"
+            collapsed={closedCollapsed}
+            count={closedLoadState === "ready" ? closedIssues.length : null}
+            onToggle={handleToggleClosed}
+          />
           {!closedCollapsed &&
-            (closedLoadState === "loading" ? (
-              <div className="flex items-center gap-1.5 px-3 py-2">
-                <Loader2 size={12} className="animate-spin text-text-3" />
-                <span className="text-[11px] text-text-3">
-                  {t("actions.loading", "Loading…")}
-                </span>
-              </div>
-            ) : closedLoadState === "error" ? (
-              <p className="text-text-error px-3 py-2 text-[11px]">
-                {closedError ?? t("git.issues.failedToLoad", "Failed to load")}
-              </p>
-            ) : closedLoadState === "ready" && closedIssues.length === 0 ? (
-              <p className="px-3 py-2 text-[11px] text-text-3">
-                {t("labels.noIssues", "No issues")}
-              </p>
+            (closedStatus ? (
+              <SectionStatusRow status={closedStatus} />
             ) : (
-              closedIssues.map((issue) => (
-                <IssueRow
-                  key={issue.number}
-                  issue={issue}
-                  depth={1}
-                  isSelected={false}
-                  onClick={() => handleOpenIssue(issue)}
-                />
-              ))
+              closedIssues.map(renderIssueRow)
             ))}
         </div>
       );

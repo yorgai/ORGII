@@ -14,7 +14,7 @@ describe("classifySettingsRouteRoot", () => {
     );
   });
 
-  it("maps integrations and Agent Orgs paths to their explicit roots", () => {
+  it("maps integrations and Agent Teams paths to their explicit roots", () => {
     expect(
       classifySettingsRouteRoot("/orgii/app/settings/integrations/tools")
     ).toBe(SETTINGS_ROUTE_ROOT.INTEGRATIONS);

@@ -14,14 +14,28 @@ export interface ContextBreakdownBarProps {
   categories: PanelCategory[];
   maxTokens: number;
   hoveredKey: string | null;
+  fallbackPercentage?: number;
 }
 
 const ContextBreakdownBar = memo(
-  ({ categories, maxTokens, hoveredKey }: ContextBreakdownBarProps) => {
+  ({
+    categories,
+    maxTokens,
+    hoveredKey,
+    fallbackPercentage = 0,
+  }: ContextBreakdownBarProps) => {
     const total = categories.reduce((acc, cat) => acc + cat.tokens, 0);
     if (total === 0 || maxTokens === 0) {
+      const fallbackWidth = Math.min(Math.max(fallbackPercentage, 0), 100);
       return (
-        <div className="h-[5px] w-full overflow-hidden rounded-full bg-fill-3" />
+        <div className="h-[5px] w-full overflow-hidden rounded-full bg-fill-3">
+          {fallbackWidth > 0 && (
+            <div
+              className="h-full bg-primary-6"
+              style={{ width: `${fallbackWidth}%` }}
+            />
+          )}
+        </div>
       );
     }
 

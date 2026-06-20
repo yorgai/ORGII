@@ -34,14 +34,57 @@ type DispatchFn = (
   source: "user" | "ai" | "system"
 ) => Promise<unknown>;
 
+type ConflictStrategy = "ours" | "theirs";
+
+export function getSourceControlContextMenuActionLabels(options: {
+  isDirectory: boolean;
+  isStaged: boolean;
+  changeCount: number;
+}) {
+  const { isDirectory, isStaged, changeCount } = options;
+  const changesLabel = `${changeCount} ${changeCount === 1 ? "change" : "changes"}`;
+
+  return {
+    stageToggle: isDirectory
+      ? isStaged
+        ? `Unstage ${changesLabel}`
+        : `Stage ${changesLabel}`
+      : isStaged
+        ? GIT_LABELS.unstageChanges
+        : GIT_LABELS.stageChanges,
+    markResolved: isDirectory
+      ? `Mark ${changesLabel} as Resolved`
+      : GIT_LABELS.markAsResolved,
+    discard: isDirectory
+      ? `Discard ${changesLabel}`
+      : GIT_LABELS.discardChanges,
+  };
+}
+
+export async function resolveConflictsForFiles(
+  dispatch: DispatchFn,
+  files: GitFile[],
+  strategy: ConflictStrategy
+) {
+  await Promise.all(
+    files.map((file) =>
+      dispatch("git.resolveConflict", { path: file.path, strategy }, "user")
+    )
+  );
+}
+
 export interface SourceControlContextMenuProps {
   file: GitFile;
+  files?: GitFile[];
+  targetPath?: string;
   repoPath: string;
   isConflictFile: boolean;
+  isDirectory?: boolean;
   dispatch: DispatchFn;
   onSelect?: (fileId: string) => void;
   onStageToggle?: (fileId: string, stage: boolean) => Promise<void>;
   onDiscard?: (fileId: string) => Promise<void>;
+  onDiscardFiles?: (fileIds: string[]) => Promise<void>;
   onStageResolved?: (fileId: string) => Promise<void>;
   onClose: () => void;
 }
@@ -80,59 +123,69 @@ export default function SourceControlContextMenu(
           return;
         }
 
-        const { file, repoPath: _repoPath, isConflictFile } = ctx;
+        const { file, repoPath: _repoPath, isConflictFile, isDirectory } = ctx;
         const t = i18next.t.bind(i18next);
+        const files = ctx.files ?? [file];
+        const labels = getSourceControlContextMenuActionLabels({
+          isDirectory: !!isDirectory,
+          isStaged: file.staged,
+          changeCount: files.length,
+        });
 
         const items: (MenuItem | PredefinedMenuItem)[] = [];
 
-        // --- Open Changes (diff view) ---
-        items.push(
-          await MenuItem.new({
-            text: GIT_LABELS.openChanges,
-            action: () => {
-              const ref = contextMenuRef.current;
-              if (ref?.onSelect) {
-                ref.onSelect(ref.file.id);
-              }
-            },
-          })
-        );
+        if (!isDirectory) {
+          // --- Open Changes (diff view) ---
+          items.push(
+            await MenuItem.new({
+              text: GIT_LABELS.openChanges,
+              action: () => {
+                const ref = contextMenuRef.current;
+                if (ref?.onSelect) {
+                  ref.onSelect(ref.file.id);
+                }
+              },
+            })
+          );
 
-        // --- Open File ---
-        items.push(
-          await MenuItem.new({
-            text: t("common:actions.openFile"),
-            action: () => {
-              const ref = contextMenuRef.current;
-              if (ref) {
-                const absPath = ref.repoPath
-                  ? `${ref.repoPath}/${ref.file.path}`
-                  : ref.file.path;
-                ref.dispatch(
-                  "file.openAtLine",
-                  { path: absPath, line: 1 },
-                  "user"
-                );
-              }
-            },
-          })
-        );
+          // --- Open File ---
+          items.push(
+            await MenuItem.new({
+              text: t("common:actions.openFile"),
+              action: () => {
+                const ref = contextMenuRef.current;
+                if (ref) {
+                  const absPath = ref.repoPath
+                    ? `${ref.repoPath}/${ref.file.path}`
+                    : ref.file.path;
+                  ref.dispatch(
+                    "file.openAtLine",
+                    { path: absPath, line: 1 },
+                    "user"
+                  );
+                }
+              },
+            })
+          );
 
-        // --- Separator ---
-        items.push(await PredefinedMenuItem.new({ item: "Separator" }));
+          // --- Separator ---
+          items.push(await PredefinedMenuItem.new({ item: "Separator" }));
+        }
 
         // --- Stage / Unstage ---
         if (!isConflictFile) {
-          const isStaged = file.staged;
           items.push(
             await MenuItem.new({
-              text: isStaged
-                ? GIT_LABELS.unstageChanges
-                : GIT_LABELS.stageChanges,
-              action: () => {
+              text: labels.stageToggle,
+              action: async () => {
                 const ref = contextMenuRef.current;
                 if (ref?.onStageToggle) {
-                  ref.onStageToggle(ref.file.id, !ref.file.staged);
+                  const files = ref.files ?? [ref.file];
+                  await Promise.all(
+                    files.map((file) =>
+                      ref.onStageToggle?.(file.id, !ref.file.staged)
+                    )
+                  );
                 }
               },
             })
@@ -143,11 +196,14 @@ export default function SourceControlContextMenu(
         if (isConflictFile) {
           items.push(
             await MenuItem.new({
-              text: GIT_LABELS.markAsResolved,
-              action: () => {
+              text: labels.markResolved,
+              action: async () => {
                 const ref = contextMenuRef.current;
                 if (ref?.onStageResolved) {
-                  ref.onStageResolved(ref.file.id);
+                  const files = ref.files ?? [ref.file];
+                  await Promise.all(
+                    files.map((file) => ref.onStageResolved?.(file.id))
+                  );
                 }
               },
             })
@@ -157,11 +213,13 @@ export default function SourceControlContextMenu(
         // --- Discard Changes ---
         items.push(
           await MenuItem.new({
-            text: GIT_LABELS.discardChanges,
-            action: () => {
+            text: labels.discard,
+            action: async () => {
               const ref = contextMenuRef.current;
-              if (ref?.onDiscard) {
-                ref.onDiscard(ref.file.id);
+              if (ref?.onDiscardFiles && ref.files) {
+                await ref.onDiscardFiles(ref.files.map((file) => file.id));
+              } else if (ref?.onDiscard) {
+                await ref.onDiscard(ref.file.id);
               }
             },
           })
@@ -174,14 +232,11 @@ export default function SourceControlContextMenu(
           items.push(
             await MenuItem.new({
               text: GIT_LABELS.acceptCurrentChange,
-              action: () => {
+              action: async () => {
                 const ref = contextMenuRef.current;
                 if (ref) {
-                  ref.dispatch(
-                    "git.resolveConflict",
-                    { path: ref.file.path, strategy: "ours" },
-                    "user"
-                  );
+                  const files = ref.files ?? [ref.file];
+                  await resolveConflictsForFiles(ref.dispatch, files, "ours");
                 }
               },
             })
@@ -190,14 +245,11 @@ export default function SourceControlContextMenu(
           items.push(
             await MenuItem.new({
               text: GIT_LABELS.acceptIncomingChange,
-              action: () => {
+              action: async () => {
                 const ref = contextMenuRef.current;
                 if (ref) {
-                  ref.dispatch(
-                    "git.resolveConflict",
-                    { path: ref.file.path, strategy: "theirs" },
-                    "user"
-                  );
+                  const files = ref.files ?? [ref.file];
+                  await resolveConflictsForFiles(ref.dispatch, files, "theirs");
                 }
               },
             })
@@ -215,9 +267,10 @@ export default function SourceControlContextMenu(
             action: async () => {
               const ref = contextMenuRef.current;
               if (ref) {
+                const targetPath = ref.targetPath ?? ref.file.path;
                 const absPath = ref.repoPath
-                  ? `${ref.repoPath}/${ref.file.path}`
-                  : ref.file.path;
+                  ? `${ref.repoPath}/${targetPath}`
+                  : targetPath;
                 await copyText(absPath);
               }
             },
@@ -232,7 +285,7 @@ export default function SourceControlContextMenu(
             action: async () => {
               const ref = contextMenuRef.current;
               if (ref) {
-                await copyText(ref.file.path);
+                await copyText(ref.targetPath ?? ref.file.path);
               }
             },
           })
@@ -248,9 +301,10 @@ export default function SourceControlContextMenu(
             action: () => {
               const ref = contextMenuRef.current;
               if (ref) {
+                const targetPath = ref.targetPath ?? ref.file.path;
                 const absPath = ref.repoPath
-                  ? `${ref.repoPath}/${ref.file.path}`
-                  : ref.file.path;
+                  ? `${ref.repoPath}/${targetPath}`
+                  : targetPath;
                 ref.dispatch("file.revealInFinder", { path: absPath }, "user");
               }
             },

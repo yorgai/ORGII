@@ -22,9 +22,9 @@
     "indexing": "Индексация",
     "index": "Index",
     "billing": "Платежи",
-    "agentOrgs": "Agents & Orgs",
+    "agentOrgs": "Agent и команда",
     "agents": "Agents",
-    "org": "Орг",
+    "org": "Команда",
     "coreSettings": "Ядро",
     "appSettings": "Настройки приложения",
     "terminal": "Терминал",
@@ -103,8 +103,8 @@
       "manage": "Управление",
       "core": "Ядро",
       "agent": "Agent",
-      "org": "Орг",
-      "agentOrgs": "Agents & Orgs"
+      "org": "Команда",
+      "agentOrgs": "Agent и команда"
     },
     "groupBy": {
       "title": "Группировка",

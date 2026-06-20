@@ -39,7 +39,7 @@
     "storage": "ストレージ",
     "projectUsage": "Projectと使用量",
     "agentMemory": "Agent メモリ",
-    "agentOrg": "Agent 組織"
+    "agentOrg": "Agent チーム"
   },
   "coreSidebar": {
     "groups": {
@@ -1163,10 +1163,10 @@
     "noAgentsSubtitle": "進化を設定するには Agent を作成またはインポートしてください。"
   },
   "org": {
-    "linkTitle": "Agent 組織",
-    "description": "Agent 組織の階層と役割を定義します。",
-    "emptyTitle": "組織が定義されていません",
-    "createOrg": "組織を作成",
+    "linkTitle": "Agentチーム",
+    "description": "Agentチームの階層と役割を定義します。",
+    "emptyTitle": "Agentチームが定義されていません",
+    "createOrg": "チームを作成",
     "addMember": "メンバーを追加",
     "editMember": "メンバーを編集",
     "addChild": "部下を追加",
@@ -1177,7 +1177,7 @@
     "fieldStatus": "ステータス",
     "namePlaceholder": "メンバー名を入力",
     "deleteConfirm": "このメンバーとすべての部下を削除しますか？",
-    "openAgentOrgs": "Agent 組織を開く"
+    "openAgentOrgs": "Agentチームを開く"
   },
   "learningsBrowser": {
     "title": "Learnings ブラウザ",

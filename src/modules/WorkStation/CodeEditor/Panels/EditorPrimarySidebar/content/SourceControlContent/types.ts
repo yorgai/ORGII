@@ -25,6 +25,8 @@ export interface SourceControlContentProps {
   onStageToggle?: (fileId: string, stage: boolean) => Promise<void>;
   /** Called when discard is clicked */
   onDiscard?: (fileId: string) => Promise<void>;
+  /** Called when discarding multiple explicit files */
+  onDiscardFiles?: (fileIds: string[]) => Promise<void>;
 
   // Bulk operations
   onStageAll?: () => Promise<void>;

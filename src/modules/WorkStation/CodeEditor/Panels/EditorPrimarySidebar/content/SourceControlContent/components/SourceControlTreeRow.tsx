@@ -35,11 +35,23 @@ import {
   getCountBadgeSizeClass,
 } from "@src/modules/WorkStation/shared/tokens";
 import { activeWorkspaceRootPathAtom } from "@src/store/workspace";
+import type { GitFile } from "@src/types/git/types";
 
 import { SHORTCUTS } from "../../../hooks/useSourceControlShortcuts";
 import { GIT_LABELS } from "../config";
 import type { SourceControlNode } from "../utils/virtualizedTreeUtils";
+import type { GitFileTreeNode } from "./GitFileTreeItem";
 import SourceControlContextMenu from "./SourceControlContextMenu";
+
+// ============================================
+// Helpers
+// ============================================
+
+function collectGitFiles(node: GitFileTreeNode | undefined): GitFile[] {
+  if (!node) return [];
+  if (node.type === "file" && node.file) return [node.file];
+  return node.children?.flatMap(collectGitFiles) ?? [];
+}
 
 // ============================================
 // Types
@@ -64,6 +76,7 @@ export interface SourceControlTreeRowProps {
   onSelect?: (fileId: string, event?: React.MouseEvent) => void;
   onStageToggle?: (fileId: string, stage: boolean) => Promise<void>;
   onDiscard?: (fileId: string) => Promise<void>;
+  onDiscardFiles?: (fileIds: string[]) => Promise<void>;
   onToggleDirectory?: (path: string) => void;
   onStageResolved?: (fileId: string) => Promise<void>;
   /** Show parent path hint after filename (flat list mode) */
@@ -237,6 +250,7 @@ interface FileDirectoryRowProps {
   onSelect?: (fileId: string, event?: React.MouseEvent) => void;
   onStageToggle?: (fileId: string, stage: boolean) => Promise<void>;
   onDiscard?: (fileId: string) => Promise<void>;
+  onDiscardFiles?: (fileIds: string[]) => Promise<void>;
   onToggleDirectory?: (path: string) => void;
   onStageResolved?: (fileId: string) => Promise<void>;
   showPathHint?: boolean;
@@ -253,6 +267,7 @@ const FileDirectoryRow: React.FC<FileDirectoryRowProps> = memo(
     onSelect,
     onStageToggle,
     onDiscard,
+    onDiscardFiles,
     onToggleDirectory,
     onStageResolved,
     showPathHint = false,
@@ -275,6 +290,12 @@ const FileDirectoryRow: React.FC<FileDirectoryRowProps> = memo(
       if (relativePath.startsWith("/")) return relativePath;
       return `${effectiveRepoPath}/${relativePath}`;
     }, [node.file?.path, node.treeNode?.path, node.path, effectiveRepoPath]);
+
+    const contextMenuFiles = useMemo(
+      () => (isDirectory ? collectGitFiles(node.treeNode) : []),
+      [isDirectory, node.treeNode]
+    );
+    const contextMenuFile = node.file ?? contextMenuFiles[0];
 
     // Native OS drag-out via tauri-plugin-drag
     const { handleMouseDown: nativeDragMouseDown } = useNativeDrag(rowRef);
@@ -382,7 +403,7 @@ const FileDirectoryRow: React.FC<FileDirectoryRowProps> = memo(
     // Context menu handler
     const handleContextMenu = useCallback(
       (event: React.MouseEvent) => {
-        if (!node.file || isDirectory) return;
+        if (!contextMenuFile) return;
         event.preventDefault();
         event.stopPropagation();
         // Force remount: reset to false first so React unmounts the menu,
@@ -390,7 +411,7 @@ const FileDirectoryRow: React.FC<FileDirectoryRowProps> = memo(
         setShowContextMenu(false);
         requestAnimationFrame(() => setShowContextMenu(true));
       },
-      [node.file, isDirectory]
+      [contextMenuFile]
     );
 
     const handleContextMenuClose = useCallback(() => {
@@ -449,17 +470,21 @@ const FileDirectoryRow: React.FC<FileDirectoryRowProps> = memo(
           {/* Git status badge */}
           <GitStatusBadge status={gitStatus} isDirectory={isDirectory} />
         </TreeRowBase>
-        {showContextMenu && node.file && actionSystem?.dispatch && (
+        {showContextMenu && contextMenuFile && actionSystem?.dispatch && (
           <SourceControlContextMenu
-            file={node.file}
+            file={contextMenuFile}
+            files={isDirectory ? contextMenuFiles : undefined}
+            targetPath={isDirectory ? node.treeNode?.path : undefined}
             repoPath={effectiveRepoPath ?? ""}
             isConflictFile={isConflictFile}
+            isDirectory={isDirectory}
             dispatch={actionSystem.dispatch}
             onSelect={
               onSelect ? (fileId: string) => onSelect(fileId) : undefined
             }
             onStageToggle={onStageToggle}
             onDiscard={onDiscard}
+            onDiscardFiles={onDiscardFiles}
             onStageResolved={onStageResolved}
             onClose={handleContextMenuClose}
           />

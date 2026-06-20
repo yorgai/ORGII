@@ -609,7 +609,7 @@
     "selectSource": "소스 선택",
     "selectAgent": "Agent 선택",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Agent 또는 Agent org 선택...",
+    "searchAgentOrOrg": "Agent 또는 Agent 팀 선택...",
     "tplSelectAgentOrOrg": "{agent} 선택",
     "cliAgent": "CLI Agent",
     "placeholderModel": "모델",
@@ -1935,6 +1935,7 @@
     },
     "warningHint": "컨텍스트가 채워지고 있습니다. 더 나은 결과를 위해 곧 새 세션을 시작하세요.",
     "dangerHint": "컨텍스트가 거의 가득 찼습니다. 세부 정보 손실을 피하려면 새 세션을 시작하세요.",
+    "autoCompactNote": "컨텍스트가 곧 요약됩니다",
     "startNewSession": "새 세션 시작"
   },
   "relativeDate": {

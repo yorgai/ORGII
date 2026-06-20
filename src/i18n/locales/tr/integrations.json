@@ -1573,7 +1573,7 @@
     "deleteConfirmMessage": "Bu işlem sunucuyu yapılandırma dosyasından kaldıracaktır. Aktif oturumlar kesilecektir."
   },
   "agentOrgs": {
-    "title": "Agent Organizasyonu",
+    "title": "Agent ekipleri",
     "running": "Çalışıyor",
     "fires": "tetikleme",
     "addRoutine": "Routine ekle",
@@ -1616,13 +1616,13 @@
     "enabledDesc": "Enable or disable this policy",
     "disabled": "Devre dışı",
     "noTemplates": "Henüz şablon yok",
-    "addOrg": "Organizasyon ekle",
+    "addOrg": "Agent ekibi ekle",
     "addAgent": "Agent ekle",
     "agentSections": {
       "builtInAgents": "Yerleşik Agents",
       "customAgents": "Özel Agents",
       "cli": "CLI Agents",
-      "orgs": "Org"
+      "orgs": "Ekipler"
     },
     "memorySections": {
       "personalMemory": "Kişisel",
@@ -1814,13 +1814,14 @@
     "noMemory": "Henüz Memory yok",
     "memoryDescription": "Memory, üyelerin oturumlar arasında başvurabileceği bilgi ve bağlamı saklar.",
     "tabs": {
-      "org": "ORG",
+      "org": "Ekip",
       "agents": "Üyeler",
       "integrations": "Entegrasyonlar",
-      "rules": "Kurallar"
+      "rules": "Kurallar",
+      "orgs": "Ekipler"
     },
     "searchPlaceholder": "Kurallarda ara…",
-    "searchOrgsPlaceholder": "Organizasyon ara...",
+    "searchOrgsPlaceholder": "Ekip ara...",
     "searchAgentsPlaceholder": "Üye ara...",
     "searchMemoryPlaceholder": "Memory ara...",
     "searchIntegrationsPlaceholder": "Integrations ara...",
@@ -1892,11 +1893,11 @@
     "orgWizard": {
       "title": "Org Ekle",
       "orgName": "Org Adı",
-      "orgNameDesc": "Bu Agent organizasyonunun adı",
+      "orgNameDesc": "Bu Agent ekibinin adı",
       "orgNamePlaceholder": "örn. Mühendislik Ekibi",
       "orgDescription": "Açıklama",
-      "orgDescriptionDesc": "Bu organizasyonun ne yaptığına dair isteğe bağlı özet",
-      "orgDescriptionPlaceholder": "Bu organizasyon ne yapar?",
+      "orgDescriptionDesc": "Bu ekibin ne yaptığına dair isteğe bağlı özet",
+      "orgDescriptionPlaceholder": "Bu ekip ne yapar?",
       "members": "Üyeler",
       "addMember": "Üye Ekle",
       "editMember": "Üye Düzenle",
@@ -1911,7 +1912,7 @@
         },
         "soft": {
           "label": "Yumuşak (önerilen)",
-          "description": "Reports-to LLM'e organizasyonel ipucu olarak iletilir. Runtime yönlendirmesi serbesttir — gerektiğinde LLM bir akrana doğrudan yazabilir"
+          "description": "Reports-to LLM'e ekip ipucu olarak iletilir. Runtime yönlendirmesi serbesttir — gerektiğinde LLM bir akrana doğrudan yazabilir"
         },
         "strict": {
           "label": "Katı",
@@ -1933,7 +1934,7 @@
       "membersDesc": "Her satır bir yönlendirme takma adıdır. Koordinatör üyelere name ile hitap eder; name'ler benzersiz olmalıdır. Role, uzmanlık ipucu olarak LLM'e iletilir",
       "memberName": "Ad",
       "memberNamePlaceholder": "Benzersiz yönlendirme adı (örn. SDE-1)",
-      "memberNameDuplicate": "Başka bir üye bu name'i zaten kullanıyor. Name organizasyon içinde benzersiz olmalıdır.",
+      "memberNameDuplicate": "Başka bir üye bu name'i zaten kullanıyor. Name ekip içinde benzersiz olmalıdır.",
       "role": "Rol",
       "rolePlaceholder": "Uzmanlık (örn. backend dev)",
       "agent": "Agent",
@@ -1941,7 +1942,7 @@
       "reportsToCoordinator": "Koordinatör (üst düzey)",
       "status": "Durum",
       "coordinator": "Koordinatör",
-      "coordinatorDesc": "Bu organizasyon çalışması için koordinatör oturumunu yöneten lider ajan",
+      "coordinatorDesc": "Bu ekip çalışması için koordinatör oturumunu yöneten lider ajan",
       "coordinatorPlaceholder": "Koordinatör ajanı seçin",
       "tabs": {
         "edit": "Düzenle",
@@ -1949,7 +1950,7 @@
       },
       "dangerZone": "Tehlikeli Bölge",
       "deleteOrg": "Bu Org'u sil",
-      "deleteOrgDesc": "Bu Agent Org'u kalıcı olarak siler. Üye Agent'lar etkilenmez. Bu işlem geri alınamaz",
+      "deleteOrgDesc": "Bu Agent Ekibi’ni kalıcı olarak siler. Üye Agent’lar etkilenmez. Bu işlem geri alınamaz",
       "deleteThisOrg": "Bu Org'u sil"
     },
     "agentWizard": {
@@ -2262,18 +2263,18 @@
         "skip": "Skip and continue"
       }
     },
-    "emptySelectionTitle": "Bir üye veya Agent Org seçin",
-    "emptySelectionSubtitle": "Görüntülemek ve yapılandırmak için kenar çubuğundan bir Agent veya Agent Org seçin.",
+    "emptySelectionTitle": "Bir üye veya Agent Ekibi seçin",
+    "emptySelectionSubtitle": "Görüntülemek ve yapılandırmak için kenar çubuğundan bir Agent veya Agent Ekibi seçin.",
     "applicableWorkspace": "Uygulanacak Workspace",
     "tableTabs": {
       "agents": "Agents",
-      "orgs": "Orgs",
+      "orgs": "Ekipler",
       "clis": "CLIs"
     },
     "searchAgents": "Agents ara…",
-    "searchOrgs": "orgs ara…",
+    "searchOrgs": "Ekip ara…",
     "noAgents": "Henüz Agents yok",
-    "noOrgs": "Henüz orgs yok",
+    "noOrgs": "Henüz ekip yok",
     "orgMembers": "Üyeler",
     "agentLoadFailed": "Agent tanımları yüklenemedi",
     "agentSaved": "Agent kaydedildi",
@@ -2282,12 +2283,12 @@
     "agentDeleteFailed": "Agent silinemedi",
     "deleteAgentTitle": "Agent silinsin mi?",
     "deleteAgentMessage": "\"{{name}}\" kalıcı olarak kaldırılacak. Bu işlem geri alınamaz.",
-    "orgCreated": "Organizasyon oluşturuldu",
-    "orgUpdated": "Organizasyon güncellendi",
-    "orgDeleted": "Organizasyon silindi",
-    "orgSaveFailed": "Organizasyon kaydedilemedi",
-    "orgDeleteFailed": "Organizasyon silinemedi",
-    "deleteOrgTitle": "Organizasyon silinsin mi?",
+    "orgCreated": "Ekip oluşturuldu",
+    "orgUpdated": "Ekip güncellendi",
+    "orgDeleted": "Ekip silindi",
+    "orgSaveFailed": "Ekip kaydedilemedi",
+    "orgDeleteFailed": "Ekip silinemedi",
+    "deleteOrgTitle": "Ekip silinsin mi?",
     "deleteOrgMessage": "\"{{name}}\" kalıcı olarak kaldırılacak. Bu işlem geri alınamaz."
   },
   "databases": {
@@ -2450,7 +2451,7 @@
     "noProjects": "Kullanılabilir Project yok",
     "target": "Target",
     "agentResponsible": "Bu rutinden sorumlu Agent",
-    "agentResponsiblePlaceholder": "Bir Agent veya Agent Org seçin",
+    "agentResponsiblePlaceholder": "Bir Agent veya Agent ekibi seçin",
     "workspacePathPlaceholder": "Bir workspace seçin",
     "prompt": "Prompt",
     "promptPlaceholder": "Tell the agent what to do when this routine fires...",

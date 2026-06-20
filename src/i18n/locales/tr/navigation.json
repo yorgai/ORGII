@@ -22,9 +22,9 @@
     "indexing": "İndeksleme",
     "index": "Index",
     "billing": "Faturalama",
-    "agentOrgs": "Agents & Orgs",
+    "agentOrgs": "Agent ve ekip",
     "agents": "Agents",
-    "org": "Org",
+    "org": "Ekip",
     "coreSettings": "Çekirdek",
     "appSettings": "Uygulama Ayarları",
     "terminal": "Terminal",
@@ -103,8 +103,8 @@
       "manage": "Yönet",
       "core": "Çekirdek",
       "agent": "Agent",
-      "org": "Org",
-      "agentOrgs": "Agents & Orgs"
+      "org": "Ekip",
+      "agentOrgs": "Agent ve ekip"
     },
     "groupBy": {
       "title": "Grupla",

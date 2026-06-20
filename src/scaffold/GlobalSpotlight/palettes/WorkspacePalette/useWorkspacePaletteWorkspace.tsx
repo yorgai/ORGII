@@ -379,6 +379,7 @@ export function useWorkspacePaletteWorkspace({
         type: "repo" as const,
         data: {
           isCurrentSelection: isActive,
+          updatedAt: ws.updatedAt,
           rightContent: isManageMode ? manageActions : repoCountBadge,
           selectionState: isManageMode
             ? { checked: isChecked, onToggle: () => toggleSelection(itemId) }

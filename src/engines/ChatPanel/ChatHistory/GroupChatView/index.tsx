@@ -1,5 +1,5 @@
 /**
- * Group chat helpers — merged event feed for Agent Org runs.
+ * Group chat helpers — merged event feed for Agent Team runs.
  *
  * Rendering uses the regular `ChatHistory` pipeline via
  * `ChatHistoryOverrideContext`; this folder only owns merge logic,

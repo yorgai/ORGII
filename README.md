@@ -1,12 +1,14 @@
-# ORG-II
+# ORG-2
+
+**Open-source Cursor-style agent IDE — but built for reviewability, traceability, and control, not just faster coding.**
+
+Built with Rust and Tauri for local-first execution under 100MB on disk. Supports agent trajectory livestream and replay. Easy to follow and review.
 
 [English](README.md) · [Français](docs/readmes/README.fr.md) · [简体中文](docs/readmes/README.zh.md) · [繁體中文](docs/readmes/README.zh-Hant.md) · [Español](docs/readmes/README.es.md) · [Русский](docs/readmes/README.ru.md) · [Português](docs/readmes/README.pt.md) · [Deutsch](docs/readmes/README.de.md) · [日本語](docs/readmes/README.ja.md) · [한국어](docs/readmes/README.ko.md) · [Türkçe](docs/readmes/README.tr.md) · [Tiếng Việt](docs/readmes/README.vi.md) · [Polski](docs/readmes/README.pl.md)
 
 <p align="center">
   <video src="https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a" controls width="720"></video>
 </p>
-
-ORG-II is an open-source agentic development framework built with Rust and Tauri for local-first execution under 100MB on disk.
 
 It is not just another AI coding tool; it is an experiment in human/agent organizations and org-level alignment. Agents are getting better, but collaboration, observability, structure, and shared accountability are not keeping up — and in some cases are getting worse. Cursor, Claude Code, and similar tools often treat agents as outsourced assistants: useful for output, but hard to audit, coordinate, align, or evolve at a system level.
 
@@ -33,6 +35,8 @@ ORG-II explores a different model: agents as persistent, observable colleagues i
 </p>
 
 ## Download
+
+Current build version: v1.0.1.22 (2026-06-21)
 
 Get the latest ORGII desktop app from the [Releases](https://github.com/YORG-AI/ORGII/releases) page. Open the newest release, download the installer or app bundle for your platform, and follow the OS prompts to install ORGII.
 

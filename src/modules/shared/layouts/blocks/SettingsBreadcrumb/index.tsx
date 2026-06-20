@@ -12,8 +12,8 @@
  *   - The trailing crumb is either the active wizard's title
  *     (`wizardBreadcrumbTitleAtom` — wizards no longer render their own
  *     40px header bar) OR the active in-page selection title
- *     (`settingsSelectionTitleAtom` — e.g. the selected agent/org name
- *     on the Agents & Orgs page). Wizard wins when both are set, which
+ *     (`settingsSelectionTitleAtom` — e.g. the selected agent/team name
+ *     on the Agent Teams page). Wizard wins when both are set, which
  *     matches the way pages clear their selection on wizard open.
  *
  * Adding a new settings section only requires registering its URL slug
@@ -62,7 +62,6 @@ export interface SettingsBreadcrumbProps {
 
 const SETTINGS_LABEL_KEY = "navigation:labels.settings";
 const AGENT_ORG_ROW_KEY = "agent-orgs";
-const AGENT_ORG_LABEL = "Agent & Org";
 interface SettingsSelectorGroupConfig {
   readonly id: string;
   readonly labelKey: string | null;
@@ -170,7 +169,7 @@ const SettingsBreadcrumb: React.FC<SettingsBreadcrumbProps> = ({
             id === AGENT_ORG_ROW_KEY ? null : getSegmentLabelKey(id);
           return {
             id,
-            label: labelKey ? t(labelKey) : AGENT_ORG_LABEL,
+            label: labelKey ? t(labelKey) : t("navigation:labels.agentOrgs"),
             path: getSettingsSelectorItemPath(id),
             icon:
               id === AGENT_ORG_ROW_KEY

@@ -312,7 +312,7 @@ export const REGISTRY: TabContentRegistry = {
   // Subagent
   "subagent-detail": SubagentDetailEntry,
 
-  // Agent Config (Agent Orgs page → opens here)
+  // Agent Config (Agent Teams page → opens here)
   "agent-config": AgentConfigEntry,
 
   // Ops Control

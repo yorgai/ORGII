@@ -39,7 +39,7 @@
     "storage": "Depolama",
     "projectUsage": "Project ve Kullanım",
     "agentMemory": "Agent Belleği",
-    "agentOrg": "Agent Organizasyonu"
+    "agentOrg": "Agent Ekibi"
   },
   "coreSidebar": {
     "groups": {
@@ -1163,10 +1163,10 @@
     "noAgentsSubtitle": "Evrim’i yapılandırmak için bir Agent oluşturun veya içe aktarın."
   },
   "org": {
-    "linkTitle": "Agent Organizasyonu",
-    "description": "Agent organizasyon hiyerarşisini ve rollerini tanımlayın.",
-    "emptyTitle": "Tanımlanmış organizasyon yok",
-    "createOrg": "Organizasyon oluştur",
+    "linkTitle": "Agent ekipleri",
+    "description": "Agent ekibi hiyerarşisini ve rollerini tanımlayın.",
+    "emptyTitle": "Tanımlanmış Agent ekibi yok",
+    "createOrg": "Ekip oluştur",
     "addMember": "Üye ekle",
     "editMember": "Üyeyi düzenle",
     "addChild": "Alt kademe ekle",
@@ -1177,7 +1177,7 @@
     "fieldStatus": "Durum",
     "namePlaceholder": "Üye adı girin",
     "deleteConfirm": "Bu üyeyi ve tüm alt kademeleri silmek istiyor musunuz?",
-    "openAgentOrgs": "Agent Organizasyonunu aç"
+    "openAgentOrgs": "Agent ekiplerini aç"
   },
   "learningsBrowser": {
     "title": "Learnings Tarayıcısı",

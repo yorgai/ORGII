@@ -1576,7 +1576,7 @@
     "deleteConfirmMessage": "Dadurch wird der Server aus der Konfigurationsdatei entfernt. Aktive Sitzungen werden getrennt."
   },
   "agentOrgs": {
-    "title": "Agent-Org",
+    "title": "Agent-Teams",
     "running": "Läuft",
     "fires": "Auslösungen",
     "addRoutine": "Routine hinzufügen",
@@ -1619,13 +1619,13 @@
     "enabledDesc": "Enable or disable this policy",
     "disabled": "Deaktiviert",
     "noTemplates": "Noch keine Vorlagen",
-    "addOrg": "Org hinzufügen",
+    "addOrg": "Agent-Team hinzufügen",
     "addAgent": "Agent hinzufügen",
     "agentSections": {
       "builtInAgents": "Integrierte Agents",
       "customAgents": "Benutzerdefinierte Agents",
       "cli": "CLI Agents",
-      "orgs": "Organisationen"
+      "orgs": "Teams"
     },
     "memorySections": {
       "personalMemory": "Persönlich",
@@ -1817,13 +1817,14 @@
     "noMemory": "Noch keine Memory-Einträge",
     "memoryDescription": "Memory speichert Wissen und Kontext, den Mitglieder sitzungsübergreifend nutzen können.",
     "tabs": {
-      "org": "ORG",
+      "org": "Team",
       "agents": "Mitglieder",
       "integrations": "Integrationen",
-      "rules": "Regeln"
+      "rules": "Regeln",
+      "orgs": "Teams"
     },
     "searchPlaceholder": "Regeln suchen…",
-    "searchOrgsPlaceholder": "Orgen suchen...",
+    "searchOrgsPlaceholder": "Teams suchen...",
     "searchAgentsPlaceholder": "Mitglieder suchen...",
     "searchMemoryPlaceholder": "Memory suchen...",
     "searchIntegrationsPlaceholder": "Integrations suchen...",
@@ -1895,7 +1896,7 @@
     "orgWizard": {
       "title": "Org hinzufügen",
       "orgName": "Org-Name",
-      "orgNameDesc": "Name dieser Agent-Org",
+      "orgNameDesc": "Name dieses Agent-Teams",
       "orgNamePlaceholder": "z.B. Engineering-Team",
       "orgDescription": "Beschreibung",
       "orgDescriptionDesc": "Optionale Zusammenfassung dessen, was diese Org tut",
@@ -1952,7 +1953,7 @@
       },
       "dangerZone": "Gefahrenzone",
       "deleteOrg": "Dieses Org löschen",
-      "deleteOrgDesc": "Dieses Agent Org dauerhaft löschen. Die Member Agents bleiben erhalten. Diese Aktion kann nicht rückgängig gemacht werden",
+      "deleteOrgDesc": "Dieses Agent-Team dauerhaft löschen. Die Member Agents bleiben erhalten. Diese Aktion kann nicht rückgängig gemacht werden",
       "deleteThisOrg": "Dieses Org löschen"
     },
     "agentWizard": {
@@ -2265,18 +2266,18 @@
         "skip": "Skip and continue"
       }
     },
-    "emptySelectionTitle": "Wählen Sie ein Mitglied oder eine Agent Org aus",
-    "emptySelectionSubtitle": "Wählen Sie in der Seitenleiste einen Agent oder eine Agent Org aus, um ihn anzuzeigen und zu konfigurieren.",
+    "emptySelectionTitle": "Wählen Sie ein Mitglied oder ein Agent-Team aus",
+    "emptySelectionSubtitle": "Wählen Sie in der Seitenleiste einen Agent oder ein Agent-Team aus, um ihn anzuzeigen und zu konfigurieren.",
     "applicableWorkspace": "Anwendbarer Workspace",
     "tableTabs": {
       "agents": "Agents",
-      "orgs": "Orgs",
+      "orgs": "Teams",
       "clis": "CLIs"
     },
     "searchAgents": "Agents suchen…",
-    "searchOrgs": "Orgs suchen…",
+    "searchOrgs": "Teams suchen…",
     "noAgents": "Noch keine Agents",
-    "noOrgs": "Noch keine Orgs",
+    "noOrgs": "Noch keine Teams",
     "orgMembers": "Mitglieder",
     "agentLoadFailed": "Agent-Definitionen konnten nicht geladen werden",
     "agentSaved": "Agent gespeichert",
@@ -2285,12 +2286,12 @@
     "agentDeleteFailed": "Agent konnte nicht gelöscht werden",
     "deleteAgentTitle": "Agent löschen?",
     "deleteAgentMessage": "\"{{name}}\" wird dauerhaft entfernt. Dies kann nicht rückgängig gemacht werden.",
-    "orgCreated": "Organisation erstellt",
-    "orgUpdated": "Organisation aktualisiert",
-    "orgDeleted": "Organisation gelöscht",
-    "orgSaveFailed": "Organisation konnte nicht gespeichert werden",
-    "orgDeleteFailed": "Organisation konnte nicht gelöscht werden",
-    "deleteOrgTitle": "Organisation löschen?",
+    "orgCreated": "Team erstellt",
+    "orgUpdated": "Team aktualisiert",
+    "orgDeleted": "Team gelöscht",
+    "orgSaveFailed": "Team konnte nicht gespeichert werden",
+    "orgDeleteFailed": "Team konnte nicht gelöscht werden",
+    "deleteOrgTitle": "Team löschen?",
     "deleteOrgMessage": "\"{{name}}\" wird dauerhaft entfernt. Dies kann nicht rückgängig gemacht werden."
   },
   "databases": {
@@ -2453,7 +2454,7 @@
     "noProjects": "Keine Projects verfügbar",
     "target": "Target",
     "agentResponsible": "Verantwortlicher Agent für diese Routine",
-    "agentResponsiblePlaceholder": "Agent oder Agent Org auswählen",
+    "agentResponsiblePlaceholder": "Agent oder Agent-Team auswählen",
     "workspacePathPlaceholder": "Workspace auswählen",
     "prompt": "Prompt",
     "promptPlaceholder": "Tell the agent what to do when this routine fires...",

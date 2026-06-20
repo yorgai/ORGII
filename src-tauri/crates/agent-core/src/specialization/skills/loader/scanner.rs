@@ -1133,42 +1133,30 @@ mod include_filter_tests {
                 ("root-review".to_string(), "external-source".to_string()),
             ]
         );
-        assert!(
-            loader
-                .load_skill("cursor-audit")
-                .unwrap_or_default()
-                .contains("Cursor repo skill")
-        );
-        assert!(
-            loader
-                .load_skill("opencode-review")
-                .unwrap_or_default()
-                .contains("OpenCode repo skill")
-        );
-        assert!(
-            loader
-                .load_skill("gemini-review")
-                .unwrap_or_default()
-                .contains("Gemini repo skill")
-        );
-        assert!(
-            loader
-                .load_skill("agent-review")
-                .unwrap_or_default()
-                .contains("Agent repo skill")
-        );
-        assert!(
-            loader
-                .load_skill("windsurf-review")
-                .unwrap_or_default()
-                .contains("Unknown repo skill")
-        );
-        assert!(
-            loader
-                .load_skill("root-review")
-                .unwrap_or_default()
-                .contains("Root repo skill")
-        );
+        assert!(loader
+            .load_skill("cursor-audit")
+            .unwrap_or_default()
+            .contains("Cursor repo skill"));
+        assert!(loader
+            .load_skill("opencode-review")
+            .unwrap_or_default()
+            .contains("OpenCode repo skill"));
+        assert!(loader
+            .load_skill("gemini-review")
+            .unwrap_or_default()
+            .contains("Gemini repo skill"));
+        assert!(loader
+            .load_skill("agent-review")
+            .unwrap_or_default()
+            .contains("Agent repo skill"));
+        assert!(loader
+            .load_skill("windsurf-review")
+            .unwrap_or_default()
+            .contains("Unknown repo skill"));
+        assert!(loader
+            .load_skill("root-review")
+            .unwrap_or_default()
+            .contains("Root repo skill"));
         assert!(loader.load_skill("cache-review").is_none());
         assert!(loader.load_skill("vscode-review").is_none());
     }

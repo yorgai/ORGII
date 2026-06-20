@@ -34,6 +34,7 @@ import { buildImperativeApi } from "./imperativeApi";
 import "./index.scss";
 import {
   type MentionState,
+  canStartSlashCommand,
   createKeyDownHandler,
   removePillForDeleteDirection,
 } from "./keyboard";
@@ -86,7 +87,7 @@ function findInlineSlashCommand(
 ): { startOffset: number; query: string } | null {
   const beforeCaret = text.slice(0, caretOffset).replace(/\u200B/g, "");
   const slashIndex = beforeCaret.lastIndexOf("/");
-  if (slashIndex < 0) return null;
+  if (!canStartSlashCommand(beforeCaret, slashIndex)) return null;
   const query = beforeCaret.slice(slashIndex + 1);
   if (/\s/.test(query)) return null;
   return { startOffset: slashIndex + 1, query };

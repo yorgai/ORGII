@@ -84,10 +84,10 @@ export interface KanbanTask {
   /** Display label for the workspace root associated with the session. */
   workspaceName?: string;
   /**
-   * Owning Agent Org's display name when the session was launched as
-   * part of an Agent Org run (Inbox or any other entry point). Left
-   * unset for org-scoped Kanban embeds (e.g. the Inbox per-org Kanban)
-   * since every card there belongs to the same org anyway.
+   * Owning Agent Team's display name when the session was launched as
+   * part of an Agent Team run (Inbox or any other entry point). Left
+   * unset for team-scoped Kanban embeds (e.g. the Inbox per-team Kanban)
+   * since every card there belongs to the same team anyway.
    */
   orgName?: string;
   /**

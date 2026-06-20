@@ -2,8 +2,8 @@
  * SettingsSidebar
  *
  * Sidebar for the Settings page. The first level shows app settings plus
- * integration categories. Agent & Org now opens a single table surface; its
- * Agents / Orgs / CLIs switcher lives inside the page, not in a drill-down
+ * integration categories. Agent Teams now opens a single table surface; its
+ * Agents / Teams / CLIs switcher lives inside the page, not in a drill-down
  * sidebar level.
  */
 import { useAtomValue, useSetAtom } from "jotai";
@@ -50,7 +50,6 @@ type SettingsRootItemSegment =
   | typeof AGENT_ORG_ROW_KEY;
 
 const AGENT_ORG_ROW_KEY = "agent-orgs";
-const AGENT_ORG_LABEL = "Agent & Org";
 const AGENT_ORG_PATH = buildAgentOrgsPath({ tab: "agents" });
 
 function isAgentOrgsRoute(pathname: string): boolean {
@@ -184,7 +183,7 @@ const SettingsRootBody: React.FC = () => {
             return {
               id,
               key: id,
-              label: AGENT_ORG_LABEL,
+              label: t("navigation:labels.agentOrgs"),
               icon: InfinityIcon,
               dataTestId: "settings-core-item-agent-orgs",
             };

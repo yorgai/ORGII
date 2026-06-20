@@ -9,10 +9,10 @@
     {
       "date": "2026-06-01",
       "commitCount": 62,
-      "summary": "A high-volume day focused on stabilizing Agent Org workflows, expanding the slash menu and plus-button command experience, refining integrations and settings surfaces, and strengthening E2E coverage. Backend agent-core work added Agent Architect and AI Researcher skill sources, workspace resource loading controls, external import scope handling, and event store refactors, while frontend changes improved skill pills, MCP/skills integrations, source control, workspace setup, CodeMirror behavior, table interactions, loading states, and localized UI copy.",
+      "summary": "A high-volume day focused on stabilizing Agent Team workflows, expanding the slash menu and plus-button command experience, refining integrations and settings surfaces, and strengthening E2E coverage. Backend agent-core work added Agent Architect and AI Researcher skill sources, workspace resource loading controls, external import scope handling, and event store refactors, while frontend changes improved skill pills, MCP/skills integrations, source control, workspace setup, CodeMirror behavior, table interactions, loading states, and localized UI copy.",
       "frontendChangeBullets": [
         "Expanded the plus-button command menu with dedicated Mode and Models flyouts, making common session setup choices easier to discover without leaving the composer.",
-        "Improved skill pills across Agent Org and chat surfaces so selected skills are more visible, safer to expand, and clearer during active workflow setup.",
+        "Improved skill pills across Agent Team and chat surfaces so selected skills are more visible, safer to expand, and clearer during active workflow setup.",
         "Refined MCP and skills integration screens with more stable setup flows, clearer loading behavior, and stronger feedback when integration data is unavailable.",
         "Polished source control and workspace setup interactions so users get smoother file, repository, and project-context handling inside ORGII.",
         "Improved CodeMirror behavior, table interactions, loading states, and localized interface copy for a more consistent product experience across settings and workflow screens."
@@ -22,7 +22,7 @@
         "Added Agent Architect and AI Researcher skill sources in agent-core, expanding the set of structured capabilities available to agent workflows.",
         "Improved external import scope handling so imported rules, skills, and agent definitions can be applied more predictably to the intended workspace context.",
         "Refactored event store internals to improve reliability around persisted agent activity and runtime event handling.",
-        "Expanded E2E coverage around Agent Org workflows, slash menu behavior, integrations, and settings surfaces to catch regressions in both UI and runtime paths."
+        "Expanded E2E coverage around Agent Team workflows, slash menu behavior, integrations, and settings surfaces to catch regressions in both UI and runtime paths."
       ],
       "modelsUsed": ["GPT 5.5", "Opus 4.6"]
     },
@@ -120,7 +120,7 @@
       "backendChangeBullets": [
         "Added GitHub Issues backend commands, atoms, helpers, and localized strings to support issue browsing from WorkStation surfaces.",
         "Persisted compacted Rust session history and verified compacted provider payloads so long-running agent sessions retain cleaner historical state.",
-        "Kept Agent Org coordinator sessions responsive and coordinator roots visible during active multi-agent workflows.",
+        "Kept Agent Team coordinator sessions responsive and coordinator roots visible during active multi-agent workflows.",
         "Avoided global CLI resume lock stalls, improving reliability when multiple CLI-backed sessions resume or continue in parallel.",
         "Updated the fast-open package name, webdriver app target, GitHub adapter wording, and pre-commit cleanup paths used by the June workflow."
       ],

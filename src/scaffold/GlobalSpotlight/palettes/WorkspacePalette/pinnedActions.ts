@@ -39,14 +39,6 @@ export function buildPinnedWorkspaceActions({
         action: onOpenLocalWorkspace,
       },
       {
-        id: "pinned-add-entry",
-        label: `${paletteText.addEntryLabel}...`,
-        icon: ICONS.addWorkspace,
-        type: "action",
-        data: { showDisclosureChevron: true },
-        action: onOpenAddMenu,
-      },
-      {
         id: "pinned-create-workspace-entry",
         label: t(
           "workspaceForm.createWorkspace",
@@ -56,6 +48,14 @@ export function buildPinnedWorkspaceActions({
         type: "action",
         data: { showDisclosureChevron: true },
         action: onCreateWorkspace,
+      },
+      {
+        id: "pinned-add-entry",
+        label: `${paletteText.addEntryLabel}...`,
+        icon: ICONS.addWorkspace,
+        type: "action",
+        data: { showDisclosureChevron: true },
+        action: onOpenAddMenu,
       }
     );
   }

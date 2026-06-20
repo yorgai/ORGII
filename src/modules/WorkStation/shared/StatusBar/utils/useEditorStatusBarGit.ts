@@ -13,6 +13,7 @@ import { useGitStatus } from "@src/contexts/git";
 import { useGitOperations } from "@src/hooks/git/useGitOperations";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { useRefreshSpin } from "@src/hooks/ui";
+import { workspaceGitStatusMapAtom } from "@src/store/git";
 import {
   isMultiRootWorkspaceAtom,
   workspaceFoldersAtom,
@@ -21,6 +22,7 @@ import { workspaceNameAtom } from "@src/store/workspace/derived";
 
 export interface UseEditorStatusBarGitOptions {
   repoName: string | undefined;
+  repoPath: string | undefined;
   branchName: string | undefined;
 }
 
@@ -33,6 +35,7 @@ export interface UseEditorStatusBarGitReturn {
   needsPublish: boolean;
   isSyncBusy: boolean;
   isPublishing: boolean;
+  canSyncDisplayedRepo: boolean;
   syncSpinClass: string | undefined;
   handleSyncClick: () => void;
   checkoutLoading: boolean;
@@ -40,17 +43,19 @@ export interface UseEditorStatusBarGitReturn {
 
 export function useEditorStatusBarGit({
   repoName,
+  repoPath,
   branchName,
 }: UseEditorStatusBarGitOptions): UseEditorStatusBarGitReturn {
   const { t } = useTranslation();
 
-  const { currentGitStatus, loading: statusLoading } = useGitStatus();
+  const { scopedGitStatus, loading: statusLoading } = useGitStatus();
   const { selectedRepoId, currentRepo, checkoutLoading } = useRepoSelection({
     autoLoad: false,
   });
 
   const isMultiRoot = useAtomValue(isMultiRootWorkspaceAtom);
   const workspaceFolders = useAtomValue(workspaceFoldersAtom);
+  const workspaceGitStatusMap = useAtomValue(workspaceGitStatusMapAtom);
   const workspaceName = useAtomValue(workspaceNameAtom);
 
   const workspaceLabel = useMemo(() => {
@@ -65,10 +70,23 @@ export function useEditorStatusBarGit({
     return `${label}\n${workspaceFolders.length} repos: ${names.join(", ")}`;
   }, [isMultiRoot, repoName, workspaceName, workspaceFolders]);
 
-  const repoPath = currentRepo?.path || currentRepo?.fs_uri;
+  const selectedRepoPath = currentRepo?.path || currentRepo?.fs_uri;
+  const currentGitStatus = useMemo(() => {
+    if (!repoPath) return null;
+    return (
+      workspaceGitStatusMap.get(repoPath) ??
+      (scopedGitStatus?.repoPath === repoPath ? scopedGitStatus.status : null)
+    );
+  }, [repoPath, scopedGitStatus, workspaceGitStatusMap]);
+  const operationRepoPath =
+    selectedRepoPath === repoPath ? selectedRepoPath : undefined;
+  const operationRepoId = operationRepoPath
+    ? selectedRepoId || undefined
+    : undefined;
+  const canSyncDisplayedRepo = !!operationRepoPath;
   const { push, pull, fetch, publish, isLoading } = useGitOperations({
-    repoId: selectedRepoId || undefined,
-    repoPath,
+    repoId: operationRepoId,
+    repoPath: operationRepoPath,
   });
 
   const aheadCount = currentGitStatus?.branch_ahead_behind?.ahead ?? 0;
@@ -77,6 +95,8 @@ export function useEditorStatusBarGit({
     !currentGitStatus?.current_upstream_branch && currentGitStatus?.exists;
 
   const handlePublish = useCallback(async () => {
+    if (!canSyncDisplayedRepo) return;
+
     const result = await publish();
     if (result.success) {
       Message.success(
@@ -87,11 +107,13 @@ export function useEditorStatusBarGit({
         t("git.messages.publishFailed", { error: result.errorType })
       );
     }
-  }, [publish, branchName, t]);
+  }, [publish, branchName, canSyncDisplayedRepo, t]);
 
   const [syncInProgress, setSyncInProgress] = useState(false);
 
   const handleSync = useCallback(async () => {
+    if (!canSyncDisplayedRepo) return;
+
     if (needsPublish) {
       await handlePublish();
       return;
@@ -142,6 +164,7 @@ export function useEditorStatusBarGit({
     fetch,
     behindCount,
     aheadCount,
+    canSyncDisplayedRepo,
     needsPublish,
     handlePublish,
     t,
@@ -168,6 +191,7 @@ export function useEditorStatusBarGit({
     needsPublish: !!needsPublish,
     isSyncBusy,
     isPublishing,
+    canSyncDisplayedRepo,
     syncSpinClass,
     handleSyncClick,
     checkoutLoading,

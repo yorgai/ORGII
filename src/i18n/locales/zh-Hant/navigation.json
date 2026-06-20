@@ -22,9 +22,9 @@
     "indexing": "Index",
     "index": "Index",
     "billing": "賬單",
-    "agentOrgs": "Agent 與組織",
+    "agentOrgs": "Agent & 團隊",
     "agents": "Agents",
-    "org": "組織",
+    "org": "團隊",
     "coreSettings": "核心",
     "appSettings": "應用程式設定",
     "terminal": "終端",
@@ -103,8 +103,8 @@
       "manage": "管理",
       "core": "核心",
       "agent": "Agent",
-      "org": "組織",
-      "agentOrgs": "Agent 與組織"
+      "org": "團隊",
+      "agentOrgs": "Agent & 團隊"
     },
     "groupBy": {
       "title": "分組",

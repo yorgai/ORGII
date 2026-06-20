@@ -609,7 +609,7 @@
     "selectSource": "ソースを選択",
     "selectAgent": "Agent を選択",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Agent または Agent org を選択...",
+    "searchAgentOrOrg": "Agent または Agent チームを選択...",
     "tplSelectAgentOrOrg": "{agent} を選択",
     "cliAgent": "CLI Agent",
     "placeholderModel": "モデル",
@@ -1937,6 +1937,7 @@
     },
     "warningHint": "コンテキストが埋まりつつあります。より良い結果のため、まもなく新しいセッションを開始してください。",
     "dangerHint": "コンテキストがほぼいっぱいです。詳細を失わないよう、新しいセッションを開始してください。",
+    "autoCompactNote": "まもなくコンテキストを要約します",
     "startNewSession": "新しいセッションを開始"
   },
   "relativeDate": {

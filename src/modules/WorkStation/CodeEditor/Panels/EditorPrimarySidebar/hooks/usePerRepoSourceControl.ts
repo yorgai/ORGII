@@ -72,6 +72,7 @@ export interface PerRepoSourceControlState {
   onFileSelect: (fileId: string) => void;
   onStageToggle: (fileId: string, stage: boolean) => Promise<void>;
   onDiscard: (fileId: string) => Promise<void>;
+  onDiscardFiles: (fileIds: string[]) => Promise<void>;
   onStageAll: () => Promise<void>;
   onUnstageAll: () => Promise<void>;
   onDiscardAll: () => Promise<void>;
@@ -299,6 +300,49 @@ export function usePerRepoSourceControl(
     [repoPath, fetchStatus]
   );
 
+  const handleDiscardFiles = useCallback(
+    async (fileIds: string[]) => {
+      const files = filesRef.current.filter((file) =>
+        fileIds.includes(file.id)
+      );
+      if (files.length === 0) return;
+
+      const fileText =
+        files.length === 1 ? files[0].path : `${files.length} files`;
+      const confirmed = await confirmDestructiveAction({
+        title: "Discard changes?",
+        message: `This will revert all changes in ${fileText}. This action cannot be undone.`,
+      });
+      if (!confirmed) return;
+
+      try {
+        const untracked = files.filter(
+          (file) => file.status === "added" && !file.staged
+        );
+        const tracked = files.filter(
+          (file) => !(file.status === "added" && !file.staged)
+        );
+
+        await Promise.all(
+          untracked.map((file) => {
+            const absolutePath = file.path.startsWith("/")
+              ? file.path
+              : `${repoPath}/${file.path}`;
+            return remove(absolutePath);
+          })
+        );
+
+        if (tracked.length > 0) {
+          await gitRef.current.discard(tracked.map((file) => file.path));
+        }
+        await fetchStatus();
+      } catch (err) {
+        log.error("[usePerRepoSourceControl] discard failed:", err);
+      }
+    },
+    [repoPath, fetchStatus]
+  );
+
   const handleStageAll = useCallback(async () => {
     const unstaged = filesRef.current.filter((f) => !f.staged);
     if (unstaged.length === 0) return;
@@ -419,6 +463,7 @@ export function usePerRepoSourceControl(
       onFileSelect: handleFileSelect,
       onStageToggle: handleStageToggle,
       onDiscard: handleDiscard,
+      onDiscardFiles: handleDiscardFiles,
       onStageAll: handleStageAll,
       onUnstageAll: handleUnstageAll,
       onDiscardAll: handleDiscardAll,
@@ -445,6 +490,7 @@ export function usePerRepoSourceControl(
       handleFileSelect,
       handleStageToggle,
       handleDiscard,
+      handleDiscardFiles,
       handleStageAll,
       handleUnstageAll,
       handleDiscardAll,

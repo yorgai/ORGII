@@ -16,6 +16,8 @@ import {
 import { gitAutoCreatePrAtom } from "@src/store/ui/editorSettingsAtom";
 import {
   workstationAllOpenPrsAtom,
+  workstationOpenPrsErrorAtom,
+  workstationOpenPrsLoadStateAtom,
   workstationPrAtom,
   workstationPrCallbackAtom,
 } from "@src/store/workstation/codeEditor/workstationPrAtom";
@@ -62,6 +64,8 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
   const setWorkstationPrAtom = useSetAtom(workstationPrAtom);
   const setWorkstationPrCallbackAtom = useSetAtom(workstationPrCallbackAtom);
   const setAllOpenPrs = useSetAtom(workstationAllOpenPrsAtom);
+  const setOpenPrsLoadState = useSetAtom(workstationOpenPrsLoadStateAtom);
+  const setOpenPrsError = useSetAtom(workstationOpenPrsErrorAtom);
   const branchKey = branchName ?? "";
 
   const [remotePrByBranch, setRemotePrByBranch] = useState<
@@ -169,7 +173,12 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     const cachedEntry = getCachedPrs(repoPath);
     if (cachedEntry) {
       setAllOpenPrs(cachedEntry.prs);
+      setOpenPrsLoadState("ready");
+      setOpenPrsError(null);
       if (!isPrCacheStale(repoPath)) return; // fresh — skip network
+    } else {
+      setOpenPrsLoadState("loading");
+      setOpenPrsError(null);
     }
 
     let cancelled = false;
@@ -183,24 +192,34 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
         const originRemote = remotesData?.remotes?.find(
           (remote) => remote.name === "origin"
         );
-        if (!originRemote?.url) return;
+        if (!originRemote?.url) {
+          if (!cancelled) setOpenPrsLoadState("ready");
+          return;
+        }
 
         const repoFullName = parseGithubRepoFullName(originRemote.url);
-        if (!repoFullName) return;
+        if (!repoFullName) {
+          if (!cancelled) setOpenPrsLoadState("ready");
+          return;
+        }
 
         const prs = await listOpenPRsLocal(repoFullName);
         if (cancelled) return;
         setAllOpenPrs(prs);
         setCachedPrs(repoPath, prs);
-      } catch {
-        // Non-critical — swallow silently; current-branch PR lookup is unaffected
+        setOpenPrsLoadState("ready");
+        setOpenPrsError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setOpenPrsError(err instanceof Error ? err.message : String(err));
+        setOpenPrsLoadState("error");
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [repoPath, repoId, setAllOpenPrs]);
+  }, [repoPath, repoId, setAllOpenPrs, setOpenPrsLoadState, setOpenPrsError]);
 
   const eligible = useMemo(
     () =>
@@ -345,8 +364,16 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
       });
       setWorkstationPrCallbackAtom({ createPr: null });
       setAllOpenPrs([]);
+      setOpenPrsLoadState("idle");
+      setOpenPrsError(null);
     };
-  }, [setWorkstationPrAtom, setWorkstationPrCallbackAtom, setAllOpenPrs]);
+  }, [
+    setWorkstationPrAtom,
+    setWorkstationPrCallbackAtom,
+    setAllOpenPrs,
+    setOpenPrsLoadState,
+    setOpenPrsError,
+  ]);
 
   return {
     prUrl,

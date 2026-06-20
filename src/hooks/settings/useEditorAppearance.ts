@@ -122,12 +122,15 @@ export function useEditorAppearanceStyles(): void {
     };
   }, [fontSize, lineHeight, tabSize, fontFamily]);
   useEffect(() => {
+    const root = document.documentElement;
     const body = document.body;
+    root.style.setProperty("color-scheme", isDark ? "dark" : "light");
     const vars = getAnsiColorCssVars(isDark ? "dark" : "light");
     Object.entries(vars).forEach(([key, value]) => {
       body.style.setProperty(key, value);
     });
     return () => {
+      root.style.removeProperty("color-scheme");
       ANSI_COLOR_CSS_KEYS.forEach((key) => {
         body.style.removeProperty(key);
       });

@@ -609,7 +609,7 @@
     "selectSource": "Выбрать источник",
     "selectAgent": "Выбрать Agent",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Выбрать Agent или Agent org...",
+    "searchAgentOrOrg": "Выбрать Agent или Команду Agent...",
     "tplSelectAgentOrOrg": "Выбрать {agent}",
     "cliAgent": "CLI Agent",
     "placeholderModel": "модель",
@@ -1931,6 +1931,7 @@
     },
     "warningHint": "Контекст заполняется. Скоро начните новую сессию для лучших результатов.",
     "dangerHint": "Контекст почти заполнен. Начните новую сессию, чтобы не потерять детали.",
+    "autoCompactNote": "Контекст скоро будет резюмирован",
     "startNewSession": "Начать новую сессию"
   },
   "relativeDate": {

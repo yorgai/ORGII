@@ -1576,7 +1576,7 @@
     "deleteConfirmMessage": "設定ファイルからサーバーが削除されます。実行中のセッションは切断されます。"
   },
   "agentOrgs": {
-    "title": "Agent 組織",
+    "title": "Agentチーム",
     "running": "実行中",
     "fires": "回発火",
     "addRoutine": "Routine を追加",
@@ -1619,13 +1619,13 @@
     "enabledDesc": "このポリシーを有効または無効にする",
     "disabled": "無効",
     "noTemplates": "テンプレートがありません",
-    "addOrg": "組織を追加",
+    "addOrg": "Agentチームを追加",
     "addAgent": "Agent を追加",
     "agentSections": {
       "builtInAgents": "ビルトイン Agents",
       "customAgents": "カスタム Agents",
       "cli": "CLI Agents",
-      "orgs": "組織"
+      "orgs": "チーム"
     },
     "memorySections": {
       "personalMemory": "パーソナル",
@@ -1817,13 +1817,14 @@
     "noMemory": "Memory がまだありません",
     "memoryDescription": "Memory はメンバーがセッション間で参照できる知識とコンテキストを保存します。",
     "tabs": {
-      "org": "組織",
+      "org": "チーム",
       "agents": "メンバー",
       "integrations": "連携",
-      "rules": "ルール"
+      "rules": "ルール",
+      "orgs": "チーム"
     },
     "searchPlaceholder": "ルールを検索…",
-    "searchOrgsPlaceholder": "組織を検索...",
+    "searchOrgsPlaceholder": "チームを検索...",
     "searchAgentsPlaceholder": "メンバーを検索...",
     "searchMemoryPlaceholder": "Memory を検索...",
     "searchIntegrationsPlaceholder": "Integrations を検索...",
@@ -1895,7 +1896,7 @@
     "orgWizard": {
       "title": "Org を追加",
       "orgName": "Org 名",
-      "orgNameDesc": "この Agent 組織の名前",
+      "orgNameDesc": "この Agent チームの名前",
       "orgNamePlaceholder": "例：エンジニアリングチーム",
       "orgDescription": "説明",
       "orgDescriptionDesc": "この組織の役割についての任意の概要",
@@ -1952,7 +1953,7 @@
       },
       "dangerZone": "危険ゾーン",
       "deleteOrg": "この Org を削除",
-      "deleteOrgDesc": "この Agent Org を完全に削除します。Member Agent には影響しません。この操作は元に戻せません",
+      "deleteOrgDesc": "この Agent チームを完全に削除します。Member Agent には影響しません。この操作は元に戻せません",
       "deleteThisOrg": "この Org を削除"
     },
     "agentWizard": {
@@ -2265,18 +2266,18 @@
         "skip": "Skip and continue"
       }
     },
-    "emptySelectionTitle": "メンバーまたは Agent Org を選択",
-    "emptySelectionSubtitle": "サイドバーから Agent または Agent Org を選択して表示・設定します。",
+    "emptySelectionTitle": "メンバーまたは Agent チームを選択",
+    "emptySelectionSubtitle": "サイドバーから Agent または Agent チームを選択して表示・設定します。",
     "applicableWorkspace": "適用 Workspace",
     "tableTabs": {
       "agents": "Agents",
-      "orgs": "Orgs",
+      "orgs": "チーム",
       "clis": "CLIs"
     },
     "searchAgents": "Agents を検索…",
-    "searchOrgs": "orgs を検索…",
+    "searchOrgs": "チームを検索…",
     "noAgents": "Agents はまだありません",
-    "noOrgs": "orgs はまだありません",
+    "noOrgs": "チームはまだありません",
     "orgMembers": "メンバー",
     "agentLoadFailed": "Agent 定義の読み込みに失敗しました",
     "agentSaved": "Agent を保存しました",
@@ -2285,12 +2286,12 @@
     "agentDeleteFailed": "Agent の削除に失敗しました",
     "deleteAgentTitle": "Agent を削除しますか？",
     "deleteAgentMessage": "\"{{name}}\" は完全に削除されます。この操作は元に戻せません。",
-    "orgCreated": "組織を作成しました",
-    "orgUpdated": "組織を更新しました",
-    "orgDeleted": "組織を削除しました",
-    "orgSaveFailed": "組織の保存に失敗しました",
-    "orgDeleteFailed": "組織の削除に失敗しました",
-    "deleteOrgTitle": "組織を削除しますか？",
+    "orgCreated": "チームを作成しました",
+    "orgUpdated": "チームを更新しました",
+    "orgDeleted": "チームを削除しました",
+    "orgSaveFailed": "チームの保存に失敗しました",
+    "orgDeleteFailed": "チームの削除に失敗しました",
+    "deleteOrgTitle": "チームを削除しますか？",
     "deleteOrgMessage": "\"{{name}}\" は完全に削除されます。この操作は元に戻せません。"
   },
   "databases": {
@@ -2453,7 +2454,7 @@
     "noProjects": "利用できる Project がありません",
     "target": "Target",
     "agentResponsible": "このルーティンを担当する Agent",
-    "agentResponsiblePlaceholder": "Agent または Agent Org を選択",
+    "agentResponsiblePlaceholder": "Agent または Agent チームを選択",
     "workspacePathPlaceholder": "Workspace を選択",
     "prompt": "Prompt",
     "promptPlaceholder": "Tell the agent what to do when this routine fires...",

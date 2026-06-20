@@ -609,7 +609,7 @@
     "selectSource": "Wybierz źródło",
     "selectAgent": "Wybierz Agenta",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Wybierz Agent lub Agent org...",
+    "searchAgentOrOrg": "Wybierz Agent lub Zespół Agent...",
     "tplSelectAgentOrOrg": "Wybierz {agent}",
     "cliAgent": "CLI Agent",
     "placeholderModel": "model",
@@ -1931,6 +1931,7 @@
     },
     "warningHint": "Kontekst się zapełnia. Wkrótce rozpocznij nową sesję, aby uzyskać lepsze wyniki.",
     "dangerHint": "Kontekst jest prawie pełny. Rozpocznij nową sesję, aby uniknąć utraty szczegółów.",
+    "autoCompactNote": "Kontekst zostanie wkrótce podsumowany",
     "startNewSession": "Rozpocznij nową sesję"
   },
   "relativeDate": {

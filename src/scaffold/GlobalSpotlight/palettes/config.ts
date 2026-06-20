@@ -203,7 +203,7 @@ export const DISPATCH_CATEGORY_PALETTE_CONFIG: SelectorConfig = {
     i18nTemplate: "filters.tplSelectAgentOrOrg",
     i18nNs: "common",
   },
-  placeholder: "agent or Agent org",
+  placeholder: "agent or Agent team",
   missingParam: "agent",
 };
 

@@ -39,7 +39,7 @@
     "storage": "스토리지",
     "projectUsage": "Project 및 사용량",
     "agentMemory": "Agent 메모리",
-    "agentOrg": "Agent 조직"
+    "agentOrg": "Agent 팀"
   },
   "coreSidebar": {
     "groups": {
@@ -1163,10 +1163,10 @@
     "noAgentsSubtitle": "진화를 구성하려면 Agent를 만들거나 가져오세요."
   },
   "org": {
-    "linkTitle": "Agent 조직",
-    "description": "Agent 조직 계층 구조와 역할을 정의하세요.",
-    "emptyTitle": "정의된 조직이 없습니다",
-    "createOrg": "조직 생성",
+    "linkTitle": "Agent 팀",
+    "description": "Agent 팀 계층과 역할을 정의합니다.",
+    "emptyTitle": "정의된 Agent 팀이 없습니다",
+    "createOrg": "팀 만들기",
     "addMember": "멤버 추가",
     "editMember": "멤버 편집",
     "addChild": "부하 추가",
@@ -1177,7 +1177,7 @@
     "fieldStatus": "상태",
     "namePlaceholder": "멤버 이름 입력",
     "deleteConfirm": "이 멤버와 모든 부하를 삭제하시겠습니까?",
-    "openAgentOrgs": "Agent 조직 열기"
+    "openAgentOrgs": "Agent 팀 열기"
   },
   "learningsBrowser": {
     "title": "Learnings 브라우저",

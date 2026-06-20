@@ -22,9 +22,9 @@
     "indexing": "Indexación",
     "index": "Index",
     "billing": "Facturación",
-    "agentOrgs": "Agents & Orgs",
+    "agentOrgs": "Agent y equipo",
     "agents": "Agents",
-    "org": "Org",
+    "org": "Equipo",
     "coreSettings": "Núcleo",
     "appSettings": "Ajustes de la app",
     "terminal": "Terminal",
@@ -103,8 +103,8 @@
       "manage": "Gestionar",
       "core": "Núcleo",
       "agent": "Agent",
-      "org": "Org",
-      "agentOrgs": "Agents & Orgs"
+      "org": "Equipo",
+      "agentOrgs": "Agent y equipo"
     },
     "groupBy": {
       "title": "Agrupar por",

@@ -1562,7 +1562,7 @@
     "deleteConfirmMessage": "Serwer zostanie usunięty z pliku konfiguracyjnego. Aktywne sesje zostaną rozłączone."
   },
   "agentOrgs": {
-    "title": "Organizacje Agent",
+    "title": "Zespoły agentów",
     "running": "Działa",
     "activeRules": "aktywne",
     "fires": "wyzwoleń",
@@ -1616,13 +1616,13 @@
     "disabled": "Wyłączone",
     "noRulesOrRoutines": "Brak reguł i procedur",
     "noTemplates": "Brak szablonów",
-    "addOrg": "Dodaj Org",
+    "addOrg": "Dodaj zespół agentów",
     "addAgent": "Dodaj Agent",
     "agentSections": {
       "builtInAgents": "Wbudowane Agents",
       "customAgents": "Niestandardowe Agents",
       "cli": "Agenci CLI",
-      "orgs": "Organizacje"
+      "orgs": "Zespoły"
     },
     "memorySections": {
       "personalMemory": "Osobiste",
@@ -1814,13 +1814,14 @@
     "noMemory": "Brak elementów pamięci",
     "memoryDescription": "Pamięć przechowuje wiedzę i kontekst, do których członkowie mogą się odwoływać między sesjami.",
     "tabs": {
-      "org": "ORG",
+      "org": "Zespół",
       "agents": "Członkowie",
       "integrations": "Integracje",
-      "rules": "Reguły"
+      "rules": "Reguły",
+      "orgs": "Zespoły"
     },
     "searchPlaceholder": "Szukaj reguł…",
-    "searchOrgsPlaceholder": "Szukaj orgów...",
+    "searchOrgsPlaceholder": "Szukaj zespołów...",
     "searchAgentsPlaceholder": "Szukaj członków...",
     "searchMemoryPlaceholder": "Szukaj w pamięci...",
     "searchIntegrationsPlaceholder": "Szukaj integracji...",
@@ -1892,7 +1893,7 @@
     "orgWizard": {
       "title": "Dodaj Org",
       "orgName": "Nazwa Org",
-      "orgNameDesc": "Nazwa tego org Agent",
+      "orgNameDesc": "Nazwa tego zespołu Agent",
       "orgNamePlaceholder": "np. Zespół Inżynierski",
       "orgDescription": "Opis",
       "orgDescriptionDesc": "Opcjonalne podsumowanie tego, czym zajmuje się ten org",
@@ -1949,7 +1950,7 @@
       },
       "dangerZone": "Strefa niebezpieczeństwa",
       "deleteOrg": "Usuń ten Org",
-      "deleteOrgDesc": "Trwale usuń ten Agent Org. Agenci członkowie nie zostaną naruszeni. Tej akcji nie można cofnąć",
+      "deleteOrgDesc": "Trwale usuń ten Zespół Agent. Agenci członkowie nie zostaną naruszeni. Tej akcji nie można cofnąć",
       "deleteThisOrg": "Usuń ten Org"
     },
     "agentWizard": {
@@ -2251,18 +2252,18 @@
         "skip": "Pomiń i kontynuuj"
       }
     },
-    "emptySelectionTitle": "Wybierz członka lub Agent Org",
-    "emptySelectionSubtitle": "Wybierz Agent lub Agent Org z paska bocznego, aby wyświetlić i skonfigurować.",
+    "emptySelectionTitle": "Wybierz członka lub Zespół Agent",
+    "emptySelectionSubtitle": "Wybierz Agent lub Zespół Agent z paska bocznego, aby wyświetlić i skonfigurować.",
     "applicableWorkspace": "Dotyczy Workspace",
     "tableTabs": {
       "agents": "Agents",
-      "orgs": "Orgs",
+      "orgs": "Zespoły",
       "clis": "CLIs"
     },
     "searchAgents": "Szukaj Agents…",
-    "searchOrgs": "Szukaj orgs…",
+    "searchOrgs": "Szukaj zespołów…",
     "noAgents": "Brak Agents",
-    "noOrgs": "Brak orgs",
+    "noOrgs": "Brak zespołów",
     "orgMembers": "Członkowie",
     "agentLoadFailed": "Nie udało się wczytać definicji Agent",
     "agentSaved": "Agent zapisany",
@@ -2271,12 +2272,12 @@
     "agentDeleteFailed": "Nie udało się usunąć Agent",
     "deleteAgentTitle": "Usunąć Agent?",
     "deleteAgentMessage": "\"{{name}}\" zostanie trwale usunięty. Tej operacji nie można cofnąć.",
-    "orgCreated": "Organizacja utworzona",
-    "orgUpdated": "Organizacja zaktualizowana",
-    "orgDeleted": "Organizacja usunięta",
-    "orgSaveFailed": "Nie udało się zapisać organizacji",
-    "orgDeleteFailed": "Nie udało się usunąć organizacji",
-    "deleteOrgTitle": "Usunąć organizację?",
+    "orgCreated": "Zespół utworzony",
+    "orgUpdated": "Zespół zaktualizowany",
+    "orgDeleted": "Zespół usunięty",
+    "orgSaveFailed": "Nie udało się zapisać zespołu",
+    "orgDeleteFailed": "Nie udało się usunąć zespołu",
+    "deleteOrgTitle": "Usunąć zespół?",
     "deleteOrgMessage": "\"{{name}}\" zostanie trwale usunięta. Tej operacji nie można cofnąć."
   },
   "tableHeaders": {
@@ -2450,7 +2451,7 @@
     "noProjects": "Brak dostępnych historii",
     "target": "Target",
     "agentResponsible": "Agent odpowiedzialny za tę rutynę",
-    "agentResponsiblePlaceholder": "Wybierz Agent lub Agent Org",
+    "agentResponsiblePlaceholder": "Wybierz Agent lub Zespół Agent",
     "workspacePathPlaceholder": "Wybierz workspace",
     "prompt": "Prompt",
     "promptPlaceholder": "Tell the agent what to do when this routine fires...",

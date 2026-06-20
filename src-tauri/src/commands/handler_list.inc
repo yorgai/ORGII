@@ -996,7 +996,7 @@ cursor_ide_watch::cursor_bridge_watch_composer,
 cursor_ide_watch::cursor_bridge_unwatch_composer,
 // Remote SQL client commands (PostgreSQL + MySQL via sqlx).
 // Crate: src-tauri/crates/db-clients. Owns the `sqlx` dep tree privately
-// so it never enters `cargo check -p orgii`. See the crate's Cargo.toml
+// so it never enters `cargo check -p org2`. See the crate's Cargo.toml
 // for the naming-disambiguation note vs `database` and `db_browser`.
 db_clients::db_sql_connect,
 db_clients::db_sql_disconnect,

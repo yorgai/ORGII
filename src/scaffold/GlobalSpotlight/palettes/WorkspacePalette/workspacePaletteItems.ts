@@ -1,7 +1,7 @@
 import type React from "react";
 
 import { isSystemPathRepoItem } from "@src/features/SessionCreator/utils/systemPathSource";
-import { REPO_KIND } from "@src/store/repo";
+import { type CachedRepo, REPO_KIND } from "@src/store/repo";
 
 import type { RepoItem, SpotlightItem } from "../../types";
 import {
@@ -46,6 +46,7 @@ interface BuildSectionedWorkspaceItemsArgs {
   openPathItem: SpotlightItem | null;
   filteredRepos: RepoItem[];
   externalRecentRepos?: readonly RepoItem[];
+  recentCachedRepos?: readonly CachedRepo[];
   currentRepoId?: string;
   isMultiRoot: boolean;
   isManageMode: boolean;
@@ -66,6 +67,7 @@ export function buildSectionedWorkspaceItems({
   openPathItem,
   filteredRepos,
   externalRecentRepos = [],
+  recentCachedRepos = [],
   currentRepoId,
   isMultiRoot,
   isManageMode,
@@ -125,6 +127,37 @@ export function buildSectionedWorkspaceItems({
         })
       : [];
 
+  const recentCachedRepoRanks = new Map(
+    recentCachedRepos.map((repo, index) => [repo.id, index])
+  );
+  const recentItems = !isManageMode
+    ? [
+        ...repoItems.filter((item) => recentCachedRepoRanks.has(item.id)),
+        ...folderWorkspaceItems.filter((item) =>
+          recentCachedRepoRanks.has(item.id)
+        ),
+        ...leadingRepoItems.filter((item) =>
+          recentCachedRepoRanks.has(item.id)
+        ),
+        ...workspaceItems,
+      ]
+        .sort((itemA, itemB) => {
+          const rankA = recentCachedRepoRanks.get(itemA.id);
+          const rankB = recentCachedRepoRanks.get(itemB.id);
+          if (rankA !== undefined || rankB !== undefined) {
+            return (
+              (rankA ?? Number.MAX_SAFE_INTEGER) -
+              (rankB ?? Number.MAX_SAFE_INTEGER)
+            );
+          }
+          return String(itemB.data?.updatedAt ?? "").localeCompare(
+            String(itemA.data?.updatedAt ?? "")
+          );
+        })
+        .slice(0, 3)
+    : [];
+  const recentIds = new Set(recentItems.map((item) => item.id));
+
   const sourceItems = [
     ...leadingRepoItems,
     ...externalRecentItems,
@@ -137,17 +170,19 @@ export function buildSectionedWorkspaceItems({
   );
   const currentIds = new Set(currentItems.map((item) => item.id));
   const regularSystemPathItems = leadingRepoItems.filter(
-    (item) => !currentIds.has(item.id)
+    (item) => !currentIds.has(item.id) && !recentIds.has(item.id)
   );
   const regularExternalRecentItems = externalRecentItems.filter(
     (item) => !currentIds.has(item.id)
   );
   const regularFolderWorkspaceItems = folderWorkspaceItems.filter(
-    (item) => !currentIds.has(item.id)
+    (item) => !currentIds.has(item.id) && !recentIds.has(item.id)
   );
-  const regularRepoItems = repoItems.filter((item) => !currentIds.has(item.id));
+  const regularRepoItems = repoItems.filter(
+    (item) => !currentIds.has(item.id) && !recentIds.has(item.id)
+  );
   const regularWorkspaceItems = workspaceItems.filter(
-    (item) => !currentIds.has(item.id)
+    (item) => !currentIds.has(item.id) && !recentIds.has(item.id)
   );
   const sectionedItems: SpotlightItem[] = [];
 
@@ -163,21 +198,9 @@ export function buildSectionedWorkspaceItems({
   );
   appendSection(
     sectionedItems,
-    WORKSPACE_PALETTE_SECTION_KEY.SYSTEM_PATH,
-    paletteText.sectionSystemPathsLabel,
-    regularSystemPathItems
-  );
-  appendSection(
-    sectionedItems,
-    WORKSPACE_PALETTE_SECTION_KEY.EXTERNAL_RECENT,
-    paletteText.sectionExternalRecentLabel,
-    regularExternalRecentItems
-  );
-  appendSection(
-    sectionedItems,
-    WORKSPACE_PALETTE_SECTION_KEY.FOLDER_WORKSPACE,
-    paletteText.sectionFolderWorkspaceLabel,
-    regularFolderWorkspaceItems
+    WORKSPACE_PALETTE_SECTION_KEY.RECENT,
+    paletteText.sectionRecentLabel,
+    recentItems.filter((item) => !currentIds.has(item.id))
   );
   appendSection(
     sectionedItems,
@@ -190,6 +213,24 @@ export function buildSectionedWorkspaceItems({
     WORKSPACE_PALETTE_SECTION_KEY.MULTI_REPO_WORKSPACE,
     paletteText.sectionMultiRepoWorkspaceLabel,
     regularWorkspaceItems
+  );
+  appendSection(
+    sectionedItems,
+    WORKSPACE_PALETTE_SECTION_KEY.FOLDER_WORKSPACE,
+    paletteText.sectionFolderWorkspaceLabel,
+    regularFolderWorkspaceItems
+  );
+  appendSection(
+    sectionedItems,
+    WORKSPACE_PALETTE_SECTION_KEY.SYSTEM_PATH,
+    paletteText.sectionSystemPathsLabel,
+    regularSystemPathItems
+  );
+  appendSection(
+    sectionedItems,
+    WORKSPACE_PALETTE_SECTION_KEY.EXTERNAL_RECENT,
+    paletteText.sectionExternalRecentLabel,
+    regularExternalRecentItems
   );
 
   return sectionedItems;

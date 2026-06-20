@@ -23,6 +23,7 @@ export interface SourceControlState {
   onFileSelect: (fileId: string) => void;
   onStageToggle: (fileId: string, stage: boolean) => Promise<void>;
   onDiscard: (fileId: string) => Promise<void>;
+  onDiscardFiles: (fileIds: string[]) => Promise<void>;
 
   // Bulk operations
   onStageAll: () => Promise<void>;

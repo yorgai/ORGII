@@ -177,15 +177,15 @@ const appGoToOpsControl = defineRouteNavigationAction(
 
 const appGoToAgentOrgs = defineRouteNavigationAction(
   ACTION_ID.APP_GO_TO_AGENT_ORGS,
-  "Open Agent Orgs",
+  "Open Agent Teams",
   ROUTES.app.home.agentOrgs.path,
-  "Opened Agent Orgs",
-  ["open agent orgs", "show agents"]
+  "Opened Agent Teams",
+  ["open agent teams", "show agents"]
 );
 
 const appGoToIntegrations = defineRouteNavigationAction(
   ACTION_ID.APP_GO_TO_INTEGRATIONS,
-  "Open Agent Orgs integrations",
+  "Open Agent Teams integrations",
   buildIntegrationsPath({ category: "models" }),
   "Opened integrations",
   ["open integrations", "manage models"]

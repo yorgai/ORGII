@@ -115,6 +115,7 @@ export const WorktreeSourceControlSection: React.FC<
       onFileSelect={handleContentFileSelect}
       onStageToggle={state.onStageToggle}
       onDiscard={state.onDiscard}
+      onDiscardFiles={state.onDiscardFiles}
       onStageAll={state.onStageAll}
       onUnstageAll={state.onUnstageAll}
       onDiscardAll={state.onDiscardAll}

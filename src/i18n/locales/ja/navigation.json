@@ -22,9 +22,9 @@
     "indexing": "Index",
     "index": "Index",
     "billing": "請求",
-    "agentOrgs": "Agent と組織",
+    "agentOrgs": "Agent & チーム",
     "agents": "Agents",
-    "org": "組織",
+    "org": "チーム",
     "coreSettings": "コア",
     "appSettings": "アプリ設定",
     "terminal": "ターミナル",
@@ -103,8 +103,8 @@
       "manage": "管理",
       "core": "コア",
       "agent": "Agent",
-      "org": "組織",
-      "agentOrgs": "Agent と組織"
+      "org": "チーム",
+      "agentOrgs": "Agent & チーム"
     },
     "groupBy": {
       "title": "グループ表示",

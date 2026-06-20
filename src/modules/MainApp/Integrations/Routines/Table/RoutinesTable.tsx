@@ -123,7 +123,7 @@ function getNextFireLabel(routine: RoutineDefinition): string | null {
 
 function getRoutineTargetLabel(routine: RoutineDefinition): string {
   if (routine.runTemplate.target.kind === "agent_org") {
-    return `Agent Org: ${routine.runTemplate.target.agentOrgId}`;
+    return `Agent Team: ${routine.runTemplate.target.agentOrgId}`;
   }
   return routine.runTemplate.target.agentDefinitionId ?? "Default agent";
 }

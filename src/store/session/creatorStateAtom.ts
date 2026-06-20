@@ -104,9 +104,9 @@ export interface SessionCreatorState {
   source: SessionSource | null;
   /** Selected AgentDefinition ID for Rust agents */
   selectedAgentDefinitionId: string | null;
-  /** Selected Agent Org ID when targetKind is agent_org */
+  /** Selected Agent Team ID when targetKind is agent_org */
   selectedAgentOrgId: string | null;
-  /** Display name of the selected agent (Rust, CLI, or Agent Org) */
+  /** Display name of the selected agent (Rust, CLI, or Agent Team) */
   agentName: string | null;
   /** Icon identifier for the selected agent */
   agentIconId: string | null;
@@ -271,7 +271,7 @@ export const sessionTargetKindAtom = atom(
 );
 
 /**
- * Derived atom for the selected Agent Org ID.
+ * Derived atom for the selected Agent Team ID.
  */
 export const selectedAgentOrgIdAtom = atom(
   (get) => get(sessionCreatorStateAtom).selectedAgentOrgId,
@@ -291,7 +291,7 @@ export const selectedAgentOrgIdAtom = atom(
 );
 
 /**
- * Derived atom for the selected target's display name (Rust, CLI, or Agent Org).
+ * Derived atom for the selected target's display name (Rust, CLI, or Agent Team).
  */
 export const agentNameAtom = atom(
   (get) => get(sessionCreatorStateAtom).agentName

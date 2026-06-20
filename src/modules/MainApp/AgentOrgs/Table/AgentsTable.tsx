@@ -2,13 +2,13 @@
  * AgentsTable — Unified list of every available agent definition.
  *
  * Combines built-in agents (OS / SDE / Wingman …) and the user's custom
- * agents into a single `SettingsTable` rendered inside the Agent Orgs
+ * agents into a single `SettingsTable` rendered inside the Agent Teams
  * page. Rows are clickable / have an explicit "View" button that opens
  * the existing multi-tab detail view inside a WorkStation `agent-config`
  * tab (mirroring the skill-preview pattern).
  *
  * No second-level sidebar: this table replaces the agent navigation that
- * previously lived under "Agent & Org → Agents" in `SettingsSidebar`.
+ * previously lived under "Agent Teams → Agents" in `SettingsSidebar`.
  */
 import { Plus, Trash2 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";

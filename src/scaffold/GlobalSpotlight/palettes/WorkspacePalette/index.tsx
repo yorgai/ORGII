@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import { repoApi } from "@src/api/tauri/repo";
 import Message from "@src/components/Message";
+import { cachedReposAtom } from "@src/store/repo";
 import { addWorkspaceInitialStageAtom } from "@src/store/ui/overlayAtom";
 import {
   isMultiRootWorkspaceAtom,
@@ -111,6 +112,7 @@ export const WorkspacePalette: React.FC<WorkspacePaletteProps> = ({
       openFolderLabel: t("actions.openFolder"),
       addFolderLabel: t("selectors.repo.pathImport.addLabel"),
       sectionCurrentLabel: t("selectors.repo.sections.current"),
+      sectionRecentLabel: t("selectors.repo.sections.recent", "Recent"),
       sectionSystemPathsLabel: t("selectors.repo.sections.systemPaths"),
       sectionExternalRecentLabel: t("selectors.repo.sections.usedElsewhere"),
       sectionRepoLabel: t("selectors.repo.sections.repo"),
@@ -188,6 +190,7 @@ export const WorkspacePalette: React.FC<WorkspacePaletteProps> = ({
       currentRepoId,
       searchQuery,
     });
+  const cachedRepos = useAtomValue(cachedReposAtom);
 
   const existingRepoPaths = useMemo(
     () => repos.map((repo) => repo.fs_uri ?? "").filter(Boolean),
@@ -440,6 +443,7 @@ export const WorkspacePalette: React.FC<WorkspacePaletteProps> = ({
         openPathItem,
         filteredRepos,
         externalRecentRepos,
+        recentCachedRepos: cachedRepos,
         currentRepoId,
         isMultiRoot,
         isManageMode,
@@ -466,6 +470,7 @@ export const WorkspacePalette: React.FC<WorkspacePaletteProps> = ({
       }),
     [
       addMenuKind,
+      cachedRepos,
       currentRepoId,
       externalRecentRepos,
       filteredRepos,

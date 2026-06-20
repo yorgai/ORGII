@@ -22,9 +22,9 @@
     "indexing": "Indizierung",
     "index": "Index",
     "billing": "Abrechnung",
-    "agentOrgs": "Agents & Orgs",
+    "agentOrgs": "Agent & Team",
     "agents": "Agents",
-    "org": "Org",
+    "org": "Team",
     "coreSettings": "Kern",
     "appSettings": "App-Einstellungen",
     "terminal": "Terminal",
@@ -103,8 +103,8 @@
       "manage": "Verwalten",
       "core": "Kern",
       "agent": "Agent",
-      "org": "Org",
-      "agentOrgs": "Agents & Orgs"
+      "org": "Team",
+      "agentOrgs": "Agent & Team"
     },
     "groupBy": {
       "title": "Gruppieren nach",

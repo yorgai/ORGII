@@ -1573,7 +1573,7 @@
     "deleteConfirmMessage": "설정 파일에서 서버가 제거됩니다. 활성 세션이 끊깁니다."
   },
   "agentOrgs": {
-    "title": "Agent 조직",
+    "title": "Agent 팀",
     "running": "실행 중",
     "fires": "회 실행",
     "addRoutine": "Routine 추가",
@@ -1616,13 +1616,13 @@
     "enabledDesc": "이 정책을 활성화하거나 비활성화합니다",
     "disabled": "비활성화됨",
     "noTemplates": "템플릿이 없습니다",
-    "addOrg": "조직 추가",
+    "addOrg": "Agent 팀 추가",
     "addAgent": "Agent 추가",
     "agentSections": {
       "builtInAgents": "기본 제공 Agents",
       "customAgents": "사용자 정의 Agents",
       "cli": "CLI Agents",
-      "orgs": "조직"
+      "orgs": "팀"
     },
     "memorySections": {
       "personalMemory": "개인",
@@ -1814,13 +1814,14 @@
     "noMemory": "아직 Memory 없음",
     "memoryDescription": "Memory는 멤버가 세션 간에 참조할 수 있는 지식과 컨텍스트를 저장합니다.",
     "tabs": {
-      "org": "조직",
+      "org": "팀",
       "agents": "멤버",
       "integrations": "통합",
-      "rules": "규칙"
+      "rules": "규칙",
+      "orgs": "팀"
     },
     "searchPlaceholder": "규칙 검색…",
-    "searchOrgsPlaceholder": "조직 검색...",
+    "searchOrgsPlaceholder": "팀 검색...",
     "searchAgentsPlaceholder": "멤버 검색...",
     "searchMemoryPlaceholder": "Memory 검색...",
     "searchIntegrationsPlaceholder": "Integrations 검색...",
@@ -1892,7 +1893,7 @@
     "orgWizard": {
       "title": "Org 추가",
       "orgName": "Org 이름",
-      "orgNameDesc": "이 Agent 조직의 이름",
+      "orgNameDesc": "이 Agent 팀의 이름",
       "orgNamePlaceholder": "예: 엔지니어링 팀",
       "orgDescription": "설명",
       "orgDescriptionDesc": "이 조직의 역할에 대한 선택적 요약",
@@ -1949,7 +1950,7 @@
       },
       "dangerZone": "위험 구역",
       "deleteOrg": "이 Org 삭제",
-      "deleteOrgDesc": "이 Agent Org를 영구적으로 삭제합니다. 멤버 Agent는 영향을 받지 않습니다. 이 작업은 되돌릴 수 없습니다",
+      "deleteOrgDesc": "이 Agent 팀을 영구적으로 삭제합니다. 멤버 Agent는 영향을 받지 않습니다. 이 작업은 되돌릴 수 없습니다",
       "deleteThisOrg": "이 Org 삭제"
     },
     "agentWizard": {
@@ -2262,18 +2263,18 @@
         "skip": "Skip and continue"
       }
     },
-    "emptySelectionTitle": "멤버 또는 Agent Org 선택",
-    "emptySelectionSubtitle": "사이드바에서 Agent 또는 Agent Org를 선택해 보고 구성하세요.",
+    "emptySelectionTitle": "멤버 또는 Agent 팀 선택",
+    "emptySelectionSubtitle": "사이드바에서 Agent 또는 Agent 팀을 선택해 보고 구성하세요.",
     "applicableWorkspace": "적용 Workspace",
     "tableTabs": {
       "agents": "Agents",
-      "orgs": "Orgs",
+      "orgs": "팀",
       "clis": "CLIs"
     },
     "searchAgents": "Agents 검색…",
-    "searchOrgs": "orgs 검색…",
+    "searchOrgs": "팀 검색…",
     "noAgents": "아직 Agents가 없습니다",
-    "noOrgs": "아직 orgs가 없습니다",
+    "noOrgs": "아직 팀이 없습니다",
     "orgMembers": "멤버",
     "agentLoadFailed": "Agent 정의를 불러오지 못했습니다",
     "agentSaved": "Agent가 저장되었습니다",
@@ -2282,12 +2283,12 @@
     "agentDeleteFailed": "Agent 삭제에 실패했습니다",
     "deleteAgentTitle": "Agent를 삭제할까요?",
     "deleteAgentMessage": "\"{{name}}\"이(가) 영구적으로 제거됩니다. 이 작업은 취소할 수 없습니다.",
-    "orgCreated": "조직이 생성되었습니다",
-    "orgUpdated": "조직이 업데이트되었습니다",
-    "orgDeleted": "조직이 삭제되었습니다",
-    "orgSaveFailed": "조직 저장에 실패했습니다",
-    "orgDeleteFailed": "조직 삭제에 실패했습니다",
-    "deleteOrgTitle": "조직을 삭제할까요?",
+    "orgCreated": "팀이 생성되었습니다",
+    "orgUpdated": "팀이 업데이트되었습니다",
+    "orgDeleted": "팀이 삭제되었습니다",
+    "orgSaveFailed": "팀 저장 실패",
+    "orgDeleteFailed": "팀 삭제 실패",
+    "deleteOrgTitle": "팀을 삭제할까요?",
     "deleteOrgMessage": "\"{{name}}\"이(가) 영구적으로 제거됩니다. 이 작업은 취소할 수 없습니다."
   },
   "databases": {
@@ -2450,7 +2451,7 @@
     "noProjects": "사용 가능한 Project가 없습니다",
     "target": "Target",
     "agentResponsible": "이 루틴을 담당할 Agent",
-    "agentResponsiblePlaceholder": "Agent 또는 Agent Org 선택",
+    "agentResponsiblePlaceholder": "Agent 또는 Agent 팀 선택",
     "workspacePathPlaceholder": "Workspace 선택",
     "prompt": "Prompt",
     "promptPlaceholder": "Tell the agent what to do when this routine fires...",

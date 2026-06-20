@@ -53,7 +53,7 @@ import { McpLogoIcon } from "@src/assets/channelIcons/McpLogoIcon";
  * Registry entry for every URL segment that can appear in a MainApp route.
  * `labelKey` is a namespaced i18n key (`"<ns>:<key>"`).
  * `icon` is the shared visual identity for that segment, reused across
- * Agent Orgs sidebar, Settings sidebar, Global Spotlight, breadcrumbs, etc.
+ * Agent Teams sidebar, Settings sidebar, Global Spotlight, breadcrumbs, etc.
  */
 export interface SegmentRegistryEntry {
   labelKey: string;

@@ -1573,7 +1573,7 @@
     "deleteConfirmMessage": "這將從設定檔中删除該伺服器，正在執行的會話將斷開連線。"
   },
   "agentOrgs": {
-    "title": "Agent 組織",
+    "title": "Agent團隊",
     "running": "運行中",
     "fires": "次觸發",
     "addRoutine": "添加 Routine",
@@ -1616,13 +1616,13 @@
     "enabledDesc": "啓用或禁用此政策",
     "disabled": "已禁用",
     "noTemplates": "暫無模板",
-    "addOrg": "添加組織",
+    "addOrg": "新增Agent團隊",
     "addAgent": "添加 Agent",
     "agentSections": {
       "builtInAgents": "內置 Agents",
       "customAgents": "自訂 Agents",
       "cli": "CLI Agent",
-      "orgs": "組織"
+      "orgs": "團隊"
     },
     "memorySections": {
       "personalMemory": "個人",
@@ -1814,13 +1814,14 @@
     "noMemory": "暫無 Memory 條目",
     "memoryDescription": "Memory 存儲成員可跨會話引用的知識和上下文。",
     "tabs": {
-      "org": "組織",
+      "org": "團隊",
       "agents": "成員",
       "integrations": "集成",
-      "rules": "規則"
+      "rules": "規則",
+      "orgs": "團隊"
     },
     "searchPlaceholder": "搜索規則…",
-    "searchOrgsPlaceholder": "搜索組織...",
+    "searchOrgsPlaceholder": "搜尋團隊...",
     "searchAgentsPlaceholder": "搜索成員...",
     "searchMemoryPlaceholder": "搜索 Memory...",
     "searchIntegrationsPlaceholder": "搜索 Integrations...",
@@ -1892,7 +1893,7 @@
     "orgWizard": {
       "title": "添加組織",
       "orgName": "組織名稱",
-      "orgNameDesc": "此 Agent 組織的名稱",
+      "orgNameDesc": "此 Agent 團隊的名稱",
       "orgNamePlaceholder": "例如：工程團隊",
       "orgDescription": "描述",
       "orgDescriptionDesc": "對該組織職能的可選簡介",
@@ -1949,7 +1950,7 @@
       },
       "dangerZone": "危險區域",
       "deleteOrg": "刪除此 Org",
-      "deleteOrgDesc": "永久刪除此 Agent Org。成員 Agent 不會受影響。此操作無法撤銷",
+      "deleteOrgDesc": "永久刪除此 Agent 團隊。成員 Agent 不會受影響。此操作無法撤銷",
       "deleteThisOrg": "刪除此 Org"
     },
     "agentWizard": {
@@ -2262,18 +2263,18 @@
         "skip": "跳過並繼續"
       }
     },
-    "emptySelectionTitle": "選擇成員或 Agent 組織",
-    "emptySelectionSubtitle": "從側邊欄選擇一個 Agent 或 Agent 組織以查看和配置。",
+    "emptySelectionTitle": "選擇成員或 Agent 團隊",
+    "emptySelectionSubtitle": "從側邊欄選擇一個 Agent 或 Agent 團隊以查看和配置。",
     "applicableWorkspace": "適用 Workspace",
     "tableTabs": {
       "agents": "Agents",
-      "orgs": "Orgs",
+      "orgs": "團隊",
       "clis": "CLIs"
     },
     "searchAgents": "搜尋 Agents…",
-    "searchOrgs": "搜尋 orgs…",
+    "searchOrgs": "搜尋團隊…",
     "noAgents": "暫無 Agents",
-    "noOrgs": "暫無 orgs",
+    "noOrgs": "暫無團隊",
     "orgMembers": "成員",
     "agentLoadFailed": "載入 Agent 定義失敗",
     "agentSaved": "Agent 已儲存",
@@ -2282,12 +2283,12 @@
     "agentDeleteFailed": "刪除 Agent 失敗",
     "deleteAgentTitle": "刪除 Agent？",
     "deleteAgentMessage": "\"{{name}}\" 將被永久移除。此操作無法復原。",
-    "orgCreated": "組織已建立",
-    "orgUpdated": "組織已更新",
-    "orgDeleted": "組織已刪除",
-    "orgSaveFailed": "儲存組織失敗",
-    "orgDeleteFailed": "刪除組織失敗",
-    "deleteOrgTitle": "刪除組織？",
+    "orgCreated": "團隊已建立",
+    "orgUpdated": "團隊已更新",
+    "orgDeleted": "團隊已刪除",
+    "orgSaveFailed": "儲存團隊失敗",
+    "orgDeleteFailed": "刪除團隊失敗",
+    "deleteOrgTitle": "刪除團隊？",
     "deleteOrgMessage": "\"{{name}}\" 將被永久移除。此操作無法復原。"
   },
   "databases": {

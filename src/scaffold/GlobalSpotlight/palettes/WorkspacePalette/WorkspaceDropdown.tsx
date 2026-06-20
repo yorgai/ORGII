@@ -36,7 +36,7 @@ import {
   useDropdownEngine,
 } from "@src/hooks/dropdown";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
-import { REPO_KIND } from "@src/store/repo";
+import { REPO_KIND, cachedReposAtom } from "@src/store/repo";
 import {
   isMultiRootWorkspaceAtom,
   setWorkspaceFoldersAtom,
@@ -64,10 +64,16 @@ type DropdownRepoItem =
   | { kind: "repo"; repo: RepoItem }
   | { kind: "workspace"; entry: WorkspaceSwitchEntry }
   | { kind: "openPath"; item: SpotlightItem };
+type DropdownRepoRowItem = Extract<DropdownRepoItem, { kind: "repo" }>;
+type DropdownWorkspaceRowItem = Extract<
+  DropdownRepoItem,
+  { kind: "workspace" }
+>;
 
 type WorkspaceDropdownSectionKey =
   | "openPath"
   | "current"
+  | "recent"
   | "multiRepoWorkspace"
   | "system"
   | "externalRecent"
@@ -240,6 +246,7 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
       currentRepoId,
       searchQuery,
     });
+  const cachedRepos = useAtomValue(cachedReposAtom);
 
   const existingRepoPaths = useMemo(
     () => repos.map((repo) => repo.fs_uri ?? "").filter(Boolean),
@@ -304,16 +311,16 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
 
   const sections = useMemo<WorkspaceDropdownSection[]>(() => {
     const allRepos = [...leadingRepos, ...filteredRepos];
-    const currentItems: DropdownRepoItem[] = [];
-    const systemItems: DropdownRepoItem[] = [];
-    const externalRecentItems: DropdownRepoItem[] = externalRecentRepos.map(
+    const currentItems: DropdownRepoRowItem[] = [];
+    const systemItems: DropdownRepoRowItem[] = [];
+    const externalRecentItems: DropdownRepoRowItem[] = externalRecentRepos.map(
       (repo) => ({ kind: "repo", repo })
     );
-    const folderWorkspaceItems: DropdownRepoItem[] = [];
-    const repoItems: DropdownRepoItem[] = [];
+    const folderWorkspaceItems: DropdownRepoRowItem[] = [];
+    const repoItems: DropdownRepoRowItem[] = [];
 
     for (const repo of allRepos) {
-      const item: DropdownRepoItem = { kind: "repo", repo };
+      const item: DropdownRepoRowItem = { kind: "repo", repo };
       if (repo.id === currentRepoId) {
         currentItems.push(item);
       } else if (isSystemPathRepoItem(repo)) {
@@ -325,19 +332,55 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
       }
     }
 
+    const recentRepoRanks = new Map(
+      cachedRepos.map((repo, index) => [repo.id, index])
+    );
+    const recentRepoItems = [
+      ...repoItems,
+      ...folderWorkspaceItems,
+      ...systemItems,
+    ]
+      .filter((item) => recentRepoRanks.has(item.repo.id))
+      .sort(
+        (itemA, itemB) =>
+          (recentRepoRanks.get(itemA.repo.id) ?? Number.MAX_SAFE_INTEGER) -
+          (recentRepoRanks.get(itemB.repo.id) ?? Number.MAX_SAFE_INTEGER)
+      );
+
     // Active multi-repo workspace is the "current" selection; sits with the
     // current repo. Inactive workspaces get their own section above repos so
     // they are easy to spot.
-    const activeWorkspaceItems: DropdownRepoItem[] = [];
-    const inactiveWorkspaceItems: DropdownRepoItem[] = [];
+    const activeWorkspaceItems: DropdownWorkspaceRowItem[] = [];
+    const inactiveWorkspaceItems: DropdownWorkspaceRowItem[] = [];
     for (const entry of filteredWorkspaces) {
-      const item: DropdownRepoItem = { kind: "workspace", entry };
+      const item: DropdownWorkspaceRowItem = { kind: "workspace", entry };
       if (entry.isActive) {
         activeWorkspaceItems.push(item);
       } else {
         inactiveWorkspaceItems.push(item);
       }
     }
+
+    const recentItems = [
+      ...recentRepoItems,
+      ...inactiveWorkspaceItems.sort((itemA, itemB) =>
+        itemB.entry.workspace.updatedAt.localeCompare(
+          itemA.entry.workspace.updatedAt
+        )
+      ),
+    ].slice(0, 3);
+    const recentRepoIds = new Set(
+      recentItems
+        .filter((item): item is DropdownRepoRowItem => item.kind === "repo")
+        .map((item) => item.repo.id)
+    );
+    const recentWorkspaceIds = new Set(
+      recentItems
+        .filter(
+          (item): item is DropdownWorkspaceRowItem => item.kind === "workspace"
+        )
+        .map((item) => item.entry.workspace.workspaceId)
+    );
 
     const nextSections: WorkspaceDropdownSection[] = [];
     if (searchQuery.trim() && openPathItem) {
@@ -354,18 +397,55 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
         items: [...activeWorkspaceItems, ...currentItems],
       });
     }
-    if (inactiveWorkspaceItems.length > 0) {
+    const nonCurrentRecentItems = recentItems.filter((item) => {
+      if (item.kind === "repo") return item.repo.id !== currentRepoId;
+      return !item.entry.isActive;
+    });
+    if (nonCurrentRecentItems.length > 0) {
+      nextSections.push({
+        key: "recent",
+        label: t("selectors.repo.sections.recent", "Recent"),
+        items: nonCurrentRecentItems,
+      });
+    }
+    const regularRepoItems = repoItems.filter(
+      (item) => !recentRepoIds.has(item.repo.id)
+    );
+    if (regularRepoItems.length > 0) {
+      nextSections.push({
+        key: "repo",
+        label: t("selectors.repo.sections.repo"),
+        items: regularRepoItems,
+      });
+    }
+    const regularInactiveWorkspaceItems = inactiveWorkspaceItems.filter(
+      (item) => !recentWorkspaceIds.has(item.entry.workspace.workspaceId)
+    );
+    if (regularInactiveWorkspaceItems.length > 0) {
       nextSections.push({
         key: "multiRepoWorkspace",
         label: t("workspaceForm.multiRepoWorkspace", "Multi-Repo Workspace"),
-        items: inactiveWorkspaceItems,
+        items: regularInactiveWorkspaceItems,
       });
     }
-    if (systemItems.length > 0) {
+    const regularFolderWorkspaceItems = folderWorkspaceItems.filter(
+      (item) => !recentRepoIds.has(item.repo.id)
+    );
+    if (regularFolderWorkspaceItems.length > 0) {
+      nextSections.push({
+        key: "workspace",
+        label: t("selectors.repo.sections.workspace"),
+        items: regularFolderWorkspaceItems,
+      });
+    }
+    const regularSystemItems = systemItems.filter(
+      (item) => !recentRepoIds.has(item.repo.id)
+    );
+    if (regularSystemItems.length > 0) {
       nextSections.push({
         key: "system",
         label: t("selectors.repo.sections.systemPaths"),
-        items: systemItems,
+        items: regularSystemItems,
       });
     }
     if (externalRecentItems.length > 0) {
@@ -375,24 +455,11 @@ export const WorkspaceDropdown: React.FC<WorkspaceDropdownProps> = ({
         items: externalRecentItems,
       });
     }
-    if (folderWorkspaceItems.length > 0) {
-      nextSections.push({
-        key: "workspace",
-        label: t("selectors.repo.sections.workspace"),
-        items: folderWorkspaceItems,
-      });
-    }
-    if (repoItems.length > 0) {
-      nextSections.push({
-        key: "repo",
-        label: t("selectors.repo.sections.repo"),
-        items: repoItems,
-      });
-    }
     return nextSections;
   }, [
     filteredRepos,
     filteredWorkspaces,
+    cachedRepos,
     currentRepoId,
     externalRecentRepos,
     leadingRepos,

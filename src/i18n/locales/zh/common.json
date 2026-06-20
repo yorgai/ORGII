@@ -622,7 +622,7 @@
     "selectSource": "选择来源",
     "selectAgent": "选择 Agent",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "选择 Agent 或 Agent org...",
+    "searchAgentOrOrg": "选择 Agent 或 Agent 团队...",
     "tplSelectAgentOrOrg": "选择 {agent}",
     "cliAgent": "CLI Agent",
     "placeholderModel": "模型",
@@ -1240,6 +1240,7 @@
         "nonCoding": "工作区",
         "pinned": "固定",
         "current": "当前",
+        "recent": "最近",
         "repo": "仓库",
         "systemPaths": "系统路径",
         "usedElsewhere": "在其他位置使用",
@@ -1956,7 +1957,7 @@
     "cacheHero": "{{pct}}% 来自缓存 · 本轮复用约 {{tokens}}",
     "cacheHeroSub": "Prompt 缓存让复用前缀的费用降到约 1/10。",
     "headroom": "还剩 {{tokens}} 空间",
-    "autoCompactNote": "上下文填满前 ORGII 会自动整理较早的内容——你的工作不会丢失。"
+    "autoCompactNote": "即将自动总结上下文"
   },
   "relativeDate": {
     "today": "今天",

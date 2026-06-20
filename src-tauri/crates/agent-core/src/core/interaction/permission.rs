@@ -356,8 +356,11 @@ impl PermissionProvider for AgentPermissionManager {
         tool_call_id: &str,
         args: &serde_json::Value,
     ) -> Result<PermissionVerdict, ()> {
-        // Check pattern-level always-allow with actual args
-        if self.check_always_allowed(tool_name, args).await {
+        // Check pattern-level always-allow with actual args. External terminal launches
+        // must still surface an explicit approval because they run outside the backend.
+        if args.get("terminal_target").and_then(|value| value.as_str()) != Some("external")
+            && self.check_always_allowed(tool_name, args).await
+        {
             return Ok(PermissionVerdict::AlwaysAllow);
         }
 

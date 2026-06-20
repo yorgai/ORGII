@@ -609,7 +609,7 @@
     "selectSource": "Kaynak seç",
     "selectAgent": "Agent seç",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Agent veya Agent org seç...",
+    "searchAgentOrOrg": "Agent veya Agent ekibi seç...",
     "tplSelectAgentOrOrg": "{agent} seç",
     "cliAgent": "CLI Agent",
     "placeholderModel": "model",
@@ -1936,6 +1936,7 @@
     },
     "warningHint": "Bağlam doluyor. En iyi sonuçlar için yakında yeni bir oturum başlatın.",
     "dangerHint": "Bağlam neredeyse dolu. Ayrıntı kaybetmemek için yeni bir oturum başlatın.",
+    "autoCompactNote": "Bağlam yakında özetlenecek",
     "startNewSession": "Yeni oturum başlat"
   },
   "relativeDate": {

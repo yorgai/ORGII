@@ -1,5 +1,5 @@
 /**
- * Org chart configuration — tree depth limit, agent color map, agent options builder.
+ * Team chart configuration — tree depth limit, agent color map, agent options builder.
  */
 import type { SelectOption } from "@src/components/Select";
 import type {

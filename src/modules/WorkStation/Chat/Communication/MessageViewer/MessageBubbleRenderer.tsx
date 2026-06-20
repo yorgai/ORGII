@@ -35,7 +35,7 @@ export const BubbleWrapper: React.FC<{
   total: number;
   onMessageClick?: (eventId: string) => void;
   /**
-   * Called when an Agent Org task-list card's navigate arrow is clicked.
+   * Called when an Agent Team task-list card's navigate arrow is clicked.
    * Wired by `MessageViewer` to switch the Communication tab to the Todo
    * Kanban view. No-op when the parent does not provide a handler.
    */

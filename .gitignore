@@ -97,6 +97,8 @@ chathistory.json
 # IDE-specific configuration - all settings.json files are tracked
 
 # Local sidecar symlinks (machine-specific paths)
+ORG2 Helper (Backend)-*
+src-tauri/bin/ORG2 Helper (Semantic)-*
 ORGII Helper (Backend)-*
 src-tauri/bin/ORGII Helper (Semantic)-*
 SOYD Helper (Backend)-*

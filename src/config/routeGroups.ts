@@ -110,7 +110,7 @@ export const APP_HOME_ROUTES = {
     "chart-no-axes-gantt",
     "Monthly and daily summaries of product changes"
   ),
-  // `agentOrgs` route points at the Agent Orgs settings namespace while
+  // `agentOrgs` route points at the Agent Teams settings namespace while
   // remaining on `APP_HOME_ROUTES` for existing route consumers.
   // viewMode MUST be `workStation` to match the rest of `/settings/*`.
   agentOrgs: route(
@@ -161,7 +161,7 @@ export const APP_SETTINGS_ROUTE = route(
   "workStation",
   "app",
   "settings",
-  "Unified Settings surface \u2014 Core (app settings + integrations), Agent, and Org"
+  "Unified Settings surface \u2014 Core (app settings + integrations), Agent, and Team"
 );
 
 // ============================================================================

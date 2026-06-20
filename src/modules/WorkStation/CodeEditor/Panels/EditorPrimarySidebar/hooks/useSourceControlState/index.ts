@@ -128,6 +128,7 @@ export function useSourceControlState(
   const {
     handleStageToggle,
     handleDiscard,
+    handleDiscardFiles,
     handleStageAll,
     handleUnstageAll,
     handleDiscardAll,
@@ -407,6 +408,7 @@ export function useSourceControlState(
       onFileSelect: handleFileSelect,
       onStageToggle: handleStageToggle,
       onDiscard: handleDiscard,
+      onDiscardFiles: handleDiscardFiles,
       onStageAll: handleStageAll,
       onUnstageAll: handleUnstageAll,
       onDiscardAll: handleDiscardAll,
@@ -469,6 +471,7 @@ export function useSourceControlState(
       handleFileSelect,
       handleStageToggle,
       handleDiscard,
+      handleDiscardFiles,
       handleStageAll,
       handleUnstageAll,
       handleDiscardAll,

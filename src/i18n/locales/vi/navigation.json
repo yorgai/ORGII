@@ -22,9 +22,9 @@
     "indexing": "Index",
     "index": "Index",
     "billing": "Thanh toán",
-    "agentOrgs": "Agent & Tổ chức",
+    "agentOrgs": "Agent và nhóm",
     "agents": "Agents",
-    "org": "Tổ chức",
+    "org": "Nhóm",
     "coreSettings": "Lõi",
     "appSettings": "Cài đặt ứng dụng",
     "terminal": "Terminal",
@@ -103,8 +103,8 @@
       "manage": "Quản lý",
       "core": "Lõi",
       "agent": "Agent",
-      "org": "Tổ chức",
-      "agentOrgs": "Agent & Tổ chức"
+      "org": "Nhóm",
+      "agentOrgs": "Agent và nhóm"
     },
     "groupBy": {
       "title": "Nhóm theo",

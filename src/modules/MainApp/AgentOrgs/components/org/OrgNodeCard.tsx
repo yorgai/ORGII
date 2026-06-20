@@ -1,5 +1,5 @@
 /**
- * OrgNodeCard — individual node in the org chart.
+ * OrgNodeCard — individual node in the team chart.
  *
  * Shows member name, role, agent badge.
  * Hover reveals action buttons: add child, edit, delete. When `readOnly`

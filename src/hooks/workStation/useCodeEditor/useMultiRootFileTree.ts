@@ -282,7 +282,7 @@ export function useMultiRootFileTree(
       setFileTree((prev) =>
         prev.map((rootNode) => ({
           ...rootNode,
-          expanded: true,
+          expanded: false,
           children: rootNode.children
             ? collapseNodes(rootNode.children)
             : rootNode.children,

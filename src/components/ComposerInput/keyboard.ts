@@ -160,6 +160,15 @@ function moveCaretRightPastPill(
 
 const DROPDOWN_NAV_KEYS = ["ArrowUp", "ArrowDown", "Enter", "Tab", "Escape"];
 
+export function canStartSlashCommand(
+  text: string,
+  slashIndex: number
+): boolean {
+  if (slashIndex < 0) return false;
+  const previousChar = slashIndex > 0 ? text[slashIndex - 1] : "";
+  return !previousChar || /\s/.test(previousChar);
+}
+
 export interface MentionState {
   active: boolean;
   /**
@@ -527,16 +536,17 @@ export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
 
     if (event.key === "/" && !ctx.getAtMention().active) {
       // Let the character land in the editor, then mark the slash command as
-      // active if the input event did not already activate it. This
-      // intentionally mirrors @ mention behavior: slash commands are
-      // triggerable from non-empty input too, with the query starting after the
-      // typed `/`.
+      // active if the input event did not already activate it. Slash commands
+      // are triggerable from non-empty input when `/` starts a token, not when
+      // it appears inside path-like text such as `github/x/y`.
       setTimeout(() => {
         if (ctx.getSlashCommand().active || ctx.getAtMention().active) return;
         const liveHost = ctx.host();
         if (!liveHost) return;
         const range = rangeInsideHost(liveHost);
         const offset = caretTextOffset(liveHost, range);
+        const text = ctx.getText().slice(0, offset);
+        if (!canStartSlashCommand(text, offset - 1)) return;
         ctx.setSlashCommand({
           active: true,
           startOffset: offset,

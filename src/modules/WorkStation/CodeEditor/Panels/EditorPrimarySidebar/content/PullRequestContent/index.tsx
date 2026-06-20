@@ -6,13 +6,7 @@
  * Clicking a row fires `onHistorySelectionChange` with `type: "pr"`.
  */
 import { useAtomValue } from "jotai";
-import {
-  ChevronDown,
-  ChevronRight,
-  GitPullRequest,
-  Loader2,
-  TriangleAlert,
-} from "lucide-react";
+import { GitPullRequest, Loader2, TriangleAlert } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -20,15 +14,17 @@ import type { OpenPRItem } from "@src/api/tauri/github";
 import Tooltip from "@src/components/Tooltip";
 import { TreeRowBase, type TreeRowNode } from "@src/components/TreeRow";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
-import { TYPOGRAPHY } from "@src/modules/WorkStation/shared/tokens";
 import {
-  COUNT_BADGE,
-  getCountBadgeSizeClass,
-} from "@src/modules/WorkStation/shared/tokens";
-import { Placeholder } from "@src/modules/shared/layouts/blocks";
+  type SectionStatus,
+  SectionStatusRow,
+} from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/components/SectionStatusRow";
+import { TreeSectionHeader } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/components/TreeSectionHeader";
+import { TYPOGRAPHY } from "@src/modules/WorkStation/shared/tokens";
 import { getPrStatusLabelKey } from "@src/shared/pr/prStatus";
 import {
   workstationAllOpenPrsAtom,
+  workstationOpenPrsErrorAtom,
+  workstationOpenPrsLoadStateAtom,
   workstationPrAtom,
   workstationPrCallbackAtom,
 } from "@src/store/workstation/codeEditor/workstationPrAtom";
@@ -183,6 +179,8 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
   } = useAtomValue(workstationPrAtom);
   const { createPr: onCreatePr } = useAtomValue(workstationPrCallbackAtom);
   const allOpenPrs = useAtomValue(workstationAllOpenPrsAtom);
+  const openPrsLoadState = useAtomValue(workstationOpenPrsLoadStateAtom);
+  const openPrsError = useAtomValue(workstationOpenPrsErrorAtom);
 
   const [selectedPrNumber, setSelectedPrNumber] = useState<number | null>(null);
   const [localCreateError, setLocalCreateError] = useState<string | null>(null);
@@ -241,24 +239,24 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
     }
   }, [onCreatePr, prCreating]);
 
-  const openSectionNode: TreeRowNode = {
-    id: "open-prs",
-    name: "Open",
-    path: "open-prs",
-    type: "directory",
-    expanded: !openCollapsed,
-    icon: (
-      <div className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center">
-        {openCollapsed ? (
-          <ChevronRight size={14} className="text-text-3" />
-        ) : (
-          <ChevronDown size={14} className="text-text-3" />
-        )}
-      </div>
-    ),
-  };
-
   const hasCurrentBranchPr = !!currentBranchPrFromList || !!parsedAtomPr;
+
+  const openStatus: SectionStatus | null =
+    openPrsLoadState === "loading" && orderedPrs.length === 0
+      ? { kind: "loading", message: t("actions.loading", "Loading…") }
+      : openPrsLoadState === "error" && orderedPrs.length === 0
+        ? {
+            kind: "error",
+            message:
+              openPrsError ??
+              t("git.pr.failedToLoad", "Failed to load pull requests"),
+          }
+        : orderedPrs.length === 0
+          ? {
+              kind: "empty",
+              message: t("labels.noPullRequest", "No pull request"),
+            }
+          : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -312,27 +310,17 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
       {/* PR tree list */}
       <div className="flex flex-1 flex-col overflow-y-auto">
         {/* Open section header */}
-        <TreeRowBase
-          node={openSectionNode}
-          depth={0}
-          onClick={() => setOpenCollapsed((prev) => !prev)}
-          showIndentGuides={false}
-          className="[&_.min-w-0]:text-[11px] [&_.min-w-0]:font-medium [&_.min-w-0]:uppercase [&_.min-w-0]:text-text-2"
-        >
-          <span
-            className={`${COUNT_BADGE.base} ${getCountBadgeSizeClass(orderedPrs.length)} ${COUNT_BADGE.primary}`}
-          >
-            {orderedPrs.length}
-          </span>
-        </TreeRowBase>
+        <TreeSectionHeader
+          id="open-prs"
+          title="Open"
+          collapsed={openCollapsed}
+          count={orderedPrs.length}
+          onToggle={() => setOpenCollapsed((prev) => !prev)}
+        />
 
         {!openCollapsed &&
-          (orderedPrs.length === 0 ? (
-            <Placeholder
-              variant="empty"
-              placement="sidebar"
-              title={t("labels.noPullRequest", "No pull request")}
-            />
+          (openStatus ? (
+            <SectionStatusRow status={openStatus} />
           ) : (
             orderedPrs.map((pr) => (
               <PrRow

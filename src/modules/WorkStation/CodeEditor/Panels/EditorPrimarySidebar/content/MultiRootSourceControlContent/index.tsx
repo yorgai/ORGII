@@ -24,12 +24,10 @@ import type { GitWorktreeEntry } from "@src/api/http/git/types";
 import { FolderHeaderRow } from "@src/modules/WorkStation/shared/FolderHeaderRow";
 import { FOLDER_HEADER } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { workspaceGitStatusMapAtom } from "@src/store/git";
 import { reposAtom } from "@src/store/repo";
 import { activeFolderAtom } from "@src/store/workspace/derived";
 import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
 import type { GitFile } from "@src/types/git/types";
-import type { GitRepositoryStatus } from "@src/types/session/steps";
 import type { WorkspaceFolder } from "@src/types/workspace";
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
 import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
@@ -77,17 +75,6 @@ export interface MultiRootSourceControlContentHandle {
 
 export interface FolderSectionHandle {
   refresh: () => Promise<void>;
-}
-
-function computeChangeCount(status: GitRepositoryStatus | undefined): number {
-  if (!status) return 0;
-  const files = status.working_directory?.files ?? [];
-  const staged = files.filter((file) => file.staged).length;
-  const unstaged = files.filter(
-    (file) => !file.staged && file.status !== "?"
-  ).length;
-  const untracked = files.filter((file) => file.status === "?").length;
-  return staged + unstaged + untracked;
 }
 
 function toAbsoluteFolderFile(file: GitFile, folderPath: string): GitFile {
@@ -158,7 +145,6 @@ interface FolderSectionProps {
   navigateWithoutSelecting?: boolean;
   defaultExpanded: boolean;
   isActive: boolean;
-  changeCount: number;
   sectionFilter?: "uncommitted" | "staged" | "unstaged";
 }
 
@@ -174,7 +160,6 @@ const FolderSection = React.forwardRef<FolderSectionHandle, FolderSectionProps>(
       navigateWithoutSelecting,
       defaultExpanded,
       isActive,
-      changeCount,
       sectionFilter,
     },
     ref
@@ -214,7 +199,6 @@ const FolderSection = React.forwardRef<FolderSectionHandle, FolderSectionProps>(
           expanded={expanded}
           onToggle={toggle}
           branchName={branchName}
-          badgeCount={changeCount}
         />
 
         {expanded && (
@@ -523,7 +507,6 @@ export const MultiRootSourceControlContent = React.forwardRef<
     }, [repos, workspaceFolders]);
 
     const activeFolder = useAtomValue(activeFolderAtom);
-    const gitStatusMap = useAtomValue(workspaceGitStatusMapAtom);
 
     // Track child handles via callback refs (avoids ref-during-render lint)
     const [handlesMap] = useState(() => new Map<string, FolderSectionHandle>());
@@ -581,7 +564,6 @@ export const MultiRootSourceControlContent = React.forwardRef<
             navigateWithoutSelecting={navigateWithoutSelecting}
             defaultExpanded={index < 3}
             isActive={folder.id === activeFolder?.id}
-            changeCount={computeChangeCount(gitStatusMap.get(folder.path))}
             sectionFilter={sectionFilter}
           />
         ))}

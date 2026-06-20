@@ -56,6 +56,7 @@ export const SourceControlContent: React.FC<SourceControlContentProps> = memo(
     navigateWithoutSelecting = false,
     onStageToggle,
     onDiscard,
+    onDiscardFiles,
     onStageAll,
     onUnstageAll,
     onDiscardAll,
@@ -346,6 +347,7 @@ export const SourceControlContent: React.FC<SourceControlContentProps> = memo(
           onSelect={handleFileSelectWithMultiSelect}
           onStageToggle={handleStageToggleWithMultiSelect}
           onDiscard={handleDiscardWithMultiSelect}
+          onDiscardFiles={onDiscardFiles}
           onToggleDirectory={handleToggleDirectory}
           onStageResolved={onStageResolved}
           showPathHint={false}
@@ -367,6 +369,7 @@ export const SourceControlContent: React.FC<SourceControlContentProps> = memo(
         handleFileSelectWithMultiSelect,
         handleStageToggleWithMultiSelect,
         handleDiscardWithMultiSelect,
+        onDiscardFiles,
         handleToggleDirectory,
         onStageResolved,
         repoPath,

@@ -59,6 +59,25 @@ export const workstationPrCommitMessageAtom = atom<string>("");
 export const workstationAllOpenPrsAtom = atom<OpenPRItem[]>([]);
 
 /**
+ * Load lifecycle for `workstationAllOpenPrsAtom`. Lets the PR sidebar
+ * distinguish "still fetching" from "truly empty" / "failed to fetch".
+ *   - "idle"    : not yet attempted (no repo selected)
+ *   - "loading" : in-flight request OR seeded from stale cache while refreshing
+ *   - "ready"   : last fetch succeeded (list may be empty)
+ *   - "error"   : last fetch threw (error message in `workstationOpenPrsErrorAtom`)
+ */
+export type WorkstationOpenPrsLoadState =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "error";
+
+export const workstationOpenPrsLoadStateAtom =
+  atom<WorkstationOpenPrsLoadState>("idle");
+
+export const workstationOpenPrsErrorAtom = atom<string | null>(null);
+
+/**
  * Stable ref-backed callback for triggering PR creation from Source Control UI.
  * Stored as a ref container to avoid stale closure issues with atom-stored functions.
  */

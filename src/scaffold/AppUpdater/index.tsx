@@ -279,7 +279,7 @@ function AppUpdateModal() {
       maskClosable={false}
       escToExit={!installing}
       onCancel={handleLater}
-      bodyClassName="px-5 py-4"
+      bodyClassName="p-4"
       footerTopBorder={false}
       footer={
         <div className="flex h-12 items-center gap-2 px-3">

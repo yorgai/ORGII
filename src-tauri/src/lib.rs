@@ -284,6 +284,23 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_drag::init())
+        .on_window_event(|window, event| {
+            #[cfg(target_os = "macos")]
+            match event {
+                tauri::WindowEvent::ScaleFactorChanged { .. }
+                | tauri::WindowEvent::ThemeChanged(_)
+                | tauri::WindowEvent::Focused(true) => {
+                    if let Some(webview_window) = window.app_handle().get_webview_window(window.label()) {
+                        app_window::set_traffic_light_position(
+                            &webview_window,
+                            app_window::TRAFFIC_LIGHT_X,
+                            app_window::TRAFFIC_LIGHT_Y,
+                        );
+                    }
+                }
+                _ => {}
+            }
+        })
         .invoke_handler(include!(concat!(
             env!("OUT_DIR"),
             "/tauri_invoke_handler_expr.rs"

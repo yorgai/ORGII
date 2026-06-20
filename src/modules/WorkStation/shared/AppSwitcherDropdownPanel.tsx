@@ -20,14 +20,14 @@ export interface AppSwitcherMenuItem {
   id: string;
   /**
    * Optional leading icon. When omitted, the row renders label-only.
-   * Used by the Agent Org member picker which mirrors the icon-less
+   * Used by the Agent Team member picker which mirrors the icon-less
    * chat-panel switcher style.
    */
   icon?: LucideIcon;
   label: string;
   /**
    * When true, the row is rendered greyed out and clicks are ignored.
-   * Used by the Agent Org member picker to suppress members that have
+   * Used by the Agent Team member picker to suppress members that have
    * not received any tasks yet.
    */
   disabled?: boolean;

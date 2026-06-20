@@ -38,7 +38,7 @@ describe("extractArgsSummary", () => {
     ).toBe("e20");
   });
 
-  it("parses Agent Org message cards with member ids only", () => {
+  it("parses Agent Team message cards with member ids only", () => {
     const card = parseAgentMessageCard(
       {
         recipient_member_id: "planner",

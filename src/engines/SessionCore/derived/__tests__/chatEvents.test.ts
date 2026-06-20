@@ -8,6 +8,7 @@ import {
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
+import { messagesEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
 
 function makeSnapshot(chatEvents: SessionEvent[] = []) {
   return {
@@ -83,6 +84,29 @@ describe("chatEventsAtom live streaming overlay", () => {
         createdAt: "2026-06-06T20:00:00.000Z",
         functionName: "assistant_message",
         displayText: "hello live",
+        displayStatus: "running",
+        args: { syntheticLive: true },
+        isDelta: true,
+      }),
+    ]);
+  });
+
+  it("renders live assistant text in Agent Station messages events", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-06T20:00:00.000Z"));
+    const store = createStore();
+    store.set(sessionIdAtom, "session-1");
+    store.set(derivedSnapshotAtom, makeSnapshot());
+
+    setLiveContent(store, "session-1", "hello station");
+
+    expect(store.get(messagesEventsAtom)).toEqual([
+      expect.objectContaining({
+        id: "live-assistant-session-1",
+        sessionId: "session-1",
+        createdAt: "2026-06-06T20:00:00.000Z",
+        functionName: "assistant_message",
+        displayText: "hello station",
         displayStatus: "running",
         args: { syntheticLive: true },
         isDelta: true,

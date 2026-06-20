@@ -1576,7 +1576,7 @@
     "deleteConfirmMessage": "Сервер будет удалён из файла конфигурации. Активные сессии будут отключены."
   },
   "agentOrgs": {
-    "title": "Орг Agent",
+    "title": "Команды агентов",
     "running": "Работает",
     "fires": "срабатываний",
     "addRoutine": "Добавить Routine",
@@ -1619,13 +1619,13 @@
     "enabledDesc": "Enable or disable this policy",
     "disabled": "Отключено",
     "noTemplates": "Шаблонов пока нет",
-    "addOrg": "Добавить организацию",
+    "addOrg": "Добавить команду агентов",
     "addAgent": "Добавить Agent",
     "agentSections": {
       "builtInAgents": "Встроенные Agents",
       "customAgents": "Пользовательские Agents",
       "cli": "CLI Agents",
-      "orgs": "Организации"
+      "orgs": "Команды"
     },
     "memorySections": {
       "personalMemory": "Личное",
@@ -1817,13 +1817,14 @@
     "noMemory": "Memory пока нет",
     "memoryDescription": "Memory хранит знания и контекст, к которым участники могут обращаться между сессиями.",
     "tabs": {
-      "org": "ОРГ",
+      "org": "Команда",
       "agents": "Участники",
       "integrations": "Интеграции",
-      "rules": "Правила"
+      "rules": "Правила",
+      "orgs": "Команды"
     },
     "searchPlaceholder": "Поиск правил…",
-    "searchOrgsPlaceholder": "Поиск организаций...",
+    "searchOrgsPlaceholder": "Искать команды...",
     "searchAgentsPlaceholder": "Поиск участников...",
     "searchMemoryPlaceholder": "Поиск Memory...",
     "searchIntegrationsPlaceholder": "Поиск Integrations...",
@@ -1895,7 +1896,7 @@
     "orgWizard": {
       "title": "Добавить Org",
       "orgName": "Название Org",
-      "orgNameDesc": "Название этой организации Agent",
+      "orgNameDesc": "Название этой команды Agent",
       "orgNamePlaceholder": "напр. Команда разработки",
       "orgDescription": "Описание",
       "orgDescriptionDesc": "Необязательное краткое описание задач организации",
@@ -1952,7 +1953,7 @@
       },
       "dangerZone": "Опасная зона",
       "deleteOrg": "Удалить этот Org",
-      "deleteOrgDesc": "Безвозвратно удалить этот Agent Org. Agent-участники не будут затронуты. Это действие нельзя отменить",
+      "deleteOrgDesc": "Безвозвратно удалить эту Команду Agent. Agent-участники не будут затронуты. Это действие нельзя отменить",
       "deleteThisOrg": "Удалить этот Org"
     },
     "agentWizard": {
@@ -2265,18 +2266,18 @@
         "skip": "Skip and continue"
       }
     },
-    "emptySelectionTitle": "Выберите участника или Agent Org",
-    "emptySelectionSubtitle": "Выберите Agent или Agent Org на боковой панели, чтобы просмотреть и настроить его.",
+    "emptySelectionTitle": "Выберите участника или Команду Agent",
+    "emptySelectionSubtitle": "Выберите Agent или Команду Agent на боковой панели, чтобы просмотреть и настроить его.",
     "applicableWorkspace": "Применимый Workspace",
     "tableTabs": {
       "agents": "Agents",
-      "orgs": "Orgs",
+      "orgs": "Команды",
       "clis": "CLIs"
     },
     "searchAgents": "Поиск Agents…",
-    "searchOrgs": "Поиск orgs…",
+    "searchOrgs": "Искать команды…",
     "noAgents": "Agents пока нет",
-    "noOrgs": "Orgs пока нет",
+    "noOrgs": "Команд пока нет",
     "orgMembers": "Участники",
     "agentLoadFailed": "Не удалось загрузить определения Agent",
     "agentSaved": "Agent сохранён",
@@ -2285,12 +2286,12 @@
     "agentDeleteFailed": "Не удалось удалить Agent",
     "deleteAgentTitle": "Удалить Agent?",
     "deleteAgentMessage": "\"{{name}}\" будет удалён навсегда. Это действие нельзя отменить.",
-    "orgCreated": "Организация создана",
-    "orgUpdated": "Организация обновлена",
-    "orgDeleted": "Организация удалена",
-    "orgSaveFailed": "Не удалось сохранить организацию",
-    "orgDeleteFailed": "Не удалось удалить организацию",
-    "deleteOrgTitle": "Удалить организацию?",
+    "orgCreated": "Команда создана",
+    "orgUpdated": "Команда обновлена",
+    "orgDeleted": "Команда удалена",
+    "orgSaveFailed": "Не удалось сохранить команду",
+    "orgDeleteFailed": "Не удалось удалить команду",
+    "deleteOrgTitle": "Удалить команду?",
     "deleteOrgMessage": "\"{{name}}\" будет удалена навсегда. Это действие нельзя отменить."
   },
   "databases": {
@@ -2453,7 +2454,7 @@
     "noProjects": "Нет доступных Projects",
     "target": "Target",
     "agentResponsible": "Agent, отвечающий за эту рутину",
-    "agentResponsiblePlaceholder": "Выберите Agent или Agent Org",
+    "agentResponsiblePlaceholder": "Выберите Agent или Команду Agent",
     "workspacePathPlaceholder": "Выберите Workspace",
     "prompt": "Prompt",
     "promptPlaceholder": "Tell the agent what to do when this routine fires...",

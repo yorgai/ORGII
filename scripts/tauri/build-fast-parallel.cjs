@@ -18,7 +18,7 @@
  *
  * Usage:
  *   pnpm run tauri:build:fast
- *   pnpm run tauri:build:fast -- /tmp/ORGII.app
+ *   pnpm run tauri:build:fast -- /tmp/ORG2.app
  *   pnpm run tauri:build:fast -- ~/Desktop
  *   pnpm run tauri:build:fast -- --semantic ~/Desktop
  */
@@ -99,14 +99,14 @@ function resolveOutputAppPath(outputPath) {
   const resolved = path.resolve(rootDir, outputPath);
   return path.extname(resolved) === ".app"
     ? resolved
-    : path.join(resolved, "ORGII.app");
+    : path.join(resolved, "ORG2.app");
 }
 
 function copyBuiltApp(outputPath) {
   if (!outputPath) return;
 
   const targetDir = resolveCargoTargetDir();
-  const builtAppPath = path.join(targetDir, "dev-build", "bundle", "macos", "ORGII.app");
+  const builtAppPath = path.join(targetDir, "dev-build", "bundle", "macos", "ORG2.app");
   if (!fs.existsSync(builtAppPath)) {
     console.error(`Built app not found at ${builtAppPath}`);
     process.exit(1);

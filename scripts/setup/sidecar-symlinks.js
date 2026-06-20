@@ -48,18 +48,18 @@ const ARCH = getArchitecture();
 // Sidecar configurations
 const SIDECARS = [
   {
-    name: "ORGII Helper (Backend)",
+    name: "ORG2 Helper (Backend)",
     target: process.execPath, // Current Node.js binary path
-    path: path.join(PROJECT_ROOT, `ORGII Helper (Backend)-${ARCH}`),
+    path: path.join(PROJECT_ROOT, `ORG2 Helper (Backend)-${ARCH}`),
   },
   {
-    name: "ORGII Helper (Semantic)",
+    name: "ORG2 Helper (Semantic)",
     target: process.execPath, // Current Node.js binary path
     path: path.join(
       PROJECT_ROOT,
       "src-tauri",
       "bin",
-      `ORGII Helper (Semantic)-${ARCH}`
+      `ORG2 Helper (Semantic)-${ARCH}`
     ),
   },
 ];

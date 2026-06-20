@@ -45,7 +45,6 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
       contextUsage,
       cacheReadTokens,
       cacheWriteTokens,
-      remainingTokens,
       cacheHitRate,
       cacheSavedTokens,
     } = useContextUsageInfo();
@@ -154,7 +153,7 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
                   </button>
                 </div>
 
-                <p className="mt-0.5 text-[11px] text-text-3">{tokenLabel}</p>
+                <p className="mt-0.5 text-[13px] text-text-3">{tokenLabel}</p>
 
                 {showCacheHero ? (
                   <div className="mt-2 rounded-lg bg-green-500/10 px-2.5 py-1.5">
@@ -179,14 +178,6 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
                   )
                 )}
 
-                {maxTokens > 0 && (
-                  <p className="mt-1 text-[11px] text-text-3">
-                    {t("contextInfo.headroom", {
-                      tokens: formatTokenCount(remainingTokens),
-                    })}
-                  </p>
-                )}
-
                 {ringTone !== "unused" && ringTone !== "normal" && (
                   <p className="mt-1 text-[11px] leading-snug text-text-3">
                     {t("contextInfo.autoCompactNote")}
@@ -198,6 +189,7 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
                     categories={categories}
                     maxTokens={maxTokens}
                     hoveredKey={hoveredKey}
+                    fallbackPercentage={percentage}
                   />
                 </div>
               </div>

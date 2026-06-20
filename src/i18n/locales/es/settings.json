@@ -39,7 +39,7 @@
     "storage": "Almacenamiento",
     "projectUsage": "Project y uso",
     "agentMemory": "Memoria del Agent",
-    "agentOrg": "Agent ORG"
+    "agentOrg": "Equipo Agent"
   },
   "coreSidebar": {
     "groups": {
@@ -1163,10 +1163,10 @@
     "noAgentsSubtitle": "Crea o importa un Agent para configurar Evolución."
   },
   "org": {
-    "linkTitle": "Agent Orgs",
-    "description": "Define la jerarquía y roles de tu organización de Agent.",
-    "emptyTitle": "No se ha definido organización",
-    "createOrg": "Crear organización",
+    "linkTitle": "Equipos de agentes",
+    "description": "Define la jerarquía y los roles de tu equipo de agentes.",
+    "emptyTitle": "No hay ningún equipo de agentes definido",
+    "createOrg": "Crear equipo",
     "addMember": "Agregar miembro",
     "editMember": "Editar miembro",
     "addChild": "Agregar subordinado",
@@ -1177,7 +1177,7 @@
     "fieldStatus": "Estado",
     "namePlaceholder": "Ingrese el nombre del miembro",
     "deleteConfirm": "¿Eliminar este miembro y todos sus subordinados?",
-    "openAgentOrgs": "Abrir Agent Orgs"
+    "openAgentOrgs": "Abrir equipos de agentes"
   },
   "learningsBrowser": {
     "title": "Explorador de Learnings",

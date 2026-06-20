@@ -39,7 +39,7 @@
     "storage": "Storage",
     "projectUsage": "Project & Usage",
     "agentMemory": "Agent Memory",
-    "agentOrg": "Agent ORG"
+    "agentOrg": "Agent Team"
   },
   "coreSidebar": {
     "groups": {
@@ -1163,10 +1163,10 @@
     "noAgentsSubtitle": "Create or import an agent to configure Evolution."
   },
   "org": {
-    "linkTitle": "Agent Orgs",
-    "description": "Define your agent org hierarchy and roles.",
-    "emptyTitle": "No org defined",
-    "createOrg": "Create Org",
+    "linkTitle": "Agent Teams",
+    "description": "Define your agent team hierarchy and roles.",
+    "emptyTitle": "No agent team defined",
+    "createOrg": "Create team",
     "addMember": "Add Member",
     "editMember": "Edit Member",
     "addChild": "Add subordinate",
@@ -1177,7 +1177,7 @@
     "fieldStatus": "Status",
     "namePlaceholder": "Enter member name",
     "deleteConfirm": "Delete this member and all subordinates?",
-    "openAgentOrgs": "Open Agent Orgs"
+    "openAgentOrgs": "Open Agent Teams"
   },
   "learningsBrowser": {
     "title": "Learnings Browser",

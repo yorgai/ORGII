@@ -8,16 +8,13 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import React from "react";
 
 import type { TreePanelNode } from "@src/components/TreePanelSidebar/types";
-import {
-  TREE_INDENT_PX,
-  TREE_PADDING_X,
-  TREE_ROW_HEIGHT,
-} from "@src/components/TreeRow";
+import { TREE_INDENT_PX, TREE_PADDING_X } from "@src/components/TreeRow";
 import type {
   FlattenedTreeNode,
   StickyScrollNode,
 } from "@src/components/VirtualizedStickyTree";
 import { getStatusBgColor, getStatusColorForFile } from "@src/config/gitStatus";
+import { FolderHeaderRow } from "@src/modules/WorkStation/shared/FolderHeaderRow";
 
 import { NewItemInput } from "./NewItemInput";
 import { TreeNode } from "./TreeNode";
@@ -69,31 +66,23 @@ export function renderFileTreeItem(
   if (isMultiRoot && item.depth === 0 && item.node.type === "directory") {
     const isExpanded = item.node.expanded ?? false;
     return (
-      <div
-        className="flex cursor-pointer items-center gap-1.5 border-b border-border-2 bg-bg-2 px-2 py-1.5 text-[12px] font-semibold uppercase tracking-wide text-text-2 hover:bg-fill-2"
-        style={{ height: `${TREE_ROW_HEIGHT}px` }}
-        onClick={() => onToggleDirectory(item.node.path)}
+      <FolderHeaderRow
+        name={item.node.name}
+        expanded={isExpanded}
+        onToggle={() => onToggleDirectory(item.node.path)}
         onContextMenu={(event) => onContextMenu(event, item.node)}
-      >
-        <div className="flex h-4 w-4 flex-shrink-0 items-center justify-center">
-          {isExpanded ? (
-            <ChevronDown size={14} className="text-text-3" />
-          ) : (
-            <ChevronRight size={14} className="text-text-3" />
-          )}
-        </div>
-        <span className="min-w-0 flex-1 truncate">{item.node.name}</span>
-      </div>
+      />
     );
   }
 
   const isRenaming = renamingPath === item.node.path;
+  const depth = isMultiRoot ? Math.max(0, item.depth - 1) : item.depth;
 
   return (
     <div onContextMenu={(event) => onContextMenu(event, item.node)}>
       <TreeNode
         node={item.node}
-        depth={item.depth}
+        depth={depth}
         onSelectNode={onSelectNode}
         onToggleDirectory={onToggleDirectory}
         isRenaming={isRenaming}

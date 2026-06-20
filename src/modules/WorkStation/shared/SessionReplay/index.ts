@@ -42,15 +42,6 @@ export { useReplayShell, type UseReplayShellResult } from "./useReplayShell";
 export type { UseReplayShellOptions } from "./useReplayShell";
 
 export {
-  REPLAY_EVENT_FILTER_CATEGORIES,
-  ReplayEventFilter,
-  filterReplayTabsBySelection,
-  getReplayEventFilterCategory,
-  type ReplayEventFilterCategory,
-  type ReplayEventFilterSelection,
-} from "./ReplayEventFilter";
-
-export {
   ReplayShellLayout,
   ReplayShellPlaceholder,
   type ReplayShellLayoutProps,

@@ -12,11 +12,7 @@ import {
   messageQueueAtom,
 } from "@src/store/ui/messageQueueAtom";
 
-import {
-  derivedSnapshotAtom,
-  eventsAtom,
-  streamingDeltaContentAtom,
-} from "../core/atoms/events";
+import { derivedSnapshotAtom, eventsAtom } from "../core/atoms/events";
 import { sessionIdAtom } from "../core/atoms/metadata";
 import type { Snapshot } from "../core/store/EventStoreProxy";
 import type { SessionEvent } from "../core/types";
@@ -122,7 +118,7 @@ function isFinalAssistantDuplicate(
   );
 }
 
-function appendLiveAssistantEvent(
+export function appendLiveAssistantEvent(
   events: SessionEvent[],
   sessionId: string | null,
   content: string | null
@@ -176,9 +172,13 @@ export const chatEventsAtom = atom((get) => {
     _prevChatEvents = [];
   }
 
-  const liveContent = sessionId
-    ? (get(streamingDeltaContentAtom).get(sessionId) ?? null)
-    : null;
+  // During streaming, inject the live-assistant placeholder with a stable
+  // sentinel so `appendLiveAssistantEvent` adds it to the list without
+  // subscribing to `streamingDeltaContentAtom` (which fires on every token).
+  // The actual streaming text is read directly from `streamingDeltaContentAtom`
+  // inside `AgentMessageEvent` at the leaf renderer level.
+  const streaming = snap ? isStreamingSnap(snap) : false;
+  const liveContent = streaming && sessionId ? "\u200b" : null;
   const queuedMessages = get(messageQueueAtom);
 
   if (snap && "chatEvents" in snap) {
@@ -190,18 +190,15 @@ export const chatEventsAtom = atom((get) => {
       liveContent
     );
 
-    if (isStreamingSnap(snap)) {
-      _prevChatEvents = next;
-      return next;
-    }
-
     const argsChanged = !allArgsStable(next, _prevChatEvents);
     const planContentChanged = !allPlanContentStable(next, _prevChatEvents);
 
     if (
       next.length === _prevChatEvents.length &&
       next.every((evt, i) => evt.id === _prevChatEvents[i].id) &&
-      lastEventStable(next, _prevChatEvents) &&
+      (streaming
+        ? lastEventStableIgnoreDisplayText(next, _prevChatEvents)
+        : lastEventStable(next, _prevChatEvents)) &&
       !argsChanged &&
       !planContentChanged
     ) {
@@ -236,6 +233,30 @@ function lastEventStable(next: SessionEvent[], prev: SessionEvent[]): boolean {
     lastN.displayStatus === lastP.displayStatus &&
     lastN.isDelta === lastP.isDelta &&
     lastN.displayText === lastP.displayText
+  );
+}
+
+/**
+ * Same as `lastEventStable` but ignores `displayText` on the last event.
+ *
+ * Used during streaming: the live assistant placeholder's `displayText` grows
+ * with every token, but the leaf renderer (`AgentMessageEvent`) reads the
+ * actual streaming text directly from `streamingDeltaContentAtom`. Propagating
+ * the growing text through `chatEventsAtom` → `optimizedChatHistory` →
+ * `flatItems` would bust every GroupItemRenderer memo on every token.
+ * Ignoring it here is safe because the ‌\u200b sentinel already guarantees
+ * the placeholder event exists in the array; the renderer handles the rest.
+ */
+function lastEventStableIgnoreDisplayText(
+  next: SessionEvent[],
+  prev: SessionEvent[]
+): boolean {
+  if (next.length === 0) return true;
+  const lastN = next[next.length - 1];
+  const lastP = prev[prev.length - 1];
+  return (
+    lastN.displayStatus === lastP.displayStatus &&
+    lastN.isDelta === lastP.isDelta
   );
 }
 

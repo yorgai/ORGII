@@ -107,7 +107,7 @@ const PAGES: NavDestination[] = [
     keywords: ["projects", "work items", "tasks"],
   }),
   dest("nav-agents", buildAgentOrgsPath(), "pages", {
-    keywords: ["automation", "agent orgs", "team"],
+    keywords: ["automation", "agent teams", "team"],
   }),
   dest("nav-journey-record", ROUTES.app.journey.record.path, "pages", {
     keywords: ["analytics", "activity", "history"],

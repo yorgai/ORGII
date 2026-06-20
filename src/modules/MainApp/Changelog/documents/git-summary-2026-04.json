@@ -598,8 +598,8 @@
         "Improved session creator icons, simulator follow mode, and inbox follow-up behavior."
       ],
       "backendChangeBullets": [
-        "Added inbox auto-resume behavior for agent organization collaboration.",
-        "Slimmed agent-org messages for cleaner runtime communication.",
+        "Added inbox auto-resume behavior for agent team collaboration.",
+        "Slimmed agent-team messages for cleaner runtime communication.",
         "Refined project and group chat backend paths that support replies, broadcasts, and lifecycle messages.",
         "Added typed constants around group chat and session behavior to reduce string drift.",
         "Improved backend support for completed session cards and diff viewing in collaboration flows."

@@ -366,7 +366,10 @@ export function useSessionLaunch(
       if (selectedAgentOrgId) {
         void loadSidebarSessions({ forceRefresh: true }).catch(
           (error: unknown) => {
-            log.warn("Failed to refresh sidebar after Agent Org launch", error);
+            log.warn(
+              "Failed to refresh sidebar after Agent Team launch",
+              error
+            );
           }
         );
       }

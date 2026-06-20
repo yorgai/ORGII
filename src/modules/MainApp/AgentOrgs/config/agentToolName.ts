@@ -1,5 +1,5 @@
 /**
- * Helpers for displaying tool names in the Agent Orgs UI.
+ * Helpers for displaying tool names in the Agent Teams UI.
  *
  * The wire format for MCP tools is `mcp__<server>__<tool>`. Tables and
  * preview panels show the bare `<tool>` name; non-MCP tools pass through

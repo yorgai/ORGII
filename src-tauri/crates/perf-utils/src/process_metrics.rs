@@ -345,6 +345,9 @@ const MACOS_WEBKIT_PROCESS_MARKERS: &[&str] = &[
     "com.apple.webkit.networking",
 ];
 
+#[cfg(target_os = "macos")]
+pub(crate) const MACOS_WEBKIT_XPC_GROUP_WINDOW_SECS: u64 = 10;
+
 /// Child process memory info
 #[derive(Debug, Clone, Serialize)]
 pub struct ChildProcessInfo {
@@ -445,10 +448,22 @@ fn is_macos_webkit_xpc_process(process_name: &str) -> bool {
 }
 
 #[cfg(target_os = "macos")]
-fn is_related_macos_webkit_xpc_process(pid: Pid, root_pid: Pid, system: &System) -> bool {
-    let Some(root_process) = system.process(root_pid) else {
-        return false;
-    };
+pub(crate) fn is_macos_webkit_xpc_in_first_group(
+    first_webkit_start_time: u64,
+    process_start_time: u64,
+) -> bool {
+    first_webkit_start_time != 0
+        && process_start_time >= first_webkit_start_time
+        && process_start_time.saturating_sub(first_webkit_start_time)
+            <= MACOS_WEBKIT_XPC_GROUP_WINDOW_SECS
+}
+
+#[cfg(target_os = "macos")]
+fn is_related_macos_webkit_xpc_process(
+    pid: Pid,
+    first_webkit_start_time: Option<u64>,
+    system: &System,
+) -> bool {
     let Some(process) = system.process(pid) else {
         return false;
     };
@@ -457,13 +472,31 @@ fn is_related_macos_webkit_xpc_process(pid: Pid, root_pid: Pid, system: &System)
         return false;
     }
 
-    let root_start_time = root_process.start_time();
+    let Some(first_webkit_start_time) = first_webkit_start_time else {
+        return false;
+    };
     let process_start_time = process.start_time();
-    if root_start_time == 0 || process_start_time == 0 {
+    if process_start_time == 0 {
         return false;
     }
 
-    process_start_time >= root_start_time
+    is_macos_webkit_xpc_in_first_group(first_webkit_start_time, process_start_time)
+}
+
+#[cfg(target_os = "macos")]
+fn first_macos_webkit_xpc_start_time_after(root_pid: Pid, system: &System) -> Option<u64> {
+    let root_start_time = system.process(root_pid)?.start_time();
+    if root_start_time == 0 {
+        return None;
+    }
+
+    system
+        .processes()
+        .values()
+        .filter(|process| is_macos_webkit_xpc_process(&process.name().to_string_lossy()))
+        .map(|process| process.start_time())
+        .filter(|start_time| *start_time >= root_start_time)
+        .min()
 }
 
 /// Get memory usage of all child processes (WebViews, etc.)
@@ -494,6 +527,16 @@ pub fn get_child_processes_memory() -> Vec<ChildProcessInfo> {
     guard.update_process_timestamp();
 
     let process_ids: Vec<Pid> = guard.system.processes().keys().copied().collect();
+    let first_webkit_start_time = {
+        #[cfg(target_os = "macos")]
+        {
+            first_macos_webkit_xpc_start_time_after(our_pid, &guard.system)
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            None::<u64>
+        }
+    };
     let mut descendant_cache = HashSet::new();
     let mut children: Vec<ChildProcessInfo> = vec![];
 
@@ -503,7 +546,7 @@ pub fn get_child_processes_memory() -> Vec<ChildProcessInfo> {
         let is_related_helper = {
             #[cfg(target_os = "macos")]
             {
-                is_related_macos_webkit_xpc_process(pid, our_pid, &guard.system)
+                is_related_macos_webkit_xpc_process(pid, first_webkit_start_time, &guard.system)
             }
             #[cfg(not(target_os = "macos"))]
             {

@@ -38,6 +38,109 @@ const INBOX_TRANSCRIPT_ICON = (
   <MailOpen size={SESSION_UI_TOKENS.ICON.SIZE_SM} />
 );
 
+// ============================================
+// Custom props equality for memo()
+// ============================================
+
+type EventSummary = NonNullable<OptimizedChatItem["event"]>;
+
+function sameEventSummary(
+  left: EventSummary | undefined,
+  right: EventSummary | undefined
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return (
+    left.id === right.id &&
+    left.displayText === right.displayText &&
+    left.displayStatus === right.displayStatus &&
+    left.displayVariant === right.displayVariant
+  );
+}
+
+function sameEventList(
+  left: readonly EventSummary[] | undefined,
+  right: readonly EventSummary[] | undefined
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  if (left.length !== right.length) return false;
+  return left.every((leftEvent, i) => sameEventSummary(leftEvent, right[i]));
+}
+
+function sameChatItem(
+  left: OptimizedChatItem | undefined,
+  right: OptimizedChatItem | undefined
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return (
+    left.chunk_id === right.chunk_id &&
+    left.type === right.type &&
+    left.structuralOnly === right.structuralOnly &&
+    left.consolidatedParts === right.consolidatedParts &&
+    left.repeatedErrorCount === right.repeatedErrorCount &&
+    left.actionSummaryClosedByBoundary ===
+      right.actionSummaryClosedByBoundary &&
+    sameEventSummary(left.event, right.event) &&
+    sameEventList(left.readFileEvents, right.readFileEvents) &&
+    sameEventList(
+      left.activityStackGroup?.events,
+      right.activityStackGroup?.events
+    ) &&
+    sameEventList(
+      left.actionSummaryItems?.map((item) => item.event),
+      right.actionSummaryItems?.map((item) => item.event)
+    )
+  );
+}
+
+function sameNumberArray(
+  left: readonly number[],
+  right: readonly number[]
+): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+  return left.every((v, i) => v === right[i]);
+}
+
+function sameNullableNumberArray(
+  left: readonly (number | null)[],
+  right: readonly (number | null)[]
+): boolean {
+  if (left === right) return true;
+  if (left.length !== right.length) return false;
+  return left.every((v, i) => v === right[i]);
+}
+
+function areGroupItemRendererPropsEqual(
+  previous: GroupItemRendererProps,
+  next: GroupItemRendererProps
+): boolean {
+  return (
+    previous.flatIndex === next.flatIndex &&
+    previous.groupIndex === next.groupIndex &&
+    sameChatItem(previous.chatItem, next.chatItem) &&
+    // previousChatItem affects group-chat continuation window only (createdAt
+    // comparison). Shallow-compare the event rather than the full item — the
+    // continuation check only reads event.createdAt, source, and senderName.
+    previous.previousChatItem?.event === next.previousChatItem?.event &&
+    sameNumberArray(previous.groupCounts, next.groupCounts) &&
+    sameNullableNumberArray(
+      previous.lastAssistantFlatIndexPerItem,
+      next.lastAssistantFlatIndexPerItem
+    ) &&
+    previous.isWpGeneWorking === next.isWpGeneWorking &&
+    previous.isExploring === next.isExploring &&
+    previous.codeBlockContainerWidth === next.codeBlockContainerWidth &&
+    previous.onRegenerate === next.onRegenerate &&
+    previous.onSubmit === next.onSubmit &&
+    previous.onSkip === next.onSkip &&
+    previous.onEditUserMessage === next.onEditUserMessage &&
+    previous.newEventDividerLabel === next.newEventDividerLabel
+  );
+}
+
 function isWithinGroupChatContinuationWindow(
   previousTimestamp: string,
   currentTimestamp: string
@@ -126,7 +229,14 @@ const InboxTranscriptCard: React.FC<{
 export interface GroupItemRendererProps {
   flatIndex: number;
   groupIndex: number;
-  flatItems: OptimizedChatItem[];
+  /** The item at `flatIndex`. Passed directly to avoid the full array reference. */
+  chatItem: OptimizedChatItem | undefined;
+  /**
+   * The nearest preceding non-structural, non-unloaded item before
+   * `flatIndex`. Pre-resolved by the call site so this renderer does not
+   * need to scan the full flat list on every render.
+   */
+  previousChatItem: OptimizedChatItem | undefined;
   /**
    * Per-group post-collapse item counts, aligned with `groupHeaders`.
    * Used to detect "last item in this group" so we can append a turn
@@ -185,7 +295,8 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
   ({
     flatIndex,
     groupIndex,
-    flatItems,
+    chatItem,
+    previousChatItem,
     groupCounts,
     lastAssistantFlatIndexPerItem,
     isWpGeneWorking,
@@ -198,7 +309,6 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
     newEventDividerLabel = null,
   }) => {
     const { t } = useTranslation("sessions");
-    const chatItem = flatItems[flatIndex];
     const groupChat = useGroupChatContext();
     const event = chatItem?.event;
 
@@ -211,28 +321,18 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
       );
     }, [groupChat, event]);
 
-    const previousSimpleMessage = (() => {
-      if (!groupChat?.enabled) return null;
-      for (
-        let previousIndex = flatIndex - 1;
-        previousIndex >= 0;
-        previousIndex--
-      ) {
-        const previousItem = flatItems[previousIndex];
-        if (!previousItem || previousItem.structuralOnly) continue;
-        if (getUnloadedTurnMeta(previousItem) !== null) continue;
-        const previousEvent = previousItem.event;
-        if (!previousEvent) continue;
-        const message = resolveGroupChatMessageBubble(
-          previousEvent,
-          groupChat.coordinatorSessionId,
-          groupChat.orgMembers
-        );
-        if (!message) return null;
-        return { event: previousEvent, message };
-      }
-      return null;
-    })();
+    const previousSimpleMessage = useMemo(() => {
+      if (!groupChat?.enabled || !previousChatItem) return null;
+      const previousEvent = previousChatItem.event;
+      if (!previousEvent) return null;
+      const message = resolveGroupChatMessageBubble(
+        previousEvent,
+        groupChat.coordinatorSessionId,
+        groupChat.orgMembers
+      );
+      if (!message) return null;
+      return { event: previousEvent, message };
+    }, [groupChat, previousChatItem]);
 
     const inboxTranscriptLabel = useMemo(() => {
       if (!event || simpleMessage) return null;
@@ -263,9 +363,10 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
       !groupChat.isCoordinatorTurnHeader(event)
     );
 
-    const lastAssistantFlatIndex = chatItem
-      ? (lastAssistantFlatIndexPerItem[flatIndex] ?? null)
-      : null;
+    const lastAssistantFlatIndex =
+      chatItem != null
+        ? (lastAssistantFlatIndexPerItem[flatIndex] ?? null)
+        : null;
 
     // Trailing-item turn gap. Placing the 24px gap on the LAST item of
     // each non-final group keeps the next group's sticky header free of
@@ -380,7 +481,8 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
         </div>
       </AgentTurnContext.Provider>
     );
-  }
+  },
+  areGroupItemRendererPropsEqual
 );
 
 GroupItemRenderer.displayName = "GroupItemRenderer";

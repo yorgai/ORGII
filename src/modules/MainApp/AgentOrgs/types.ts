@@ -1,5 +1,5 @@
 /**
- * Agent & Org types for the Agent Orgs page.
+ * Agent & Team types for the Agent Teams page.
  *
  * Automation/policy types live in:
  *   @src/modules/MainApp/Integrations/RulesMemoryEvolution/types.ts
@@ -250,7 +250,7 @@ export interface ReliabilityConfig {
 /** Prefix used in selectedAgentId to distinguish CLI agents from built-in/custom */
 export const CLI_AGENT_PREFIX = "cli:";
 
-// ── Org (agent organization hierarchy) ──
+// ── Team (agent hierarchy) ──
 
 /**
  * How the `OrgMember.children` hierarchy is interpreted at runtime.
@@ -265,7 +265,7 @@ export const CLI_AGENT_PREFIX = "cli:";
  *   coordinator (always reachable as escape hatch). Sibling-to-sibling
  *   sends are rejected.
  *
- * Default for new orgs is `soft`. Old orgs without this field migrate
+ * Default for new teams is `soft`. Old teams without this field migrate
  * to `soft` because that matches the previous prompt-with-tree /
  * unrestricted-routing behaviour the closest.
  */

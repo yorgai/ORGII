@@ -1,6 +1,6 @@
 /**
  * OrgWizard — Single-page wizard for creating or editing an agent
- * organization. Sections: Org name, Coordinator (root agent), Preview, and
+ * team. Sections: Team name, Coordinator (root agent), Preview, and
  * Team members.
  *
  * Follows the WizardShell → WizardStepLayout → SectionLayout pattern.

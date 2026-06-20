@@ -32,6 +32,7 @@ import { TerminalOutput } from "@src/components/TerminalDisplay";
 import { PILL_REGEX, PILL_TYPES, type PillType } from "@src/config/pillTokens";
 import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/UserMessageContent";
 import { stripExpandedPillContent } from "@src/engines/ChatPanel/InputArea/utils/pillContentParser";
+import MessageReferenceCards from "@src/engines/ChatPanel/blocks/MessageReferenceCards";
 import { SESSION_UI_TOKENS } from "@src/engines/ChatPanel/blocks/primitives/config";
 import { extractTodoData } from "@src/engines/SessionCore/rendering/props";
 import type { ExtractedTodoData } from "@src/engines/SessionCore/rendering/types/universalProps";
@@ -769,6 +770,11 @@ export const ChatBubble: React.FC<{
           >
             <div className={`min-w-0 ${SESSION_UI_TOKENS.TEXT.BODY_BASE}`}>
               <ReplayMarkdown content={message.content} />
+              <MessageReferenceCards
+                content={rawContent}
+                enabled={message.event.displayStatus !== "running"}
+                sessionId={message.event.sessionId}
+              />
             </div>
           </div>
         )}

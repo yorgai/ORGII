@@ -1,8 +1,8 @@
 /**
  * Agent Config Tab Factories
  *
- * Hosts the multi-tab agent / org detail view inside the WorkStation Code
- * Editor surface. Opened from the Agent Orgs page table rows in the same
+ * Hosts the multi-tab agent / team detail view inside the WorkStation Code
+ * Editor surface. Opened from the Agent Teams page table rows in the same
  * way skill previews are opened — `openAgentConfigInWorkStation` writes
  * one of these tabs into the main pane without navigating away.
  *

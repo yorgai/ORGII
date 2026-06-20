@@ -14,8 +14,8 @@
 //! Inspect with:
 //!
 //! ```sh
-//! cargo tree -p orgii -i <banned-crate> --target all
-//! cargo tree -p orgii -i <banned-crate> --target all --edges=features
+//! cargo tree -p org2 -i <banned-crate> --target all
+//! cargo tree -p org2 -i <banned-crate> --target all --edges=features
 //! ```
 //!
 //! …and fix the new dep at the source (either replace it, or make sure
@@ -172,7 +172,7 @@ fn no_banned_crates_in_lockfile() {
         violations.is_empty(),
         "Cargo.lock contains crates that were deliberately retired:\n{}\n\n\
          Inspect the regression with:\n\
-         \n  cargo tree -p orgii -i <crate> --target all --edges=features\n\
+         \n  cargo tree -p org2 -i <crate> --target all --edges=features\n\
          \n\
          Then either remove the new dep that pulled it in, or — if the new\n\
          dep is essential — add `default-features = false` plus rustls-tls\n\

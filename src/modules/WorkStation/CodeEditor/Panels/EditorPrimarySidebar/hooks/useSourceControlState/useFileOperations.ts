@@ -35,6 +35,7 @@ export interface UseFileOperationsOptions {
 export interface UseFileOperationsResult {
   handleStageToggle: (fileId: string, stage: boolean) => Promise<void>;
   handleDiscard: (fileId: string) => Promise<void>;
+  handleDiscardFiles: (fileIds: string[]) => Promise<void>;
   handleStageAll: () => Promise<void>;
   handleUnstageAll: () => Promise<void>;
   handleDiscardAll: () => Promise<void>;
@@ -131,6 +132,56 @@ export function useFileOperations(
         } else {
           await dispatch("git.discard", { path: file.path }, "user");
         }
+        await fetchGitStatus();
+      } catch (error) {
+        log.error("Failed to discard file changes:", error);
+      }
+    },
+    [gitFiles, repoPath, fetchGitStatus, dispatch, t]
+  );
+
+  const handleDiscardFiles = useCallback(
+    async (fileIds: string[]) => {
+      const files = gitFiles.filter((file) => fileIds.includes(file.id));
+      if (files.length === 0) return;
+
+      if (!dispatch) {
+        log.warn("[useFileOperations] No dispatch available - cannot discard");
+        return;
+      }
+
+      const fileText =
+        files.length === 1 ? files[0].path : `${files.length} files`;
+      const confirmed = await confirmDestructiveAction({
+        title: t("workstation.discardChanges"),
+        message: t("workstation.discardChangesConfirm", { files: fileText }),
+        okLabel: t("workstation.discardChanges"),
+        cancelLabel: t("actions.cancel"),
+      });
+      if (!confirmed) return;
+
+      try {
+        const untrackedFiles = files.filter(
+          (file) => file.status === "added" && !file.staged
+        );
+        const trackedFiles = files.filter(
+          (file) => !(file.status === "added" && !file.staged)
+        );
+
+        await Promise.all(
+          untrackedFiles.map((file) => {
+            const absolutePath = file.path.startsWith("/")
+              ? file.path
+              : `${repoPath}/${file.path}`;
+            return remove(absolutePath);
+          })
+        );
+
+        await Promise.all(
+          trackedFiles.map((file) =>
+            dispatch("git.discard", { path: file.path }, "user")
+          )
+        );
         await fetchGitStatus();
       } catch (error) {
         log.error("Failed to discard file changes:", error);
@@ -309,6 +360,7 @@ export function useFileOperations(
   return {
     handleStageToggle,
     handleDiscard,
+    handleDiscardFiles,
     handleStageAll,
     handleUnstageAll,
     handleDiscardAll,

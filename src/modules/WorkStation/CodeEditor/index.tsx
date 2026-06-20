@@ -273,7 +273,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
           error={codeEditorState.treeError}
           repoPath={repoPath}
           repoId={selectedRepoId}
-          repoName={repoName}
+          repoName={
+            workspaceFolders.length > 1
+              ? `${workspaceFolders.length} repos`
+              : repoName
+          }
           searchResults={codeEditorState.searchResults}
           searchLoading={codeEditorState.searchLoading}
           searchQuery={codeEditorState.searchQuery}

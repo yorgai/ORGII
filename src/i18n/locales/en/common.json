@@ -634,7 +634,7 @@
     "selectSource": "Select source",
     "selectAgent": "Select agent",
     "agentOrAgentOrg": "Session agent",
-    "searchAgentOrOrg": "Select an agent or Agent org...",
+    "searchAgentOrOrg": "Select an agent or Agent team...",
     "tplSelectAgentOrOrg": "Select {agent}",
     "cliAgent": "CLI agent",
     "placeholderModel": "model",
@@ -1304,6 +1304,7 @@
         "nonCoding": "Workspace",
         "pinned": "Pinned",
         "current": "Current",
+        "recent": "Recent",
         "repo": "Repositories",
         "systemPaths": "System Paths",
         "usedElsewhere": "Used elsewhere",
@@ -2015,7 +2016,7 @@
     "cacheHero": "{{pct}}% served from cache · ~{{tokens}} reused this turn",
     "cacheHeroSub": "Prompt caching cuts the cost of the reused prefix to roughly 1/10.",
     "headroom": "{{tokens}} of room left",
-    "autoCompactNote": "ORGII automatically tidies older context as it fills — your work won't be lost."
+    "autoCompactNote": "Context will be summarized soon"
   },
   "relativeDate": {
     "today": "Today",

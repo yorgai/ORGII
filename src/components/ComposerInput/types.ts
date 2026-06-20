@@ -85,8 +85,7 @@ export interface ComposerInputProps {
   /** Called when the editable surface receives a pointer down. */
   onInputMouseDown?: () => void;
   /**
-   * Slash behavior: both modes open wherever `/` is typed, like @ mentions.
-   * The mode is kept so consumers can distinguish command vs context surfaces.
+   * Slash behavior for command vs context surfaces.
    */
   slashTriggerMode?: "command" | "context";
   /** Called for clipboard image attachments */

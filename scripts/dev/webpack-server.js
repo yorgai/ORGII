@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 
 /**
- * ORGII Development Server
+ * ORG2 Development Server
  *
  * Custom webpack-dev-server wrapper with branded process name
- * This makes the process appear as "ORGII Dev" in Activity Monitor
+ * This makes the process appear as "ORG2 Dev" in Activity Monitor
  * instead of generic "node"
  */
 
 // ============================================
 // Set Process Title FIRST (before any imports)
 // ============================================
-process.title = "ORGII Dev";
+process.title = "ORG2 Dev";
 
 // ============================================
 // Environment Configuration
@@ -228,7 +228,7 @@ const runServer = async () => {
           ? "slow, ts-loader"
           : "fast, esbuild";
 
-    console.log(`✨ ORGII Dev Server: http://${host}:${port} (${modeLabel})`);
+    console.log(`✨ ORG2 Dev Server: http://${host}:${port} (${modeLabel})`);
   } catch (error) {
     console.error("\n❌ Failed to start development server\n");
     console.error("Error:", error.message);

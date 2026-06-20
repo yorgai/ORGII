@@ -39,7 +39,7 @@
     "storage": "Stockage",
     "projectUsage": "Project et utilisation",
     "agentMemory": "Mémoire de l'Agent",
-    "agentOrg": "Agent ORG"
+    "agentOrg": "Équipe Agent"
   },
   "coreSidebar": {
     "groups": {
@@ -1163,10 +1163,10 @@
     "noAgentsSubtitle": "Créez ou importez un Agent pour configurer l’évolution."
   },
   "org": {
-    "linkTitle": "Agent Orgs",
-    "description": "Définissez la hiérarchie et les rôles de votre organisation Agent.",
-    "emptyTitle": "Aucune organisation définie",
-    "createOrg": "Créer une organisation",
+    "linkTitle": "Équipes d’agents",
+    "description": "Définissez la hiérarchie et les rôles de votre équipe d’agents.",
+    "emptyTitle": "Aucune équipe d’agents définie",
+    "createOrg": "Créer une équipe",
     "addMember": "Ajouter un membre",
     "editMember": "Modifier le membre",
     "addChild": "Ajouter un subordonné",
@@ -1177,7 +1177,7 @@
     "fieldStatus": "Statut",
     "namePlaceholder": "Entrez le nom du membre",
     "deleteConfirm": "Supprimer ce membre et tous ses subordonnés ?",
-    "openAgentOrgs": "Ouvrir Agent Orgs"
+    "openAgentOrgs": "Ouvrir les équipes d’agents"
   },
   "learningsBrowser": {
     "title": "Explorateur de Learnings",

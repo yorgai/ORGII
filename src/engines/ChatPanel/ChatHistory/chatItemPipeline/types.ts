@@ -57,15 +57,6 @@ export interface OptimizedChatItem {
   consolidatedParts?: number;
   /** Number of consecutive identical errors collapsed into this item (≥2 means repeats were folded) */
   repeatedErrorCount?: number;
-  /**
-   * True when this item is an assistant message that is mid-turn narration —
-   * i.e. it is followed by a tool_call before the turn ends. The main chat
-   * renders these de-emphasised inside a collapsible think-style block so the
-   * step-by-step narration the SDE prompt mandates doesn't read as loud prose.
-   * Only set when {@link ChatItemPipelineOptions.collapseInterToolNarration}
-   * is enabled (main chat only — never the subagent monitor).
-   */
-  collapsedNarration?: boolean;
   /** Internal layout-only row used to keep a collapsed turn measurable. */
   structuralOnly?: boolean;
   /** Thread selector synthetic data */
@@ -99,14 +90,6 @@ export interface ChatItemPipelineOptions {
   minReadFilesToGroup?: number;
   filterManageTodo?: boolean;
   /**
-   * When true, assistant messages that are followed by a tool_call within the
-   * same turn (mid-turn "narration") are marked {@link OptimizedChatItem.collapsedNarration}
-   * so the renderer can collapse them into a think-style block. Enabled by the
-   * main chat only; the subagent monitor leaves it off so narration stays fully
-   * visible there.
-   */
-  collapseInterToolNarration?: boolean;
-  /**
    * Optional predicate to drop events before any grouping. Used by the
    * Agent Desk when a simulator app (e.g. Diff) takes over a class of
    * events so they don't double-render inline in the chat stream.
@@ -124,5 +107,4 @@ export const DEFAULT_PIPELINE_OPTIONS: ChatItemPipelineOptions = {
   preFilterEmptyActivities: true,
   minReadFilesToGroup: 2,
   filterManageTodo: false,
-  collapseInterToolNarration: false,
 };

@@ -1,5 +1,5 @@
 /**
- * OrgDetailView — Inline-editable detail view for a saved Agent Org.
+ * OrgDetailView — Inline-editable detail view for a saved Agent Team.
  *
  * Layout mirrors OrgWizard (same `OrgFormSections` body — see that file).
  * Edits are buffered locally; a sticky Save / Cancel footer appears once

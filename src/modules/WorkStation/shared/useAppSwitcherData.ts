@@ -155,8 +155,8 @@ export function useWorkStationAppSwitcher(
     (modeId: string) => {
       const nextFilter: DockFilter =
         modeId === ALL_TABS_ID ? "all" : (modeId as DockFilter);
-      if (nextFilter === dockFilter) return;
       setStationMode("my-station");
+      if (nextFilter === dockFilter) return;
       setDockFilter(nextFilter);
       // Stay on the bare base path with `?filter=` — rematching a per-host
       // sub-route while Source Control / Terminal subtrees suspend can stall

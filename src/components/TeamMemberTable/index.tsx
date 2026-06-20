@@ -41,14 +41,14 @@ export interface TeamMemberTableProps {
   headerHeight?: "compact" | "tall";
   /**
    * IDs of rows whose `name` should render with an error state (e.g. duplicate
-   * names within an Agent Org's routing namespace). The table itself is
+   * names within an Agent Team's routing namespace). The table itself is
    * routing-agnostic; callers decide what counts as an error.
    */
   invalidNameRowIds?: ReadonlySet<string>;
   /** Tooltip surfaced on the name input for rows in `invalidNameRowIds`. */
   invalidNameMessage?: string;
   /**
-   * Hide the `Reports to` column entirely. Used by callers (Agent Org
+   * Hide the `Reports to` column entirely. Used by callers (Agent Team
    * wizard) when the underlying hierarchy mode treats reports-to as
    * meaningless — e.g. `HierarchyMode.flat`. The `parentId` field on
    * each row is still preserved on the wire so toggling the column back

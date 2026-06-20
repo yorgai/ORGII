@@ -17,7 +17,7 @@ function runWindowsCleanup() {
   const patterns = [
   { label: "build watchers", match: "build.js --watch" },
   { label: "esbuild services", match: "esbuild --service" },
-  { label: "ORGII Dev", match: "ORGII Dev" },
+  { label: "ORG2 Dev", match: "ORG2 Dev" },
   { label: "orphaned cargo run", match: "cargo run" },
 ];
 

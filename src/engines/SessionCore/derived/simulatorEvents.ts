@@ -18,8 +18,13 @@ import {
   currentEventIdAtom,
   navigateToEventAtom,
   replayModeAtom,
+  sessionIdAtom,
 } from "../core/atoms";
-import { derivedSnapshotAtom, eventIndexAtom } from "../core/atoms/events";
+import {
+  derivedSnapshotAtom,
+  eventIndexAtom,
+  streamingDeltaContentAtom,
+} from "../core/atoms/events";
 import type { DerivedSnapshot } from "../core/store/EventStoreProxy";
 import type {
   ReplayMode,
@@ -27,6 +32,7 @@ import type {
   SimulatorEventPreview,
 } from "../core/types";
 import { isSubagentSpawningTool } from "../sync/adapters/shared/subagentTracking";
+import { appendLiveAssistantEvent } from "./chatEvents";
 
 function buildSimulatorEventPreview(
   event: SessionEvent
@@ -105,14 +111,22 @@ simulatorEventsAtom.debugLabel = "session/simulatorEvents";
  */
 export const messagesEventsAtom = atom((get) => {
   const snap = get(derivedSnapshotAtom);
+  const sessionId = get(sessionIdAtom);
+  const liveContent = sessionId
+    ? (get(streamingDeltaContentAtom).get(sessionId) ?? null)
+    : null;
 
   if (snap && "messagesEvents" in snap) {
-    return (snap as DerivedSnapshot).messagesEvents;
+    return appendLiveAssistantEvent(
+      (snap as DerivedSnapshot).messagesEvents,
+      sessionId,
+      liveContent
+    );
   }
 
   // No derived snapshot baseline — messages visibility is pre-computed in
   // Rust (derived.rs is_visible_in_messages); nothing to show yet.
-  return [] as SessionEvent[];
+  return appendLiveAssistantEvent([], sessionId, liveContent);
 });
 messagesEventsAtom.debugLabel = "session/messagesEvents";
 

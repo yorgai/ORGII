@@ -366,11 +366,11 @@ export default OrgFormSections;
 
 /**
  * Shared validation predicate. A draft is "valid" iff:
- *  - org name is non-empty
+ *  - team name is non-empty
  *  - coordinator agent is set
  *  - at least one member exists
  *  - every member has a non-empty name AND an agent assigned
- *  - no two members share a name (within this org)
+ *  - no two members share a name (within this team)
  *
  * Both OrgWizard.canSave and OrgDetailView.isValid resolve to exactly
  * this predicate; centralising it keeps the two flows in sync.

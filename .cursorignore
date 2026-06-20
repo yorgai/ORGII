@@ -91,6 +91,8 @@ Atlas/
 .orgiiproject/
 .atlasxp/
 .worktrees/
+ORG2 Helper (Backend)-*
+src-tauri/bin/ORG2 Helper (Semantic)-*
 ORGII Helper (Backend)-*
 src-tauri/bin/ORGII Helper (Semantic)-*
 src-tauri/sidecar/browser-server/node_modules/

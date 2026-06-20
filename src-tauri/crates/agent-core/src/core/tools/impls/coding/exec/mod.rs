@@ -14,6 +14,7 @@
 //! to terminate.
 
 pub mod await_tool;
+mod external;
 mod pty;
 pub mod registry;
 mod subprocess;
@@ -160,12 +161,31 @@ impl ExecTool {
         command: &str,
         reason: &str,
     ) -> Result<(), ToolError> {
+        self.request_command_confirmation_inner(command, reason, false)
+            .await
+    }
+
+    async fn request_external_terminal_confirmation(
+        &self,
+        command: &str,
+        reason: &str,
+    ) -> Result<(), ToolError> {
+        self.request_command_confirmation_inner(command, reason, true)
+            .await
+    }
+
+    async fn request_command_confirmation_inner(
+        &self,
+        command: &str,
+        reason: &str,
+        force_prompt: bool,
+    ) -> Result<(), ToolError> {
         let provider = self.permission_provider.lock().await.clone();
         let Some(provider) = provider else {
             return Err(ToolError::PermissionDenied(reason.to_string()));
         };
 
-        if provider.is_always_allowed(tool_names::RUN_SHELL).await {
+        if !force_prompt && provider.is_always_allowed(tool_names::RUN_SHELL).await {
             return Ok(());
         }
 
@@ -176,10 +196,18 @@ impl ExecTool {
             ));
         };
         let tool_call_id = format!("{}-confirm-{}", tool_names::RUN_SHELL, uuid::Uuid::new_v4());
-        let confirm_args = serde_json::json!({
-            "command": command,
-            "reason": reason,
-        });
+        let confirm_args = if force_prompt {
+            serde_json::json!({
+                "command": command,
+                "reason": reason,
+                "terminal_target": "external",
+            })
+        } else {
+            serde_json::json!({
+                "command": command,
+                "reason": reason,
+            })
+        };
 
         info!("[ExecTool] Command requires user confirmation: {}", command);
         match provider
@@ -235,7 +263,9 @@ impl Tool for ExecTool {
 
     fn description(&self) -> &str {
         "Execute a shell command or kill a backgrounded process.\n\
-        Execute: runs as a fast subprocess with clean stdout/stderr capture. \
+        Execute: terminal_target=\"integrated\" (default) runs as a fast subprocess with clean stdout/stderr capture. \
+        Set terminal_target=\"external\" only when the user explicitly asks to open the OS terminal for interactive input; \
+        external terminal output cannot be captured like integrated stdout/stderr. \
         Set interactive: true ONLY for commands that require user input (passwords, sudo, SSH key passphrases). \
         Set mode: \"background\" up-front for long-running processes (dev servers, watchers, builds \
         you want to spawn then poll). Background mode returns {pid, logPath} as soon as the process \
@@ -258,7 +288,9 @@ impl Tool for ExecTool {
             .unwrap_or_else(|| self.working_dir.display().to_string());
         Some(format!(
             "Execute a shell command in {cwd} or kill a backgrounded process.\n\
-            Execute: runs as a fast subprocess with clean stdout/stderr capture. \
+            Execute: terminal_target=\"integrated\" (default) runs as a fast subprocess with clean stdout/stderr capture. \
+            Set terminal_target=\"external\" only when the user explicitly asks to open the OS terminal for interactive input; \
+            external terminal output cannot be captured like integrated stdout/stderr. \
             Set interactive: true ONLY for commands that require user input (passwords, sudo, SSH key passphrases). \
             Set mode: \"background\" up-front for long-running processes (dev servers, watchers, builds \
             you want to spawn then poll). Background mode returns {{pid, logPath}} immediately after spawn; \
@@ -294,6 +326,11 @@ impl Tool for ExecTool {
                 "interactive": {
                     "type": "boolean",
                     "description": "Set true ONLY for commands needing user input (password prompts, sudo, ssh). Default: false."
+                },
+                "terminal_target": {
+                    "type": "string",
+                    "enum": ["integrated", "external"],
+                    "description": "Where to run the command. 'integrated' (default) executes through the tool backend and captures stdout/stderr. 'external' opens the default OS terminal and sends the command there; use only when explicitly requested for interactive user input/password approval, and expect no stdout/stderr capture."
                 },
                 "mode": {
                     "type": "string",
@@ -374,6 +411,11 @@ impl Tool for ExecTool {
             .and_then(|val| val.as_bool())
             .unwrap_or(false);
         let interactive = requested_interactive;
+        let terminal_target = external::TerminalTarget::parse(
+            params
+                .get("terminal_target")
+                .and_then(|value| value.as_str()),
+        )?;
         let wait_secs = params.get("wait").and_then(|val| val.as_u64());
         let mode = match params.get("mode").and_then(|v| v.as_str()) {
             None | Some("blocking") => subprocess::ExecMode::Blocking,
@@ -485,11 +527,28 @@ impl Tool for ExecTool {
         }
 
         info!(
-            "exec: {} (cwd: {}, interactive: {})",
+            "exec: {} (cwd: {}, interactive: {}, terminal_target: {:?})",
             command,
             effective_dir.display(),
             interactive,
+            terminal_target,
         );
+
+        if matches!(terminal_target, external::TerminalTarget::External) {
+            if matches!(mode, subprocess::ExecMode::Background) {
+                return Err(ToolError::InvalidParams(
+                    "mode=\"background\" is incompatible with terminal_target=\"external\". External terminal commands are interactive windows and cannot be tracked as backend background jobs."
+                        .into(),
+                ));
+            }
+            self.request_external_terminal_confirmation(
+                &command,
+                "Opening an external terminal runs outside the tool backend and stdout/stderr cannot be captured. Confirm that you want ORGII to open your OS terminal and send this command.",
+            )
+            .await?;
+            let launch = external::launch(&command, &effective_dir)?;
+            return Ok(external::format_launch_result(&command, &launch));
+        }
 
         if !interactive {
             if let Some(ref router) = self.router {
@@ -687,6 +746,72 @@ mod tests {
             Err(ToolError::InvalidParams(msg)) => {
                 assert!(
                     msg.contains("Invalid kill_handle"),
+                    "unexpected error: {msg}"
+                );
+            }
+            other => panic!("expected InvalidParams, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn external_terminal_target_is_exposed_in_schema() {
+        let workspace = tempfile::tempdir().expect("workspace tmpdir");
+        let tool = fresh_tool(workspace.path());
+        let schema = tool.parameters();
+
+        let enum_values = schema
+            .pointer("/properties/terminal_target/enum")
+            .and_then(|value| value.as_array())
+            .expect("terminal_target enum should exist");
+        assert_eq!(enum_values, &vec![json!("integrated"), json!("external")]);
+    }
+
+    #[tokio::test]
+    async fn external_terminal_rejects_background_mode_before_launch() {
+        let workspace = tempfile::tempdir().expect("workspace tmpdir");
+        let tool = fresh_tool(workspace.path());
+
+        let result = tool
+            .execute_text(
+                json!({
+                    "command": "/bin/echo hello",
+                    "terminal_target": "external",
+                    "mode": "background",
+                }),
+                &crate::tools::call_context::CallContext::default(),
+            )
+            .await;
+
+        match result {
+            Err(ToolError::InvalidParams(msg)) => {
+                assert!(
+                    msg.contains("terminal_target=\"external\""),
+                    "unexpected error: {msg}"
+                );
+            }
+            other => panic!("expected InvalidParams, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn unknown_terminal_target_is_rejected() {
+        let workspace = tempfile::tempdir().expect("workspace tmpdir");
+        let tool = fresh_tool(workspace.path());
+
+        let result = tool
+            .execute_text(
+                json!({
+                    "command": "/bin/echo hello",
+                    "terminal_target": "space",
+                }),
+                &crate::tools::call_context::CallContext::default(),
+            )
+            .await;
+
+        match result {
+            Err(ToolError::InvalidParams(msg)) => {
+                assert!(
+                    msg.contains("Unknown terminal_target"),
                     "unexpected error: {msg}"
                 );
             }

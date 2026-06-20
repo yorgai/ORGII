@@ -22,7 +22,7 @@ fi
 # Count processes before cleanup
 BUILD_COUNT=$(ps aux | grep "build.js --watch" | grep -v grep | wc -l | xargs)
 ESBUILD_COUNT=$(ps aux | grep "esbuild --service" | grep -v grep | wc -l | xargs)
-ORGII_COUNT=$(pgrep -f "ORGII Dev" | wc -l | xargs)
+ORGII_COUNT=$(pgrep -f "ORG2 Dev" | wc -l | xargs)
 CARGO_ORPHAN_COUNT=$(ps aux | grep "cargo run.*no-default-features" | grep -v grep | wc -l | xargs)
 PORT_PID=$(lsof -ti :1998 2>/dev/null | head -1)
 
@@ -30,7 +30,7 @@ if [ "$QUIET" != "true" ]; then
     echo "Found orphaned processes:"
     echo "  - Node build watchers: $BUILD_COUNT"
     echo "  - esbuild services: $ESBUILD_COUNT"
-    echo "  - ORGII Dev (webpack): $ORGII_COUNT"
+    echo "  - ORG2 Dev (webpack): $ORGII_COUNT"
     echo "  - Orphaned cargo run: $CARGO_ORPHAN_COUNT"
     if [ -n "$PORT_PID" ]; then
         echo "  - Port 1998 held by PID: $PORT_PID"
@@ -72,8 +72,8 @@ if [ "$ESBUILD_COUNT" -gt 0 ]; then
 fi
 
 if [ "$ORGII_COUNT" -gt 0 ]; then
-    pkill -f "ORGII Dev" 2>/dev/null || true
-    [ "$QUIET" != "true" ] && echo "  ✓ Killed $ORGII_COUNT ORGII Dev processes"
+    pkill -f "ORG2 Dev" 2>/dev/null || true
+    [ "$QUIET" != "true" ] && echo "  ✓ Killed $ORGII_COUNT ORG2 Dev processes"
 fi
 
 if [ "$CARGO_ORPHAN_COUNT" -gt 0 ]; then
@@ -96,13 +96,13 @@ if [ "$QUIET" != "true" ]; then
 fi
 BUILD_AFTER=$(ps aux | grep "build.js --watch" | grep -v grep | wc -l | xargs)
 ESBUILD_AFTER=$(ps aux | grep "esbuild --service" | grep -v grep | wc -l | xargs)
-ORGII_AFTER=$(pgrep -f "ORGII Dev" | wc -l | xargs)
+ORGII_AFTER=$(pgrep -f "ORG2 Dev" | wc -l | xargs)
 PORT_AFTER=$(lsof -ti :1998 2>/dev/null | head -1)
 
 if [ "$QUIET" != "true" ]; then
     echo "  - Remaining build watchers: $BUILD_AFTER"
     echo "  - Remaining esbuild services: $ESBUILD_AFTER"
-    echo "  - Remaining ORGII Dev: $ORGII_AFTER"
+    echo "  - Remaining ORG2 Dev: $ORGII_AFTER"
     echo "  - Port 1998: ${PORT_AFTER:-free}"
     echo ""
 fi

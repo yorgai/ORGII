@@ -22,9 +22,9 @@
     "indexing": "Index",
     "index": "Index",
     "billing": "청구",
-    "agentOrgs": "Agent 및 조직",
+    "agentOrgs": "Agent & 팀",
     "agents": "Agents",
-    "org": "조직",
+    "org": "팀",
     "coreSettings": "코어",
     "appSettings": "앱 설정",
     "terminal": "터미널",
@@ -103,8 +103,8 @@
       "manage": "관리",
       "core": "코어",
       "agent": "Agent",
-      "org": "조직",
-      "agentOrgs": "Agent 및 조직"
+      "org": "팀",
+      "agentOrgs": "Agent & 팀"
     },
     "groupBy": {
       "title": "그룹",

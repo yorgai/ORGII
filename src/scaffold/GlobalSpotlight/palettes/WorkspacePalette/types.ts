@@ -8,6 +8,7 @@ export type AddMenuKind = "add" | null;
 
 export const WORKSPACE_PALETTE_SECTION_KEY = {
   CURRENT: "current",
+  RECENT: "recent",
   SYSTEM_PATH: "systemPath",
   EXTERNAL_RECENT: "externalRecent",
   REPO: "repo",
@@ -44,6 +45,7 @@ export interface WorkspacePaletteText {
   openFolderLabel: string;
   addFolderLabel: string;
   sectionCurrentLabel: string;
+  sectionRecentLabel: string;
   sectionSystemPathsLabel: string;
   sectionExternalRecentLabel: string;
   sectionRepoLabel: string;

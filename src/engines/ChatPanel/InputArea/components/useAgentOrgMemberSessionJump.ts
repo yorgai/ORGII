@@ -25,7 +25,7 @@ function parseCliAgentOrgReference(agentReference: string | null | undefined) {
 }
 
 /**
- * Switch the chat pipeline to an Agent Org member's session without
+ * Switch the chat pipeline to an Agent Team member's session without
  * touching WorkStation's remembered selection.
  *
  * The two-atom session model (see `viewAtom.ts`) separates the

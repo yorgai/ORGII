@@ -147,10 +147,10 @@ schemars = "1.0"         # JSON Schema generation for tool params — used by ap
 [package]
 # Package name controls the produced binary file name (no explicit `[[bin]]`
 # section below). macOS uses that file name as the dock-tooltip label in
-# `tauri dev` because there's no .app bundle to read `productName` from —
-# so this stays as `orgii`, not `app`. The bundled .app from `tauri build`
-# still gets its name from `productName` in `tauri.conf.json` ("ORGII").
-name = "orgii"
+# `tauri dev` because there's no .app bundle to read `productName` from.
+# The bundled .app from `tauri build` gets its name from `productName` in
+# `tauri.conf.json`.
+name = "org2"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
@@ -158,7 +158,7 @@ license = "AGPL-3.0-or-later"
 repository = ""
 edition = "2021"
 rust-version = "1.85.0"
-default-run = "orgii"
+default-run = "org2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -294,7 +294,7 @@ database = { path = "crates/database" }
 
 # Remote SQL client feature: 6 `#[tauri::command]`s that connect to
 # user-supplied PostgreSQL / MySQL servers and run ad-hoc queries. Owns
-# the `sqlx` dep tree privately so it never enters `cargo check -p orgii`.
+# the `sqlx` dep tree privately so it never enters `cargo check -p org2`.
 # See `crates/db-clients/Cargo.toml` for the full rationale and the
 # naming-disambiguation note (this is NOT the `database` SQLite crate
 # above, NOR the `work_station::db_browser` module that opens local
@@ -452,9 +452,9 @@ rusqlite = { workspace = true } # SQLite driver
 # never imported it — the only consumer was `work_station/database/mod.rs`,
 # the DB Browser feature. That moved to the `db_browser` workspace crate
 # above; sqlx now compiles only when `db_browser` does, not on every
-# `cargo check -p orgii`. Removing it from `orgii`'s direct deps drops three
+# `cargo check -p org2`. Removing it from `org2`'s direct deps drops three
 # top-15 fattest transitive crates (sqlx-core, sqlx-postgres, sqlx-mysql)
-# from rust-analyzer's index for `orgii`.
+# from rust-analyzer's index for `org2`.
 dirs = "6.0"             # Get user directories (~/.orgii/data)
 chrono = { workspace = true }  # Date/time handling
 zip = { workspace = true }

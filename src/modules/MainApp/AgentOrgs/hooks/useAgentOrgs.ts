@@ -1,5 +1,5 @@
 /**
- * useAgentOrgs — read-only hook to load agent organizations via Tauri invoke.
+ * useAgentOrgs — read-only hook to load agent teams via Tauri invoke.
  *
  * Returns the list of OrgMember (top-level org definitions) for use in
  * assignee pickers and orchestrator config resolution.
