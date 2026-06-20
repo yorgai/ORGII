@@ -13,8 +13,8 @@ use super::scanner::SkillsLoader;
 use super::types::SkillInfo;
 use crate::specialization::skills::builtin;
 
-use crate::core::definitions::AgentSkillsConfig;
 use crate::core::definitions::store::AgentDefinitionsStore;
+use crate::core::definitions::AgentSkillsConfig;
 use crate::session::prompt::cache::PromptCacheInvalidationReason;
 use crate::state::AgentAppState;
 

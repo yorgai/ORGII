@@ -565,7 +565,11 @@ mod tests {
             variants.iter().all(|v| v.is_string()),
             "enum must contain no null after collapse: {schema}"
         );
-        assert_eq!(variants.len(), 3, "all three variants must survive: {schema}");
+        assert_eq!(
+            variants.len(),
+            3,
+            "all three variants must survive: {schema}"
+        );
         // No `"type"` arrays must remain anywhere in the schema.
         assert!(
             type_arrays(&schema).is_empty(),

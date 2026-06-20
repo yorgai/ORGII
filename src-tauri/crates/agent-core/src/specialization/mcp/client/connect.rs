@@ -91,84 +91,83 @@ impl McpClient {
 
         let connect_timeout = resolve_connect_timeout(&expanded);
 
-        let serve_future =
-            async {
-                match expanded.transport_type {
-                    McpTransportType::Stdio => {
-                        let command = expanded.command.as_deref().ok_or_else(|| {
-                            "stdio transport requires a 'command' field".to_string()
-                        })?;
-                        let args = expanded.args.as_deref().unwrap_or(&[]);
+        let serve_future = async {
+            match expanded.transport_type {
+                McpTransportType::Stdio => {
+                    let command = expanded
+                        .command
+                        .as_deref()
+                        .ok_or_else(|| "stdio transport requires a 'command' field".to_string())?;
+                    let args = expanded.args.as_deref().unwrap_or(&[]);
 
-                        // Resolve the command to an absolute path against the
-                        // (startup-augmented) PATH. A bare name like `npx` /
-                        // `uvx` / `codegraph` otherwise fails with an opaque
-                        // ENOENT when it lives in a dir the login-shell PATH
-                        // probe missed (pipx/uv/cargo/`~/.local/bin`). On miss,
-                        // return an actionable "not found in PATH" error.
-                        let resolved_command = which::which(command).map_err(|_| {
+                    // Resolve the command to an absolute path against the
+                    // (startup-augmented) PATH. A bare name like `npx` /
+                    // `uvx` / `codegraph` otherwise fails with an opaque
+                    // ENOENT when it lives in a dir the login-shell PATH
+                    // probe missed (pipx/uv/cargo/`~/.local/bin`). On miss,
+                    // return an actionable "not found in PATH" error.
+                    let resolved_command = which::which(command).map_err(|_| {
                             format!(
                                 "command '{}' not found in PATH (is the MCP server installed and on your PATH?)",
                                 command
                             )
                         })?;
 
-                        let mut cmd = TokioCommand::new(&resolved_command);
-                        cmd.args(args);
-                        if let Some(cwd) = expanded.cwd.as_deref() {
-                            // Validate cwd before handing it to the spawn —
-                            // a missing/invalid working dir otherwise fails the
-                            // spawn with an unhelpful error.
-                            let cwd_path = std::path::Path::new(cwd);
-                            if !cwd_path.is_dir() {
-                                return Err(format!(
+                    let mut cmd = TokioCommand::new(&resolved_command);
+                    cmd.args(args);
+                    if let Some(cwd) = expanded.cwd.as_deref() {
+                        // Validate cwd before handing it to the spawn —
+                        // a missing/invalid working dir otherwise fails the
+                        // spawn with an unhelpful error.
+                        let cwd_path = std::path::Path::new(cwd);
+                        if !cwd_path.is_dir() {
+                            return Err(format!(
                                     "stdio MCP working directory '{}' does not exist or is not a directory",
                                     cwd
                                 ));
-                            }
-                            cmd.current_dir(cwd_path);
                         }
-                        if let Some(env) = expanded.env.as_ref() {
-                            for (k, v) in env {
-                                cmd.env(k, v);
-                            }
+                        cmd.current_dir(cwd_path);
+                    }
+                    if let Some(env) = expanded.env.as_ref() {
+                        for (k, v) in env {
+                            cmd.env(k, v);
                         }
-
-                        // Windows: stdio MCP servers are console programs; without
-                        // this each one would flash a console window on spawn.
-                        #[cfg(windows)]
-                        cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
-
-                        // Capture the child's stderr so a failed handshake can
-                        // surface the server's real diagnostic instead of an
-                        // opaque "MCP initialize failed" / timeout message.
-                        let (child, stderr) = TokioChildProcess::builder(cmd)
-                            .stderr(Stdio::piped())
-                            .spawn()
-                            .map_err(|err| {
-                                format!("Failed to spawn '{}': {}", command, err)
-                            })?;
-                        let stderr_ring = stderr.map(spawn_stderr_drain).unwrap_or_default();
-
-                        handler.serve(child).await.map_err(|err| {
-                            with_stderr(
-                                format!("MCP initialize failed for '{}': {}", name, err),
-                                &stderr_ring,
-                            )
-                        })
                     }
-                    McpTransportType::StreamableHttp | McpTransportType::Sse => {
-                        let url = expanded.url.as_deref().ok_or_else(|| {
-                            "HTTP/SSE transport requires a 'url' field".to_string()
-                        })?;
-                        let transport = StreamableHttpClientTransport::from_uri(url);
-                        handler
-                            .serve(transport)
-                            .await
-                            .map_err(|err| format!("MCP initialize failed for '{}': {}", name, err))
-                    }
+
+                    // Windows: stdio MCP servers are console programs; without
+                    // this each one would flash a console window on spawn.
+                    #[cfg(windows)]
+                    cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
+
+                    // Capture the child's stderr so a failed handshake can
+                    // surface the server's real diagnostic instead of an
+                    // opaque "MCP initialize failed" / timeout message.
+                    let (child, stderr) = TokioChildProcess::builder(cmd)
+                        .stderr(Stdio::piped())
+                        .spawn()
+                        .map_err(|err| format!("Failed to spawn '{}': {}", command, err))?;
+                    let stderr_ring = stderr.map(spawn_stderr_drain).unwrap_or_default();
+
+                    handler.serve(child).await.map_err(|err| {
+                        with_stderr(
+                            format!("MCP initialize failed for '{}': {}", name, err),
+                            &stderr_ring,
+                        )
+                    })
                 }
-            };
+                McpTransportType::StreamableHttp | McpTransportType::Sse => {
+                    let url = expanded
+                        .url
+                        .as_deref()
+                        .ok_or_else(|| "HTTP/SSE transport requires a 'url' field".to_string())?;
+                    let transport = StreamableHttpClientTransport::from_uri(url);
+                    handler
+                        .serve(transport)
+                        .await
+                        .map_err(|err| format!("MCP initialize failed for '{}': {}", name, err))
+                }
+            }
+        };
 
         let service = tokio::time::timeout(connect_timeout, serve_future)
             .await

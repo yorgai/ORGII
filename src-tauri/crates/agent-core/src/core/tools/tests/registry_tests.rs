@@ -970,9 +970,8 @@ fn real_tool_schemas_have_no_null_enum_members() {
         "use_code_map schema must not contain null enum members \
          (moonshot/MiniMax/kimi reject them): {schema}"
     );
-    assert_llm_compatible_schema(&schema).unwrap_or_else(|err| {
-        panic!("use_code_map schema violates LLM contract: {err}\n{schema}")
-    });
+    assert_llm_compatible_schema(&schema)
+        .unwrap_or_else(|err| panic!("use_code_map schema violates LLM contract: {err}\n{schema}"));
 }
 
 #[test]
