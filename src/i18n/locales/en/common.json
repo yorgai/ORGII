@@ -2068,6 +2068,7 @@
     "willInclude": "Workspace would include {{count}} repos",
     "statusSelectAtLeastTwo": "Select at least 2 repos",
     "statusReadyToCreate": "Ready to create workspace",
+    "statusMaxRepos": "Maximum 5 repos selected",
     "defaultName": "Workspace",
     "defaultNameWithRepo": "{{repo}} Workspace",
     "windowTitle": "Workspace"

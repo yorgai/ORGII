@@ -23,6 +23,8 @@ import {
   SpotlightModalHeader,
 } from "../shared";
 
+const MAX_WORKSPACE_REPOS = 5;
+
 interface CreateWorkspaceFormProps {
   repos: RepoItem[];
   currentRepoId?: string;
@@ -63,6 +65,9 @@ const CreateWorkspaceForm: React.FC<CreateWorkspaceFormProps> = ({
   const [workspaceName, setWorkspaceName] = useState(
     editingWorkspace?.name ?? ""
   );
+  const [hasCustomWorkspaceName, setHasCustomWorkspaceName] = useState(
+    Boolean(editingWorkspace?.name)
+  );
   const [repoSearchQuery, setRepoSearchQuery] = useState("");
 
   const orderedRepos = useMemo(() => repos, [repos]);
@@ -89,6 +94,10 @@ const CreateWorkspaceForm: React.FC<CreateWorkspaceFormProps> = ({
 
   const handleToggle = useCallback((repoId: string, checked: boolean) => {
     setSelectedIds((prev) => {
+      if (checked && !prev.has(repoId) && prev.size >= MAX_WORKSPACE_REPOS) {
+        return prev;
+      }
+
       const next = new Set(prev);
       if (checked) {
         next.add(repoId);
@@ -99,16 +108,18 @@ const CreateWorkspaceForm: React.FC<CreateWorkspaceFormProps> = ({
     });
   }, []);
 
-  const effectiveName = useMemo(() => {
-    if (workspaceName.trim()) return workspaceName.trim();
-    const selectedArr = Array.from(selectedIds);
-    const firstRepo = repos.find((r) => r.id === selectedArr[0]);
-    return firstRepo
-      ? t("workspaceForm.defaultNameWithRepo", "{{repo}} Workspace", {
-          repo: firstRepo.name,
-        })
-      : "";
-  }, [workspaceName, selectedIds, repos, t]);
+  const generatedWorkspaceName = useMemo(() => {
+    const selectedRepoNames = orderedRepos
+      .filter((repo) => selectedIds.has(repo.id))
+      .map((repo) => repo.name)
+      .filter(Boolean);
+    return selectedRepoNames.join("-");
+  }, [selectedIds, orderedRepos]);
+
+  const effectiveName = workspaceName.trim() || generatedWorkspaceName;
+  const displayedWorkspaceName = hasCustomWorkspaceName
+    ? workspaceName
+    : generatedWorkspaceName;
 
   const handleSubmit = useCallback(() => {
     const name = effectiveName || t("workspaceForm.defaultName", "Workspace");
@@ -121,7 +132,11 @@ const CreateWorkspaceForm: React.FC<CreateWorkspaceFormProps> = ({
   const isSubmitDisabled = loading || selectedIds.size < 2;
 
   const statusKey =
-    selectedIds.size < 2 ? "statusSelectAtLeastTwo" : "statusReadyToCreate";
+    selectedIds.size < 2
+      ? "statusSelectAtLeastTwo"
+      : selectedIds.size >= MAX_WORKSPACE_REPOS
+        ? "statusMaxRepos"
+        : "statusReadyToCreate";
 
   return (
     <div className="flex h-full flex-col">
@@ -155,8 +170,13 @@ const CreateWorkspaceForm: React.FC<CreateWorkspaceFormProps> = ({
                 effectiveName ||
                 t("workspaceForm.workspaceNamePlaceholder", "My Workspace")
               }
-              value={workspaceName}
-              onChange={setWorkspaceName}
+              value={displayedWorkspaceName}
+              onChange={(name) => {
+                setWorkspaceName(name);
+                setHasCustomWorkspaceName(
+                  name.trim() !== generatedWorkspaceName
+                );
+              }}
               className="h-[32px] rounded-lg bg-fill-1 text-[14px]"
               prefix={
                 <ICONS.workspace
@@ -195,15 +215,20 @@ const CreateWorkspaceForm: React.FC<CreateWorkspaceFormProps> = ({
                 {filteredRepos.map((repo) => {
                   const isChecked = selectedIds.has(repo.id);
                   const isCurrent = repo.id === currentRepoId;
+                  const isSelectionDisabled =
+                    !isChecked && selectedIds.size >= MAX_WORKSPACE_REPOS;
                   return (
                     <label
                       key={repo.id}
-                      className={`flex cursor-pointer items-center gap-2.5 rounded px-2 py-1.5 hover:bg-fill-3 ${
-                        isChecked ? "bg-fill-1/50" : ""
-                      }`}
+                      className={`flex items-center gap-2.5 rounded px-2 py-1.5 ${
+                        isSelectionDisabled
+                          ? "cursor-not-allowed opacity-50"
+                          : "cursor-pointer hover:bg-fill-3"
+                      } ${isChecked ? "bg-fill-1/50" : ""}`}
                     >
                       <Checkbox
                         checked={isChecked}
+                        disabled={isSelectionDisabled}
                         onChange={(checked) => handleToggle(repo.id, checked)}
                       />
                       <div className="flex min-w-0 flex-1 items-center gap-2">

@@ -26,6 +26,8 @@ import type { WorkspaceFolder } from "@src/types/workspace";
 
 import type { RepoItem } from "../../types";
 
+const MAX_WORKSPACE_REPOS = 5;
+
 export interface UseCreateWorkspaceFormOptions {
   onSuccess?: () => void;
   onClose?: () => void;
@@ -72,7 +74,11 @@ export function useCreateWorkspaceForm(
 
   const handleSubmit = useCallback(
     async (selectedRepoIds: string[], workspaceName: string) => {
-      if (selectedRepoIds.length < 2) return;
+      if (
+        selectedRepoIds.length < 2 ||
+        selectedRepoIds.length > MAX_WORKSPACE_REPOS
+      )
+        return;
 
       setLoading(true);
       try {
