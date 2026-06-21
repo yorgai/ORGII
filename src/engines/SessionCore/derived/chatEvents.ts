@@ -104,18 +104,26 @@ function getAssistantText(event: SessionEvent): string {
 
 function isFinalAssistantDuplicate(
   events: SessionEvent[],
-  content: string
+  content: string,
+  liveCreatedAt: string,
+  sessionId: string
 ): boolean {
   const liveText = normalizeEventText(content);
   if (!liveText) return false;
-  return events.some(
-    (event) =>
-      event.source === "assistant" &&
-      event.displayVariant === "message" &&
-      event.displayStatus !== "running" &&
-      event.isDelta !== true &&
-      getAssistantText(event) === liveText
-  );
+
+  return events.some((event) => {
+    if (event.sessionId !== sessionId) return false;
+    if (event.source !== "assistant") return false;
+    if (event.displayVariant !== "message") return false;
+    if (event.displayStatus === "running") return false;
+    if (event.isDelta === true) return false;
+
+    if (liveText === "\u200b") {
+      return Boolean(event.createdAt && event.createdAt >= liveCreatedAt);
+    }
+
+    return getAssistantText(event) === liveText;
+  });
 }
 
 export function appendLiveAssistantEvent(
@@ -123,19 +131,23 @@ export function appendLiveAssistantEvent(
   sessionId: string | null,
   content: string | null
 ): SessionEvent[] {
-  if (!sessionId || !content || isFinalAssistantDuplicate(events, content)) {
+  if (!sessionId || !content) {
     if (sessionId) _liveAssistantCreatedAtBySession.delete(sessionId);
     return events.filter((event) => event.id !== `live-assistant-${sessionId}`);
   }
   const liveId = `live-assistant-${sessionId}`;
   const createdAt = getLiveAssistantCreatedAt(sessionId);
+  if (isFinalAssistantDuplicate(events, content, createdAt, sessionId)) {
+    _liveAssistantCreatedAtBySession.delete(sessionId);
+    return events.filter((event) => event.id !== liveId);
+  }
   const liveEvent: SessionEvent = {
     id: liveId,
     chunk_id: null,
     sessionId,
     createdAt,
-    functionName: "assistant_message",
-    uiCanonical: "assistant_message",
+    functionName: "agent_message",
+    uiCanonical: "agent_message",
     actionType: "assistant",
     args: { syntheticLive: true },
     result: { observation: content },
@@ -147,18 +159,7 @@ export function appendLiveAssistantEvent(
     isDelta: true,
   };
   const withoutLive = events.filter((event) => event.id !== liveId);
-  // Summary events are anchored by Rust to their completed turn; the live
-  // overlay uses its first-token timestamp only to place transient UI relative
-  // to those durable, turn-local anchors.
-  const insertAt = withoutLive.findIndex(
-    (event) => event.createdAt && event.createdAt > createdAt
-  );
-  if (insertAt < 0) return [...withoutLive, liveEvent];
-  return [
-    ...withoutLive.slice(0, insertAt),
-    liveEvent,
-    ...withoutLive.slice(insertAt),
-  ];
+  return [...withoutLive, liveEvent];
 }
 
 export const chatEventsAtom = atom((get) => {

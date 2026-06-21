@@ -17,6 +17,10 @@ import {
   isStreamingPlanDraftEvent,
   isSubmittedCreatePlanEvent,
 } from "@src/engines/SessionCore/derived/planDisplayEvents";
+import {
+  extractThinkContent,
+  stripThinkTags,
+} from "@src/engines/SessionCore/sync/adapters/shared/streamingParsers";
 import { normalizeFunctionName } from "@src/lib/activityData/activityNormalizers";
 import {
   extractAssistantMessageContent,
@@ -42,7 +46,12 @@ function hasShellCommand(event: SessionEvent): boolean {
  * suppress empty agent_message wrappers.
  */
 function hasAgentMessageBody(event: SessionEvent): boolean {
-  if (extractAssistantMessageContent(event)) return true;
+  const assistantContent = extractAssistantMessageContent(event);
+  if (assistantContent) {
+    const visibleContent = stripThinkTags(assistantContent).trim();
+    const thinkingContent = extractThinkContent(assistantContent);
+    return Boolean(visibleContent || thinkingContent);
+  }
   const taskDescription = event.args?.["task_description"];
   if (typeof taskDescription === "string" && taskDescription.trim())
     return true;
@@ -72,9 +81,9 @@ function hasThinkingBody(event: SessionEvent): boolean {
   );
 }
 
-function hasThinkingEventType(
+export function hasThinkingEventType(
   event: SessionEvent,
-  normalized: string
+  normalized = event.uiCanonical || normalizeFunctionName(event.functionName)
 ): boolean {
   const normalizedActionType = normalizeFunctionName(event.actionType);
   return (
@@ -120,6 +129,13 @@ export function willEventRenderContent(event: SessionEvent): boolean {
   const actionType = event.actionType;
   const functionName = event.functionName;
 
+  // Use pre-computed uiCanonical from ingestion (already normalized)
+  const normalized = event.uiCanonical || normalizeFunctionName(functionName);
+
+  if (hasThinkingEventType(event, normalized)) {
+    return hasThinkingBody(event);
+  }
+
   // Assistant/agent messages render only when they actually carry text
   // (either streaming, displayText, a result body, or a task_description arg).
   // Without this guard, an agent_message whose payload landed only in <think>
@@ -146,9 +162,6 @@ export function willEventRenderContent(event: SessionEvent): boolean {
     }
   }
 
-  // Use pre-computed uiCanonical from ingestion (already normalized)
-  const normalized = event.uiCanonical || normalizeFunctionName(functionName);
-
   // Plan cards have two renderable shapes:
   // - running raw create_plan tool-call args for streaming draft UI
   // - explicit backend-authored plan_approval lifecycle events for history
@@ -162,10 +175,6 @@ export function willEventRenderContent(event: SessionEvent): boolean {
 
   // Failed events always render (FailedEventRow)
   if (event.displayStatus === "failed") return true;
-
-  if (hasThinkingEventType(event, normalized)) {
-    return hasThinkingBody(event);
-  }
 
   // Shell commands render when the command itself is known, even if the CLI
   // reports an empty stdout/stderr payload.

@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 
 import Markdown from "@src/components/MarkDown";
 import { getEventIcon } from "@src/config/toolIcons";
+import { hasThinkingEventType } from "@src/engines/ChatPanel/ChatHistory/chatItemPipeline/filters";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
@@ -152,9 +153,15 @@ export const ThinkingEvent: React.FC<ThinkingEventProps> = (props) => {
 
   const { content } = extractThinkingData(normalizedProps);
   const displayContent = props.streamingContent || content;
+  const hasContent = Boolean(displayContent?.trim());
+  const isThinkingEvent = props.event
+    ? hasThinkingEventType(props.event, normalizedProps.eventType)
+    : false;
   const isLoading = normalizedProps.status === "running";
 
   if (normalizedProps.variant === "chat") {
+    if (isThinkingEvent && !hasContent) return null;
+
     return (
       <ChatVariant
         content={displayContent}

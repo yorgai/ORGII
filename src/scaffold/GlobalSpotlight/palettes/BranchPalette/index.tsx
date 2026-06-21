@@ -10,7 +10,6 @@
  * prevent redundant calls.
  */
 import React from "react";
-import { useTranslation } from "react-i18next";
 
 import {
   SPOTLIGHT_FOOTER_ACTIVE_CHIP,
@@ -41,8 +40,6 @@ export const BranchPalette: React.FC<BranchPaletteProps> = ({
   onModeChange,
   onGoBackToParent,
 }) => {
-  const { t } = useTranslation();
-
   const effectiveShowRemoveMode = showRemoveMode ?? variant === "global";
 
   const {
@@ -50,7 +47,6 @@ export const BranchPalette: React.FC<BranchPaletteProps> = ({
     activeMode,
     setActiveMode,
     isCreatingBranch,
-    selectedStartPoint,
     setSelectedStartPoint,
     items,
     pinnedActionItems,
@@ -78,14 +74,6 @@ export const BranchPalette: React.FC<BranchPaletteProps> = ({
   React.useEffect(() => {
     onModeChange?.(activeMode);
   }, [activeMode, onModeChange]);
-
-  const hintSlot =
-    activeMode === "add" && selectedStartPoint ? (
-      <div className="py-2 pl-[48px] pr-4 text-[13px] text-text-3">
-        {t("selectors.branch.labels.basedOn")}{" "}
-        <span className="font-medium text-text-2">{selectedStartPoint}</span>
-      </div>
-    ) : undefined;
 
   const handleRemovePathSegment = React.useCallback(() => {
     if (activeMode === "checkout") {
@@ -133,7 +121,6 @@ export const BranchPalette: React.FC<BranchPaletteProps> = ({
       hideActionClose={hideActionClose}
       containerHeight={350}
       fixedHeight
-      hintSlot={hintSlot}
       contentOverride={activeMode === "add" ? <></> : undefined}
       afterListSlot={pinnedActionSection}
     />

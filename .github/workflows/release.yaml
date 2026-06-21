@@ -1,8 +1,8 @@
 # Build, sign, notarize, and release ORGII for macOS (Apple Silicon) and Windows (x64).
 #
-# Trigger: push a tag matching v* (e.g. v1.0.1, v1.0.2, v1.0.1.1, v1.0.1.2)
-# Tauri app/updater versions must be SemVer. Four-part release tags are folded to
-# three-part SemVer before writing tauri.conf.json and latest.json.
+# Trigger: push a tag matching v* (e.g. v1.1.0, v1.1.1).
+# Release tags must be valid three-part SemVer because Tauri app/updater
+# versions are written directly from the tag.
 #
 # Sidecar binaries (peekaboo, agent-browser, dugite/git) are NOT bundled in the
 # .app. They are downloaded at first launch into ~/.orgii/bin/ by the app itself
@@ -84,26 +84,18 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
 
       # ── Stamp version from git tag ──────────────────────────
-      # Tag format: v1.0.1.3 (MAJOR.MINOR.PATCH.BUILD)
-      # Tauri/SemVer needs exactly 3 parts, so we fold the build number
-      # into the patch: 1.0.1.3 → 1.0.3  (1.0.PATCH+BUILD or just BUILD).
-      # package.json keeps the full tag for display in About / release notes.
+      # Tag format: v1.1.0 (valid three-part SemVer).
       - name: Set version from tag
         run: |
-          FULL_VERSION="${GITHUB_REF_NAME#v}"   # e.g. 1.0.1.3
-          # Extract MAJOR.MINOR from tag, use BUILD as PATCH for SemVer
-          MAJOR=$(echo "$FULL_VERSION" | cut -d. -f1)
-          MINOR=$(echo "$FULL_VERSION" | cut -d. -f2)
-          BUILD=$(echo "$FULL_VERSION" | cut -d. -f4)
-          # If no 4th part (plain v1.0.1), use PATCH as-is
-          if [ -z "$BUILD" ]; then
-            SEMVER="$FULL_VERSION"
-          else
-            SEMVER="${MAJOR}.${MINOR}.${BUILD}"
+          FULL_VERSION="${GITHUB_REF_NAME#v}"
+          if ! [[ "$FULL_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag must be valid three-part SemVer: $GITHUB_REF_NAME" >&2
+            exit 1
           fi
+          SEMVER="$FULL_VERSION"
           echo "VERSION=$FULL_VERSION" >> "$GITHUB_ENV"
           echo "SEMVER=$SEMVER" >> "$GITHUB_ENV"
-          echo "=== Release version: $FULL_VERSION (semver: $SEMVER) ==="
+          echo "=== Release version: $FULL_VERSION ==="
           sed -i '' "s/\"version\": \".*\"/\"version\": \"$SEMVER\"/" src-tauri/tauri.conf.json
           sed -i '' "s/\"version\": \".*\"/\"version\": \"$FULL_VERSION\"/" package.json
           grep '"version"' src-tauri/tauri.conf.json package.json
@@ -253,14 +245,11 @@ jobs:
         shell: bash
         run: |
           FULL_VERSION="${GITHUB_REF_NAME#v}"
-          MAJOR=$(echo "$FULL_VERSION" | cut -d. -f1)
-          MINOR=$(echo "$FULL_VERSION" | cut -d. -f2)
-          BUILD=$(echo "$FULL_VERSION" | cut -d. -f4)
-          if [ -z "$BUILD" ]; then
-            SEMVER="$FULL_VERSION"
-          else
-            SEMVER="${MAJOR}.${MINOR}.${BUILD}"
+          if ! [[ "$FULL_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag must be valid three-part SemVer: $GITHUB_REF_NAME" >&2
+            exit 1
           fi
+          SEMVER="$FULL_VERSION"
           echo "VERSION=$FULL_VERSION" >> "$GITHUB_ENV"
           echo "SEMVER=$SEMVER" >> "$GITHUB_ENV"
           sed -i "s/\"version\": \".*\"/\"version\": \"$SEMVER\"/" src-tauri/tauri.conf.json
