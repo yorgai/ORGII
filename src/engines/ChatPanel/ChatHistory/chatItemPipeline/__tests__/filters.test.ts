@@ -111,6 +111,29 @@ describe("willEventRenderContent", () => {
       expect(willEventRenderContent(event)).toBe(false);
     });
 
+    it("returns false for empty thinking events even when source is assistant", () => {
+      const event = makeSessionEvent({
+        action_type: "llm_thinking_delta",
+        function: "thinking",
+        source: "assistant",
+        displayVariant: "thinking",
+        result: {},
+      });
+      expect(willEventRenderContent(event)).toBe(false);
+    });
+
+    it("returns false for whitespace-only assistant thinking events", () => {
+      const event = makeSessionEvent({
+        action_type: "llm_thinking_delta",
+        function: "thinking",
+        source: "assistant",
+        displayText: "  \n  ",
+        displayVariant: "thinking",
+        result: { observation: "  \n  " },
+      });
+      expect(willEventRenderContent(event)).toBe(false);
+    });
+
     it("returns true for actionType-only thinking delta events with content", () => {
       const event = makeSessionEvent({
         action_type: "llm_thinking_delta",
@@ -474,9 +497,25 @@ describe("willEventRenderContent", () => {
       expect(willEventRenderContent(event)).toBe(false);
     });
 
-    it("returns false for an agent_message whose only text was inside <think> tags", () => {
-      // After stripping <think>...</think> the rendered content is empty, so
-      // displayText that consists only of whitespace should still be filtered.
+    it("returns false for an agent_message whose only text is empty <think> content", () => {
+      const event = makeSessionEvent({
+        action_type: "assistant",
+        function: "agent_message",
+        result: { observation: "<think>  \n  </think>" },
+      });
+      expect(willEventRenderContent(event)).toBe(false);
+    });
+
+    it("returns true for an agent_message whose only text is non-empty <think> content", () => {
+      const event = makeSessionEvent({
+        action_type: "assistant",
+        function: "agent_message",
+        result: { observation: "<think>I need to inspect the repo.</think>" },
+      });
+      expect(willEventRenderContent(event)).toBe(true);
+    });
+
+    it("returns false for an agent_message whose visible text is whitespace", () => {
       const event = makeSessionEvent({
         action_type: "assistant",
         function: "agent_message",

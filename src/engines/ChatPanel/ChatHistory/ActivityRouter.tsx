@@ -146,6 +146,10 @@ const ActivityLoadingFallback: React.FC = () => (
  */
 const DEDICATED_NON_MESSAGE_CANONICALS = new Set(["rate_limit_hint"]);
 
+function isSyntheticLiveAssistantEvent(event: SessionEvent): boolean {
+  return event.args?.syntheticLive === true;
+}
+
 function isAssistantMessageLikeEvent(
   event: SessionEvent,
   eventType: string
@@ -249,7 +253,10 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
         );
       }
 
-      if (isAssistantMessageLikeEvent(event, eventType)) {
+      if (
+        isAssistantMessageLikeEvent(event, eventType) &&
+        !isSyntheticLiveAssistantEvent(event)
+      ) {
         const assistantContent = extractAssistantMessageContent(event);
         if (assistantContent) {
           return (
