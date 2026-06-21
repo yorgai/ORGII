@@ -8,6 +8,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import Message from "@src/components/Message";
+import { willEventRenderContent } from "@src/engines/ChatPanel/ChatHistory/chatItemPipeline/filters";
 import {
   beginOptimisticTurn,
   failOptimisticTurn,
@@ -19,6 +20,8 @@ import {
 } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { forceTurnIdle } from "@src/engines/SessionCore/control/turnLifecycle";
 import { pendingSyntheticEventAtom } from "@src/engines/SessionCore/core/atoms";
+import { eventsAtom } from "@src/engines/SessionCore/core/atoms/events";
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { clearSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
 import { createLogger } from "@src/hooks/logger";
@@ -84,6 +87,31 @@ export function resolveRestorableUserMessage(options: {
   }
 
   return null;
+}
+
+export function shouldRestoreStoppedUserMessage(options: {
+  events: SessionEvent[];
+  sessionId: string;
+  message: RestorableUserMessage | null;
+}): boolean {
+  if (!options.message) return false;
+
+  const userEventIndex = options.events.findLastIndex(
+    (event) =>
+      event.sessionId === options.sessionId &&
+      event.source === "user" &&
+      event.displayText === options.message?.displayContent
+  );
+  if (userEventIndex === -1) return true;
+
+  return !options.events
+    .slice(userEventIndex + 1)
+    .some(
+      (event) =>
+        event.sessionId === options.sessionId &&
+        event.source !== "user" &&
+        willEventRenderContent(event)
+    );
 }
 
 interface UseSessionActionsOptions {
@@ -157,7 +185,13 @@ export function useSessionActions(options: UseSessionActionsOptions) {
       pendingImages: pendingSyntheticEvent?.result?.images,
     });
 
-    if (currentUserMessage) {
+    if (
+      shouldRestoreStoppedUserMessage({
+        events: store.get(eventsAtom),
+        sessionId,
+        message: currentUserMessage,
+      })
+    ) {
       setRestoreToInput({
         sessionId,
         displayContent: currentUserMessage.displayContent,
