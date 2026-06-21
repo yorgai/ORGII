@@ -218,6 +218,7 @@ export function TableBody<T>({
                         type="button"
                         className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded text-text-3 transition-colors hover:text-text-1"
                         onClick={(event) => {
+                          event.stopPropagation();
                           event.currentTarget.blur();
                           setHoverSuppressedRowKey(rowKey);
                           toggleRowExpand(rowKey);
