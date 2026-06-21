@@ -8,6 +8,7 @@
  * Extracted from ChatItemRenderer for modularity.
  */
 import i18next from "i18next";
+import { useAtomValue } from "jotai";
 import { AlertCircle, Chrome, FileSymlink, Globe, Search } from "lucide-react";
 import React from "react";
 
@@ -18,6 +19,8 @@ import {
   SESSION_UI_TOKENS,
   StackedBlock,
 } from "@src/engines/ChatPanel/blocks/primitives";
+import { streamingDeltaContentAtom } from "@src/engines/SessionCore";
+import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { createLogger } from "@src/hooks/logger";
 
@@ -33,29 +36,25 @@ import {
 
 const log = createLogger("ChatItemRenderer");
 
-// ============================================
-// Renderer Functions
-// ============================================
+function isSyntheticLiveActivity(event: SessionEvent): boolean {
+  return event.args?.syntheticLive === true;
+}
 
-export function renderActivity(
-  chatItem: OptimizedChatItem,
-  index: number,
-  itemKey: string
-): React.ReactElement | null {
-  const event = chatItem.event;
-  if (!event && process.env.NODE_ENV === "development") {
-    log.warn("[ChatItemRenderer] activity item missing event:", chatItem);
+const ActivityRow: React.FC<{
+  event: SessionEvent;
+  index: number;
+  itemKey: string;
+  totalOccurrences?: number;
+}> = ({ event, index, itemKey, totalOccurrences }) => {
+  const sessionId = useAtomValue(sessionIdAtom);
+  const streamingMap = useAtomValue(streamingDeltaContentAtom);
+  const streamingContent = sessionId ? streamingMap.get(sessionId) : undefined;
+
+  if (isSyntheticLiveActivity(event) && !streamingContent?.trim()) {
+    return null;
   }
-  if (!event) return null;
-
-  // willEventRenderContent is already applied by the pipeline (chatItemPipeline.ts)
-  // before items reach the renderer. A second call here is redundant overhead.
 
   const isTextActivity = event.actionType === "assistant";
-  // repeatedErrorCount stores extra occurrences beyond the first, so total = count + 1.
-  const extraRepeats = chatItem.repeatedErrorCount;
-  const totalOccurrences =
-    extraRepeats !== undefined ? extraRepeats + 1 : undefined;
 
   return (
     <ChatItemWrap
@@ -88,6 +87,37 @@ export function renderActivity(
         </div>
       )}
     </ChatItemWrap>
+  );
+};
+
+// ============================================
+// Renderer Functions
+// ============================================
+
+export function renderActivity(
+  chatItem: OptimizedChatItem,
+  index: number,
+  itemKey: string
+): React.ReactElement | null {
+  const event = chatItem.event;
+  if (!event && process.env.NODE_ENV === "development") {
+    log.warn("[ChatItemRenderer] activity item missing event:", chatItem);
+  }
+  if (!event) return null;
+
+  // repeatedErrorCount stores extra occurrences beyond the first, so total = count + 1.
+  const extraRepeats = chatItem.repeatedErrorCount;
+  const totalOccurrences =
+    extraRepeats !== undefined ? extraRepeats + 1 : undefined;
+
+  return (
+    <ActivityRow
+      key={itemKey}
+      event={event}
+      index={index}
+      itemKey={itemKey}
+      totalOccurrences={totalOccurrences}
+    />
   );
 }
 

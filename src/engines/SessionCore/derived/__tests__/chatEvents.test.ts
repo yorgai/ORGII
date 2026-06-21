@@ -10,7 +10,7 @@ import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
 import { messagesEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
 
-function makeSnapshot(chatEvents: SessionEvent[] = []) {
+function makeSnapshot(chatEvents: SessionEvent[] = [], streaming = true) {
   return {
     version: 1,
     eventCount: chatEvents.length,
@@ -23,7 +23,8 @@ function makeSnapshot(chatEvents: SessionEvent[] = []) {
       chatEvents.map((event, index) => [event.id, index])
     ),
     chatEventCount: chatEvents.length,
-    hasRunningEvent: false,
+    hasRunningEvent: streaming,
+    streaming,
   };
 }
 
@@ -82,8 +83,8 @@ describe("chatEventsAtom live streaming overlay", () => {
         id: "live-assistant-session-1",
         sessionId: "session-1",
         createdAt: "2026-06-06T20:00:00.000Z",
-        functionName: "assistant_message",
-        displayText: "hello live",
+        functionName: "agent_message",
+        displayText: "\u200b",
         displayStatus: "running",
         args: { syntheticLive: true },
         isDelta: true,
@@ -105,7 +106,7 @@ describe("chatEventsAtom live streaming overlay", () => {
         id: "live-assistant-session-1",
         sessionId: "session-1",
         createdAt: "2026-06-06T20:00:00.000Z",
-        functionName: "assistant_message",
+        functionName: "agent_message",
         displayText: "hello station",
         displayStatus: "running",
         args: { syntheticLive: true },
@@ -142,10 +143,10 @@ describe("chatEventsAtom live streaming overlay", () => {
       "live-assistant-session-1",
     ]);
     expect(second.at(-1)?.createdAt).toBe(firstLiveCreatedAt);
-    expect(second.at(-1)?.displayText).toBe("first token plus more");
+    expect(second.at(-1)?.displayText).toBe("\u200b");
   });
 
-  it("keeps later turn summary after the live assistant by first-live timestamp", () => {
+  it("keeps the live assistant after newly arriving durable events while streaming", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-06-06T20:04:00.000Z"));
     const store = createStore();
@@ -171,8 +172,8 @@ describe("chatEventsAtom live streaming overlay", () => {
 
     expect(store.get(chatEventsAtom).map((event) => event.id)).toEqual([
       "thinking-1",
-      "live-assistant-session-1",
       "turn-summary-1",
+      "live-assistant-session-1",
     ]);
   });
 
@@ -192,7 +193,7 @@ describe("chatEventsAtom live streaming overlay", () => {
       derivedSnapshotAtom,
       makeSnapshot([
         makeChatEvent("assistant-final-1", "2026-06-06T20:05:10.000Z", {
-          functionName: "assistant_message",
+          functionName: "agent_message",
           uiCanonical: "assistant_message",
           actionType: "assistant",
           result: { observation: "final answer" },
@@ -222,9 +223,11 @@ describe("chatEventsAtom live streaming overlay", () => {
     );
 
     store.set(streamingDeltaContentAtom, new Map());
+    store.set(derivedSnapshotAtom, makeSnapshot([], false));
     expect(store.get(chatEventsAtom)).toEqual([]);
 
     vi.setSystemTime(new Date("2026-06-06T20:03:00.000Z"));
+    store.set(derivedSnapshotAtom, makeSnapshot());
     setLiveContent(store, "session-1", "turn two");
     expect(store.get(chatEventsAtom).at(-1)?.createdAt).toBe(
       "2026-06-06T20:03:00.000Z"
