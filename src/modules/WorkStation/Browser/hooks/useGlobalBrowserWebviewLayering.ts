@@ -17,6 +17,7 @@ import { useEffect, useRef } from "react";
 
 import { createLogger } from "@src/hooks/logger";
 import { activeOverlayCountAtom } from "@src/store/ui/overlayLayerAtom";
+import { isMacOS } from "@src/util/platform/tauri";
 import { invokeTauri } from "@src/util/platform/tauri/init";
 
 const log = createLogger("useGlobalBrowserWebviewLayering");
@@ -26,6 +27,8 @@ export function useGlobalBrowserWebviewLayering(): void {
   const lastStateRef = useRef<"front" | "back" | null>(null);
 
   useEffect(() => {
+    if (!isMacOS()) return;
+
     const shouldBeBack = count > 0;
     const next = shouldBeBack ? "back" : "front";
     if (lastStateRef.current === next) return;

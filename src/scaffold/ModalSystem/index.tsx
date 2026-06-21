@@ -23,6 +23,7 @@ import {
   PanelFooter,
   PanelHeader,
 } from "@src/modules/shared/layouts/blocks";
+import { useOverlayLayer } from "@src/store/ui/overlayLayerAtom";
 
 import "./index.scss";
 
@@ -119,6 +120,8 @@ const Modal: React.FC<ModalProps> = ({
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
   const [okLoading, setOkLoading] = useState(false);
+
+  useOverlayLayer(visible);
 
   // Store the previously focused element
   useEffect(() => {
