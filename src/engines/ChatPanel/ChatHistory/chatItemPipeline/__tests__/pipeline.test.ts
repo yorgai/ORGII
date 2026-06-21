@@ -142,6 +142,45 @@ describe("processChatItems", () => {
     });
   });
 
+  describe("assistant messages", () => {
+    it("filters empty assistant deltas before they create chat rows", () => {
+      const emptyDelta = makeSessionEvent({
+        id: "assistant-empty-delta",
+        action_type: "assistant",
+        function: "assistant_message",
+        source: "assistant",
+        displayVariant: "message",
+        displayText: "",
+        result: {},
+        isDelta: true,
+      });
+
+      const { items, stats } = processChatItems([emptyDelta]);
+
+      expect(items).toEqual([]);
+      expect(stats.totalActivities).toBe(0);
+    });
+
+    it("keeps assistant deltas once they contain visible text", () => {
+      const textDelta = makeSessionEvent({
+        id: "assistant-text-delta",
+        action_type: "assistant",
+        function: "assistant_message",
+        source: "assistant",
+        displayVariant: "message",
+        displayText: "Working on it",
+        result: {},
+        isDelta: true,
+      });
+
+      const { items, stats } = processChatItems([textDelta]);
+
+      expect(items).toHaveLength(1);
+      expect(items[0].event?.id).toBe("assistant-text-delta");
+      expect(stats.totalActivities).toBe(1);
+    });
+  });
+
   describe("plan approvals", () => {
     it("does not insert rehydrated pending plan snapshots into the current turn", () => {
       const userMessage = makeSessionEvent({

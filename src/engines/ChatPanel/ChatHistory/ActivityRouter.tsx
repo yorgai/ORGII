@@ -18,6 +18,7 @@ import {
 import { createLogger } from "@src/hooks/logger";
 import { getRegistryEventType } from "@src/lib/activityData/activityNormalizers";
 import {
+  extractAssistantMessageContent,
   extractTextFromContent,
   isOrchestratorSystemPrompt,
 } from "@src/lib/activityData/textExtractors";
@@ -134,15 +135,6 @@ const ActivityLoadingFallback: React.FC = () => (
   <div className="h-8 animate-pulse rounded bg-fill-2" />
 );
 
-function getAssistantMessageContent(event: SessionEvent): string | null {
-  const text =
-    extractTextFromContent(event.result?.message) ||
-    extractTextFromContent(event.result?.observation) ||
-    extractTextFromContent(event.result?.content) ||
-    extractTextFromContent(event.displayText);
-  return text?.trim() ? text : null;
-}
-
 /**
  * uiCanonical values that carry their own dedicated chat renderer AND are
  * NOT assistant prose, even though the producing event is stamped
@@ -258,7 +250,7 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
       }
 
       if (isAssistantMessageLikeEvent(event, eventType)) {
-        const assistantContent = getAssistantMessageContent(event);
+        const assistantContent = extractAssistantMessageContent(event);
         if (assistantContent) {
           return (
             <AgentMessageBlock>
@@ -283,10 +275,10 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
       }
 
       if (actionType === "raw" || actionType === "raw_event") {
-        if (userMessageText) {
+        if (userMessageText || userMessageImages?.length) {
           return (
             <UserMessageContent
-              text={userMessageText}
+              text={userMessageText ?? ""}
               images={userMessageImages}
             />
           );

@@ -6,15 +6,14 @@ import {
   useLayoutEffect,
   useRef,
 } from "react";
-import type { GroupedVirtuosoHandle } from "react-virtuoso";
 
 export interface UseChatScrollPinOptions {
   activeId: string | null;
   groupCounts: number[];
   totalFlatItems: number;
   footerSpacerHeight: number;
+  bottomInset: number;
   sessionLoadStatus: string;
-  virtuosoRef: RefObject<GroupedVirtuosoHandle>;
   virtuosoScrollerRef: RefObject<HTMLElement | null>;
   atBottom: boolean;
   isPendingCancelRef: MutableRefObject<boolean>;
@@ -29,9 +28,7 @@ export interface UseChatScrollPinOptions {
   manualScrollAtRef?: MutableRefObject<number>;
   onPinToTopChange?: (active: boolean) => void;
   /**
-   * Fallback scroll container for the static rendering path (≤12 items,
-   * no Virtuoso). When virtuosoRef.current is null, scrollToEnd falls back
-   * to scrolling this element to its bottom instead of silently failing.
+   * Fallback scroll container for the static rendering path.
    */
   staticScrollerRef?: MutableRefObject<HTMLDivElement | null>;
 }
@@ -59,10 +56,10 @@ const MANUAL_SCROLL_REPIN_SUPPRESS_MS = 450;
 export function useChatScrollPin({
   activeId,
   groupCounts,
-  totalFlatItems,
-  footerSpacerHeight: _footerSpacerHeight,
+  totalFlatItems: _totalFlatItems,
+  footerSpacerHeight,
+  bottomInset,
   sessionLoadStatus: _sessionLoadStatus,
-  virtuosoRef,
   virtuosoScrollerRef,
   atBottom: _atBottom,
   isPendingCancelRef: _isPendingCancelRef,
@@ -98,30 +95,27 @@ export function useChatScrollPin({
   }, [onPinToTopChange]);
 
   const scrollToEnd = useCallback(() => {
-    if (virtuosoRef.current) {
-      if (totalFlatItems > 0) {
-        virtuosoRef.current.scrollToIndex({
-          index: totalFlatItems - 1,
-          align: "end",
-          behavior: "auto",
-        });
-      } else {
-        virtuosoRef.current.scrollTo({ top: 0 });
-      }
-      return;
+    const scrollRoot =
+      virtuosoScrollerRef.current ?? staticScrollerRef?.current;
+    if (scrollRoot) {
+      const contentBottom = Math.max(
+        0,
+        scrollRoot.scrollHeight - footerSpacerHeight
+      );
+      scrollRoot.scrollTo({
+        top: Math.max(
+          0,
+          contentBottom - scrollRoot.clientHeight + Math.max(1, bottomInset)
+        ),
+        behavior: "auto",
+      });
     }
-    // Static rendering path fallback: Virtuoso is not mounted (≤12 items).
-    // Scroll the plain div to its bottom so session switches still land correctly.
-    const staticEl = staticScrollerRef?.current;
-    if (staticEl) {
-      staticEl.scrollTo({ top: staticEl.scrollHeight });
-    }
-  }, [totalFlatItems, virtuosoRef, staticScrollerRef]);
+  }, [bottomInset, footerSpacerHeight, staticScrollerRef, virtuosoScrollerRef]);
 
   // Effect 1: always scroll to end on session switch.
-  // New-event tail following is owned by Virtuoso followOutput/useChatScroll;
-  // doing it here as well makes flushed event batches fight Virtuoso's own
-  // layout anchoring and produces visible up/down bounce.
+  // New-event tail following is owned by useChatScroll;
+  // doing it here as well makes flushed event batches fight layout anchoring
+  // and produces visible up/down bounce.
   const prevActiveIdForScrollRef = useRef<string | null>(null);
   useLayoutEffect(() => {
     if (optimizedChatHistoryLength === 0) return;

@@ -84,9 +84,7 @@ const InlineThinkingBlock: React.FC<{ content: string }> = ({ content }) => {
           onToggle={handleHeaderClick}
           hasContent
         />
-        <EventBlockHeaderTitle>
-          {t("tools.thinkingRunning")}
-        </EventBlockHeaderTitle>
+        <EventBlockHeaderTitle>{t("tools.thought")}</EventBlockHeaderTitle>
       </EventBlockHeader>
 
       {!isCollapsed && (

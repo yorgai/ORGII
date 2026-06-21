@@ -58,7 +58,11 @@ export function renderActivity(
     extraRepeats !== undefined ? extraRepeats + 1 : undefined;
 
   return (
-    <ChatItemWrap key={itemKey} variant={isTextActivity ? "text" : "default"}>
+    <ChatItemWrap
+      key={itemKey}
+      variant={isTextActivity ? "text" : "default"}
+      className="chat-item-wrap--activity"
+    >
       <ActivityChatItem
         event={event}
         status={event.activityStatus || "agent"}

@@ -42,6 +42,18 @@ export function extractTextFromContent(value: unknown): string | undefined {
   return undefined;
 }
 
+export function extractAssistantMessageContent(event: {
+  result?: Record<string, unknown>;
+  displayText?: unknown;
+}): string | null {
+  const text =
+    extractTextFromContent(event.result?.message) ||
+    extractTextFromContent(event.result?.observation) ||
+    extractTextFromContent(event.result?.content) ||
+    extractTextFromContent(event.displayText);
+  return text?.trim() ? text : null;
+}
+
 /**
  * Orchestrator system prompt patterns.
  * These are internal workflow instructions that should NOT be shown to users.

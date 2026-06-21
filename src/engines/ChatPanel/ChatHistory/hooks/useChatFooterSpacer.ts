@@ -1,5 +1,5 @@
 /**
- * Measures the Virtuoso scroller and sets Footer spacer height so normal
+ * Measures the chat scroller and sets footer spacer height so normal
  * bottom state stays compact while active pin-to-top has enough scroll range.
  */
 import { useAtomValue } from "jotai";
@@ -41,7 +41,7 @@ export interface UseChatFooterSpacerOptions {
 
 export interface UseChatFooterSpacerReturn {
   footerSpacerHeight: number;
-  /** Writable — ChatScroller ref callback assigns the Virtuoso scroll root node. */
+  /** Writable — assigned to the active chat scroll root node. */
   virtuosoScrollerRef: MutableRefObject<HTMLDivElement | null>;
   /** `true` when the rendered chat content (excluding the footer spacer)
    *  is taller than the viewport — i.e. there is actually content off-screen
@@ -233,13 +233,10 @@ export function useChatFooterSpacer(
 }
 
 /**
- * Sum the bounding-rect heights of rendered Virtuoso items whose
+ * Sum the bounding-rect heights of rendered virtual items whose
  * `data-item-index` is `>= firstFlatIndex`. Returns `null` when we cannot
  * measure (first item not rendered, scroller missing, or `firstFlatIndex`
  * is `null`) so the caller falls back to the short-thread-only formula.
- *
- * Relies on Virtuoso's documented data attribute (`data-item-index`) which
- * is stable across versions and annotates every rendered body item.
  */
 function measureLastGroupContentHeight(
   scroller: HTMLElement,

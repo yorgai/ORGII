@@ -95,6 +95,9 @@ export function makeSessionEvent(
       ? { shellExitCode: overrides.shellExitCode }
       : {}),
     ...(overrides.shellLogPath ? { shellLogPath: overrides.shellLogPath } : {}),
+    ...(overrides.isDelta !== undefined
+      ? { isDelta: overrides.isDelta as boolean }
+      : {}),
   } as SessionEvent;
 }
 

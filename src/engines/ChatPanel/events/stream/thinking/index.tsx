@@ -88,6 +88,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
   }, [eventId, replayEventById]);
 
   const hasContent = Boolean(content);
+  const title = t(isLoading ? "tools.thinkingRunning" : "tools.thinkingDone");
 
   return (
     <div className={getEventBlockContainerClasses(false)}>
@@ -108,7 +109,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
           isLoading={isLoading}
         />
         <EventBlockHeaderTitle isLoading={isLoading}>
-          {t("tools.thinkingRunning")}
+          {title}
         </EventBlockHeaderTitle>
       </EventBlockHeader>
 

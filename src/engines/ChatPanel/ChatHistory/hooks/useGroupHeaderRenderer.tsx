@@ -2,7 +2,7 @@
  * useGroupHeaderRenderer
  *
  * Builds the memoized `renderGroupHeader` function passed into
- * `GroupedVirtuoso`. Centralizes the dependency list so ChatHistory's
+ * the chat history list. Centralizes the dependency list so ChatHistory's
  * top-level body stays focused on orchestration.
  */
 import React, { useCallback } from "react";

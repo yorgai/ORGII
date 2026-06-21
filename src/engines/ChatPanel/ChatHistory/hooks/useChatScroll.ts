@@ -4,14 +4,13 @@
  * Manages scroll-to-bottom behaviour for the chat list:
  * - atBottom state change handler (syncs to parent)
  * - scrollToBottom action
- * - followOutput — auto-scroll when new content arrives and the user
+ * - auto-scroll when new content arrives and the user
  *   is at (or near) the content bottom
  *
- * The chat footer renders a measured spacer (see `useChatFooterSpacer`)
- * so short threads can pin the last item to the bottom without a
- * full-viewport empty gap. followOutput returns `false` and manually
- * calls `scrollToIndex(align:"end")` so the last *item* sits at the
- * viewport bottom with only the small tail spacer below the fold.
+ * The chat footer renders a fixed spacer after the content. Scroll-to-bottom
+ * paths manually scroll the root to the content bottom
+ * (`scrollHeight - footerSpacerHeight`) so the footer spacer stays below
+ * the fold instead of becoming the visual bottom target.
  */
 import {
   type Dispatch,
@@ -22,7 +21,6 @@ import {
   useEffect,
   useRef,
 } from "react";
-import type { VirtuosoHandle } from "react-virtuoso";
 
 import { useDebouncedCallback } from "@src/hooks/perf";
 
@@ -32,7 +30,6 @@ import { useDebouncedCallback } from "@src/hooks/perf";
 
 export interface UseChatScrollOptions {
   optimizedChatHistoryLength: number;
-  virtuosoRef: RefObject<VirtuosoHandle | null>;
   virtuosoScrollerRef: RefObject<HTMLElement | null>;
   atBottom: boolean;
   setAtBottom: Dispatch<SetStateAction<boolean>>;
@@ -41,13 +38,12 @@ export interface UseChatScrollOptions {
    *  suppressed to prevent the viewport from jumping upward as content
    *  shrinks (events finalizing, planning footer collapsing). */
   isPendingCancelRef: MutableRefObject<boolean>;
-  /** Ref tracking Virtuoso's visibleRange.endIndex — used to detect
+  /** Ref tracking the rendered visibleRange.endIndex — used to detect
    *  "near content bottom" independently of atBottom (which uses a
    *  small threshold and won't be true when the spacer is below). */
   visibleRangeEndRef: MutableRefObject<number>;
   /** When true, the latest user-message group is pinned to the top of
-   *  the viewport; both the new-message auto-scroll effect and the
-   *  `followOutput` streaming auto-scroll stand down so the pin sticks.
+   *  the viewport; new-message auto-scroll stands down so the pin sticks.
    *  Cleared by `ChatHistory` on manual scroll / session switch. */
   pinLastGroupRef: MutableRefObject<boolean>;
   /** Timestamp of the latest user scroll on the chat scroller. Used to keep
@@ -73,7 +69,6 @@ export interface UseChatScrollOptions {
 export interface UseChatScrollReturn {
   handleAtBottomStateChange: (bottom: boolean) => void;
   scrollToBottom: () => void;
-  followOutput: (isAtBottom: boolean) => "smooth" | false;
 }
 
 // ============================================
@@ -91,12 +86,11 @@ const TURN_COLLAPSE_AUTO_FOLLOW_SUPPRESS_MS = 700;
 
 export function useChatScroll({
   optimizedChatHistoryLength,
-  virtuosoRef,
   virtuosoScrollerRef,
   atBottom,
   setAtBottom,
   setIsChatScrolledToBottom,
-  isPendingCancelRef,
+  isPendingCancelRef: _isPendingCancelRef,
   visibleRangeEndRef,
   pinLastGroupRef,
   manualScrollAtRef,
@@ -117,8 +111,14 @@ export function useChatScroll({
   }, [optimizedChatHistoryLength]);
 
   const scrollRafRef = useRef(0);
+  const scrollSecondRafRef = useRef(0);
   useEffect(() => {
-    return () => cancelAnimationFrame(scrollRafRef.current);
+    const scrollRafRefForCleanup = scrollRafRef;
+    const scrollSecondRafRefForCleanup = scrollSecondRafRef;
+    return () => {
+      cancelAnimationFrame(scrollRafRefForCleanup.current);
+      cancelAnimationFrame(scrollSecondRafRefForCleanup.current);
+    };
   }, []);
 
   const debouncedSetAtBottom = useDebouncedCallback((bottom: boolean) => {
@@ -151,24 +151,13 @@ export function useChatScroll({
   );
 
   const scrollToBottom = useCallback(() => {
-    if (virtuosoRef.current && optimizedChatHistoryLength > 0) {
-      virtuosoRef.current.scrollToIndex({
-        index: optimizedChatHistoryLength - 1,
-        behavior: "auto",
-        align: "end",
-      });
-      window.requestAnimationFrame(() => {
-        virtuosoRef.current?.scrollToIndex({
-          index: optimizedChatHistoryLength - 1,
-          behavior: "auto",
-          align: "end",
-        });
-      });
+    if (scrollElementToBottom()) {
+      window.requestAnimationFrame(() => scrollElementToBottom());
       return;
     }
 
     scrollElementToBottom("smooth");
-  }, [optimizedChatHistoryLength, scrollElementToBottom, virtuosoRef]);
+  }, [scrollElementToBottom]);
 
   // Auto-scroll when new messages arrive if user was at content bottom.
   // Stands down while the latest group is pinned to top — the pin is the
@@ -247,94 +236,8 @@ export function useChatScroll({
     alwaysFollowTail,
   ]);
 
-  // followOutput: return false and manually scroll to the last *item*
-  // (align:"end").  The footer spacer means the absolute scroll bottom
-  // is past the spacer; returning "smooth" would keep the viewport on
-  // the spacer instead of the content.
-  //
-  // Stands down while the latest group is pinned to top so streaming
-  // tokens cannot yank the viewport back to the bottom.
-  // Also stands down when content still fits in the viewport: aligning
-  // the last item to "end" when the whole thread is shorter than the
-  // viewport pushes earlier content off the top of the screen.
-  const followOutput = useCallback(
-    (isAtBottom: boolean): "smooth" | false => {
-      if (pinLastGroupRef.current) return false;
-      if (
-        performance.now() - effectiveManualScrollAtRef.current <
-        MANUAL_SCROLL_AUTO_FOLLOW_SUPPRESS_MS
-      ) {
-        return false;
-      }
-      if (
-        performance.now() - turnCollapseInteractionAtRef.current <
-        TURN_COLLAPSE_AUTO_FOLLOW_SUPPRESS_MS
-      ) {
-        return false;
-      }
-      if (!alwaysFollowTail && !isContentOverflowingRef.current) return false;
-      if (isPendingCancelRef.current) return false;
-
-      const length = chatHistoryLengthRef.current;
-      const isNearContentBottom = visibleRangeEndRef.current >= length - 1;
-
-      if (
-        alwaysFollowTail ||
-        isAtBottom ||
-        atBottomRef.current ||
-        isNearContentBottom
-      ) {
-        cancelAnimationFrame(scrollRafRef.current);
-        scrollRafRef.current = requestAnimationFrame(() => {
-          if (pinLastGroupRef.current) return;
-          if (
-            performance.now() - effectiveManualScrollAtRef.current <
-            MANUAL_SCROLL_AUTO_FOLLOW_SUPPRESS_MS
-          ) {
-            return;
-          }
-          if (
-            performance.now() - turnCollapseInteractionAtRef.current <
-            TURN_COLLAPSE_AUTO_FOLLOW_SUPPRESS_MS
-          ) {
-            return;
-          }
-          if (!alwaysFollowTail && !isContentOverflowingRef.current) return;
-          if (isPendingCancelRef.current) return;
-          const len = chatHistoryLengthRef.current;
-          if (len > 0) {
-            virtuosoRef.current?.scrollToIndex({
-              index: len - 1,
-              align: "end",
-              behavior: "auto",
-            });
-          }
-          window.requestAnimationFrame(() => {
-            virtuosoRef.current?.scrollToIndex({
-              index: len - 1,
-              align: "end",
-              behavior: "auto",
-            });
-          });
-        });
-      }
-      return false;
-    },
-    [
-      virtuosoRef,
-      isPendingCancelRef,
-      visibleRangeEndRef,
-      pinLastGroupRef,
-      effectiveManualScrollAtRef,
-      turnCollapseInteractionAtRef,
-      isContentOverflowingRef,
-      alwaysFollowTail,
-    ]
-  );
-
   return {
     handleAtBottomStateChange,
     scrollToBottom,
-    followOutput,
   };
 }

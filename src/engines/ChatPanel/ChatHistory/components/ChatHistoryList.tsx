@@ -1,18 +1,20 @@
 /**
  * ChatHistoryList
  *
- * Pure list rendering: static path for header-only turns and GroupedVirtuoso
- * for any list with body items. Extracted from `ChatHistory/index.tsx` to keep that file
+ * Pure list rendering: static path for small turns and TanStack Virtual
+ * for longer grouped chat history. Extracted from `ChatHistory/index.tsx` to keep that file
  * under the 600-line limit.
  *
  * Receives all data and callbacks as props — no atom reads here.
  */
-import React, { memo, useMemo, useRef } from "react";
-import {
-  type Components,
-  GroupedVirtuoso,
-  type GroupedVirtuosoHandle,
-} from "react-virtuoso";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import React, {
+  memo,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+} from "react";
 
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { PlanningFooter } from "@src/engines/ChatPanel/blocks/primitives";
@@ -44,6 +46,60 @@ function sameNullableNumberArray(
 
 type EventSummary = NonNullable<OptimizedChatItem["event"]>;
 
+const RESULT_RENDER_KEYS = [
+  "type",
+  "message",
+  "content",
+  "observation",
+  "success",
+  "failure",
+  "error",
+  "images",
+  "call_id",
+  "output",
+  "stdout",
+  "stderr",
+  "interleaved_output",
+  "interleavedOutput",
+  "diff",
+  "diffString",
+  "segments",
+  "filePaths",
+  "linesAdded",
+  "linesRemoved",
+  "status",
+] as const;
+
+const ARG_RENDER_KEYS = [
+  "command",
+  "streamOutput",
+  "streamContent",
+  "title",
+  "action",
+  "content",
+  "path",
+  "file_path",
+  "target_file",
+  "patch_text",
+  "old_str",
+  "old_string",
+  "old_content",
+  "new_str",
+  "new_string",
+  "new_content",
+  "subagentSessionId",
+] as const;
+
+function sameRecordKeys(
+  left: Record<string, unknown> | undefined,
+  right: Record<string, unknown> | undefined,
+  keys: readonly string[]
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return keys.every((key) => left[key] === right[key]);
+}
+
 function sameEventSummary(
   left: EventSummary | undefined,
   right: EventSummary | undefined
@@ -52,9 +108,21 @@ function sameEventSummary(
   if (!left || !right) return false;
   return (
     left.id === right.id &&
+    left.actionType === right.actionType &&
+    left.functionName === right.functionName &&
+    left.uiCanonical === right.uiCanonical &&
     left.displayText === right.displayText &&
     left.displayStatus === right.displayStatus &&
-    left.displayVariant === right.displayVariant
+    left.displayVariant === right.displayVariant &&
+    left.activityStatus === right.activityStatus &&
+    left.shellPid === right.shellPid &&
+    left.shellProcessStatus === right.shellProcessStatus &&
+    left.shellExitCode === right.shellExitCode &&
+    left.shellLogPath === right.shellLogPath &&
+    left.extracted === right.extracted &&
+    left.payloadRefs === right.payloadRefs &&
+    sameRecordKeys(left.result, right.result, RESULT_RENDER_KEYS) &&
+    sameRecordKeys(left.args, right.args, ARG_RENDER_KEYS)
   );
 }
 
@@ -69,6 +137,42 @@ function sameEventList(
     sameEventSummary(leftEvent, right[index])
   );
 }
+
+interface RowGroupMeta {
+  lastAssistantFlatIndex: number | null;
+  isLastItemInGroup: boolean;
+  isLastGroup: boolean;
+}
+
+function buildRowGroupMeta(
+  groupCounts: readonly number[],
+  lastAssistantFlatIndexPerItem: readonly (number | null)[]
+): RowGroupMeta[] {
+  const result: RowGroupMeta[] = [];
+  let flatIndex = 0;
+  const lastGroupIndex = groupCounts.length - 1;
+  for (let groupIndex = 0; groupIndex < groupCounts.length; groupIndex++) {
+    const groupCount = groupCounts[groupIndex];
+    const groupEndFlatIndex = flatIndex + groupCount - 1;
+    const isLastGroup = groupIndex === lastGroupIndex;
+    for (let itemOffset = 0; itemOffset < groupCount; itemOffset++) {
+      result[flatIndex] = {
+        lastAssistantFlatIndex:
+          lastAssistantFlatIndexPerItem[flatIndex] ?? null,
+        isLastItemInGroup: flatIndex === groupEndFlatIndex,
+        isLastGroup,
+      };
+      flatIndex++;
+    }
+  }
+  return result;
+}
+
+const EMPTY_ROW_GROUP_META: RowGroupMeta = {
+  lastAssistantFlatIndex: null,
+  isLastItemInGroup: false,
+  isLastGroup: false,
+};
 
 function sameFlatItems(
   left: readonly OptimizedChatItem[],
@@ -134,14 +238,16 @@ function sameChatHistoryListProps(
       "planningVariantIndex",
       previous.planningVariantIndex === next.planningVariantIndex,
     ],
-    ["virtuosoRef", previous.virtuosoRef === next.virtuosoRef],
-    ["virtuosoDataKey", previous.virtuosoDataKey === next.virtuosoDataKey],
+    ["virtualListRef", previous.virtualListRef === next.virtualListRef],
+    [
+      "virtualListDataKey",
+      previous.virtualListDataKey === next.virtualListDataKey,
+    ],
     [
       "getIsWpGeneWorking",
       previous.getIsWpGeneWorking === next.getIsWpGeneWorking,
     ],
     ["getIsExploring", previous.getIsExploring === next.getIsExploring],
-    ["followOutput", previous.followOutput === next.followOutput],
     [
       "renderGroupHeader",
       previous.renderGroupHeader === next.renderGroupHeader,
@@ -159,7 +265,10 @@ function sameChatHistoryListProps(
       "onEditUserMessage",
       previous.onEditUserMessage === next.onEditUserMessage,
     ],
-    ["ChatScroller", previous.ChatScroller === next.ChatScroller],
+    [
+      "virtualScrollerRef",
+      previous.virtualScrollerRef === next.virtualScrollerRef,
+    ],
     [
       "staticScrollerRef",
       previous.staticScrollerRef === next.staticScrollerRef,
@@ -172,6 +281,14 @@ function sameChatHistoryListProps(
   return checks.every(([, same]) => same);
 }
 
+export interface ChatHistoryListHandle {
+  scrollToIndex: (options: {
+    index: number;
+    behavior?: ScrollBehavior;
+    align?: "start" | "center" | "end" | "auto";
+  }) => void;
+}
+
 interface ChatHistoryListProps {
   flatItems: OptimizedChatItem[];
   groupCounts: number[];
@@ -182,8 +299,8 @@ interface ChatHistoryListProps {
   planningIndicatorCount: number;
   planningShowSlowHint: boolean;
   planningVariantIndex: number;
-  virtuosoRef: React.RefObject<GroupedVirtuosoHandle>;
-  virtuosoDataKey: string;
+  virtualListRef: React.RefObject<ChatHistoryListHandle | null>;
+  virtualListDataKey: string;
   /**
    * Stable getter returning whether work-product generation is active.
    * Implemented as a function so Virtuoso item callbacks can read the
@@ -195,7 +312,6 @@ interface ChatHistoryListProps {
    * Same rationale as `getIsWpGeneWorking`.
    */
   getIsExploring: () => boolean;
-  followOutput: boolean | ((isAtBottom: boolean) => "smooth" | false);
   renderGroupHeader: (groupIndex: number) => React.ReactNode;
   onAtBottomStateChange: (atBottom: boolean) => void;
   onRangeChanged: (range: { startIndex: number; endIndex: number }) => void;
@@ -208,8 +324,7 @@ interface ChatHistoryListProps {
     text: string,
     images?: string[]
   ) => void;
-  /** Opaque Scroller component from `createChatScroller`. */
-  ChatScroller: NonNullable<Components["Scroller"]>;
+  virtualScrollerRef: React.MutableRefObject<HTMLDivElement | null>;
   /**
    * Ref that receives the static-path scroll container (used only when
    * a page has no body items and Virtuoso is not mounted).
@@ -224,6 +339,12 @@ interface ChatHistoryListProps {
    * keeps the divider off (default for the main chat panel).
    */
   newEventDividerLabel?: string | null;
+}
+
+interface VirtualGroup {
+  groupIndex: number;
+  startFlatIndex: number;
+  itemCount: number;
 }
 
 // memo: parent (`ChatHistory/index.tsx`) re-renders on every chat event
@@ -243,11 +364,10 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
     planningIndicatorCount,
     planningShowSlowHint,
     planningVariantIndex,
-    virtuosoRef,
-    virtuosoDataKey,
+    virtualListRef,
+    virtualListDataKey,
     getIsWpGeneWorking,
     getIsExploring,
-    followOutput,
     renderGroupHeader: renderGroupHeaderProp,
     onAtBottomStateChange,
     onRangeChanged,
@@ -256,7 +376,7 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
     onSubmit,
     onSkip,
     onEditUserMessage,
-    ChatScroller,
+    virtualScrollerRef,
     staticScrollerRef,
     newEventDividerLabel = null,
   }) => {
@@ -288,6 +408,68 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
       return adjusted;
     }, [hasPlanningItem, groupCounts]);
     const effectiveTotalFlatItems = totalFlatItems + (hasPlanningItem ? 1 : 0);
+    const virtualGroups = useMemo<VirtualGroup[]>(() => {
+      let startFlatIndex = 0;
+      return effectiveGroupCounts.map((itemCount, groupIndex) => {
+        const group = { groupIndex, startFlatIndex, itemCount };
+        startFlatIndex += itemCount;
+        return group;
+      });
+    }, [effectiveGroupCounts]);
+    const flatIndexToGroupIndex = useMemo(() => {
+      const indexes: number[] = [];
+      for (const group of virtualGroups) {
+        for (let offset = 0; offset < group.itemCount; offset++) {
+          indexes[group.startFlatIndex + offset] = group.groupIndex;
+        }
+      }
+      return indexes;
+    }, [virtualGroups]);
+    const virtualizer = useVirtualizer({
+      count: virtualGroups.length,
+      getScrollElement: () => virtualScrollerRef.current,
+      estimateSize: () => 360,
+      overscan: 4,
+      getItemKey: (index) => {
+        const group = virtualGroups[index];
+        const firstItem = group ? flatItems[group.startFlatIndex] : undefined;
+        return firstItem?.chunk_id ?? `chat-group-${index}`;
+      },
+    });
+    const virtualItems = virtualizer.getVirtualItems();
+
+    useEffect(() => {
+      if (virtualItems.length === 0) return;
+      const firstGroup = virtualGroups[virtualItems[0].index];
+      const lastGroup =
+        virtualGroups[virtualItems[virtualItems.length - 1].index];
+      if (!firstGroup || !lastGroup) return;
+      onRangeChanged({
+        startIndex: firstGroup.startFlatIndex,
+        endIndex: Math.max(
+          firstGroup.startFlatIndex,
+          lastGroup.startFlatIndex + lastGroup.itemCount - 1
+        ),
+      });
+    }, [onRangeChanged, virtualGroups, virtualItems]);
+
+    useImperativeHandle(
+      virtualListRef,
+      () => ({
+        scrollToIndex: ({ index, behavior = "auto", align = "center" }) => {
+          const groupIndex = flatIndexToGroupIndex[index] ?? 0;
+          virtualizer.scrollToIndex(groupIndex, { align, behavior });
+        },
+      }),
+      [flatIndexToGroupIndex, virtualizer]
+    );
+    const rowGroupMeta = useMemo(
+      () =>
+        buildRowGroupMeta(effectiveGroupCounts, lastAssistantFlatIndexPerItem),
+      [effectiveGroupCounts, lastAssistantFlatIndexPerItem]
+    );
+    const rowGroupMetaRef = useRef<RowGroupMeta[]>(rowGroupMeta);
+    rowGroupMetaRef.current = rowGroupMeta;
 
     // For each flat index, the nearest preceding qualifying item — non-structural,
     // non-unloaded, with an event. Pre-computed once per flatItems change so
@@ -333,48 +515,6 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
       });
     }, [useStaticRendering, effectiveGroupCounts]);
 
-    // Keep footerSpacerHeight in a ref so the Footer component can read the
-    // latest value without being re-created. Virtuoso unmounts and remounts
-    // Footer whenever `components` changes identity, so keeping Footer stable
-    // avoids that churn even as footerSpacerHeight updates.
-    const footerSpacerHeightRef = useRef(footerSpacerHeight);
-    footerSpacerHeightRef.current = footerSpacerHeight;
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const FooterComponent = useMemo(
-      () =>
-        function ChatFooterSpacer() {
-          return <div style={{ height: footerSpacerHeightRef.current }} />;
-        },
-      // Empty deps: FooterComponent is intentionally stable for the lifetime
-      // of this ChatHistoryList instance. It reads footerSpacerHeightRef.current
-      // on each Virtuoso-triggered render, so footerSpacerHeight changes are
-      // still reflected without recreating the component.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      []
-    );
-
-    const virtuosoComponents = useMemo(() => {
-      const List = React.forwardRef<
-        HTMLDivElement,
-        React.HTMLAttributes<HTMLDivElement>
-      >(({ style, className = "", ...props }, ref) => (
-        <div
-          {...props}
-          ref={ref}
-          className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth} ${className}`.trim()}
-          style={style}
-        />
-      ));
-      List.displayName = "ChatHistoryVirtuosoList";
-
-      return {
-        Scroller: ChatScroller,
-        List,
-        Footer: FooterComponent,
-      };
-    }, [ChatScroller, FooterComponent]);
-
     const renderGroupItem = React.useCallback(
       (flatIndex: number, groupIndex: number) => {
         const currentFlatItems = flatItemsRef.current;
@@ -388,14 +528,17 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
             />
           );
         }
+        const rowMeta =
+          rowGroupMetaRef.current[flatIndex] ?? EMPTY_ROW_GROUP_META;
         return (
           <GroupItemRenderer
             flatIndex={flatIndex}
             groupIndex={groupIndex}
             chatItem={currentFlatItems[flatIndex]}
             previousChatItem={previousChatItemsRef.current[flatIndex]}
-            groupCounts={effectiveGroupCounts}
-            lastAssistantFlatIndexPerItem={lastAssistantFlatIndexPerItem}
+            lastAssistantFlatIndex={rowMeta.lastAssistantFlatIndex}
+            isLastItemInGroup={rowMeta.isLastItemInGroup}
+            isLastGroup={rowMeta.isLastGroup}
             isWpGeneWorking={getIsWpGeneWorking()}
             isExploring={getIsExploring()}
             codeBlockContainerWidth={codeBlockContainerWidth}
@@ -408,8 +551,6 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         );
       },
       [
-        effectiveGroupCounts,
-        lastAssistantFlatIndexPerItem,
         codeBlockContainerWidth,
         getIsWpGeneWorking,
         getIsExploring,
@@ -419,23 +560,6 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         onEditUserMessage,
         newEventDividerLabel,
       ]
-    );
-
-    const renderGroupHeader = React.useCallback(
-      (groupIndex: number) => (
-        <div className="relative z-[60]">
-          {renderGroupHeaderProp(groupIndex)}
-        </div>
-      ),
-      [renderGroupHeaderProp]
-    );
-
-    const handleFollowOutput = React.useCallback(
-      (isAtBottom: boolean) => {
-        if (typeof followOutput === "boolean") return followOutput;
-        return followOutput(isAtBottom) !== false;
-      },
-      [followOutput]
     );
 
     if (useStaticRendering) {
@@ -466,6 +590,8 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
                   const itemKey =
                     flatItems[itemFlatIndex]?.chunk_id ??
                     `static-chat-${itemFlatIndex}`;
+                  const rowMeta =
+                    rowGroupMeta[itemFlatIndex] ?? EMPTY_ROW_GROUP_META;
                   return (
                     <GroupItemRenderer
                       key={itemKey}
@@ -473,10 +599,9 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
                       groupIndex={groupIndex}
                       chatItem={flatItems[itemFlatIndex]}
                       previousChatItem={previousChatItems[itemFlatIndex]}
-                      groupCounts={effectiveGroupCounts}
-                      lastAssistantFlatIndexPerItem={
-                        lastAssistantFlatIndexPerItem
-                      }
+                      lastAssistantFlatIndex={rowMeta.lastAssistantFlatIndex}
+                      isLastItemInGroup={rowMeta.isLastItemInGroup}
+                      isLastGroup={rowMeta.isLastGroup}
                       isWpGeneWorking={false}
                       isExploring={false}
                       codeBlockContainerWidth={codeBlockContainerWidth}
@@ -497,36 +622,56 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
     }
 
     return (
-      <GroupedVirtuoso
-        key={virtuosoDataKey}
-        ref={virtuosoRef}
-        style={{
-          height: "100%",
-          width: "100%",
-          overscrollBehavior: "contain",
+      <div
+        key={virtualListDataKey}
+        ref={(node) => {
+          virtualScrollerRef.current = node;
         }}
-        groupCounts={effectiveGroupCounts}
-        groupContent={renderGroupHeader}
-        itemContent={renderGroupItem}
-        atBottomStateChange={onAtBottomStateChange}
-        rangeChanged={onRangeChanged}
-        endReached={onEndReached}
-        followOutput={handleFollowOutput}
-        atBottomThreshold={80}
-        initialTopMostItemIndex={
-          effectiveTotalFlatItems > 0 ? effectiveTotalFlatItems - 1 : 0
-        }
-        overscan={{ main: 1200, reverse: 1200 }}
-        increaseViewportBy={{ top: 1000, bottom: 1000 }}
-        defaultItemHeight={280}
-        computeItemKey={(flatIndex) =>
-          flatIndex >= flatItems.length
-            ? `planning-footer-${flatIndex}`
-            : flatItems[flatIndex]?.chunk_id || `chat-${flatIndex}`
-        }
-        className="scrollbar-hide"
-        components={virtuosoComponents}
-      />
+        className="h-full w-full overflow-y-auto overscroll-contain scrollbar-hide"
+        onScroll={(event) => {
+          const el = event.currentTarget;
+          const isAtBottom =
+            el.scrollHeight - el.scrollTop - el.clientHeight <= 80;
+          onAtBottomStateChange(isAtBottom);
+          if (isAtBottom) onEndReached();
+        }}
+      >
+        <div
+          className={`relative mx-auto min-h-full w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
+          style={{ height: virtualizer.getTotalSize() + footerSpacerHeight }}
+        >
+          {virtualItems.map((virtualItem) => {
+            const group = virtualGroups[virtualItem.index];
+            if (!group) return null;
+            return (
+              <div
+                key={virtualItem.key}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
+                className="absolute left-0 top-0 w-full"
+                style={{
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                <div className="sticky top-0 z-[60]">
+                  {renderGroupHeaderProp(group.groupIndex)}
+                </div>
+                {Array.from({ length: group.itemCount }, (_, itemOffset) => {
+                  const flatIndex = group.startFlatIndex + itemOffset;
+                  return (
+                    <div
+                      key={`virtual-item-${flatIndex}`}
+                      data-item-index={flatIndex}
+                    >
+                      {renderGroupItem(flatIndex, group.groupIndex)}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     );
   },
   sameChatHistoryListProps

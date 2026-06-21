@@ -16,12 +16,12 @@ import {
   useRef,
   useState,
 } from "react";
-import type { VirtuosoHandle } from "react-virtuoso";
 
 import { useEventNavigation } from "@src/engines/SessionCore";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
+import type { ChatHistoryListHandle } from "../components/ChatHistoryList";
 import type { ChatSearchBarHandle } from "../components/ChatSearchBar";
 import { type UseChatSearchReturn, useChatSearch } from "./useChatSearch";
 
@@ -32,9 +32,9 @@ import { type UseChatSearchReturn, useChatSearch } from "./useChatSearch";
 export interface UseChatSearchIntegrationOptions {
   chatHistory: SessionEvent[];
   optimizedChatHistory: OptimizedChatItem[];
-  virtuosoRef: RefObject<VirtuosoHandle | null>;
+  virtualListRef: RefObject<ChatHistoryListHandle | null>;
   chatContainerRef: RefObject<HTMLDivElement | null>;
-  /** Maps optimizedChatHistory index -> GroupedVirtuoso flat item index. */
+  /** Maps optimizedChatHistory index -> virtual flat item index. */
   originalToFlatIndex?: Map<number, number>;
 }
 
@@ -53,7 +53,7 @@ export interface UseChatSearchIntegrationReturn {
 export function useChatSearchIntegration({
   chatHistory,
   optimizedChatHistory,
-  virtuosoRef,
+  virtualListRef,
   chatContainerRef,
   originalToFlatIndex,
 }: UseChatSearchIntegrationOptions): UseChatSearchIntegrationReturn {
@@ -116,12 +116,12 @@ export function useChatSearchIntegration({
         if (
           optimizedIndex !== undefined &&
           optimizedIndex >= 0 &&
-          virtuosoRef.current
+          virtualListRef.current
         ) {
           const scrollIdx = originalToFlatIndex
             ? (originalToFlatIndex.get(optimizedIndex) ?? optimizedIndex)
             : optimizedIndex;
-          virtuosoRef.current.scrollToIndex({
+          virtualListRef.current.scrollToIndex({
             index: scrollIdx,
             behavior: "smooth",
             align: "center",
@@ -130,7 +130,7 @@ export function useChatSearchIntegration({
       },
       [
         navigateToEvent,
-        virtuosoRef,
+        virtualListRef,
         chunkIdToOptimizedIndex,
         findOptimizedIndexByContent,
         originalToFlatIndex,

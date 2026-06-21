@@ -44,6 +44,60 @@ const INBOX_TRANSCRIPT_ICON = (
 
 type EventSummary = NonNullable<OptimizedChatItem["event"]>;
 
+const RESULT_RENDER_KEYS = [
+  "type",
+  "message",
+  "content",
+  "observation",
+  "success",
+  "failure",
+  "error",
+  "images",
+  "call_id",
+  "output",
+  "stdout",
+  "stderr",
+  "interleaved_output",
+  "interleavedOutput",
+  "diff",
+  "diffString",
+  "segments",
+  "filePaths",
+  "linesAdded",
+  "linesRemoved",
+  "status",
+] as const;
+
+const ARG_RENDER_KEYS = [
+  "command",
+  "streamOutput",
+  "streamContent",
+  "title",
+  "action",
+  "content",
+  "path",
+  "file_path",
+  "target_file",
+  "patch_text",
+  "old_str",
+  "old_string",
+  "old_content",
+  "new_str",
+  "new_string",
+  "new_content",
+  "subagentSessionId",
+] as const;
+
+function sameRecordKeys(
+  left: Record<string, unknown> | undefined,
+  right: Record<string, unknown> | undefined,
+  keys: readonly string[]
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return keys.every((key) => left[key] === right[key]);
+}
+
 function sameEventSummary(
   left: EventSummary | undefined,
   right: EventSummary | undefined
@@ -52,9 +106,21 @@ function sameEventSummary(
   if (!left || !right) return false;
   return (
     left.id === right.id &&
+    left.actionType === right.actionType &&
+    left.functionName === right.functionName &&
+    left.uiCanonical === right.uiCanonical &&
     left.displayText === right.displayText &&
     left.displayStatus === right.displayStatus &&
-    left.displayVariant === right.displayVariant
+    left.displayVariant === right.displayVariant &&
+    left.activityStatus === right.activityStatus &&
+    left.shellPid === right.shellPid &&
+    left.shellProcessStatus === right.shellProcessStatus &&
+    left.shellExitCode === right.shellExitCode &&
+    left.shellLogPath === right.shellLogPath &&
+    left.extracted === right.extracted &&
+    left.payloadRefs === right.payloadRefs &&
+    sameRecordKeys(left.result, right.result, RESULT_RENDER_KEYS) &&
+    sameRecordKeys(left.args, right.args, ARG_RENDER_KEYS)
   );
 }
 
@@ -95,24 +161,6 @@ function sameChatItem(
   );
 }
 
-function sameNumberArray(
-  left: readonly number[],
-  right: readonly number[]
-): boolean {
-  if (left === right) return true;
-  if (left.length !== right.length) return false;
-  return left.every((v, i) => v === right[i]);
-}
-
-function sameNullableNumberArray(
-  left: readonly (number | null)[],
-  right: readonly (number | null)[]
-): boolean {
-  if (left === right) return true;
-  if (left.length !== right.length) return false;
-  return left.every((v, i) => v === right[i]);
-}
-
 function areGroupItemRendererPropsEqual(
   previous: GroupItemRendererProps,
   next: GroupItemRendererProps
@@ -125,11 +173,9 @@ function areGroupItemRendererPropsEqual(
     // comparison). Shallow-compare the event rather than the full item — the
     // continuation check only reads event.createdAt, source, and senderName.
     previous.previousChatItem?.event === next.previousChatItem?.event &&
-    sameNumberArray(previous.groupCounts, next.groupCounts) &&
-    sameNullableNumberArray(
-      previous.lastAssistantFlatIndexPerItem,
-      next.lastAssistantFlatIndexPerItem
-    ) &&
+    previous.lastAssistantFlatIndex === next.lastAssistantFlatIndex &&
+    previous.isLastItemInGroup === next.isLastItemInGroup &&
+    previous.isLastGroup === next.isLastGroup &&
     previous.isWpGeneWorking === next.isWpGeneWorking &&
     previous.isExploring === next.isExploring &&
     previous.codeBlockContainerWidth === next.codeBlockContainerWidth &&
@@ -237,22 +283,12 @@ export interface GroupItemRendererProps {
    * need to scan the full flat list on every render.
    */
   previousChatItem: OptimizedChatItem | undefined;
-  /**
-   * Per-group post-collapse item counts, aligned with `groupHeaders`.
-   * Used to detect "last item in this group" so we can append a turn
-   * gap below the trailing item — placing the gap on the previous
-   * group keeps the next group's sticky header free of `pt-*`, so
-   * pinned headers sit flush at the top of the scroll viewport.
-   */
-  groupCounts: number[];
-  /**
-   * For each flat index, the flat index of the surviving last-assistant
-   * item within the same group (or `null` when the group has no assistant
-   * body item). Pre-computed by `useChatGroups` and indexed 1-to-1 with
-   * `flatItems`. Used to surface the regenerate action on the turn's
-   * final reply.
-   */
-  lastAssistantFlatIndexPerItem: (number | null)[];
+  /** Flat index of the last assistant item in this row's group, if any. */
+  lastAssistantFlatIndex: number | null;
+  /** Whether this row is the final body item in its group. */
+  isLastItemInGroup: boolean;
+  /** Whether this row belongs to the latest group. */
+  isLastGroup: boolean;
   isWpGeneWorking: boolean;
   isExploring: boolean;
   codeBlockContainerWidth?: number;
@@ -276,15 +312,15 @@ export interface GroupItemRendererProps {
 }
 
 /**
- * Renders a single flat item within a GroupedVirtuoso group, wrapped in
+ * Renders a single flat item within a chat-history group, wrapped in
  * an AgentTurnContext so descendants can surface turn-scoped actions
  * (e.g. Regenerate) without prop-drilling through the event registry.
  *
  * Note: the shared "Agent worked for …" collapse is applied
  * STRUCTURALLY in `useChatGroups` — collapsed body items are dropped
  * from `flatItems` and `groupCounts` before they ever reach this
- * renderer. Doing the hide here (via `return null`) leaves Virtuoso's
- * per-item size cache pointing at the pre-collapse heights, which
+ * renderer. Doing the hide here (via `return null`) leaves virtual item
+ * size caches pointing at the pre-collapse heights, which
  * shows up as a tall blank tail beneath the surviving last reply.
  */
 // memo: per-item renderer called 30-50x for each visible viewport.
@@ -297,8 +333,9 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
     groupIndex,
     chatItem,
     previousChatItem,
-    groupCounts,
-    lastAssistantFlatIndexPerItem,
+    lastAssistantFlatIndex,
+    isLastItemInGroup,
+    isLastGroup,
     isWpGeneWorking,
     isExploring,
     codeBlockContainerWidth,
@@ -363,23 +400,12 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
       !groupChat.isCoordinatorTurnHeader(event)
     );
 
-    const lastAssistantFlatIndex =
-      chatItem != null
-        ? (lastAssistantFlatIndexPerItem[flatIndex] ?? null)
-        : null;
-
     // Trailing-item turn gap. Placing the 24px gap on the LAST item of
     // each non-final group keeps the next group's sticky header free of
     // top padding — so pinned headers stay flush at the top of the
     // viewport, while the visual turn boundary scrolls away with the
     // previous group's body. Skipped on the final group (no following
     // turn to separate from).
-    const groupEndFlatIndex =
-      groupCounts
-        .slice(0, groupIndex + 1)
-        .reduce((sum, count) => sum + count, 0) - 1;
-    const isLastItemInGroup = flatIndex === groupEndFlatIndex;
-    const isLastGroup = groupIndex === groupCounts.length - 1;
     const turnGapClass = isLastItemInGroup && !isLastGroup ? "pb-6" : "";
 
     // Memoize the context value so consumers of `AgentTurnContext`

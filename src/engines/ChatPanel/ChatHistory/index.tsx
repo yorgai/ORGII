@@ -4,8 +4,8 @@
  * Slim orchestrator that wires extracted hooks and presentational
  * components together. All business logic lives in hooks/.
  *
- * Uses GroupedVirtuoso so each user message is a native CSS-sticky
- * group header with response items below. Groups are separated by
+ * Uses TanStack Virtual so each user-message turn is virtualized as a
+ * measured group with response items below. Groups are separated by
  * a visual gap.
  */
 import { useAtomValue } from "jotai";
@@ -19,7 +19,6 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import type { GroupedVirtuosoHandle } from "react-virtuoso";
 
 import type { AgentOrgRunMemberView } from "@src/api/tauri/agent";
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
@@ -56,7 +55,6 @@ import type { OptimizedChatItem } from "./chatItemPipeline/types";
 import ChatHistoryEmptyState from "./components/ChatHistoryEmptyState";
 import ChatHistoryList from "./components/ChatHistoryList";
 import ChatPinnedHeaderLayer from "./components/ChatPinnedHeaderLayer";
-import { createChatScroller } from "./components/ChatScroller";
 import ChatSearchBar from "./components/ChatSearchBar";
 import RevertConfirmDialog from "./components/RevertConfirmDialog";
 import TurnPageList from "./components/TurnPageList";
@@ -142,7 +140,6 @@ const renderNoGroupHeader = () => <div aria-hidden style={{ minHeight: 1 }} />;
 const TAIL_TURN_COLLAPSE_IDLE_MS = 60_000;
 const EMPTY_ORG_MEMBERS: AgentOrgRunMemberView[] = [];
 const BOTTOM_OVERLAY_FADE_PX = 32;
-const SCROLL_NAV_SPACER_CAP_PX = 160;
 const SCROLL_NAV_SHOW_THRESHOLD_PX = 48;
 
 export interface FollowAgentNavState {
@@ -304,7 +301,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     atBottom,
     setAtBottom,
     setVisibleRange,
-    virtuosoRef,
+    virtualListRef,
     chatFontSize,
     chatCodeFontSize,
     chatLineHeight,
@@ -320,8 +317,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const memoryStatsKeyRef = useRef(Symbol("chat-rendered-tree-memory"));
-  // Used by useChatScrollPin as a fallback when Virtuoso is not mounted
-  // (static rendering path, ≤12 items).
   const staticScrollerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -421,15 +416,13 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     );
   }, []);
 
-  // --- Grouping for GroupedVirtuoso ---
+  // --- Grouping for virtualized chat rows ---
   //
   // `useChatGroups` applies the shared "Agent worked for …" collapse
   // STRUCTURALLY: collapsed turns drop all but their final assistant
-  // message before flatItems/groupCounts are returned. This is mandatory
-  // for Virtuoso — hiding items inline (via `return null` from the item
-  // renderer) leaves the virtualization layer's per-item size cache
-  // stuck at pre-collapse heights, which shows up as a tall blank tail
-  // beneath the surviving last reply (the 0511 regression).
+  // message before flatItems/groupCounts are returned. Hiding items inline
+  // leaves virtualization measurement caches stuck at pre-collapse heights,
+  // which shows up as a tall blank tail beneath the surviving last reply.
   const {
     groupCounts,
     groupHeaders,
@@ -545,10 +538,10 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     // dead subagent session).
     mergeUserOnlyPages: hideGroupUserMessage,
   });
-  const virtuosoGroupShapeKey = displayGroupCounts.join(",");
-  const virtuosoDataKey = `${activeId ?? "no-session"}:${
+  const virtualListGroupShapeKey = displayGroupCounts.join(",");
+  const virtualListDataKey = `${activeId ?? "no-session"}:${
     turnPaginationEnabled ? `page-${currentPageIndex}` : "all"
-  }:${virtuosoGroupShapeKey}`;
+  }:${virtualListGroupShapeKey}`;
 
   // --- Empty-state grace period ---
   const optimizedLen = chatHistory.length;
@@ -569,7 +562,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   } = useChatSearchIntegration({
     chatHistory,
     optimizedChatHistory,
-    virtuosoRef,
+    virtualListRef,
     chatContainerRef,
     originalToFlatIndex,
   });
@@ -641,11 +634,10 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
         if (measurementKey === lastMeasurementKey) return;
         lastMeasurementKey = measurementKey;
 
-        const scrollNavSpacer = Math.min(
-          footerSpacerHeight,
-          Math.max(bottomInset, SCROLL_NAV_SPACER_CAP_PX)
+        const contentBottom = Math.max(
+          0,
+          root.scrollHeight - footerSpacerHeight
         );
-        const contentBottom = Math.max(0, root.scrollHeight - scrollNavSpacer);
         const visibleBottom =
           root.scrollTop + root.clientHeight - Math.max(0, bottomInset);
         const nextVisible =
@@ -682,89 +674,42 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   ]);
 
   // --- Scroll ---
-  const { handleAtBottomStateChange, scrollToBottom, followOutput } =
-    useChatScroll({
-      optimizedChatHistoryLength: displayTotalFlatItems,
-      virtuosoRef,
-      virtuosoScrollerRef,
-      atBottom,
-      setAtBottom,
-      setIsChatScrolledToBottom,
-      isPendingCancelRef,
-      visibleRangeEndRef,
-      pinLastGroupRef,
-      manualScrollAtRef,
-      turnCollapseInteractionAtRef,
-      isContentOverflowingRef,
-      activeSessionId: activeId,
-      staticScrollerRef,
-      alwaysFollowTail: disableTailCollapse,
-    });
-  const scrollToBottomSentinel = useCallback(() => {
-    const scrollToBottomLine = () => {
-      const root = staticScrollerRef.current ?? virtuosoScrollerRef.current;
-      if (!root) return false;
-      const scrollNavSpacer = Math.min(
-        footerSpacerHeight,
-        Math.max(bottomInset, SCROLL_NAV_SPACER_CAP_PX)
-      );
-      const contentBottom = Math.max(0, root.scrollHeight - scrollNavSpacer);
-      root.scrollTo({
-        top: Math.max(
-          0,
-          contentBottom - root.clientHeight + Math.max(1, bottomInset)
-        ),
-        behavior: "auto",
-      });
-      return true;
-    };
-
-    if (scrollToBottomLine()) {
-      window.requestAnimationFrame(scrollToBottomLine);
-      return;
-    }
-
-    scrollToBottom();
-    window.requestAnimationFrame(scrollToBottomLine);
-  }, [
-    bottomInset,
-    footerSpacerHeight,
-    scrollToBottom,
-    staticScrollerRef,
+  const { handleAtBottomStateChange, scrollToBottom } = useChatScroll({
+    optimizedChatHistoryLength: displayTotalFlatItems,
     virtuosoScrollerRef,
-  ]);
-
+    atBottom,
+    setAtBottom,
+    setIsChatScrolledToBottom,
+    isPendingCancelRef,
+    visibleRangeEndRef,
+    pinLastGroupRef,
+    manualScrollAtRef,
+    turnCollapseInteractionAtRef,
+    isContentOverflowingRef,
+    activeSessionId: activeId,
+    staticScrollerRef,
+    alwaysFollowTail: disableTailCollapse,
+  });
   // Subagent panes pass `disableTailCollapse` because every paginated page
   // is exactly one turn and the user expects the cell to show the freshest
-  // event in that turn at all times. Virtuoso's
-  // `initialTopMostItemIndex={last}` lands on the tail on mount, but after
-  // mount the pane still needs to fall back to the tail whenever:
+  // event in that turn at all times. After mount the pane still needs to
+  // fall back to the tail whenever:
   //   (a) the user switches round (currentPageIndex changes), or
   //   (b) the underlying event stream grows (live streaming, or replay
   //       cursor advancing through `slicedEvents`).
-  // The default ChatPanel `followOutput` only engages when the user is
-  // already at-bottom, which is not a safe assumption inside a 4-cell
-  // strip whose viewports are small enough that a single new event can
-  // push the previous "bottom" off-screen. So when the caller opts in
-  // we run a defensive `scrollToIndex(last, end)` on a rAF tick keyed
-  // by the same triple Virtuoso would use to invalidate its layout.
+  // So when the caller opts in we defensively scroll to the shared
+  // content-bottom target on a rAF tick keyed by the same invalidation triple.
   useEffect(() => {
     if (!disableTailCollapse) return;
     if (displayTotalFlatItems <= 0) return;
-    const handle = window.requestAnimationFrame(() => {
-      virtuosoRef.current?.scrollToIndex({
-        index: displayTotalFlatItems - 1,
-        align: "end",
-        behavior: "auto",
-      });
-    });
+    const handle = window.requestAnimationFrame(() => scrollToBottom());
     return () => window.cancelAnimationFrame(handle);
   }, [
     disableTailCollapse,
     activeId,
     currentPageIndex,
     displayTotalFlatItems,
-    virtuosoRef,
+    scrollToBottom,
   ]);
 
   // --- Scroll pin ---
@@ -773,8 +718,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     groupCounts: displayGroupCounts,
     totalFlatItems: displayTotalFlatItems,
     footerSpacerHeight,
+    bottomInset,
     sessionLoadStatus,
-    virtuosoRef: virtuosoRef as React.RefObject<GroupedVirtuosoHandle>,
     virtuosoScrollerRef,
     atBottom,
     isPendingCancelRef,
@@ -793,7 +738,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   React.useEffect(() => {
     onScrollNavChange?.({
       showScrollToBottom,
-      onScrollToBottom: scrollToBottomSentinel,
+      onScrollToBottom: scrollToBottom,
       showFollowAgent,
       followAgentLabel,
       followAgentTooltipLabel,
@@ -802,7 +747,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     });
   }, [
     showScrollToBottom,
-    scrollToBottomSentinel,
+    scrollToBottom,
     showFollowAgent,
     followAgentLabel,
     followAgentTooltipLabel,
@@ -810,12 +755,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     onFollowAgent,
     onScrollNavChange,
   ]);
-
-  // --- Custom Virtuoso scroller ---
-  const ChatScroller = useMemo(
-    () => createChatScroller(virtuosoScrollerRef),
-    [virtuosoScrollerRef]
-  );
 
   // --- Ref accessor callbacks (avoids reading .current during JSX render) ---
   const getIsWpGeneWorking = useCallback(
@@ -1116,13 +1055,10 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                       }
                       codeBlockContainerWidth={codeBlockContainerWidth ?? 0}
                       footerSpacerHeight={footerSpacerHeight}
-                      virtuosoRef={
-                        virtuosoRef as React.RefObject<GroupedVirtuosoHandle>
-                      }
-                      virtuosoDataKey={virtuosoDataKey}
+                      virtualListRef={virtualListRef}
+                      virtualListDataKey={virtualListDataKey}
                       getIsWpGeneWorking={getIsWpGeneWorking}
                       getIsExploring={getIsExploring}
-                      followOutput={followOutput}
                       renderGroupHeader={
                         turnPaginationEnabled
                           ? renderNoGroupHeader
@@ -1135,7 +1071,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                       onSubmit={memoizedSubmit}
                       onSkip={stableHandleIgnoreQuestion}
                       onEditUserMessage={handleEditUserMessage}
-                      ChatScroller={ChatScroller}
+                      virtualScrollerRef={virtuosoScrollerRef}
                       staticScrollerRef={staticScrollerRef}
                       newEventDividerLabel={newEventDividerLabel}
                     />

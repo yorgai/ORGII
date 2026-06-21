@@ -1,7 +1,7 @@
 /**
  * useChatGroups Hook
  *
- * Splits the flat optimizedChatHistory into groups for GroupedVirtuoso.
+ * Splits the flat optimizedChatHistory into groups for the chat list.
  * Each user message starts a new group and becomes its sticky header.
  * Programmatic interrupts such as Force Send can produce adjacent user
  * messages without an intervening assistant event; they are still distinct
@@ -11,13 +11,13 @@
  * When `collapseOverrides` / `isAgentWorking` are provided, the hook also
  * APPLIES the shared "Agent worked for …" collapse at the group
  * level: collapsed turns drop all but their last assistant message from
- * `flatItems` and `groupCounts`. This is required for GroupedVirtuoso to
+ * `flatItems` and `groupCounts`. This is required for virtualization to
  * recompute total list height correctly — hiding items inline (via
- * `return null` from the item renderer) leaves Virtuoso's size cache
+ * `return null` from the item renderer) leaves measured size caches
  * pointing at the pre-collapse heights, which manifested as a large
- * blank tail beneath the surviving last reply (see the 0511 regression
- * report). By making collapse a structural transform here, the
- * virtualization layer only ever sees real, rendered items.
+ * blank tail beneath the surviving last reply. By making collapse a
+ * structural transform here, the virtualization layer only ever sees
+ * real, rendered items.
  *
  * Returns:
  * - groupCounts       — item count per group (excluding the header)
@@ -25,7 +25,7 @@
  * - flatItems         — all non-header items in order, post-collapse
  * - totalFlatItems    — flatItems.length (convenience)
  * - originalToFlatIndex — maps an optimizedChatHistory index to a
- *     GroupedVirtuoso flat-item index (for search scrollToIndex).
+ *     virtual flat-item index (for search scrollToIndex).
  *     User-message indices map to the first surviving item of that group;
  *     items dropped by collapse map to the surviving last-assistant flat
  *     index of their turn so search still lands on the right turn.

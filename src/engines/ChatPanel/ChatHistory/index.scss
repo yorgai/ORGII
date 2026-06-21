@@ -252,6 +252,10 @@
     // Note: vertical spacing is handled by CHAT_ITEM_GAP token in ChatItemWrap.
     // Do NOT add padding-bottom here — it conflicts with the Tailwind gap classes.
 
+    &.chat-item-wrap--activity:has(> .activity-chat-item:empty) {
+      display: none;
+    }
+
     // Selection paint is restricted above so drag-selecting across cards
     // does not highlight block chrome/background shapes.
 

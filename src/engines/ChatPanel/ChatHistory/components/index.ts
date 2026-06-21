@@ -2,8 +2,6 @@ export { default as ChatHistoryEmptyState } from "./ChatHistoryEmptyState";
 export { default as ChatHistoryList } from "./ChatHistoryList";
 export { ChatSearchBar } from "./ChatSearchBar";
 export type { ChatSearchBarHandle, ChatSearchBarProps } from "./ChatSearchBar";
-export { createChatScroller } from "./ChatScroller";
-export type { ChatScrollerProps } from "./ChatScroller";
 export { default as RevertConfirmDialog } from "./RevertConfirmDialog";
 export { revertConfirmAtom, showRevertConfirm } from "./RevertConfirmDialog";
 export type { RevertChoice } from "./RevertConfirmDialog";

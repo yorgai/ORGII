@@ -4,7 +4,7 @@
  * Extracts all state management logic from ChatHistory component.
  * Manages:
  * - Chat history data from context
- * - Virtuoso ref for scroll control
+ * - virtual list ref for scroll control
  * - Scroll state (atBottom)
  * - Visible range tracking
  * - Chat appearance settings
@@ -20,7 +20,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { VirtuosoHandle } from "react-virtuoso";
 
 import {
   useChatHistory,
@@ -41,6 +40,8 @@ import {
   chatFontSizeAtom,
   chatLineHeightAtom,
 } from "@src/store/config/configAtom";
+
+import type { ChatHistoryListHandle } from "../components/ChatHistoryList";
 
 // ============================================
 // Helpers
@@ -71,7 +72,7 @@ export interface UseChatHistoryStateReturn {
 
   // Refs
   chatContainerRef: RefObject<HTMLDivElement | null>;
-  virtuosoRef: RefObject<VirtuosoHandle | null>;
+  virtualListRef: RefObject<ChatHistoryListHandle | null>;
   isWpGeneWorkingRef: MutableRefObject<boolean>;
   isExploringRef: MutableRefObject<boolean>;
   handleReplyQuestionRef: MutableRefObject<
@@ -123,7 +124,6 @@ export function useChatHistoryState(
   const sessionLoadError = useAtomValue(loadErrorAtom);
   // Colocated subscription: read agent working state via EventStore selector
   // instead of isSessionActiveAtom to avoid unnecessary re-renders.
-  // The ref is only used by Virtuoso's followOutput callback.
   const isWpGeneWorkingRef = useAgentWorkingRef();
   const chatFontSize = useAtomValue(chatFontSizeAtom);
   const chatCodeFontSize = useAtomValue(chatCodeFontSizeAtom);
@@ -134,8 +134,7 @@ export function useChatHistoryState(
   // Local State
   // ============================================
 
-  // Virtuoso reference
-  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const virtualListRef = useRef<ChatHistoryListHandle>(null);
 
   // Track whether should auto-scroll to bottom
   const [atBottom, setAtBottom] = useState(true);
@@ -177,7 +176,7 @@ export function useChatHistoryState(
 
     // Refs
     chatContainerRef,
-    virtuosoRef,
+    virtualListRef,
     isWpGeneWorkingRef,
     isExploringRef,
     handleReplyQuestionRef,

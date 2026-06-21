@@ -124,7 +124,7 @@ export interface GroupHeaderRendererProps {
 }
 
 /**
- * Renders the sticky user-message group header row for GroupedVirtuoso.
+ * Renders the sticky user-message group header row for ChatHistory.
  *
  * Wrapped in `memo` so it doesn't re-render every time the chat panel
  * tree re-mounts during scroll / event ticks. The header is one of N
