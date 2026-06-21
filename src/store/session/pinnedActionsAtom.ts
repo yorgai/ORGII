@@ -27,25 +27,7 @@ export interface PinnedAction {
   serverName?: string;
 }
 
-const DEFAULT_PINNED: PinnedAction[] = [
-  {
-    name: "Setup Repo",
-    category: "action",
-    source: "builtin",
-  },
-  {
-    name: "manage-skills",
-    skillName: "manage-skills",
-    category: "skill",
-    source: "Global Skills",
-  },
-  {
-    name: "manage-agents-and-orgs",
-    skillName: "manage-agents-and-orgs",
-    category: "skill",
-    source: "Global Skills",
-  },
-];
+const DEFAULT_PINNED: PinnedAction[] = [];
 
 const STORAGE_KEY = "orgii:pinnedActions";
 
