@@ -215,18 +215,18 @@ export const EditComposerBar: React.FC<EditComposerBarProps> = ({
               shape="round"
               htmlType="button"
               className="enabled:hover:bg-fill-3 enabled:hover:text-text-1"
-              onClick={() => onSubmit()}
+              onClick={onEditSendNow}
             >
-              {t("common:actions.save")}
+              {t("common:actions.sendNow")}
             </Button>
             <Button
               variant="primary"
               size="mini"
               shape="round"
               htmlType="button"
-              onClick={onEditSendNow}
+              onClick={() => onSubmit()}
             >
-              {t("common:actions.sendNow")}
+              {t("common:actions.save")}
             </Button>
           </div>
         ) : quietEditSurface ? (
