@@ -1,5 +1,8 @@
 import { atom } from "jotai";
 
+import { isMacOS } from "@src/util/platform/tauri";
+
+import { activeOverlayCountAtom } from "./overlayLayerAtom";
 import { stationModeAtom } from "./simulatorAtom";
 import { spotlightOpenAtom } from "./uiAtom";
 import { viewModeAtom } from "./viewModeAtom";
@@ -71,6 +74,10 @@ locationSelectorOpenAtom.debugLabel = "locationSelectorOpenAtom";
  * Agent Station can host the same native browser without recreating it.
  */
 export const webviewOverlayBlockedAtom = atom((get) => {
+  // macOS can move native WKWebViews behind React overlays. Other platforms
+  // need a visibility fallback because inline webviews may paint above modals.
+  const hasNativeBlockingOverlay =
+    !isMacOS() && get(activeOverlayCountAtom) > 0;
   const hasGlobalError = get(hasGlobalErrorAtom);
   const isComponentIssueModalOpen = get(componentIssueModalOpenAtom);
   const isQuitConfirmationModalOpen = get(quitConfirmationModalOpenAtom);
@@ -81,6 +88,7 @@ export const webviewOverlayBlockedAtom = atom((get) => {
   const isNotInCodeView = viewMode !== "workStation";
 
   return (
+    hasNativeBlockingOverlay ||
     hasGlobalError ||
     isComponentIssueModalOpen ||
     isQuitConfirmationModalOpen ||

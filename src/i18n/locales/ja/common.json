@@ -205,7 +205,8 @@
     "skipThisVersion": "このバージョンをスキップ",
     "later": "後で",
     "updateAiBlame": "AI Blame を更新",
-    "link": "リンク"
+    "link": "リンク",
+    "fetchPr": "Fetch PR"
   },
   "refreshToast": {
     "successName": "{{name}} を更新しました",
@@ -961,7 +962,10 @@
     "noRepoSelected": "No repository selected",
     "scanningFileExtensions": "Scanning file extensions...",
     "startBrowsingMarket": "Start browsing the marketplace",
-    "previewUnavailable": "プレビューを利用できません"
+    "previewUnavailable": "プレビューを利用できません",
+    "selectPrCommitToViewDiff": "Select a pull request commit from the header to view its diff.",
+    "fetchPrCommitToViewDiff": "Fetch PR to view this commit",
+    "prCommitMissingLocally": "This pull request commit is not available in your local repository yet."
   },
   "inbox": {
     "searchPlaceholder": "メッセージを検索...",
@@ -1183,6 +1187,19 @@
     "commit": {
       "copySha": "SHAをコピー",
       "shaCopied": "SHAをクリップボードにコピーしました"
+    },
+    "issues": {
+      "updated": "最終更新",
+      "notUpdated": "未更新",
+      "assignedTo": "{{assignees}} に割り当て",
+      "commentCount_one": "{{count}} 件のコメント",
+      "commentCount_other": "{{count}} 件のコメント",
+      "status": {
+        "open": "オープン",
+        "closed": "クローズ",
+        "completed": "完了",
+        "notPlanned": "未計画"
+      }
     }
   },
   "selectors": {

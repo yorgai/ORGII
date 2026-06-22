@@ -2503,7 +2503,8 @@
       "open": "Otwórz",
       "copyUrl": "Kopiuj URL",
       "copied": "Skopiowano URL",
-      "openExternalFailed": "Nie udało się otworzyć URL w domyślnej przeglądarce"
+      "openExternalFailed": "Nie udało się otworzyć URL w domyślnej przeglądarce",
+      "groupTitle": "Strony internetowe"
     },
     "path": {
       "open": "Otwórz",

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   getNativeFrameScale,
+  resolveNativeFrameScale,
   toNativeFrame,
   toNativeFrameFromCorners,
 } from "../nativeFrame";
@@ -176,5 +177,24 @@ describe("toNativeFrame", () => {
       width: 100,
       height: 50,
     });
+  });
+});
+
+describe("resolveNativeFrameScale", () => {
+  it("uses the measured DOM CSS pixel to Tauri logical pixel ratio", () => {
+    expect(resolveNativeFrameScale(1.575, 1.5, 1)).toBeCloseTo(1.05);
+  });
+
+  it("falls back when the measured ratio is invalid", () => {
+    expect(resolveNativeFrameScale(1.5, 0, 0.9)).toBe(0.9);
+    expect(resolveNativeFrameScale(Number.NaN, 1.5, 0.9)).toBe(0.9);
+    expect(resolveNativeFrameScale(1.5, Number.POSITIVE_INFINITY, 0.9)).toBe(
+      0.9
+    );
+  });
+
+  it("uses 1 when both the measured ratio and fallback are invalid", () => {
+    expect(resolveNativeFrameScale(1.5, 0, 0)).toBe(1);
+    expect(resolveNativeFrameScale(1.5, 0, Number.NaN)).toBe(1);
   });
 });

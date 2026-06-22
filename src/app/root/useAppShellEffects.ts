@@ -23,7 +23,9 @@ import {
   uiScaleAtom,
   windowFullscreenAtom,
 } from "@src/store/ui/uiAtom";
+import { isWindows } from "@src/util/platform/tauri";
 import { invokeTauri } from "@src/util/platform/tauri/init";
+import { resolveNativeFrameScale } from "@src/util/platform/tauri/nativeFrame";
 
 const logger = createLogger("AppShellEffects");
 
@@ -33,9 +35,52 @@ export function useAppShellEffects(): void {
   const isFullscreen = useAtomValue(windowFullscreenAtom);
 
   useEffect(() => {
+    let disposed = false;
+    let unlistenScaleChanged: (() => void) | null = null;
     const root = document.documentElement;
     const appRoot = document.getElementById("root");
     const scaleValue = uiScale / 100;
+    const currentWindowPromise = import("@tauri-apps/api/window").then(
+      ({ getCurrentWindow }) => getCurrentWindow()
+    );
+
+    const dispatchScaleApplied = () => {
+      requestAnimationFrame(() => {
+        if (!disposed) {
+          window.dispatchEvent(new CustomEvent("orgii-ui-scale-applied"));
+        }
+      });
+    };
+
+    const applyNativeFrameScale = (nextScale: number) => {
+      root.style.setProperty("--native-frame-scale", String(nextScale));
+      dispatchScaleApplied();
+    };
+
+    const applyMeasuredNativeFrameScale = async () => {
+      try {
+        const appWindow = await currentWindowPromise;
+        if (disposed) return;
+
+        const windowScaleFactor = await appWindow.scaleFactor();
+        if (disposed) return;
+
+        // Windows WebView2 can report DOM CSS pixels in a different logical
+        // scale than Tauri's window scale. Keep non-Windows on the existing
+        // configured scale path until verified on WKWebView/Linux.
+        const nextScale = isWindows()
+          ? resolveNativeFrameScale(
+              window.devicePixelRatio,
+              windowScaleFactor,
+              scaleValue
+            )
+          : scaleValue;
+
+        applyNativeFrameScale(nextScale);
+      } catch (error) {
+        logger.error("failed to measure native frame scale:", error);
+      }
+    };
 
     root.style.zoom = "";
     root.style.setProperty("--ui-scale", "1");
@@ -53,11 +98,31 @@ export function useAppShellEffects(): void {
       appRoot.style.height = "";
     }
 
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new CustomEvent("orgii-ui-scale-applied"));
-    });
+    dispatchScaleApplied();
+    void applyMeasuredNativeFrameScale();
+
+    void currentWindowPromise
+      .then(async (appWindow) => {
+        if (disposed) return;
+        const unlisten = await appWindow.onScaleChanged(() => {
+          void applyMeasuredNativeFrameScale();
+        });
+        if (disposed) {
+          unlisten();
+          return;
+        }
+        unlistenScaleChanged = unlisten;
+      })
+      .catch((error) => {
+        logger.error(
+          "failed to listen for native window scale changes:",
+          error
+        );
+      });
 
     return () => {
+      disposed = true;
+      unlistenScaleChanged?.();
       root.style.zoom = "";
       root.style.removeProperty("--ui-scale");
       root.style.removeProperty("--native-frame-scale");

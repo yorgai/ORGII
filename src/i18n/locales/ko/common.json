@@ -205,7 +205,8 @@
     "skipThisVersion": "이 버전 건너뛰기",
     "later": "나중에",
     "updateAiBlame": "AI Blame 업데이트",
-    "link": "연결"
+    "link": "연결",
+    "fetchPr": "Fetch PR"
   },
   "refreshToast": {
     "successName": "{{name}} 새로고침됨",
@@ -961,7 +962,10 @@
     "noRepoSelected": "No repository selected",
     "scanningFileExtensions": "Scanning file extensions...",
     "startBrowsingMarket": "Start browsing the marketplace",
-    "previewUnavailable": "미리보기를 사용할 수 없습니다"
+    "previewUnavailable": "미리보기를 사용할 수 없습니다",
+    "selectPrCommitToViewDiff": "Select a pull request commit from the header to view its diff.",
+    "fetchPrCommitToViewDiff": "Fetch PR to view this commit",
+    "prCommitMissingLocally": "This pull request commit is not available in your local repository yet."
   },
   "inbox": {
     "searchPlaceholder": "메시지 검색...",
@@ -1183,6 +1187,19 @@
     "commit": {
       "copySha": "SHA 복사",
       "shaCopied": "SHA를 클립보드에 복사했습니다"
+    },
+    "issues": {
+      "updated": "마지막 업데이트",
+      "notUpdated": "업데이트 없음",
+      "assignedTo": "{{assignees}}에게 할당됨",
+      "commentCount_one": "댓글 {{count}}개",
+      "commentCount_other": "댓글 {{count}}개",
+      "status": {
+        "open": "열림",
+        "closed": "닫힘",
+        "completed": "완료됨",
+        "notPlanned": "계획 없음"
+      }
     }
   },
   "selectors": {

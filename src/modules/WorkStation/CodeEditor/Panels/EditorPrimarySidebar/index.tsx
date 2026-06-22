@@ -146,6 +146,7 @@ export const EditorPrimarySidebar: React.FC<EditorPrimarySidebarProps> = memo(
       searchLoading,
       repoPath,
     });
+    const hasVisibleFileTreeItems = displayData.length > 0;
 
     // ============================================
     // Simple callbacks
@@ -200,7 +201,7 @@ export const EditorPrimarySidebar: React.FC<EditorPrimarySidebarProps> = memo(
       onToggleFilterFiles: filterState.handleToggleFilterFiles,
       onRefresh,
       filesRefreshLoading: loading,
-      onCollapseAll,
+      onCollapseAll: hasVisibleFileTreeItems ? onCollapseAll : undefined,
       onAddFile: handleAddFile,
       onAddFolder: handleAddFolder,
       showSearchFilters,

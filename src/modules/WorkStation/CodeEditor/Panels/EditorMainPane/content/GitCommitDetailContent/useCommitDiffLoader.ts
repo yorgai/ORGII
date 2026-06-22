@@ -5,7 +5,7 @@ import type { CommitDiffResult } from "@src/api/http/git/types";
 import { createLogger } from "@src/hooks/logger";
 import { decodeOctalPath } from "@src/util/file/pathUtils";
 
-type CommitLoadState = "loading" | "ready" | "error" | "no-files";
+type CommitLoadState = "loading" | "ready" | "error" | "no-files" | "missing";
 
 const logger = createLogger("GitCommitDetailContent");
 
@@ -14,6 +14,7 @@ interface UseCommitDiffLoaderParams {
   repoId: string;
   repoPath: string;
   isRepoReady: boolean;
+  treatEmptyResultAsMissing?: boolean;
 }
 
 interface UseCommitDiffLoaderResult {
@@ -34,6 +35,7 @@ export function useCommitDiffLoader({
   repoId,
   repoPath,
   isRepoReady,
+  treatEmptyResultAsMissing = false,
 }: UseCommitDiffLoaderParams): UseCommitDiffLoaderResult {
   const [commitDiff, setCommitDiff] = useState<CommitDiffResult | null>(null);
   const [commitLoadState, setCommitLoadState] =
@@ -94,7 +96,7 @@ export function useCommitDiffLoader({
               repoPath,
             }
           );
-          setCommitLoadState("error");
+          setCommitLoadState(treatEmptyResultAsMissing ? "missing" : "error");
           setCommitError(`commit=${commitSha}`);
           return;
         }
@@ -150,7 +152,14 @@ export function useCommitDiffLoader({
     return () => {
       cancelled = true;
     };
-  }, [commitSha, repoId, repoPath, isRepoReady, commitReloadKey]);
+  }, [
+    commitSha,
+    repoId,
+    repoPath,
+    isRepoReady,
+    commitReloadKey,
+    treatEmptyResultAsMissing,
+  ]);
 
   return {
     commitDiff,

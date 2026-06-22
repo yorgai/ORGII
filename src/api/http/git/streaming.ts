@@ -167,6 +167,7 @@ export async function gitFetchStream(
     repo_path: string;
     remote?: string;
     prune?: boolean;
+    refspec?: string;
   },
   callbacks: GitStreamCallbacks
 ): Promise<() => void> {
@@ -177,6 +178,7 @@ export async function gitFetchStream(
   if (params.remote) queryParams.append("remote", params.remote);
   if (params.prune !== undefined)
     queryParams.append("prune", params.prune.toString());
+  if (params.refspec) queryParams.append("refspec", params.refspec);
 
   const url = `${gitRepoUrl(params.repo_id)}/fetch/stream?${queryParams.toString()}`;
 

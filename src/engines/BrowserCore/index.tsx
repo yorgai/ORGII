@@ -27,6 +27,7 @@ import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import BrowserSessionWebview from "./BrowserSessionWebview";
 import type { UseBrowserStateReturn } from "./hooks/useBrowserState";
 import "./index.scss";
+import { BROWSER_WEBVIEW_FRAME_ANCHOR_ATTRIBUTE } from "./nativeFrameAnchor";
 
 const log = createLogger("BrowserCore");
 
@@ -97,6 +98,10 @@ export const BrowserCore: React.FC<BrowserCoreProps> = ({
   // Refs for the browser content host and the exact native WebView anchor.
   const contentAreaRef = useRef<HTMLDivElement>(null);
   const webviewFrameAnchorRef = useRef<HTMLDivElement>(null);
+  const webviewFrameAnchorDataAttr = useMemo(
+    () => ({ [BROWSER_WEBVIEW_FRAME_ANCHOR_ATTRIBUTE]: "" }),
+    []
+  );
 
   // Find current session
   const currentSession = sessions.find((s) => s.id === activeSessionId);
@@ -178,6 +183,7 @@ export const BrowserCore: React.FC<BrowserCoreProps> = ({
         <div className="browser-content" ref={contentAreaRef}>
           <div
             ref={webviewFrameAnchorRef}
+            {...webviewFrameAnchorDataAttr}
             className={`browser-webview-frame-anchor ${
               SHOW_WEBVIEW_FRAME_ANCHOR ? "debug-visible" : ""
             }`}

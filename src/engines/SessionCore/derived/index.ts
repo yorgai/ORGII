@@ -4,6 +4,11 @@
  * Derived views from core atoms (read-only).
  */
 
+export {
+  SIMULATOR_EVENT_FILTER_VALUES,
+  isSimulatorEventVisibleForFilters,
+  type SimulatorEventFilterValue,
+} from "./simulatorEventFilters";
 export { chatEventsAtom } from "./chatEvents";
 export {
   createdAtByIdAtom,

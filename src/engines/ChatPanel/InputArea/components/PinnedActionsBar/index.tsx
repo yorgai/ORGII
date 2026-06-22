@@ -80,6 +80,7 @@ const ActionPill: React.FC<ActionPillProps> = memo(
         itemType="file"
         as="div"
         display="inline-block"
+        className="shrink-0"
       >
         {button}
       </FileTreeHoverPreview>

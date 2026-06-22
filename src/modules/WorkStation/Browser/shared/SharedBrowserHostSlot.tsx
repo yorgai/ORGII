@@ -18,6 +18,7 @@ interface SharedBrowserHostSlotProps {
   active: boolean;
   className?: string;
   bottomInsetPx?: number;
+  measureSelector?: string;
   children?: React.ReactNode;
 }
 
@@ -52,12 +53,21 @@ function sameRect(
   );
 }
 
+function getMeasureTarget(
+  element: Element,
+  measureSelector: string | undefined
+): Element | null {
+  if (!measureSelector) return element;
+  return element.querySelector(measureSelector);
+}
+
 export const SharedBrowserHostSlot: React.FC<SharedBrowserHostSlotProps> = ({
   hostId,
   scope = getDefaultScope(hostId),
   active,
   className = "h-full w-full",
   bottomInsetPx = 0,
+  measureSelector,
   children,
 }) => {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -68,6 +78,24 @@ export const SharedBrowserHostSlot: React.FC<SharedBrowserHostSlotProps> = ({
     if (!element) return;
 
     let animationFrame: number | null = null;
+    let observedMeasureTarget: Element | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const syncObservedMeasureTarget = (): Element | null => {
+      const nextTarget = getMeasureTarget(element, measureSelector);
+      if (nextTarget === observedMeasureTarget) return nextTarget;
+
+      if (observedMeasureTarget && observedMeasureTarget !== element) {
+        resizeObserver?.unobserve(observedMeasureTarget);
+      }
+
+      observedMeasureTarget = nextTarget;
+      if (nextTarget && nextTarget !== element) {
+        resizeObserver?.observe(nextTarget);
+      }
+
+      return nextTarget;
+    };
 
     const publish = () => {
       if (animationFrame !== null) {
@@ -76,8 +104,12 @@ export const SharedBrowserHostSlot: React.FC<SharedBrowserHostSlotProps> = ({
 
       animationFrame = window.requestAnimationFrame(() => {
         animationFrame = null;
+        const measureTarget = syncObservedMeasureTarget();
+        const insetPx = measureTarget === element ? bottomInsetPx : 0;
         const nextRect = active
-          ? toHostRect(element.getBoundingClientRect(), bottomInsetPx)
+          ? measureTarget
+            ? toHostRect(measureTarget.getBoundingClientRect(), insetPx)
+            : null
           : null;
         setRegistry((prev) => {
           const current = prev[hostId];
@@ -101,15 +133,25 @@ export const SharedBrowserHostSlot: React.FC<SharedBrowserHostSlotProps> = ({
       });
     };
 
-    publish();
-    const resizeObserver = new ResizeObserver(publish);
+    resizeObserver = new ResizeObserver(publish);
     resizeObserver.observe(element);
+
+    const mutationObserver = measureSelector
+      ? new MutationObserver(publish)
+      : null;
+    mutationObserver?.observe(element, {
+      childList: true,
+      subtree: true,
+    });
+
+    publish();
     window.addEventListener("resize", publish);
     window.addEventListener("scroll", publish, true);
     window.addEventListener(WEBVIEW_LAYOUT_CHANGED_EVENT, publish);
 
     return () => {
-      resizeObserver.disconnect();
+      mutationObserver?.disconnect();
+      resizeObserver?.disconnect();
       window.removeEventListener("resize", publish);
       window.removeEventListener("scroll", publish, true);
       window.removeEventListener(WEBVIEW_LAYOUT_CHANGED_EVENT, publish);
@@ -117,7 +159,7 @@ export const SharedBrowserHostSlot: React.FC<SharedBrowserHostSlotProps> = ({
         window.cancelAnimationFrame(animationFrame);
       }
     };
-  }, [active, bottomInsetPx, hostId, scope, setRegistry]);
+  }, [active, bottomInsetPx, hostId, measureSelector, scope, setRegistry]);
 
   useEffect(() => {
     return () => {

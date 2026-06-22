@@ -2498,7 +2498,8 @@
       "open": "開啟",
       "copyUrl": "複製 URL",
       "copied": "URL 複製",
-      "openExternalFailed": "無法用預設瀏覽器開啟 URL"
+      "openExternalFailed": "無法用預設瀏覽器開啟 URL",
+      "groupTitle": "網頁"
     },
     "path": {
       "open": "開啟",

@@ -26,7 +26,8 @@ export type PillIconType =
   | "skill"
   | "member"
   | "paste"
-  | "pr";
+  | "pr"
+  | "issue";
 
 /**
  * Persisted pill payload. This is the canonical, in-memory description of a

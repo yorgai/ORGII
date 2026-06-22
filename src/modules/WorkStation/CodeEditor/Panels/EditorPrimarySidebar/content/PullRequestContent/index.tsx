@@ -7,7 +7,7 @@
  */
 import { useAtomValue } from "jotai";
 import { GitPullRequest, Loader2, TriangleAlert } from "lucide-react";
-import React, { memo, useCallback, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { OpenPRItem } from "@src/api/tauri/github";
@@ -177,10 +177,16 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
     readyToCreate,
     isCreating: prCreating,
   } = useAtomValue(workstationPrAtom);
-  const { createPr: onCreatePr } = useAtomValue(workstationPrCallbackAtom);
+  const { createPr: onCreatePr, loadOpenPrs } = useAtomValue(
+    workstationPrCallbackAtom
+  );
   const allOpenPrs = useAtomValue(workstationAllOpenPrsAtom);
   const openPrsLoadState = useAtomValue(workstationOpenPrsLoadStateAtom);
   const openPrsError = useAtomValue(workstationOpenPrsErrorAtom);
+
+  useEffect(() => {
+    loadOpenPrs?.();
+  }, [loadOpenPrs]);
 
   const [selectedPrNumber, setSelectedPrNumber] = useState<number | null>(null);
   const [localCreateError, setLocalCreateError] = useState<string | null>(null);

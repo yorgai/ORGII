@@ -1,0 +1,4 @@
+export const BROWSER_WEBVIEW_FRAME_ANCHOR_ATTRIBUTE =
+  "data-browser-webview-frame-anchor";
+
+export const BROWSER_WEBVIEW_FRAME_ANCHOR_SELECTOR = `[${BROWSER_WEBVIEW_FRAME_ANCHOR_ATTRIBUTE}]`;

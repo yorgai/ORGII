@@ -129,20 +129,12 @@ const PrCommitDropdown: React.FC<PrCommitDropdownProps> = ({
 
   useEffect(() => {
     const parsed = parsePrUrlForHeader(prUrl);
+    setSelectedSha(null);
     if (!parsed) return;
 
     const cached = prCommitsCache.get(prUrl);
     if (cached) {
       setCommits(cached);
-      if (cached.length > 0) {
-        const first = cached[0];
-        setSelectedSha(first.sha);
-        onCommitSelect({
-          commitSha: first.sha,
-          shortSha: first.shortSha,
-          commitMessage: first.summary,
-        });
-      }
       return;
     }
 
@@ -169,15 +161,6 @@ const PrCommitDropdown: React.FC<PrCommitDropdownProps> = ({
         });
         prCommitsCache.set(prUrl, parsed2);
         setCommits(parsed2);
-        if (parsed2.length > 0) {
-          const first = parsed2[0];
-          setSelectedSha(first.sha);
-          onCommitSelect({
-            commitSha: first.sha,
-            shortSha: first.shortSha,
-            commitMessage: first.summary,
-          });
-        }
       } catch (err) {
         if (cancelled || err instanceof GitHubReAuthError) return;
       } finally {

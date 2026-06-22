@@ -18,8 +18,10 @@
  */
 export const INTERNAL_AGENT_IDS = new Set([
   "builtin:base",
+  "builtin:ai-research",
   "builtin:explore",
   "builtin:general",
   "builtin:memory-extractor",
   "builtin:memory-consolidator",
+  "builtin:wingman",
 ]);

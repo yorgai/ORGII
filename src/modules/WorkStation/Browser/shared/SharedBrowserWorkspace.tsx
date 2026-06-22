@@ -1,6 +1,7 @@
 import type { FC } from "react";
 
 import type { UseBrowserStateReturn } from "@src/engines/BrowserCore/hooks/useBrowserState";
+import { BROWSER_WEBVIEW_FRAME_ANCHOR_SELECTOR } from "@src/engines/BrowserCore/nativeFrameAnchor";
 import type { WorkstationTabHeaderHost } from "@src/hooks/workStation";
 import {
   NoTabsPlaceholder,
@@ -86,6 +87,7 @@ export const SharedBrowserWorkspace: FC<SharedBrowserWorkspaceProps> = ({
           scope={scope}
           active={shouldActivateNativeHost}
           bottomInsetPx={webviewBottomInsetPx}
+          measureSelector={BROWSER_WEBVIEW_FRAME_ANCHOR_SELECTOR}
         >
           <WebViewport
             browserState={browserState}

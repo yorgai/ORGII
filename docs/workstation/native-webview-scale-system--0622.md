@@ -25,7 +25,7 @@ Important invariants:
 - Do not use `document.documentElement.style.zoom` for app scaling.
 - Do not scale `#root` with CSS transforms for the active production path.
 - Keep `--ui-scale` set to `1` so frontend pointer compensation paths do not double-apply scale.
-- Set `--native-frame-scale` to the actual native zoom factor so native frame conversion can compensate DOMRect coordinates.
+- Set `--native-frame-scale` to the actual DOM-CSS-pixel to Tauri logical-pixel conversion factor so native frame conversion can compensate DOMRect coordinates. On Windows this is measured from the running window as `window.devicePixelRatio / appWindow.scaleFactor()` instead of assuming it always equals the configured UI scale. Non-Windows platforms keep using the configured UI scale until the measured ratio is verified against WKWebView/Linux child webview behavior.
 
 ### Main WebView zoom target
 
@@ -121,9 +121,10 @@ When inline WebViews are misaligned under UI scale:
 2. Confirm child WebViews are not using `.auto_resize()`.
 3. Confirm the measured anchor visually matches the intended browser rectangle.
 4. Confirm `toNativeFrame` emits `x/y/a/b` and applies `--native-frame-scale`.
-5. Confirm Rust receives `a/b` and derives size from corners.
-6. If the browser panel moves without resizing, confirm `orgii-webview-layout-changed` reaches `SharedBrowserHostSlot` and `useWebviewLayout`.
-7. If using the shared browser owner, confirm `SharedBrowserApp` has moved its fixed host before the final native position update.
+5. On Windows, confirm `--native-frame-scale` matches `window.devicePixelRatio / appWindow.scaleFactor()`. A mismatch here makes offsets grow with distance from the window origin, so right-side browser panes can look shifted even when the DOMRect measurement is correct.
+6. Confirm Rust receives `a/b` and derives size from corners.
+7. If the browser panel moves without resizing, confirm `orgii-webview-layout-changed` reaches `SharedBrowserHostSlot` and `useWebviewLayout`.
+8. If using the shared browser owner, confirm `SharedBrowserApp` has moved its fixed host before the final native position update.
 
 ## Files of interest
 

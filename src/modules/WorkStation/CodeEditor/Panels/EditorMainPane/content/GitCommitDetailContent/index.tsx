@@ -12,6 +12,7 @@ import { ChevronRight } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { gitFetchStream } from "@src/api/http/git/streaming";
 import type { GitFileStatus } from "@src/config/gitStatus";
 import { CodeMirrorDiff } from "@src/features/CodeMirror";
 import {
@@ -49,6 +50,7 @@ export interface GitCommitDetailContentProps {
   headerVariant?: "commit" | "stash";
   headerRootLabel?: string;
   publishHeaderToWorkstation?: boolean;
+  prNumber?: number;
 }
 
 const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
@@ -62,6 +64,7 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
   headerVariant = "commit",
   headerRootLabel,
   publishHeaderToWorkstation = true,
+  prNumber,
 }) => {
   const { t } = useTranslation();
 
@@ -74,6 +77,8 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
   );
   const { onOpenSettings } = useAtomValue(activeStatusBarCallbacksAtom);
   const [fileListWidth, setFileListWidth] = useAtom(gitFileListWidthAtom);
+  const [fetchingPrCommit, setFetchingPrCommit] = useState(false);
+  const [fetchPrError, setFetchPrError] = useState<string | null>(null);
   const { columnRef: fileListRef, handleMouseDown: handleFileListResize } =
     useColumnResize({
       width: fileListWidth,
@@ -81,6 +86,12 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
       min: GIT_FILE_LIST_MIN_WIDTH,
       max: GIT_FILE_LIST_MAX_WIDTH,
     });
+  const setFileListElement = useCallback(
+    (node: HTMLDivElement | null) => {
+      fileListRef.current = node;
+    },
+    [fileListRef]
+  );
 
   const {
     commitDiff,
@@ -89,7 +100,13 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
     selectedFilePath,
     setSelectedFilePath,
     reloadCommit,
-  } = useCommitDiffLoader({ commitSha, repoId, repoPath, isRepoReady });
+  } = useCommitDiffLoader({
+    commitSha,
+    repoId,
+    repoPath,
+    isRepoReady,
+    treatEmptyResultAsMissing: Boolean(prNumber),
+  });
 
   const {
     fileOldContent,
@@ -150,6 +167,36 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
     [setLineNumbers]
   );
 
+  const handleFetchPrCommit = useCallback(() => {
+    if (!prNumber || !repoId || !repoPath || fetchingPrCommit) return;
+
+    setFetchingPrCommit(true);
+    setFetchPrError(null);
+    void gitFetchStream(
+      {
+        repo_id: repoId,
+        repo_path: repoPath,
+        remote: "origin",
+        prune: false,
+        refspec: `pull/${prNumber}/head:refs/orgii/pr/${prNumber}`,
+      },
+      {
+        onComplete: (success) => {
+          setFetchingPrCommit(false);
+          if (success) {
+            reloadCommit();
+          } else {
+            setFetchPrError(`git fetch origin pull/${prNumber}/head`);
+          }
+        },
+        onError: (error) => {
+          setFetchingPrCommit(false);
+          setFetchPrError(error);
+        },
+      }
+    );
+  }, [fetchingPrCommit, prNumber, reloadCommit, repoId, repoPath]);
+
   const stashHeaderPath = `${headerRootLabel ?? shortSha}/${commitMessage}`;
 
   const hasInlineHeaderAbove = !publishHeaderToWorkstation;
@@ -208,6 +255,35 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
           onRetry={reloadCommit}
           fillParentHeight
         />
+      ) : commitLoadState === "missing" ? (
+        <Placeholder
+          variant="empty"
+          placement="detail-panel"
+          title={t(
+            "placeholders.fetchPrCommitToViewDiff",
+            "Fetch PR to view this commit"
+          )}
+          subtitle={
+            fetchPrError ??
+            t(
+              "placeholders.prCommitMissingLocally",
+              "This pull request commit is not available in your local repository yet."
+            )
+          }
+          action={
+            prNumber
+              ? {
+                  label: fetchingPrCommit
+                    ? t("status.loading")
+                    : t("actions.fetchPr", "Fetch PR"),
+                  onClick: handleFetchPrCommit,
+                  disabled: fetchingPrCommit,
+                  variant: "primary",
+                }
+              : undefined
+          }
+          fillParentHeight
+        />
       ) : commitLoadState === "no-files" ? (
         <Placeholder
           variant="empty"
@@ -236,7 +312,7 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
             {!fileListCollapsed && (
               <>
                 <div
-                  ref={fileListRef}
+                  ref={setFileListElement}
                   className="flex flex-shrink-0 flex-col overflow-hidden"
                   style={{ width: `${fileListWidth}px` }}
                 >

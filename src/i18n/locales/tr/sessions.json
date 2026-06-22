@@ -2495,7 +2495,8 @@
       "open": "Aç",
       "copyUrl": "URL'yi kopyala",
       "copied": "URL kopyalandı",
-      "openExternalFailed": "URL varsayılan tarayıcıda açılamadı"
+      "openExternalFailed": "URL varsayılan tarayıcıda açılamadı",
+      "groupTitle": "Web sayfaları"
     },
     "path": {
       "open": "Aç",

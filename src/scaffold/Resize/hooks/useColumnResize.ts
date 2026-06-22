@@ -36,7 +36,7 @@ interface UseColumnResizeOptions {
 }
 
 interface UseColumnResizeReturn {
-  columnRef: React.RefObject<HTMLDivElement | null>;
+  columnRef: React.MutableRefObject<HTMLDivElement | null>;
   handleMouseDown: (event: React.MouseEvent) => void;
   isResizing: boolean;
 }

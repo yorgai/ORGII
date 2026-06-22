@@ -1,10 +1,32 @@
-# ORG-2
+<div align="center">
+  <h1>ORG-2</h1>
+  <p><strong>开源的 Cursor 风格 Agent IDE——但它为可审查性、可追踪性和控制而构建，而不只是为了更快写代码。</strong></p>
+  <p>基于 Rust 和 Tauri 构建，面向 local-first 执行，磁盘占用低于 100MB。支持 Agent 轨迹直播和回放，易于跟踪和审查。</p>
+  <p>
+    <a href="../../LICENSE"><img alt="License" src="https://img.shields.io/github/license/yorgai/ORG2?style=flat-square" /></a>
+    <a href="https://github.com/yorgai/ORG2/releases/latest"><img alt="Downloads" src="https://img.shields.io/github/downloads/yorgai/ORG2/total?style=flat-square&label=downloads" /></a>
+    <a href="https://github.com/yorgai/ORG2/commits/develop"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2?style=flat-square&label=last%20commit" /></a>
+    <a href="https://github.com/yorgai/ORG2/graphs/commit-activity"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/yorgai/ORG2?style=flat-square&label=commit%20activity" /></a>
+  </p>
+</div>
 
-**开源的 Cursor 风格 Agent IDE——但它为可审查性、可追踪性和控制而构建，而不只是为了更快写代码。**
+---
 
-基于 Rust 和 Tauri 构建，面向 local-first 执行，磁盘占用低于 100MB。支持 Agent 轨迹直播和回放，易于跟踪和审查。
+<p align="center">
+  <a href="https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-mac-apple-silicon.dmg"><strong>macOS Apple Silicon</strong></a>
+  ·
+  <a href="https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-windows-x64-setup.exe"><strong>Windows installer</strong></a>
+  ·
+  <a href="https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-windows-x64.msi"><strong>Windows MSI</strong></a>
+  ·
+  <a href="https://github.com/yorgai/ORG2/releases/latest"><strong>All latest release assets</strong></a>
+</p>
 
-[English](../../README.md) · [Français](README.fr.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [Español](README.es.md) · [Русский](README.ru.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Türkçe](README.tr.md) · [Tiếng Việt](README.vi.md) · [Polski](README.pl.md)
+---
+
+<p align="center">
+  <a href="../../README.md">English</a> · <a href="README.fr.md">Français</a> · <a href="README.zh.md">简体中文</a> · <a href="README.zh-Hant.md">繁體中文</a> · <a href="README.es.md">Español</a> · <a href="README.ru.md">Русский</a> · <a href="README.pt.md">Português</a> · <a href="README.de.md">Deutsch</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.pl.md">Polski</a>
+</p>
 
 <p align="center">
   <video src="https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a" controls width="720"></video>
@@ -25,14 +47,6 @@ ORG-II 探索另一种模式：把 Agent 视为结构化组织中持久、可观
 - 支持调度和自动启动会话，让 Agent 可以通宵运行，或在你离开时继续工作。
 - 面向组织级对齐的界面，用于协调人类、Agent、目标和责任归属（WIP）。
 - 通过自托管 Supabase 支持会话协作和群组 issue 工作流（WIP）。
-
-<p align="center">
-  <img src="../../assets/github-browser-demo.png" alt="ORGII GitHub 浏览器演示" width="720" />
-</p>
-
-<p align="center">
-  <img src="../../assets/agent-scheduling-demo.png" alt="ORGII Agent 调度演示" width="720" />
-</p>
 
 ## 下载
 

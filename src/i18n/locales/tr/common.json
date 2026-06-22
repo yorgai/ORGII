@@ -205,7 +205,8 @@
     "skipThisVersion": "Bu sürümü atla",
     "later": "Daha sonra",
     "updateAiBlame": "AI Blame'i güncelle",
-    "link": "Bağla"
+    "link": "Bağla",
+    "fetchPr": "Fetch PR"
   },
   "refreshToast": {
     "successName": "{{name}} yenilendi",
@@ -961,7 +962,10 @@
     "noRepoSelected": "No repository selected",
     "scanningFileExtensions": "Scanning file extensions...",
     "startBrowsingMarket": "Start browsing the marketplace",
-    "previewUnavailable": "Önizleme kullanılamıyor"
+    "previewUnavailable": "Önizleme kullanılamıyor",
+    "selectPrCommitToViewDiff": "Select a pull request commit from the header to view its diff.",
+    "fetchPrCommitToViewDiff": "Fetch PR to view this commit",
+    "prCommitMissingLocally": "This pull request commit is not available in your local repository yet."
   },
   "inbox": {
     "searchPlaceholder": "Mesajlarda ara...",
@@ -1183,6 +1187,19 @@
     "commit": {
       "copySha": "SHA’yı kopyala",
       "shaCopied": "SHA panoya kopyalandı"
+    },
+    "issues": {
+      "updated": "Son güncelleme",
+      "notUpdated": "güncellenmedi",
+      "assignedTo": "{{assignees}} kişisine atandı",
+      "commentCount_one": "{{count}} yorum",
+      "commentCount_other": "{{count}} yorum",
+      "status": {
+        "open": "Açık",
+        "closed": "Kapalı",
+        "completed": "Tamamlandı",
+        "notPlanned": "Planlanmadı"
+      }
     }
   },
   "selectors": {
