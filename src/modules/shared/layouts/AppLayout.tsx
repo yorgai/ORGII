@@ -45,6 +45,7 @@ import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
 import type { ChatPanelPosition } from "@src/store/ui/workStationLayout/chatPositionAtoms";
 import { activeWorkspaceRootPathAtom } from "@src/store/workspace";
 
+import { FocusedChatWorkstationRail } from "./FocusedChatWorkstationRail";
 import { GlobalModals } from "./GlobalModals";
 import { MainContentArea } from "./MainContentArea";
 
@@ -374,6 +375,9 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
                     {slotInner}
                   </div>
                 )}
+                {chatPanelMaximized && chatPanelMode === "session" && (
+                  <FocusedChatWorkstationRail />
+                )}
               </div>
             </div>
           ) : (
@@ -410,6 +414,9 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
               >
                 {slotInner}
               </div>
+              {chatPanelMaximized && chatPanelMode === "session" && (
+                <FocusedChatWorkstationRail />
+              )}
             </div>
           )}
         </SessionSyncProvider>
