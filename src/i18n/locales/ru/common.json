@@ -1182,6 +1182,19 @@
     "commit": {
       "copySha": "Копировать SHA",
       "shaCopied": "SHA скопирован в буфер обмена"
+    },
+    "issues": {
+      "updated": "Последнее обновление",
+      "notUpdated": "не обновлялось",
+      "assignedTo": "Назначено: {{assignees}}",
+      "commentCount_one": "{{count}} комментарий",
+      "commentCount_other": "{{count}} комментария",
+      "status": {
+        "open": "Открыто",
+        "closed": "Закрыто",
+        "completed": "Завершено",
+        "notPlanned": "Не запланировано"
+      }
     }
   },
   "selectors": {

@@ -1182,6 +1182,19 @@
     "commit": {
       "copySha": "SHA kopieren",
       "shaCopied": "SHA in die Zwischenablage kopiert"
+    },
+    "issues": {
+      "updated": "Zuletzt aktualisiert",
+      "notUpdated": "nicht aktualisiert",
+      "assignedTo": "Zugewiesen an {{assignees}}",
+      "commentCount_one": "{{count}} Kommentar",
+      "commentCount_other": "{{count}} Kommentare",
+      "status": {
+        "open": "Offen",
+        "closed": "Geschlossen",
+        "completed": "Abgeschlossen",
+        "notPlanned": "Nicht geplant"
+      }
     }
   },
   "selectors": {

@@ -1196,6 +1196,19 @@
     "commit": {
       "copySha": "复制 SHA",
       "shaCopied": "SHA 已复制到剪贴板"
+    },
+    "issues": {
+      "updated": "最后更新",
+      "notUpdated": "未更新",
+      "assignedTo": "分配给 {{assignees}}",
+      "commentCount_one": "{{count}} 条评论",
+      "commentCount_other": "{{count}} 条评论",
+      "status": {
+        "open": "开放",
+        "closed": "已关闭",
+        "completed": "已完成",
+        "notPlanned": "未计划"
+      }
     }
   },
   "selectors": {

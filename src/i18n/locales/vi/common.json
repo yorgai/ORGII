@@ -1183,6 +1183,19 @@
     "commit": {
       "copySha": "Sao chép SHA",
       "shaCopied": "Đã sao chép SHA vào bảng nhớ tạm"
+    },
+    "issues": {
+      "updated": "Cập nhật lần cuối",
+      "notUpdated": "chưa cập nhật",
+      "assignedTo": "Được giao cho {{assignees}}",
+      "commentCount_one": "{{count}} bình luận",
+      "commentCount_other": "{{count}} bình luận",
+      "status": {
+        "open": "Đang mở",
+        "closed": "Đã đóng",
+        "completed": "Hoàn tất",
+        "notPlanned": "Không lên kế hoạch"
+      }
     }
   },
   "selectors": {

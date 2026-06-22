@@ -1183,6 +1183,19 @@
     "commit": {
       "copySha": "SHA 복사",
       "shaCopied": "SHA를 클립보드에 복사했습니다"
+    },
+    "issues": {
+      "updated": "마지막 업데이트",
+      "notUpdated": "업데이트 없음",
+      "assignedTo": "{{assignees}}에게 할당됨",
+      "commentCount_one": "댓글 {{count}}개",
+      "commentCount_other": "댓글 {{count}}개",
+      "status": {
+        "open": "열림",
+        "closed": "닫힘",
+        "completed": "완료됨",
+        "notPlanned": "계획 없음"
+      }
     }
   },
   "selectors": {

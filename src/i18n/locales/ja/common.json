@@ -1183,6 +1183,19 @@
     "commit": {
       "copySha": "SHAをコピー",
       "shaCopied": "SHAをクリップボードにコピーしました"
+    },
+    "issues": {
+      "updated": "最終更新",
+      "notUpdated": "未更新",
+      "assignedTo": "{{assignees}} に割り当て",
+      "commentCount_one": "{{count}} 件のコメント",
+      "commentCount_other": "{{count}} 件のコメント",
+      "status": {
+        "open": "オープン",
+        "closed": "クローズ",
+        "completed": "完了",
+        "notPlanned": "未計画"
+      }
     }
   },
   "selectors": {
