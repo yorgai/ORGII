@@ -52,7 +52,7 @@ ORG-II explores a different model: agents as persistent, observable colleagues i
 
 ## Download
 
-Current build version: v1.1.1 (2026-06-22)
+Current build version: v1.1.1 (2026-06-23)
 
 Download the latest ORGII desktop app with one click:
 
