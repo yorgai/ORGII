@@ -105,7 +105,6 @@
     "retry": "重试",
     "regenerate": "重新生成",
     "refresh": "刷新",
-    "fetchPr": "拉取 PR",
     "reload": "重新加载",
     "reviewNextFile": "审查下一个文件",
     "reviewPreviousFile": "审查上一个文件",
@@ -208,7 +207,8 @@
     "skipThisVersion": "跳过此版本",
     "later": "稍后",
     "updateAiBlame": "更新 AI Blame",
-    "link": "链接"
+    "link": "链接",
+    "fetchPr": "拉取 PR"
   },
   "refreshToast": {
     "successName": "{{name}} 已刷新",
@@ -885,9 +885,6 @@
     "noCommitHistory": "未找到提交记录",
     "noCommitData": "选择提交以查看详情",
     "failedToLoadCommitDiff": "加载提交差异失败",
-    "selectPrCommitToViewDiff": "从顶部选择一个 PR 提交来查看 diff。",
-    "fetchPrCommitToViewDiff": "拉取 PR 后查看这个提交",
-    "prCommitMissingLocally": "这个 PR 提交还不在你的本地仓库中。",
     "loadingHistory": "加载历史记录中...",
     "commitMessage": "提交消息",
     "filterChanges": "筛选变更...",
@@ -978,7 +975,10 @@
     "noRepoSelected": "No repository selected",
     "scanningFileExtensions": "Scanning file extensions...",
     "startBrowsingMarket": "Start browsing the marketplace",
-    "previewUnavailable": "预览不可用"
+    "previewUnavailable": "预览不可用",
+    "selectPrCommitToViewDiff": "从顶部选择一个 PR 提交来查看 diff。",
+    "fetchPrCommitToViewDiff": "拉取 PR 后查看这个提交",
+    "prCommitMissingLocally": "这个 PR 提交还不在你的本地仓库中。"
   },
   "inbox": {
     "searchPlaceholder": "搜索消息...",
@@ -1200,6 +1200,19 @@
     "commit": {
       "copySha": "复制 SHA",
       "shaCopied": "SHA 已复制到剪贴板"
+    },
+    "issues": {
+      "updated": "最后更新",
+      "notUpdated": "未更新",
+      "assignedTo": "分配给 {{assignees}}",
+      "commentCount_one": "{{count}} 条评论",
+      "commentCount_other": "{{count}} 条评论",
+      "status": {
+        "open": "开放",
+        "closed": "已关闭",
+        "completed": "已完成",
+        "notPlanned": "未计划"
+      }
     }
   },
   "selectors": {

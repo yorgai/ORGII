@@ -1187,6 +1187,19 @@
     "commit": {
       "copySha": "SHA’yı kopyala",
       "shaCopied": "SHA panoya kopyalandı"
+    },
+    "issues": {
+      "updated": "Son güncelleme",
+      "notUpdated": "güncellenmedi",
+      "assignedTo": "{{assignees}} kişisine atandı",
+      "commentCount_one": "{{count}} yorum",
+      "commentCount_other": "{{count}} yorum",
+      "status": {
+        "open": "Açık",
+        "closed": "Kapalı",
+        "completed": "Tamamlandı",
+        "notPlanned": "Planlanmadı"
+      }
     }
   },
   "selectors": {
