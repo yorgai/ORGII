@@ -315,12 +315,7 @@ export function useComposerInput(
         const buffer = getTerminalBuffer(ptySessionId);
         if (buffer) {
           const capped = capPillText(buffer);
-          const lineCount = capped.split("\n").length;
           const pillPath = `terminal://${value}/${Date.now()}`;
-          const pillDisplayName =
-            lineCount > 1
-              ? `${displayName || "Terminal"} (1-${lineCount})`
-              : displayName || "Terminal";
 
           storePillText(pillPath, capped);
 
@@ -328,7 +323,7 @@ export function useComposerInput(
             pillPath,
             false,
             "terminal",
-            pillDisplayName
+            displayName || "Terminal"
           );
 
           const newItems = [

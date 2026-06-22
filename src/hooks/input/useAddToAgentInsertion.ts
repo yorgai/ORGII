@@ -54,11 +54,8 @@ export function useAddToAgentInsertion(
         });
       } else if (stableRequest.type === "terminal") {
         const capped = capPillText(stableRequest.text);
-        const lineCount = capped.split("\n").length;
         const pillPath = `terminal://selection/${Date.now()}`;
-        const label =
-          stableRequest.displayName ??
-          (lineCount > 1 ? `Terminal (1-${lineCount})` : "Terminal");
+        const label = stableRequest.displayName ?? "Terminal";
         storePillText(pillPath, capped);
         editor.insertFilePill(pillPath, false, "terminal", label);
       } else if (stableRequest.type === "dom-element") {

@@ -119,12 +119,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
           const buffer = getTerminalBuffer(ptySessionId);
           if (buffer) {
             const capped = capPillText(buffer);
-            const lineCount = capped.split("\n").length;
             const pillPath = `terminal://${value}/${Date.now()}`;
-            const pillDisplayName =
-              lineCount > 1
-                ? `${resolvedDisplayName} (1-${lineCount})`
-                : resolvedDisplayName;
 
             storePillText(pillPath, capped);
 
@@ -132,7 +127,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
               pillPath,
               false,
               "terminal",
-              pillDisplayName
+              resolvedDisplayName
             );
           } else {
             composerInputRef.current.insertFilePill(
