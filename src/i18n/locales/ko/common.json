@@ -205,7 +205,8 @@
     "skipThisVersion": "이 버전 건너뛰기",
     "later": "나중에",
     "updateAiBlame": "AI Blame 업데이트",
-    "link": "연결"
+    "link": "연결",
+    "fetchPr": "Fetch PR"
   },
   "refreshToast": {
     "successName": "{{name}} 새로고침됨",
@@ -961,7 +962,10 @@
     "noRepoSelected": "No repository selected",
     "scanningFileExtensions": "Scanning file extensions...",
     "startBrowsingMarket": "Start browsing the marketplace",
-    "previewUnavailable": "미리보기를 사용할 수 없습니다"
+    "previewUnavailable": "미리보기를 사용할 수 없습니다",
+    "selectPrCommitToViewDiff": "Select a pull request commit from the header to view its diff.",
+    "fetchPrCommitToViewDiff": "Fetch PR to view this commit",
+    "prCommitMissingLocally": "This pull request commit is not available in your local repository yet."
   },
   "inbox": {
     "searchPlaceholder": "메시지 검색...",

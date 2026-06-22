@@ -205,7 +205,8 @@
     "skipThisVersion": "Omitir esta versión",
     "later": "Más tarde",
     "updateAiBlame": "Actualizar AI Blame",
-    "link": "Vincular"
+    "link": "Vincular",
+    "fetchPr": "Fetch PR"
   },
   "refreshToast": {
     "successName": "{{name}} actualizado",
@@ -961,7 +962,10 @@
     "noRepoSelected": "No repository selected",
     "scanningFileExtensions": "Scanning file extensions...",
     "startBrowsingMarket": "Start browsing the marketplace",
-    "previewUnavailable": "Vista previa no disponible"
+    "previewUnavailable": "Vista previa no disponible",
+    "selectPrCommitToViewDiff": "Select a pull request commit from the header to view its diff.",
+    "fetchPrCommitToViewDiff": "Fetch PR to view this commit",
+    "prCommitMissingLocally": "This pull request commit is not available in your local repository yet."
   },
   "inbox": {
     "searchPlaceholder": "Buscar mensajes...",
