@@ -81,6 +81,13 @@ export interface EventPayloadBody {
   fullSizeBytes: number;
 }
 
+export type SimulatorEventFilterValue =
+  | "key_interactions"
+  | "file_changes"
+  | "terminal_events"
+  | "explore"
+  | "other";
+
 export interface SimulatorEventPreview {
   id: string;
   sessionId: string;
@@ -93,6 +100,7 @@ export interface SimulatorEventPreview {
   displayStatus: EventDisplayStatus;
   displayVariant: EventDisplayVariant;
   activityStatus: ActivityStatus;
+  filterCategory: SimulatorEventFilterValue;
   threadId?: string;
   processId?: string;
   callId?: string;

@@ -309,6 +309,16 @@
       "pause": "Pause",
       "playbackSpeed": "Playback speed",
       "noEvents": "No events",
+      "filters": {
+        "tooltip": "Filter events",
+        "allEvents": "All events",
+        "keyInteractions": "Key interactions",
+        "fileChanges": "File changes",
+        "terminalEvents": "Terminal events",
+        "explore": "Explore",
+        "other": "Other",
+        "selectedCount": "{{count}} filters"
+      },
       "agentHasNotUsedTool": "The Agent has not yet used this tool",
       "browser": {
         "tabs": {
