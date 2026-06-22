@@ -32,6 +32,7 @@ import {
   storageRefreshTriggerAtom,
 } from "@src/store/ui/settingsPanelAtoms";
 import { copyText } from "@src/util/data/clipboard";
+import { askNativeDialogSafely } from "@src/util/dialogs/nativeDialog";
 
 const log = createLogger("Storage");
 
@@ -163,9 +164,8 @@ const StorageSection: React.FC = () => {
       if (cat.size_bytes === 0 || PROTECTED_CATEGORIES.has(cat.key)) return;
       setClearingKey(cat.key);
       try {
-        const { ask } = await import("@tauri-apps/plugin-dialog");
         const categoryLabel = t("monitor.diskCategory_" + cat.key);
-        const confirmed = await ask(
+        const confirmed = await askNativeDialogSafely(
           t("storage.clearConfirmMessage", { category: categoryLabel }),
           {
             title: t("storage.clearConfirmTitle"),
