@@ -150,6 +150,8 @@ pub struct FetchStreamQuery {
     pub remote: Option<String>,
     #[serde(default)]
     pub prune: Option<bool>,
+    #[serde(default)]
+    pub refspec: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -328,16 +330,20 @@ fn sse_response(stream: GitEventStream) -> Response {
         .into_response()
 }
 
-fn git_resolution_error_response(error: String) -> Response {
+fn stream_error_response(error: String, error_type: &'static str) -> Response {
     let escaped = error.replace('"', "\\\"");
     let stream = futures::stream::once(async move {
         Ok(Event::default().event("error").data(format!(
-            "{{\"error\":\"{}\",\"error_type\":\"git_unavailable\"}}",
-            escaped
+            "{{\"error\":\"{}\",\"error_type\":\"{}\"}}",
+            escaped, error_type
         )))
     });
 
     sse_response(Box::pin(stream) as GitEventStream)
+}
+
+fn git_resolution_error_response(error: String) -> Response {
+    stream_error_response(error, "git_unavailable")
 }
 
 // ============================================
@@ -462,6 +468,27 @@ pub async fn fetch_stream(
         cmd.arg("--prune");
     }
 
+    if let Some(refspec) = query.refspec.as_deref() {
+        let Some((source, target)) = refspec.split_once(':') else {
+            return stream_error_response("Invalid fetch refspec".to_string(), "invalid_refspec");
+        };
+        let source_pr = source
+            .strip_prefix("pull/")
+            .and_then(|rest| rest.strip_suffix("/head"));
+        let target_pr = target.strip_prefix("refs/orgii/pr/");
+        if source_pr.is_none()
+            || target_pr.is_none()
+            || source_pr != target_pr
+            || !source_pr
+                .unwrap_or_default()
+                .chars()
+                .all(|ch| ch.is_ascii_digit())
+        {
+            return stream_error_response("Invalid fetch refspec".to_string(), "invalid_refspec");
+        }
+        cmd.arg(refspec);
+    }
+
     cmd.current_dir(&repo_path)
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GIT_ASKPASS", "")
@@ -472,7 +499,10 @@ pub async fn fetch_stream(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let command_str = format!("git fetch {}", remote);
+    let command_str = match query.refspec.as_deref() {
+        Some(refspec) => format!("git fetch {} {}", remote, refspec),
+        None => format!("git fetch {}", remote),
+    };
     let stream = stream_git_command(cmd, command_str, "fetch").await;
 
     sse_response(stream)
