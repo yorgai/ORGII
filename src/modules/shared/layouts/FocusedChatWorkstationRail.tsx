@@ -246,8 +246,8 @@ export function FocusedChatWorkstationRail() {
       <div
         className={`pointer-events-auto flex bg-bg-2/90 transition-all ${
           collapsed
-            ? "border-border/70 flex-col items-center rounded-2xl border-2 p-1.5"
-            : "w-64 flex-col rounded-2xl p-1.5"
+            ? "flex-col items-center rounded-2xl border-2 border-border-1 p-1.5"
+            : "w-64 flex-col rounded-2xl border-2 border-border-1 p-1.5"
         }`}
       >
         <button
