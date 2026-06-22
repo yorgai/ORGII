@@ -2494,7 +2494,8 @@
       "open": "開く",
       "copyUrl": "URL をコピー",
       "copied": "URL をコピーしました",
-      "openExternalFailed": "既定のブラウザで URL を開けませんでした"
+      "openExternalFailed": "既定のブラウザで URL を開けませんでした",
+      "groupTitle": "Web ページ"
     },
     "path": {
       "open": "開く",

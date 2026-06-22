@@ -2521,7 +2521,8 @@
       "open": "打开",
       "copyUrl": "复制 URL",
       "copied": "URL 复制",
-      "openExternalFailed": "无法用默认浏览器打开 URL"
+      "openExternalFailed": "无法用默认浏览器打开 URL",
+      "groupTitle": "网页"
     },
     "path": {
       "open": "打开",

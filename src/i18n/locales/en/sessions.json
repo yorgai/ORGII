@@ -2520,7 +2520,8 @@
       "open": "Open",
       "copyUrl": "Copy URL",
       "copied": "URL copied",
-      "openExternalFailed": "Failed to open URL in default browser"
+      "openExternalFailed": "Failed to open URL in default browser",
+      "groupTitle": "Web pages"
     },
     "path": {
       "open": "Open",
