@@ -35,6 +35,9 @@ import {
 } from "@src/store/workstation/tabRegistry";
 import type { WorkStationTab } from "@src/store/workstation/tabs/types";
 
+const FOCUSED_CHAT_RAIL_COLLAPSED_KEY =
+  "orgii:focusedChatWorkstationRailCollapsed";
+
 const FOCUSED_CHAT_RAIL_SECTIONS = [
   { key: "tabs", label: "Open Tabs" },
   { key: "workspace" },
@@ -75,9 +78,27 @@ function getRailTabFileName(tab: WorkStationTab): string | undefined {
   }
 }
 
+function getStoredRailCollapsed(): boolean {
+  try {
+    const stored = localStorage.getItem(FOCUSED_CHAT_RAIL_COLLAPSED_KEY);
+    return stored == null ? true : stored === "true";
+  } catch {
+    return true;
+  }
+}
+
+function persistRailCollapsed(collapsed: boolean): void {
+  try {
+    localStorage.setItem(FOCUSED_CHAT_RAIL_COLLAPSED_KEY, String(collapsed));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function FocusedChatWorkstationRail() {
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(getStoredRailCollapsed);
+
   const activeWorkspaceRoot = useAtomValue(activeWorkspaceRootAtom);
   const tabEntries = useAtomValue(tabRegistryAtom);
   const closeTab = useCloseTabWithGuard();
@@ -221,18 +242,24 @@ export function FocusedChatWorkstationRail() {
   ];
 
   return (
-    <div className="pointer-events-none absolute inset-y-0 right-3 z-20 hidden items-center xl:flex">
+    <div className="pointer-events-none absolute right-3 top-12 z-20 hidden xl:flex">
       <div
-        className={`border-border/70 pointer-events-auto flex border bg-bg-2/90 shadow-lg backdrop-blur transition-all ${
+        className={`pointer-events-auto flex bg-bg-2/90 transition-all ${
           collapsed
-            ? "flex-col items-center rounded-2xl p-1.5"
+            ? "border-border/70 flex-col items-center rounded-2xl border-2 p-1.5"
             : "w-64 flex-col rounded-2xl p-1.5"
         }`}
       >
         <button
           type="button"
           className="text-text-tertiary hover:text-text-primary mb-1 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-fill-2"
-          onClick={() => setCollapsed((value) => !value)}
+          onClick={() =>
+            setCollapsed((value) => {
+              const nextValue = !value;
+              persistRailCollapsed(nextValue);
+              return nextValue;
+            })
+          }
           aria-label={
             collapsed ? "Expand workstation info" : "Collapse workstation info"
           }
