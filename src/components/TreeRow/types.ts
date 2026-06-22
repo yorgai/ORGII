@@ -74,6 +74,10 @@ export interface TreeRowBaseProps {
   onDragEnd?: (event: DragEvent<HTMLDivElement>) => void;
   /** Mouse down handler (used for native OS drag-out) */
   onMouseDown?: (event: MouseEvent<HTMLDivElement>) => void;
+  /** Mouse enter handler */
+  onMouseEnter?: (event: MouseEvent<HTMLDivElement>) => void;
+  /** Mouse leave handler */
+  onMouseLeave?: (event: MouseEvent<HTMLDivElement>) => void;
   // NOTE: isDragging removed - now uses .is-dragging CSS class for performance
   /** Show VS Code-style vertical indent guide lines (default: true) */
   showIndentGuides?: boolean;
