@@ -1,5 +1,5 @@
 import { CircleDot, MessageSquare, XCircle } from "lucide-react";
-import React, { memo, useMemo } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 
 import type { GitHubIssue } from "@src/api/tauri/github";
 import Tag from "@src/components/Tag";
@@ -17,6 +17,30 @@ interface IssueRowProps {
 export const IssueRow: React.FC<IssueRowProps> = memo(
   ({ issue, depth = 0, isSelected, onClick }) => {
     const isOpen = issue.state === "open";
+
+    const handleDragStart = useCallback(
+      (event: React.DragEvent<HTMLElement>) => {
+        const issuePayload = {
+          issueNumber: issue.number,
+          issueTitle: issue.title,
+          issueUrl: issue.html_url,
+          issueState: issue.state,
+          labels: issue.labels.map((label) => label.name),
+          assignees: issue.assignees.map((assignee) => assignee.login),
+          comments: issue.comments,
+        };
+        event.dataTransfer.setData(
+          "application/x-orgii-issue-reference",
+          JSON.stringify(issuePayload)
+        );
+        window.__orgiiLastIssueDrag = {
+          ...issuePayload,
+          timestamp: Date.now(),
+        };
+        event.dataTransfer.effectAllowed = "copy";
+      },
+      [issue]
+    );
 
     const treeRowNode: TreeRowNode = useMemo(
       () => ({
@@ -44,6 +68,8 @@ export const IssueRow: React.FC<IssueRowProps> = memo(
         isSelected={isSelected}
         onClick={onClick}
         showIndentGuides={false}
+        draggable
+        onDragStart={handleDragStart}
       >
         <span className="ml-auto flex shrink-0 items-center gap-1">
           {issue.labels.slice(0, 2).map((label) => {
