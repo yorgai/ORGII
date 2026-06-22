@@ -2494,7 +2494,8 @@
       "open": "Mở",
       "copyUrl": "Sao chép URL",
       "copied": "Đã sao chép URL",
-      "openExternalFailed": "Không thể mở URL trong trình duyệt mặc định"
+      "openExternalFailed": "Không thể mở URL trong trình duyệt mặc định",
+      "groupTitle": "Trang web"
     },
     "path": {
       "open": "Mở",

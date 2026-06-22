@@ -415,6 +415,7 @@ function useCommitMetadataReferences(
 interface MessageReferenceCardProps {
   item: MessageReferenceItem;
   sessionId?: string | null;
+  compact?: boolean;
 }
 
 /**
@@ -488,6 +489,7 @@ SessionReferenceCard.displayName = "SessionReferenceCard";
 const MessageReferenceCard: React.FC<MessageReferenceCardProps> = ({
   item,
   sessionId,
+  compact = false,
 }) => {
   const { t } = useTranslation("sessions");
   const { t: tCommon } = useTranslation("common");
@@ -602,15 +604,29 @@ const MessageReferenceCard: React.FC<MessageReferenceCardProps> = ({
         : FileText;
 
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-border-2 bg-bg-2 p-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-1 text-primary-6">
-        <Icon size={18} />
+    <div
+      className={
+        compact
+          ? "flex min-w-0 items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-fill-2"
+          : "flex min-w-0 items-center gap-3 rounded-xl border border-border-2 bg-bg-2 p-3"
+      }
+    >
+      <div
+        className={
+          compact
+            ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary-1 text-primary-6"
+            : "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-1 text-primary-6"
+        }
+      >
+        <Icon size={compact ? 15 : 18} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13px] font-medium text-text-1">
+        <div className="chat-block-content truncate text-[13px] font-medium text-text-1">
           {item.title}
         </div>
-        <div className="truncate text-[12px] text-text-3">{item.subtitle}</div>
+        <div className="chat-block-content truncate text-[12px] text-text-3">
+          {item.subtitle}
+        </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Button
@@ -679,6 +695,34 @@ const MessageReferenceCard: React.FC<MessageReferenceCardProps> = ({
   );
 };
 
+const UrlReferenceGroupCard: React.FC<{
+  items: MessageReferenceItem[];
+  sessionId?: string | null;
+}> = ({ items, sessionId }) => {
+  const { t } = useTranslation("sessions");
+
+  return (
+    <div className="rounded-xl border border-border-2 bg-bg-2 p-2">
+      <div className="chat-block-content px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-text-3">
+        {t("cards.url.groupTitle", {
+          count: items.length,
+          defaultValue: "Web pages",
+        })}
+      </div>
+      <div className="flex flex-col gap-1">
+        {items.map((item) => (
+          <MessageReferenceCard
+            key={makeReferenceKey(item)}
+            item={item}
+            sessionId={sessionId}
+            compact
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 interface MessageReferenceCardsProps {
   content: string;
   enabled?: boolean;
@@ -709,9 +753,17 @@ const MessageReferenceCards: React.FC<MessageReferenceCardsProps> = ({
 
   if (resolvedReferences.length === 0) return null;
 
+  const urlReferences = resolvedReferences.filter(
+    (item) => item.kind === "web_url"
+  );
+  const groupedUrlReferences = urlReferences.length > 1;
+  const renderedReferences = groupedUrlReferences
+    ? resolvedReferences.filter((item) => item.kind !== "web_url")
+    : resolvedReferences;
+
   return (
     <div className="mt-3 flex w-full flex-col gap-2">
-      {resolvedReferences.map((item) =>
+      {renderedReferences.map((item) =>
         item.kind === "session" ? (
           <SessionReferenceCard key={makeReferenceKey(item)} item={item} />
         ) : (
@@ -721,6 +773,9 @@ const MessageReferenceCards: React.FC<MessageReferenceCardsProps> = ({
             sessionId={sessionId}
           />
         )
+      )}
+      {groupedUrlReferences && (
+        <UrlReferenceGroupCard items={urlReferences} sessionId={sessionId} />
       )}
     </div>
   );

@@ -1,0 +1,186 @@
+import { useAtom } from "jotai";
+import { ListFilter } from "lucide-react";
+import React, { useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
+
+import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_PANEL,
+} from "@src/components/Dropdown/tokens";
+import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
+import {
+  SIMULATOR_EVENT_FILTER_VALUES,
+  type SimulatorEventFilterValue,
+} from "@src/engines/SessionCore";
+import { useDropdownEngine } from "@src/hooks/dropdown/useDropdownEngine";
+import { simulatorEventFiltersAtom } from "@src/store/ui/simulatorAtom";
+
+const FILTER_LABEL_KEYS: Record<SimulatorEventFilterValue, string> = {
+  key_interactions: "simulator.replay.filters.keyInteractions",
+  file_changes: "simulator.replay.filters.fileChanges",
+  terminal_events: "simulator.replay.filters.terminalEvents",
+  explore: "simulator.replay.filters.explore",
+  other: "simulator.replay.filters.other",
+};
+
+const FILTER_LABEL_FALLBACKS: Record<SimulatorEventFilterValue, string> = {
+  key_interactions: "Key interactions",
+  file_changes: "File changes",
+  terminal_events: "Terminal events",
+  explore: "Explore",
+  other: "Other",
+};
+
+interface EventFilterDropdownProps {
+  variant?: "default" | "primary";
+}
+
+export const EventFilterDropdown: React.FC<EventFilterDropdownProps> = ({
+  variant = "default",
+}) => {
+  const { t } = useTranslation("sessions");
+  const [selectedFilters, setSelectedFilters] = useAtom(
+    simulatorEventFiltersAtom
+  );
+  const selectedFilterSet = useMemo(
+    () => new Set(selectedFilters),
+    [selectedFilters]
+  );
+  const isAllEvents = selectedFilters.length === 0;
+
+  const { isOpen, isPositioned, triggerRef, panelRef, panelPosition, toggle } =
+    useDropdownEngine<HTMLButtonElement>({
+      placement: "top",
+      align: "right",
+      gap: DROPDOWN_PANEL.triggerGapTight,
+    });
+
+  const panelPositionStyle = useMemo(() => {
+    const pos = panelPosition;
+    return {
+      ...(pos.top !== undefined
+        ? { top: `${pos.top}px` }
+        : { bottom: `${pos.bottom}px` }),
+      ...(pos.right !== undefined
+        ? { right: `${pos.right}px` }
+        : { left: `${pos.left}px` }),
+      ...(pos.width > 0 ? { minWidth: `${pos.width}px` } : {}),
+    };
+  }, [panelPosition]);
+
+  const triggerLabel = isAllEvents
+    ? t("simulator.replay.filters.allEvents", "All events")
+    : selectedFilters.length === 1
+      ? t(
+          FILTER_LABEL_KEYS[selectedFilters[0]],
+          FILTER_LABEL_FALLBACKS[selectedFilters[0]]
+        )
+      : t("simulator.replay.filters.selectedCount", "{{count}} filters", {
+          count: selectedFilters.length,
+        });
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedFilters([]);
+  }, [setSelectedFilters]);
+
+  const handleToggleFilter = useCallback(
+    (filter: SimulatorEventFilterValue) => {
+      setSelectedFilters((current) =>
+        current.includes(filter)
+          ? current.filter((item) => item !== filter)
+          : [...current, filter]
+      );
+    },
+    [setSelectedFilters]
+  );
+
+  const triggerToneClass =
+    variant === "primary"
+      ? isOpen || !isAllEvents
+        ? "bg-white/15 text-white"
+        : "text-white hover:bg-white/15 hover:text-white"
+      : isOpen || !isAllEvents
+        ? "bg-fill-3 text-primary-6"
+        : `text-text-2 ${SURFACE_TOKENS.hover} hover:text-primary-6`;
+
+  return (
+    <>
+      <button
+        ref={triggerRef as React.Ref<HTMLButtonElement>}
+        type="button"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          toggle();
+        }}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        title={t("simulator.replay.filters.tooltip", "Filter events")}
+        className={`pointer-events-auto flex h-5 shrink-0 transform-gpu items-center gap-1 rounded-full px-1.5 text-[11px] font-medium leading-none ${triggerToneClass}`}
+      >
+        <ListFilter size={12} strokeWidth={2} />
+        <span>{triggerLabel}</span>
+      </button>
+      {isOpen &&
+        isPositioned &&
+        createPortal(
+          <div
+            ref={panelRef as React.Ref<HTMLDivElement>}
+            className={`${DROPDOWN_CLASSES.menuPanel} fixed min-w-[180px]`}
+            style={panelPositionStyle}
+          >
+            <div
+              className={`flex flex-col ${DROPDOWN_PANEL.itemsGapClass}`}
+              role="listbox"
+              aria-multiselectable="true"
+            >
+              <button
+                type="button"
+                role="option"
+                aria-selected={isAllEvents}
+                onClick={handleSelectAll}
+                className={`${DROPDOWN_CLASSES.item} ${
+                  isAllEvents
+                    ? DROPDOWN_CLASSES.itemSelected
+                    : DROPDOWN_CLASSES.itemHover
+                } w-full justify-between gap-2`}
+              >
+                <span className="flex-1 text-left">
+                  {t("simulator.replay.filters.allEvents", "All events")}
+                </span>
+                {isAllEvents && <DropdownSelectedCheck />}
+              </button>
+              {SIMULATOR_EVENT_FILTER_VALUES.map((filter) => {
+                const selected = selectedFilterSet.has(filter);
+                return (
+                  <button
+                    key={filter}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => handleToggleFilter(filter)}
+                    className={`${DROPDOWN_CLASSES.item} ${
+                      selected
+                        ? DROPDOWN_CLASSES.itemSelected
+                        : DROPDOWN_CLASSES.itemHover
+                    } w-full justify-between gap-2`}
+                  >
+                    <span className="flex-1 text-left">
+                      {t(
+                        FILTER_LABEL_KEYS[filter],
+                        FILTER_LABEL_FALLBACKS[filter]
+                      )}
+                    </span>
+                    {selected && <DropdownSelectedCheck />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
+  );
+};

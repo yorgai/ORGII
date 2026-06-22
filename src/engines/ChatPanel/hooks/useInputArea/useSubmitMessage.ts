@@ -222,8 +222,8 @@ export function useSubmitMessage({
             try {
               const prData = JSON.parse(text) as Record<string, unknown>;
               const lines: string[] = [
-                `[PR Context] #${prData["prNumber"]} ${prData["prTitle"]}`,
-                `Status: ${prData["prStatus"]}`,
+                `[PR Context] #${prData["prNumber"] ?? prData["number"]} ${prData["prTitle"] ?? prData["title"]}`,
+                `Status: ${prData["prStatus"] ?? prData["state"]}`,
                 ...(prData["sourceBranch"]
                   ? [
                       `Branch: ${prData["sourceBranch"]}${prData["targetBranch"] ? ` → ${prData["targetBranch"]}` : ""}`,
@@ -234,7 +234,30 @@ export function useSubmitMessage({
                       `+${prData["additions"]} -${prData["deletions"] ?? 0} changes`,
                     ]
                   : []),
-                `URL: ${prData["prUrl"]}`,
+                `URL: ${prData["prUrl"] ?? prData["url"]}`,
+              ];
+              contextBlocks.push(lines.join("\n"));
+            } catch {
+              contextBlocks.push("```\n" + text + "\n```");
+            }
+          } else if (path.startsWith("issue://")) {
+            try {
+              const issueData = JSON.parse(text) as Record<string, unknown>;
+              const labels = Array.isArray(issueData["labels"])
+                ? issueData["labels"].join(", ")
+                : "";
+              const assignees = Array.isArray(issueData["assignees"])
+                ? issueData["assignees"].join(", ")
+                : "";
+              const lines: string[] = [
+                `[Issue Context] #${issueData["issueNumber"] ?? issueData["number"]} ${issueData["issueTitle"] ?? issueData["title"]}`,
+                `State: ${issueData["issueState"] ?? issueData["state"]}`,
+                ...(labels ? [`Labels: ${labels}`] : []),
+                ...(assignees ? [`Assignees: ${assignees}`] : []),
+                ...(issueData["comments"] != null
+                  ? [`Comments: ${issueData["comments"]}`]
+                  : []),
+                `URL: ${issueData["issueUrl"] ?? issueData["url"]}`,
               ];
               contextBlocks.push(lines.join("\n"));
             } catch {

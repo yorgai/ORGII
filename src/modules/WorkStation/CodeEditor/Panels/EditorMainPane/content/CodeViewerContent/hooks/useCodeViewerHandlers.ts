@@ -24,6 +24,7 @@ import { hasConflictMarkers } from "@src/features/CodeMirror";
 import { addToAgentAtom } from "@src/store/ui/addToAgentAtom";
 import { activeStationChatVisibleAtom } from "@src/store/ui/chatPanelAtom";
 import { editorAutoSaveAtom } from "@src/store/ui/editorSettingsAtom";
+import { askNativeDialogSafely } from "@src/util/dialogs/nativeDialog";
 
 import type { Diagnostic } from "../../../../EditorBottomPanel/content/ProblemsContent/types";
 import type {
@@ -137,23 +138,10 @@ export function useCodeViewerHandlers(
   const localEditVersionRef = useRef(0);
   const lastAutoSaveAttemptVersionRef = useRef(0);
 
-  // Derive localContent: if source changed, use new fileContent; otherwise use edited version
   const sourceChanged =
     localState.file !== selectedFile ||
     localState.externalContent !== fileContent;
-
-  let localContent: string;
-  if (sourceChanged) {
-    // Source data changed — check if it's our own edit echoing back
-    if (lastLocalEditRef.current === fileContent) {
-      localContent = localState.editedContent;
-    } else {
-      localContent = fileContent;
-      lastLocalEditRef.current = null;
-    }
-  } else {
-    localContent = localState.editedContent;
-  }
+  const localContent = sourceChanged ? fileContent : localState.editedContent;
 
   // Lazily sync state to match new source (runs once per source change, in an effect)
   useEffect(() => {
@@ -162,6 +150,9 @@ export function useCodeViewerHandlers(
         return prev;
       }
       const isOwnEdit = lastLocalEditRef.current === fileContent;
+      if (!isOwnEdit) {
+        lastLocalEditRef.current = null;
+      }
       return {
         file: selectedFile,
         externalContent: fileContent,
@@ -331,13 +322,15 @@ export function useCodeViewerHandlers(
     if (!callbackRefs.current.onReload) return;
 
     if (hasUnsavedChanges) {
-      const { ask } = await import("@tauri-apps/plugin-dialog");
-      const confirmed = await ask(t("confirmation.reloadFileMessage"), {
-        title: t("confirmation.reloadFileTitle"),
-        kind: "warning",
-        okLabel: t("actions.confirm"),
-        cancelLabel: t("actions.cancel"),
-      });
+      const confirmed = await askNativeDialogSafely(
+        t("confirmation.reloadFileMessage"),
+        {
+          title: t("confirmation.reloadFileTitle"),
+          kind: "warning",
+          okLabel: t("actions.confirm"),
+          cancelLabel: t("actions.cancel"),
+        }
+      );
 
       if (!confirmed) {
         return;

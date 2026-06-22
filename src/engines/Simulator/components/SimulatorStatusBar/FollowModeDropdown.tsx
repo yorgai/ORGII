@@ -102,7 +102,7 @@ export const FollowModeDropdown: React.FC = () => {
         mouseEnterDelay={200}
       >
         <button
-          ref={triggerRef}
+          ref={triggerRef as React.Ref<HTMLButtonElement>}
           type="button"
           onClick={toggle}
           aria-expanded={isOpen}
@@ -120,7 +120,7 @@ export const FollowModeDropdown: React.FC = () => {
         isPositioned &&
         createPortal(
           <div
-            ref={panelRef}
+            ref={panelRef as React.Ref<HTMLDivElement>}
             className={`${DROPDOWN_CLASSES.menuPanel} fixed`}
             style={panelPositionStyle}
           >

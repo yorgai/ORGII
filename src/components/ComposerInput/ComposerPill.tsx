@@ -279,6 +279,7 @@ const ComposerPill: React.FC<ComposerPillProps> = ({
       case "project":
         return <FolderKanban {...ICON_PROPS} />;
       case "workitem":
+      case "issue":
         return <ListChecks {...ICON_PROPS} />;
       case "dom-element":
         return <SquareMousePointer {...ICON_PROPS} />;

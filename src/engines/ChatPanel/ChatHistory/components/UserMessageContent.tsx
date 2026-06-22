@@ -54,6 +54,7 @@ const SINGLE_LINE_PILL_REGEX = new RegExp(
     "skill",
     "paste",
     "pr",
+    "issue",
   ].join("|")}):([^\\]]+)\\]`,
   "g"
 );
@@ -138,7 +139,9 @@ function parseUserMessage(text: string): Segment[] {
         pillType === "terminal" ||
         pillType === "browser" ||
         pillType === "dom-element" ||
-        pillType === "paste";
+        pillType === "paste" ||
+        pillType === "pr" ||
+        pillType === "issue";
       let path = rawPath;
       let terminalText: string | undefined;
       if (isContextPill) {
@@ -177,7 +180,9 @@ function parseUserMessage(text: string): Segment[] {
       s.kind === "pill" &&
       (s.pillType === "terminal" ||
         s.pillType === "browser" ||
-        s.pillType === "paste")
+        s.pillType === "paste" ||
+        s.pillType === "pr" ||
+        s.pillType === "issue")
   );
 
   // Strip trailing code blocks — they carry embedded context, not user text
@@ -220,6 +225,7 @@ const PillIcon: React.FC<{ pillType: PillType; displayName: string }> = memo(
       case "project":
         return <FolderKanban {...ICON_PROPS} />;
       case "workitem":
+      case "issue":
         return <ListChecks {...ICON_PROPS} />;
       case "skill":
         return <Toolbox {...ICON_PROPS} />;

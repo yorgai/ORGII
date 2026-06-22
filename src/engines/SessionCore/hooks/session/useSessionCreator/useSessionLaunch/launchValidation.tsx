@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 
 import { Message } from "@src/components/Message";
+import { askNativeDialogSafely } from "@src/util/dialogs/nativeDialog";
 
 import type { SessionValidationResult } from "../useSessionValidation";
 
@@ -37,8 +38,7 @@ export async function confirmShortInputIfNeeded(
   }
 
   try {
-    const { ask } = await import("@tauri-apps/plugin-dialog");
-    return ask(t("creator.shortInputMessage"), {
+    return askNativeDialogSafely(t("creator.shortInputMessage"), {
       title: t("creator.shortInputTitle"),
       kind: "warning",
       okLabel: t("common:actions.continue"),

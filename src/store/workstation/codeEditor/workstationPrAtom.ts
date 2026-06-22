@@ -83,4 +83,5 @@ export const workstationOpenPrsErrorAtom = atom<string | null>(null);
  */
 export const workstationPrCallbackAtom = atom<{
   createPr: (() => Promise<{ url?: string; error?: string }>) | null;
-}>({ createPr: null });
+  loadOpenPrs: (() => void) | null;
+}>({ createPr: null, loadOpenPrs: null });

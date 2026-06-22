@@ -4,7 +4,7 @@
  * Manages local workspace creation and import form state and actions.
  * Uses .git presence to decide whether a directory is a Git workspace.
  */
-import { ask, open } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +17,7 @@ import {
   effectiveWorkspaceDefaultRepoLocationAtom,
   workspaceCustomDefaultRepoPathAtom,
 } from "@src/store/config/configAtom";
+import { askNativeDialogSafely } from "@src/util/dialogs/nativeDialog";
 import { resolveDefaultRepoParentPath } from "@src/util/workspace/defaultRepoPath";
 
 const logger = createLogger("WorkspaceForm");
@@ -133,7 +134,7 @@ export function useWorkspaceForm(
     async (path: string): Promise<boolean> => {
       if (isSystemWorkspaceRoot(path)) return false;
 
-      return ask(t("selectors.repo.gitInitPrompt.message"), {
+      return askNativeDialogSafely(t("selectors.repo.gitInitPrompt.message"), {
         title: t("selectors.repo.gitInitPrompt.title"),
         kind: "info",
         okLabel: t("selectors.repo.gitInitPrompt.ok"),

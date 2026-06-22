@@ -205,7 +205,8 @@
     "skipThisVersion": "Пропустить эту версию",
     "later": "Позже",
     "updateAiBlame": "Обновить AI Blame",
-    "link": "Связать"
+    "link": "Связать",
+    "fetchPr": "Fetch PR"
   },
   "refreshToast": {
     "successName": "{{name}} обновлено",
@@ -961,7 +962,10 @@
     "noRepoSelected": "No repository selected",
     "scanningFileExtensions": "Scanning file extensions...",
     "startBrowsingMarket": "Start browsing the marketplace",
-    "previewUnavailable": "Предпросмотр недоступен"
+    "previewUnavailable": "Предпросмотр недоступен",
+    "selectPrCommitToViewDiff": "Select a pull request commit from the header to view its diff.",
+    "fetchPrCommitToViewDiff": "Fetch PR to view this commit",
+    "prCommitMissingLocally": "This pull request commit is not available in your local repository yet."
   },
   "inbox": {
     "searchPlaceholder": "Поиск сообщений...",
