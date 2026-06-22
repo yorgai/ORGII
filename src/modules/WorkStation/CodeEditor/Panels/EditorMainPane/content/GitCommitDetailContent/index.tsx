@@ -86,6 +86,12 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
       min: GIT_FILE_LIST_MIN_WIDTH,
       max: GIT_FILE_LIST_MAX_WIDTH,
     });
+  const setFileListElement = useCallback(
+    (node: HTMLDivElement | null) => {
+      fileListRef.current = node;
+    },
+    [fileListRef]
+  );
 
   const {
     commitDiff,
@@ -306,7 +312,7 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
             {!fileListCollapsed && (
               <>
                 <div
-                  ref={fileListRef}
+                  ref={setFileListElement}
                   className="flex flex-shrink-0 flex-col overflow-hidden"
                   style={{ width: `${fileListWidth}px` }}
                 >
