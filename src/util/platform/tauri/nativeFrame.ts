@@ -37,6 +37,23 @@ export function getNativeFrameScale(): number {
   return scale;
 }
 
+export function resolveNativeFrameScale(
+  devicePixelRatio: number,
+  windowScaleFactor: number,
+  fallbackScale = 1
+): number {
+  const measuredScale = devicePixelRatio / windowScaleFactor;
+  if (Number.isFinite(measuredScale) && measuredScale > 0) {
+    return measuredScale;
+  }
+
+  if (Number.isFinite(fallbackScale) && fallbackScale > 0) {
+    return fallbackScale;
+  }
+
+  return 1;
+}
+
 export function toNativeFrameFromCorners(
   corners: NativeFrameCorners,
   scale = 1

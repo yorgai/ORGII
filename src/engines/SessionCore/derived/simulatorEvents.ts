@@ -10,6 +10,7 @@ import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { getAppTypeForEventSafe } from "@src/engines/Simulator/utils/eventToDockMapping";
 import { selectedExecutionThreadAtom } from "@src/store/ui/sessionPaginationAtom";
 import {
+  simulatorEventFiltersAtom,
   simulatorFollowAppLockAtom,
   simulatorSelectedAppAtom,
 } from "@src/store/ui/simulatorAtom";
@@ -33,6 +34,7 @@ import type {
 } from "../core/types";
 import { isSubagentSpawningTool } from "../sync/adapters/shared/subagentTracking";
 import { appendLiveAssistantEvent } from "./chatEvents";
+import { isSimulatorEventVisibleForFilters } from "./simulatorEventFilters";
 
 function buildSimulatorEventPreview(
   event: SessionEvent
@@ -239,6 +241,7 @@ export const effectiveSimulatorEventIdsAtom = atom((get) => {
   const eventIds = get(simulatorThreadFilteredEventIdsAtom);
   const previewById = get(simulatorEventPreviewByIdAtom);
   const followAppLock = get(simulatorFollowAppLockAtom);
+  const selectedFilters = get(simulatorEventFiltersAtom);
 
   return eventIds.filter((eventId) => {
     const preview = previewById[eventId];
@@ -248,6 +251,10 @@ export const effectiveSimulatorEventIdsAtom = atom((get) => {
       followAppLock &&
       getAppTypeForSimulatorPreview(preview) !== followAppLock
     ) {
+      return false;
+    }
+
+    if (!isSimulatorEventVisibleForFilters(preview, selectedFilters)) {
       return false;
     }
 

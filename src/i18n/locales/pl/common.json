@@ -205,7 +205,8 @@
     "skipThisVersion": "Pomiń tę wersję",
     "later": "Później",
     "updateAiBlame": "Zaktualizuj AI Blame",
-    "link": "Połącz"
+    "link": "Połącz",
+    "fetchPr": "Fetch PR"
   },
   "refreshToast": {
     "successName": "Odświeżono: {{name}}",
@@ -961,7 +962,10 @@
     "noRepoSelected": "Nie wybrano Repo",
     "scanningFileExtensions": "Skanowanie rozszerzeń plików...",
     "startBrowsingMarket": "Rozpocznij przeglądanie marketplace",
-    "previewUnavailable": "Podgląd niedostępny"
+    "previewUnavailable": "Podgląd niedostępny",
+    "selectPrCommitToViewDiff": "Select a pull request commit from the header to view its diff.",
+    "fetchPrCommitToViewDiff": "Fetch PR to view this commit",
+    "prCommitMissingLocally": "This pull request commit is not available in your local repository yet."
   },
   "inbox": {
     "searchPlaceholder": "Szukaj wiadomości...",
@@ -1182,6 +1186,19 @@
     "commit": {
       "copySha": "Kopiuj SHA",
       "shaCopied": "SHA skopiowano do schowka"
+    },
+    "issues": {
+      "updated": "Ostatnia aktualizacja",
+      "notUpdated": "niezaktualizowane",
+      "assignedTo": "Przypisano do {{assignees}}",
+      "commentCount_one": "{{count}} komentarz",
+      "commentCount_other": "{{count}} komentarze",
+      "status": {
+        "open": "Otwarte",
+        "closed": "Zamknięte",
+        "completed": "Ukończone",
+        "notPlanned": "Nieplanowane"
+      }
     }
   },
   "selectors": {

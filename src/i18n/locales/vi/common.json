@@ -205,7 +205,8 @@
     "skipThisVersion": "Bỏ qua phiên bản này",
     "later": "Để sau",
     "updateAiBlame": "Cập nhật AI Blame",
-    "link": "Liên kết"
+    "link": "Liên kết",
+    "fetchPr": "Fetch PR"
   },
   "refreshToast": {
     "successName": "Đã làm mới {{name}}",
@@ -961,7 +962,10 @@
     "noRepoSelected": "No repository selected",
     "scanningFileExtensions": "Scanning file extensions...",
     "startBrowsingMarket": "Start browsing the marketplace",
-    "previewUnavailable": "Không thể xem trước"
+    "previewUnavailable": "Không thể xem trước",
+    "selectPrCommitToViewDiff": "Select a pull request commit from the header to view its diff.",
+    "fetchPrCommitToViewDiff": "Fetch PR to view this commit",
+    "prCommitMissingLocally": "This pull request commit is not available in your local repository yet."
   },
   "inbox": {
     "searchPlaceholder": "Tìm kiếm tin nhắn...",
@@ -1183,6 +1187,19 @@
     "commit": {
       "copySha": "Sao chép SHA",
       "shaCopied": "Đã sao chép SHA vào bảng nhớ tạm"
+    },
+    "issues": {
+      "updated": "Cập nhật lần cuối",
+      "notUpdated": "chưa cập nhật",
+      "assignedTo": "Được giao cho {{assignees}}",
+      "commentCount_one": "{{count}} bình luận",
+      "commentCount_other": "{{count}} bình luận",
+      "status": {
+        "open": "Đang mở",
+        "closed": "Đã đóng",
+        "completed": "Hoàn tất",
+        "notPlanned": "Không lên kế hoạch"
+      }
     }
   },
   "selectors": {

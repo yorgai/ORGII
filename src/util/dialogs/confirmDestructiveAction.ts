@@ -5,6 +5,7 @@
  * Replaces the duplicated `import("@tauri-apps/plugin-dialog") → ask()` pattern
  * found across 10+ files.
  */
+import { askNativeDialogSafely } from "./nativeDialog";
 
 export interface ConfirmDestructiveActionOptions {
   title: string;
@@ -30,8 +31,7 @@ export async function confirmDestructiveAction(
   if (e2eAutoConfirm) return true;
 
   try {
-    const { ask } = await import("@tauri-apps/plugin-dialog");
-    return await ask(message, {
+    return await askNativeDialogSafely(message, {
       title,
       kind: "warning",
       okLabel,

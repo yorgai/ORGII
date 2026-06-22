@@ -1,5 +1,6 @@
 import Message from "@src/components/Message";
 import i18n from "@src/i18n";
+import { askNativeDialogSafely } from "@src/util/dialogs/nativeDialog";
 
 import { cursorBridgeRestartRealCursorWithDebugPort } from ".";
 
@@ -37,8 +38,7 @@ async function askRestartCursor(): Promise<boolean> {
   const message = i18n.t("sessions:cursorIde.restart.message");
 
   try {
-    const { ask } = await import("@tauri-apps/plugin-dialog");
-    return await ask(message, {
+    return await askNativeDialogSafely(message, {
       title,
       kind: "warning",
       okLabel: i18n.t("sessions:cursorIde.restart.okLabel"),

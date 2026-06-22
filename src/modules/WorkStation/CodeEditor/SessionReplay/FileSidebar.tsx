@@ -329,7 +329,8 @@ const FileSidebarComponent: React.FC<FileSidebarProps> = ({
             ),
             defaultFlexGrow: 2,
             resizable: true,
-            actions: fileOperationsSectionActions,
+            actions:
+              readItems.length > 0 ? fileOperationsSectionActions : undefined,
           },
           {
             key: "explorations",
@@ -374,7 +375,8 @@ const FileSidebarComponent: React.FC<FileSidebarProps> = ({
             ),
             defaultFlexGrow: 1,
             resizable: false,
-            actions: fileOperationsSectionActions,
+            actions:
+              writeItems.length > 0 ? fileOperationsSectionActions : undefined,
           },
         ],
       },

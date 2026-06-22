@@ -207,7 +207,8 @@
     "skipThisVersion": "跳過此版本",
     "later": "稍後",
     "updateAiBlame": "更新 AI Blame",
-    "link": "連結"
+    "link": "連結",
+    "fetchPr": "Fetch PR"
   },
   "refreshToast": {
     "successName": "{{name}} 已刷新",
@@ -973,7 +974,10 @@
     "noRepoSelected": "No repository selected",
     "scanningFileExtensions": "Scanning file extensions...",
     "startBrowsingMarket": "Start browsing the marketplace",
-    "previewUnavailable": "預覽不可用"
+    "previewUnavailable": "預覽不可用",
+    "selectPrCommitToViewDiff": "Select a pull request commit from the header to view its diff.",
+    "fetchPrCommitToViewDiff": "Fetch PR to view this commit",
+    "prCommitMissingLocally": "This pull request commit is not available in your local repository yet."
   },
   "inbox": {
     "searchPlaceholder": "搜索消息...",
@@ -1195,6 +1199,19 @@
     "commit": {
       "copySha": "複製 SHA",
       "shaCopied": "SHA 已複製到剪貼簿"
+    },
+    "issues": {
+      "updated": "最後更新",
+      "notUpdated": "未更新",
+      "assignedTo": "指派給 {{assignees}}",
+      "commentCount_one": "{{count}} 則留言",
+      "commentCount_other": "{{count}} 則留言",
+      "status": {
+        "open": "開啟",
+        "closed": "已關閉",
+        "completed": "已完成",
+        "notPlanned": "未計劃"
+      }
     }
   },
   "selectors": {

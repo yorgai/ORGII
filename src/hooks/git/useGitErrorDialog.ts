@@ -33,6 +33,7 @@ import {
   buildGitErrorInfo,
   showGitErrorDialog,
 } from "@src/util/dialogs/gitErrorDialog";
+import { askNativeDialogSafely } from "@src/util/dialogs/nativeDialog";
 
 // ============================================
 // Types
@@ -153,8 +154,7 @@ async function stashAndRetryOperation(
   try {
     const operationLabel =
       options.operation.charAt(0).toUpperCase() + options.operation.slice(1);
-    const { ask } = await import("@tauri-apps/plugin-dialog");
-    const shouldUnstash = await ask(
+    const shouldUnstash = await askNativeDialogSafely(
       `${operationLabel} completed successfully. Restore stashed changes now (${stashRefLabel})?`,
       {
         title: "Restore Stashed Changes",

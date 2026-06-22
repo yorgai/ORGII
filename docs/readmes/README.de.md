@@ -1,10 +1,32 @@
-# ORG-2
+<div align="center">
+  <h1>ORG-2</h1>
+  <p><strong>Open-source Agent IDE im Stil von Cursor — aber für Reviewbarkeit, Nachvollziehbarkeit und Kontrolle gebaut, nicht nur für schnelleres Coding.</strong></p>
+  <p>Gebaut mit Rust und Tauri für local-first Ausführung mit weniger als 100 MB auf der Festplatte. Unterstützt Livestream und Replay von Agent-Trajektorien. Leicht zu verfolgen und zu prüfen.</p>
+  <p>
+    <a href="../../LICENSE"><img alt="License" src="https://img.shields.io/github/license/yorgai/ORG2?style=flat-square" /></a>
+    <a href="https://github.com/yorgai/ORG2/releases/latest"><img alt="Downloads" src="https://img.shields.io/github/downloads/yorgai/ORG2/total?style=flat-square&label=downloads" /></a>
+    <a href="https://github.com/yorgai/ORG2/commits/develop"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2?style=flat-square&label=last%20commit" /></a>
+    <a href="https://github.com/yorgai/ORG2/graphs/commit-activity"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/yorgai/ORG2?style=flat-square&label=commit%20activity" /></a>
+  </p>
+</div>
 
-**Open-source Agent IDE im Stil von Cursor — aber für Reviewbarkeit, Nachvollziehbarkeit und Kontrolle gebaut, nicht nur für schnelleres Coding.**
+---
 
-Gebaut mit Rust und Tauri für local-first Ausführung mit weniger als 100 MB auf der Festplatte. Unterstützt Livestream und Replay von Agent-Trajektorien. Leicht zu verfolgen und zu prüfen.
+<p align="center">
+  <a href="https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-mac-apple-silicon.dmg"><strong>macOS Apple Silicon</strong></a>
+  ·
+  <a href="https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-windows-x64-setup.exe"><strong>Windows installer</strong></a>
+  ·
+  <a href="https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-windows-x64.msi"><strong>Windows MSI</strong></a>
+  ·
+  <a href="https://github.com/yorgai/ORG2/releases/latest"><strong>All latest release assets</strong></a>
+</p>
 
-[English](../../README.md) · [Français](README.fr.md) · [简体中文](README.zh.md) · [繁體中文](README.zh-Hant.md) · [Español](README.es.md) · [Русский](README.ru.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Türkçe](README.tr.md) · [Tiếng Việt](README.vi.md) · [Polski](README.pl.md)
+---
+
+<p align="center">
+  <a href="../../README.md">English</a> · <a href="README.fr.md">Français</a> · <a href="README.zh.md">简体中文</a> · <a href="README.zh-Hant.md">繁體中文</a> · <a href="README.es.md">Español</a> · <a href="README.ru.md">Русский</a> · <a href="README.pt.md">Português</a> · <a href="README.de.md">Deutsch</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a> · <a href="README.tr.md">Türkçe</a> · <a href="README.vi.md">Tiếng Việt</a> · <a href="README.pl.md">Polski</a>
+</p>
 
 <p align="center">
   <video src="https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a" controls width="720"></video>
@@ -25,14 +47,6 @@ ORG-II untersucht ein anderes Modell: Agents als persistente, beobachtbare Kolle
 - Scheduling und automatisch gestartete Sessions, damit Agents über Nacht laufen oder während Ihrer Abwesenheit weiterarbeiten können.
 - Oberflächen für org-level Alignment zur Koordination von Menschen, Agents, Zielen und Verantwortlichkeit (WIP).
 - Session-Zusammenarbeit und Gruppen-issue-workflows über selbst gehostetes Supabase (WIP).
-
-<p align="center">
-  <img src="../../assets/github-browser-demo.png" alt="ORGII GitHub-Browser-Demo" width="720" />
-</p>
-
-<p align="center">
-  <img src="../../assets/agent-scheduling-demo.png" alt="ORGII Agent-Scheduling-Demo" width="720" />
-</p>
 
 ## Download
 

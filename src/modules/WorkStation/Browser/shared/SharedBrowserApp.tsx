@@ -1,5 +1,5 @@
 import { useAtomValue } from "jotai";
-import React, { Suspense, memo, useEffect, useMemo } from "react";
+import React, { Suspense, memo, useLayoutEffect, useMemo } from "react";
 
 import { useBrowserContextAdapter } from "@src/engines/BrowserCore/hooks/useBrowserContextAdapter";
 import { dispatchWebviewLayoutChanged } from "@src/hooks/platform/useInlineWebview/webviewLayoutEvents";
@@ -30,17 +30,17 @@ export const SharedBrowserApp: React.FC = memo(() => {
     if (!activeRect) return OFFSCREEN_STYLE;
     return {
       position: "fixed",
-      left: Math.round(activeRect.x),
-      top: Math.round(activeRect.y),
-      width: Math.round(activeRect.width),
-      height: Math.round(activeRect.height),
+      left: activeRect.x,
+      top: activeRect.y,
+      width: activeRect.width,
+      height: activeRect.height,
       pointerEvents: "none",
       overflow: "hidden",
       zIndex: 0,
     };
   }, [activeRect]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     dispatchWebviewLayoutChanged();
   }, [activeRect]);
 
@@ -51,6 +51,7 @@ export const SharedBrowserApp: React.FC = memo(() => {
           <BrowserCore
             browserState={browserState}
             respectModalBlocking={false}
+            className="!p-0"
             hidden={!activeRect || isWebviewBlocked}
             manageWebviews
             bypassStationModeBlocking

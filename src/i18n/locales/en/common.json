@@ -212,7 +212,8 @@
     "skipThisVersion": "Skip this version",
     "later": "Later",
     "updateAiBlame": "Update AI Blame",
-    "link": "Link"
+    "link": "Link",
+    "fetchPr": "Fetch PR"
   },
   "refreshToast": {
     "successName": "{{name}} refreshed",
@@ -986,7 +987,10 @@
     "noRepoSelected": "No repository selected",
     "scanningFileExtensions": "Scanning file extensions...",
     "startBrowsingMarket": "Start browsing the marketplace",
-    "previewUnavailable": "Preview unavailable"
+    "previewUnavailable": "Preview unavailable",
+    "selectPrCommitToViewDiff": "Select a pull request commit from the header to view its diff.",
+    "fetchPrCommitToViewDiff": "Fetch PR to view this commit",
+    "prCommitMissingLocally": "This pull request commit is not available in your local repository yet."
   },
   "inbox": {
     "searchPlaceholder": "Search messages...",
@@ -1240,6 +1244,11 @@
       "noGitHubRepo": "Connect a GitHub repository to manage issues",
       "searchPlaceholder": "Filter by title or label…",
       "commentPlaceholder": "Leave a comment…",
+      "updated": "Last updated",
+      "notUpdated": "not updated",
+      "assignedTo": "Assigned to {{assignees}}",
+      "commentCount_one": "{{count}} comment",
+      "commentCount_other": "{{count}} comments",
       "submitComment": "Comment",
       "newIssueTitlePlaceholder": "Issue title",
       "newIssueBodyPlaceholder": "Describe the issue (optional)…",

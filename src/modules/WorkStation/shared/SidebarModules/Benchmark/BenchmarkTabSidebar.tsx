@@ -197,6 +197,7 @@ const BenchmarkTabSidebar: TabSidebarComponent = memo(() => {
     }
     return Array.from(keys);
   }, [tasks]);
+  const hasTaskGroups = repoKeys.length > 0;
 
   const handleRefresh = useCallback(() => {
     void loadTasks();
@@ -241,19 +242,30 @@ const BenchmarkTabSidebar: TabSidebarComponent = memo(() => {
         tooltip: t("creator.benchmark.loadTasks"),
         onClick: handleRefreshClick,
       },
-      {
-        key: "collapse-benchmark-repos",
-        icon: (
-          <CollapseAllIcon
-            size={ACTION_ICON_SIZE}
-            strokeWidth={ACTION_ICON_STROKE_WIDTH}
-          />
-        ),
-        tooltip: t("common:tooltips.collapseAll"),
-        onClick: handleCollapseAll,
-      },
+      ...(hasTaskGroups
+        ? [
+            {
+              key: "collapse-benchmark-repos",
+              icon: (
+                <CollapseAllIcon
+                  size={ACTION_ICON_SIZE}
+                  strokeWidth={ACTION_ICON_STROKE_WIDTH}
+                />
+              ),
+              tooltip: t("common:tooltips.collapseAll"),
+              onClick: handleCollapseAll,
+            },
+          ]
+        : []),
     ],
-    [handleCollapseAll, handleRefreshClick, refreshSpinClass, showFilter, t]
+    [
+      handleCollapseAll,
+      handleRefreshClick,
+      hasTaskGroups,
+      refreshSpinClass,
+      showFilter,
+      t,
+    ]
   );
 
   const sectionContent = useMemo(

@@ -16,6 +16,7 @@ use std::sync::OnceLock;
 use std::time::Instant;
 
 use crate::extracted::ExtractedData;
+use crate::tool_names;
 
 /// Inversion-of-control slot for `extract_event_data`. Registered at
 /// startup by the `app` layer so `recompute_extracted` can produce typed
@@ -79,6 +80,16 @@ pub enum ActivityStatus {
     Agent,
     Pending,
     Processed,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SimulatorEventFilterCategory {
+    KeyInteractions,
+    FileChanges,
+    TerminalEvents,
+    Explore,
+    Other,
 }
 
 // ============================================
@@ -272,6 +283,66 @@ impl SessionEventPatch {
 // Derived Snapshots
 // ============================================
 
+fn classify_simulator_event(event: &SessionEvent) -> SimulatorEventFilterCategory {
+    let name = if event.ui_canonical.is_empty() {
+        event.function_name.as_str()
+    } else {
+        event.ui_canonical.as_str()
+    };
+
+    if matches!(event.source, EventSource::User)
+        || matches!(
+            name,
+            tool_names::ASK_USER_QUESTIONS
+                | tool_names::ASK_USER_PERMISSIONS
+                | tool_names::SUGGEST_MODE_SWITCH
+                | tool_names::SUGGEST_NEXT_STEPS
+                | tool_names::CREATE_PLAN
+                | tool_names::MANAGE_SECRETS
+        )
+    {
+        return SimulatorEventFilterCategory::KeyInteractions;
+    }
+
+    if matches!(name, tool_names::EDIT_FILE | tool_names::DELETE_FILE) {
+        return SimulatorEventFilterCategory::FileChanges;
+    }
+
+    if event.command.is_some()
+        || matches!(
+            name,
+            tool_names::RUN_SHELL | tool_names::AWAIT_OUTPUT | tool_names::INSPECT_TERMINALS
+        )
+    {
+        return SimulatorEventFilterCategory::TerminalEvents;
+    }
+
+    if matches!(
+        name,
+        tool_names::READ_FILE
+            | tool_names::LIST_DIR
+            | "list_directory"
+            | tool_names::CODE_SEARCH
+            | "codebase_search"
+            | tool_names::WEB_SEARCH
+            | tool_names::WEB_FETCH
+            | "glob_file_search"
+            | "find_files"
+            | tool_names::QUERY_LSP
+            | tool_names::USE_CODE_MAP
+            | tool_names::MANAGE_CODE_MAP
+            | tool_names::TOOL_SEARCH
+    ) {
+        return SimulatorEventFilterCategory::Explore;
+    }
+
+    if event.file_path.is_some() {
+        return SimulatorEventFilterCategory::FileChanges;
+    }
+
+    SimulatorEventFilterCategory::Other
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SimulatorEventPreview {
@@ -286,6 +357,7 @@ pub struct SimulatorEventPreview {
     pub display_status: EventDisplayStatus,
     pub display_variant: EventDisplayVariant,
     pub activity_status: ActivityStatus,
+    pub filter_category: SimulatorEventFilterCategory,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thread_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -318,6 +390,7 @@ impl From<&SessionEvent> for SimulatorEventPreview {
             display_status: event.display_status.clone(),
             display_variant: event.display_variant.clone(),
             activity_status: event.activity_status.clone(),
+            filter_category: classify_simulator_event(event),
             thread_id: event.thread_id.clone(),
             process_id: event.process_id.clone(),
             call_id: event.call_id.clone(),
@@ -434,4 +507,71 @@ pub struct SnapshotDelta {
     pub chat_event_count: usize,
     pub has_running_event: bool,
     pub snapshot_delta: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn event(ui_canonical: &str) -> SessionEvent {
+        SessionEvent {
+            id: "event-1".to_string(),
+            chunk_id: None,
+            session_id: "session-1".to_string(),
+            created_at: "2026-06-22T00:00:00.000Z".to_string(),
+            function_name: ui_canonical.to_string(),
+            ui_canonical: ui_canonical.to_string(),
+            action_type: "tool_call".to_string(),
+            args: json!({}),
+            result: json!({}),
+            source: EventSource::Assistant,
+            display_text: "event".to_string(),
+            display_status: EventDisplayStatus::Completed,
+            display_variant: EventDisplayVariant::ToolCall,
+            activity_status: ActivityStatus::Processed,
+            thread_id: None,
+            process_id: None,
+            call_id: None,
+            file_path: None,
+            command: None,
+            is_delta: None,
+            repo_id: None,
+            repo_path: None,
+            extracted: None,
+            payload_refs: Vec::new(),
+            last_extract_at: None,
+        }
+    }
+
+    #[test]
+    fn simulator_preview_classifies_filter_category_in_rust() {
+        let mut read = event(tool_names::READ_FILE);
+        read.file_path = Some("src/App.tsx".to_string());
+        assert_eq!(
+            SimulatorEventPreview::from(&read).filter_category,
+            SimulatorEventFilterCategory::Explore
+        );
+
+        let mut edit = event(tool_names::EDIT_FILE);
+        edit.function_name = tool_names::APPLY_PATCH.to_string();
+        assert_eq!(
+            SimulatorEventPreview::from(&edit).filter_category,
+            SimulatorEventFilterCategory::FileChanges
+        );
+
+        let mut terminal = event("unknown_tool");
+        terminal.command = Some("pnpm test".to_string());
+        assert_eq!(
+            SimulatorEventPreview::from(&terminal).filter_category,
+            SimulatorEventFilterCategory::TerminalEvents
+        );
+
+        let mut user = event("user");
+        user.source = EventSource::User;
+        assert_eq!(
+            SimulatorEventPreview::from(&user).filter_category,
+            SimulatorEventFilterCategory::KeyInteractions
+        );
+    }
 }

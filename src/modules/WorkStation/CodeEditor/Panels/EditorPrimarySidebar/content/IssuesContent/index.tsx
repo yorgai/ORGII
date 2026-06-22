@@ -69,7 +69,6 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
       openError,
       closedError,
       fetchClosed,
-      loading,
       remoteUrlLoading,
       needsReAuth,
       error,
@@ -164,9 +163,9 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
       refresh,
     ]);
 
-    const isInitialLoading =
+    const isOpenLoading =
       remoteUrlLoading ||
-      (loading && openIssues.length === 0 && openLoadState !== "ready");
+      (openLoadState === "loading" && openIssues.length === 0);
 
     const handleToggleClosed = useCallback(() => {
       setClosedCollapsed((prev) => {
@@ -231,7 +230,7 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
       const loadingLabel = t("actions.loading", "Loading…");
       const noIssuesLabel = t("labels.noIssues", "No issues");
 
-      const openStatus: SectionStatus | null = isInitialLoading
+      const openStatus: SectionStatus | null = isOpenLoading
         ? { kind: "loading", message: loadingLabel }
         : openLoadState === "error"
           ? { kind: "error", message: openError ?? failedToLoad }

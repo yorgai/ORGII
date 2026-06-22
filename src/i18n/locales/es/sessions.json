@@ -2494,7 +2494,8 @@
       "open": "Abrir",
       "copyUrl": "Copiar URL",
       "copied": "URL copiada",
-      "openExternalFailed": "No se pudo abrir la URL en el navegador predeterminado"
+      "openExternalFailed": "No se pudo abrir la URL en el navegador predeterminado",
+      "groupTitle": "Páginas web"
     },
     "path": {
       "open": "Abrir",

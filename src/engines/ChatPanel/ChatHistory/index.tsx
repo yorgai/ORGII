@@ -98,6 +98,7 @@ interface PlanningIndicatorBridgeProps extends Omit<
   "planningIndicatorCount" | "planningShowSlowHint" | "planningVariantIndex"
 > {
   planningIndicatorScope: { sessionId: string; isLive: boolean } | null;
+  planningIndicatorEnabled: boolean;
   /**
    * Called whenever the visible count (0 or 1) changes. Stable identity —
    * created once with `useCallback([], [])` in the orchestrator.
@@ -107,24 +108,26 @@ interface PlanningIndicatorBridgeProps extends Omit<
 
 const PlanningIndicatorBridge: React.FC<PlanningIndicatorBridgeProps> = ({
   planningIndicatorScope,
+  planningIndicatorEnabled,
   onPlanningIndicatorCount,
   ...chatHistoryListProps
 }) => {
   const { count, showSlowHint, variantIndex } = usePlanningIndicator(
     planningIndicatorScope
   );
+  const visibleCount = planningIndicatorEnabled ? count : 0;
 
   // Notify the orchestrator whenever the count flips so useChatFooterSpacer
   // can schedule a re-measurement.
   useEffect(() => {
-    onPlanningIndicatorCount(count);
-  }, [count, onPlanningIndicatorCount]);
+    onPlanningIndicatorCount(visibleCount);
+  }, [visibleCount, onPlanningIndicatorCount]);
 
   return (
     <ChatHistoryList
       {...chatHistoryListProps}
-      planningIndicatorCount={count}
-      planningShowSlowHint={showSlowHint}
+      planningIndicatorCount={visibleCount}
+      planningShowSlowHint={planningIndicatorEnabled && showSlowHint}
       planningVariantIndex={variantIndex}
     />
   );
@@ -538,6 +541,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     // dead subagent session).
     mergeUserOnlyPages: hideGroupUserMessage,
   });
+  const planningIndicatorEnabled =
+    !turnPaginationEnabled || currentPageIndex >= pageCount - 1;
   const virtualListGroupShapeKey = displayGroupCounts.join(",");
   const virtualListDataKey = `${activeId ?? "no-session"}:${
     turnPaginationEnabled ? `page-${currentPageIndex}` : "all"
@@ -1046,6 +1051,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                   <>
                     <PlanningIndicatorBridge
                       planningIndicatorScope={planningIndicatorScope}
+                      planningIndicatorEnabled={planningIndicatorEnabled}
                       onPlanningIndicatorCount={handlePlanningIndicatorCount}
                       flatItems={displayFlatItems}
                       groupCounts={displayGroupCounts}

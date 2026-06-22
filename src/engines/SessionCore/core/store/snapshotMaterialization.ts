@@ -1,4 +1,8 @@
-import type { SessionEvent, SimulatorEventPreview } from "../types";
+import type {
+  SessionEvent,
+  SimulatorEventFilterValue,
+  SimulatorEventPreview,
+} from "../types";
 import type {
   DerivedSnapshot,
   NormalizedSnapshotCache,
@@ -20,6 +24,23 @@ export function isSnapshotDelta(
   return "snapshotDelta" in payload && payload.snapshotDelta === true;
 }
 
+function getFallbackFilterCategory(
+  event: SessionEvent
+): SimulatorEventFilterValue {
+  if (event.source === "user") return "key_interactions";
+  if (
+    event.uiCanonical === "edit_file" ||
+    event.uiCanonical === "delete_file"
+  ) {
+    return "file_changes";
+  }
+  if (event.command || event.uiCanonical === "run_shell") {
+    return "terminal_events";
+  }
+  if (event.filePath) return "file_changes";
+  return "other";
+}
+
 function buildSimulatorEventPreview(
   event: SessionEvent
 ): SimulatorEventPreview {
@@ -35,6 +56,7 @@ function buildSimulatorEventPreview(
     displayStatus: event.displayStatus,
     displayVariant: event.displayVariant,
     activityStatus: event.activityStatus,
+    filterCategory: getFallbackFilterCategory(event),
     threadId: event.threadId,
     processId: event.processId,
     callId: event.callId,

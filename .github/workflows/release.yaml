@@ -41,8 +41,8 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write  # create releases and upload assets
-  id-token: write  # Azure OIDC for Trusted Signing (Windows job)
+  contents: write # create releases and upload assets
+  id-token: write # Azure OIDC for Trusted Signing (Windows job)
 
 jobs:
   build-and-release:
@@ -161,7 +161,10 @@ jobs:
           BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle"
 
           DMG=$(find "$BUNDLE_DIR/dmg" -name "*.dmg" | head -1)
+          LATEST_DMG="ORG2-latest-mac-apple-silicon.dmg"
+          cp "$DMG" "$LATEST_DMG"
           echo "dmg=$DMG" >> "$GITHUB_OUTPUT"
+          echo "latest_dmg=$LATEST_DMG" >> "$GITHUB_OUTPUT"
 
           UPDATER_TAR=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz" ! -name "*.sig" | head -1)
           UPDATER_SIG=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz.sig" | head -1)
@@ -210,6 +213,7 @@ jobs:
           generate_release_notes: true
           files: |
             ${{ steps.artifacts.outputs.dmg }}
+            ${{ steps.artifacts.outputs.latest_dmg }}
             ${{ steps.artifacts.outputs.updater_tar }}
             ${{ steps.artifacts.outputs.updater_sig }}
             latest.json
@@ -326,12 +330,19 @@ jobs:
           NSIS_ZIP=$(find "$BUNDLE_DIR/nsis" -name "*.nsis.zip" | head -1)
           NSIS_SIG=$(find "$BUNDLE_DIR/nsis" -name "*.nsis.zip.sig" | head -1)
 
-          echo "msi=$MSI"           >> "$GITHUB_OUTPUT"
-          echo "msi_zip=$MSI_ZIP"   >> "$GITHUB_OUTPUT"
-          echo "msi_sig=$MSI_SIG"   >> "$GITHUB_OUTPUT"
-          echo "nsis=$NSIS"         >> "$GITHUB_OUTPUT"
-          echo "nsis_zip=$NSIS_ZIP" >> "$GITHUB_OUTPUT"
-          echo "nsis_sig=$NSIS_SIG" >> "$GITHUB_OUTPUT"
+          LATEST_MSI="ORG2-latest-windows-x64.msi"
+          LATEST_NSIS="ORG2-latest-windows-x64-setup.exe"
+          cp "$MSI" "$LATEST_MSI"
+          cp "$NSIS" "$LATEST_NSIS"
+
+          echo "msi=$MSI"                 >> "$GITHUB_OUTPUT"
+          echo "msi_zip=$MSI_ZIP"         >> "$GITHUB_OUTPUT"
+          echo "msi_sig=$MSI_SIG"         >> "$GITHUB_OUTPUT"
+          echo "nsis=$NSIS"               >> "$GITHUB_OUTPUT"
+          echo "nsis_zip=$NSIS_ZIP"       >> "$GITHUB_OUTPUT"
+          echo "nsis_sig=$NSIS_SIG"       >> "$GITHUB_OUTPUT"
+          echo "latest_msi=$LATEST_MSI"   >> "$GITHUB_OUTPUT"
+          echo "latest_nsis=$LATEST_NSIS" >> "$GITHUB_OUTPUT"
 
           echo "=== Windows artifacts ==="
           echo "MSI:  $MSI"
@@ -345,8 +356,10 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-nightly') }}
           files: |
             ${{ steps.artifacts.outputs.msi }}
+            ${{ steps.artifacts.outputs.latest_msi }}
             ${{ steps.artifacts.outputs.msi_zip }}
             ${{ steps.artifacts.outputs.msi_sig }}
             ${{ steps.artifacts.outputs.nsis }}
+            ${{ steps.artifacts.outputs.latest_nsis }}
             ${{ steps.artifacts.outputs.nsis_zip }}
             ${{ steps.artifacts.outputs.nsis_sig }}

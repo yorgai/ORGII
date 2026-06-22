@@ -47,6 +47,8 @@ export const TreeRowBase = React.memo(
         onDragStart,
         onDragEnd,
         onMouseDown,
+        onMouseEnter,
+        onMouseLeave,
         showIndentGuides,
         showPathHint = false,
       },
@@ -72,6 +74,14 @@ export const TreeRowBase = React.memo(
           onClick?.(event);
         },
         [markClicked, onClick]
+      );
+
+      const handleMouseLeave = useCallback(
+        (event: React.MouseEvent<HTMLDivElement>) => {
+          resetCursor();
+          onMouseLeave?.(event);
+        },
+        [onMouseLeave, resetCursor]
       );
 
       // Calculate padding based on depth
@@ -107,7 +117,8 @@ export const TreeRowBase = React.memo(
           }}
           onClick={isClickable ? handleRowClick : undefined}
           onContextMenu={onContextMenu}
-          onMouseLeave={resetCursor}
+          onMouseEnter={onMouseEnter}
+          onMouseLeave={handleMouseLeave}
           draggable={draggable}
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}

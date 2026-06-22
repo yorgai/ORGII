@@ -1,10 +1,34 @@
-# ORG-2
+<div align="center">
+  <h1>ORG-2</h1>
+  <p><strong>Open-source Cursor-style agent IDE<br />— but built for reviewability, traceability, and control, not just faster coding.</strong></p>
+  <p>
+    <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/yorgai/ORG2?style=flat-square" /></a>
+    <a href="https://github.com/yorgai/ORG2/releases/latest"><img alt="Downloads" src="https://img.shields.io/github/downloads/yorgai/ORG2/total?style=flat-square&label=downloads" /></a>
+    <a href="https://github.com/yorgai/ORG2/commits/develop"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2?style=flat-square&label=last%20commit" /></a>
+    <a href="https://github.com/yorgai/ORG2/graphs/commit-activity"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/yorgai/ORG2?style=flat-square&label=commit%20activity" /></a>
+    <a href="https://discord.gg/tvWgAqhCzs"><img alt="Discord" src="https://img.shields.io/badge/Discord-join%20chat-5865F2?style=flat-square&logo=discord&logoColor=white" /></a>
+  </p>
+</div>
 
-**Open-source Cursor-style agent IDE — but built for reviewability, traceability, and control, not just faster coding.**
+---
 
-Built with Rust and Tauri for local-first execution under 100MB on disk. Supports agent trajectory livestream and replay. Easy to follow and review.
+<p align="center">
+  <a href="https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-mac-apple-silicon.dmg"><strong>macOS Apple Silicon</strong></a>
+  ·
+  <a href="https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-windows-x64-setup.exe"><strong>Windows installer</strong></a>
+  ·
+  <a href="https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-windows-x64.msi"><strong>Windows MSI</strong></a>
+  ·
+  <a href="https://github.com/yorgai/ORG2/releases/latest"><strong>All latest release assets</strong></a>
+</p>
 
-[English](README.md) · [Français](docs/readmes/README.fr.md) · [简体中文](docs/readmes/README.zh.md) · [繁體中文](docs/readmes/README.zh-Hant.md) · [Español](docs/readmes/README.es.md) · [Русский](docs/readmes/README.ru.md) · [Português](docs/readmes/README.pt.md) · [Deutsch](docs/readmes/README.de.md) · [日本語](docs/readmes/README.ja.md) · [한국어](docs/readmes/README.ko.md) · [Türkçe](docs/readmes/README.tr.md) · [Tiếng Việt](docs/readmes/README.vi.md) · [Polski](docs/readmes/README.pl.md)
+---
+
+<p align="center">
+  <a href="README.md">English</a> · <a href="docs/readmes/README.fr.md">Français</a> · <a href="docs/readmes/README.zh.md">简体中文</a> · <a href="docs/readmes/README.zh-Hant.md">繁體中文</a> · <a href="docs/readmes/README.es.md">Español</a> · <a href="docs/readmes/README.ru.md">Русский</a> · <a href="docs/readmes/README.pt.md">Português</a> · <a href="docs/readmes/README.de.md">Deutsch</a> · <a href="docs/readmes/README.ja.md">日本語</a> · <a href="docs/readmes/README.ko.md">한국어</a> · <a href="docs/readmes/README.tr.md">Türkçe</a> · <a href="docs/readmes/README.vi.md">Tiếng Việt</a> · <a href="docs/readmes/README.pl.md">Polski</a>
+</p>
+
+<p>Built with Rust and Tauri for local-first execution under 100MB on disk. Supports agent trajectory livestream and replay. Easy to follow and review.</p>
 
 <p align="center">
   <video src="https://github.com/user-attachments/assets/bd4833d2-4cc4-4971-9805-84529b14d01a" controls width="720"></video>
@@ -26,19 +50,18 @@ ORG-II explores a different model: agents as persistent, observable colleagues i
 - Org-level alignment surfaces (issues/projects management) for coordinating humans, agents, goals, and accountability (WIP).
 - Session collaboration and group issue workflows via self-hosted Supabase (WIP).
 
-<p align="center">
-  <img src="assets/github-browser-demo.png" alt="ORGII GitHub browser demo" width="720" />
-</p>
-
-<p align="center">
-  <img src="assets/agent-scheduling-demo.png" alt="ORGII agent scheduling demo" width="720" />
-</p>
-
 ## Download
 
 Current build version: v1.1.0 (2026-06-21)
 
-Get the latest ORGII desktop app from the [Releases](https://github.com/YORG-AI/ORGII/releases) page. Open the newest release, download the installer or app bundle for your platform, and follow the OS prompts to install ORGII.
+Download the latest ORGII desktop app with one click:
+
+- [macOS Apple Silicon](https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-mac-apple-silicon.dmg)
+- [Windows x64 installer](https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-windows-x64-setup.exe)
+- [Windows x64 MSI](https://github.com/yorgai/ORG2/releases/latest/download/ORG2-latest-windows-x64.msi)
+- [All latest release assets](https://github.com/yorgai/ORG2/releases/latest)
+
+The direct download links always resolve through GitHub's latest release pointer.
 
 ## Develop from source
 
@@ -62,6 +85,17 @@ Browser Use and Computer Use features rely on optional native helpers for browse
 Computer Use is currently available on macOS only. Browser Use can use `agent-browser` on supported platforms.
 
 If a sidecar is missing, the Rust build creates a small placeholder resource so development builds can continue. The related capability may fall back to `PATH` or remain unavailable until you run `pnpm run download:sidecars`.
+
+## Community
+
+Have questions, feedback, or want to follow along as ORG-2 evolves? Join us on Discord:
+
+👉 **[discord.gg/tvWgAqhCzs](https://discord.gg/tvWgAqhCzs)**
+
+- **#how-to-use-org2** and **#faq** — get up and running
+- **#announcement** — release news and updates
+- **#lets-chat** — share what you're building and meet the community
+- **#feedback** — ideas, feature requests, and bug reports
 
 ## License
 

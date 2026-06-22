@@ -36,73 +36,130 @@ export interface DropHandlerContext {
   insertPill: (attrs: ComposerPillAttrs) => void;
 }
 
-/** Max age (ms) for the window-level PR drag fallback payload. */
-const PR_DRAG_MAX_AGE = 30_000;
+/** Max age (ms) for the window-level PR/issue drag fallback payload. */
+const REFERENCE_DRAG_MAX_AGE = 30_000;
+
+type PrReferencePayload = {
+  prNumber: number;
+  prTitle: string;
+  prUrl: string;
+  prStatus: string;
+  sourceBranch?: string;
+  targetBranch?: string;
+  additions?: number;
+  deletions?: number;
+};
+
+type IssueReferencePayload = {
+  issueNumber: number;
+  issueTitle: string;
+  issueUrl: string;
+  issueState: string;
+  labels?: string[];
+  assignees?: string[];
+  comments?: number;
+};
+
+function insertReferencePill(
+  ctx: DropHandlerContext,
+  options: {
+    pillPath: string;
+    displayName: string;
+    iconType: "pr" | "issue";
+    payload: PrReferencePayload | IssueReferencePayload;
+  }
+): void {
+  storePillText(options.pillPath, capPillText(JSON.stringify(options.payload)));
+  ctx.insertPill({
+    filePath: options.pillPath,
+    fileName: options.displayName,
+    isFolder: false,
+    iconType: options.iconType,
+    lineStart: null,
+    lineEnd: null,
+  });
+}
+
+function getReferenceDragData(event: DragEvent, type: "pr" | "issue"): string {
+  const mimeType =
+    type === "pr"
+      ? "application/x-orgii-pr-reference"
+      : "application/x-orgii-issue-reference";
+  const data = event.dataTransfer?.getData(mimeType);
+  if (data) return data;
+
+  if (type === "pr") {
+    const stash = window.__orgiiLastPrDrag;
+    if (stash && Date.now() - stash.timestamp < REFERENCE_DRAG_MAX_AGE) {
+      return JSON.stringify(stash);
+    }
+    return "";
+  }
+
+  const stash = window.__orgiiLastIssueDrag;
+  if (stash && Date.now() - stash.timestamp < REFERENCE_DRAG_MAX_AGE) {
+    return JSON.stringify(stash);
+  }
+  return "";
+}
 
 /**
  * Returns a `drop` event handler for the contenteditable host that handles
- * `application/x-orgii-pr-reference` drag data created by `PrListRow`.
+ * PR/issue reference drag data created by source-control rows.
  * Returns `true` if the event was consumed.
  *
  * WKWebView (Tauri/macOS) strips custom MIME types from DataTransfer during
- * cross-element drags, so we fall back to `window.__orgiiLastPrDrag` when
+ * cross-element drags, so we fall back to the window-level drag stash when
  * `dataTransfer.getData()` returns an empty string.
  */
 export function createDropHandler(ctx: DropHandlerContext) {
   return (event: DragEvent): boolean => {
-    // Primary: read from dataTransfer (works in Chromium/Firefox).
-    let prRefData = event.dataTransfer?.getData(
-      "application/x-orgii-pr-reference"
-    );
-
-    // Fallback: WKWebView strips custom MIME types; use the window-level
-    // stash written by PrListRow.onDragStart if the primary read is empty.
-    if (!prRefData) {
-      const stash = window.__orgiiLastPrDrag;
-      if (stash && Date.now() - stash.timestamp < PR_DRAG_MAX_AGE) {
-        prRefData = JSON.stringify(stash);
+    const prRefData = getReferenceDragData(event, "pr");
+    if (prRefData) {
+      window.__orgiiLastPrDrag = undefined;
+      try {
+        const prRef = JSON.parse(prRefData) as PrReferencePayload;
+        if (!prRef.prNumber || !prRef.prTitle) {
+          logger.warn("PR drag payload missing prNumber or prTitle:", prRef);
+          return false;
+        }
+        event.preventDefault();
+        insertReferencePill(ctx, {
+          pillPath: `pr://${prRef.prNumber}`,
+          displayName: `#${prRef.prNumber} ${prRef.prTitle}`,
+          iconType: "pr",
+          payload: prRef,
+        });
+        return true;
+      } catch (parseError) {
+        logger.warn("Failed to parse PR reference drop:", parseError);
+        return false;
       }
     }
 
-    if (!prRefData) return false;
-
-    // Clear the stash so a subsequent unrelated drop doesn't accidentally
-    // re-use stale PR data.
-    window.__orgiiLastPrDrag = undefined;
+    const issueRefData = getReferenceDragData(event, "issue");
+    if (!issueRefData) return false;
+    window.__orgiiLastIssueDrag = undefined;
 
     try {
-      const prRef = JSON.parse(prRefData) as {
-        prNumber: number;
-        prTitle: string;
-        prUrl: string;
-        prStatus: string;
-        sourceBranch?: string;
-        targetBranch?: string;
-        additions?: number;
-        deletions?: number;
-      };
-
-      // Guard against malformed payloads that would produce a blank pill.
-      if (!prRef.prNumber || !prRef.prTitle) {
-        logger.warn("PR drag payload missing prNumber or prTitle:", prRef);
+      const issueRef = JSON.parse(issueRefData) as IssueReferencePayload;
+      if (!issueRef.issueNumber || !issueRef.issueTitle) {
+        logger.warn(
+          "Issue drag payload missing issueNumber or issueTitle:",
+          issueRef
+        );
         return false;
       }
-
-      const pillPath = `pr://${prRef.prNumber}`;
-      const displayName = `#${prRef.prNumber} ${prRef.prTitle}`;
-      storePillText(pillPath, capPillText(JSON.stringify(prRef)));
       event.preventDefault();
-      ctx.insertPill({
-        filePath: pillPath,
-        fileName: displayName,
-        isFolder: false,
-        iconType: "pr",
-        lineStart: null,
-        lineEnd: null,
+      insertReferencePill(ctx, {
+        pillPath: `issue://${issueRef.issueNumber}`,
+        displayName: `#${issueRef.issueNumber} ${issueRef.issueTitle}`,
+        iconType: "issue",
+        payload: issueRef,
       });
       return true;
     } catch (parseError) {
-      logger.warn("Failed to parse PR reference drop:", parseError);
+      logger.warn("Failed to parse issue reference drop:", parseError);
       return false;
     }
   };
