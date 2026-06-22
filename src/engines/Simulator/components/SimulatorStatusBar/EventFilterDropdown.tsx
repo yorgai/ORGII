@@ -4,7 +4,7 @@ import React, { useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
+import Checkbox from "@src/components/Checkbox";
 import {
   DROPDOWN_CLASSES,
   DROPDOWN_PANEL,
@@ -96,6 +96,15 @@ export const EventFilterDropdown: React.FC<EventFilterDropdownProps> = ({
     [setSelectedFilters]
   );
 
+  const handleOptionKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>, action: () => void) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      action();
+    },
+    []
+  );
+
   const triggerToneClass =
     variant === "primary"
       ? isOpen || !isAllEvents
@@ -117,11 +126,11 @@ export const EventFilterDropdown: React.FC<EventFilterDropdownProps> = ({
         }}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        title={t("simulator.replay.filters.tooltip", "Filter events")}
-        className={`pointer-events-auto flex h-5 shrink-0 transform-gpu items-center gap-1 rounded-full px-1.5 text-[11px] font-medium leading-none ${triggerToneClass}`}
+        aria-label={t("simulator.replay.filters.tooltip", "Filter events")}
+        title={triggerLabel}
+        className={`pointer-events-auto flex h-5 w-5 shrink-0 transform-gpu items-center justify-center rounded-full ${triggerToneClass}`}
       >
         <ListFilter size={12} strokeWidth={2} />
-        <span>{triggerLabel}</span>
       </button>
       {isOpen &&
         isPositioned &&
@@ -136,45 +145,65 @@ export const EventFilterDropdown: React.FC<EventFilterDropdownProps> = ({
               role="listbox"
               aria-multiselectable="true"
             >
-              <button
-                type="button"
+              <div
                 role="option"
                 aria-selected={isAllEvents}
+                tabIndex={0}
                 onClick={handleSelectAll}
+                onKeyDown={(event) =>
+                  handleOptionKeyDown(event, handleSelectAll)
+                }
                 className={`${DROPDOWN_CLASSES.item} ${
                   isAllEvents
                     ? DROPDOWN_CLASSES.itemSelected
                     : DROPDOWN_CLASSES.itemHover
-                } w-full justify-between gap-2`}
+                } w-full justify-start gap-2 !text-text-1 hover:!text-text-1`}
               >
+                <Checkbox
+                  checked={isAllEvents}
+                  size="small"
+                  className="shrink-0"
+                />
                 <span className="flex-1 text-left">
                   {t("simulator.replay.filters.allEvents", "All events")}
                 </span>
-                {isAllEvents && <DropdownSelectedCheck />}
-              </button>
+              </div>
+              <div
+                className={DROPDOWN_CLASSES.menuSeparator}
+                role="separator"
+              />
               {SIMULATOR_EVENT_FILTER_VALUES.map((filter) => {
-                const selected = selectedFilterSet.has(filter);
+                const selected = isAllEvents || selectedFilterSet.has(filter);
                 return (
-                  <button
+                  <div
                     key={filter}
-                    type="button"
                     role="option"
                     aria-selected={selected}
+                    tabIndex={0}
                     onClick={() => handleToggleFilter(filter)}
+                    onKeyDown={(event) =>
+                      handleOptionKeyDown(event, () =>
+                        handleToggleFilter(filter)
+                      )
+                    }
                     className={`${DROPDOWN_CLASSES.item} ${
                       selected
                         ? DROPDOWN_CLASSES.itemSelected
                         : DROPDOWN_CLASSES.itemHover
-                    } w-full justify-between gap-2`}
+                    } w-full justify-start gap-2 !text-text-1 hover:!text-text-1`}
                   >
+                    <Checkbox
+                      checked={selected}
+                      size="small"
+                      className="shrink-0"
+                    />
                     <span className="flex-1 text-left">
                       {t(
                         FILTER_LABEL_KEYS[filter],
                         FILTER_LABEL_FALLBACKS[filter]
                       )}
                     </span>
-                    {selected && <DropdownSelectedCheck />}
-                  </button>
+                  </div>
                 );
               })}
             </div>
