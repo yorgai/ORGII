@@ -1924,7 +1924,7 @@
     "regionNoticeBodySanctions": "Jesteś w {{location}}. GitHub, npm, Docker Hub i podobne usługi mogą być niedostępne.",
     "regionNoticeBodyBoth": "Jesteś w {{location}}. Niektóre modele i usługi takie jak GitHub, npm i Docker Hub mogą być niedostępne z powodu zasad regionalnych i przepisów handlowych.",
     "selectAgent": "Wybierz Agenta",
-    "placeholderDefault": "Wpisz wiadomość, @ aby dodać pliki",
+    "placeholderDefault": "Wpisz wiadomość, @ aby dodać pliki, / aby użyć skills",
     "agentHeaderPromptVariants": [
       {
         "before": "Nad czym pracujemy z",

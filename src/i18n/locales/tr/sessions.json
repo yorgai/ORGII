@@ -1889,7 +1889,7 @@
     "regionNoticeBodySanctions": "Bulunduğunuz yer: {{location}}. GitHub, npm, Docker Hub ve benzeri hizmetler kullanılamayabilir.",
     "regionNoticeBodyBoth": "Bulunduğunuz yer: {{location}}. Bölgesel kurallar ve ticaret kısıtlamaları nedeniyle bazı modeller ve GitHub, npm, Docker Hub gibi hizmetler kullanılamayabilir.",
     "selectAgent": "Bir ajan seçin",
-    "placeholderDefault": "Mesaj yazın, dosya eklemek için @ kullanın",
+    "placeholderDefault": "Mesaj yazın, dosya eklemek için @ kullanın, skills kullanmak için / kullanın",
     "agentHeaderPromptVariants": [
       {
         "before": "",

@@ -1889,7 +1889,7 @@
     "regionNoticeBodySanctions": "위치: {{location}}. GitHub, npm, Docker Hub 및 유사 서비스가 사용할 수 없을 수 있습니다.",
     "regionNoticeBodyBoth": "위치: {{location}}. 지역 정책 및 무역 규제로 인해 일부 모델과 GitHub, npm, Docker Hub 등 서비스가 사용할 수 없을 수 있습니다.",
     "selectAgent": "에이전트 선택",
-    "placeholderDefault": "메시지를 입력하고 @로 파일 추가",
+    "placeholderDefault": "메시지를 입력하고 @로 파일 추가, /로 skills 사용",
     "agentHeaderPromptVariants": [
       {
         "before": "",

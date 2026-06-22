@@ -1898,7 +1898,7 @@
     "regionNoticeBodySanctions": "您所在位置：{{location}}。GitHub、npm、Docker Hub 等服務可能不可用。",
     "regionNoticeBodyBoth": "您所在位置：{{location}}。因地區政策與貿易規則，某些模型以及 GitHub、npm、Docker Hub 等服務可能不可用。",
     "selectAgent": "選擇一個 Agent",
-    "placeholderDefault": "輸入訊息，使用 @ 加入檔案",
+    "placeholderDefault": "輸入訊息，使用 @ 加入檔案，使用 / 呼叫 skills",
     "agentHeaderPromptVariants": [
       {
         "before": "我們要和",

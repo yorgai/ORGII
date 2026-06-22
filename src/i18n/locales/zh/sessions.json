@@ -1920,7 +1920,7 @@
     "regionNoticeBodySanctions": "您所在位置：{{location}}。GitHub、npm、Docker Hub 等服务可能不可用。",
     "regionNoticeBodyBoth": "您所在位置：{{location}}。因地区政策与贸易规则，某些模型以及 GitHub、npm、Docker Hub 等服务可能不可用。",
     "selectAgent": "选择一个 Agent",
-    "placeholderDefault": "输入消息，使用 @ 添加文件",
+    "placeholderDefault": "输入消息，使用 @ 添加文件，使用 / 调用 skills",
     "agentHeaderPromptVariants": [
       {
         "before": "我们要和",

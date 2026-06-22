@@ -1889,7 +1889,7 @@
     "regionNoticeBodySanctions": "Sie befinden sich in {{location}}. GitHub, npm, Docker Hub und ähnliche Dienste sind möglicherweise nicht verfügbar.",
     "regionNoticeBodyBoth": "Sie befinden sich in {{location}}. Bestimmte Modelle und Dienste wie GitHub, npm und Docker Hub sind aufgrund regionaler Regeln und Handelsbeschränkungen möglicherweise nicht verfügbar.",
     "selectAgent": "Agent auswählen",
-    "placeholderDefault": "Nachricht eingeben, @ zum Hinzufügen von Dateien",
+    "placeholderDefault": "Nachricht eingeben, @ zum Hinzufügen von Dateien, / zum Verwenden von skills",
     "agentHeaderPromptVariants": [
       {
         "before": "Woran arbeiten wir mit",

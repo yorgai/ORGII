@@ -1889,7 +1889,7 @@
     "regionNoticeBodySanctions": "お住まいの地域：{{location}}。GitHub、npm、Docker Hub などのサービスが利用できない場合があります。",
     "regionNoticeBodyBoth": "お住まいの地域：{{location}}。地域政策と貿易規制により、一部のモデルや GitHub、npm、Docker Hub などのサービスが利用できない場合があります。",
     "selectAgent": "エージェントを選択",
-    "placeholderDefault": "メッセージを入力、@ でファイルを追加",
+    "placeholderDefault": "メッセージを入力、@ でファイルを追加、/ で skills を使用",
     "agentHeaderPromptVariants": [
       {
         "before": "",

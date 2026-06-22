@@ -1940,7 +1940,7 @@
     "regionNoticeBodySanctions": "You are in {{location}}. GitHub, npm, Docker Hub, and similar services may be unavailable.",
     "regionNoticeBodyBoth": "You are in {{location}}. Certain models and services like GitHub, npm, and Docker Hub may be unavailable due to regional policy and trade rules.",
     "selectAgent": "Select an agent",
-    "placeholderDefault": "Type a message, @ to add files",
+    "placeholderDefault": "Type a message, @ to add files, / to use skills",
     "agentHeaderPromptVariants": [
       {
         "before": "What are we working on with",
