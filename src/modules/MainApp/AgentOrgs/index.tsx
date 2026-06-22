@@ -43,6 +43,7 @@ import { builtInAgentsAtom } from "./store/builtInAgentsAtom";
 import type { AgentDefinition, AvailableCliAgent, OrgMember } from "./types";
 
 const logger = createLogger("AgentOrgs");
+const AGENT_ORGS_CHANGED_EVENT = "orgii-agent-orgs-changed";
 
 const TABLE_TABS: Array<{
   key: AgentOrgsTabSegment;
@@ -179,6 +180,19 @@ const AgentOrgsPage: React.FC = () => {
       });
     return () => {
       cancelled = true;
+    };
+  }, [loadOrgs]);
+
+  useEffect(() => {
+    const handleOrgsChanged = () => {
+      void loadOrgs()
+        .then(setOrgs)
+        .catch(() => setOrgs([]));
+    };
+
+    window.addEventListener(AGENT_ORGS_CHANGED_EVENT, handleOrgsChanged);
+    return () => {
+      window.removeEventListener(AGENT_ORGS_CHANGED_EVENT, handleOrgsChanged);
     };
   }, [loadOrgs]);
 
