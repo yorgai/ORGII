@@ -2493,7 +2493,8 @@
       "open": "Abrir",
       "copyUrl": "Copiar URL",
       "copied": "URL copiado",
-      "openExternalFailed": "Falha ao abrir URL no navegador padrão"
+      "openExternalFailed": "Falha ao abrir URL no navegador padrão",
+      "groupTitle": "Páginas da web"
     },
     "path": {
       "open": "Abrir",

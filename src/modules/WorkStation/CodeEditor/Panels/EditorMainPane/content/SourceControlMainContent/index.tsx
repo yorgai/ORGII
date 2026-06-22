@@ -10,6 +10,7 @@
  */
 import { useAtomValue } from "jotai";
 import React, { Suspense, memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 import { IssueDetailPanel } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/content/IssuesContent/IssueDetailPanel";
 import {
@@ -77,6 +78,7 @@ const SourceControlMainContent: React.FC<SourceControlMainContentProps> = ({
   collapseAllSignal,
   emptyFocusActions,
 }) => {
+  const { t } = useTranslation();
   const selectedIssueState = useAtomValue(workstationSelectedIssueAtom);
   const issueCallbacks = useAtomValue(workstationIssueCallbackAtom);
 
@@ -126,6 +128,21 @@ const SourceControlMainContent: React.FC<SourceControlMainContentProps> = ({
       ? historySelection.selectedCommitSha
       : historySelection.commitSha;
 
+    if (isPr && !commitSha) {
+      return (
+        <Placeholder
+          variant="empty"
+          placement="detail-panel"
+          title={historySelection.prTitle}
+          subtitle={t(
+            "placeholders.selectPrCommitToViewDiff",
+            "Select a pull request commit from the header to view its diff."
+          )}
+          fillParentHeight
+        />
+      );
+    }
+
     if (!isPr || commitSha) {
       const resolvedRepoId = repoId ?? repoPath;
       const repoReady = Boolean(repoPath && resolvedRepoId);
@@ -164,6 +181,7 @@ const SourceControlMainContent: React.FC<SourceControlMainContentProps> = ({
                   : undefined
               }
               publishHeaderToWorkstation={false}
+              prNumber={isPr ? historySelection.prNumber : undefined}
             />
           </Suspense>
         </div>

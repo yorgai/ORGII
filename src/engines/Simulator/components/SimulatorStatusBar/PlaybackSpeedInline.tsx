@@ -56,7 +56,7 @@ export const PlaybackSpeedInline: React.FC<PlaybackSpeedInlineProps> = ({
   return (
     <>
       <button
-        ref={triggerRef}
+        ref={triggerRef as React.Ref<HTMLButtonElement>}
         type="button"
         disabled={disabled}
         onClick={toggle}
@@ -74,7 +74,7 @@ export const PlaybackSpeedInline: React.FC<PlaybackSpeedInlineProps> = ({
         isPositioned &&
         createPortal(
           <div
-            ref={panelRef}
+            ref={panelRef as React.Ref<HTMLDivElement>}
             className={`${DROPDOWN_CLASSES.menuPanelBase} fixed min-w-[80px]`}
             style={panelPositionStyle}
           >

@@ -303,6 +303,16 @@
       "pause": "暂停",
       "playbackSpeed": "播放速度",
       "noEvents": "无事件",
+      "filters": {
+        "tooltip": "筛选事件",
+        "allEvents": "所有事件",
+        "keyInteractions": "关键交互",
+        "fileChanges": "文件变更",
+        "terminalEvents": "终端事件",
+        "explore": "探索",
+        "other": "其他",
+        "selectedCount": "{{count}} 个筛选"
+      },
       "agentHasNotUsedTool": "Agent 尚未使用此工具",
       "browser": {
         "tabs": {
@@ -2511,7 +2521,8 @@
       "open": "打开",
       "copyUrl": "复制 URL",
       "copied": "URL 复制",
-      "openExternalFailed": "无法用默认浏览器打开 URL"
+      "openExternalFailed": "无法用默认浏览器打开 URL",
+      "groupTitle": "网页"
     },
     "path": {
       "open": "打开",

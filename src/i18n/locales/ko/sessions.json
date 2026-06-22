@@ -2495,7 +2495,8 @@
       "open": "열기",
       "copyUrl": "URL 복사",
       "copied": "URL이 복사되었습니다",
-      "openExternalFailed": "기본 브라우저에서 URL을 열지 못했습니다"
+      "openExternalFailed": "기본 브라우저에서 URL을 열지 못했습니다",
+      "groupTitle": "웹 페이지"
     },
     "path": {
       "open": "열기",

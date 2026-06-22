@@ -23,6 +23,7 @@ import {
   type PanelState,
   workstationLayoutAtom,
 } from "@src/store/workstation/tabs";
+import { askNativeDialogSafely } from "@src/util/dialogs/nativeDialog";
 
 import { DEFAULT_PANEL_STATE } from "../config";
 import type { UseEditorPaneStateReturn } from "../types";
@@ -203,8 +204,7 @@ export function useEditorPaneState(
             }
           } else {
             // Non-active tab - can't save, only discard or cancel
-            const { ask } = await import("@tauri-apps/plugin-dialog");
-            const confirmed = await ask(
+            const confirmed = await askNativeDialogSafely(
               t("confirmation.unsavedCloseMessage", {
                 name: tabToClose.title,
               }),
@@ -282,8 +282,7 @@ export function useEditorPaneState(
       );
 
       if (otherTabsWithUnsaved.length > 0) {
-        const { ask } = await import("@tauri-apps/plugin-dialog");
-        const confirmed = await ask(
+        const confirmed = await askNativeDialogSafely(
           t("confirmation.unsavedCloseMultipleMessage", {
             count: otherTabsWithUnsaved.length,
           }),

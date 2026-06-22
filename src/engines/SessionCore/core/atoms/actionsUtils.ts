@@ -18,6 +18,7 @@ import {
 import { selectedExecutionThreadAtom } from "@src/store/ui/sessionPaginationAtom";
 import {
   simulatorEffectiveDockAppAtom,
+  simulatorEventFiltersAtom,
   simulatorFollowAppLockAtom,
   simulatorSelectedAppAtom,
 } from "@src/store/ui/simulatorAtom";
@@ -129,6 +130,7 @@ export function resetSessionUIState(
   set(simulatorSelectedAppAtom, null);
   set(simulatorEffectiveDockAppAtom, null);
   set(simulatorFollowAppLockAtom, null);
+  set(simulatorEventFiltersAtom, []);
   set(clearFileReviewAtom);
   set(sessionRuntimeStatusAtom, "idle");
   set(sessionRuntimeErrorAtom, null);

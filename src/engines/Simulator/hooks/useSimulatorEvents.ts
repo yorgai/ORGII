@@ -132,13 +132,12 @@ export function useSimulatorEvents(
 
   useEffect(() => {
     if (
-      replayMode === "follow" &&
       simulatorCurrentEvent &&
       simulatorCurrentEvent.id !== currentEvent?.id
     ) {
       setCurrentEvent(simulatorCurrentEvent);
     }
-  }, [replayMode, simulatorCurrentEvent, currentEvent, setCurrentEvent]);
+  }, [simulatorCurrentEvent, currentEvent, setCurrentEvent]);
 
   useEffect(() => {
     if (effectiveEventIds.length === 0) return;

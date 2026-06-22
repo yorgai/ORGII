@@ -2508,7 +2508,8 @@
       "open": "Открыть",
       "copyUrl": "Скопировать URL",
       "copied": "URL скопирован",
-      "openExternalFailed": "Не удалось открыть URL в браузере по умолчанию"
+      "openExternalFailed": "Не удалось открыть URL в браузере по умолчанию",
+      "groupTitle": "Веб-страницы"
     },
     "path": {
       "open": "Открыть",

@@ -79,6 +79,7 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
   >({});
   const [defaultBranch, setDefaultBranch] = useState("main");
   const autoTriggeredRef = useRef(false);
+  const openPrsRequestIdRef = useRef(0);
   const handleCreatePrRef = useRef<
     () => Promise<{ url?: string; error?: string }>
   >(async () => ({}));
@@ -166,22 +167,22 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     };
   }, [repoPath, repoId, branchName]);
 
-  useEffect(() => {
+  const handleLoadOpenPrs = useCallback(() => {
     if (!repoPath) return;
 
-    // Seed from cache immediately so the PR list is visible on re-entry
+    const requestId = ++openPrsRequestIdRef.current;
+    const isCurrentRequest = () => requestId === openPrsRequestIdRef.current;
+
     const cachedEntry = getCachedPrs(repoPath);
     if (cachedEntry) {
       setAllOpenPrs(cachedEntry.prs);
       setOpenPrsLoadState("ready");
       setOpenPrsError(null);
-      if (!isPrCacheStale(repoPath)) return; // fresh — skip network
+      if (!isPrCacheStale(repoPath)) return;
     } else {
       setOpenPrsLoadState("loading");
       setOpenPrsError(null);
     }
-
-    let cancelled = false;
 
     void (async () => {
       try {
@@ -193,32 +194,28 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
           (remote) => remote.name === "origin"
         );
         if (!originRemote?.url) {
-          if (!cancelled) setOpenPrsLoadState("ready");
+          if (isCurrentRequest()) setOpenPrsLoadState("ready");
           return;
         }
 
         const repoFullName = parseGithubRepoFullName(originRemote.url);
         if (!repoFullName) {
-          if (!cancelled) setOpenPrsLoadState("ready");
+          if (isCurrentRequest()) setOpenPrsLoadState("ready");
           return;
         }
 
         const prs = await listOpenPRsLocal(repoFullName);
-        if (cancelled) return;
+        if (!isCurrentRequest()) return;
         setAllOpenPrs(prs);
         setCachedPrs(repoPath, prs);
         setOpenPrsLoadState("ready");
         setOpenPrsError(null);
       } catch (err) {
-        if (cancelled) return;
+        if (!isCurrentRequest()) return;
         setOpenPrsError(err instanceof Error ? err.message : String(err));
         setOpenPrsLoadState("error");
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [repoPath, repoId, setAllOpenPrs, setOpenPrsLoadState, setOpenPrsError]);
 
   const eligible = useMemo(
@@ -349,11 +346,15 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
   ]);
 
   useEffect(() => {
-    setWorkstationPrCallbackAtom({ createPr: handleCreatePr });
-  }, [handleCreatePr, setWorkstationPrCallbackAtom]);
+    setWorkstationPrCallbackAtom({
+      createPr: handleCreatePr,
+      loadOpenPrs: handleLoadOpenPrs,
+    });
+  }, [handleCreatePr, handleLoadOpenPrs, setWorkstationPrCallbackAtom]);
 
   useEffect(() => {
     return () => {
+      openPrsRequestIdRef.current += 1;
       setWorkstationPrAtom({
         readyToCreate: false,
         prUrl: undefined,
@@ -362,7 +363,7 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
         uncommittedCount: 0,
         isDefaultBranch: false,
       });
-      setWorkstationPrCallbackAtom({ createPr: null });
+      setWorkstationPrCallbackAtom({ createPr: null, loadOpenPrs: null });
       setAllOpenPrs([]);
       setOpenPrsLoadState("idle");
       setOpenPrsError(null);

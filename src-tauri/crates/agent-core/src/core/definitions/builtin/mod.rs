@@ -110,8 +110,8 @@ pub fn get_builtin_agents() -> Vec<AgentDefinition> {
         // Core agents — ADE Manager first by design.
         ade_manager(),
         base_agent(),
-        os_agent(),
         sde_agent(),
+        os_agent(),
         ai_research_agent(),
         wingman_agent(),
         work_item_manager_agent(),

@@ -29,6 +29,7 @@ export const PILL_TYPE_LIST = [
   "skill",
   "paste",
   "pr",
+  "issue",
 ] as const;
 
 export type PillType = (typeof PILL_TYPE_LIST)[number];
@@ -57,6 +58,7 @@ export const CONTEXT_PILL_PREFIXES: Record<string, string> = {
   "dom-element": "dom-element://",
   paste: "paste://",
   pr: "pr://",
+  issue: "issue://",
 } as const;
 
 /** Pill types that carry async-loaded content stored in the pill cache */
@@ -70,7 +72,7 @@ export const CONTEXT_PILL_TYPES: ReadonlySet<string> = new Set(
 
 /** Matches serialized context pill references like [terminal:terminal://...] */
 export const CONTEXT_PILL_REF_REGEX =
-  /\[(terminal|browser|dom-element|pr):(terminal|browser|dom-element|pr):\/\/[^\]]+\]/;
+  /\[(terminal|browser|dom-element|pr|issue):(terminal|browser|dom-element|pr|issue):\/\/[^\]]+\]/;
 
 /** Matches context headers and trace markers injected by the agent pipeline */
 export const CONTEXT_TRACE_MARKER_REGEX =
@@ -99,6 +101,16 @@ declare global {
       prStatus: string;
       sourceBranch?: string;
       targetBranch?: string;
+      timestamp: number;
+    };
+    __orgiiLastIssueDrag?: {
+      issueNumber: number;
+      issueTitle: string;
+      issueUrl: string;
+      issueState: string;
+      labels?: string[];
+      assignees?: string[];
+      comments?: number;
       timestamp: number;
     };
   }

@@ -3,6 +3,7 @@ import { atomWithStorage } from "jotai/utils";
 import { z } from "zod/v4";
 
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
+import type { SimulatorEventFilterValue } from "@src/engines/SessionCore/core/types";
 import type { SubagentSession } from "@src/engines/Simulator/hooks/useSubagentSessions";
 import type { AppType } from "@src/engines/Simulator/types/appTypes";
 import { createZodJsonStorage } from "@src/util/core/storage/zodStorage";
@@ -137,6 +138,9 @@ simulatorEffectiveDockAppAtom.debugLabel = "simulatorEffectiveDockAppAtom";
  */
 export const simulatorFollowAppLockAtom = atom<AppType | null>(null);
 simulatorFollowAppLockAtom.debugLabel = "simulatorFollowAppLockAtom";
+
+export const simulatorEventFiltersAtom = atom<SimulatorEventFilterValue[]>([]);
+simulatorEventFiltersAtom.debugLabel = "simulatorEventFiltersAtom";
 
 export interface SimulatorDiffCommitNavigationRequest {
   sessionId?: string | null;

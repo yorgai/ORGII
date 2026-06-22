@@ -138,6 +138,11 @@ export {
 // Derived Atoms
 // ============================================
 
+export {
+  SIMULATOR_EVENT_FILTER_VALUES,
+  isSimulatorEventVisibleForFilters,
+  type SimulatorEventFilterValue,
+} from "./derived/simulatorEventFilters";
 export { chatEventsAtom } from "./derived/chatEvents";
 export {
   createdAtByIdAtom,

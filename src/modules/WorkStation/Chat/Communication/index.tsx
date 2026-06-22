@@ -18,7 +18,6 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import TabPill from "@src/components/TabPill";
 import { EDITOR_TAB_CANVAS_BG_CLASS } from "@src/config/workstation/tokens";
 import { useAgentOrgRunView } from "@src/engines/ChatPanel/InputArea/components/useAgentOrgRunView";
 import EventWrapper from "@src/engines/ChatPanel/adapters/EventWrapper";
@@ -259,24 +258,9 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
     handleEditToggle();
   }, [isEditing, handleViewModeChange, handleEditToggle]);
 
-  const planTrailingSlot =
+  const planHeaderActions =
     isPlanDoc && isPlanPending ? (
-      <div className="flex h-full items-center gap-2 px-2">
-        {/* Source/Preview toggle is irrelevant while editing — hide it so the
-            row stays focused on Cancel/Save (issue #28). */}
-        {!isEditing && (
-          <TabPill
-            activeTab={effectivePreviewMode ? "preview" : "source"}
-            tabs={[
-              { key: "source", label: t("common:common.sourceCode") },
-              { key: "preview", label: t("common:common.preview") },
-            ]}
-            onChange={(key) => handlePreviewToggle(key === "preview")}
-            variant="pill"
-            fillWidth={false}
-            size="small"
-          />
-        )}
+      <div className="flex h-full items-center gap-2">
         <PlanApprovalActions
           isEditing={isEditing}
           submitting={submitting}
@@ -396,7 +380,6 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
         tabs={replayTabs}
         activeEventId={activeTabId}
         onTabClick={handleTabClick}
-        trailingSlot={planTrailingSlot}
         sidebarToggleDisabled
         showWorkstationTabHeader={false}
         tabBarSurfaceClassName={EDITOR_TAB_CANVAS_BG_CLASS}
@@ -408,6 +391,16 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
           plainTitle
           publishToHost="simulator"
           publishEnabled={effectiveDockApp === AppType.CHANNELS}
+          isMarkdownFile={isPlanDoc && isPlanPending && !isEditing}
+          isPreviewMode={effectivePreviewMode}
+          previewSourceLabel={t("common:common.sourceCode")}
+          previewLabel={t("common:common.preview")}
+          onTogglePreview={
+            isPlanDoc && isPlanPending && !isEditing
+              ? () => handlePreviewToggle(!effectivePreviewMode)
+              : undefined
+          }
+          extraActions={planHeaderActions}
         />
         <div className="flex min-h-0 flex-1">
           <WorkStationShell
