@@ -100,6 +100,8 @@ export function useInputArea(
     customMentionOptions,
     onSubmitOverride,
     sessionId: propSessionId,
+    sessionScope = "active",
+    submitDisabled = false,
   } = options;
 
   // ============================================
@@ -128,21 +130,24 @@ export function useInputArea(
     isHosted,
     canStopAgent,
     canResume,
-  } = useWorkspaceChat({ sessionId: propSessionId });
+  } = useWorkspaceChat({ sessionId: propSessionId, sessionScope });
 
   // ============================================
   // Atoms (Global State)
   // ============================================
 
   const wpReadOnly = useAtomValue(wpReadOnlyAtom);
-  const isSessionActive = useAtomValue(isSessionActiveAtom);
-  const isPendingCancel = useAtomValue(isPendingCancelAtom);
+  const rawIsSessionActive = useAtomValue(isSessionActiveAtom);
+  const rawIsPendingCancel = useAtomValue(isPendingCancelAtom);
   const runtimeStatus = useAtomValue(sessionRuntimeStatusAtom);
+  const isSessionless = sessionScope === "none";
+  const isSessionActive = isSessionless ? false : rawIsSessionActive;
+  const isPendingCancel = isSessionless ? false : rawIsPendingCancel;
 
   const sessionEvents = useAtomValue(sortedEventsAtom);
   // Retry is only meaningful for `failed` runs. A user-initiated cancel should
   // never surface the orange retry button — the user stopped on purpose.
-  const isSessionTerminal = runtimeStatus === "failed";
+  const isSessionTerminal = !isSessionless && runtimeStatus === "failed";
 
   // ============================================
   // Sub-hooks
@@ -180,7 +185,10 @@ export function useInputArea(
   const { sessionId: resolvedActiveSessionId } = useSessionId({
     propSessionId,
   });
-  const activeSessionId = propSessionId ?? resolvedActiveSessionId;
+  const activeSessionId =
+    sessionScope === "none"
+      ? undefined
+      : (propSessionId ?? resolvedActiveSessionId);
   const draftSessionId = activeSessionId ?? "";
   const hasComposerStopBlockingWork = activeSessionId
     ? sessionHasComposerStopBlockingWork(
@@ -450,6 +458,7 @@ export function useInputArea(
     citeCode,
     handleSessChatSubmit,
     onSubmitOverride,
+    submitDisabled,
   });
 
   // ============================================

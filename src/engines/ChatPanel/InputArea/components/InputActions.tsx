@@ -47,6 +47,7 @@ interface InputActionsProps {
   onInterrupt: () => Promise<void>;
   onResume: () => Promise<void>;
   tone?: "primary" | "warning";
+  submitDisabled?: boolean;
 }
 
 const InputActions: React.FC<InputActionsProps> = memo(
@@ -62,6 +63,7 @@ const InputActions: React.FC<InputActionsProps> = memo(
     onInterrupt,
     onResume,
     tone = "primary",
+    submitDisabled = false,
   }) => {
     const { t } = useTranslation();
     const suppressSubmitClickUntilRef = useRef(0);
@@ -81,6 +83,9 @@ const InputActions: React.FC<InputActionsProps> = memo(
 
     const handleClick = async () => {
       if (showSubmit) {
+        if (submitDisabled) {
+          return;
+        }
         if (Date.now() < suppressSubmitClickUntilRef.current) {
           return;
         }
@@ -107,7 +112,7 @@ const InputActions: React.FC<InputActionsProps> = memo(
       }
     };
 
-    const isActive = showSubmit || showRetry;
+    const isActive = (showSubmit && !submitDisabled) || showRetry;
 
     // Hover variants use a brand-shade swap (paint-only) rather than
     // `opacity-80`. See INPUT_AREA_BUTTONS.iconButtonActive for the
@@ -124,7 +129,9 @@ const InputActions: React.FC<InputActionsProps> = memo(
         : INPUT_AREA_BUTTONS.iconButtonInactive;
 
     const stateClass = showSubmit
-      ? activeButtonClass
+      ? submitDisabled
+        ? inactiveButtonClass
+        : activeButtonClass
       : showStop
         ? canStopAgent
           ? "cursor-pointer border-none bg-text-2 text-white hover:bg-text-1"
@@ -144,7 +151,8 @@ const InputActions: React.FC<InputActionsProps> = memo(
         : undefined;
 
     // Button is only disabled for the "working and cannot stop" dead-end.
-    const disabled = showStop && !canStopAgent;
+    const disabled =
+      (showStop && !canStopAgent) || (showSubmit && submitDisabled);
 
     const sendState =
       showStop && !showSubmit

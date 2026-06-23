@@ -46,7 +46,7 @@ export interface AgentTurnContextValue {
   isLastItemInGroup: boolean;
   /** Regenerate the current turn by re-sending its originating user
    *  message through the truncate-and-resend pipeline. */
-  onRegenerate: () => void;
+  onRegenerate?: () => void;
   /** Optional sender label for group-chat merged streams. */
   groupSenderName?: string | null;
 }

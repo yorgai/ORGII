@@ -292,10 +292,10 @@ export interface GroupItemRendererProps {
   isWpGeneWorking: boolean;
   isExploring: boolean;
   codeBlockContainerWidth?: number;
-  onRegenerate: (groupIndex: number) => void;
+  onRegenerate?: (groupIndex: number) => void;
   onSubmit: (eventId: string, answers: Record<string, string>) => void;
   onSkip: (eventId: string) => void;
-  onEditUserMessage: (
+  onEditUserMessage?: (
     item: OptimizedChatItem,
     newText: string,
     imageDataUrls?: string[]
@@ -417,9 +417,11 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
         lastAssistantFlatIndex,
         isLastGroup,
         isLastItemInGroup,
-        onRegenerate: isWpGeneWorking
-          ? () => Message.info("Workspace is working!")
-          : () => onRegenerate(groupIndex),
+        onRegenerate: onRegenerate
+          ? isWpGeneWorking
+            ? () => Message.info("Workspace is working!")
+            : () => onRegenerate(groupIndex)
+          : undefined,
         groupSenderName:
           groupChat?.enabled && event && !usesGroupChatMessageBubble
             ? groupChat.resolveSenderName(event)
