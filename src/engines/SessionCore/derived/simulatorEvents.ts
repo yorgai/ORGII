@@ -34,7 +34,10 @@ import type {
 } from "../core/types";
 import { isSubagentSpawningTool } from "../sync/adapters/shared/subagentTracking";
 import { appendLiveAssistantEvent } from "./chatEvents";
-import { isSimulatorEventVisibleForFilters } from "./simulatorEventFilters";
+import {
+  getFallbackSimulatorEventFilterCategory,
+  isSimulatorEventVisibleForFilters,
+} from "./simulatorEventFilters";
 
 function buildSimulatorEventPreview(
   event: SessionEvent
@@ -51,6 +54,7 @@ function buildSimulatorEventPreview(
     displayStatus: event.displayStatus,
     displayVariant: event.displayVariant,
     activityStatus: event.activityStatus,
+    filterCategory: getFallbackSimulatorEventFilterCategory(event),
     threadId: event.threadId,
     processId: event.processId,
     callId: event.callId,

@@ -128,9 +128,12 @@ export const EventFilterDropdown: React.FC<EventFilterDropdownProps> = ({
         aria-haspopup="listbox"
         aria-label={t("simulator.replay.filters.tooltip", "Filter events")}
         title={triggerLabel}
-        className={`pointer-events-auto flex h-5 w-5 shrink-0 transform-gpu items-center justify-center rounded-full ${triggerToneClass}`}
+        className={`pointer-events-auto flex h-5 max-w-[132px] shrink-0 transform-gpu items-center justify-center gap-1 rounded-full px-1.5 ${triggerToneClass}`}
       >
-        <ListFilter size={12} strokeWidth={2} />
+        <ListFilter size={12} strokeWidth={2} className="shrink-0" />
+        <span className="truncate text-[11px] font-medium leading-none">
+          {triggerLabel}
+        </span>
       </button>
       {isOpen &&
         isPositioned &&

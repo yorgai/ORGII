@@ -37,6 +37,16 @@ function getFallbackFilterCategory(
   if (event.command || event.uiCanonical === "run_shell") {
     return "terminal_events";
   }
+  if (
+    event.uiCanonical === "read_file" ||
+    event.uiCanonical === "list_dir" ||
+    event.uiCanonical === "code_search" ||
+    event.uiCanonical === "glob" ||
+    event.uiCanonical === "find_files" ||
+    event.uiCanonical === "search"
+  ) {
+    return "explore";
+  }
   if (event.filePath) return "file_changes";
   return "other";
 }
