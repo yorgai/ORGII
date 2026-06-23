@@ -522,6 +522,7 @@ const UsageHistory: React.FC<UsageHistoryProps> = ({
                     getRowKey={(item) => item.id}
                     headerHeight="tall"
                     pageSize={50}
+                    maxHeight="min(420px, calc(100vh - 280px))"
                     emptyTitle={t("market:usageHistory.noTransactions")}
                     expandable={{ expandedRowRender: renderExpandedRow }}
                   />

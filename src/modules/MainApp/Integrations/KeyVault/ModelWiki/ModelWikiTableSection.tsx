@@ -351,6 +351,7 @@ export default function ModelWikiTableSection() {
         getRowKey={(entry) => entry.id}
         headerHeight="tall"
         pageSize={50}
+        maxHeight="min(420px, calc(100vh - 280px))"
         searchBar={{
           searchValue: searchQuery,
           onSearchChange: setSearchQuery,
