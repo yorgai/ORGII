@@ -12,7 +12,6 @@
  */
 import {
   PathCopyOpenRow,
-  SECTION_ACTION_GAP_CLASSES,
   SECTION_CONTROL_STYLE,
   SECTION_VALUE_TEXT_CLASSES,
   SectionContainer,
@@ -32,7 +31,6 @@ import React, {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 
 import {
   type MicrophonePermissionStatus,
@@ -45,10 +43,7 @@ import Button from "@src/components/Button";
 import Message from "@src/components/Message";
 import Select from "@src/components/Select";
 import Switch from "@src/components/Switch";
-import { ROUTES } from "@src/config/routes";
-import { useServiceAuth } from "@src/hooks/auth";
 import { useTimezoneSelect } from "@src/hooks/geo";
-import { createLogger } from "@src/hooks/logger";
 import {
   LANGUAGE_NAMES,
   LANGUAGE_PREFERENCE,
@@ -65,11 +60,7 @@ import { devModeEnabledAtom } from "@src/store/platform/devModeAtom";
 import { preventSleepWhileRunningAtom } from "@src/store/platform/preventSleepAtom";
 import { voiceInputEnabledAtom } from "@src/store/platform/voiceInputAtom";
 import { languageAtom } from "@src/store/ui/languageAtom";
-import { userAtom } from "@src/store/user";
-import { IUserInfo } from "@src/types/core/user";
 import { copyText } from "@src/util/data/clipboard";
-
-const log = createLogger("GeneralSection");
 
 export const GENERAL_TAB_KEYS = {
   GENERAL: "general",
@@ -114,7 +105,6 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({
 };
 
 const GeneralTabBody: React.FC = () => {
-  const navigate = useNavigate();
   const { t, i18n } = useTranslation("settings");
   const [timezone, setTimezone] = useAtom(timezoneAtom);
   const [languagePreference, setLanguagePreference] = useAtom(languageAtom);
@@ -218,15 +208,6 @@ const GeneralTabBody: React.FC = () => {
     }
   }, [micPermissionStatus, t]);
 
-  const {
-    isAuthenticated: isLoggedIn,
-    isLoading: isAuthLoading,
-    login,
-    logout,
-  } = useServiceAuth();
-
-  const [_user, setUser] = useAtom(userAtom);
-
   useEffect(() => {
     let cancelled = false;
     invoke<string>("settings_get_path").then((path) => {
@@ -298,46 +279,6 @@ const GeneralTabBody: React.FC = () => {
     [t]
   );
 
-  const handleSignIn = async () => {
-    try {
-      await login();
-    } catch (error) {
-      log.error("Login error:", error);
-      Message.error(t("toasts.loginFailed"));
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await logout();
-      setUser({
-        uuid: "",
-        name: "",
-        authing_id: "",
-        profile: "",
-        picture: "",
-        openai_api_key: "",
-        profile_image_url: "",
-        deepseek_api_key: "",
-        git_user_name: "",
-        git_user_email: "",
-        github_infos: [],
-        gitlab_infos: [],
-      } as IUserInfo);
-      Message.success(t("toasts.signedOut"));
-      navigate(ROUTES.auth.login.path, { replace: true });
-    } catch (error) {
-      log.error("Logout error:", error);
-      Message.error(t("toasts.logoutFailed"));
-    }
-  };
-
-  const loginStatusText = useMemo(() => {
-    if (isAuthLoading) return t("general.checking");
-    if (!isLoggedIn) return t("general.notLoggedIn");
-    return t("general.loggedIn");
-  }, [isAuthLoading, isLoggedIn, t]);
-
   return (
     <>
       <SectionContainer>
@@ -357,42 +298,6 @@ const GeneralTabBody: React.FC = () => {
           <Select {...timezoneSelectProps} />
         </SectionRow>
       </SectionContainer>
-
-      {/* Account */}
-      <SectionContainer>
-        <SectionRow label={t("general.loginStatus")}>
-          <div className={`${SECTION_ACTION_GAP_CLASSES} @[480px]:justify-end`}>
-            <span className={SECTION_VALUE_TEXT_CLASSES}>
-              {loginStatusText}
-            </span>
-            <Button
-              className="shrink-0"
-              size="default"
-              loading={isAuthLoading}
-              onClick={isLoggedIn ? handleSignOut : handleSignIn}
-            >
-              {isLoggedIn ? t("general.signOut") : t("general.signIn")}
-            </Button>
-          </div>
-        </SectionRow>
-        <SectionRow label={t("general.profile")}>
-          <Button
-            {...NAV_BUTTON_PROPS}
-            onClick={() => navigate(ROUTES.app.market.profile.path)}
-          >
-            {t("common:actions.configure")}
-          </Button>
-        </SectionRow>
-        <SectionRow label={t("general.setupWalkthrough")}>
-          <Button
-            {...NAV_BUTTON_PROPS}
-            onClick={() => navigate(ROUTES.auth.setup.path)}
-          >
-            {t("common:actions.configure")}
-          </Button>
-        </SectionRow>
-      </SectionContainer>
-
       <SectionContainer>
         <SectionRow label={t("general.voiceInput")}>
           <Switch checked={voiceInputEnabled} onChange={setVoiceInputEnabled} />

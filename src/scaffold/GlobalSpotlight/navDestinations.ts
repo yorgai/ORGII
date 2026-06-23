@@ -203,8 +203,15 @@ const OSS_SPOTLIGHT_ACTIONS = ACTIONS.filter(
   (destination) => !destination.path.startsWith("/orgii/app/market")
 );
 
+const OSS_PAGE_DESTINATIONS = PAGES.filter(
+  (destination) =>
+    destination.path !== "/orgii/app/login" &&
+    destination.path !== "/orgii/app/walkthrough" &&
+    !destination.path.startsWith("/orgii/app/market")
+);
+
 export const NAV_DESTINATIONS: NavDestination[] = [
-  ...PAGES,
+  ...OSS_PAGE_DESTINATIONS,
   ...SETTINGS,
   ...INTEGRATIONS,
   ...OSS_SPOTLIGHT_ACTIONS,

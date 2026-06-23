@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 
 import { ROUTES } from "@src/config/routes";
+import { HOSTED_LOGIN_ENABLED } from "@src/config/serviceAuth";
 import MainAppShell from "@src/modules/shared/layouts/MainAppShell";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import {
@@ -36,6 +37,15 @@ import OpenSourceMarketUnavailablePage from "@src/router/routes/OpenSourceMarket
 import { WorkStationRoutePlaceholder } from "@src/router/routes/placeholders";
 
 const Loading = () => <Placeholder variant="loading" />;
+
+const HostedLoginRoute: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  if (!HOSTED_LOGIN_ENABLED) {
+    return <Navigate to={ROUTES.workStation.base.path} replace />;
+  }
+  return <>{children}</>;
+};
 
 const lazy = (element: React.ReactNode, withLoader = true) => (
   <Suspense fallback={withLoader ? <Loading /> : null}>{element}</Suspense>
@@ -103,10 +113,25 @@ export const projectManagerRouteGroup: RouteObject[] = [
 ];
 
 export const appStandaloneRouteGroup: RouteObject[] = [
-  { path: "app/login", element: lazy(<LoginPage />, false) },
+  {
+    path: "app/login",
+    element: lazy(
+      <HostedLoginRoute>
+        <LoginPage />
+      </HostedLoginRoute>,
+      false
+    ),
+  },
   { path: "app/select-repo", element: lazy(<SelectRepoPage />, false) },
   { path: "app/start-page", element: lazy(<SuggestionsPage />, false) },
-  { path: "app/walkthrough", element: lazy(<SetupWalkthrough />) },
+  {
+    path: "app/walkthrough",
+    element: lazy(
+      <HostedLoginRoute>
+        <SetupWalkthrough />
+      </HostedLoginRoute>
+    ),
+  },
   { path: "marketplace/callback", element: lazy(<AuthCallback />) },
 ];
 
