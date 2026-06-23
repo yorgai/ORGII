@@ -813,10 +813,9 @@ pub fn run() {
             let _ = &app_handle;
 
             match event {
-                // Handle macOS file/folder open events (from Dock, Finder, Expose)
                 #[cfg(target_os = "macos")]
                 tauri::RunEvent::Opened { urls } => {
-                    handle_opened_urls(app_handle, urls);
+                    tracing::info!(count = urls.len(), "[OpenedFiles] Ignoring native macOS open event");
                 }
                 // macOS: clicking the dock icon when all windows are closed should reopen the main window
                 #[cfg(target_os = "macos")]
@@ -846,53 +845,4 @@ pub fn run() {
                 _ => {}
             }
         });
-}
-
-#[cfg(target_os = "macos")]
-/// Handle files/folders opened via macOS Dock, Finder, or Expose
-///
-/// This is triggered when:
-/// - User drops a file/folder on the app icon in Dock
-/// - User right-clicks a file and selects "Open With" → ORGII
-/// - User clicks a recent file in Expose/Mission Control
-/// - User clicks a recent file in Dock right-click menu
-fn handle_opened_urls(app_handle: &tauri::AppHandle, urls: Vec<url::Url>) {
-    use tauri::Emitter;
-
-    // Convert URLs to file paths
-    let paths: Vec<String> = urls
-        .iter()
-        .filter_map(|url| {
-            if url.scheme() == "file" {
-                url.to_file_path()
-                    .ok()
-                    .map(|p| p.to_string_lossy().to_string())
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    if paths.is_empty() {
-        return;
-    }
-
-    tracing::info!(
-        count = paths.len(),
-        ?paths,
-        "[OpenedFiles] Received paths from macOS"
-    );
-
-    // Emit event to frontend so it can handle the opened files/folders
-    // The frontend can then:
-    // - If it's a folder: add it as a repo and select it
-    // - If it's a file: open it in the editor
-    if let Err(err) = app_handle.emit("macos-open-files", &paths) {
-        tracing::error!(error = %err, "[OpenedFiles] Failed to emit event");
-    }
-
-    // Also add to recent documents for the circular flow
-    for path in &paths {
-        let _ = system_services::recent_files::add_to_recent_documents(path.clone());
-    }
 }

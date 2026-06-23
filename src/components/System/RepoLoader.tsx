@@ -5,7 +5,7 @@
  * - Auto-loads repos on mount (autoLoad: true)
  * - Loads saved workspaces from DB and hydrates savedWorkspacesAtom
  * - Restores the active workspace (if any) on startup
- * - Listens for macOS Dock / Expose / File > Open Recent events
+ * - Listens for app-controlled File > Open Recent events
  *   and routes them to repo selection
  * - Handles "Add Folder to Workspace" menu events (multi-root workspace)
  * - Syncs selected repo → workspace folders (migration from single-repo)

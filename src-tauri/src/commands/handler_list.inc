@@ -187,11 +187,6 @@ system_services::notifications::check_notification_permission,
 system_services::notifications::request_notification_permission,
 system_services::notifications::set_dock_badge,
 system_services::notifications::clear_dock_badge,
-// Platform commands - Recent Files (macOS system-level)
-system_services::recent_files::add_to_recent_documents,
-system_services::recent_files::add_multiple_to_recent_documents,
-system_services::recent_files::clear_recent_documents,
-system_services::recent_files::get_max_recent_documents,
 // Platform commands - App Menu (File > Open Recent)
 system_services::app_menu::menu_add_recent,
 system_services::app_menu::menu_get_recent,
