@@ -366,18 +366,75 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
 
     const collapseButton =
       isCurrentSurface && onCollapse ? (
-        <button
-          type="button"
+        <Button
+          variant="tertiary"
+          size="mini"
+          iconOnly
           data-testid="create-plan-collapse"
-          onClick={(event) => {
-            event.stopPropagation();
-            onCollapse();
-          }}
-          className="flex h-5 w-5 cursor-pointer items-center justify-center rounded text-text-3 transition-colors hover:bg-fill-2 hover:text-text-1"
+          onClick={() => onCollapse()}
+          icon={<X size={12} strokeWidth={2} />}
           title={t("planDoc.collapse")}
+        />
+      ) : null;
+    const planActions =
+      ownsActions || collapseButton ? (
+        <div
+          className="flex items-center gap-1"
+          onClick={(event) => event.stopPropagation()}
         >
-          <X size={12} strokeWidth={2} />
-        </button>
+          {ownsActions && (
+            <>
+              {ready && !isEditing && (
+                <Button
+                  variant="tertiary"
+                  size="mini"
+                  data-testid="create-plan-skip"
+                  onClick={handleSkip}
+                  disabled={!interactive || submitting}
+                  icon={<XCircle size={12} />}
+                >
+                  {t("planDoc.skip")}
+                </Button>
+              )}
+              {ready && (
+                <Button
+                  variant="tertiary"
+                  size="mini"
+                  data-testid="create-plan-edit"
+                  onClick={handleEditToggle}
+                  disabled={actionsDisabled}
+                  icon={isEditing ? <X size={12} /> : <Pencil size={12} />}
+                >
+                  {isEditing ? t("planDoc.cancelEdit") : t("planDoc.edit")}
+                </Button>
+              )}
+              {isEditing ? (
+                <Button
+                  variant="primary"
+                  size="mini"
+                  data-testid="create-plan-save"
+                  onClick={() => void handleSave()}
+                  disabled={!interactive || submitting}
+                  icon={<CheckCircle2 size={12} />}
+                >
+                  {t("common:actions.save")}
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="mini"
+                  data-testid="create-plan-build"
+                  onClick={handleBuild}
+                  disabled={!interactive || submitting}
+                  icon={<CheckCircle2 size={12} />}
+                >
+                  {t("planDoc.build")}
+                </Button>
+              )}
+            </>
+          )}
+          {collapseButton}
+        </div>
       ) : null;
     const planIcon = getToolIcon("create_plan", { size: PLAN_ICON_SIZE });
 
@@ -399,7 +456,7 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
           onNavigate={handlePreviewNavigate}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
-          rightContent={collapseButton}
+          rightContent={planActions}
         >
           <EventBlockHeaderIcon
             icon={planIcon}
@@ -448,62 +505,6 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
               )}
             </div>
           ))}
-
-        {ownsActions && (
-          <div className="flex items-center justify-end gap-2 border-t border-fill-3 px-3 py-2">
-            {/*
-              While editing, keep the action row focused on the edit itself —
-              hide unrelated actions (Skip) and the separate Build, leaving only
-              Cancel + Save. Outside edit mode, show the full Skip/Edit/Build
-              row. (Issue #28)
-            */}
-            {ready && !isEditing && (
-              <Button
-                size="mini"
-                data-testid="create-plan-skip"
-                onClick={handleSkip}
-                disabled={!interactive || submitting}
-                icon={<XCircle size={12} />}
-              >
-                {t("planDoc.skip")}
-              </Button>
-            )}
-            {ready && (
-              <Button
-                size="mini"
-                data-testid="create-plan-edit"
-                onClick={handleEditToggle}
-                disabled={actionsDisabled}
-                icon={isEditing ? <X size={12} /> : <Pencil size={12} />}
-              >
-                {isEditing ? t("planDoc.cancelEdit") : t("planDoc.edit")}
-              </Button>
-            )}
-            {isEditing ? (
-              <Button
-                variant="primary"
-                size="mini"
-                data-testid="create-plan-save"
-                onClick={() => void handleSave()}
-                disabled={!interactive || submitting}
-                icon={<CheckCircle2 size={12} />}
-              >
-                {t("common:actions.save")}
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                size="mini"
-                data-testid="create-plan-build"
-                onClick={handleBuild}
-                disabled={!interactive || submitting}
-                icon={<CheckCircle2 size={12} />}
-              >
-                {t("planDoc.build")}
-              </Button>
-            )}
-          </div>
-        )}
       </div>
     );
   }

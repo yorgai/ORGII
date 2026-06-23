@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { SimulatorEventPreview } from "../core/types";
-import { isSimulatorEventVisibleForFilters } from "./simulatorEventFilters";
+import type { SessionEvent, SimulatorEventPreview } from "../core/types";
+import {
+  getFallbackSimulatorEventFilterCategory,
+  isSimulatorEventVisibleForFilters,
+} from "./simulatorEventFilters";
 
 function preview(
   overrides: Partial<SimulatorEventPreview>
@@ -19,6 +22,26 @@ function preview(
     displayVariant: "tool_call",
     activityStatus: "processed",
     filterCategory: "other",
+    ...overrides,
+  };
+}
+
+function event(overrides: Partial<SessionEvent>): SessionEvent {
+  return {
+    chunk_id: "event-1",
+    id: "event-1",
+    sessionId: "session-1",
+    createdAt: "2026-06-22T00:00:00.000Z",
+    functionName: "noop",
+    uiCanonical: "noop",
+    actionType: "tool_call",
+    args: {},
+    result: {},
+    source: "assistant",
+    displayText: "Noop",
+    displayStatus: "completed",
+    displayVariant: "tool_call",
+    activityStatus: "processed",
     ...overrides,
   };
 }
@@ -68,5 +91,27 @@ describe("simulator event filters", () => {
     expect(isSimulatorEventVisibleForFilters(event, ["file_changes"])).toBe(
       false
     );
+  });
+
+  it("derives fallback categories for single-category filtering without snapshot previews", () => {
+    expect(
+      getFallbackSimulatorEventFilterCategory(event({ source: "user" }))
+    ).toBe("key_interactions");
+    expect(
+      getFallbackSimulatorEventFilterCategory(
+        event({ uiCanonical: "edit_file" })
+      )
+    ).toBe("file_changes");
+    expect(
+      getFallbackSimulatorEventFilterCategory(
+        event({ uiCanonical: "run_shell", command: "pnpm test" })
+      )
+    ).toBe("terminal_events");
+    expect(
+      getFallbackSimulatorEventFilterCategory(
+        event({ uiCanonical: "code_search" })
+      )
+    ).toBe("explore");
+    expect(getFallbackSimulatorEventFilterCategory(event({}))).toBe("other");
   });
 });

@@ -6,6 +6,7 @@
 
 export {
   SIMULATOR_EVENT_FILTER_VALUES,
+  getFallbackSimulatorEventFilterCategory,
   isSimulatorEventVisibleForFilters,
   type SimulatorEventFilterValue,
 } from "./simulatorEventFilters";

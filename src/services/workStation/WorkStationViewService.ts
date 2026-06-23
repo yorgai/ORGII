@@ -264,8 +264,37 @@ export const WorkStationViewService = {
   },
 
   async openTerminalTab(options?: NavigationOptions): Promise<boolean> {
-    const { CODE_EDITOR_MAIN_TERMINAL_TAB_ID } =
-      await import("@src/store/workstation/tabs");
+    const store = getStore();
+    const [
+      { CODE_EDITOR_MAIN_TERMINAL_TAB_ID },
+      { AppType },
+      {
+        simulatorIdeTerminalRevealRequestAtom,
+        simulatorSelectedAppAtom,
+        stationModeAtom,
+      },
+      { chatPanelMaximizedAtom },
+    ] = await Promise.all([
+      import("@src/store/workstation/tabs"),
+      import("@src/engines/Simulator/types/appTypes"),
+      import("@src/store/ui/simulatorAtom"),
+      import("@src/store/ui/chatPanelAtom"),
+    ]);
+
+    if (
+      isWorkStationRoute() &&
+      store.get(stationModeAtom) === "agent-station"
+    ) {
+      store.set(chatPanelMaximizedAtom, false);
+      store.set(simulatorSelectedAppAtom, AppType.CODE_EDITOR);
+      store.set(
+        simulatorIdeTerminalRevealRequestAtom,
+        (current: number) => current + 1
+      );
+      dispatchNavigate(ROUTES.workStation.base.path);
+      return true;
+    }
+
     return this.openCodeEditorTabOrToggleChatPanelMaximized(
       CODE_EDITOR_MAIN_TERMINAL_TAB_ID,
       { ...options, activeTabType: "terminal" }

@@ -73,13 +73,10 @@ export function useSourceControlSetup({
     sourceControlFilterModeAtom
   );
 
-  // PR lookup — this is the SINGLE mount of useWorkstationPr. It runs at the
-  // CodeEditor level so the global workstationPrAtom is populated regardless of
-  // which sidebar tab is active (fixes "No pull request" when the Source
-  // Control tab has never been mounted). The Source Control panel no longer
-  // mounts its own copy; it mirrors the atom instead (see useSourceControlState)
-  // and publishes its commit message via workstationPrCommitMessageAtom so PR
-  // titles stay accurate.
+  // PR state — this is the SINGLE mount of useWorkstationPr. It runs at the
+  // CodeEditor level so eligibility/create callbacks stay available regardless
+  // of which sidebar tab is active. The open PR list is still loaded lazily by
+  // PullRequestContent when the PR page is visited.
   const { currentGitStatus: gitStatus } = useGitStatus();
   const hasUpstream = !!gitStatus?.current_upstream_branch;
   const { files: gitFilesForPr } = useGitFiles({
