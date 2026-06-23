@@ -55,6 +55,15 @@ type IssueReferencePayload = {
   comments?: number;
 };
 
+function getPlainTextReferenceDragData(
+  dataTransfer: DataTransfer,
+  type: "pr" | "issue"
+): string {
+  const text = dataTransfer.getData("text/plain");
+  const prefix = `orgii-reference:${type}:`;
+  return text.startsWith(prefix) ? text.slice(prefix.length) : "";
+}
+
 function getDragReferenceData(
   dataTransfer: DataTransfer,
   type: "pr" | "issue"
@@ -63,7 +72,9 @@ function getDragReferenceData(
     type === "pr"
       ? "application/x-orgii-pr-reference"
       : "application/x-orgii-issue-reference";
-  const data = dataTransfer.getData(mimeType);
+  const data =
+    dataTransfer.getData(mimeType) ||
+    getPlainTextReferenceDragData(dataTransfer, type);
   if (data) return data;
 
   if (type === "pr") {

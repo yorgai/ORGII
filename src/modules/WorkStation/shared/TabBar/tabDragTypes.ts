@@ -7,6 +7,7 @@ export interface TabDragPillPayload {
   iconType: PillIconType;
   isFolder?: boolean;
   tabType?: WorkStationTabType;
+  contextText?: string;
 }
 
 export interface TabDragEventDetail {

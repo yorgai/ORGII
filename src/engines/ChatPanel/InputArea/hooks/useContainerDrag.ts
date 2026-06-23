@@ -64,6 +64,24 @@ interface UseContainerDragReturn {
   isDragOver: boolean;
 }
 
+function hasReferenceDrag(types?: readonly string[]): boolean {
+  const now = Date.now();
+  return (
+    Boolean(
+      window.__orgiiLastPrDrag &&
+      now - window.__orgiiLastPrDrag.timestamp < 30_000
+    ) ||
+    Boolean(
+      window.__orgiiLastIssueDrag &&
+      now - window.__orgiiLastIssueDrag.timestamp < 30_000
+    ) ||
+    Boolean(
+      types?.includes("application/x-orgii-pr-reference") ||
+      types?.includes("application/x-orgii-issue-reference")
+    )
+  );
+}
+
 export function useContainerDrag({
   handleDragOver,
   handleDragLeave,
@@ -89,8 +107,11 @@ export function useContainerDrag({
       // Use global flags - browser restricts dataTransfer.types during dragover
       const isInternalFileDrag = window.__internalFileTreeDrag === true;
       const isTabDrag = window.__internalWorkstationTabDrag === true;
+      const isReferenceDrag = hasReferenceDrag(
+        Array.from(e.dataTransfer.types)
+      );
 
-      if (isInternalFileDrag || isTabDrag) {
+      if (isInternalFileDrag || isTabDrag || isReferenceDrag) {
         e.preventDefault();
         e.stopPropagation();
         handleDragOver(e);
@@ -106,8 +127,11 @@ export function useContainerDrag({
 
       const isInternalFileDrag = window.__internalFileTreeDrag === true;
       const isTabDrag = window.__internalWorkstationTabDrag === true;
+      const isReferenceDrag = hasReferenceDrag(
+        Array.from(e.dataTransfer.types)
+      );
 
-      if (isInternalFileDrag || isTabDrag) {
+      if (isInternalFileDrag || isTabDrag || isReferenceDrag) {
         e.preventDefault();
         e.stopPropagation();
         handleDragLeave(e);
@@ -151,7 +175,10 @@ export function useContainerDrag({
 
       // Can check dataTransfer.types during drop event
       const types = Array.from(e.dataTransfer.types);
-      if (types.includes("application/x-file-reference")) {
+      if (
+        types.includes("application/x-file-reference") ||
+        hasReferenceDrag(types)
+      ) {
         // Prevent default and stop propagation before handling
         e.preventDefault();
         e.stopPropagation();

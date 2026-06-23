@@ -16,10 +16,12 @@ import ComposerInput, { ComposerInputRef } from "@src/components/ComposerInput";
 import ComposerShell from "@src/components/ComposerShell";
 import Message from "@src/components/Message";
 import { VoiceInputButton, VoiceRecordingBar } from "@src/components/Voice";
+import { capPillText, storePillText } from "@src/config/pillTokens";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import ContextMenuPortal from "@src/engines/ChatPanel/InputArea/components/ContextMenuPortal";
 import SlashCommandPortal from "@src/engines/ChatPanel/InputArea/components/SlashCommandPortal";
 import { type VoiceInputError, useVoiceInput } from "@src/hooks/voice";
+import i18n from "@src/i18n";
 import { voiceInputEnabledAtom } from "@src/store/platform/voiceInputAtom";
 import type { RepoKind } from "@src/store/repo/types";
 import type { ChatImageAttachment } from "@src/store/ui/chatImageAtom";
@@ -49,7 +51,7 @@ export interface EditorAreaProps {
   /** Remove file handler */
   onRemoveFile: (fileId: string) => void;
   /** Composer input ref */
-  composerInputRef: React.RefObject<ComposerInputRef | null>;
+  composerInputRef: React.MutableRefObject<ComposerInputRef | null>;
   /** Content change handler */
   onContentChange?: (text: string) => void;
   /** @ mention handler */
@@ -293,7 +295,116 @@ const EditorArea: React.FC<EditorAreaProps> = ({
 
   const voiceFeatureEnabled = useAtomValue(voiceInputEnabledAtom);
 
-  const isDragOver = useTabDragDrop(editorContainerRef, composerInputRef);
+  const isTabDragOver = useTabDragDrop(editorContainerRef, composerInputRef);
+  const [isReferenceDragOver, setIsReferenceDragOver] = useState(false);
+  const isDragOver = isTabDragOver || isReferenceDragOver;
+
+  const hasReferenceDrag = useCallback((types?: readonly string[]) => {
+    const now = Date.now();
+    return (
+      Boolean(
+        window.__orgiiLastPrDrag &&
+        now - window.__orgiiLastPrDrag.timestamp < 30_000
+      ) ||
+      Boolean(
+        window.__orgiiLastIssueDrag &&
+        now - window.__orgiiLastIssueDrag.timestamp < 30_000
+      ) ||
+      Boolean(
+        types?.includes("application/x-orgii-pr-reference") ||
+        types?.includes("application/x-orgii-issue-reference")
+      )
+    );
+  }, []);
+
+  const handleReferenceDragOver = useCallback(
+    (event: React.DragEvent<HTMLElement>) => {
+      if (!hasReferenceDrag(Array.from(event.dataTransfer.types))) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "copy";
+      setIsReferenceDragOver(true);
+    },
+    [hasReferenceDrag]
+  );
+
+  const handleReferenceDragLeave = useCallback(
+    (event: React.DragEvent<HTMLElement>) => {
+      if (!hasReferenceDrag(Array.from(event.dataTransfer.types))) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setIsReferenceDragOver(false);
+    },
+    [hasReferenceDrag]
+  );
+
+  const setComposerInputElement = useCallback(
+    (node: ComposerInputRef | null) => {
+      composerInputRef.current = node;
+    },
+    [composerInputRef]
+  );
+
+  const handleReferenceDrop = useCallback(
+    (event: React.DragEvent<HTMLElement>) => {
+      const plainText = event.dataTransfer.getData("text/plain");
+      const prTextPrefix = "orgii-reference:pr:";
+      const issueTextPrefix = "orgii-reference:issue:";
+      const prData =
+        event.dataTransfer.getData("application/x-orgii-pr-reference") ||
+        (plainText.startsWith(prTextPrefix)
+          ? plainText.slice(prTextPrefix.length)
+          : "") ||
+        (window.__orgiiLastPrDrag &&
+        Date.now() - window.__orgiiLastPrDrag.timestamp < 30_000
+          ? JSON.stringify(window.__orgiiLastPrDrag)
+          : "");
+      const issueData =
+        event.dataTransfer.getData("application/x-orgii-issue-reference") ||
+        (plainText.startsWith(issueTextPrefix)
+          ? plainText.slice(issueTextPrefix.length)
+          : "") ||
+        (window.__orgiiLastIssueDrag &&
+        Date.now() - window.__orgiiLastIssueDrag.timestamp < 30_000
+          ? JSON.stringify(window.__orgiiLastIssueDrag)
+          : "");
+      const rawData = prData || issueData;
+      if (!rawData) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setIsReferenceDragOver(false);
+
+      try {
+        const payload = JSON.parse(rawData) as Record<string, unknown>;
+        const isPr = Boolean(prData);
+        const number = Number(isPr ? payload.prNumber : payload.issueNumber);
+        const rawTitle = isPr ? payload.prTitle : payload.issueTitle;
+        const title = typeof rawTitle === "string" ? rawTitle.trim() : "";
+        if (!number || !title) return;
+
+        const pillPath = `${isPr ? "pr" : "issue"}://${number}`;
+        const displayName = `#${number} ${title}`;
+        storePillText(pillPath, capPillText(JSON.stringify(payload)));
+        composerInputRef.current?.insertFilePill(
+          pillPath,
+          false,
+          isPr ? "pr" : "issue",
+          displayName
+        );
+        Message.success(i18n.t("toasts.addedAsContext", { name: displayName }));
+      } catch {
+        // Malformed drag payload: ignore.
+      } finally {
+        if (prData) {
+          window.__orgiiLastPrDrag = undefined;
+        } else {
+          window.__orgiiLastIssueDrag = undefined;
+        }
+      }
+    },
+    [composerInputRef]
+  );
 
   const handleVoiceCommit = useCallback(
     (transcript: string) => {
@@ -453,6 +564,9 @@ const EditorArea: React.FC<EditorAreaProps> = ({
         ]
           .filter(Boolean)
           .join(" ")}
+        onDragOver={handleReferenceDragOver}
+        onDragLeave={handleReferenceDragLeave}
+        onDropCapture={handleReferenceDrop}
         style={{
           height: isCompact ? "auto" : `${SESSION_CONFIG.EDITOR_HEIGHT}px`,
         }}
@@ -495,7 +609,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
 
         {/* Composer Input Area */}
         <ComposerInput
-          ref={composerInputRef}
+          ref={setComposerInputElement}
           initialContent={initialContent ?? ""}
           placeholder={editorPlaceholder}
           onContentChange={(text) => onContentChange?.(text)}

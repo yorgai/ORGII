@@ -3,11 +3,17 @@
  *
  * Sidebar PR list using TreeRowBase rows grouped under a collapsible
  * "OPEN" section header (same pattern as IssuesContent).
- * Clicking a row fires `onHistorySelectionChange` with `type: "pr"`.
  */
 import { useAtomValue } from "jotai";
 import { GitPullRequest, Loader2, TriangleAlert } from "lucide-react";
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import type { OpenPRItem } from "@src/api/tauri/github";
@@ -15,10 +21,15 @@ import Tooltip from "@src/components/Tooltip";
 import { TreeRowBase, type TreeRowNode } from "@src/components/TreeRow";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
 import {
+  ReferenceDragGhost,
+  type ReferenceDragState,
+} from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/components/ReferenceDragGhost";
+import {
   type SectionStatus,
   SectionStatusRow,
 } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/components/SectionStatusRow";
 import { TreeSectionHeader } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/components/TreeSectionHeader";
+import type { TabDragPillPayload } from "@src/modules/WorkStation/shared/TabBar/tabDragTypes";
 import { TYPOGRAPHY } from "@src/modules/WorkStation/shared/tokens";
 import { getPrStatusLabelKey } from "@src/shared/pr/prStatus";
 import {
@@ -28,18 +39,18 @@ import {
   workstationPrAtom,
   workstationPrCallbackAtom,
 } from "@src/store/workstation/codeEditor/workstationPrAtom";
-import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
 import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import { getPrStatusVariant, truncateBranchLabel } from "./prCardHelpers";
 
 export interface PullRequestContentProps {
   branchName?: string;
-  onHistorySelectionChange?: (selection: SourceControlHistorySelection) => void;
   filterQuery?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+const DRAG_THRESHOLD_PX = 6;
 
 function parsePrUrl(
   prUrl: string | undefined
@@ -65,26 +76,40 @@ const PrRow: React.FC<PrRowProps> = memo(
     const { t } = useTranslation("common");
     const statusKey = pr.draft ? "draft" : pr.state;
     const statusVariant = getPrStatusVariant(statusKey);
+    const pointerDragRef = useRef<{
+      active: boolean;
+      startX: number;
+      startY: number;
+      thresholdMet: boolean;
+    } | null>(null);
+    const [dragState, setDragState] = useState<ReferenceDragState | null>(null);
 
-    const handleDragStart = useCallback(
-      (event: React.DragEvent<HTMLElement>) => {
-        const prPayload = {
-          prNumber: pr.number,
-          prTitle: pr.title,
-          prUrl: pr.url,
-          prStatus: statusKey,
-          sourceBranch: pr.head_branch,
-          targetBranch: pr.base_branch,
-        };
-        event.dataTransfer.setData(
-          "application/x-orgii-pr-reference",
-          JSON.stringify(prPayload)
-        );
-        window.__orgiiLastPrDrag = { ...prPayload, timestamp: Date.now() };
-        event.dataTransfer.effectAllowed = "copy";
-      },
+    const buildPrPayload = useCallback(
+      () => ({
+        prNumber: pr.number,
+        prTitle: pr.title,
+        prUrl: pr.url,
+        prStatus: statusKey,
+        sourceBranch: pr.head_branch,
+        targetBranch: pr.base_branch,
+      }),
       [pr, statusKey]
     );
+
+    const buildPrPillPayload = useCallback((): TabDragPillPayload => {
+      const prPayload = buildPrPayload();
+      return {
+        path: `pr://${prPayload.prNumber}`,
+        name: `#${prPayload.prNumber} ${prPayload.prTitle}`,
+        iconType: "pr",
+        isFolder: false,
+        contextText: JSON.stringify(prPayload),
+      };
+    }, [buildPrPayload]);
+
+    const stashPrDrag = useCallback(() => {
+      window.__orgiiLastPrDrag = { ...buildPrPayload(), timestamp: Date.now() };
+    }, [buildPrPayload]);
 
     const node: TreeRowNode = useMemo(
       () => ({
@@ -99,6 +124,88 @@ const PrRow: React.FC<PrRowProps> = memo(
         ),
       }),
       [pr.number, pr.title, pr.url, statusVariant.dotClass]
+    );
+
+    const handlePointerDown = useCallback(
+      (event: React.PointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
+        stashPrDrag();
+        pointerDragRef.current = {
+          active: true,
+          startX: event.clientX,
+          startY: event.clientY,
+          thresholdMet: false,
+        };
+
+        const onPointerMove = (moveEvent: PointerEvent) => {
+          const state = pointerDragRef.current;
+          if (!state?.active) return;
+
+          if (!state.thresholdMet) {
+            const dx = moveEvent.clientX - state.startX;
+            const dy = moveEvent.clientY - state.startY;
+            if (Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD_PX) return;
+
+            state.thresholdMet = true;
+            const pill = buildPrPillPayload();
+            window.__internalWorkstationTabDrag = true;
+            window.__internalWorkstationTabDragData = JSON.stringify(pill);
+            document.dispatchEvent(
+              new CustomEvent("tab-drag-start", {
+                detail: { tabId: `pr-${pr.number}`, pill },
+              })
+            );
+            setDragState({
+              isDragging: true,
+              dragX: moveEvent.clientX,
+              dragY: moveEvent.clientY,
+              dragLabel: pill.name ?? pill.path,
+            });
+          } else {
+            setDragState((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    dragX: moveEvent.clientX,
+                    dragY: moveEvent.clientY,
+                  }
+                : null
+            );
+          }
+        };
+
+        const onPointerUp = (upEvent: PointerEvent) => {
+          window.removeEventListener("pointermove", onPointerMove);
+          window.removeEventListener("pointerup", onPointerUp);
+          window.removeEventListener("pointercancel", onPointerUp);
+
+          const state = pointerDragRef.current;
+          pointerDragRef.current = null;
+          setDragState(null);
+          window.__internalWorkstationTabDrag = false;
+          window.__internalWorkstationTabDragData = undefined;
+
+          if (state?.thresholdMet) {
+            document.dispatchEvent(
+              new CustomEvent("tab-drag-end", {
+                detail: {
+                  tabId: `pr-${pr.number}`,
+                  pill: buildPrPillPayload(),
+                  pointerX: upEvent.clientX,
+                  pointerY: upEvent.clientY,
+                },
+              })
+            );
+          }
+        };
+
+        window.addEventListener("pointermove", onPointerMove, {
+          passive: true,
+        });
+        window.addEventListener("pointerup", onPointerUp);
+        window.addEventListener("pointercancel", onPointerUp);
+      },
+      [buildPrPillPayload, pr.number, stashPrDrag]
     );
 
     const tooltipContent = (
@@ -131,34 +238,37 @@ const PrRow: React.FC<PrRowProps> = memo(
     );
 
     return (
-      <Tooltip
-        content={tooltipContent}
-        position="bottom-end"
-        smartPlacement
-        panelStyle
-        mouseEnterDelay={200}
-      >
-        <TreeRowBase
-          node={node}
-          depth={depth}
-          isSelected={isSelected}
-          onClick={() => onClick(pr)}
-          showIndentGuides={false}
-          draggable
-          onDragStart={handleDragStart}
-          className={
-            isCurrentBranch
-              ? "border-l-2 border-primary-5 !pl-[calc(theme(spacing.3)+2px+theme(spacing.4))]"
-              : undefined
-          }
+      <>
+        {dragState && <ReferenceDragGhost dragState={dragState} />}
+        <Tooltip
+          content={tooltipContent}
+          position="bottom-end"
+          smartPlacement
+          panelStyle
+          mouseEnterDelay={200}
         >
-          <span className="ml-auto flex shrink-0 items-center gap-1">
-            <span className="min-w-[28px] text-right text-[11px] tabular-nums text-text-3">
-              #{pr.number}
+          <TreeRowBase
+            node={node}
+            depth={depth}
+            isSelected={isSelected}
+            onClick={() => onClick(pr)}
+            showIndentGuides={false}
+            onMouseDown={stashPrDrag}
+            onPointerDown={handlePointerDown}
+            className={
+              isCurrentBranch
+                ? "border-l-2 border-primary-5 !pl-[calc(theme(spacing.3)+2px+theme(spacing.4))]"
+                : undefined
+            }
+          >
+            <span className="ml-auto flex shrink-0 items-center gap-1">
+              <span className="min-w-[28px] text-right text-[11px] tabular-nums text-text-3">
+                #{pr.number}
+              </span>
             </span>
-          </span>
-        </TreeRowBase>
-      </Tooltip>
+          </TreeRowBase>
+        </Tooltip>
+      </>
     );
   }
 );
@@ -168,7 +278,6 @@ PrRow.displayName = "PrRow";
 
 const PullRequestContent: React.FC<PullRequestContentProps> = ({
   branchName,
-  onHistorySelectionChange,
   filterQuery = "",
 }) => {
   const { t } = useTranslation("common");
@@ -216,21 +325,9 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
     return sorted.filter((p) => p.title.toLowerCase().includes(q));
   }, [allOpenPrs, currentBranchPrFromList, filterQuery]);
 
-  const handlePrClick = useCallback(
-    (pr: OpenPRItem) => {
-      setSelectedPrNumber(pr.number);
-      const statusKey = pr.draft ? "draft" : pr.state;
-      onHistorySelectionChange?.({
-        type: "pr",
-        prNumber: pr.number,
-        prTitle: pr.title,
-        prUrl: pr.url,
-        prStatus: statusKey,
-        headBranch: pr.head_branch,
-      });
-    },
-    [onHistorySelectionChange]
-  );
+  const handlePrClick = useCallback((pr: OpenPRItem) => {
+    setSelectedPrNumber(pr.number);
+  }, []);
 
   const handleCreate = useCallback(async () => {
     if (!onCreatePr || prCreating) return;

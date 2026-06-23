@@ -80,12 +80,23 @@ function insertReferencePill(
   });
 }
 
+function getPlainTextReferenceDragData(
+  event: DragEvent,
+  type: "pr" | "issue"
+): string {
+  const text = event.dataTransfer?.getData("text/plain");
+  const prefix = `orgii-reference:${type}:`;
+  return text?.startsWith(prefix) ? text.slice(prefix.length) : "";
+}
+
 function getReferenceDragData(event: DragEvent, type: "pr" | "issue"): string {
   const mimeType =
     type === "pr"
       ? "application/x-orgii-pr-reference"
       : "application/x-orgii-issue-reference";
-  const data = event.dataTransfer?.getData(mimeType);
+  const data =
+    event.dataTransfer?.getData(mimeType) ||
+    getPlainTextReferenceDragData(event, type);
   if (data) return data;
 
   if (type === "pr") {
