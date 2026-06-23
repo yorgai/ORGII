@@ -23,6 +23,13 @@ describe("stripContextPillBase64", () => {
     );
   });
 
+  it("strips DOM component browser-inspect pill payloads", () => {
+    const input = "Button.json [dom-component:paste://inspect-1::QQ==]";
+    expect(stripContextPillBase64(input)).toBe(
+      "Button.json [dom-component:paste://inspect-1]"
+    );
+  });
+
   it("does not touch file/session/skill pills", () => {
     const input = "x [file:/repo/a.ts] y [session:sdeagent-1] z [skill:/foo]";
     expect(stripContextPillBase64(input)).toBe(input);

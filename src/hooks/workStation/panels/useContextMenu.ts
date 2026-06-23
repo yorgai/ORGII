@@ -337,6 +337,16 @@ export function useContextMenu(
           case KEYBOARD_CONFIG.enter:
             e.preventDefault();
             e.stopPropagation();
+            if (
+              hasExternalQuery &&
+              activeIndex >= customMentionStartIndex &&
+              activeIndex < menuStartIndex
+            ) {
+              onCustomMentionIndexSelect?.(
+                activeIndex - customMentionStartIndex
+              );
+              return true;
+            }
             if (searchResults.length > 0) {
               const selected = searchResults[secondLayerActiveIndex];
               // Use iconType for project/work items, otherwise secondLayer.
@@ -347,6 +357,8 @@ export function useContextMenu(
                 selectType = "project";
               } else if (selected.iconType === "workitem") {
                 selectType = "workitem";
+              } else if (selected.iconType === "browser") {
+                selectType = "browser";
               } else if (
                 secondLayer === "files" &&
                 selected.type === "folder"

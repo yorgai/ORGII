@@ -52,7 +52,7 @@ const log = createLogger("useSubmitMessage");
  * fenced block still has an anchor, but drop the blob.
  */
 const CONTEXT_PILL_TYPE_ALTERNATION =
-  "paste|terminal|browser|workitem|dom-element|pr";
+  "paste|terminal|browser|workitem|dom-element|dom-component|pr|issue";
 const CONTEXT_PILL_BASE64_REGEX = new RegExp(
   `\\[(${CONTEXT_PILL_TYPE_ALTERNATION}):([^\\]]+?)::[A-Za-z0-9+/=]+\\]`,
   "g"
