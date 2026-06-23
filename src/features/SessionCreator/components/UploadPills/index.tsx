@@ -165,7 +165,7 @@ const UploadPill: React.FC<UploadPillProps> = ({
 
   return (
     <div
-      className={`group relative flex items-center gap-2 rounded-[8px] bg-bg-2 px-3 py-2 ${className}`}
+      className={`group relative flex min-w-0 max-w-full items-center gap-2 overflow-hidden rounded-[8px] bg-bg-2 px-3 py-2 ${className}`}
     >
       {/* File Icon */}
       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[6px] bg-bg-3">
@@ -173,9 +173,9 @@ const UploadPill: React.FC<UploadPillProps> = ({
       </div>
 
       {/* File Info */}
-      <div className="flex flex-col gap-0.5 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden">
         <span
-          className="truncate text-[13px] font-medium text-text-1"
+          className="block max-w-full truncate text-[13px] font-medium text-text-1"
           style={{ maxWidth: STYLE_CONFIG.maxNameWidth }}
           title={file.name}
         >
@@ -260,10 +260,12 @@ const UploadPills: React.FC<UploadPillsProps> = ({
   // ============================================
 
   return (
-    <div className={`flex flex-col gap-3 ${className}`}>
+    <div
+      className={`flex min-w-0 max-w-full flex-col gap-3 overflow-hidden ${className}`}
+    >
       {/* Image Previews Row - Square thumbnails */}
       {displayImages.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 overflow-hidden">
           {displayImages.map((file) => (
             <ImagePill
               key={file.id}
@@ -286,7 +288,10 @@ const UploadPills: React.FC<UploadPillsProps> = ({
 
       {/* Non-Image Files Row - Text pills */}
       {displayNonImages.length > 0 && (
-        <div className="flex flex-wrap gap-2" style={{ gap: STYLE_CONFIG.gap }}>
+        <div
+          className="flex min-w-0 max-w-full flex-wrap gap-2 overflow-hidden"
+          style={{ gap: STYLE_CONFIG.gap }}
+        >
           {displayNonImages.map((file) => (
             <UploadPill
               key={file.id}
