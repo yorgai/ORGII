@@ -206,7 +206,6 @@
       "iAmOnline": "I am Online",
       "iAmInvisible": "I am Invisible",
       "iAmAway": "I am Away",
-      "backInShort": "back in {{value}}",
       "awayDurationHeading": "I'll be back in…",
       "duration15m": "15 minutes",
       "duration30m": "30 minutes",
