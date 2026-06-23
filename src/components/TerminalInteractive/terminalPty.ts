@@ -185,6 +185,26 @@ async function reconnectOrCreatePty({
   if (cachedBuffer) {
     terminal.write(cachedBuffer);
     deleteTerminalBuffer(sessionId);
+    return;
+  }
+
+  try {
+    const snapshot = await invokeTauri<{
+      output: string;
+      unacked_bytes?: number;
+    }>("get_pty_output_snapshot", { sessionId });
+
+    if (snapshot.output) {
+      terminal.write(snapshot.output);
+    }
+    if (snapshot.unacked_bytes && snapshot.unacked_bytes > 0) {
+      await invokeTauri("ack_pty_data", {
+        sessionId,
+        byteCount: snapshot.unacked_bytes,
+      });
+    }
+  } catch (error) {
+    log.error("[TerminalView] Failed to restore PTY output snapshot:", error);
   }
 }
 
