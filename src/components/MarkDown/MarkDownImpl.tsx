@@ -489,6 +489,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
           <a
             {...props}
             href={url}
+            title={undefined}
             onClick={(event) => handleLinkClick(event, url)}
           >
             {children}
