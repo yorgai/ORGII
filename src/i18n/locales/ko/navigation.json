@@ -176,7 +176,6 @@
       "iAmOnline": "온라인 상태",
       "iAmInvisible": "숨김 상태",
       "iAmAway": "자리비움 상태",
-      "backInShort": "{{value}} 후 돌아옴",
       "awayDurationHeading": "돌아오기까지…",
       "duration15m": "15 분",
       "duration30m": "30 분",

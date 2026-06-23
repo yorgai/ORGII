@@ -176,7 +176,6 @@
       "iAmOnline": "オンライン中",
       "iAmInvisible": "オフライン表示中",
       "iAmAway": "離席中です",
-      "backInShort": "{{value}} 後に戻る",
       "awayDurationHeading": "戻るまでの時間…",
       "duration15m": "15 分",
       "duration30m": "30 分",
