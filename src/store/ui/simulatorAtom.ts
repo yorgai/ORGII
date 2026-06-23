@@ -113,6 +113,10 @@ simulatorDataSourceAtom.debugLabel = "simulatorDataSourceAtom";
 export const simulatorSelectedAppAtom = atom<AppType | null>(null);
 simulatorSelectedAppAtom.debugLabel = "simulatorSelectedAppAtom";
 
+export const simulatorIdeTerminalRevealRequestAtom = atom<number>(0);
+simulatorIdeTerminalRevealRequestAtom.debugLabel =
+  "simulatorIdeTerminalRevealRequestAtom";
+
 /**
  * Effective dock active app — the app the dock is actually highlighting.
  * Combines user selection (simulatorSelectedAppAtom) with event-derived app type.
