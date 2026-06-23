@@ -20,7 +20,7 @@ interface PtyOutputPayload {
 const PTY_SESSION_ID = "osagent-pty-main";
 const MAX_WRITTEN_IDS = 500;
 const RETAINED_WRITTEN_IDS = 200;
-const MAX_OUTPUT_CHARS = 300_000;
+const MAX_OUTPUT_CHARS = 30_000;
 function safeStr(value: unknown): string | undefined {
   if (!value) return undefined;
   if (typeof value === "string") return value;
