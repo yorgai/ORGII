@@ -191,6 +191,8 @@ describe("Agent Org detail Settings UI", () => {
     const cancelledName = `E2E Cancelled Detail Org ${RUN_MARKER}`;
     const savedName = `E2E Saved Detail Org ${RUN_MARKER}`;
     const savedDescription = `Saved org detail description ${RUN_MARKER}`;
+    const addedMemberName = `E2E Detail Added ${RUN_MARKER}`;
+    const addedMemberRole = "Reviewer";
 
     try {
       await removeAgentOrgsByName(originalName);
@@ -242,6 +244,41 @@ describe("Agent Org detail Settings UI", () => {
         `${orgTabSelector} [data-testid="agent-orgs-org-detail"] [data-testid="agent-orgs-org-description-input"]`,
         savedDescription,
         "org detail saved description"
+      );
+      await pointerClick(
+        `${orgTabSelector} [data-testid="agent-orgs-member-add-member-button"]`,
+        "org detail add member button"
+      );
+      await waitForScript(
+        `return Array.from(document.querySelectorAll(arguments[0] + ' [data-testid^="agent-orgs-member-"][data-testid$="-name-input"]')).some((input) => input.value === '');`,
+        "new org detail member name input did not render",
+        30_000,
+        [orgTabSelector]
+      );
+      const addedMemberNameInputTestId = await browser.executeScript(
+        `
+          const inputs = Array.from(document.querySelectorAll(arguments[0] + ' [data-testid^="agent-orgs-member-"][data-testid$="-name-input"]'));
+          const nameInput = inputs.find((input) => input.value === '');
+          return nameInput?.getAttribute('data-testid') ?? null;
+        `,
+        [orgTabSelector]
+      );
+      if (!addedMemberNameInputTestId) {
+        throw new Error("new org detail member name input test id was not found");
+      }
+      const addedMemberRoleInputTestId = addedMemberNameInputTestId.replace(
+        "-name-input",
+        "-role-input"
+      );
+      await setTextInput(
+        `${orgTabSelector} [data-testid="${addedMemberNameInputTestId}"]`,
+        addedMemberName,
+        "org detail added member name"
+      );
+      await setTextInput(
+        `${orgTabSelector} [data-testid="${addedMemberRoleInputTestId}"]`,
+        addedMemberRole,
+        "org detail added member role"
       );
       let savedEditState = null;
       try {
@@ -296,11 +333,30 @@ describe("Agent Org detail Settings UI", () => {
       }
       const savedLead = (savedOrg.children ?? []).find((member) => member.name === leadName);
       const savedChild = savedLead?.children?.find((member) => member.name === childName);
-      if (!savedLead || !savedChild || savedOrg.hierarchyMode !== "strict") {
+      const savedAddedMember = (savedOrg.children ?? []).find(
+        (member) => member.name === addedMemberName
+      );
+      if (
+        !savedLead ||
+        !savedChild ||
+        !savedAddedMember ||
+        savedAddedMember.role !== addedMemberRole ||
+        savedOrg.hierarchyMode !== "strict"
+      ) {
         throw new Error(
           `Saved org detail clobbered topology: ${JSON.stringify(savedOrg)}`
         );
       }
+      unwrap(await invokeE2E("navigateTo", ORGS_ROUTE), "navigate to orgs after org detail save");
+      await waitForScript(
+        `
+          const row = document.querySelector('[data-testid="agent-orgs-org-row-' + arguments[0] + '"]');
+          return !!row && /\\b4\\b/.test(row.textContent || '');
+        `,
+        "org table member count did not refresh after detail save",
+        30_000,
+        [org.id]
+      );
     } finally {
       await removeAgentOrgsByName(originalName);
       await removeAgentOrgsByName(cancelledName);
