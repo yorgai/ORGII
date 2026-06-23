@@ -39,6 +39,7 @@ import React, { forwardRef } from "react";
 
 import {
   ClaudeCodeIcon,
+  CodeBuddyIcon,
   CodexIcon,
   CopilotIcon,
   CursorIcon,
@@ -83,6 +84,7 @@ const GeminiBrandIcon = brandIcon(GeminiIcon, "GeminiBrandIcon");
 const KiroBrandIcon = brandIcon(KiroIcon, "KiroBrandIcon");
 const KimiBrandIcon = brandIcon(KimiIcon, "KimiBrandIcon");
 const OpenCodeBrandIcon = brandIcon(OpenCodeIcon, "OpenCodeBrandIcon");
+const WorkBuddyBrandIcon = brandIcon(CodeBuddyIcon, "WorkBuddyBrandIcon");
 
 const ICON_MAP: Record<string, LucideIcon> = {
   omega: Omega,
@@ -107,6 +109,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   kiro: KiroBrandIcon,
   kimi: KimiBrandIcon,
   opencode: OpenCodeBrandIcon,
+  workbuddy: WorkBuddyBrandIcon,
 };
 
 const DEFAULT_ICON: LucideIcon = Bot;

@@ -958,6 +958,9 @@ orgtrack::history_commands::external_history_auto_import_recent_paths,
 orgtrack::history_commands::windsurf_history_chunks,
 orgtrack::history_commands::windsurf_history_list_sessions,
 orgtrack::history_commands::windsurf_recent_paths,
+orgtrack::history_commands::workbuddy_history_chunks,
+orgtrack::history_commands::workbuddy_history_list_sessions,
+orgtrack::history_commands::workbuddy_recent_paths,
 // Cursor IDE control — drive a running Cursor.app via CDP `Input.*`
 // so users can submit prompts (start + follow-up) without leaving ORGII.
 // See `crates/cursor-bridge-app/src/lib.rs` and
