@@ -23,6 +23,7 @@ export type PillIconType =
   | "project"
   | "workitem"
   | "dom-element"
+  | "dom-component"
   | "skill"
   | "member"
   | "paste"

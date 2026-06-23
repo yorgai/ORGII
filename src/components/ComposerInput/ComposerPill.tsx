@@ -18,6 +18,7 @@ import {
   Globe,
   ListChecks,
   MessageSquare,
+  MousePointer2,
   SquareMousePointer,
   Terminal,
   Toolbox,
@@ -127,7 +128,8 @@ const ComposerPill: React.FC<ComposerPillProps> = ({
     return !iconType || iconType === "folder" || iconType === "file";
   }, [iconType]);
 
-  const shouldShowPastePreview = iconType === "paste";
+  const shouldShowPastePreview =
+    iconType === "paste" || iconType === "dom-component";
   const shouldShowHoverPreview =
     shouldShowTreePreview || shouldShowPastePreview;
 
@@ -174,7 +176,7 @@ const ComposerPill: React.FC<ComposerPillProps> = ({
         return;
       }
 
-      if (iconType === "paste") {
+      if (iconType === "paste" || iconType === "dom-component") {
         event.preventDefault();
         event.stopPropagation();
         // Paste pills carry an inline JSON blob captured from the page.
@@ -283,6 +285,8 @@ const ComposerPill: React.FC<ComposerPillProps> = ({
         return <ListChecks {...ICON_PROPS} />;
       case "dom-element":
         return <SquareMousePointer {...ICON_PROPS} />;
+      case "dom-component":
+        return <MousePointer2 {...ICON_PROPS} />;
       case "skill":
         return <Toolbox {...ICON_PROPS} />;
       case "member":

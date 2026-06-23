@@ -75,7 +75,12 @@ export function useAddToAgentInsertion(
           .toString(36)
           .slice(2, 8)}`;
         storePillText(pillPath, capPillText(stableRequest.jsonText));
-        editor.insertFilePill(pillPath, false, "paste", stableRequest.fileName);
+        editor.insertFilePill(
+          pillPath,
+          false,
+          "dom-component",
+          stableRequest.fileName
+        );
       } else {
         editor.insertFilePill(stableRequest.filePath, false, "file");
       }
