@@ -13,7 +13,7 @@ import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
 import {
   SIMULATOR_EVENT_FILTER_VALUES,
   type SimulatorEventFilterValue,
-} from "@src/engines/SessionCore";
+} from "@src/engines/SessionCore/derived/simulatorEventFilters";
 import { useDropdownEngine } from "@src/hooks/dropdown/useDropdownEngine";
 import { simulatorEventFiltersAtom } from "@src/store/ui/simulatorAtom";
 
@@ -156,11 +156,11 @@ export const EventFilterDropdown: React.FC<EventFilterDropdownProps> = ({
                 onKeyDown={(event) =>
                   handleOptionKeyDown(event, handleSelectAll)
                 }
-                className={`${DROPDOWN_CLASSES.item} ${
+                className={`${DROPDOWN_CLASSES.menuControlItem} ${
                   isAllEvents
                     ? DROPDOWN_CLASSES.itemSelected
                     : DROPDOWN_CLASSES.itemHover
-                } w-full justify-start gap-2 !text-text-1 hover:!text-text-1`}
+                } !justify-start !text-text-1 hover:!text-text-1`}
               >
                 <Checkbox
                   checked={isAllEvents}
@@ -189,11 +189,11 @@ export const EventFilterDropdown: React.FC<EventFilterDropdownProps> = ({
                         handleToggleFilter(filter)
                       )
                     }
-                    className={`${DROPDOWN_CLASSES.item} ${
+                    className={`${DROPDOWN_CLASSES.menuControlItem} ${
                       selected
                         ? DROPDOWN_CLASSES.itemSelected
                         : DROPDOWN_CLASSES.itemHover
-                    } w-full justify-start gap-2 !text-text-1 hover:!text-text-1`}
+                    } !justify-start !text-text-1 hover:!text-text-1`}
                   >
                     <Checkbox
                       checked={selected}
