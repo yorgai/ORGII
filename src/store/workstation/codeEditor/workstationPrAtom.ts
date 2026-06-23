@@ -53,7 +53,7 @@ export const workstationPrCommitMessageAtom = atom<string>("");
 
 /**
  * All open pull requests for the active workstation repo.
- * Written by `useWorkstationPr` on mount and when the repo changes.
+ * Written by `useWorkstationPr` when the PR page requests the list.
  * Read by `PullRequestContent` to render the full PR list.
  */
 export const workstationAllOpenPrsAtom = atom<OpenPRItem[]>([]);

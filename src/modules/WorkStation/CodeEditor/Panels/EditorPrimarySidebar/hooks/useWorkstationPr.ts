@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { fetchRustApi, gitRepoUrl } from "@src/api/http/git/client";
 import { getGitRemotes } from "@src/api/http/git/remotes";
-import { findPullRequestLocal, listOpenPRsLocal } from "@src/api/tauri/github";
+import { listOpenPRsLocal } from "@src/api/tauri/github";
 import { Message } from "@src/components/Message";
 import { buildIntegrationsPath } from "@src/config/mainAppPaths/integrations";
 import { createLogger } from "@src/hooks/logger";
@@ -122,51 +122,6 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     autoTriggeredRef.current = false;
   }, [branchKey]);
 
-  useEffect(() => {
-    if (!repoPath || !branchName) return;
-
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const remotesData = await getGitRemotes({
-          repo_id: repoId,
-          repo_path: repoPath,
-        });
-        const originRemote = remotesData?.remotes?.find(
-          (remote) => remote.name === "origin"
-        );
-        if (!originRemote?.url) return;
-
-        const repoFullName = parseGithubRepoFullName(originRemote.url);
-        if (!repoFullName) return;
-
-        const existing = await findPullRequestLocal(repoFullName, branchName);
-        if (cancelled || !existing?.url) return;
-
-        const status = normalizePullRequestStatus(existing.state);
-        setRemotePrByBranch((current) => ({
-          ...current,
-          [branchName]: { url: existing.url, status },
-        }));
-        setStoredWorkstationPr(repoPath, branchName, {
-          url: existing.url,
-          status,
-        });
-      } catch (error) {
-        logger.debug(
-          `Failed to refresh PR for ${branchName}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [repoPath, repoId, branchName]);
-
   const handleLoadOpenPrs = useCallback(() => {
     if (!repoPath) return;
 
@@ -207,6 +162,22 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
         const prs = await listOpenPRsLocal(repoFullName);
         if (!isCurrentRequest()) return;
         setAllOpenPrs(prs);
+        if (branchName) {
+          const currentBranchPr = prs.find(
+            (pr) => pr.head_branch === branchName
+          );
+          if (currentBranchPr) {
+            const status = normalizePullRequestStatus(currentBranchPr.state);
+            setRemotePrByBranch((current) => ({
+              ...current,
+              [branchName]: { url: currentBranchPr.url, status },
+            }));
+            setStoredWorkstationPr(repoPath, branchName, {
+              url: currentBranchPr.url,
+              status,
+            });
+          }
+        }
         setCachedPrs(repoPath, prs);
         setOpenPrsLoadState("ready");
         setOpenPrsError(null);
@@ -216,7 +187,14 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
         setOpenPrsLoadState("error");
       }
     })();
-  }, [repoPath, repoId, setAllOpenPrs, setOpenPrsLoadState, setOpenPrsError]);
+  }, [
+    repoPath,
+    repoId,
+    branchName,
+    setAllOpenPrs,
+    setOpenPrsLoadState,
+    setOpenPrsError,
+  ]);
 
   const eligible = useMemo(
     () =>
