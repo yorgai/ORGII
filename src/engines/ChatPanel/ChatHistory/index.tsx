@@ -246,9 +246,11 @@ interface ChatHistoryProps {
   groupChatViewActive?: boolean;
   /** Toggle handler for the group chat view entry. */
   onGroupChatViewToggle?: (active: boolean) => void;
+  mutationActionsDisabled?: boolean;
   /**
    * Drive the "Planning next step…" footer from a specific session's
    * snapshot channel instead of the global active-session atoms. REQUIRED
+
    * for session-scoped instances (subagent monitor cells): without it the
    * footer reads the parent session's state and is structurally dead or
    * wrong. `isLive` should be false while the surface shows a replay
@@ -281,6 +283,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   groupChatViewAvailable = false,
   groupChatViewActive = false,
   onGroupChatViewToggle,
+  mutationActionsDisabled = false,
   planningIndicatorScope = null,
 }) => {
   const { t } = useTranslation();
@@ -827,7 +830,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       | undefined;
     void currentHandleEditUserMessage(header, originalText, images);
   }, []);
-
   const memoizedSubmit = useCallback(
     (eventId: string, answers: Record<string, string>) => {
       const reply = Object.values(answers).join("\n");
@@ -878,9 +880,12 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     collapseTailWhenIdle,
     hideUserMessage: hideGroupUserMessage,
     turnCollapseInteractionAtRef,
-    onEditSubmit: handleEditUserMessage,
-    onRestoreCheckpoint: handleHeaderRestoreCheckpoint,
+    onEditSubmit: mutationActionsDisabled ? undefined : handleEditUserMessage,
+    onRestoreCheckpoint: mutationActionsDisabled
+      ? undefined
+      : handleHeaderRestoreCheckpoint,
   });
+
   const showPinnedTurnHeader =
     turnPaginationEnabled && !turnPageListOpen && !agentOrgOverviewOpen;
   const showTurnContextRow =
@@ -926,8 +931,12 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       collapseTailWhenIdle={collapseTailWhenIdle}
       hideUserMessage={hideGroupUserMessage}
       turnCollapseInteractionAtRef={turnCollapseInteractionAtRef}
-      onEditSubmit={handlePinnedEditSubmit}
-      onRestoreCheckpoint={handleHeaderRestoreCheckpoint}
+      onEditSubmit={
+        mutationActionsDisabled ? undefined : handlePinnedEditSubmit
+      }
+      onRestoreCheckpoint={
+        mutationActionsDisabled ? undefined : handleHeaderRestoreCheckpoint
+      }
     />
   );
 
@@ -1073,10 +1082,18 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                       onAtBottomStateChange={handleAtBottomStateChange}
                       onRangeChanged={handleRangeChanged}
                       onEndReached={handleTurnPageEndReached}
-                      onRegenerate={handleRegenerateGroup}
+                      onRegenerate={
+                        mutationActionsDisabled
+                          ? undefined
+                          : handleRegenerateGroup
+                      }
                       onSubmit={memoizedSubmit}
                       onSkip={stableHandleIgnoreQuestion}
-                      onEditUserMessage={handleEditUserMessage}
+                      onEditUserMessage={
+                        mutationActionsDisabled
+                          ? undefined
+                          : handleEditUserMessage
+                      }
                       virtualScrollerRef={virtuosoScrollerRef}
                       staticScrollerRef={staticScrollerRef}
                       newEventDividerLabel={newEventDividerLabel}

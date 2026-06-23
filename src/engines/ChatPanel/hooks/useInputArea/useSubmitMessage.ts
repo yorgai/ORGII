@@ -90,6 +90,7 @@ export interface UseSubmitMessageOptions {
     imageDataUrls?: string[]
   ) => Promise<void>;
   onSubmitOverride?: (input: SubmitOverrideInput) => Promise<boolean>;
+  submitDisabled?: boolean;
 }
 
 // ============================================================================
@@ -106,6 +107,7 @@ export function useSubmitMessage({
   citeCode,
   handleSessChatSubmit,
   onSubmitOverride,
+  submitDisabled = false,
 }: UseSubmitMessageOptions): (options?: SubmitMessageOptions) => Promise<void> {
   const { t } = useTranslation("sessions");
   const store = useStore();
@@ -114,6 +116,8 @@ export function useSubmitMessage({
 
   return useCallback(
     async (options: SubmitMessageOptions = {}) => {
+      if (submitDisabled) return;
+
       if (wpReadOnly) {
         Message.warning(t("chat.noActiveSession"));
         return;
@@ -428,6 +432,7 @@ export function useSubmitMessage({
       replyTargetEventId,
       clearReplyTarget,
       onSubmitOverride,
+      submitDisabled,
     ]
   );
 }

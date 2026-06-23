@@ -36,6 +36,7 @@ import {
   type CoreSessionSummary,
   getOrgtrackSessionSummary,
 } from "@src/api/tauri/lineage";
+import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { useShowInteractArea } from "@src/contexts/workspace/ChatContext";
 import { AgentMessageClampProvider } from "@src/engines/ChatPanel/blocks";
 import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatStatusBanners";
@@ -76,6 +77,8 @@ import {
 } from "@src/store/ui/simulatorAtom";
 import { getFileName } from "@src/util/file/pathUtils";
 import {
+  isClaudeCodeHistorySession,
+  isCodexAppSession,
   isCursorIdeSession,
   isExternalHistorySession,
 } from "@src/util/session/sessionDispatch";
@@ -85,7 +88,11 @@ import ChatHistory, { type ScrollNavState } from "./ChatHistory";
 import { GroupChatProvider } from "./ChatHistory/GroupChatView/GroupChatContext";
 import { AgentEventsTap } from "./ChatHistory/GroupChatView/useGroupChatMergedEvents";
 import { ChatHistoryOverrideContext } from "./ChatHistoryOverrideContext";
-import { ChatSessionContext } from "./ChatSessionContext";
+import {
+  CHAT_SESSION_CONTEXT_NONE,
+  ChatSessionContext,
+} from "./ChatSessionContext";
+import InputArea from "./InputArea";
 import AgentOrgOverviewPanel from "./InputArea/components/AgentOrgOverviewPanel";
 import type { FileChangesResult } from "./InputArea/components/CompactFileChanges";
 import GitDiffActionsMenu from "./InputArea/components/GitDiffActionsMenu";
@@ -306,6 +313,14 @@ const ChatView: React.FC<ChatViewProps> = memo(
     // dispatch).
 
     const showInteractArea = useShowInteractArea();
+    const showExternalHistoryForkComposer =
+      isCodexAppSession(sessionId) || isClaudeCodeHistorySession(sessionId);
+    const historyBottomInset =
+      showInteractArea && !isReadOnlySurface
+        ? CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX
+        : showExternalHistoryForkComposer
+          ? CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX
+          : 0;
     const {
       showFollowAgent,
       followAgentLabel,
@@ -692,6 +707,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
                       currentAgentOrgMember?.memberId ?? null
                     }
                     agentOrgMembers={agentOrgRunView?.members ?? []}
+                    mutationActionsDisabled={isReadOnlySurface}
                     agentOrgOverviewPanel={
                       agentOrgRunView || agentOrgRunViewError ? (
                         <AgentOrgOverviewPanel
@@ -710,11 +726,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
                     displayMode={displayMode}
                     turnPaginationEnabled={turnPaginationEnabled}
                     pinnedHeaderPortalHost={pinnedHeaderHost}
-                    bottomInset={
-                      showInteractArea && !isReadOnlySurface
-                        ? CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX
-                        : 0
-                    }
+                    bottomInset={historyBottomInset}
                     groupChatViewAvailable={groupChatViewAvailable}
                     groupChatViewActive={groupChatViewActive}
                     onGroupChatViewToggle={handleGroupChatViewToggle}
@@ -723,6 +735,25 @@ const ChatView: React.FC<ChatViewProps> = memo(
               </GroupChatProvider>
             </ChatHistoryOverrideContext.Provider>
           </div>
+          {showExternalHistoryForkComposer && (
+            <div className="absolute bottom-0 left-0 right-0 z-50 flex w-full flex-shrink-0 flex-col items-center px-2 pb-2 pt-1">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 top-[-28px] bg-gradient-to-t from-chat-pane via-chat-pane/90 to-transparent" />
+              <div
+                className={`${DETAIL_PANEL_TOKENS.contentMaxWidth} relative z-10 w-full`}
+              >
+                <ChatSessionContext.Provider value={CHAT_SESSION_CONTEXT_NONE}>
+                  <InputArea
+                    omitChatHeader
+                    chatPanelPosition={position}
+                    sessionScope="none"
+                    onSubmitOverride={() => Promise.resolve(true)}
+                    submitDisabled
+                    bottomAnchored
+                  />
+                </ChatSessionContext.Provider>
+              </div>
+            </div>
+          )}
           {showInteractArea && !isReadOnlySurface && (
             <ChatFloatingComposer
               composerRef={floatingComposerRef}

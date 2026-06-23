@@ -316,10 +316,10 @@ interface ChatHistoryListProps {
   onAtBottomStateChange: (atBottom: boolean) => void;
   onRangeChanged: (range: { startIndex: number; endIndex: number }) => void;
   onEndReached: () => void;
-  onRegenerate: (groupIndex: number) => void;
+  onRegenerate?: (groupIndex: number) => void;
   onSubmit: (eventId: string, answers: Record<string, string>) => void;
   onSkip: (eventId: string) => void;
-  onEditUserMessage: (
+  onEditUserMessage?: (
     header: OptimizedChatItem,
     text: string,
     images?: string[]
