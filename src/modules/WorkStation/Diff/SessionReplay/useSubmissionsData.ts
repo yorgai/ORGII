@@ -3,9 +3,9 @@
  *
  * Single entry point for every Submissions-tab data source on the Diff app:
  *
- * 1. Orgtrack session final diffs (`getOrgtrackSessionFinalDiffs`)
- * 2. Orgtrack session→commit links (`getOrgtrackSessionCommitLinks`)
- * 3. Git history commit resolution (`getGitCommits` + `getGitCommitDiff`
+ * 1. Backend diff replay preview (`getOrgtrackDiffReplayPreview`) for
+ *    orgtrack final diffs and orgtrack-created submission commits.
+ * 2. Git history commit resolution (`getGitCommits` + `getGitCommitDiff`
  *    fallback) — upgrades short SHAs to full SHAs and attaches real
  *    author/summary to commits surfaced by orgtrack or by chat/shell
  *    extraction.
@@ -25,10 +25,8 @@ import { getGitCommitDiff, getGitCommits } from "@src/api/http/git";
 import type { CommitDiffResult, GitCommitInfo } from "@src/api/http/git/types";
 import { getPRLocal } from "@src/api/tauri/github";
 import {
-  type OrgtrackCommitLink,
   type OrgtrackSessionFinalDiff,
-  getOrgtrackSessionCommitLinks,
-  getOrgtrackSessionFinalDiffs,
+  getOrgtrackDiffReplayPreview,
 } from "@src/api/tauri/lineage";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { createLogger } from "@src/hooks/logger";
@@ -77,22 +75,6 @@ export interface UseSubmissionsDataResult {
 
 function getRepoContextKey(context: SubmissionRepoContext): string | null {
   return context.repoPath ?? context.repoId ?? null;
-}
-
-function commitLinkToSubmissionCommit(
-  link: OrgtrackCommitLink,
-  fallbackRepoContext: SubmissionRepoContext
-): SubmissionCommit {
-  const shortSha = link.commitSha.slice(0, 7);
-  return {
-    sha: link.commitSha,
-    short_sha: shortSha,
-    summary: shortSha,
-    author: null,
-    repoId: fallbackRepoContext.repoId,
-    repoPath: fallbackRepoContext.repoPath,
-    origin: "created",
-  };
 }
 
 function commitMatchesSubmission(
@@ -165,31 +147,44 @@ export function useSubmissionsData({
   repos,
   diffRefreshNonce,
 }: UseSubmissionsDataParams): UseSubmissionsDataResult {
-  // ───────────────────────── orgtrack final diffs ─────────────────────────
+  // ─────────────────────── backend replay preview ───────────────────────
   const [orgtrackFinalDiffs, setOrgtrackFinalDiffs] = useState<
     OrgtrackSessionFinalDiff[]
   >([]);
   const [orgtrackFinalDiffsLoading, setOrgtrackFinalDiffsLoading] =
     useState(false);
+  const [orgtrackSubmissionCommits, setOrgtrackSubmissionCommits] = useState<
+    SubmissionCommit[]
+  >([]);
 
   useEffect(() => {
     if (!sessionId) {
       setOrgtrackFinalDiffs([]);
+      setOrgtrackSubmissionCommits([]);
       return;
     }
 
     let cancelled = false;
     setOrgtrackFinalDiffsLoading(true);
-    void getOrgtrackSessionFinalDiffs({ sessionId })
-      .then((finalDiffs) => {
-        if (!cancelled) setOrgtrackFinalDiffs(finalDiffs);
+    void getOrgtrackDiffReplayPreview({
+      sessionId,
+      repoId: fallbackRepoContext.repoId,
+      repoPath: fallbackRepoContext.repoPath,
+    })
+      .then((preview) => {
+        if (!cancelled) {
+          setOrgtrackFinalDiffs(preview.finalDiffs);
+          setOrgtrackSubmissionCommits(preview.submissionCommits);
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          logger.warn("failed to load orgtrack final diffs", {
+          logger.warn("failed to load orgtrack diff replay preview", {
             err,
             sessionId,
           });
+          setOrgtrackFinalDiffs([]);
+          setOrgtrackSubmissionCommits([]);
         }
       })
       .finally(() => {
@@ -199,40 +194,12 @@ export function useSubmissionsData({
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
-
-  // ───────────────────────── orgtrack commit links ─────────────────────────
-  const [orgtrackCommitLinks, setOrgtrackCommitLinks] = useState<
-    OrgtrackCommitLink[]
-  >([]);
-
-  useEffect(() => {
-    if (!sessionId) {
-      setOrgtrackCommitLinks([]);
-      return;
-    }
-
-    let cancelled = false;
-    void getOrgtrackSessionCommitLinks({ sessionId })
-      .then((commitLinks) => {
-        if (!cancelled) setOrgtrackCommitLinks(commitLinks);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          logger.warn("failed to load orgtrack commit links", {
-            error,
-            sessionId,
-          });
-          setOrgtrackCommitLinks([]);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // `diffRefreshNonce` re-runs this load on each chat→Diff navigation so the
-    // canonical final diffs reflect the latest working tree (not a stale cache).
-  }, [sessionId, diffRefreshNonce]);
+  }, [
+    sessionId,
+    diffRefreshNonce,
+    fallbackRepoContext.repoId,
+    fallbackRepoContext.repoPath,
+  ]);
 
   // ─────────────── derived: union of every commit submission ───────────────
   const submissionsData = useMemo(
@@ -243,13 +210,6 @@ export function useSubmissionsData({
     [fallbackRepoContext, simulatorEvents]
   );
 
-  const orgtrackSubmissionCommits = useMemo(
-    () =>
-      orgtrackCommitLinks.map((link) =>
-        commitLinkToSubmissionCommit(link, fallbackRepoContext)
-      ),
-    [fallbackRepoContext, orgtrackCommitLinks]
-  );
   const createdShellSubmissionCommits = useMemo<SubmissionCommit[]>(
     () => submissionsData.commits.filter((c) => c.origin === "created"),
     [submissionsData.commits]

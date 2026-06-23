@@ -310,6 +310,7 @@ orgtrack::orgtrack_get_extraction_memory_gate,
 orgtrack::orgtrack_get_session_edit_artifacts,
 orgtrack::orgtrack_get_session_diff_chunks,
 orgtrack::orgtrack_get_session_final_diffs,
+orgtrack::orgtrack_get_diff_replay_preview,
 orgtrack::orgtrack_get_session_commit_links,
 // Debug-only: WDIO Submissions-tab commit-link seeding (Err outside debug builds)
 orgtrack::debug_seed_commit_link,
