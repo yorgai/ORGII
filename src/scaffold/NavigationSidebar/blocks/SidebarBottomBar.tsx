@@ -232,11 +232,8 @@ export const PresenceMenuButton: React.FC<PresenceMenuButtonProps> = ({
 
   const backLabel = useMemo(() => {
     if (mode !== USER_PRESENCE_MODE.AWAY || !presence.backAtMs) return null;
-    const formatted = formatBackAt(presence.backAtMs);
-    return formatted
-      ? t("sidebar.presence.backInShort", { value: formatted })
-      : null;
-  }, [mode, presence.backAtMs, t]);
+    return formatBackAt(presence.backAtMs) || null;
+  }, [mode, presence.backAtMs]);
   const pillLabel = backLabel ? `${modeLabel} · ${backLabel}` : modeLabel;
 
   // Single-segment PillGroup so the trigger matches the visual size and

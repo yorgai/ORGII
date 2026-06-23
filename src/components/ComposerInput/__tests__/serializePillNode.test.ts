@@ -72,6 +72,23 @@ describe("serializePillNode", () => {
     expect(serialized).toBe("some-file.ts [file:/repo/some file.ts]");
   });
 
+  it("serializes browser-inspect DOM component pills with stored paste content", () => {
+    window.__orgiiTerminalPillTexts = {
+      "paste://inspect-1": '{"cssSelector":"button.primary"}',
+    };
+
+    const serialized = serializePillNode({
+      filePath: "paste://inspect-1",
+      fileName: "Button.json",
+      iconType: "dom-component",
+    });
+
+    expect(serialized).toMatch(
+      /^Button\.json \[dom-component:paste:\/\/inspect-1::/
+    );
+    expect(serialized).not.toContain("[paste:");
+  });
+
   it("leaves member pills (plain @mention, no bracket grammar) untouched", () => {
     const serialized = serializePillNode({
       filePath: "member-1",

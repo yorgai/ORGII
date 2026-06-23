@@ -23,7 +23,13 @@ export interface SearchResultItem {
   /** Human-readable root/source label for multi-root results. */
   repoName?: string;
   /** Optional icon type for special items (terminal, session, repo, project, work item) */
-  iconType?: "terminal" | "session" | "repo" | "project" | "workitem";
+  iconType?:
+    | "terminal"
+    | "session"
+    | "repo"
+    | "project"
+    | "workitem"
+    | "browser";
   /** Explicit Rust/agent icon id for session rows. */
   agentIconId?: string;
   /** CLI agent type for session rows. */

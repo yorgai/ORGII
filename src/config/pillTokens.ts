@@ -26,6 +26,7 @@ export const PILL_TYPE_LIST = [
   "project",
   "workitem",
   "dom-element",
+  "dom-component",
   "skill",
   "paste",
   "pr",
@@ -56,6 +57,7 @@ export const CONTEXT_PILL_PREFIXES: Record<string, string> = {
   browser: "browser://",
   workitem: "workitem://",
   "dom-element": "dom-element://",
+  "dom-component": "paste://",
   paste: "paste://",
   pr: "pr://",
   issue: "issue://",
@@ -72,7 +74,7 @@ export const CONTEXT_PILL_TYPES: ReadonlySet<string> = new Set(
 
 /** Matches serialized context pill references like [terminal:terminal://...] */
 export const CONTEXT_PILL_REF_REGEX =
-  /\[(terminal|browser|dom-element|pr|issue):(terminal|browser|dom-element|pr|issue):\/\/[^\]]+\]/;
+  /\[(terminal|browser|dom-element|dom-component|pr|issue):(terminal|browser|dom-element|paste|pr|issue):\/\/[^\]]+\]/;
 
 /** Matches context headers and trace markers injected by the agent pipeline */
 export const CONTEXT_TRACE_MARKER_REGEX =
