@@ -1122,7 +1122,8 @@
     "selectRepoFromHome": "请从首页选择一个仓库",
     "cloneRepoAgain": "请从首页重新克隆仓库",
     "unsavedChangesTitle": "未保存的更改",
-    "prkPlaceholder": "PRJ"
+    "prkPlaceholder": "PRJ",
+    "gitSyncMenuTitle": "Git 同步操作"
   },
   "git": {
     "loading": "正在加载 Git 状态...",

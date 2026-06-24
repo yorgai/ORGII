@@ -1108,7 +1108,8 @@
     "selectRepoFromHome": "Please select a repo from the home page",
     "cloneRepoAgain": "Please clone the repo again from the home page",
     "unsavedChangesTitle": "Unsaved Changes",
-    "prkPlaceholder": "PRJ"
+    "prkPlaceholder": "PRJ",
+    "gitSyncMenuTitle": "Acciones de sincronización Git"
   },
   "git": {
     "loading": "Cargando estado de Git...",

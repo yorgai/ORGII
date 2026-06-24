@@ -1108,7 +1108,8 @@
     "selectRepoFromHome": "Selecione um Repo na página inicial",
     "cloneRepoAgain": "Clone o Repo novamente na página inicial",
     "unsavedChangesTitle": "Alterações não salvas",
-    "prkPlaceholder": "PRJ"
+    "prkPlaceholder": "PRJ",
+    "gitSyncMenuTitle": "Ações de sincronização Git"
   },
   "git": {
     "loading": "Carregando status do Git...",
