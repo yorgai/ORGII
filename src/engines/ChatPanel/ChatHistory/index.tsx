@@ -422,6 +422,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     );
   }, []);
 
+  const defaultTurnCollapsed = forceCollapseAllTurns;
+
   // --- Grouping for virtualized chat rows ---
   //
   // `useChatGroups` applies the shared "Agent worked for …" collapse
@@ -443,6 +445,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     isAgentWorking,
     collapseTailWhenIdle,
     forceCollapseAllTurns,
+    defaultTurnCollapsed,
     allTurnsCollapsed:
       collapseAllCommand.epoch > 0 && collapseAllCommand.collapsed
         ? true
@@ -546,10 +549,20 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   });
   const planningIndicatorEnabled =
     !turnPaginationEnabled || currentPageIndex >= pageCount - 1;
+  const collapseStateKey = useMemo(() => {
+    const overrideKey = Array.from(turnCollapseOverrides.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([turnId, collapsed]) => `${turnId}:${collapsed ? 1 : 0}`)
+      .join("|");
+    return `${collapseAllCommand.epoch}:${collapseAllCommand.collapsed ? 1 : 0}:${overrideKey}`;
+  }, [collapseAllCommand, turnCollapseOverrides]);
   const virtualListGroupShapeKey = displayGroupCounts.join(",");
+  const virtualListItemShapeKey = displayFlatItems
+    .map((item) => item.chunk_id)
+    .join(",");
   const virtualListDataKey = `${activeId ?? "no-session"}:${
     turnPaginationEnabled ? `page-${currentPageIndex}` : "all"
-  }:${virtualListGroupShapeKey}`;
+  }:${virtualListGroupShapeKey}:${virtualListItemShapeKey}:${collapseStateKey}`;
 
   // --- Empty-state grace period ---
   const optimizedLen = chatHistory.length;
@@ -583,6 +596,25 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   }, [onRegisterSearchOpen, handleOpenSearch]);
 
   const visibleRangeEndRef = useRef(0);
+  const [activePinnedGroupIndex, setActivePinnedGroupIndex] = useState(0);
+  const [activeGroupPinned, setActiveGroupPinned] = useState(false);
+  const handleActiveGroupIndexChange = useCallback(
+    (groupIndex: number, pinned: boolean) => {
+      setActivePinnedGroupIndex((previousIndex) =>
+        previousIndex === groupIndex ? previousIndex : groupIndex
+      );
+      setActiveGroupPinned((previousPinned) =>
+        previousPinned === pinned ? previousPinned : pinned
+      );
+    },
+    []
+  );
+  useEffect(() => {
+    setActivePinnedGroupIndex((previousIndex) =>
+      Math.min(previousIndex, Math.max(0, displayGroupCounts.length - 1))
+    );
+    setActiveGroupPinned(false);
+  }, [activeId, currentPageIndex, displayGroupCounts.length]);
 
   // Shared scroll intent refs — owned here, passed into scroll hooks so
   // they coordinate without re-renders.
@@ -696,6 +728,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     isContentOverflowingRef,
     activeSessionId: activeId,
     staticScrollerRef,
+    footerSpacerHeight,
+    bottomInset,
     alwaysFollowTail: disableTailCollapse,
   });
   // Subagent panes pass `disableTailCollapse` because every paginated page
@@ -879,6 +913,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     turnPaginationEnabled,
     collapseTailWhenIdle,
     hideUserMessage: hideGroupUserMessage,
+    defaultTurnCollapsed,
     turnCollapseInteractionAtRef,
     onEditSubmit: mutationActionsDisabled ? undefined : handleEditUserMessage,
     onRestoreCheckpoint: mutationActionsDisabled
@@ -887,7 +922,10 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   });
 
   const showPinnedTurnHeader =
-    turnPaginationEnabled && !turnPageListOpen && !agentOrgOverviewOpen;
+    displayTotalFlatItems > 0 &&
+    !turnPageListOpen &&
+    !agentOrgOverviewOpen &&
+    (turnPaginationEnabled || activeGroupPinned);
   const showTurnContextRow =
     turnPaginationEnabled ||
     Boolean(agentOrgCurrentMemberName) ||
@@ -922,14 +960,15 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       onGroupChatViewToggle={onGroupChatViewToggle}
       showPinnedTurnHeader={showPinnedTurnHeader}
       sessionId={activeId}
-      sourceGroupIndex={displaySourceGroupIndices[0]}
+      sourceGroupIndex={displaySourceGroupIndices[activePinnedGroupIndex]}
       sourceGroupCount={groupCounts.length}
-      header={displayGroupHeaders[0]}
-      meta={displayGroupMeta[0]}
+      header={displayGroupHeaders[activePinnedGroupIndex]}
+      meta={displayGroupMeta[activePinnedGroupIndex]}
       hasPinnedContent={hasPinnedContent}
       collapseLabelVariant={groupChat?.enabled ? "agents" : "agent"}
       collapseTailWhenIdle={collapseTailWhenIdle}
       hideUserMessage={hideGroupUserMessage}
+      defaultTurnCollapsed={defaultTurnCollapsed}
       turnCollapseInteractionAtRef={turnCollapseInteractionAtRef}
       onEditSubmit={
         mutationActionsDisabled ? undefined : handlePinnedEditSubmit
@@ -1081,6 +1120,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                       }
                       onAtBottomStateChange={handleAtBottomStateChange}
                       onRangeChanged={handleRangeChanged}
+                      onActiveGroupIndexChange={handleActiveGroupIndexChange}
                       onEndReached={handleTurnPageEndReached}
                       onRegenerate={
                         mutationActionsDisabled

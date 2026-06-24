@@ -13,7 +13,7 @@ export const CHAT_FOOTER_SPACER = {
   /** Ignore sub-pixel / tiny remeasure noise, but keep spacer state and rendering in sync. */
   UPDATE_THRESHOLD_PX: 8,
   /** Gap before every non-first turn header so adjacent rounds do not visually merge. */
-  ROUND_GAP_PX: 96,
+  ROUND_GAP_PX: 24,
 } as const;
 
 export function computeChatFooterSpacerHeight(params: {

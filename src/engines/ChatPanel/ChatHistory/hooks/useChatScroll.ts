@@ -61,6 +61,8 @@ export interface UseChatScrollOptions {
   activeSessionId: string | null | undefined;
   /** Static renderer scroll root used when Virtuoso is not mounted. */
   staticScrollerRef?: MutableRefObject<HTMLDivElement | null>;
+  footerSpacerHeight: number;
+  bottomInset: number;
   /** When true, bypass the `isContentOverflowingRef` guard so auto-scroll
    *  engages even in small viewports (subagent monitor cells). */
   alwaysFollowTail?: boolean;
@@ -98,6 +100,8 @@ export function useChatScroll({
   isContentOverflowingRef,
   activeSessionId,
   staticScrollerRef,
+  footerSpacerHeight,
+  bottomInset,
   alwaysFollowTail = false,
 }: UseChatScrollOptions): UseChatScrollReturn {
   const atBottomRef = useRef(true);
@@ -141,13 +145,17 @@ export function useChatScroll({
     (behavior: ScrollBehavior = "auto") => {
       const el = staticScrollerRef?.current ?? virtuosoScrollerRef.current;
       if (!el) return false;
+      const contentBottom = Math.max(0, el.scrollHeight - footerSpacerHeight);
       el.scrollTo({
-        top: Math.max(0, el.scrollHeight - el.clientHeight),
+        top: Math.max(
+          0,
+          contentBottom - el.clientHeight + Math.max(0, bottomInset)
+        ),
         behavior,
       });
       return true;
     },
-    [staticScrollerRef, virtuosoScrollerRef]
+    [bottomInset, footerSpacerHeight, staticScrollerRef, virtuosoScrollerRef]
   );
 
   const scrollToBottom = useCallback(() => {
