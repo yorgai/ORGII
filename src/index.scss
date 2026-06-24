@@ -416,6 +416,11 @@ select,
   user-select: text !important;
   -webkit-touch-callout: default;
 }
+
+[data-browser-url-bar-input]::selection {
+  background: color-mix(in srgb, var(--color-primary-6) 82%, black) !important;
+  color: white !important;
+}
 html {
   overscroll-behavior-x: none;
   background: var(--color-bg-2);

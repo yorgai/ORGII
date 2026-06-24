@@ -45,7 +45,6 @@ const WorkstationTabHeader: React.FC = memo(() => {
     <div
       className="flex h-10 shrink-0 items-center gap-2 border-b border-border-2 pl-1.5 pr-2"
       data-tauri-drag-region
-      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       <NoDragRegion className="flex shrink-0 items-center gap-px">
         <WorkStationSidebarToggleButton
