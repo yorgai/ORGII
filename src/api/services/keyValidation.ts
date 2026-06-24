@@ -157,9 +157,10 @@ export async function getCodexOAuthModels(
 }
 
 export async function getGeminiOAuthModels(
-  accessToken: string
+  accessToken: string,
+  projectId?: string | null
 ): Promise<string[]> {
-  return rpc.validation.geminiOauthListModels({ accessToken });
+  return rpc.validation.geminiOauthListModels({ accessToken, projectId });
 }
 
 /**
