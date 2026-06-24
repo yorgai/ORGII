@@ -1354,7 +1354,13 @@
         "deleteBranch": "ブランチを削除",
         "refresh": "ブランチを更新",
         "checkoutDetachedSuccess": "detached HEAD 状態になりました（現在のコミット）",
-        "checkoutDetachedFailed": "detached HEAD へのチェックアウトに失敗しました"
+        "checkoutDetachedFailed": "detached HEAD へのチェックアウトに失敗しました",
+        "removeWorktree": "Worktree を削除"
+      },
+      "messages": {
+        "deletedCount_one": "{{count}} 件のブランチを削除しました",
+        "deletedCount_other": "{{count}} 件のブランチを削除しました",
+        "failedDeleteList": "削除できませんでした: {{branches}}"
       },
       "labels": {
         "otherBranches": "その他のブランチ",
@@ -1362,7 +1368,9 @@
         "recent": "最近",
         "currentCommit": "現在のコミット",
         "basedOn": "ベース",
-        "worktrees": "Worktrees"
+        "worktrees": "Worktrees",
+        "worktreeInUse": "使用中",
+        "checkedOutInWorktree": "Worktree でチェックアウト済み: {{path}}"
       },
       "placeholders": {
         "checkout": "ブランチ",

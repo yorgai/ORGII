@@ -1354,7 +1354,13 @@
         "deleteBranch": "Xóa nhánh",
         "refresh": "Làm mới nhánh",
         "checkoutDetachedSuccess": "Đang ở trạng thái detached HEAD tại commit hiện tại",
-        "checkoutDetachedFailed": "Checkout detached HEAD thất bại"
+        "checkoutDetachedFailed": "Checkout detached HEAD thất bại",
+        "removeWorktree": "Xóa Worktree"
+      },
+      "messages": {
+        "deletedCount_one": "Đã xóa {{count}} nhánh",
+        "deletedCount_other": "Đã xóa {{count}} nhánh",
+        "failedDeleteList": "Không thể xóa: {{branches}}"
       },
       "labels": {
         "otherBranches": "Nhánh khác",
@@ -1362,7 +1368,9 @@
         "recent": "Gần đây",
         "currentCommit": "Commit hiện tại",
         "basedOn": "Dựa trên",
-        "worktrees": "Worktrees"
+        "worktrees": "Worktrees",
+        "worktreeInUse": "Đang dùng",
+        "checkedOutInWorktree": "Đã checkout trong Worktree: {{path}}"
       },
       "placeholders": {
         "checkout": "nhánh",

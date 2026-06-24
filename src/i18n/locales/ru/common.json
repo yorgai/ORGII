@@ -1353,7 +1353,13 @@
         "deleteBranch": "Удалить ветку",
         "refresh": "Обновить ветку",
         "checkoutDetachedSuccess": "В состоянии detached HEAD на текущем коммите",
-        "checkoutDetachedFailed": "Ошибка checkout detached HEAD"
+        "checkoutDetachedFailed": "Ошибка checkout detached HEAD",
+        "removeWorktree": "Удалить Worktree"
+      },
+      "messages": {
+        "deletedCount_one": "Удалена {{count}} ветка",
+        "deletedCount_other": "Удалено веток: {{count}}",
+        "failedDeleteList": "Не удалось удалить: {{branches}}"
       },
       "labels": {
         "otherBranches": "Другие ветки",
@@ -1361,7 +1367,9 @@
         "recent": "Недавние",
         "currentCommit": "Текущий коммит",
         "basedOn": "На основе",
-        "worktrees": "Worktrees"
+        "worktrees": "Worktrees",
+        "worktreeInUse": "Используется",
+        "checkedOutInWorktree": "Checkout в Worktree: {{path}}"
       },
       "placeholders": {
         "checkout": "ветка",

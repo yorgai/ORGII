@@ -1353,7 +1353,13 @@
         "deleteBranch": "Supprimer la branche",
         "refresh": "Actualiser la branche",
         "checkoutDetachedSuccess": "État detached HEAD au commit actuel",
-        "checkoutDetachedFailed": "Échec du checkout detached HEAD"
+        "checkoutDetachedFailed": "Échec du checkout detached HEAD",
+        "removeWorktree": "Supprimer le Worktree"
+      },
+      "messages": {
+        "deletedCount_one": "{{count}} branche supprimée",
+        "deletedCount_other": "{{count}} branches supprimées",
+        "failedDeleteList": "Échec de la suppression : {{branches}}"
       },
       "labels": {
         "otherBranches": "Autres branches",
@@ -1361,7 +1367,9 @@
         "recent": "Récentes",
         "currentCommit": "Commit actuel",
         "basedOn": "Basé sur",
-        "worktrees": "Worktrees"
+        "worktrees": "Worktrees",
+        "worktreeInUse": "En cours d’utilisation",
+        "checkedOutInWorktree": "Checkout dans le Worktree : {{path}}"
       },
       "placeholders": {
         "checkout": "branche",
