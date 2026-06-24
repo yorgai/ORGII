@@ -193,7 +193,9 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                 : "border-b border-solid border-border-1"
             }
             onClick={hasContent ? handleLocate : undefined}
-            onNavigate={eventId ? handleLocate : undefined}
+            onNavigate={
+              eventId && !shouldShowCopyButton ? handleLocate : undefined
+            }
             onMouseEnter={handleHeaderMouseEnter}
             onMouseLeave={handleHeaderMouseLeave}
             withHover={!useTerminalLayout && hasContent}

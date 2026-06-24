@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ORG2</title>
     <!-- Preflight: same radii as src/config/windowChromeRadius.ts (splash before bundle loads) -->
-    <script>
+    <script nonce="orgii-codemirror-style">
       (function () {
         var styleNonce = "orgii-codemirror-style";
         var originalCreateElement = document.createElement.bind(document);
@@ -18,7 +18,7 @@
         };
       })();
     </script>
-    <script>
+    <script nonce="orgii-codemirror-style">
       // Hide splash immediately for secondary windows (/windows/*).
       // These are lightweight Tauri panels — no loading screen needed.
       if (window.location.pathname.indexOf("/windows/") === 0) {
@@ -33,7 +33,7 @@
         document.documentElement.dataset.preflightTheme = isDarkTheme ? "dark" : "light";
       }
     </script>
-    <script>
+    <script nonce="orgii-codemirror-style">
       (function () {
         var ua = (navigator.userAgent || "").toLowerCase();
         var html = document.documentElement;
@@ -53,7 +53,7 @@
         }
       })();
     </script>
-    <script>
+    <script nonce="orgii-codemirror-style">
       // ---------------------------------------------------------------------
       // Splash hard-timeout watchdog (runs before the JS bundle).
       //

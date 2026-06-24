@@ -90,7 +90,12 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     return customMentionOptions.filter((option) => {
       const label = option.label.toLowerCase();
       const description = option.description?.toLowerCase() ?? "";
-      return label.includes(query) || description.includes(query);
+      const groupLabel = option.groupLabel?.toLowerCase() ?? "";
+      return (
+        label.includes(query) ||
+        description.includes(query) ||
+        groupLabel.includes(query)
+      );
     });
   }, [customMentionOptions, externalSearchQuery]);
   const customMentionGroups = useMemo(
