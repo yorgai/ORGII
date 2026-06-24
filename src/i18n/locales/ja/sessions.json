@@ -713,10 +713,38 @@
       },
       "tabs": {
         "work": "作業",
-        "explore": "探索"
+        "explore": "探索",
+        "heatmap": "Heat map"
+      },
+      "heatmap": {
+        "loading": "アクティビティ Heat map を読み込み中…",
+        "empty": "まだセッションアクティビティはありません。",
+        "sessions": "セッション",
+        "tokens": "Tokens",
+        "cost": "コスト"
       },
       "exploreRepos": {
         "title": "Repo を探索"
+      },
+      "hints": {
+        "skill": {
+          "before": "Use",
+          "after": "to link a skill or tool"
+        },
+        "ask": {
+          "before": "Use",
+          "after": "to ask questions about the codebase"
+        },
+        "plan": {
+          "before": "Use",
+          "after": "to plan before building"
+        },
+        "switch": {
+          "before": "Use",
+          "after": "to switch sections"
+        },
+        "previous": "Previous hint",
+        "next": "Next hint"
       }
     },
     "defaultTitle": "チャット",

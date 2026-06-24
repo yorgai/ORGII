@@ -9,12 +9,22 @@ use agent_core::coordination::agent_org_runs::{AgentOrgRunRecord, AgentOrgRunSto
 use agent_core::definitions::orgs::OrgDefinition;
 use agent_core::session::persistence::{self as session_persistence, session_type};
 use core_types::key_source::KeySource;
+use database::db::get_connection;
+use orgtrack_core::sources::claude_code::history as claude_code_history;
+use orgtrack_core::sources::codex::app as codex_app_history;
+use orgtrack_core::sources::imported_history::metadata::{
+    SOURCE_CLAUDE_CODE, SOURCE_CODEX_APP, SOURCE_OPENCODE, SOURCE_WINDSURF, SOURCE_WORKBUDDY,
+};
+use orgtrack_core::sources::imported_history::ImportedHistorySessionPage;
+use orgtrack_core::sources::opencode::history as opencode_history;
+use orgtrack_core::sources::windsurf::history as windsurf_history;
+use orgtrack_core::sources::workbuddy as workbuddy_history;
 
 const AGENT_ORG_ICON_ID: &str = "network";
 
 use super::conversion::{
-    cli_session_to_aggregate_record, os_session_to_aggregate_record,
-    sde_session_to_aggregate_record, AgentMetadataResolver,
+    cli_session_to_aggregate_record, imported_history_to_aggregate_record,
+    os_session_to_aggregate_record, sde_session_to_aggregate_record, AgentMetadataResolver,
 };
 use super::display::matches_text_query;
 use super::status::{is_active_status, is_completed_status, is_failed_status};
@@ -22,6 +32,74 @@ use super::types::{
     CategoryStats, KeySourceStats, SessionAggregateRecord, SessionCategory, SessionFilter,
     SessionListResponse, SessionStats,
 };
+
+const IMPORTED_HISTORY_PAGE_SIZE: usize = 500;
+
+fn load_imported_history_source(
+    conn: &mut rusqlite::Connection,
+    records: &mut Vec<SessionAggregateRecord>,
+    source: &str,
+    mut load_page: impl FnMut(
+        &mut rusqlite::Connection,
+        usize,
+        usize,
+    ) -> Result<ImportedHistorySessionPage, String>,
+) -> Result<(), String> {
+    let mut offset = 0;
+    loop {
+        let page = load_page(conn, IMPORTED_HISTORY_PAGE_SIZE, offset)?;
+        let page_len = page.sessions.len();
+        records.extend(
+            page.sessions
+                .into_iter()
+                .map(|row| imported_history_to_aggregate_record(row, source)),
+        );
+        if !page.has_more || page_len == 0 {
+            break;
+        }
+        offset = offset.saturating_add(page_len);
+    }
+    Ok(())
+}
+
+fn load_imported_history_sessions() -> Result<Vec<SessionAggregateRecord>, String> {
+    let mut conn =
+        get_connection().map_err(|err| format!("Failed to open orgtrack cache DB: {err}"))?;
+    let mut records = Vec::new();
+
+    load_imported_history_source(
+        &mut conn,
+        &mut records,
+        SOURCE_CLAUDE_CODE,
+        claude_code_history::list_claude_code_history_sessions_paginated,
+    )?;
+    load_imported_history_source(
+        &mut conn,
+        &mut records,
+        SOURCE_CODEX_APP,
+        codex_app_history::list_codex_app_sessions_paginated,
+    )?;
+    load_imported_history_source(
+        &mut conn,
+        &mut records,
+        SOURCE_OPENCODE,
+        opencode_history::list_opencode_history_sessions_paginated,
+    )?;
+    load_imported_history_source(
+        &mut conn,
+        &mut records,
+        SOURCE_WINDSURF,
+        windsurf_history::list_windsurf_history_sessions_paginated,
+    )?;
+    load_imported_history_source(
+        &mut conn,
+        &mut records,
+        SOURCE_WORKBUDDY,
+        workbuddy_history::list_workbuddy_history_sessions_paginated,
+    )?;
+
+    Ok(records)
+}
 
 // ============================================================================
 // Core Aggregation
@@ -48,6 +126,13 @@ pub fn list_all_sessions(filter: Option<&SessionFilter>) -> Result<SessionListRe
         all_sessions.reserve(cli_sessions.len());
         for session in cli_sessions {
             all_sessions.push(cli_session_to_aggregate_record(session));
+        }
+
+        match load_imported_history_sessions() {
+            Ok(imported_sessions) => all_sessions.extend(imported_sessions),
+            Err(err) => {
+                tracing::warn!(error = %err, "unified_stats: failed to load orgtrack imported history sessions")
+            }
         }
     }
 

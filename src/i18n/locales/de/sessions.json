@@ -713,10 +713,38 @@
       },
       "tabs": {
         "work": "Arbeit",
-        "explore": "Entdecken"
+        "explore": "Entdecken",
+        "heatmap": "Heat map"
+      },
+      "heatmap": {
+        "loading": "Aktivitäts-Heat map wird geladen…",
+        "empty": "Noch keine Sitzungsaktivität.",
+        "sessions": "Sitzungen",
+        "tokens": "Tokens",
+        "cost": "Kosten"
       },
       "exploreRepos": {
         "title": "Repos entdecken"
+      },
+      "hints": {
+        "skill": {
+          "before": "Use",
+          "after": "to link a skill or tool"
+        },
+        "ask": {
+          "before": "Use",
+          "after": "to ask questions about the codebase"
+        },
+        "plan": {
+          "before": "Use",
+          "after": "to plan before building"
+        },
+        "switch": {
+          "before": "Use",
+          "after": "to switch sections"
+        },
+        "previous": "Previous hint",
+        "next": "Next hint"
       }
     },
     "defaultTitle": "Chat",

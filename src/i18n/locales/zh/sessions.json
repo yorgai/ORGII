@@ -738,10 +738,38 @@
       },
       "tabs": {
         "work": "工作",
-        "explore": "探索"
+        "explore": "探索",
+        "heatmap": "Heat map"
+      },
+      "heatmap": {
+        "loading": "正在加载活动 Heat map…",
+        "empty": "还没有会话活动。",
+        "sessions": "会话",
+        "tokens": "Tokens",
+        "cost": "成本"
       },
       "exploreRepos": {
         "title": "探索 Repos"
+      },
+      "hints": {
+        "skill": {
+          "before": "Use",
+          "after": "to link a skill or tool"
+        },
+        "ask": {
+          "before": "Use",
+          "after": "to ask questions about the codebase"
+        },
+        "plan": {
+          "before": "Use",
+          "after": "to plan before building"
+        },
+        "switch": {
+          "before": "Use",
+          "after": "to switch sections"
+        },
+        "previous": "Previous hint",
+        "next": "Next hint"
       }
     },
     "defaultTitle": "Session",
