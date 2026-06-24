@@ -4,7 +4,7 @@ import {
   collapseRelativePathSegments,
   extractMessageReferences,
   resolveOpenPath,
-} from "../MessageReferenceCards";
+} from "../MessageReferenceCards.helpers";
 
 vi.mock("@tauri-apps/api/path", () => ({
   homeDir: vi.fn(async () => "/Users/tester"),
@@ -132,6 +132,18 @@ staged file lint stats
     expect(references[0]).toMatchObject({
       kind: "web_url",
       value: "https://example.com/docs",
+    });
+  });
+
+  it("does not extract template placeholder hosts as URL cards", () => {
+    const references = extractMessageReferences(
+      "The server logs http://localhost:1998 and http://${host}/"
+    );
+
+    expect(references).toHaveLength(1);
+    expect(references[0]).toMatchObject({
+      kind: "web_url",
+      value: "http://localhost:1998/",
     });
   });
 
