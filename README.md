@@ -90,7 +90,8 @@ If a sidecar is missing, the Rust build creates a small placeholder resource so 
 
 Have questions, feedback, or want to follow along as ORG-2 evolves? Join us on Discord:
 
-👉 **[discord.gg/tvWgAqhCzs](https://discord.gg/tvWgAqhCzs)**
+👉 **Discord: [discord.gg/tvWgAqhCzs](https://discord.gg/tvWgAqhCzs)**
+👉 **WeChat: [https://github.com/yorgai/ORG2/issues/128]**
 
 - **#how-to-use-org2** and **#faq** — get up and running
 - **#announcement** — release news and updates
