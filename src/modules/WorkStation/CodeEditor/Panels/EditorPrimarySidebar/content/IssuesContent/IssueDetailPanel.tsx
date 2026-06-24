@@ -30,6 +30,7 @@ interface IssueDetailPanelProps {
   comments: GitHubIssueComment[];
   commentsLoading: boolean;
   submittingComment: boolean;
+  showHeader?: boolean;
   onClose: () => void;
   onCloseIssue: () => void;
   onReopenIssue: () => void;
@@ -42,6 +43,7 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
     comments,
     commentsLoading,
     submittingComment,
+    showHeader = true,
     onClose: _onClose,
     onCloseIssue,
     onReopenIssue,
@@ -60,39 +62,40 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
 
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        {/* ── Header strip — mirrors CommitTabHeader height/style ─────────── */}
-        <div className={HEADER_CLASSES.pageHeader}>
-          <span
-            className={`shrink-0 ${isOpen ? "text-success-6" : "text-text-3"}`}
-          >
-            {isOpen ? (
-              <CircleDot size={HEADER_ICON_SIZE.sm} strokeWidth={2} />
-            ) : (
-              <XCircle size={HEADER_ICON_SIZE.sm} strokeWidth={2} />
-            )}
-          </span>
+        {showHeader && (
+          <div className={HEADER_CLASSES.pageHeader}>
+            <span
+              className={`shrink-0 ${isOpen ? "text-success-6" : "text-text-3"}`}
+            >
+              {isOpen ? (
+                <CircleDot size={HEADER_ICON_SIZE.sm} strokeWidth={2} />
+              ) : (
+                <XCircle size={HEADER_ICON_SIZE.sm} strokeWidth={2} />
+              )}
+            </span>
 
-          <span className="shrink-0 font-mono text-[11px] text-text-3">
-            #{issue.number}
-          </span>
+            <span className="shrink-0 font-mono text-[11px] text-text-3">
+              #{issue.number}
+            </span>
 
-          <span
-            className={`min-w-0 flex-1 truncate ${TYPOGRAPHY.sectionTitle} text-text-1`}
-            title={issue.title}
-          >
-            {issue.title}
-          </span>
+            <span
+              className={`min-w-0 flex-1 truncate ${TYPOGRAPHY.sectionTitle} text-text-1`}
+              title={issue.title}
+            >
+              {issue.title}
+            </span>
 
-          <a
-            href={issue.html_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={HEADER_BUTTON.action}
-            title="Open on GitHub"
-          >
-            <ExternalLink size={12} strokeWidth={2} />
-          </a>
-        </div>
+            <a
+              href={issue.html_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={HEADER_BUTTON.action}
+              title="Open on GitHub"
+            >
+              <ExternalLink size={12} strokeWidth={2} />
+            </a>
+          </div>
+        )}
 
         {/* ── Info panel — fixed strip, mirrors CommitInfoPanel ───────────── */}
         <div className="flex max-h-48 flex-shrink-0 flex-col gap-2 border-b border-border-2 px-4 py-3">
