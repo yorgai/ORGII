@@ -11,7 +11,7 @@
  * - Intersection observer for lazy syntax highlighting
  * - Virtual scrolling for large code blocks (>100 lines)
  */
-import { Check, Clipboard, Eye, EyeOff } from "lucide-react";
+import { ArrowUpRight, Check, Clipboard, Eye, EyeOff } from "lucide-react";
 import React, { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -88,6 +88,7 @@ export interface ChatCodeBlockProps {
   isFailed?: boolean;
   showFileTreeHover?: boolean;
   showCopyButton?: boolean;
+  showOpenButton?: boolean;
 }
 
 // ============================================
@@ -121,6 +122,7 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
     isFailed = false,
     showFileTreeHover = true,
     showCopyButton = true,
+    showOpenButton = false,
   }) => {
     const {
       isCollapsed,
@@ -142,8 +144,17 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
       },
       [handleCopy]
     );
+    const handleOpenFile = useCallback(
+      (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        if (filePath) openFileInEditor(filePath);
+      },
+      [filePath]
+    );
     const shouldShowCopyButton =
       showCopyButton && hasContent && Boolean(code) && !isCollapsed;
+    const shouldShowOpenButton =
+      showOpenButton && hasContent && Boolean(filePath) && !isCollapsed;
 
     const {
       useTerminalLayout,
@@ -321,6 +332,20 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                   </span>
                 )}
 
+                {shouldShowOpenButton && (
+                  <Button
+                    variant="tertiary"
+                    appearance="ghost"
+                    size="mini"
+                    iconOnly
+                    icon={<ArrowUpRight size={12} strokeWidth={1.75} />}
+                    title={t("common:actions.open")}
+                    aria-label={t("common:actions.open")}
+                    className="ml-auto shrink-0 text-text-4 hover:text-text-2"
+                    onClick={handleOpenFile}
+                  />
+                )}
+
                 {shouldShowCopyButton && (
                   <Button
                     variant="tertiary"
@@ -344,7 +369,9 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                         ? t("common:status.copied")
                         : t("common:actions.copy")
                     }
-                    className="ml-auto shrink-0 text-text-4 hover:text-text-2"
+                    className={`shrink-0 text-text-4 hover:text-text-2 ${
+                      shouldShowOpenButton ? "" : "ml-auto"
+                    }`}
                     onClick={handleCopyContent}
                   />
                 )}
@@ -357,7 +384,9 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                       handleTogglePreview();
                     }}
                     className={`flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
-                      shouldShowCopyButton ? "" : "ml-auto"
+                      shouldShowCopyButton || shouldShowOpenButton
+                        ? ""
+                        : "ml-auto"
                     } ${
                       isPreviewOpen
                         ? "bg-primary-6/15 text-primary-6 hover:bg-primary-6/25"

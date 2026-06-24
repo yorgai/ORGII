@@ -28,6 +28,7 @@ import ChatCodeBlock from "@src/engines/ChatPanel/blocks/CodeBlock";
 import { codeMirrorPrismTheme } from "@src/features/CodeMirror/themes";
 import { useCopyCheck } from "@src/hooks/ui";
 import { themesAtom } from "@src/store";
+import { activeWorkspaceRootAtom } from "@src/store/workspace";
 import { copyText } from "@src/util/data/clipboard";
 import { openFileInWorkStation } from "@src/util/ui/openFileInWorkStation";
 
@@ -210,12 +211,12 @@ function splitIntoStableMarkdownBlocks(content: string): string[] {
 interface CodeBlockProps {
   children: string;
   language: string;
-  filePath?: string;
   startLine?: string;
+  openFilePath?: string;
 }
 
 const CodeBlock = memo<CodeBlockProps>(
-  ({ children, language, filePath, startLine }) => {
+  ({ children, language, startLine, openFilePath }) => {
     const onCopyContent = useCallback(async () => {
       await copyText(children);
     }, [children]);
@@ -223,40 +224,47 @@ const CodeBlock = memo<CodeBlockProps>(
     const { t } = useTranslation("common");
 
     const handleOpenFile = useCallback(() => {
-      if (!filePath) return;
+      if (!openFilePath) return;
       const line = startLine ? Number.parseInt(startLine, 10) : undefined;
-      openFileInWorkStation(filePath, {
+      openFileInWorkStation(openFilePath, {
         line: Number.isFinite(line) ? line : undefined,
       });
-    }, [filePath, startLine]);
+    }, [openFilePath, startLine]);
 
-    const isFileReference = Boolean(filePath);
-    const actionLabel = isFileReference
-      ? t("actions.open")
-      : copied
-        ? t("status.copied")
-        : t("actions.copy");
+    const copyLabel = copied ? t("status.copied") : t("actions.copy");
+    const openLabel = t("actions.open");
 
     return (
       <div className="code-block-wrapper" style={CODE_WRAPPER_STYLE}>
+        {openFilePath && (
+          <Button
+            variant="tertiary"
+            appearance="ghost"
+            size="mini"
+            iconOnly
+            icon={<ArrowUpRight size={12} strokeWidth={1.75} />}
+            title={openLabel}
+            aria-label={openLabel}
+            className="code-block-open-button text-text-4 hover:text-text-2"
+            onClick={handleOpenFile}
+          />
+        )}
         <Button
           variant="tertiary"
           appearance="ghost"
           size="mini"
           iconOnly
           icon={
-            isFileReference ? (
-              <ArrowUpRight size={12} strokeWidth={1.75} />
-            ) : copied ? (
+            copied ? (
               <Check size={12} strokeWidth={1.75} />
             ) : (
               <Clipboard size={12} strokeWidth={1.75} />
             )
           }
-          title={actionLabel}
-          aria-label={actionLabel}
+          title={copyLabel}
+          aria-label={copyLabel}
           className="code-block-copy-button text-text-4 hover:text-text-2"
-          onClick={isFileReference ? handleOpenFile : handleCopy}
+          onClick={handleCopy}
         />
         <SyntaxHighlighter
           customStyle={CODE_CUSTOM_STYLE}
@@ -275,10 +283,48 @@ const CodeBlock = memo<CodeBlockProps>(
   (prev, next) =>
     prev.children === next.children &&
     prev.language === next.language &&
-    prev.filePath === next.filePath &&
-    prev.startLine === next.startLine
+    prev.startLine === next.startLine &&
+    prev.openFilePath === next.openFilePath
 );
 CodeBlock.displayName = "CodeBlock";
+
+function normalizePathForRepoCheck(path: string): string {
+  return path
+    .replace(/^file:\/\//, "")
+    .replace(/\\/g, "/")
+    .replace(/\/+$/, "");
+}
+
+function isAbsolutePath(path: string): boolean {
+  return /^(?:file:\/\/)?\//.test(path) || /^[A-Za-z]:[\\/]/.test(path);
+}
+
+function isPathInCurrentRepo(
+  filePath: string | undefined,
+  repoRoot: string
+): boolean {
+  if (!filePath || !repoRoot) return false;
+  const normalizedFilePath = normalizePathForRepoCheck(filePath);
+  if (!isAbsolutePath(normalizedFilePath)) return true;
+  const normalizedRepoRoot = normalizePathForRepoCheck(repoRoot);
+  return (
+    normalizedFilePath === normalizedRepoRoot ||
+    normalizedFilePath.startsWith(`${normalizedRepoRoot}/`)
+  );
+}
+
+function resolveCurrentRepoFilePath(
+  filePath: string | undefined,
+  repoRoot: string
+): string | undefined {
+  if (!isPathInCurrentRepo(filePath, repoRoot) || !filePath) return undefined;
+  const normalizedFilePath = normalizePathForRepoCheck(filePath);
+  if (isAbsolutePath(normalizedFilePath)) return normalizedFilePath;
+  return `${normalizePathForRepoCheck(repoRoot)}/${normalizedFilePath.replace(
+    /^\.\//,
+    ""
+  )}`;
+}
 
 // ============================================
 // Markdown render primitives
@@ -342,6 +388,8 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
   skipPreprocess = false,
 }) => {
   const themes = useAtomValue(themesAtom);
+  const activeWorkspaceRoot = useAtomValue(activeWorkspaceRootAtom);
+  const activeWorkspaceRootPath = activeWorkspaceRoot?.path ?? "";
 
   const handleLinkClick = useCallback(
     (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -437,12 +485,16 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
 
           // Use ChatCodeBlock if enabled
           if (useChatCodeBlock) {
+            const openFilePath = resolveCurrentRepoFilePath(
+              fenceMeta.filePath,
+              activeWorkspaceRootPath
+            );
             return (
               <div className="chat-markdown-fenced-block">
                 <ChatCodeBlock
                   code={codeContent}
                   language={language}
-                  filePath={fenceMeta.filePath}
+                  filePath={openFilePath ?? fenceMeta.filePath}
                   title={fenceMeta.title}
                   subtitle={lineSubtitle}
                   maxHeight={300}
@@ -455,16 +507,21 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
                       language.toLowerCase()
                     )
                   }
+                  showOpenButton={Boolean(openFilePath)}
                 />
               </div>
             );
           }
 
+          const openFilePath = resolveCurrentRepoFilePath(
+            fenceMeta.filePath,
+            activeWorkspaceRootPath
+          );
           return (
             <CodeBlock
               language={language}
-              filePath={fenceMeta.filePath}
               startLine={fenceMeta.startLine}
+              openFilePath={openFilePath}
             >
               {codeContent}
             </CodeBlock>
@@ -585,6 +642,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
     codeBlockContainerWidth,
     enableFileNavigation,
     handleLinkClick,
+    activeWorkspaceRootPath,
   ]);
 
   // Memoize plugins array to prevent recreation
