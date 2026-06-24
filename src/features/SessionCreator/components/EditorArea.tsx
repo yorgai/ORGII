@@ -673,7 +673,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             dropdownDirection={resolvedDropdownDirection}
             repoPath={repoPath}
             toolbarItemGap={false}
-            bottomPaddingClassName="pb-1"
             showContextInfo={false}
             pills={
               <ControlButtons
