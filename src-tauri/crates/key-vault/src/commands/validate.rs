@@ -81,6 +81,16 @@ fn default_base_url_for_provider(agent_type: &str) -> Option<String> {
     })
 }
 
+fn default_anthropic_base_url_for_provider(agent_type: &str) -> Option<String> {
+    match agent_type {
+        "anthropic" | "anthropic_api" | "claude_code" => {
+            Some("https://api.anthropic.com/v1".to_string())
+        }
+        "zenmux_api" => Some("https://zenmux.ai/api/anthropic".to_string()),
+        _ => None,
+    }
+}
+
 /// Validate a key for a given agent type (shared by Tauri and headless tools).
 pub async fn run_validate_key(
     agent_type: String,
@@ -88,8 +98,10 @@ pub async fn run_validate_key(
     base_url: Option<String>,
     session_token: Option<String>,
     test_model: Option<String>,
+    protocol: Option<String>,
 ) -> Result<ValidationResult, String> {
     let agent_type_lower = agent_type.to_lowercase();
+    let protocol_lower = protocol.as_deref().map(str::to_lowercase);
 
     match agent_type_lower.as_str() {
         // GitHub Copilot
@@ -174,11 +186,27 @@ pub async fn run_validate_key(
         "deepseek_api" | "groq_api" | "xai_api" | "zhipu_api" | "dashscope_api"
         | "moonshot_api" | "minimax_api" | "openrouter_api" | "zenmux_api" | "vllm_api"
         | "orgii_orchestrator" | "orgii" => {
-            let validator = OpenAIValidator::new();
-            let effective_url = base_url
-                .clone()
-                .or_else(|| default_base_url_for_provider(&agent_type_lower));
-            Ok(validator.validate(&api_key, effective_url.as_deref(), Some(&agent_type_lower), test_model.as_deref()).await)
+            if protocol_lower.as_deref() == Some("anthropic") {
+                let effective_url = base_url
+                    .clone()
+                    .or_else(|| default_anthropic_base_url_for_provider(&agent_type_lower));
+                if effective_url.is_none() {
+                    return Err(format!(
+                        "Provider '{}' has no default Anthropic endpoint. Set a custom base URL.",
+                        agent_type_lower
+                    ));
+                }
+                let validator = AnthropicValidator::new();
+                Ok(validator
+                    .validate(&api_key, effective_url.as_deref(), test_model.as_deref())
+                    .await)
+            } else {
+                let validator = OpenAIValidator::new();
+                let effective_url = base_url
+                    .clone()
+                    .or_else(|| default_base_url_for_provider(&agent_type_lower));
+                Ok(validator.validate(&api_key, effective_url.as_deref(), Some(&agent_type_lower), test_model.as_deref()).await)
+            }
         }
 
         _ => Err(format!(
@@ -196,8 +224,17 @@ pub async fn validate_key(
     base_url: Option<String>,
     session_token: Option<String>,
     test_model: Option<String>,
+    protocol: Option<String>,
 ) -> Result<ValidationResult, String> {
-    run_validate_key(agent_type, api_key, base_url, session_token, test_model).await
+    run_validate_key(
+        agent_type,
+        api_key,
+        base_url,
+        session_token,
+        test_model,
+        protocol,
+    )
+    .await
 }
 
 /// Test whether a specific model is available on an endpoint.
@@ -853,10 +890,7 @@ mod tests {
 
         assert_eq!(
             models,
-            vec![
-                "gemini-2.5-pro".to_string(),
-                "gemini-2.5-flash".to_string(),
-            ]
+            vec!["gemini-2.5-pro".to_string(), "gemini-2.5-flash".to_string(),]
         );
     }
 
@@ -1001,6 +1035,7 @@ mod tests {
         let err = run_validate_key(
             "definitely_not_real".into(),
             "sk-xxx".into(),
+            None,
             None,
             None,
             None,
