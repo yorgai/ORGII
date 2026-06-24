@@ -13,7 +13,7 @@
  * react-markdown + react-syntax-highlighter into the initial bundle.
  */
 import { useAtomValue } from "jotai";
-import { Check, Clipboard } from "lucide-react";
+import { ArrowUpRight, Check, Clipboard } from "lucide-react";
 import React, { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown, { type Components } from "react-markdown";
@@ -29,6 +29,7 @@ import { codeMirrorPrismTheme } from "@src/features/CodeMirror/themes";
 import { useCopyCheck } from "@src/hooks/ui";
 import { themesAtom } from "@src/store";
 import { copyText } from "@src/util/data/clipboard";
+import { openFileInWorkStation } from "@src/util/ui/openFileInWorkStation";
 
 import MermaidBlock from "./MermaidBlock";
 import "./index.scss";
@@ -209,15 +210,32 @@ function splitIntoStableMarkdownBlocks(content: string): string[] {
 interface CodeBlockProps {
   children: string;
   language: string;
+  filePath?: string;
+  startLine?: string;
 }
 
 const CodeBlock = memo<CodeBlockProps>(
-  ({ children, language }) => {
+  ({ children, language, filePath, startLine }) => {
     const onCopyContent = useCallback(async () => {
       await copyText(children);
     }, [children]);
     const { copied, handleCopy } = useCopyCheck(onCopyContent);
     const { t } = useTranslation("common");
+
+    const handleOpenFile = useCallback(() => {
+      if (!filePath) return;
+      const line = startLine ? Number.parseInt(startLine, 10) : undefined;
+      openFileInWorkStation(filePath, {
+        line: Number.isFinite(line) ? line : undefined,
+      });
+    }, [filePath, startLine]);
+
+    const isFileReference = Boolean(filePath);
+    const actionLabel = isFileReference
+      ? t("actions.open")
+      : copied
+        ? t("status.copied")
+        : t("actions.copy");
 
     return (
       <div className="code-block-wrapper" style={CODE_WRAPPER_STYLE}>
@@ -227,16 +245,18 @@ const CodeBlock = memo<CodeBlockProps>(
           size="mini"
           iconOnly
           icon={
-            copied ? (
+            isFileReference ? (
+              <ArrowUpRight size={12} strokeWidth={1.75} />
+            ) : copied ? (
               <Check size={12} strokeWidth={1.75} />
             ) : (
               <Clipboard size={12} strokeWidth={1.75} />
             )
           }
-          title={copied ? t("status.copied") : t("actions.copy")}
-          aria-label={copied ? t("status.copied") : t("actions.copy")}
+          title={actionLabel}
+          aria-label={actionLabel}
           className="code-block-copy-button text-text-4 hover:text-text-2"
-          onClick={handleCopy}
+          onClick={isFileReference ? handleOpenFile : handleCopy}
         />
         <SyntaxHighlighter
           customStyle={CODE_CUSTOM_STYLE}
@@ -253,7 +273,10 @@ const CodeBlock = memo<CodeBlockProps>(
     );
   },
   (prev, next) =>
-    prev.children === next.children && prev.language === next.language
+    prev.children === next.children &&
+    prev.language === next.language &&
+    prev.filePath === next.filePath &&
+    prev.startLine === next.startLine
 );
 CodeBlock.displayName = "CodeBlock";
 
@@ -437,7 +460,15 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
             );
           }
 
-          return <CodeBlock language={language}>{codeContent}</CodeBlock>;
+          return (
+            <CodeBlock
+              language={language}
+              filePath={fenceMeta.filePath}
+              startLine={fenceMeta.startLine}
+            >
+              {codeContent}
+            </CodeBlock>
+          );
         }
         return <pre {...props}>{children}</pre>;
       },
