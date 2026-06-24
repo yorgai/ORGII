@@ -17,6 +17,14 @@ use crate::Result;
 const NODE_SELECT_COLUMNS: &str = "id, kind, name, qualified_name, file_path, language, start_line, end_line, start_column, end_column, signature, updated_at, confidence, extraction_method, parent_id";
 const NODE_SELECT_COLUMNS_QUALIFIED: &str = "nodes.id, nodes.kind, nodes.name, nodes.qualified_name, nodes.file_path, nodes.language, nodes.start_line, nodes.end_line, nodes.start_column, nodes.end_column, nodes.signature, nodes.updated_at, nodes.confidence, nodes.extraction_method, nodes.parent_id";
 const EDGE_SELECT_COLUMNS_QUALIFIED: &str = "edges.source, edges.target, edges.kind, edges.line, edges.column, edges.provenance, edges.confidence, edges.resolution_status";
+const CREATE_NODES_FTS_SQL: &str = "CREATE VIRTUAL TABLE IF NOT EXISTS nodes_fts USING fts5(
+  id UNINDEXED,
+  name,
+  qualified_name,
+  file_path,
+  signature,
+  content=''
+)";
 
 pub struct CodeMapDb {
     conn: Connection,
@@ -144,16 +152,9 @@ impl CodeMapDb {
                FOREIGN KEY(from_node_id) REFERENCES nodes(id) ON DELETE SET NULL
              );
              CREATE INDEX IF NOT EXISTS idx_unresolved_refs_file_path ON unresolved_refs(file_path);
-             CREATE INDEX IF NOT EXISTS idx_unresolved_refs_name ON unresolved_refs(name);
-             CREATE VIRTUAL TABLE IF NOT EXISTS nodes_fts USING fts5(
-               id UNINDEXED,
-               name,
-               qualified_name,
-               file_path,
-               signature,
-               content=''
-             );",
+             CREATE INDEX IF NOT EXISTS idx_unresolved_refs_name ON unresolved_refs(name);",
         )?;
+        self.conn.execute(CREATE_NODES_FTS_SQL, [])?;
         self.ensure_column("files", "stale", "INTEGER NOT NULL DEFAULT 0")?;
         self.ensure_column("nodes", "confidence", "TEXT NOT NULL DEFAULT 'heuristic'")?;
         self.ensure_column(
@@ -222,6 +223,11 @@ impl CodeMapDb {
         Ok(())
     }
 
+    #[cfg(test)]
+    pub fn mark_indexing_for_test(&self) -> Result<()> {
+        self.set_status(CodeMapStatusKind::Indexing, None)
+    }
+
     pub fn apply_index_changes(
         &mut self,
         extracted_files: Vec<ExtractedFile>,
@@ -232,7 +238,7 @@ impl CodeMapDb {
             transaction.execute("DELETE FROM files WHERE path = ?1", params![file_path])?;
         }
 
-        for extracted in extracted_files {
+        for extracted in &extracted_files {
             transaction.execute(
                 "DELETE FROM unresolved_refs WHERE file_path = ?1",
                 params![extracted.record.path],
@@ -241,7 +247,9 @@ impl CodeMapDb {
                 "DELETE FROM files WHERE path = ?1",
                 params![extracted.record.path],
             )?;
+        }
 
+        for extracted in &extracted_files {
             let errors_json = serde_json::to_string(&extracted.record.errors)
                 .unwrap_or_else(|_| String::from("[]"));
             transaction.execute(
@@ -259,8 +267,10 @@ impl CodeMapDb {
                     bool_to_int(extracted.record.stale),
                 ],
             )?;
+        }
 
-            for node in extracted.nodes {
+        for extracted in &extracted_files {
+            for node in &extracted.nodes {
                 transaction.execute(
                     "INSERT INTO nodes(id, kind, name, qualified_name, file_path, language, start_line, end_line, start_column, end_column, signature, updated_at, confidence, extraction_method, parent_id)
                      VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
@@ -283,7 +293,9 @@ impl CodeMapDb {
                     ],
                 )?;
             }
+        }
 
+        for extracted in extracted_files {
             for edge in extracted.edges {
                 transaction.execute(
                     "INSERT OR IGNORE INTO edges(source, target, kind, line, column, provenance, confidence, resolution_status)
@@ -675,7 +687,8 @@ impl CodeMapDb {
 }
 
 fn rebuild_fts(transaction: &rusqlite::Transaction<'_>) -> rusqlite::Result<()> {
-    transaction.execute("DELETE FROM nodes_fts", [])?;
+    transaction.execute("DROP TABLE IF EXISTS nodes_fts", [])?;
+    transaction.execute(CREATE_NODES_FTS_SQL, [])?;
     transaction.execute(
         "INSERT INTO nodes_fts(id, name, qualified_name, file_path, signature)
          SELECT id, name, qualified_name, file_path, COALESCE(signature, '') FROM nodes",
