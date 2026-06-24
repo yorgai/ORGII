@@ -249,7 +249,6 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                           e.stopPropagation();
                           openFileInEditor(filePath);
                         }}
-                        title={filePath}
                       >
                         {displayTitle}
                       </div>
@@ -267,7 +266,6 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                         e.stopPropagation();
                         openFileInEditor(filePath);
                       }}
-                      title={filePath}
                     >
                       {displayTitle}
                     </div>
@@ -408,7 +406,6 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                 />
                 <span
                   className="min-w-0 flex-1 cursor-pointer truncate text-text-1 hover:underline"
-                  title={filePath}
                   onClick={(e) => {
                     e.stopPropagation();
                     openFileInEditor(filePath);

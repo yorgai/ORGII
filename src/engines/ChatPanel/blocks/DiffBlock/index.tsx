@@ -266,10 +266,7 @@ const CompactSegmentView: React.FC<CompactSegmentViewProps> = ({
   );
 
   const content = (
-    <div
-      className={`${getEventBlockContainerClasses(false)} animate-fade-in`}
-      title={fullPathTitle}
-    >
+    <div className={`${getEventBlockContainerClasses(false)} animate-fade-in`}>
       <EventBlockHeader
         isCollapsed
         withHover={false}
@@ -304,11 +301,7 @@ const CompactSegmentView: React.FC<CompactSegmentViewProps> = ({
         <EventBlockHeaderTitle isLoading={isLoading}>
           {compactTitle}
         </EventBlockHeaderTitle>
-        <EventBlockHeaderSubtitle
-          isLoading={isLoading}
-          title={displayTitle}
-          className="text-text-1"
-        >
+        <EventBlockHeaderSubtitle isLoading={isLoading} className="text-text-1">
           <FileTypeIcon
             fileName={displayTitle}
             size="small"
@@ -452,7 +445,6 @@ const EditView: React.FC<EditViewProps> = (props) => {
     return (
       <div
         className={`${getEventBlockContainerClasses(false)} animate-fade-in`}
-        title={editData.filePath || editData.fileName || "file"}
       >
         <EventBlockHeader
           isCollapsed
@@ -473,10 +465,7 @@ const EditView: React.FC<EditViewProps> = (props) => {
           <EventBlockHeaderTitle className="text-text-3">
             {title}
           </EventBlockHeaderTitle>
-          <EventBlockHeaderSubtitle
-            title={displayTitle}
-            className="text-text-3"
-          >
+          <EventBlockHeaderSubtitle className="text-text-3">
             <FileTypeIcon
               fileName={displayTitle}
               size="small"
