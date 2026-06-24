@@ -11,7 +11,7 @@
  * - Intersection observer for lazy syntax highlighting
  * - Virtual scrolling for large code blocks (>100 lines)
  */
-import { Clipboard, Eye, EyeOff } from "lucide-react";
+import { Check, Clipboard, Eye, EyeOff } from "lucide-react";
 import React, { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -22,6 +22,7 @@ import { FileTreeHoverPreview } from "@src/components/FileTreePreview/exports";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import ModernCodeViewer from "@src/features/CodeViewer/ModernCodeViewer";
 import { VirtualizedModernDiff } from "@src/features/CodeViewer/VirtualizedModernDiff";
+import { useCopyCheck } from "@src/hooks/ui";
 import { copyText } from "@src/util/data/clipboard";
 import { openFileInEditor } from "@src/util/ui/openFileInEditor";
 
@@ -130,14 +131,19 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
       handleLocate,
     } = useBlockHeader({ defaultCollapsed, eventId, collapseAllValue: true });
     const { t } = useTranslation("sessions");
+    const onCopyContent = useCallback(async () => {
+      await copyText(code);
+    }, [code]);
+    const { copied, handleCopy } = useCopyCheck(onCopyContent);
     const handleCopyContent = useCallback(
       (event: React.MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
-        void copyText(code);
+        handleCopy();
       },
-      [code]
+      [handleCopy]
     );
-    const shouldShowCopyButton = showCopyButton && hasContent && Boolean(code);
+    const shouldShowCopyButton =
+      showCopyButton && hasContent && Boolean(code) && !isCollapsed;
 
     const {
       useTerminalLayout,
@@ -321,9 +327,23 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                     appearance="ghost"
                     size="mini"
                     iconOnly
-                    icon={<Clipboard size={12} strokeWidth={1.75} />}
-                    title={t("common:actions.copy")}
-                    aria-label={t("common:actions.copy")}
+                    icon={
+                      copied ? (
+                        <Check size={12} strokeWidth={1.75} />
+                      ) : (
+                        <Clipboard size={12} strokeWidth={1.75} />
+                      )
+                    }
+                    title={
+                      copied
+                        ? t("common:status.copied")
+                        : t("common:actions.copy")
+                    }
+                    aria-label={
+                      copied
+                        ? t("common:status.copied")
+                        : t("common:actions.copy")
+                    }
                     className="ml-auto shrink-0 text-text-4 hover:text-text-2"
                     onClick={handleCopyContent}
                   />

@@ -10,11 +10,9 @@
  * prefer a real unified diff, falling back to a synthetic full-write diff
  * when only the new content is available.
  */
-import { Clipboard } from "lucide-react";
-import React, { useCallback, useMemo } from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import Button from "@src/components/Button";
 import DiffStatsBadge from "@src/components/DiffStatsBadge";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import { getToolIcon } from "@src/config/toolIcons";
@@ -28,7 +26,6 @@ import type {
   ExtractedEditData,
   UniversalEventProps,
 } from "@src/engines/SessionCore/rendering/types/universalProps";
-import { copyText } from "@src/util/data/clipboard";
 import { getFileName } from "@src/util/file/pathUtils";
 
 import { useChatHistoryDisplayMode } from "../../ChatHistory/chatDisplayModeContext";
@@ -228,22 +225,11 @@ const CompactSegmentView: React.FC<CompactSegmentViewProps> = ({
   const decodedContent = segment.newContent
     ? decodeStreamContent(segment.newContent)
     : undefined;
-  const copyContent =
-    decodedContent ||
-    (segment.diff ? decodeStreamContent(segment.diff) : undefined);
-  const handleCopyContent = useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
-      event.stopPropagation();
-      if (copyContent) void copyText(copyContent);
-    },
-    [copyContent]
-  );
   const linesAdded =
     isNewFile && !segment.linesAdded && decodedContent
       ? decodedContent.split("\n").length
       : (segment.linesAdded ?? 0);
   const linesRemoved = segment.linesRemoved ?? 0;
-  const fullPathTitle = segment.filePath || segment.fileName || "file";
   const hasInfo = linesAdded > 0 || linesRemoved > 0 || segment.isDeleted;
   const compactLabelState =
     status === "running" ? "compact_running" : "compact_done";
@@ -271,22 +257,7 @@ const CompactSegmentView: React.FC<CompactSegmentViewProps> = ({
         isCollapsed
         withHover={false}
         onClick={handleLocate}
-        onNavigate={copyContent ? undefined : handleLocate}
-        rightContent={
-          copyContent ? (
-            <Button
-              variant="tertiary"
-              appearance="ghost"
-              size="mini"
-              iconOnly
-              icon={<Clipboard size={12} strokeWidth={1.75} />}
-              title={t("common:actions.copy")}
-              aria-label={t("common:actions.copy")}
-              className="shrink-0 text-text-4 hover:text-text-2"
-              onClick={handleCopyContent}
-            />
-          ) : undefined
-        }
+        onNavigate={handleLocate}
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
       >

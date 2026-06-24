@@ -13,17 +13,22 @@
  * react-markdown + react-syntax-highlighter into the initial bundle.
  */
 import { useAtomValue } from "jotai";
+import { Check, Clipboard } from "lucide-react";
 import React, { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { Prism as SyntaxHighlighterPrism } from "react-syntax-highlighter";
 import remarkGfm from "remark-gfm";
 
+import Button from "@src/components/Button";
 import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { getLanguageFromPath } from "@src/config/languageMap";
 import CanvasInlineCard from "@src/engines/ChatPanel/blocks/CanvasInlineCard";
 import ChatCodeBlock from "@src/engines/ChatPanel/blocks/CodeBlock";
 import { codeMirrorPrismTheme } from "@src/features/CodeMirror/themes";
+import { useCopyCheck } from "@src/hooks/ui";
 import { themesAtom } from "@src/store";
+import { copyText } from "@src/util/data/clipboard";
 
 import MermaidBlock from "./MermaidBlock";
 import "./index.scss";
@@ -207,21 +212,46 @@ interface CodeBlockProps {
 }
 
 const CodeBlock = memo<CodeBlockProps>(
-  ({ children, language }) => (
-    <div className="code-block-wrapper" style={CODE_WRAPPER_STYLE}>
-      <SyntaxHighlighter
-        customStyle={CODE_CUSTOM_STYLE}
-        style={codeMirrorPrismTheme}
-        language={language}
-        PreTag="div"
-        showLineNumbers={false}
-        wrapLongLines
-        wrapLines={true}
-      >
-        {children}
-      </SyntaxHighlighter>
-    </div>
-  ),
+  ({ children, language }) => {
+    const onCopyContent = useCallback(async () => {
+      await copyText(children);
+    }, [children]);
+    const { copied, handleCopy } = useCopyCheck(onCopyContent);
+    const { t } = useTranslation("common");
+
+    return (
+      <div className="code-block-wrapper" style={CODE_WRAPPER_STYLE}>
+        <Button
+          variant="tertiary"
+          appearance="ghost"
+          size="mini"
+          iconOnly
+          icon={
+            copied ? (
+              <Check size={12} strokeWidth={1.75} />
+            ) : (
+              <Clipboard size={12} strokeWidth={1.75} />
+            )
+          }
+          title={copied ? t("status.copied") : t("actions.copy")}
+          aria-label={copied ? t("status.copied") : t("actions.copy")}
+          className="code-block-copy-button text-text-4 hover:text-text-2"
+          onClick={handleCopy}
+        />
+        <SyntaxHighlighter
+          customStyle={CODE_CUSTOM_STYLE}
+          style={codeMirrorPrismTheme}
+          language={language}
+          PreTag="div"
+          showLineNumbers={false}
+          wrapLongLines
+          wrapLines={true}
+        >
+          {children}
+        </SyntaxHighlighter>
+      </div>
+    );
+  },
   (prev, next) =>
     prev.children === next.children && prev.language === next.language
 );
