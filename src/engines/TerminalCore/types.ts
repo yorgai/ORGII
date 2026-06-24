@@ -27,6 +27,10 @@ export interface TerminalSession {
   processName?: string;
   /** Live CWD (updated by process polling, not just initial cwd) */
   liveCwd?: string;
+  /** True for the automatically-created placeholder terminal session. */
+  isDefaultSession?: boolean;
+  /** True after direct user input has been sent to the PTY. */
+  hasUserInput?: boolean;
 }
 
 /** Resolved display title for a terminal session, by priority. */
@@ -83,6 +87,8 @@ export interface UseTerminalStateReturn {
         | "sequenceTitle"
         | "processName"
         | "liveCwd"
+        | "isDefaultSession"
+        | "hasUserInput"
       >
     >
   ) => void;

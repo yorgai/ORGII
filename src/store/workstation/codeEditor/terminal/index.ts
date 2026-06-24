@@ -117,7 +117,9 @@ function getDefaultState(): {
   );
   const initialName = generateUniqueLabelFromBase(defaultBase, []);
   return {
-    sessions: [{ id: "1", name: initialName, isActive: true }],
+    sessions: [
+      { id: "1", name: initialName, isActive: true, isDefaultSession: true },
+    ],
     activeSessionId: "1",
     initializedSessionIds: new Set(["1"]),
   };
@@ -270,6 +272,7 @@ export const closeTerminalSessionAtom = atom(
         id: newId,
         name: generateUniqueLabelFromBase(defaultBase, []),
         isActive: true,
+        isDefaultSession: true,
       };
       set(terminalSessionsAtom, [newSession]);
       set(activeTerminalIdAtom, newId);
@@ -402,6 +405,7 @@ export const removeAgentSessionTerminalAtom = atom(
         id: newId,
         name: generateUniqueLabelFromBase(defaultBase, []),
         isActive: true,
+        isDefaultSession: true,
       };
       set(terminalSessionsAtom, [newSession]);
       set(activeTerminalIdAtom, newId);
@@ -473,6 +477,8 @@ export const updateTerminalSessionInfoAtom = atom(
           | "sequenceTitle"
           | "processName"
           | "liveCwd"
+          | "isDefaultSession"
+          | "hasUserInput"
         >
       >;
     }
