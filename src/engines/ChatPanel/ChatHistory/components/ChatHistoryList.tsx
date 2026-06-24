@@ -27,6 +27,14 @@ import { GroupItemRenderer } from "../renderers";
 import type { GroupHeaderRenderPart } from "../renderers/GroupHeaderRenderer";
 
 const STATIC_RENDER_ITEM_LIMIT = 24;
+const AT_BOTTOM_EPSILON_PX = 4;
+
+function isScrolledToPhysicalBottom(element: HTMLElement): boolean {
+  return (
+    element.scrollHeight - element.scrollTop - element.clientHeight <=
+    AT_BOTTOM_EPSILON_PX
+  );
+}
 
 function sameNumberArray(
   left: readonly number[],
@@ -649,7 +657,9 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
           ref={staticScrollerRef}
           className="h-full overflow-y-auto overscroll-contain scrollbar-hide"
           onScroll={(event) => {
-            reportActiveGroupIndex(event.currentTarget);
+            const element = event.currentTarget;
+            onAtBottomStateChange(isScrolledToPhysicalBottom(element));
+            reportActiveGroupIndex(element);
           }}
         >
           <div
@@ -717,11 +727,10 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         }}
         className="h-full w-full overflow-y-auto overscroll-contain scrollbar-hide"
         onScroll={(event) => {
-          const el = event.currentTarget;
-          const isAtBottom =
-            el.scrollHeight - el.scrollTop - el.clientHeight <= 80;
+          const element = event.currentTarget;
+          const isAtBottom = isScrolledToPhysicalBottom(element);
           onAtBottomStateChange(isAtBottom);
-          reportActiveGroupIndex(el);
+          reportActiveGroupIndex(element);
           if (isAtBottom) onEndReached();
         }}
       >

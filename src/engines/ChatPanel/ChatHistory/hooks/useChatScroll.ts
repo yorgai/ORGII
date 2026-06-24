@@ -8,9 +8,8 @@
  *   is at (or near) the content bottom
  *
  * The chat footer renders a fixed spacer after the content. Scroll-to-bottom
- * paths manually scroll the root to the content bottom
- * (`scrollHeight - footerSpacerHeight`) so the footer spacer stays below
- * the fold instead of becoming the visual bottom target.
+ * paths use the browser's physical scroll bottom (`scrollHeight - clientHeight`)
+ * so the footer spacer remains visible below the latest event.
  */
 import {
   type Dispatch,
@@ -61,8 +60,6 @@ export interface UseChatScrollOptions {
   activeSessionId: string | null | undefined;
   /** Static renderer scroll root used when Virtuoso is not mounted. */
   staticScrollerRef?: MutableRefObject<HTMLDivElement | null>;
-  footerSpacerHeight: number;
-  bottomInset: number;
   /** When true, bypass the `isContentOverflowingRef` guard so auto-scroll
    *  engages even in small viewports (subagent monitor cells). */
   alwaysFollowTail?: boolean;
@@ -100,8 +97,6 @@ export function useChatScroll({
   isContentOverflowingRef,
   activeSessionId,
   staticScrollerRef,
-  footerSpacerHeight,
-  bottomInset,
   alwaysFollowTail = false,
 }: UseChatScrollOptions): UseChatScrollReturn {
   const atBottomRef = useRef(true);
@@ -145,17 +140,13 @@ export function useChatScroll({
     (behavior: ScrollBehavior = "auto") => {
       const el = staticScrollerRef?.current ?? virtuosoScrollerRef.current;
       if (!el) return false;
-      const contentBottom = Math.max(0, el.scrollHeight - footerSpacerHeight);
       el.scrollTo({
-        top: Math.max(
-          0,
-          contentBottom - el.clientHeight + Math.max(0, bottomInset)
-        ),
+        top: Math.max(0, el.scrollHeight - el.clientHeight),
         behavior,
       });
       return true;
     },
-    [bottomInset, footerSpacerHeight, staticScrollerRef, virtuosoScrollerRef]
+    [staticScrollerRef, virtuosoScrollerRef]
   );
 
   const scrollToBottom = useCallback(() => {
@@ -166,6 +157,52 @@ export function useChatScroll({
 
     scrollElementToBottom("smooth");
   }, [scrollElementToBottom]);
+
+  useEffect(() => {
+    const scrollRoot =
+      staticScrollerRef?.current ?? virtuosoScrollerRef.current;
+    if (!scrollRoot) return;
+
+    let frameId = 0;
+    let secondFrameId = 0;
+    const followIfPinnedToTail = () => {
+      cancelAnimationFrame(frameId);
+      cancelAnimationFrame(secondFrameId);
+      frameId = requestAnimationFrame(() => {
+        if (pinLastGroupRef.current) return;
+        if (
+          !alwaysFollowTail &&
+          performance.now() - effectiveManualScrollAtRef.current <
+            MANUAL_SCROLL_AUTO_FOLLOW_SUPPRESS_MS
+        ) {
+          return;
+        }
+        if (!alwaysFollowTail && !atBottomRef.current) return;
+        scrollElementToBottom();
+        secondFrameId = requestAnimationFrame(() => scrollElementToBottom());
+      });
+    };
+
+    const resizeObserver = new ResizeObserver(followIfPinnedToTail);
+    resizeObserver.observe(scrollRoot);
+    if (scrollRoot.firstElementChild) {
+      resizeObserver.observe(scrollRoot.firstElementChild);
+    }
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      cancelAnimationFrame(secondFrameId);
+      resizeObserver.disconnect();
+    };
+  }, [
+    activeSessionId,
+    alwaysFollowTail,
+    effectiveManualScrollAtRef,
+    pinLastGroupRef,
+    scrollElementToBottom,
+    staticScrollerRef,
+    virtuosoScrollerRef,
+  ]);
 
   // Auto-scroll when new messages arrive if user was at content bottom.
   // Stands down while the latest group is pinned to top — the pin is the

@@ -669,19 +669,14 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
           root.scrollHeight,
           root.clientHeight,
           footerSpacerHeight,
-          bottomInset,
         ].join(":");
         if (measurementKey === lastMeasurementKey) return;
         lastMeasurementKey = measurementKey;
 
-        const contentBottom = Math.max(
-          0,
-          root.scrollHeight - footerSpacerHeight
-        );
-        const visibleBottom =
-          root.scrollTop + root.clientHeight - Math.max(0, bottomInset);
+        const distanceToPhysicalBottom =
+          root.scrollHeight - root.scrollTop - root.clientHeight;
         const nextVisible =
-          contentBottom - visibleBottom <= SCROLL_NAV_SHOW_THRESHOLD_PX;
+          distanceToPhysicalBottom <= SCROLL_NAV_SHOW_THRESHOLD_PX;
         setIsBottomSentinelVisible((previousVisible) =>
           previousVisible === nextVisible ? previousVisible : nextVisible
         );
@@ -706,7 +701,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     };
   }, [
     activeId,
-    bottomInset,
     displayTotalFlatItems,
     footerSpacerHeight,
     staticScrollerRef,
@@ -728,8 +722,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     isContentOverflowingRef,
     activeSessionId: activeId,
     staticScrollerRef,
-    footerSpacerHeight,
-    bottomInset,
     alwaysFollowTail: disableTailCollapse,
   });
   // Subagent panes pass `disableTailCollapse` because every paginated page
@@ -759,8 +751,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     activeId,
     groupCounts: displayGroupCounts,
     totalFlatItems: displayTotalFlatItems,
-    footerSpacerHeight,
-    bottomInset,
     sessionLoadStatus,
     virtuosoScrollerRef,
     atBottom,
@@ -921,8 +911,19 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       : handleHeaderRestoreCheckpoint,
   });
 
+  const activePinnedDisplayGroupIndex =
+    activePinnedGroupIndex < displayGroupHeaders.length
+      ? activePinnedGroupIndex
+      : 0;
+  const activePinnedHeader = displayGroupHeaders[activePinnedDisplayGroupIndex];
+  const activePinnedMeta = displayGroupMeta[activePinnedDisplayGroupIndex];
+  const activePinnedSourceGroupIndex =
+    displaySourceGroupIndices[activePinnedDisplayGroupIndex];
+  const hasPinnedHeaderContent =
+    displayTotalFlatItems > 0 ||
+    (turnPaginationEnabled && Boolean(activePinnedHeader));
   const showPinnedTurnHeader =
-    displayTotalFlatItems > 0 &&
+    hasPinnedHeaderContent &&
     !turnPageListOpen &&
     !agentOrgOverviewOpen &&
     (turnPaginationEnabled || activeGroupPinned);
@@ -960,10 +961,10 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       onGroupChatViewToggle={onGroupChatViewToggle}
       showPinnedTurnHeader={showPinnedTurnHeader}
       sessionId={activeId}
-      sourceGroupIndex={displaySourceGroupIndices[activePinnedGroupIndex]}
+      sourceGroupIndex={activePinnedSourceGroupIndex}
       sourceGroupCount={groupCounts.length}
-      header={displayGroupHeaders[activePinnedGroupIndex]}
-      meta={displayGroupMeta[activePinnedGroupIndex]}
+      header={activePinnedHeader}
+      meta={activePinnedMeta}
       hasPinnedContent={hasPinnedContent}
       collapseLabelVariant={groupChat?.enabled ? "agents" : "agent"}
       collapseTailWhenIdle={collapseTailWhenIdle}
