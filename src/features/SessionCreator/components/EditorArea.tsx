@@ -27,6 +27,7 @@ import {
   getReferenceDragPillData,
   hasReferenceDragData,
 } from "@src/shared/dnd/referenceDragData";
+import { chatAppearanceAtom } from "@src/store/config/configAtom";
 import { voiceInputEnabledAtom } from "@src/store/platform/voiceInputAtom";
 import type { RepoKind } from "@src/store/repo/types";
 import type { ChatImageAttachment } from "@src/store/ui/chatImageAtom";
@@ -299,6 +300,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   // updates immediately.
 
   const voiceFeatureEnabled = useAtomValue(voiceInputEnabledAtom);
+  const { sendOnEnter } = useAtomValue(chatAppearanceAtom);
 
   const isTabDragOver = useTabDragDrop(editorContainerRef, composerInputRef);
   const [isReferenceDragOver, setIsReferenceDragOver] = useState(false);
@@ -577,7 +579,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           onAtMention={handleAtMention}
           onAtMentionClose={onAtMentionClose}
           onSubmit={onSubmit}
-          requireCmdEnter={true}
+          requireCmdEnter={!sendOnEnter}
           autoFocus={autoFocus}
           className="session-editor flex-1 cursor-text overflow-y-auto rounded-md text-[14px] text-text-1"
           minHeight={editorMinHeight ?? (isChatPanelFullScreen ? 60 : 100)}
