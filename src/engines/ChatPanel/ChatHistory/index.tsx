@@ -1115,7 +1115,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                       getIsWpGeneWorking={getIsWpGeneWorking}
                       getIsExploring={getIsExploring}
                       renderGroupHeader={
-                        turnPaginationEnabled && displayTotalFlatItems > 0
+                        turnPaginationEnabled
                           ? renderNoGroupHeader
                           : renderGroupHeader
                       }
