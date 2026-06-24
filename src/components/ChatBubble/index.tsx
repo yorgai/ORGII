@@ -158,7 +158,7 @@ const ChatBubbleCopyButtonComponent: React.FC<ChatBubbleCopyButtonProps> = ({
       aria-label={t("actions.copy")}
       size="sm"
       variant="default"
-      className={`${cornerClass} opacity-0 transition-opacity focus-visible:ring-2 focus-visible:ring-primary-6/30 ${hoverGroupClass} ${className}`}
+      className={`${cornerClass} bg-chat-pane opacity-0 transition-opacity focus-visible:ring-2 focus-visible:ring-primary-6/30 ${hoverGroupClass} ${className}`}
       onClick={handleCopy}
     >
       <Copy size={14} strokeWidth={1.75} />

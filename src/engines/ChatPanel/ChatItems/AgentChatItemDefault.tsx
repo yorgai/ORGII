@@ -53,7 +53,7 @@ const AgentChatItemDefault: React.FC<AgentChatItemProps> = ({
         {isShow && (
           <>
             <div
-              className="chat-text relative flex flex-col items-start gap-3 self-stretch pr-8 text-text-1"
+              className="chat-text relative flex flex-col items-start gap-3 self-stretch text-text-1"
               data-testid="chat-message-assistant"
             >
               {!isStreaming && children && (
