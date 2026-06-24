@@ -8,6 +8,9 @@
     <a href="https://github.com/yorgai/ORG2/graphs/commit-activity"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/yorgai/ORG2?style=flat-square&label=commit%20activity" /></a>
     <a href="https://discord.gg/tvWgAqhCzs"><img alt="Discord" src="https://img.shields.io/badge/Discord-join%20chat-5865F2?style=flat-square&logo=discord&logoColor=white" /></a>
   </p>
+  <p>
+    <a href="https://trendshift.io/repositories/56464?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-56464" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/56464/daily?language=TypeScript" alt="yorgai%2FORG2 | Trendshift" width="250" height="55" /></a>
+  </p>
 </div>
 
 ---
