@@ -451,6 +451,7 @@ export const CodexOauthListModelsInput = z.object({
 
 export const GeminiOauthListModelsInput = z.object({
   accessToken: z.string(),
+  projectId: z.string().nullable().optional(),
 });
 
 export const RefreshOauthTokenInput = z.object({
