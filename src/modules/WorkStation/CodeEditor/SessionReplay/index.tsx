@@ -9,12 +9,20 @@
  * Integrated with SimulatorApps framework for replay-aware state management.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import React, { memo, useCallback, useMemo, useState } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
 import EventWrapper from "@src/engines/ChatPanel/adapters/EventWrapper";
 import { getIDEEventType } from "@src/engines/SessionCore/rendering/registry/toolRegistryDomain";
 import {
+  simulatorIdeTerminalRevealRequestAtom,
   simulatorPrimarySidebarCollapsedAtom,
   simulatorPrimarySidebarPositionAtom,
   simulatorPrimarySidebarWidthAtom,
@@ -64,6 +72,9 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
       (isGenericIDEFallbackToolEvent(sessionEvent)
         ? IDE_EVENT_TYPE.TOOL
         : getIDEEventType(functionName));
+  const terminalRevealRequest = useAtomValue(
+    simulatorIdeTerminalRevealRequestAtom
+  );
   const primarySidebarCollapsed = useAtomValue(
     simulatorPrimarySidebarCollapsedAtom
   );
@@ -114,6 +125,30 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
 
   // Track whether user explicitly selected a tool item (under terminal tab)
   const [userPickedTool, setUserPickedTool] = useState(false);
+  const lastTerminalRevealRequestRef = useRef(0);
+
+  useEffect(() => {
+    if (
+      terminalRevealRequest === 0 ||
+      terminalRevealRequest === lastTerminalRevealRequestRef.current
+    ) {
+      return;
+    }
+    lastTerminalRevealRequestRef.current = terminalRevealRequest;
+    const timer = window.setTimeout(() => {
+      setFileViewMode(FILE_PANEL_VIEW_MODE.TERMINAL);
+      setUserPickedTool(false);
+      const targetShell = selectedShellOperation ?? allShellOperations[0];
+      if (targetShell) selectShellOperation(targetShell.eventId);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [
+    terminalRevealRequest,
+    setFileViewMode,
+    selectedShellOperation,
+    allShellOperations,
+    selectShellOperation,
+  ]);
 
   // File tab — sidebar click lives inside the explore tab's file list, so we
   // only need to flip the explore/file vs search switch here. The sidebar
@@ -395,6 +430,27 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
     [tabKindByEventId, handleReplayTabClick]
   );
 
+  const onReplayTabDoubleClick = useCallback(
+    (clickedEventId: string) => {
+      const op = allFileOperations.find(
+        (candidate) =>
+          candidate.eventId === clickedEventId ||
+          candidate.relatedEventIds?.includes(clickedEventId)
+      );
+      if (!op?.filePath) return;
+
+      document.dispatchEvent(
+        new CustomEvent("file-pill-click", {
+          detail: {
+            filePath: op.filePath,
+            fileName: op.fileName,
+          },
+        })
+      );
+    },
+    [allFileOperations]
+  );
+
   const isCurrentEventLoading = sessionEvent?.displayStatus === "running";
 
   const mainContent = (
@@ -422,6 +478,7 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
         tabs={replayTabs}
         activeEventId={replayActiveEventId}
         onTabClick={onReplayTabClick}
+        onTabDoubleClick={onReplayTabDoubleClick}
       >
         <div className="flex min-h-0 flex-1">
           <WorkStationShell

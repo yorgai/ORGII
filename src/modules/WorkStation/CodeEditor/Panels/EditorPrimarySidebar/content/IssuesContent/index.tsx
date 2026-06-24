@@ -22,7 +22,6 @@ import {
 import { TreeSectionHeader } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/components/TreeSectionHeader";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { workstationIssueCallbackAtom } from "@src/store/workstation/codeEditor/workstationIssueAtom";
-import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
 
 import { useWorkstationIssues } from "../../hooks/useWorkstationIssues";
 import { IssueRow } from "./IssueRow";
@@ -34,7 +33,6 @@ export interface IssuesContentProps {
   branchName?: string;
   remoteUrl?: string;
   onOpenNewIssueForm?: () => void;
-  onHistorySelectionChange?: (selection: SourceControlHistorySelection) => void;
   /** Whether the filter input row is currently open */
   showFilter?: boolean;
   /** Active filter query (synced with external useSectionFilter) */
@@ -51,7 +49,6 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
     repoId,
     branchName,
     remoteUrl,
-    onHistorySelectionChange,
     showFilter = false,
     filterQuery = "",
     onFilterQueryChange,
@@ -121,18 +118,12 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
           if (created) {
             setShowNewIssueForm(false);
             selectIssue(created);
-            onHistorySelectionChange?.({
-              type: "issue",
-              issueNumber: created.number,
-              issueTitle: created.title,
-              issueUrl: created.html_url,
-            });
           }
         } finally {
           setCreatingIssue(false);
         }
       },
-      [handleCreateIssue, selectIssue, onHistorySelectionChange]
+      [handleCreateIssue, selectIssue]
     );
 
     // Register callbacks so PinnedActionsBar, agents, and the github-issue-detail
@@ -180,14 +171,8 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
     const handleOpenIssue = useCallback(
       (issue: GitHubIssue) => {
         selectIssue(issue);
-        onHistorySelectionChange?.({
-          type: "issue",
-          issueNumber: issue.number,
-          issueTitle: issue.title,
-          issueUrl: issue.html_url,
-        });
       },
-      [onHistorySelectionChange, selectIssue]
+      [selectIssue]
     );
 
     // ── Render ────────────────────────────────────────────────────────────────

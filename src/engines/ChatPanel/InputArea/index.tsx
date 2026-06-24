@@ -61,6 +61,8 @@ interface InputAreaProps {
   statusBanners?: React.ReactNode;
   composerShellRef?: React.Ref<HTMLDivElement>;
   disableStopWhenEmpty?: boolean;
+  submitDisabled?: boolean;
+  sessionScope?: "active" | "none";
   /**
    * Set by the bottom-anchored floating composer so its + / slash / @ menus
    * open upward even in queue-edit mode (there is no room beneath it).
@@ -93,6 +95,8 @@ const InputArea: React.FC<InputAreaProps> = memo(
     statusBanners,
     composerShellRef,
     disableStopWhenEmpty = false,
+    submitDisabled = false,
+    sessionScope = "active",
     bottomAnchored = false,
   }) => {
     const { t } = useTranslation("sessions");
@@ -168,6 +172,8 @@ const InputArea: React.FC<InputAreaProps> = memo(
     } = useInputArea({
       placeholder,
       sessionId: propSessionId,
+      sessionScope,
+      submitDisabled,
       onSubmitOverride,
       customMentionOptions: mergedCustomMentionOptions,
     });
@@ -469,6 +475,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
                 isSessionTerminal={isSessionTerminal}
                 voiceFeatureEnabled={voiceFeatureEnabled}
                 dropTargetId={dropTargetId}
+                submitDisabled={submitDisabled}
               />
             )}
           </ComposerShell>

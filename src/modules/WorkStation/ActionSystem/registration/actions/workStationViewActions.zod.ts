@@ -290,7 +290,7 @@ export const workstationOpenTerminalTab = defineZodAction(
   {
     id: ACTION_ID.WORKSTATION_OPEN_TERMINAL_TAB,
     category: "navigation",
-    description: "Open the Code Editor Terminal tab",
+    description: "Open the WorkStation terminal view",
     params: z.object({}),
     shortcut: getShortcutKeys("open_terminal_tab"),
     tags: ["workstation", "code-editor", "terminal"],

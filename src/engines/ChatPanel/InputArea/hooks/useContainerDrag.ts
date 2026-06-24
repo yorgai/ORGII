@@ -8,7 +8,13 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 import type { ComposerInputRef } from "@src/components/ComposerInput";
+import {
+  consumeWorkstationTabDragData,
+  isInternalFileTreeDragActive,
+  isWorkstationTabDragActive,
+} from "@src/shared/dnd/dragSideChannel";
 import { insertPillFromTabPayload } from "@src/shared/dnd/dropTargetUtils";
+import { hasReferenceDragData } from "@src/shared/dnd/referenceDragData";
 import { useTabDragEndToPill } from "@src/shared/dnd/useTabDragEndToPill";
 
 import { reorderActiveRef } from "../components/QueuedMessages";
@@ -87,10 +93,13 @@ export function useContainerDrag({
       if (reorderActiveRef.current) return;
 
       // Use global flags - browser restricts dataTransfer.types during dragover
-      const isInternalFileDrag = window.__internalFileTreeDrag === true;
-      const isTabDrag = window.__internalWorkstationTabDrag === true;
+      const isInternalFileDrag = isInternalFileTreeDragActive();
+      const isTabDrag = isWorkstationTabDragActive();
+      const isReferenceDrag = hasReferenceDragData(
+        Array.from(e.dataTransfer.types)
+      );
 
-      if (isInternalFileDrag || isTabDrag) {
+      if (isInternalFileDrag || isTabDrag || isReferenceDrag) {
         e.preventDefault();
         e.stopPropagation();
         handleDragOver(e);
@@ -104,10 +113,13 @@ export function useContainerDrag({
     (e: React.DragEvent<HTMLDivElement>) => {
       if (reorderActiveRef.current) return;
 
-      const isInternalFileDrag = window.__internalFileTreeDrag === true;
-      const isTabDrag = window.__internalWorkstationTabDrag === true;
+      const isInternalFileDrag = isInternalFileTreeDragActive();
+      const isTabDrag = isWorkstationTabDragActive();
+      const isReferenceDrag = hasReferenceDragData(
+        Array.from(e.dataTransfer.types)
+      );
 
-      if (isInternalFileDrag || isTabDrag) {
+      if (isInternalFileDrag || isTabDrag || isReferenceDrag) {
         e.preventDefault();
         e.stopPropagation();
         handleDragLeave(e);
@@ -121,22 +133,18 @@ export function useContainerDrag({
       if (reorderActiveRef.current) return;
 
       // Handle WorkStation tab drag-drop (dnd-kit pointer drag, no DataTransfer)
-      if (
-        window.__internalWorkstationTabDrag &&
-        window.__internalWorkstationTabDragData
-      ) {
+      const rawData = isWorkstationTabDragActive()
+        ? consumeWorkstationTabDragData()
+        : undefined;
+      if (rawData) {
         e.preventDefault();
         e.stopPropagation();
 
-        const rawData = window.__internalWorkstationTabDragData;
-        window.__internalWorkstationTabDrag = false;
-        window.__internalWorkstationTabDragData = undefined;
-
         let data: Parameters<typeof insertPillFromTabPayload>[1];
         try {
-          data = JSON.parse(rawData) as Parameters<
-            typeof insertPillFromTabPayload
-          >[1];
+          const parsed = JSON.parse(rawData) as unknown;
+          if (!parsed || typeof parsed !== "object") return;
+          data = parsed as Parameters<typeof insertPillFromTabPayload>[1];
         } catch {
           return;
         }
@@ -151,7 +159,11 @@ export function useContainerDrag({
 
       // Can check dataTransfer.types during drop event
       const types = Array.from(e.dataTransfer.types);
-      if (types.includes("application/x-file-reference")) {
+      if (
+        isInternalFileTreeDragActive() ||
+        types.includes("application/x-file-reference") ||
+        hasReferenceDragData(types)
+      ) {
         // Prevent default and stop propagation before handling
         e.preventDefault();
         e.stopPropagation();

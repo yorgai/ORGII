@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { exchangeSupabaseCodeForSession } from "@src/api/http/auth/supabase";
 import { ROUTES } from "@src/config/routes";
 import {
+  HOSTED_LOGIN_ENABLED,
   SERVICE_AUTH_STORAGE_KEYS,
   clearProcessedCode,
   isCodeAlreadyProcessed,
@@ -42,9 +43,14 @@ const AuthCallback: React.FC = () => {
       timers.push(timer);
     };
 
-    const redirectToLogin = () => {
+    const redirectFromFailedCallback = () => {
       safeTimeout(() => {
-        navigate(ROUTES.auth.login.path, { replace: true });
+        navigate(
+          HOSTED_LOGIN_ENABLED
+            ? ROUTES.auth.login.path
+            : ROUTES.workStation.base.path,
+          { replace: true }
+        );
       }, 2000);
     };
 
@@ -58,7 +64,7 @@ const AuthCallback: React.FC = () => {
       if (!search) {
         log.error("No query params found in URL");
         setError(t("market.auth.noAuthCode"));
-        redirectToLogin();
+        redirectFromFailedCallback();
         return;
       }
 
@@ -67,14 +73,14 @@ const AuthCallback: React.FC = () => {
       if (result.error) {
         log.error("Supabase auth error:", result.error);
         setError(result.error);
-        redirectToLogin();
+        redirectFromFailedCallback();
         return;
       }
 
       if (!result.code) {
         log.error("No authorization code in response");
         setError(t("market.auth.noAuthCode"));
-        redirectToLogin();
+        redirectFromFailedCallback();
         return;
       }
 
@@ -121,7 +127,7 @@ const AuthCallback: React.FC = () => {
             ? exchangeError.message
             : t("market.auth.tokenExchangeFailed");
         setError(errorMessage);
-        redirectToLogin();
+        redirectFromFailedCallback();
       }
     };
 

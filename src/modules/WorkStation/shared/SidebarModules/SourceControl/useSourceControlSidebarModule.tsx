@@ -384,7 +384,6 @@ export function useSourceControlSidebarModule({
         )}
         <PullRequestContent
           branchName={branchName}
-          onHistorySelectionChange={onGitHistorySelectionChange}
           filterQuery={prFilterQuery}
         />
       </div>
@@ -395,7 +394,6 @@ export function useSourceControlSidebarModule({
       setPrFilterQuery,
       clearPrFilter,
       branchName,
-      onGitHistorySelectionChange,
       t,
     ]
   );
@@ -407,7 +405,6 @@ export function useSourceControlSidebarModule({
           repoPath={repoPath}
           repoId={repoId}
           branchName={branchName}
-          onHistorySelectionChange={onGitHistorySelectionChange}
           showFilter={showIssuesFilter}
           filterQuery={issuesFilterQuery}
           onFilterQueryChange={setIssuesFilterQuery}
@@ -419,7 +416,6 @@ export function useSourceControlSidebarModule({
       repoPath,
       repoId,
       branchName,
-      onGitHistorySelectionChange,
       showIssuesFilter,
       issuesFilterQuery,
       setIssuesFilterQuery,

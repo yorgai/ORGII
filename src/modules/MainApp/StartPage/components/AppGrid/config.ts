@@ -24,7 +24,6 @@ import type { LucideIcon } from "lucide-react";
 import {
   buildAgentOrgsPath,
   buildIntegrationsPath,
-  getSegmentIcon,
 } from "@src/config/mainAppPaths";
 import {
   ROUTES,
@@ -77,10 +76,8 @@ const devRecordIcon =
   getIconComponentForPath(ROUTES.app.journey.record.path) ?? History;
 const devRecordIconName =
   getIconForPath(ROUTES.app.journey.record.path) ?? "history";
-const economyIcon = getSegmentIcon("market") ?? ICON_CONFIG.settings;
-
 export const APP_GRID_ITEMS: AppItem[] = [
-  // ========== Row 1 (4 items) ==========
+  // ========== Row 1 ==========
   {
     id: "changelog",
     labelKey: "navigation:routes.changelog",
@@ -88,14 +85,6 @@ export const APP_GRID_ITEMS: AppItem[] = [
     iconName: "chart-no-axes-gantt",
     action: "changelog",
     routePath: ROUTES.app.home.changelog.path,
-  },
-  {
-    id: "economy",
-    labelKey: "navigation:labels.economy",
-    icon: economyIcon,
-    iconName: "badge-cent",
-    action: "economy",
-    routePath: ROUTES.app.market.tokenMarket.path,
   },
   {
     id: "launchpad",

@@ -30,6 +30,13 @@ function dispatchOpenCodeTab(tabId: string) {
   );
 }
 
+async function unmaximizeChatPanel(): Promise<void> {
+  const { chatPanelMaximizedAtom } =
+    await import("@src/store/ui/chatPanelAtom");
+  const store = getStore();
+  store.set(chatPanelMaximizedAtom, false);
+}
+
 interface NavigationOptions {
   /**
    * If true, calling the navigation action while the user is *already* on the
@@ -120,6 +127,7 @@ export const WorkStationViewService = {
     store.set(stationModeAtom, mode);
 
     if (mode === "my-station" || mode === "agent-station") {
+      await unmaximizeChatPanel();
       store.set(activeStationChatVisibleAtom, mode, true);
       store.set(opsControlPeekHostAtom, null);
       store.set(opsControlFocusedTabAtom, null);
@@ -179,6 +187,7 @@ export const WorkStationViewService = {
 
     const store = getStore();
     const isAlreadyOnCodeEditorRoute = isCodeEditorRoute();
+    await unmaximizeChatPanel();
     store.set(stationModeAtom, "my-station");
     queuePendingCodeEditorTab(tabId);
     dispatchNavigate(ROUTES.workStation.code.path);
@@ -252,6 +261,7 @@ export const WorkStationViewService = {
     ) {
       return this.toggleChatPanelMaximized();
     }
+    await unmaximizeChatPanel();
     store.set(stationModeAtom, "my-station");
     store.set(workStationPrimarySidebarTabAtom, PRIMARY_SIDEBAR_TABS.SEARCH);
     if (query !== undefined) {
@@ -264,8 +274,37 @@ export const WorkStationViewService = {
   },
 
   async openTerminalTab(options?: NavigationOptions): Promise<boolean> {
-    const { CODE_EDITOR_MAIN_TERMINAL_TAB_ID } =
-      await import("@src/store/workstation/tabs");
+    const store = getStore();
+    const [
+      { CODE_EDITOR_MAIN_TERMINAL_TAB_ID },
+      { AppType },
+      {
+        simulatorIdeTerminalRevealRequestAtom,
+        simulatorSelectedAppAtom,
+        stationModeAtom,
+      },
+      { chatPanelMaximizedAtom },
+    ] = await Promise.all([
+      import("@src/store/workstation/tabs"),
+      import("@src/engines/Simulator/types/appTypes"),
+      import("@src/store/ui/simulatorAtom"),
+      import("@src/store/ui/chatPanelAtom"),
+    ]);
+
+    if (
+      isWorkStationRoute() &&
+      store.get(stationModeAtom) === "agent-station"
+    ) {
+      store.set(chatPanelMaximizedAtom, false);
+      store.set(simulatorSelectedAppAtom, AppType.CODE_EDITOR);
+      store.set(
+        simulatorIdeTerminalRevealRequestAtom,
+        (current: number) => current + 1
+      );
+      dispatchNavigate(ROUTES.workStation.base.path);
+      return true;
+    }
+
     return this.openCodeEditorTabOrToggleChatPanelMaximized(
       CODE_EDITOR_MAIN_TERMINAL_TAB_ID,
       { ...options, activeTabType: "terminal" }

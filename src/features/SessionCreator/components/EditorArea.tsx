@@ -16,10 +16,18 @@ import ComposerInput, { ComposerInputRef } from "@src/components/ComposerInput";
 import ComposerShell from "@src/components/ComposerShell";
 import Message from "@src/components/Message";
 import { VoiceInputButton, VoiceRecordingBar } from "@src/components/Voice";
+import { capPillText, storePillText } from "@src/config/pillTokens";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import ContextMenuPortal from "@src/engines/ChatPanel/InputArea/components/ContextMenuPortal";
 import SlashCommandPortal from "@src/engines/ChatPanel/InputArea/components/SlashCommandPortal";
 import { type VoiceInputError, useVoiceInput } from "@src/hooks/voice";
+import i18n from "@src/i18n";
+import {
+  clearReferenceDragData,
+  getReferenceDragPillData,
+  hasReferenceDragData,
+} from "@src/shared/dnd/referenceDragData";
+import { chatAppearanceAtom } from "@src/store/config/configAtom";
 import { voiceInputEnabledAtom } from "@src/store/platform/voiceInputAtom";
 import type { RepoKind } from "@src/store/repo/types";
 import type { ChatImageAttachment } from "@src/store/ui/chatImageAtom";
@@ -49,7 +57,7 @@ export interface EditorAreaProps {
   /** Remove file handler */
   onRemoveFile: (fileId: string) => void;
   /** Composer input ref */
-  composerInputRef: React.RefObject<ComposerInputRef | null>;
+  composerInputRef: React.MutableRefObject<ComposerInputRef | null>;
   /** Content change handler */
   onContentChange?: (text: string) => void;
   /** @ mention handler */
@@ -292,8 +300,74 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   // updates immediately.
 
   const voiceFeatureEnabled = useAtomValue(voiceInputEnabledAtom);
+  const { sendOnEnter } = useAtomValue(chatAppearanceAtom);
 
-  const isDragOver = useTabDragDrop(editorContainerRef, composerInputRef);
+  const isTabDragOver = useTabDragDrop(editorContainerRef, composerInputRef);
+  const [isReferenceDragOver, setIsReferenceDragOver] = useState(false);
+  const isDragOver = isTabDragOver || isReferenceDragOver;
+
+  const hasReferenceDrag = useCallback(
+    (types?: readonly string[]) => hasReferenceDragData(types),
+    []
+  );
+
+  const handleReferenceDragOver = useCallback(
+    (event: React.DragEvent<HTMLElement>) => {
+      if (!hasReferenceDrag(Array.from(event.dataTransfer.types))) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "copy";
+      setIsReferenceDragOver(true);
+    },
+    [hasReferenceDrag]
+  );
+
+  const handleReferenceDragLeave = useCallback(
+    (event: React.DragEvent<HTMLElement>) => {
+      if (!hasReferenceDrag(Array.from(event.dataTransfer.types))) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setIsReferenceDragOver(false);
+    },
+    [hasReferenceDrag]
+  );
+
+  const setComposerInputElement = useCallback(
+    (node: ComposerInputRef | null) => {
+      composerInputRef.current = node;
+    },
+    [composerInputRef]
+  );
+
+  const handleReferenceDrop = useCallback(
+    (event: React.DragEvent<HTMLElement>) => {
+      const reference = getReferenceDragPillData(event.dataTransfer);
+      if (!reference) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setIsReferenceDragOver(false);
+
+      try {
+        storePillText(
+          reference.pillPath,
+          capPillText(JSON.stringify(reference.payload))
+        );
+        composerInputRef.current?.insertFilePill(
+          reference.pillPath,
+          false,
+          reference.iconType,
+          reference.displayName
+        );
+        Message.success(
+          i18n.t("toasts.addedAsContext", { name: reference.displayName })
+        );
+      } finally {
+        clearReferenceDragData(reference.type);
+      }
+    },
+    [composerInputRef]
+  );
 
   const handleVoiceCommit = useCallback(
     (transcript: string) => {
@@ -453,6 +527,9 @@ const EditorArea: React.FC<EditorAreaProps> = ({
         ]
           .filter(Boolean)
           .join(" ")}
+        onDragOver={handleReferenceDragOver}
+        onDragLeave={handleReferenceDragLeave}
+        onDropCapture={handleReferenceDrop}
         style={{
           height: isCompact ? "auto" : `${SESSION_CONFIG.EDITOR_HEIGHT}px`,
         }}
@@ -495,14 +572,14 @@ const EditorArea: React.FC<EditorAreaProps> = ({
 
         {/* Composer Input Area */}
         <ComposerInput
-          ref={composerInputRef}
+          ref={setComposerInputElement}
           initialContent={initialContent ?? ""}
           placeholder={editorPlaceholder}
           onContentChange={(text) => onContentChange?.(text)}
           onAtMention={handleAtMention}
           onAtMentionClose={onAtMentionClose}
           onSubmit={onSubmit}
-          requireCmdEnter={true}
+          requireCmdEnter={!sendOnEnter}
           autoFocus={autoFocus}
           className="session-editor flex-1 cursor-text overflow-y-auto rounded-md text-[14px] text-text-1"
           minHeight={editorMinHeight ?? (isChatPanelFullScreen ? 60 : 100)}
@@ -596,7 +673,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             dropdownDirection={resolvedDropdownDirection}
             repoPath={repoPath}
             toolbarItemGap={false}
-            bottomPaddingClassName="pb-1"
             showContextInfo={false}
             pills={
               <ControlButtons

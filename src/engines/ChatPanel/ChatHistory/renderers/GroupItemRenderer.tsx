@@ -29,6 +29,7 @@ import {
 } from "../GroupChatView/groupChatUtils";
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
 import { NewEventDivider } from "../components/NewEventDivider";
+import { CHAT_FOOTER_SPACER } from "../config/chatFooterSpacer";
 import { getUnloadedTurnMeta } from "../hooks/useChatGroups";
 import { ChatItemRenderer } from "./ChatItemRenderer";
 import ChatItemWrap from "./ChatItemWrap";
@@ -292,10 +293,10 @@ export interface GroupItemRendererProps {
   isWpGeneWorking: boolean;
   isExploring: boolean;
   codeBlockContainerWidth?: number;
-  onRegenerate: (groupIndex: number) => void;
+  onRegenerate?: (groupIndex: number) => void;
   onSubmit: (eventId: string, answers: Record<string, string>) => void;
   onSkip: (eventId: string) => void;
-  onEditUserMessage: (
+  onEditUserMessage?: (
     item: OptimizedChatItem,
     newText: string,
     imageDataUrls?: string[]
@@ -401,12 +402,15 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
     );
 
     // Trailing-item turn gap. Placing the 24px gap on the LAST item of
-    // each non-final group keeps the next group's sticky header free of
-    // top padding — so pinned headers stay flush at the top of the
-    // viewport, while the visual turn boundary scrolls away with the
-    // previous group's body. Skipped on the final group (no following
-    // turn to separate from).
-    const turnGapClass = isLastItemInGroup && !isLastGroup ? "pb-6" : "";
+    // each non-final group keeps the next group's header free of top
+    // padding — so pinned headers stay flush at the top of the viewport,
+    // while the visual turn boundary scrolls away with the previous
+    // group's body. Skipped on the final group (no following turn to
+    // separate from).
+    const turnGapStyle =
+      isLastItemInGroup && !isLastGroup
+        ? { paddingBottom: CHAT_FOOTER_SPACER.ROUND_GAP_PX }
+        : undefined;
 
     // Memoize the context value so consumers of `AgentTurnContext`
     // (e.g. `RegenerateButton`, `AgentErrorChatItem`) don't re-render
@@ -417,9 +421,11 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
         lastAssistantFlatIndex,
         isLastGroup,
         isLastItemInGroup,
-        onRegenerate: isWpGeneWorking
-          ? () => Message.info("Workspace is working!")
-          : () => onRegenerate(groupIndex),
+        onRegenerate: onRegenerate
+          ? isWpGeneWorking
+            ? () => Message.info("Workspace is working!")
+            : () => onRegenerate(groupIndex)
+          : undefined,
         groupSenderName:
           groupChat?.enabled && event && !usesGroupChatMessageBubble
             ? groupChat.resolveSenderName(event)
@@ -499,7 +505,7 @@ export const GroupItemRenderer: React.FC<GroupItemRendererProps> = memo(
 
     return (
       <AgentTurnContext.Provider value={turnContext}>
-        <div className={turnGapClass || undefined} style={{ minHeight: 1 }}>
+        <div style={{ minHeight: 1, ...turnGapStyle }}>
           {showNewEventDivider && (
             <NewEventDivider label={newEventDividerLabel as string} />
           )}

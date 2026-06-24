@@ -29,6 +29,7 @@ export interface CustomMentionOption {
   id: string;
   label: string;
   description?: string;
+  groupLabel?: string;
   selectType?: MenuItemId;
   selectValue?: string;
   selectDisplayName?: string;
@@ -39,6 +40,8 @@ export interface UseInputAreaOptions {
   placeholder?: string;
   /** Explicit session ID for the chat surface using this composer. */
   sessionId?: string;
+  sessionScope?: "active" | "none";
+  submitDisabled?: boolean;
   onSubmitOverride?: (input: SubmitOverrideInput) => Promise<boolean>;
   customMentionOptions?: ReadonlyArray<CustomMentionOption>;
 }

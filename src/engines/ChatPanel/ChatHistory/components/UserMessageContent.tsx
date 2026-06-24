@@ -15,6 +15,7 @@ import {
   Globe,
   ListChecks,
   MessageSquare,
+  MousePointer2,
   SquareMousePointer,
   Terminal,
   Toolbox,
@@ -23,6 +24,7 @@ import React, { memo, useCallback, useMemo } from "react";
 
 import { ChatImageThumbnailRow } from "@src/components/ChatImageThumbnail";
 import BasePill from "@src/components/ComposerInput/BasePill";
+import { truncateVisiblePillLabel } from "@src/components/ComposerInput/utils";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import {
   PILL_LINE_HEIGHT,
@@ -51,6 +53,7 @@ const SINGLE_LINE_PILL_REGEX = new RegExp(
     "project",
     "workitem",
     "dom-element",
+    "dom-component",
     "skill",
     "paste",
     "pr",
@@ -139,6 +142,7 @@ function parseUserMessage(text: string): Segment[] {
         pillType === "terminal" ||
         pillType === "browser" ||
         pillType === "dom-element" ||
+        pillType === "dom-component" ||
         pillType === "paste" ||
         pillType === "pr" ||
         pillType === "issue";
@@ -180,6 +184,7 @@ function parseUserMessage(text: string): Segment[] {
       s.kind === "pill" &&
       (s.pillType === "terminal" ||
         s.pillType === "browser" ||
+        s.pillType === "dom-component" ||
         s.pillType === "paste" ||
         s.pillType === "pr" ||
         s.pillType === "issue")
@@ -222,6 +227,8 @@ const PillIcon: React.FC<{ pillType: PillType; displayName: string }> = memo(
         return <Globe {...ICON_PROPS} />;
       case "dom-element":
         return <SquareMousePointer {...ICON_PROPS} />;
+      case "dom-component":
+        return <MousePointer2 {...ICON_PROPS} />;
       case "project":
         return <FolderKanban {...ICON_PROPS} />;
       case "workitem":
@@ -264,7 +271,8 @@ function sessionIdFromPillPath(path: string): string {
 const SessionPillLabel: React.FC<{ path: string; fallback: string }> = memo(
   ({ path, fallback }) => {
     const session = useAtomValue(sessionByIdAtom(sessionIdFromPillPath(path)));
-    return <span>{session?.name?.trim() || fallback}</span>;
+    const label = session?.name?.trim() || fallback;
+    return <span>{truncateVisiblePillLabel(label)}</span>;
   }
 );
 SessionPillLabel.displayName = "SessionPillLabel";
@@ -274,6 +282,7 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
     segment.pillType === "terminal" ||
     segment.pillType === "file" ||
     segment.pillType === "folder" ||
+    segment.pillType === "dom-component" ||
     segment.pillType === "paste";
 
   const handleClick = useCallback(
@@ -307,7 +316,10 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
         return;
       }
 
-      if (segment.pillType === "paste") {
+      if (
+        segment.pillType === "paste" ||
+        segment.pillType === "dom-component"
+      ) {
         // Route to the dedicated DomComponentPreview tab (Raw / Preview viewer).
         const pasteText =
           segment.terminalText ??
@@ -351,6 +363,11 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
     [isClickable]
   );
 
+  const visibleDisplayName = useMemo(
+    () => truncateVisiblePillLabel(segment.displayName),
+    [segment.displayName]
+  );
+
   return (
     <BasePill
       variant="editor"
@@ -371,11 +388,12 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
       }}
       onClick={isClickable ? handleClick : undefined}
       onMouseDown={handleMouseDown}
+      title={segment.displayName}
     >
       {segment.pillType === "session" ? (
         <SessionPillLabel path={segment.path} fallback={segment.displayName} />
       ) : (
-        <span>{segment.displayName}</span>
+        <span>{visibleDisplayName}</span>
       )}
     </BasePill>
   );

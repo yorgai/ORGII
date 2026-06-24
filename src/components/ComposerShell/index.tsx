@@ -36,6 +36,7 @@ export interface ComposerShellProps {
   onDragOver?: React.DragEventHandler<HTMLDivElement>;
   onDragLeave?: React.DragEventHandler<HTMLDivElement>;
   onDrop?: React.DragEventHandler<HTMLDivElement>;
+  onDropCapture?: React.DragEventHandler<HTMLDivElement>;
   /** data-* / aria-* passthrough */
   [key: `data-${string}`]: unknown;
 }
@@ -83,6 +84,7 @@ const ComposerShell = forwardRef<HTMLDivElement, ComposerShellProps>(
       onDragOver,
       onDragLeave,
       onDrop,
+      onDropCapture,
       ...dataProps
     },
     ref
@@ -96,6 +98,7 @@ const ComposerShell = forwardRef<HTMLDivElement, ComposerShellProps>(
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
+        onDropCapture={onDropCapture}
         {...dataProps}
       >
         {children}

@@ -643,7 +643,7 @@ const SessionCreatorChatPanelSingle: React.FC<
         variant="chatPanelFullScreen"
         uploadedFiles={uploadedFiles}
         onRemoveFile={handleRemoveFile}
-        composerInputRef={composerInputRef as React.RefObject<ComposerInputRef>}
+        composerInputRef={composerInputRef}
         onContentChange={handleContentChangeWithTracking}
         onAtMention={handleAtMention}
         onAtMentionClose={handleAtMentionClose}

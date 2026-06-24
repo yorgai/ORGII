@@ -8,14 +8,18 @@
  */
 import type { Repo } from "./types";
 
+export function toRepoFileSystemPath(path: string | undefined | null): string {
+  if (!path) return "";
+  const stripped = path.trim().startsWith("file://")
+    ? path.trim().replace("file://", "")
+    : path.trim();
+  return stripped.length > 1 ? stripped.replace(/\/+$/, "") : stripped;
+}
+
 /** Strip file:// prefix and trailing slashes; lowercase for the
  *  case-insensitive default filesystem on macOS. */
 export function normalizeRepoPath(path: string | undefined | null): string {
-  if (!path) return "";
-  const stripped = path.startsWith("file://")
-    ? path.replace("file://", "")
-    : path;
-  return stripped.replace(/\/+$/, "").toLowerCase();
+  return toRepoFileSystemPath(path).toLowerCase();
 }
 
 /** Find the registered repo whose path (or fs_uri) equals `path`. */

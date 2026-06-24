@@ -296,6 +296,12 @@ pub struct PtyInfo {
     pub redacted_output_chars: usize,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PtyOutputSnapshot {
+    pub output: String,
+    pub unacked_bytes: usize,
+}
+
 fn pty_info_from_session(session_id: &str, session: &PtySession) -> PtyInfo {
     PtyInfo {
         session_id: session_id.to_string(),
@@ -344,6 +350,30 @@ pub async fn get_pty_info(
         .ok_or_else(|| format!("Session {} not found", session_id))?;
 
     Ok(pty_info_from_session(&session_id, session))
+}
+
+/// Get the recent output snapshot for a live PTY session.
+#[tauri::command]
+pub async fn get_pty_output_snapshot(
+    session_id: String,
+    state: State<'_, PtyState>,
+) -> Result<PtyOutputSnapshot, String> {
+    let sessions = state.inner().sessions.lock().await;
+    let session = sessions
+        .get(&session_id)
+        .ok_or_else(|| format!("Session {} not found", session_id))?;
+
+    let output = session
+        .redacted_output
+        .lock()
+        .expect("redacted_output mutex poisoned")
+        .clone();
+    let unacked_bytes = session.unacked_bytes.load(Ordering::Relaxed);
+
+    Ok(PtyOutputSnapshot {
+        output,
+        unacked_bytes,
+    })
 }
 
 // ============================================

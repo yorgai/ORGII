@@ -91,6 +91,14 @@ export interface WebUrlBarProps {
 const AUTO_BLUR_MS_AFTER_LEAVE = 2000;
 const BROWSER_URL_BAR_FOCUS_EVENT = "browser-url-bar-focus";
 
+export function focusBrowserUrlBar(): void {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event(BROWSER_URL_BAR_FOCUS_EVENT));
+    });
+  });
+}
+
 // ============================================
 // Component
 // ============================================

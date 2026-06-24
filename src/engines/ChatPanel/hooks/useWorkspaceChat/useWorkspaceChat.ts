@@ -114,23 +114,27 @@ function stableSubmitHash(value: string): string {
 
 interface UseWorkspaceChatOptions {
   sessionId?: string;
+  sessionScope?: "active" | "none";
 }
 
 const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
-  const { sessionId: propSessionId } = options;
+  const { sessionId: propSessionId, sessionScope = "active" } = options;
   const { t } = useTranslation("sessions");
   const [searchParams] = useSearchParams();
   const store = useStore();
 
-  const isHosted = useMemo(
+  const rawIsHosted = useMemo(
     () => isHostedFromSearchParams(searchParams),
     [searchParams]
   );
+  const isSessionless = sessionScope === "none";
+  const isHosted = isSessionless ? false : rawIsHosted;
 
   // ============================================
   // Atoms
   // ============================================
-  const isWpGeneWorking = useAtomValue(isSessionActiveAtom);
+  const rawIsWpGeneWorking = useAtomValue(isSessionActiveAtom);
+  const isWpGeneWorking = isSessionless ? false : rawIsWpGeneWorking;
   const setUserInitiatedCancel = useSetAtom(userInitiatedCancelAtom);
   const setLastUserMessage = useSetAtom(lastUserMessageAtom);
   // SessionCore engine-level session ID — always tracks the currently
@@ -182,6 +186,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
   // Session ID Helper
   // ============================================
   const getSessionId = useCallback((): string | null => {
+    if (sessionScope === "none") return null;
     return (
       propSessionId ||
       coreSessionId ||
@@ -192,6 +197,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
     );
   }, [
     propSessionId,
+    sessionScope,
     coreSessionId,
     resolvedSessionId,
     activeSessionId,
@@ -481,7 +487,9 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
   // ============================================
   // Derived State
   // ============================================
-  const effectiveSessionId = resolvedSessionId || coreSessionId;
+  const effectiveSessionId = isSessionless
+    ? null
+    : resolvedSessionId || coreSessionId;
 
   const canStopAgent = useMemo(
     () =>

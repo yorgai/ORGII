@@ -59,4 +59,27 @@ describe("getOpenedTabMentionOptions", () => {
       "sdeagent-123",
     ]);
   });
+
+  it("returns browser-session tabs as browser mention options", () => {
+    const options = getOpenedTabMentionOptions([
+      makeTab({
+        id: "browser:session-1",
+        title: "Example",
+        type: "browser-session",
+        data: { sessionId: "session-1", url: "https://example.com/docs" },
+      }),
+    ]);
+
+    expect(options).toEqual([
+      {
+        id: "workstation-tab:browser:session-1",
+        label: "Example",
+        description: "https://example.com/docs",
+        groupLabel: "Open tabs",
+        selectType: "browser",
+        selectValue: "session-1",
+        selectDisplayName: "Example",
+      },
+    ]);
+  });
 });

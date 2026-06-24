@@ -51,6 +51,7 @@ import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAc
 import type { UnifiedTabContentProps } from "../types";
 
 const logger = createLogger("AgentConfigTab");
+const AGENT_ORGS_CHANGED_EVENT = "orgii-agent-orgs-changed";
 
 interface AgentConfigInnerProps {
   data: AgentConfigTabData;
@@ -182,6 +183,7 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
         }
         const refreshed = await loadOrgs();
         setOrgs(refreshed);
+        window.dispatchEvent(new Event(AGENT_ORGS_CHANGED_EVENT));
         Message.success(
           t(isUpdate ? "agentOrgs.orgUpdated" : "agentOrgs.orgCreated", {
             defaultValue: isUpdate ? "Team updated" : "Team created",
@@ -218,6 +220,7 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
         await rpc.agentOrgs.orgs.remove({ orgId });
         const refreshed = await loadOrgs();
         setOrgs(refreshed);
+        window.dispatchEvent(new Event(AGENT_ORGS_CHANGED_EVENT));
         Message.success(
           t("agentOrgs.orgDeleted", { defaultValue: "Team deleted" })
         );

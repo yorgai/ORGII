@@ -1,17 +1,18 @@
 import React from "react";
 import { createPortal } from "react-dom";
 
-import type { NavItemDragState } from "./useNavItemDrag";
-
-interface NavItemDragGhostProps {
-  dragState: NavItemDragState;
+export interface ReferenceDragState {
+  isDragging: boolean;
+  dragX: number;
+  dragY: number;
+  dragLabel: string;
 }
 
-/**
- * A floating pill ghost that follows the pointer while a navigation item
- * is being dragged toward the chat input / session creator.
- */
-export const NavItemDragGhost: React.FC<NavItemDragGhostProps> = ({
+interface ReferenceDragGhostProps {
+  dragState: ReferenceDragState;
+}
+
+export const ReferenceDragGhost: React.FC<ReferenceDragGhostProps> = ({
   dragState,
 }) => {
   if (!dragState.isDragging) return null;
@@ -29,7 +30,7 @@ export const NavItemDragGhost: React.FC<NavItemDragGhostProps> = ({
       }}
     >
       <div className="flex items-center gap-1.5 rounded-full bg-bg-2 px-2.5 py-1 text-[12px] font-medium text-text-1 shadow-lg ring-1 ring-border-1">
-        <span className="max-w-[160px] truncate">{dragState.dragLabel}</span>
+        <span className="max-w-[180px] truncate">{dragState.dragLabel}</span>
       </div>
     </div>,
     document.body

@@ -6,6 +6,10 @@ import { useCallback, useEffect, useRef } from "react";
 import * as repoApi from "@src/api/tauri/repo";
 import { createLogger } from "@src/hooks/logger";
 import { REPO_KIND, type Repo } from "@src/store/repo";
+import {
+  matchRepoByPath,
+  toRepoFileSystemPath,
+} from "@src/store/repo/matchRepoByPath";
 import { isTauriDesktop } from "@src/util/platform/tauri";
 
 const log = createLogger("useRecentFolderEvents");
@@ -21,19 +25,13 @@ interface UseRecentFolderEventsOptions {
   onCloseWorkspace?: () => void;
 }
 
-function normalizeRepoPath(path: string): string {
-  return path.replace(/\\/g, "/").replace(/\/+$/, "");
-}
+function toRecentFolderPath(payload: unknown): string | undefined {
+  if (typeof payload !== "string") {
+    return undefined;
+  }
 
-function findRepoByPath(repos: Repo[], folderPath: string): Repo | undefined {
-  const normalizedTargetPath = normalizeRepoPath(folderPath);
-  return repos.find((repo) => {
-    const repoPath = repo.fs_uri || repo.path;
-    if (!repoPath) {
-      return false;
-    }
-    return normalizeRepoPath(repoPath) === normalizedTargetPath;
-  });
+  const fileSystemPath = toRepoFileSystemPath(payload);
+  return fileSystemPath || undefined;
 }
 
 function mapApiRepoToStoreRepo(
@@ -114,8 +112,8 @@ export function useRecentFolderEvents({
     onCloseWorkspaceRef.current = onCloseWorkspace;
   }, [onCloseWorkspace]);
 
-  const openRecentFolder = useCallback(async (candidatePath: string) => {
-    const folderPath = candidatePath.trim();
+  const openRecentFolder = useCallback(async (candidatePath: unknown) => {
+    const folderPath = toRecentFolderPath(candidatePath);
     if (!folderPath) {
       return;
     }
@@ -127,7 +125,7 @@ export function useRecentFolderEvents({
     // "Open Folder" replaces the workspace (resets multi-root to single)
     resetWorkspaceFoldersRef.current?.();
 
-    const existingRepo = findRepoByPath(reposRef.current, folderPath);
+    const existingRepo = matchRepoByPath(reposRef.current, folderPath);
     if (existingRepo) {
       selectRepoRef.current(existingRepo.id);
       return;
@@ -142,7 +140,7 @@ export function useRecentFolderEvents({
             mapApiRepoToStoreRepo(repo as unknown as Record<string, unknown>)
           )
           .filter((repo): repo is Repo => Boolean(repo));
-        const existingServerRepo = findRepoByPath(serverRepos, folderPath);
+        const existingServerRepo = matchRepoByPath(serverRepos, folderPath);
         if (existingServerRepo) {
           await forceRefreshReposRef.current();
           selectRepoRef.current(existingServerRepo.id);
@@ -186,7 +184,7 @@ export function useRecentFolderEvents({
 
     // Import the folder as a repo if not already known (for git tracking),
     // but don't change the selected repo — the user is adding, not switching.
-    const existingRepo = findRepoByPath(reposRef.current, folderPath);
+    const existingRepo = matchRepoByPath(reposRef.current, folderPath);
     if (existingRepo) return;
 
     try {
@@ -209,7 +207,7 @@ export function useRecentFolderEvents({
     const unlisteners: Array<() => void> = [];
 
     const setupListeners = async () => {
-      const unlistenOpenRecent = await listen<string>(
+      const unlistenOpenRecent = await listen<unknown>(
         "menu-open-recent",
         (event) => {
           if (cancelled) {
@@ -219,26 +217,6 @@ export function useRecentFolderEvents({
         }
       );
       unlisteners.push(unlistenOpenRecent);
-
-      const unlistenMacOpenFiles = await listen<string[]>(
-        "macos-open-files",
-        (event) => {
-          if (cancelled) {
-            return;
-          }
-
-          const openedPaths = event.payload;
-          (async () => {
-            for (const openedPath of openedPaths) {
-              if (cancelled) {
-                return;
-              }
-              await openRecentFolder(openedPath);
-            }
-          })();
-        }
-      );
-      unlisteners.push(unlistenMacOpenFiles);
 
       const unlistenOpenFolder = await listen("menu-file-open-folder", () => {
         if (cancelled) {

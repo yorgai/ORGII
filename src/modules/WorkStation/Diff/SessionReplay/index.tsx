@@ -621,6 +621,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
               selectedEntryId={null}
               selectedPath={historySelection ? null : focusedDiffPath}
               onSelectItem={handleSidebarItemSelect}
+              enableDragToInput
             />
           ),
           defaultFlexGrow: 1,

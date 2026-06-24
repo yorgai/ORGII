@@ -276,6 +276,7 @@ interface NormalComposerContentProps extends SharedComposerBarProps {
   isSessionTerminal: boolean;
   voiceFeatureEnabled: boolean;
   dropTargetId: string;
+  submitDisabled?: boolean;
 }
 
 export const NormalComposerContent: React.FC<NormalComposerContentProps> = ({
@@ -329,6 +330,7 @@ export const NormalComposerContent: React.FC<NormalComposerContentProps> = ({
   isSessionTerminal,
   voiceFeatureEnabled,
   dropTargetId,
+  submitDisabled,
 }) => {
   const { t } = useTranslation("sessions");
 
@@ -428,6 +430,7 @@ export const NormalComposerContent: React.FC<NormalComposerContentProps> = ({
                 onSubmit={onSubmit}
                 onInterrupt={onInterrupt}
                 onResume={onResume}
+                submitDisabled={submitDisabled}
               />
             </div>
           }

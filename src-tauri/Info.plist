@@ -2,44 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!--
-        Document Types — enables Dock Exposé recent files, Apple menu > Recent Items,
-        and "Open With" in Finder. Merged into the .app bundle at build time by Tauri CLI.
-        NOT active during `tauri dev` (bare binary, no bundle). Use `tauri build - -debug`
-        to test Exposé / system-level recent documents.
-    -->
-    <key>CFBundleDocumentTypes</key>
-    <array>
-        <!-- Folder/Directory support - for opening repositories -->
-        <dict>
-            <key>CFBundleTypeName</key>
-            <string>Folder</string>
-            <key>CFBundleTypeRole</key>
-            <string>Viewer</string>
-            <key>LSItemContentTypes</key>
-            <array>
-                <string>public.folder</string>
-                <string>public.directory</string>
-            </array>
-            <key>LSHandlerRank</key>
-            <string>Alternate</string>
-        </dict>
-        <!-- All files - for opening individual files -->
-        <dict>
-            <key>CFBundleTypeName</key>
-            <string>All Files</string>
-            <key>CFBundleTypeRole</key>
-            <string>Viewer</string>
-            <key>LSItemContentTypes</key>
-            <array>
-                <string>public.item</string>
-            </array>
-            <key>LSHandlerRank</key>
-            <string>Alternate</string>
-        </dict>
-    </array>
-    
-    <!-- URL Schemes - already configured in tauri.conf.json but can be added here too -->
+    <!-- URL schemes are configured in tauri.conf.json. -->
 
     <!-- Services - none for now -->
 

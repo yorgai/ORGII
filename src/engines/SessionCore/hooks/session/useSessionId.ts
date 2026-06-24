@@ -18,7 +18,10 @@
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";
 
-import { useChatSessionId } from "@src/engines/ChatPanel/ChatSessionContext";
+import {
+  CHAT_SESSION_CONTEXT_NONE,
+  useChatSessionId,
+} from "@src/engines/ChatPanel/ChatSessionContext";
 import { activeSessionIdAtom } from "@src/store/session";
 
 export interface UseSessionIdOptions {
@@ -44,6 +47,10 @@ export function useSessionId(
   return useMemo(() => {
     if (propSessionId) {
       return { sessionId: propSessionId, source: "prop" as const };
+    }
+
+    if (chatContextSessionId === CHAT_SESSION_CONTEXT_NONE) {
+      return { sessionId: undefined, source: "none" as const };
     }
 
     if (chatContextSessionId) {

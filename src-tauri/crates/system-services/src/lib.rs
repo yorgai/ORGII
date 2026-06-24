@@ -1,8 +1,8 @@
 //! System Services
 //!
 //! OS-integration Tauri commands and helpers: macOS dock + tray + app menu,
-//! NSDocumentController-backed recent files, native notifications, VPN
-//! interface detection, ipinfo geolocation lookup, and host-toolchain
+//! native notifications, VPN interface detection, ipinfo geolocation lookup,
+//! and host-toolchain
 //! dependency probing (git, node, python, …).
 //!
 //! Pure leaf — no back-edges into `app`. The `#[tauri::command]` functions
@@ -17,7 +17,7 @@ pub mod dock_menu;
 pub mod network;
 pub mod notifications;
 pub mod power;
-pub mod recent_files;
+pub mod system_recents;
 pub mod tray;
 
 #[cfg(test)]

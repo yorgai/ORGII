@@ -12,7 +12,7 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 
 import { ROUTES } from "@src/config/routes";
-import { isAuthSkipped } from "@src/config/serviceAuth";
+import { HOSTED_LOGIN_ENABLED, isAuthSkipped } from "@src/config/serviceAuth";
 import { useServiceAuthState } from "@src/hooks/auth";
 
 /**
@@ -24,7 +24,7 @@ export const AuthRedirect: React.FC = () => {
 
   // BYOK-only users may have skipped login — treat that as authorized for
   // routing purposes. AuthGuard does the same check.
-  if (!isAuthenticated && !isAuthSkipped()) {
+  if (HOSTED_LOGIN_ENABLED && !isAuthenticated && !isAuthSkipped()) {
     return <Navigate to={ROUTES.auth.login.path} replace />;
   }
 

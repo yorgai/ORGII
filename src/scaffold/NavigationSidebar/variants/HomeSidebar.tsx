@@ -23,7 +23,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import Tooltip from "@src/components/Tooltip";
-import { getSegmentIcon } from "@src/config/mainAppPaths";
 import { ROUTES } from "@src/config/routes";
 import { useRouteLabel } from "@src/hooks/i18n";
 import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
@@ -37,7 +36,6 @@ import { SidebarSearchShortcutTooltip } from "../connectors/WorkstationSidebarCo
 import type { SidebarTab } from "../types";
 import { routeToMenuItem } from "../utils/menuFromRoutes";
 import DevRecordSidebar from "./DevRecordSidebar";
-import EconomySidebar from "./EconomySidebar";
 import NavigationSidebar from "./NavigationSidebar";
 import SettingsSidebar from "./SettingsSidebar";
 
@@ -45,17 +43,8 @@ import SettingsSidebar from "./SettingsSidebar";
 // Helpers
 // ============================================
 
-const HOME_SIDEBAR_ICON_NAME = {
-  economy: "badge-cent",
-} as const;
-
 const HOME_SIDEBAR_TABS: SidebarTab[] = [];
 const noopSidebarTabChange = () => undefined;
-
-const MARKET_ROOT_PATH = ROUTES.app.market.tokenMarket.path.slice(
-  0,
-  ROUTES.app.market.tokenMarket.path.lastIndexOf("/")
-);
 
 const ORGII_GITHUB_URL = "https://github.com/YORG-AI/ORGII";
 const GITHUB_MENU_ITEM_KEY = "external-github";
@@ -80,7 +69,6 @@ const HomeSidebar: React.FC = () => {
   // Unified settings surface covers all /settings namespaces;
   // SettingsSidebar owns the nested settings levels.
   const isOnSettings = location.pathname.startsWith(ROUTES.app.settings.path);
-  const isOnEconomy = location.pathname.startsWith(MARKET_ROOT_PATH);
 
   // Build menu items — labels from route config via useRouteLabel (same as PageBreadcrumb)
   const buildMenuItems = useMemo(
@@ -98,11 +86,6 @@ const HomeSidebar: React.FC = () => {
       }),
       routeToMenuItem(ROUTES.app.journey.record, {
         label: getTranslatedRouteLabel(ROUTES.app.journey.record),
-      }),
-      routeToMenuItem(ROUTES.app.market.tokenMarket, {
-        icon: getSegmentIcon("market") ?? undefined,
-        iconName: HOME_SIDEBAR_ICON_NAME.economy,
-        label: t("sidebar.groups.economy"),
       }),
       {
         id: GITHUB_MENU_ITEM_KEY,
@@ -125,11 +108,6 @@ const HomeSidebar: React.FC = () => {
   const selectedKey = useMemo(() => {
     const pathname = location.pathname;
     const allPaths = [
-      ROUTES.app.market.tokenMarket.path,
-      ROUTES.app.market.agentApps.path,
-      ROUTES.app.market.serviceMarket.path,
-      ROUTES.app.market.profile.path,
-      ROUTES.app.market.wallet.path,
       ROUTES.app.journey.record.path,
       ROUTES.app.home.changelog.path,
     ];
@@ -146,7 +124,7 @@ const HomeSidebar: React.FC = () => {
     label: "Start page",
     items: buildMenuItems.length,
     source: { buildMenuItems, selectedKey },
-    enabled: !isOnDevRecord && !isOnSettings && !isOnEconomy,
+    enabled: !isOnDevRecord && !isOnSettings,
   });
 
   const handleOpenWorkstation = useCallback(() => {
@@ -242,10 +220,6 @@ const HomeSidebar: React.FC = () => {
 
   if (isOnSettings) {
     return <SettingsSidebar />;
-  }
-
-  if (isOnEconomy) {
-    return <EconomySidebar />;
   }
 
   return (

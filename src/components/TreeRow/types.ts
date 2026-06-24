@@ -1,4 +1,9 @@
-import type { DragEvent, MouseEvent, ReactNode } from "react";
+import type {
+  DragEvent,
+  MouseEvent,
+  PointerEventHandler,
+  ReactNode,
+} from "react";
 
 /**
  * Shared types for tree row components
@@ -78,6 +83,8 @@ export interface TreeRowBaseProps {
   onMouseEnter?: (event: MouseEvent<HTMLDivElement>) => void;
   /** Mouse leave handler */
   onMouseLeave?: (event: MouseEvent<HTMLDivElement>) => void;
+  /** Pointer down handler (used for custom pointer-based drags) */
+  onPointerDown?: PointerEventHandler<HTMLDivElement>;
   // NOTE: isDragging removed - now uses .is-dragging CSS class for performance
   /** Show VS Code-style vertical indent guide lines (default: true) */
   showIndentGuides?: boolean;

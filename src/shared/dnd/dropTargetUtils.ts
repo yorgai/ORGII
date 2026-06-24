@@ -5,6 +5,7 @@ import type {
   PillIconType,
 } from "@src/components/ComposerInput";
 import Message from "@src/components/Message";
+import { capPillText, storePillText } from "@src/config/pillTokens";
 import i18n from "@src/i18n";
 import { loadWorkItemPillContent } from "@src/util/contextPillContent";
 
@@ -39,6 +40,7 @@ interface InsertPillOptions {
   isFolder?: boolean;
   pointerX?: number;
   pointerY?: number;
+  contextText?: string;
 }
 
 function getDisplayName(path: string, name: string | undefined): string {
@@ -55,6 +57,10 @@ export function insertPillFromTabPayload(
   const iconType = payload.iconType ?? (payload.isFolder ? "folder" : "file");
   const isFolder = payload.isFolder ?? iconType === "folder";
   const displayName = getDisplayName(payload.path, payload.name);
+
+  if (payload.contextText) {
+    storePillText(payload.path, capPillText(payload.contextText));
+  }
 
   // Only place the caret at the drop point when the input already has
   // content and is focused — inserting into a position that exists.

@@ -1122,7 +1122,8 @@
     "selectRepoFromHome": "请从首页选择一个仓库",
     "cloneRepoAgain": "请从首页重新克隆仓库",
     "unsavedChangesTitle": "未保存的更改",
-    "prkPlaceholder": "PRJ"
+    "prkPlaceholder": "PRJ",
+    "gitSyncMenuTitle": "Git 同步操作"
   },
   "git": {
     "loading": "正在加载 Git 状态...",
@@ -1367,7 +1368,13 @@
         "deleteBranch": "删除分支",
         "refresh": "刷新分支",
         "checkoutDetachedSuccess": "已切换到 detached HEAD 状态（当前提交）",
-        "checkoutDetachedFailed": "切换到 detached HEAD 失败"
+        "checkoutDetachedFailed": "切换到 detached HEAD 失败",
+        "removeWorktree": "移除 Worktree"
+      },
+      "messages": {
+        "deletedCount_one": "已删除 {{count}} 个分支",
+        "deletedCount_other": "已删除 {{count}} 个分支",
+        "failedDeleteList": "删除失败：{{branches}}"
       },
       "labels": {
         "otherBranches": "其他分支",
@@ -1375,7 +1382,9 @@
         "recent": "最近",
         "currentCommit": "当前提交",
         "basedOn": "基于",
-        "worktrees": "Worktrees"
+        "worktrees": "Worktrees",
+        "worktreeInUse": "使用中",
+        "checkedOutInWorktree": "已在 Worktree 中检出：{{path}}"
       },
       "placeholders": {
         "checkout": "分支",

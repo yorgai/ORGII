@@ -9,7 +9,7 @@
 //! - Help
 //!
 //! Recent paths are persisted to `recent_paths.json` in the Tauri app data dir
-//! and restored on startup (including re-registering with macOS NSDocumentController).
+//! and restored into ORGII's app-controlled File > Open Recent menu on startup.
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -400,23 +400,19 @@ fn load_recent_paths_from_disk(app: &AppHandle) -> Vec<String> {
 }
 
 /// Initialize recent paths on app startup:
-/// 1. Load persisted paths from disk
-/// 2. Re-register them with macOS NSDocumentController (so Dock/Expose show them)
-/// 3. Rebuild the menu so File > Open Recent is populated
+/// 1. Clear stale macOS system recent documents from older builds
+/// 2. Load persisted paths from disk
+/// 3. Rebuild the app-controlled File > Open Recent menu
 ///
 /// NOTE: This runs in `.setup()`, not `.menu()`, because `app.path()` is not
 /// available during `.menu()` (PathResolver is not yet initialized).
 /// The menu is built twice: first empty, then rebuilt here with recent items.
 pub fn initialize_recent_paths(app: &AppHandle) {
+    super::system_recents::clear_system_recent_documents();
+
     let paths = load_recent_paths_from_disk(app);
     if paths.is_empty() {
         return;
-    }
-
-    // Re-register with macOS system recent documents (newest last so it appears
-    // closest to the user in the Dock menu, matching Apple HIG)
-    for path in paths.iter().rev() {
-        let _ = super::recent_files::add_to_recent_documents(path.clone());
     }
 
     if let Err(err) = rebuild_menu(app) {
@@ -603,8 +599,6 @@ pub fn setup_menu_events(app: &AppHandle) {
             }
             "recent_clear" => {
                 clear_recent_menu(&app_handle);
-                // Also clear macOS system recent documents
-                let _ = super::recent_files::clear_recent_documents();
                 if let Ok(menu) = create_app_menu(&app_handle) {
                     let _ = app.set_menu(menu);
                 }

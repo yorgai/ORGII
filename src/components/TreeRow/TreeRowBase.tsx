@@ -49,6 +49,7 @@ export const TreeRowBase = React.memo(
         onMouseDown,
         onMouseEnter,
         onMouseLeave,
+        onPointerDown,
         showIndentGuides,
         showPathHint = false,
       },
@@ -123,6 +124,7 @@ export const TreeRowBase = React.memo(
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
           onMouseDown={onMouseDown}
+          onPointerDown={onPointerDown}
         >
           {/* VS Code-style vertical indent guide lines */}
           {indentGuidesEnabled &&

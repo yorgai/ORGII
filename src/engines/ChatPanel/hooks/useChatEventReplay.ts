@@ -29,6 +29,7 @@ import {
   planAliasesContain,
 } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { createLogger } from "@src/hooks/logger";
+import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
 import {
   simulatorFollowAppLockAtom,
   simulatorSelectedAppAtom,
@@ -110,6 +111,7 @@ export function useChatEventReplay(): UseChatEventReplayReturn {
       }
       const resolvedEventId = event.id;
 
+      set(chatPanelMaximizedAtom, false);
       set(stationModeAtom, "agent-station");
 
       // Set event first — this is the primary navigation action.

@@ -13,7 +13,7 @@
  * - selectedRepoIdAtom is window-scoped (sessionStorage) for multi-window isolation
  * - lastUsedRepoAtom is global (localStorage) for new window initialization
  * - When selecting a repo, we also update lastUsedRepo for new windows
- * - macOS: Also updates system-level recent documents (Dock, Expose, Apple Menu)
+ * - macOS: Updates ORGII's app-controlled File > Open Recent menu
  *
  * NO complex refs, NO stale closures, NO race conditions.
  */
@@ -35,6 +35,7 @@ import {
   selectedRepoIdAtom,
   updateCachedRepos,
 } from "@src/store/repo";
+import { toRepoFileSystemPath } from "@src/store/repo/matchRepoByPath";
 import { getWindowId } from "@src/util/core/state/windowScopedState";
 
 import { isCheckingOut } from "./singleton";
@@ -118,21 +119,8 @@ export function useRepoSelection(
       if (repo) {
         setCachedRepos((prev) => updateCachedRepos(prev, repo));
 
-        // Add to recent items in two places:
-        // 1. macOS system-level (Dock right-click, Expose)
-        // 2. App menu bar (File > Open Recent)
-        const repoPath = repo.fs_uri || repo.path;
+        const repoPath = toRepoFileSystemPath(repo.path ?? repo.fs_uri);
         if (repoPath) {
-          // macOS system-level recent documents
-          invoke("add_to_recent_documents", { path: repoPath }).catch(
-            (error) => {
-              log.debug(
-                "[useRepoSelection] Failed to add to system recent:",
-                error
-              );
-            }
-          );
-          // App menu bar (File > Open Recent)
           invoke("menu_add_recent", { path: repoPath }).catch((error) => {
             log.debug(
               "[useRepoSelection] Failed to add to menu recent:",

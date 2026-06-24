@@ -23,6 +23,7 @@ use orgtrack_core::privacy::ORGTRACK_SCHEMA_VERSION;
 use orgtrack_core::projectors::stats::{session_summaries, CoreSessionSummary};
 use orgtrack_core::repo_sync::paths::record_id;
 use orgtrack_core::store::{sqlite::SqliteRecordStore, RecordStore};
+use serde::Serialize;
 use types::OrgtrackTier;
 
 const ORGTRACK_CALL_LOG_WINDOW: Duration = Duration::from_secs(30);
@@ -318,6 +319,84 @@ pub async fn orgtrack_get_session_final_diffs(
         let conn = get_connection().map_err(|err| err.to_string())?;
         let store = SqliteRecordStore::new(&conn);
         store.list_final_diffs(source.as_deref(), session_id.as_deref())
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrgtrackDiffReplayPreview {
+    pub final_diffs: Vec<SessionFinalDiffRecord>,
+    pub submission_commits: Vec<OrgtrackSubmissionCommit>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrgtrackSubmissionCommit {
+    pub sha: String,
+    #[serde(rename = "short_sha")]
+    pub short_sha: String,
+    pub summary: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author: Option<serde_json::Value>,
+    #[serde(rename = "repoId", skip_serializing_if = "Option::is_none")]
+    pub repo_id: Option<String>,
+    #[serde(rename = "repoPath", skip_serializing_if = "Option::is_none")]
+    pub repo_path: Option<String>,
+    pub origin: String,
+}
+
+fn commit_link_to_submission_commit(
+    link: CommitLinkRecord,
+    repo_id: &Option<String>,
+    repo_path: &Option<String>,
+) -> OrgtrackSubmissionCommit {
+    let short_sha = link.commit_sha.chars().take(7).collect::<String>();
+    OrgtrackSubmissionCommit {
+        sha: link.commit_sha,
+        short_sha: short_sha.clone(),
+        summary: short_sha,
+        author: None,
+        repo_id: repo_id.clone(),
+        repo_path: repo_path.clone(),
+        origin: "created".to_string(),
+    }
+}
+
+#[tauri::command]
+pub async fn orgtrack_get_diff_replay_preview(
+    source: Option<String>,
+    session_id: Option<String>,
+    repo_id: Option<String>,
+    repo_path: Option<String>,
+) -> Result<OrgtrackDiffReplayPreview, String> {
+    record_orgtrack_command_call("orgtrack_get_diff_replay_preview");
+    tokio::task::spawn_blocking(move || {
+        let conn = get_connection().map_err(|err| err.to_string())?;
+        let store = SqliteRecordStore::new(&conn);
+        let final_diffs = store.list_final_diffs(source.as_deref(), session_id.as_deref())?;
+        let commit_links = store.list_commit_links()?;
+        let commit_links = match session_id {
+            Some(session_id) => commit_links
+                .into_iter()
+                .filter(|link| {
+                    link.session_ids
+                        .iter()
+                        .any(|linked_id| linked_id == &session_id)
+                })
+                .collect(),
+            None => commit_links,
+        };
+        let submission_commits = commit_links
+            .into_iter()
+            .map(|link| commit_link_to_submission_commit(link, &repo_id, &repo_path))
+            .collect();
+
+        Ok(OrgtrackDiffReplayPreview {
+            final_diffs,
+            submission_commits,
+        })
     })
     .await
     .map_err(|err| err.to_string())?

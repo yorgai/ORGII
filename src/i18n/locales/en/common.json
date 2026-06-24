@@ -1133,7 +1133,8 @@
     "selectRepoFromHome": "Please select a repo from the home page",
     "cloneRepoAgain": "Please clone the repo again from the home page",
     "unsavedChangesTitle": "Unsaved Changes",
-    "prkPlaceholder": "PRJ"
+    "prkPlaceholder": "PRJ",
+    "gitSyncMenuTitle": "Git sync actions"
   },
   "git": {
     "loading": "Loading git status...",
@@ -1423,7 +1424,13 @@
         "deleteBranch": "Delete branch",
         "refresh": "Refresh branch",
         "checkoutDetachedSuccess": "Now in detached HEAD state at current commit",
-        "checkoutDetachedFailed": "Failed to checkout detached HEAD"
+        "checkoutDetachedFailed": "Failed to checkout detached HEAD",
+        "removeWorktree": "Remove Worktree"
+      },
+      "messages": {
+        "deletedCount_one": "Deleted {{count}} branch",
+        "deletedCount_other": "Deleted {{count}} branches",
+        "failedDeleteList": "Failed to delete: {{branches}}"
       },
       "labels": {
         "otherBranches": "Other Branches",
@@ -1431,7 +1438,9 @@
         "recent": "Recent",
         "currentCommit": "Current commit",
         "basedOn": "Based on",
-        "worktrees": "Worktrees"
+        "worktrees": "Worktrees",
+        "worktreeInUse": "In use",
+        "checkedOutInWorktree": "Checked out in worktree: {{path}}"
       },
       "placeholders": {
         "checkout": "branch",

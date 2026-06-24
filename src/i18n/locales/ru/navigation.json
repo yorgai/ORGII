@@ -176,7 +176,6 @@
       "iAmOnline": "Я в сети",
       "iAmInvisible": "Я невидим",
       "iAmAway": "Я отошёл",
-      "backInShort": "вернусь через {{value}}",
       "awayDurationHeading": "Вернусь через…",
       "duration15m": "15 минут",
       "duration30m": "30 минут",
