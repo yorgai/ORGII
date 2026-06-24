@@ -2285,6 +2285,7 @@
         "index": "Indexar",
         "reindex": "Reindexar",
         "cancel": "Cancelar",
+        "stop": "Parar",
         "clear": "Limpar",
         "refresh": "Atualizar"
       },

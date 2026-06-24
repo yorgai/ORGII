@@ -2306,6 +2306,7 @@
         "index": "索引",
         "reindex": "重新索引",
         "cancel": "取消",
+        "stop": "停止",
         "clear": "清除",
         "refresh": "刷新"
       },

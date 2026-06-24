@@ -2279,6 +2279,7 @@
         "index": "Indexieren",
         "reindex": "Neu indexieren",
         "cancel": "Abbrechen",
+        "stop": "Stoppen",
         "clear": "Löschen",
         "refresh": "Aktualisieren"
       },

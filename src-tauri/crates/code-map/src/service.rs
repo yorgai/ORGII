@@ -210,9 +210,31 @@ pub async fn start_index(
                     let added_files = result.added_files;
                     let modified_files = result.modified_files;
                     let deleted_files_count = result.deleted_files.len() as u32;
-                    if let Err(err) =
-                        db.apply_index_changes(result.extracted_files, &result.deleted_files)
-                    {
+                    if cancellation.load(Ordering::Relaxed) {
+                        return set_cancelled_status(
+                            &db,
+                            &key,
+                            app.as_ref(),
+                            added_files,
+                            modified_files,
+                            deleted_files_count,
+                        );
+                    }
+                    if let Err(err) = db.apply_index_changes_with_cancellation(
+                        result.extracted_files,
+                        &result.deleted_files,
+                        Some(&cancellation),
+                    ) {
+                        if matches!(err, CodeMapError::Cancelled(_)) {
+                            return set_cancelled_status(
+                                &db,
+                                &key,
+                                app.as_ref(),
+                                added_files,
+                                modified_files,
+                                deleted_files_count,
+                            );
+                        }
                         return set_failed_status(
                             &db,
                             &key,
@@ -243,25 +265,7 @@ pub async fn start_index(
                     Ok(status)
                 }
                 Err(CodeMapError::Cancelled(_)) => {
-                    db.set_status(CodeMapStatusKind::Cancelled, None)?;
-                    let status = db.status()?;
-                    set_progress(
-                        &key,
-                        CodeMapIndexProgress {
-                            workspace_path: key.clone(),
-                            phase: CodeMapIndexPhase::Cancelled,
-                            files_processed: 0,
-                            files_total: 0,
-                            current_file: None,
-                            added_files: 0,
-                            modified_files: 0,
-                            deleted_files: 0,
-                            error: None,
-                        },
-                        app.as_ref(),
-                    );
-                    emit_status_changed(app.as_ref(), &status);
-                    Ok(status)
+                    set_cancelled_status(&db, &key, app.as_ref(), 0, 0, 0)
                 }
                 Err(err) => set_failed_status(&db, &key, app.as_ref(), err, 0, 0, 0),
             }
@@ -526,6 +530,35 @@ fn source_window(
         end_line: end,
         text,
     })
+}
+
+fn set_cancelled_status(
+    db: &CodeMapDb,
+    key: &str,
+    app: Option<&AppHandle>,
+    added_files: u32,
+    modified_files: u32,
+    deleted_files: u32,
+) -> Result<CodeMapStatus> {
+    db.set_status(CodeMapStatusKind::Cancelled, None)?;
+    let status = db.status()?;
+    set_progress(
+        key,
+        CodeMapIndexProgress {
+            workspace_path: key.to_string(),
+            phase: CodeMapIndexPhase::Cancelled,
+            files_processed: 0,
+            files_total: 0,
+            current_file: None,
+            added_files,
+            modified_files,
+            deleted_files,
+            error: None,
+        },
+        app,
+    );
+    emit_status_changed(app, &status);
+    Ok(status)
 }
 
 fn set_failed_status(

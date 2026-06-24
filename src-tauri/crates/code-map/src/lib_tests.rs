@@ -89,7 +89,8 @@ fn db_stores_searches_and_migrates_metadata() {
     let extracted = extract_file(dir.path(), &source_path).unwrap();
 
     let mut db = CodeMapDb::open(dir.path()).unwrap();
-    db.apply_index_changes(vec![extracted], &[]).unwrap();
+    db.apply_index_changes_with_cancellation(vec![extracted], &[], None)
+        .unwrap();
     CodeMapDb::open(dir.path()).unwrap();
 
     let status = db.status().unwrap();
@@ -120,12 +121,30 @@ fn db_stores_cross_file_edges_after_all_nodes_exist() {
     crate::resolver::resolve_files(&mut extracted_files);
 
     let mut db = CodeMapDb::open(dir.path()).unwrap();
-    db.apply_index_changes(extracted_files, &[]).unwrap();
+    db.apply_index_changes_with_cancellation(extracted_files, &[], None)
+        .unwrap();
 
     let status = db.status().unwrap();
     assert_eq!(status.status, CodeMapStatusKind::Ready);
     assert_eq!(status.files, 2);
     assert!(status.relationships > 0);
+}
+
+#[test]
+fn db_storage_respects_cancellation_before_commit() {
+    let dir = tempdir().unwrap();
+    let source_path = dir.path().join("main.go");
+    fs::write(&source_path, "package main\nfunc main() {}\n").unwrap();
+    let extracted = extract_file(dir.path(), &source_path).unwrap();
+    let cancellation = std::sync::atomic::AtomicBool::new(true);
+
+    let mut db = CodeMapDb::open(dir.path()).unwrap();
+    let err = db
+        .apply_index_changes_with_cancellation(vec![extracted], &[], Some(&cancellation))
+        .unwrap_err();
+
+    assert!(matches!(err, crate::CodeMapError::Cancelled(_)));
+    assert_eq!(db.status().unwrap().files, 0);
 }
 
 #[test]

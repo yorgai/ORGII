@@ -2279,6 +2279,7 @@
         "index": "Indexar",
         "reindex": "Reindexar",
         "cancel": "Cancelar",
+        "stop": "Detener",
         "clear": "Limpiar",
         "refresh": "Actualizar"
       },

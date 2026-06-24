@@ -2311,6 +2311,7 @@
         "index": "Index",
         "reindex": "Re-index",
         "cancel": "Cancel",
+        "stop": "Stop",
         "clear": "Clear",
         "refresh": "Refresh"
       },

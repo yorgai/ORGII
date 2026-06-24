@@ -2280,6 +2280,7 @@
         "index": "인덱스",
         "reindex": "다시 인덱스",
         "cancel": "취소",
+        "stop": "중지",
         "clear": "지우기",
         "refresh": "새로고침"
       },
