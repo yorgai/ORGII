@@ -1,4 +1,4 @@
-import { CircleDot, MessageSquare, XCircle } from "lucide-react";
+import { CheckCircle2, CircleDot, MessageSquare, XCircle } from "lucide-react";
 import React, { memo, useCallback, useMemo } from "react";
 
 import type { GitHubIssue } from "@src/api/tauri/github";
@@ -22,6 +22,8 @@ interface IssueRowProps {
 export const IssueRow: React.FC<IssueRowProps> = memo(
   ({ issue, depth = 0, isSelected, onClick }) => {
     const isOpen = issue.state === "open";
+    const isCompleted =
+      issue.state === "closed" && issue.state_reason !== "not_planned";
 
     const buildIssuePayload = useCallback(
       () => ({
@@ -57,24 +59,24 @@ export const IssueRow: React.FC<IssueRowProps> = memo(
       onPointerDown: stashIssueDrag,
     });
 
-    const treeRowNode: TreeRowNode = useMemo(
-      () => ({
+    const treeRowNode: TreeRowNode = useMemo(() => {
+      const iconClassName = isOpen ? "text-success-6" : "text-text-3";
+      const icon = isOpen ? (
+        <CircleDot size={14} strokeWidth={1.75} />
+      ) : isCompleted ? (
+        <CheckCircle2 size={14} strokeWidth={1.75} />
+      ) : (
+        <XCircle size={14} strokeWidth={1.75} />
+      );
+
+      return {
         id: String(issue.number),
         name: issue.title,
         path: issue.html_url,
         type: "file",
-        icon: (
-          <span className={isOpen ? "text-success-6" : "text-text-3"}>
-            {isOpen ? (
-              <CircleDot size={14} strokeWidth={1.75} />
-            ) : (
-              <XCircle size={14} strokeWidth={1.75} />
-            )}
-          </span>
-        ),
-      }),
-      [isOpen, issue.html_url, issue.number, issue.title]
-    );
+        icon: <span className={iconClassName}>{icon}</span>,
+      };
+    }, [isOpen, isCompleted, issue.html_url, issue.number, issue.title]);
 
     return (
       <>
