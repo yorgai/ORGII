@@ -1,6 +1,6 @@
 <div align="center">
   <h1>ORG-2</h1>
-  <p><strong>Open-source Cursor-style agent IDE<br />— but built for reviewability, traceability, and control, not just faster coding.</strong></p>
+  <p><strong>Open-source Cursor-style agent IDE<br />— but built for reviewability, traceability, and creative freedom, not just faster coding.</strong></p>
   <p>
     <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/yorgai/ORG2?style=flat-square" /></a>
     <a href="https://github.com/yorgai/ORG2/releases/latest"><img alt="Downloads" src="https://img.shields.io/github/downloads/yorgai/ORG2/total?style=flat-square&label=downloads" /></a>
