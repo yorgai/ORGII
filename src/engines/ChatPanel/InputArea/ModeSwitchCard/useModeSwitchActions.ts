@@ -195,17 +195,20 @@ async function switchAgentMode(
   await respondModeSwitch(sessionId, "switch", targetMode);
 
   const lastUserText = getLastUserText(sessionId);
-  // Do not resend if there is no prior user message, or if the last user
-  // message was itself a mode-switch command. Resending a request to switch
+  // Do not continue if there is no prior user message, or if the last user
+  // message was itself a mode-switch command. Re-running a request to switch
   // into Plan mode would trigger another suggest_mode_switch call and
   // create an infinite switching loop.
   if (!lastUserText || isModeSwitchCommand(lastUserText)) return;
 
-  // Use the session row's model/account for the resend if it has one
-  // (an actual in-session selection beats the creator-default), and
-  // fall back to the localStorage-backed default only when the row
-  // has no model yet (very first turn, before any model picker
-  // interaction).
+  // Re-run the SAME request under the new mode WITHOUT persisting a new
+  // visible user message. The frontend groups chat history into rounds by
+  // user-message boundary (`useChatGroups`), so re-sending `lastUserText`
+  // here would open a brand-new round and duplicate the user bubble (GH #91).
+  // Instead we use Resume semantics: `content=""` + `isResume=true` makes the
+  // backend skip the `save_user_msg` write (see `should_save_user_msg` in
+  // `turn/processor/mod.rs`) and anchor the turn on the still-present last
+  // user row — so the new-mode run stays inside the original round.
   const sessionForSend = store.get(sessionByIdAtom(sessionId));
   const fallback = store.get(creatorDefaultModelSelectionAtom);
   const lastModelSelection = sessionForSend?.model
@@ -221,14 +224,15 @@ async function switchAgentMode(
     : fallback;
   const { model, accountId } = resolveModelForMessage(lastModelSelection);
 
-  // Mode-switch resends bypass useMessageDispatch, so set the optimistic
+  // Mode-switch re-runs bypass useMessageDispatch, so set the optimistic
   // running status here (P3).
   beginOptimisticTurn(sessionId);
 
   try {
     await SessionService.sendMessage({
       sessionId,
-      content: lastUserText,
+      content: "",
+      isResume: true,
       model,
       accountId,
       mode: targetMode,
