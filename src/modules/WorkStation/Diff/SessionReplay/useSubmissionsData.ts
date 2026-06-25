@@ -19,13 +19,14 @@
  * (session change → fetches kick off → derived rows resolve) read top to
  * bottom in one place.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getGitCommitDiff, getGitCommits } from "@src/api/http/git";
 import type { CommitDiffResult, GitCommitInfo } from "@src/api/http/git/types";
 import { getPRLocal } from "@src/api/tauri/github";
 import {
   type OrgtrackSessionFinalDiff,
+  analyzeOrgtrackSessions,
   getOrgtrackDiffReplayPreview,
 } from "@src/api/tauri/lineage";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
@@ -156,6 +157,12 @@ export function useSubmissionsData({
   const [orgtrackSubmissionCommits, setOrgtrackSubmissionCommits] = useState<
     SubmissionCommit[]
   >([]);
+  // One-shot guard: each sessionId may trigger at most one lazy rebuild of its
+  // orgtrack final diffs (to repair rows written before the cumulative-diff
+  // fix). Without this guard a session whose diffs are legitimately empty would
+  // re-request analysis on every render.
+  const rebuiltSessionsRef = useRef<Set<string>>(new Set());
+  const [rebuildNonce, setRebuildNonce] = useState(0);
 
   useEffect(() => {
     if (!sessionId) {
@@ -172,9 +179,30 @@ export function useSubmissionsData({
       repoPath: fallbackRepoContext.repoPath,
     })
       .then((preview) => {
-        if (!cancelled) {
-          setOrgtrackFinalDiffs(preview.finalDiffs);
-          setOrgtrackSubmissionCommits(preview.submissionCommits);
+        if (cancelled) return;
+        setOrgtrackFinalDiffs(preview.finalDiffs);
+        setOrgtrackSubmissionCommits(preview.submissionCommits);
+        // Lazily repair sessions whose final diffs were never extracted (or
+        // were written by the pre-fix collapsing path, surfacing as zero rows
+        // despite the session having edited files). Re-run analysis once, then
+        // re-fetch. Guarded per-session so it never loops.
+        if (
+          preview.finalDiffs.length === 0 &&
+          !rebuiltSessionsRef.current.has(sessionId)
+        ) {
+          rebuiltSessionsRef.current.add(sessionId);
+          void analyzeOrgtrackSessions({ sessionId, rebuild: true })
+            .then((stats) => {
+              if (!cancelled && stats.analyzedSessions > 0) {
+                setRebuildNonce((nonce) => nonce + 1);
+              }
+            })
+            .catch((err: unknown) => {
+              logger.warn("failed to rebuild orgtrack final diffs", {
+                err,
+                sessionId,
+              });
+            });
         }
       })
       .catch((err: unknown) => {
@@ -197,6 +225,7 @@ export function useSubmissionsData({
   }, [
     sessionId,
     diffRefreshNonce,
+    rebuildNonce,
     fallbackRepoContext.repoId,
     fallbackRepoContext.repoPath,
   ]);
