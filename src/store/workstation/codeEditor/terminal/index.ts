@@ -237,6 +237,7 @@ export const editorAddTerminalSessionAtom = atom(
       isActive: true,
       profileId: options?.profileId,
       shell: options?.shell,
+      cwd: options?.cwd,
     };
 
     set(terminalSessionsAtom, [
