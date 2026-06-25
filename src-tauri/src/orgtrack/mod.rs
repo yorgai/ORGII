@@ -8,7 +8,7 @@ pub mod paths;
 pub mod types;
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -364,6 +364,14 @@ fn commit_link_to_submission_commit(
     }
 }
 
+fn is_temporary_diff_path(file_path: &str) -> bool {
+    let path = Path::new(file_path);
+    path.starts_with("/tmp")
+        || path
+            .components()
+            .any(|component| component.as_os_str() == "scratchpad")
+}
+
 #[tauri::command]
 pub async fn orgtrack_get_diff_replay_preview(
     source: Option<String>,
@@ -375,7 +383,11 @@ pub async fn orgtrack_get_diff_replay_preview(
     tokio::task::spawn_blocking(move || {
         let conn = get_connection().map_err(|err| err.to_string())?;
         let store = SqliteRecordStore::new(&conn);
-        let final_diffs = store.list_final_diffs(source.as_deref(), session_id.as_deref())?;
+        let final_diffs = store
+            .list_final_diffs(source.as_deref(), session_id.as_deref())?
+            .into_iter()
+            .filter(|diff| !is_temporary_diff_path(&diff.file_path))
+            .collect();
         let commit_links = store.list_commit_links()?;
         let commit_links = match session_id {
             Some(session_id) => commit_links
@@ -567,6 +579,25 @@ pub async fn orgtrack_get_checkpoint_file_states(
     })
     .await
     .map_err(|err| err.to_string())?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_temporary_diff_path;
+
+    #[test]
+    fn hides_tmp_and_scratchpad_diff_paths() {
+        assert!(is_temporary_diff_path("/tmp/stale_probe.txt"));
+        assert!(is_temporary_diff_path(
+            "/private/var/folders/sj/orgii-501/project/sdeagent-id/scratchpad/stale_probe.txt"
+        ));
+        assert!(!is_temporary_diff_path(
+            "/Users/vinceorz/Projects/ORG2/src/main.ts"
+        ));
+        assert!(!is_temporary_diff_path(
+            "/Users/vinceorz/Downloads/notes.txt"
+        ));
+    }
 }
 
 fn validate_tier(
