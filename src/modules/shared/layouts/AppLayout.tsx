@@ -25,7 +25,7 @@ import { sendAdeActionResult } from "@src/api/tauri/agent";
 import { ChatProvider } from "@src/contexts/workspace/ChatContext";
 import { DataProvider } from "@src/contexts/workspace/DataContext";
 import ChatPanel from "@src/engines/ChatPanel";
-import { MAX_WIDTH as CHAT_MAX_WIDTH } from "@src/engines/ChatPanel/config";
+import { clampWidthForViewport } from "@src/engines/ChatPanel/config";
 import type { SessionLaunchSuccessInfo } from "@src/engines/SessionCore/hooks/session/useSessionCreator/useSessionLaunch/types";
 import { pendingSessionProposal } from "@src/engines/SessionCore/hooks/useAgentADEActions";
 import SessionSyncProvider from "@src/engines/SessionCore/sync/SessionSyncProvider";
@@ -179,10 +179,7 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
   const isSettingsSlot = chatPanelMode === "settings";
   const effectiveRawWidth =
     rawChatWidth > 0 ? rawChatWidth : isSettingsSlot ? DEFAULT_CHAT_WIDTH : 0;
-  const chatWidth =
-    effectiveRawWidth > 0
-      ? Math.min(effectiveRawWidth, CHAT_MAX_WIDTH)
-      : effectiveRawWidth;
+  const chatWidth = clampWidthForViewport(effectiveRawWidth);
   const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
   const isChatOnLeft = chatPosition === "left";
   const isCompact = chatLayout === "compact";

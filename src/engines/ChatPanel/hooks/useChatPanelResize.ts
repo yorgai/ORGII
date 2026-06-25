@@ -30,16 +30,12 @@ import { DEFAULT_CHAT_WIDTH, chatWidthAtom } from "@src/store/ui/chatPanelAtom";
 
 import {
   CHAT_WIDTH_CSS_VAR,
-  LEFT_PANEL_WIDTH,
-  MAX_WIDTH,
-  MIN_CENTER_WIDTH,
   MIN_WIDTH,
   RAPID_CLICK_THRESHOLD_MS,
+  clampWidthForContainer,
+  clampWidthForViewport,
+  getMaxWidthForContainer,
 } from "../config";
-
-// Clamp a width value to [0, MAX_WIDTH] (0 is the valid "hidden" sentinel).
-const clampChatWidth = (value: number): number =>
-  value > 0 ? Math.min(value, MAX_WIDTH) : value;
 
 export interface UseChatPanelResizeOptions {
   /** Whether using external width control */
@@ -59,14 +55,14 @@ export interface UseChatPanelResizeResult {
   handleMouseDown: (event: ReactMouseEvent) => void;
 }
 
-// Helper to get current width from CSS variable, clamped to MAX_WIDTH.
+// Helper to get current width from CSS variable, clamped to the current viewport.
 const getChatWidthFromCSS = (): number => {
   if (typeof document === "undefined") return DEFAULT_CHAT_WIDTH;
   const cssValue =
     document.documentElement.style.getPropertyValue(CHAT_WIDTH_CSS_VAR);
   if (cssValue) {
     const parsed = parseInt(cssValue, 10);
-    if (!isNaN(parsed)) return clampChatWidth(parsed);
+    if (!isNaN(parsed)) return clampWidthForViewport(parsed);
   }
   return DEFAULT_CHAT_WIDTH;
 };
@@ -153,6 +149,11 @@ export function useChatPanelResize(
         ) as HTMLElement | null;
       }
 
+      const resizeContainer = embedded
+        ? cachedChatWrapper?.parentElement
+        : cachedMainContent;
+      const containerWidth = resizeContainer?.clientWidth ?? window.innerWidth;
+
       const handleMouseMove = (moveEvent: globalThis.MouseEvent) => {
         // Only start "dragging" mode after first actual movement
         if (!hasDraggedRef.current) {
@@ -164,16 +165,7 @@ export function useChatPanelResize(
           document.body.style.userSelect = "none";
         }
 
-        // Calculate dynamic max width based on available space. Guard
-        // against undersized viewports where `availableWidth - MIN_CENTER_WIDTH`
-        // would fall below MIN_WIDTH and make the `Math.min` below try to
-        // shrink the panel past its minimum — we always want a valid
-        // non-collapsing range.
-        const availableWidth = window.innerWidth - LEFT_PANEL_WIDTH - 20;
-        const dynamicMaxWidth = Math.max(
-          MIN_WIDTH,
-          Math.min(MAX_WIDTH, availableWidth - MIN_CENTER_WIDTH)
-        );
+        const dynamicMaxWidth = getMaxWidthForContainer(containerWidth);
 
         // Calculate new width with constraints. Minimum is enforced as the
         // LAST step so nothing (negative delta, NaN, subzero dynamicMax, …)
@@ -235,10 +227,11 @@ export function useChatPanelResize(
           // coerce it up to MIN_WIDTH here so the persisted width never
           // collapses the panel.
           const rawFinal = pendingWidthRef.current;
-          const finalWidth = clampChatWidth(
+          const finalWidth = clampWidthForContainer(
             Number.isFinite(rawFinal) && rawFinal >= MIN_WIDTH
               ? rawFinal
-              : MIN_WIDTH
+              : MIN_WIDTH,
+            containerWidth
           );
 
           if (embedded) {

@@ -10,8 +10,9 @@ import {
 } from "@src/config/mainAppPaths";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
 import {
-  MAX_WIDTH as CHAT_MAX_WIDTH,
   MIN_WIDTH as CHAT_MIN_WIDTH,
+  clampWidthForViewport,
+  getCurrentMaxWidth,
 } from "@src/engines/ChatPanel/config";
 import {
   clearSessionAtom,
@@ -177,8 +178,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       () => getChatPanelBackgroundStyle(backgroundConfig.pageOpacity),
       [backgroundConfig.pageOpacity]
     );
-    const chatWidth =
-      rawChatWidth > 0 ? Math.min(rawChatWidth, CHAT_MAX_WIDTH) : rawChatWidth;
+    const chatWidth = clampWidthForViewport(rawChatWidth);
     const { isDragging, panelRef, handleMouseDown } = useChatPanelResize({
       useExternalWidth,
       embedded,
@@ -592,7 +592,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       ? t("chat.showWorkstation")
       : t("chat.maximizeChatPanel");
     const useFullScreenCreator =
-      isChatFocus || useExternalWidth || chatWidth >= CHAT_MAX_WIDTH;
+      isChatFocus || useExternalWidth || chatWidth >= getCurrentMaxWidth();
     const creatorVariant = useFullScreenCreator ? "fullScreen" : "default";
     const creatorClassName = "min-h-0 flex-1";
     const emptyChatContent = (
