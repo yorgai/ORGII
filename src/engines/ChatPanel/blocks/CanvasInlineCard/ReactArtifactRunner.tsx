@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from "react";
+import DOMPurify from "dompurify";
+import React, { useCallback, useMemo, useState } from "react";
 import { LiveError, LivePreview, LiveProvider } from "react-live";
 
 export interface ReactArtifactError {
@@ -8,6 +9,7 @@ export interface ReactArtifactError {
 
 export interface ReactArtifactRunnerProps {
   source: string;
+  sourceKind?: "react" | "html";
   onError?: (error: ReactArtifactError) => void;
 }
 
@@ -54,11 +56,49 @@ export function normalizeReactLiveSource(source: string): string {
   return code;
 }
 
+function sanitizeHtmlForLiveSource(source: string): string {
+  const purifier = DOMPurify as unknown as {
+    sanitize?: (html: string) => string;
+  };
+
+  if (typeof purifier.sanitize === "function") {
+    return purifier.sanitize(source);
+  }
+
+  if (typeof window !== "undefined" && typeof DOMPurify === "function") {
+    const createPurifier = DOMPurify as unknown as (window: Window) => {
+      sanitize?: (html: string) => string;
+    };
+    const browserPurifier = createPurifier(window);
+    if (typeof browserPurifier.sanitize === "function") {
+      return browserPurifier.sanitize(source);
+    }
+  }
+
+  return source.replace(
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+    ""
+  );
+}
+
+export function normalizeHtmlLiveSource(source: string): string {
+  const safeHtml = JSON.stringify(sanitizeHtmlForLiveSource(source));
+  return `render(<div className="h-full w-full" dangerouslySetInnerHTML={{ __html: ${safeHtml} }} />);`;
+}
+
 const ReactArtifactRunner: React.FC<ReactArtifactRunnerProps> = ({
   source,
+  sourceKind = "react",
   onError,
 }) => {
   const [lastError, setLastError] = useState<string | null>(null);
+  const liveSource = useMemo(
+    () =>
+      sourceKind === "html"
+        ? normalizeHtmlLiveSource(source)
+        : normalizeReactLiveSource(source),
+    [source, sourceKind]
+  );
 
   const handleError = useCallback(
     (message: string) => {
@@ -70,11 +110,7 @@ const ReactArtifactRunner: React.FC<ReactArtifactRunnerProps> = ({
   );
 
   return (
-    <LiveProvider
-      code={normalizeReactLiveSource(source)}
-      noInline
-      scope={{ React }}
-    >
+    <LiveProvider code={liveSource} noInline scope={{ React }}>
       <div className="h-full w-full overflow-auto bg-bg-1 p-4 text-text-1">
         <LivePreview />
         <LiveError

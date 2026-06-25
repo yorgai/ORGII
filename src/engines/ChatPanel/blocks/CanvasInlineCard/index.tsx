@@ -2,17 +2,17 @@
  * CanvasInlineCard — Agent-generated interactive preview embedded in chat.
  *
  * Renders a card directly in the message stream. Three modes:
- *   html  — static HTML from the agent, sandboxed iframe (security isolation)
+ *   html  — static HTML from the agent, sanitized and rendered through react-live
  *   url   — external URL, sandboxed iframe with allow-same-origin
  *   a2ui  — incremental JSONL stream rendered as native React components
- *   react — generated React App source rendered by the lightweight host runner
+ *   react — generated React App source rendered through react-live
  *
  * For a2ui mode the previous iframe + postMessage approach has been replaced
  * with A2UIRenderer, which receives the parsed lines directly as props and
  * re-renders incrementally without any full reload.
  *
  * Security:
- *   - html iframes: sandbox="allow-scripts" only (no allow-same-origin)
+ *   - html/react: same-page react-live preview; HTML is sanitized before injection
  *   - url iframes: allow-same-origin so cross-origin assets load correctly
  *   - a2ui: DOMPurify sanitizes type="html" elements in A2UIRenderer
  */

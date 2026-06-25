@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  CANVAS_HTML_IFRAME_SANDBOX,
   CANVAS_URL_IFRAME_SANDBOX,
   CANVAS_URL_IFRAME_SANDBOX_WITH_POPUPS,
   getCanvasPreviewRenderKind,
@@ -31,10 +30,6 @@ describe("canvasPreviewPolicy", () => {
     expect(
       getCanvasPreviewRenderKind({ mode: "url", url: "https://example.com" })
     ).toBe("url");
-  });
-
-  it("keeps raw HTML in the strongest iframe sandbox", () => {
-    expect(CANVAS_HTML_IFRAME_SANDBOX).toBe("allow-scripts");
   });
 
   it("uses explicit URL iframe policies per surface variant", () => {

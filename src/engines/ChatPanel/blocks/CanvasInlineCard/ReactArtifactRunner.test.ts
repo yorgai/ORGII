@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeReactLiveSource } from "./ReactArtifactRunner";
+import {
+  normalizeHtmlLiveSource,
+  normalizeReactLiveSource,
+} from "./ReactArtifactRunner";
 
 describe("ReactArtifactRunner", () => {
   it("converts a default App export into a react-live render call", () => {
@@ -22,9 +25,16 @@ describe("ReactArtifactRunner", () => {
     expect(source).toContain("render(<App />);");
   });
 
-  it("passes expression snippets through for inline react-live rendering", () => {
-    const source = normalizeReactLiveSource("<button>Hello</button>");
+  it("wraps HTML snippets as sanitized react-live preview code", () => {
+    const source = normalizeHtmlLiveSource(
+      '<p>Hello</p><script>alert("xss")</script>'
+    );
 
-    expect(source).toBe("<button>Hello</button>");
+    expect(source).toContain("render(<div");
+    expect(source).toContain("dangerouslySetInnerHTML");
+    expect(source).toContain("<p>Hello</p>");
+    expect(source).not.toContain("script");
+    expect(source).not.toContain("iframe");
+    expect(source).not.toContain("srcDoc");
   });
 });

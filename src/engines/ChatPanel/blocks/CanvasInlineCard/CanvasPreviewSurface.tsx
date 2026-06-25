@@ -12,9 +12,7 @@ import A2UIRenderer, { type A2UIRendererHandle } from "./A2UIRenderer";
 import ReactArtifactRunner, {
   type ReactArtifactError,
 } from "./ReactArtifactRunner";
-import { buildHtmlDocument } from "./canvasBuilder";
 import {
-  CANVAS_HTML_IFRAME_SANDBOX,
   type CanvasPreviewPayload,
   type CanvasPreviewSurfaceVariant,
   getCanvasPreviewRenderKind,
@@ -64,8 +62,8 @@ const CanvasPreviewSurface = forwardRef<
     const renderKind = getCanvasPreviewRenderKind(payload);
     const payloadContent = payload?.content;
     const errorKey =
-      renderKind === "react"
-        ? `${payloadContent ?? ""}:${reloadKey ?? ""}`
+      renderKind === "html" || renderKind === "react"
+        ? `${renderKind}:${payloadContent ?? ""}:${reloadKey ?? ""}`
         : "";
     const [reactArtifactError, setReactArtifactError] = useState<{
       key: string;
@@ -99,11 +97,6 @@ const CanvasPreviewSurface = forwardRef<
       return splitA2UIContent(payloadContent);
     }, [renderKind, payloadContent]);
 
-    const htmlSrcDoc = useMemo(() => {
-      if (renderKind !== "html" || !payloadContent) return undefined;
-      return buildHtmlDocument(payloadContent);
-    }, [renderKind, payloadContent]);
-
     let content: React.ReactNode;
 
     if (renderKind === "url" && payload?.url) {
@@ -130,21 +123,17 @@ const CanvasPreviewSurface = forwardRef<
             className={a2uiClassName}
           />
         );
-    } else if (renderKind === "html" && htmlSrcDoc) {
-      content = (
-        <iframe
-          key={reloadKey === undefined ? undefined : `doc-${reloadKey}`}
-          srcDoc={htmlSrcDoc}
-          className={iframeClassName}
-          sandbox={CANVAS_HTML_IFRAME_SANDBOX}
-          title={title}
-        />
-      );
-    } else if (renderKind === "react" && payloadContent) {
+    } else if (
+      (renderKind === "html" || renderKind === "react") &&
+      payloadContent
+    ) {
       content = (
         <ReactArtifactRunner
-          key={reloadKey === undefined ? undefined : `react-${reloadKey}`}
+          key={
+            reloadKey === undefined ? undefined : `${renderKind}-${reloadKey}`
+          }
           source={payloadContent}
+          sourceKind={renderKind}
           onError={handleReactArtifactError}
         />
       );

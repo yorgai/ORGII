@@ -16,7 +16,6 @@ export interface CanvasPreviewPayload {
   streaming?: boolean;
 }
 
-export const CANVAS_HTML_IFRAME_SANDBOX = "allow-scripts";
 export const CANVAS_URL_IFRAME_SANDBOX =
   "allow-scripts allow-same-origin allow-forms";
 export const CANVAS_URL_IFRAME_SANDBOX_WITH_POPUPS = `${CANVAS_URL_IFRAME_SANDBOX} allow-popups`;
