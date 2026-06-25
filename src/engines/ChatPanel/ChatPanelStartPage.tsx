@@ -54,7 +54,7 @@ interface ChatPanelStartPageProps {
   t: TFunction<["sessions", "common", "projects", "navigation"]>;
 }
 
-const HEATMAP_DAY_COUNT = 8;
+const HEATMAP_DAY_COUNT = 7;
 const HEATMAP_HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 const START_PAGE_HINTS: StartPageHint[] = [
   {
@@ -92,7 +92,7 @@ function formatDateForHeatmap(date: Date): string {
 function getRollingHeatmapRange(): { startDate: string; endDate: string } {
   const end = new Date();
   const start = new Date(end);
-  start.setDate(end.getDate() - 7);
+  start.setDate(end.getDate() - (HEATMAP_DAY_COUNT - 1));
   return {
     startDate: formatDateForHeatmap(start),
     endDate: formatDateForHeatmap(end),
@@ -152,7 +152,8 @@ function StartPageHeatmap({
       xIndex: cell.hour,
       yIndex: cell.day,
       count: cell.count,
-      label: `${cell.label} ${cell.hour}:00 · ${cell.count.toLocaleString()} sessions`,
+      label: `${cell.label} ${cell.hour}:00`,
+      sessions: cell.sessions,
     }));
   }, [data]);
 
