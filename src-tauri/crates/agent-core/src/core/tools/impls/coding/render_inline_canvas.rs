@@ -101,12 +101,12 @@ impl Tool for RenderInlineCanvasTool {
             "properties": {
                 "mode": {
                     "type": "string",
-                    "enum": ["html", "url", "a2ui"],
-                    "description": "Rendering mode: \"html\" for inline HTML, \"url\" for URL embed, \"a2ui\" for streamed typed elements."
+                    "enum": ["html", "url", "a2ui", "react"],
+                    "description": "Rendering mode: \"html\" for inline HTML, \"url\" for URL embed, \"a2ui\" for streamed typed elements, \"react\" for a generated React App component."
                 },
                 "content": {
                     "type": "string",
-                    "description": "The HTML/SVG/CSS string for \"html\" mode, or the JSONL payload for \"a2ui\" mode. Not used in \"url\" mode."
+                    "description": "The HTML/SVG/CSS string for \"html\" mode, the JSONL payload for \"a2ui\" mode, or React App source for \"react\" mode. Not used in \"url\" mode."
                 },
                 "url": {
                     "type": "string",
@@ -136,10 +136,10 @@ impl Tool for RenderInlineCanvasTool {
             .ok_or_else(|| ToolError::InvalidParams("missing required field: mode".into()))?;
 
         match mode {
-            "html" | "a2ui" => {
+            "html" | "a2ui" | "react" => {
                 if params.get("content").and_then(Value::as_str).is_none() {
                     return Err(ToolError::InvalidParams(
-                        "field \"content\" is required for html and a2ui modes".into(),
+                        "field \"content\" is required for html, a2ui, and react modes".into(),
                     ));
                 }
             }
@@ -155,7 +155,7 @@ impl Tool for RenderInlineCanvasTool {
             }
             other => {
                 return Err(ToolError::InvalidParams(format!(
-                    "unknown mode \"{other}\"; expected one of: html, url, a2ui"
+                    "unknown mode \"{other}\"; expected one of: html, url, a2ui, react"
                 )));
             }
         }
@@ -178,7 +178,7 @@ impl Tool for RenderInlineCanvasTool {
             .unwrap_or(0);
 
         Ok(match mode {
-            "html" | "a2ui" => format!(
+            "html" | "a2ui" | "react" => format!(
                 "render_inline_canvas: rendered {mode} content ({content_len} bytes), title=\"{title}\""
             ),
             "url" => {

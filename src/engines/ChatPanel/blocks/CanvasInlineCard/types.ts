@@ -7,7 +7,7 @@
  *   a2ui  — Agent-to-UI JSONL stream, rendered incrementally as native React
  */
 
-export type CanvasInlineMode = "html" | "url" | "a2ui";
+export type CanvasInlineMode = "html" | "url" | "a2ui" | "react";
 
 export interface CanvasInlineCardProps {
   /** Rendering mode — determines how `content` / `url` are used. */

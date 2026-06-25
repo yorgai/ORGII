@@ -518,9 +518,10 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         name: tool_names::RENDER_INLINE_CANVAS,
         description: "Render interactive UI inline in the chat panel.",
         description_detail: "Displays an interactive preview card directly in the chat stream. \
-            Supports three modes: \"html\" (self-contained HTML/SVG/CSS rendered in a sandboxed iframe), \
-            \"url\" (HTTPS URL embedded in an iframe), and \"a2ui\" (structured JSONL element stream \
-            for headings, text, code blocks, images, buttons, and lists). \
+            Supports four modes: \"html\" (self-contained HTML/SVG/CSS rendered in a sandboxed iframe), \
+            \"url\" (HTTPS URL embedded in an iframe), \"a2ui\" (structured JSONL element stream \
+            for headings, text, code blocks, images, buttons, and lists), and \"react\" \
+            (a generated React App component rendered inside a sandboxed preview iframe). \
             Available to both SDE Agent and OS Agent.",
         category: tool_categories::CODING,
         icon_id: "layout",
@@ -534,6 +535,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
             action_sub!("html", "Render a self-contained HTML/SVG/CSS snippet", OtherTool, chat: CbCanvasInline, labels: "tools.renderInlineCanvasHtmlRunning", "tools.renderInlineCanvasHtmlDone", "tools.renderInlineCanvasHtmlFailed"),
             action_sub!("url", "Embed an HTTPS URL in a sandboxed iframe", OtherTool, chat: CbCanvasInline, labels: "tools.renderInlineCanvasUrlRunning", "tools.renderInlineCanvasUrlDone", "tools.renderInlineCanvasUrlFailed"),
             action_sub!("a2ui", "Stream typed UI elements (heading, text, code, image, button, list)", OtherTool, chat: CbCanvasInline, labels: "tools.renderInlineCanvasA2uiRunning", "tools.renderInlineCanvasA2uiDone", "tools.renderInlineCanvasA2uiFailed"),
+            action_sub!("react", "Render a generated React App component in a sandboxed preview iframe", OtherTool, chat: CbCanvasInline, labels: "tools.renderInlineCanvasRunning", "tools.renderInlineCanvasDone", "tools.renderInlineCanvasFailed"),
         ],
         ..DEFAULT_TOOL_ENTRY
     },
