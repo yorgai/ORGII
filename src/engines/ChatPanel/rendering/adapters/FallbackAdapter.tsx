@@ -26,22 +26,137 @@ import ManageAgentDefBlock, {
 } from "../../blocks/ManageAgentDefBlock";
 import ManageCodeMapBlock from "../../blocks/ManageCodeMapBlock";
 import ToolCallBlock from "../../blocks/ToolCallBlock";
-import WorktreeListBlock, {
-  type WorktreeEntryItem,
+import WorktreeListBlock from "../../blocks/WorktreeListBlock";
+import type {
+  WorktreeEntryItem,
+  WorktreeInfoRow,
 } from "../../blocks/WorktreeListBlock";
 
 const MCP_ICON = getEventIcon("mcp_tool");
 
-function isWorktreeListDone(props: UniversalEventProps): boolean {
+function isWorktreeTool(toolName: string): boolean {
+  return stripMcpPrefix(toolName) === "worktree";
+}
+
+function isWorktreeListDone(
+  props: UniversalEventProps,
+  toolName: string
+): boolean {
   if (props.status !== "success") return false;
-  if (props.eventType !== "worktree") return false;
+  if (!isWorktreeTool(toolName)) return false;
   return (props.args?.action as string | undefined) === "list";
+}
+
+function isWorktreeMutation(
+  props: UniversalEventProps,
+  toolName: string
+): boolean {
+  if (!isWorktreeTool(toolName)) return false;
+  const action = props.args?.action as string | undefined;
+  return action === "add" || action === "leave";
+}
+
+function stringifyWorktreeValue(value: unknown): string | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : undefined;
+}
+
+function parseWorktreeResultObject(
+  value: unknown
+): Record<string, unknown> | undefined {
+  if (!value) return undefined;
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value !== "string") return undefined;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function getWorktreeResult(
+  props: UniversalEventProps
+): Record<string, unknown> {
+  return (
+    parseWorktreeResultObject(props.result?.output) ??
+    parseWorktreeResultObject(props.result?.content) ??
+    parseWorktreeResultObject(props.result) ??
+    props.result ??
+    {}
+  );
+}
+
+function extractWorktreeResultText(
+  result: Record<string, unknown>
+): string | undefined {
+  const content = result.content ?? result.observation ?? result.output;
+  return typeof content === "string" ? content : undefined;
+}
+
+function extractLineValue(
+  text: string | undefined,
+  label: string
+): string | undefined {
+  if (!text) return undefined;
+  const match = text.match(new RegExp(`${label}:\\s*` + "`?([^`\\n]+)`?", "i"));
+  return match?.[1]?.trim();
+}
+
+function extractCreatedWorktreePath(
+  text: string | undefined
+): string | undefined {
+  if (!text) return undefined;
+  const match = text.match(/Created worktree at\s+`([^`]+)`/i);
+  return match?.[1]?.trim();
+}
+
+function buildWorktreeRows(props: UniversalEventProps): WorktreeInfoRow[] {
+  const args = props.args ?? {};
+  const result = getWorktreeResult(props);
+  const resultText = extractWorktreeResultText(result);
+  const rows: WorktreeInfoRow[] = [];
+  const add = (key: string, label: string, value: unknown) => {
+    const text = stringifyWorktreeValue(value);
+    if (text) rows.push({ key, label, value: text });
+  };
+
+  const action = args.action as string | undefined;
+  add("action", "Action", action);
+  add(
+    "branch",
+    "Branch",
+    args.branch ?? extractLineValue(resultText, "Branch")
+  );
+  add(
+    "base",
+    "Base",
+    args.base_ref ?? args.baseRef ?? extractLineValue(resultText, "Base")
+  );
+  add(
+    "path",
+    "Path",
+    result.path ?? args.path ?? extractCreatedWorktreePath(resultText)
+  );
+  add(
+    "message",
+    "Message",
+    result.message ?? result.error ?? result.error_message ?? resultText
+  );
+
+  return rows;
 }
 
 function extractWorktreeEntries(
   props: UniversalEventProps
 ): WorktreeEntryItem[] {
-  const raw = props.result?.entries;
+  const raw = getWorktreeResult(props).entries;
   if (!Array.isArray(raw)) return [];
   return raw.filter(
     (entry): entry is WorktreeEntryItem =>
@@ -134,17 +249,29 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
   if (PLAN_SIGNAL_TOOLS.has(stripMcpPrefix(props.functionName ?? "")))
     return null;
 
-  if (isWorktreeListDone(props)) {
-    const entries = extractWorktreeEntries(props);
-    if (entries.length > 0) {
-      return (
-        <WorktreeListBlock
-          entries={entries}
-          eventId={props.eventId}
-          title={worktreeLabels[state]}
-        />
-      );
-    }
+  if (isWorktreeListDone(props, displayToolName)) {
+    return (
+      <WorktreeListBlock
+        entries={extractWorktreeEntries(props)}
+        eventId={props.eventId}
+        title={worktreeLabels[state]}
+      />
+    );
+  }
+
+  if (isWorktreeMutation(props, displayToolName)) {
+    return (
+      <WorktreeListBlock
+        rows={buildWorktreeRows(props)}
+        eventId={props.eventId}
+        title={title}
+        action={action}
+        isLoading={
+          props.status === "running" && props.showActiveEventPainting === true
+        }
+        isFailed={state === "failed"}
+      />
+    );
   }
 
   if (isManageAgentDefTool(props)) {

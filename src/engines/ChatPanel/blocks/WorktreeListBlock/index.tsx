@@ -23,14 +23,24 @@ export interface WorktreeEntryItem {
   branch: string;
 }
 
+export interface WorktreeInfoRow {
+  key: string;
+  label: string;
+  value: string;
+}
+
 export interface WorktreeListBlockProps {
-  entries: WorktreeEntryItem[];
+  entries?: WorktreeEntryItem[];
+  rows?: WorktreeInfoRow[];
   eventId?: string;
   /**
    * Pre-translated header title. Adapter resolves via
-   * `useLifecycleLabels("worktree", "list")`.
+   * `useLifecycleLabels("worktree", action)`.
    */
   title: string;
+  action?: string;
+  isLoading?: boolean;
+  isFailed?: boolean;
 }
 
 const VISIBLE_ITEMS = 6;
@@ -46,12 +56,16 @@ const renderWorktreeRow = (entry: WorktreeEntryItem) => (
 const getWorktreeKey = (entry: WorktreeEntryItem) => entry.path;
 
 export const WorktreeListBlock: React.FC<WorktreeListBlockProps> = ({
-  entries,
+  entries = [],
+  rows = [],
   eventId,
   title,
+  action,
+  isLoading = false,
+  isFailed = false,
 }) => {
   const {
-    isCollapsed: isExpanded,
+    isCollapsed,
     isHeaderHovered,
     handleHeaderClick,
     handleHeaderMouseEnter,
@@ -64,11 +78,17 @@ export const WorktreeListBlock: React.FC<WorktreeListBlockProps> = ({
   });
 
   const hasEntries = entries.length > 0;
+  const hasRows = rows.length > 0;
+  const hasContent = hasEntries || hasRows;
 
   return (
-    <div className={getEventBlockContainerClasses(false)}>
+    <div
+      className={getEventBlockContainerClasses(false)}
+      data-tool-call-event-id={eventId}
+      data-tool-call-name="worktree"
+    >
       <EventBlockHeader
-        isCollapsed={!isExpanded}
+        isCollapsed={isCollapsed}
         withHover={false}
         onClick={handleLocate}
         onNavigate={handleLocate}
@@ -79,21 +99,48 @@ export const WorktreeListBlock: React.FC<WorktreeListBlockProps> = ({
         <EventBlockHeaderIcon
           icon={getToolIcon("worktree", {
             size: SESSION_UI_TOKENS.ICON.SIZE_SM,
-            className: "text-text-2",
+            className: isFailed ? "text-danger-6" : "text-text-2",
           })}
-          isCollapsed={!isExpanded}
+          isCollapsed={isCollapsed}
           isHeaderHovered={isHeaderHovered}
-          onToggle={hasEntries ? handleHeaderClick : undefined}
-          hasContent={hasEntries}
+          onToggle={hasContent ? handleHeaderClick : undefined}
+          hasContent={hasContent}
           revealChevronOnIconHoverOnly={Boolean(eventId)}
+          isLoading={isLoading}
+          isFailed={isFailed}
         />
-        <EventBlockHeaderTitle>{title}</EventBlockHeaderTitle>
-        {hasEntries && (
+        <EventBlockHeaderTitle isLoading={isLoading}>
+          {title}
+        </EventBlockHeaderTitle>
+        {action && (
+          <EventBlockHeaderInfo isLoading={isLoading}>
+            {action}
+          </EventBlockHeaderInfo>
+        )}
+        {!action && hasEntries && (
           <EventBlockHeaderInfo>{entries.length}</EventBlockHeaderInfo>
         )}
       </EventBlockHeader>
 
-      {isExpanded && hasEntries && (
+      {!isCollapsed && hasRows && (
+        <EventBlockExpandableStackList
+          layout="full"
+          items={rows}
+          renderItem={(row) => (
+            <ComposerStackListRow
+              title={row.value}
+              leading={null}
+              primary={row.label}
+              secondary={row.value}
+              variant="info"
+            />
+          )}
+          getKey={(row) => row.key}
+          visibleCount={VISIBLE_ITEMS}
+        />
+      )}
+
+      {!isCollapsed && hasEntries && (
         <EventBlockExpandableStackList
           layout="full"
           items={entries}

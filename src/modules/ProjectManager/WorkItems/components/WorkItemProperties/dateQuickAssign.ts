@@ -1,3 +1,10 @@
+import {
+  addLocalDays,
+  addLocalMonths,
+  getLocalDateKey,
+  getStartOfLocalDay,
+} from "@src/util/data/formatters/date";
+
 const WEEKDAY_ALIASES = new Map<string, number>([
   ["sun", 0],
   ["sunday", 0],
@@ -51,36 +58,16 @@ export interface DateQuickAssignSuggestion {
   date: Date;
 }
 
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function addDays(date: Date, days: number): Date {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + days);
-  return nextDate;
-}
-
-function addMonths(date: Date, months: number): Date {
-  const nextDate = new Date(date);
-  nextDate.setMonth(nextDate.getMonth() + months);
-  return nextDate;
-}
-
-function getLocalDateKey(date: Date): string {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
 function getNextWeekday(today: Date, targetWeekday: number): Date {
   const currentWeekday = today.getDay();
   const daysUntilTarget = (targetWeekday - currentWeekday + 7) % 7 || 7;
-  return addDays(today, daysUntilTarget);
+  return addLocalDays(today, daysUntilTarget);
 }
 
 function getThisOrNextWeekday(today: Date, targetWeekday: number): Date {
   const currentWeekday = today.getDay();
   const daysUntilTarget = (targetWeekday - currentWeekday + 7) % 7;
-  return addDays(today, daysUntilTarget);
+  return addLocalDays(today, daysUntilTarget);
 }
 
 function getUpcomingMonthDate(
@@ -156,23 +143,23 @@ export function parseDateQuickAssignInput(
   input: string,
   now: Date = new Date()
 ): Date | null {
-  const today = startOfLocalDay(now);
+  const today = getStartOfLocalDay(now);
   const query = input.trim().toLowerCase().replace(/\s+/g, " ");
   if (!query) return null;
 
   if (["today", "tod", "td"].includes(query)) return today;
   if (["tomorrow", "tmr", "tmrw", "tom"].includes(query)) {
-    return addDays(today, 1);
+    return addLocalDays(today, 1);
   }
-  if (["yesterday", "yday"].includes(query)) return addDays(today, -1);
+  if (["yesterday", "yday"].includes(query)) return addLocalDays(today, -1);
   if (["next week", "1 week", "in 1 week"].includes(query)) {
-    return addDays(today, 7);
+    return addLocalDays(today, 7);
   }
   if (["next month", "1 month", "in 1 month"].includes(query)) {
-    return addMonths(today, 1);
+    return addLocalMonths(today, 1);
   }
   if (["weekend", "this weekend"].includes(query)) {
-    return getNextWeekday(addDays(today, -1), 6);
+    return getNextWeekday(addLocalDays(today, -1), 6);
   }
 
   const inMatch = query.match(
@@ -181,9 +168,9 @@ export function parseDateQuickAssignInput(
   if (inMatch) {
     const amount = Number(inMatch[1]);
     const unit = inMatch[2];
-    if (unit.startsWith("day")) return addDays(today, amount);
-    if (unit.startsWith("week")) return addDays(today, amount * 7);
-    return addMonths(today, amount);
+    if (unit.startsWith("day")) return addLocalDays(today, amount);
+    if (unit.startsWith("week")) return addLocalDays(today, amount * 7);
+    return addLocalMonths(today, amount);
   }
 
   const nextWeekdayMatch = query.match(/^next\s+([a-z]+)$/);
@@ -193,7 +180,9 @@ export function parseDateQuickAssignInput(
   }
 
   const weekday = WEEKDAY_ALIASES.get(query);
-  if (weekday !== undefined) return getNextWeekday(addDays(today, -1), weekday);
+  if (weekday !== undefined) {
+    return getNextWeekday(addLocalDays(today, -1), weekday);
+  }
 
   return parseNumericDate(today, query) ?? parseMonthDate(today, query);
 }
@@ -202,7 +191,7 @@ export function buildDateQuickAssignSuggestions(
   input: string,
   now: Date = new Date()
 ): DateQuickAssignSuggestion[] {
-  const today = startOfLocalDay(now);
+  const today = getStartOfLocalDay(now);
   const trimmedInput = input.trim();
   const parsedDate = parseDateQuickAssignInput(trimmedInput, now);
 
@@ -220,13 +209,13 @@ export function buildDateQuickAssignSuggestions(
 
   const defaultSuggestions: DateQuickAssignSuggestion[] = [
     { id: "today", input: "today", date: today },
-    { id: "tomorrow", input: "tomorrow", date: addDays(today, 1) },
+    { id: "tomorrow", input: "tomorrow", date: addLocalDays(today, 1) },
     {
       id: "this-friday",
       input: "friday",
       date: getThisOrNextWeekday(today, 5),
     },
-    { id: "next-week", input: "next week", date: addDays(today, 7) },
+    { id: "next-week", input: "next week", date: addLocalDays(today, 7) },
   ];
   const seenLocalDates = new Set<string>();
 

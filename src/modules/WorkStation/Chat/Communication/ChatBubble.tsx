@@ -461,7 +461,7 @@ const UserBubbleContent: React.FC<{
     return (
       <div className="flex flex-col items-start gap-1.5 text-left">
         <div
-          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3 pr-10`}
+          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3`}
         >
           <ChatBubbleCopyButton content={content} />
           <div className="flex items-center gap-2">
@@ -492,7 +492,7 @@ const UserBubbleContent: React.FC<{
     <div className="flex flex-col items-start gap-1.5 text-left">
       {showBubble && (
         <div
-          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3 ${hasContent ? "pr-10" : ""}`}
+          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3`}
         >
           <ChatBubbleCopyButton content={strippedContent} />
           {hasImages && images && (
@@ -767,7 +767,7 @@ export const ChatBubble: React.FC<{
           <UserBubbleContent content={rawContent} images={userImages} />
         ) : (
           <div
-            className={`${CHAT_BUBBLE_WIDTH_TOKENS.body} group/replay-msg relative rounded-lg p-3 pr-10 text-left text-text-1 ${
+            className={`${CHAT_BUBBLE_WIDTH_TOKENS.body} group/replay-msg relative rounded-lg p-3 text-left text-text-1 ${
               isLatest ? "bg-fill-2" : "bg-fill-1"
             }`}
           >
