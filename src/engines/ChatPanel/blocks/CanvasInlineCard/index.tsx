@@ -5,7 +5,7 @@
  *   html  — static HTML from the agent, sandboxed iframe (security isolation)
  *   url   — external URL, sandboxed iframe with allow-same-origin
  *   a2ui  — incremental JSONL stream rendered as native React components
- *   react — generated React App source rendered inside a sandboxed iframe
+ *   react — generated React App source rendered by the lightweight host runner
  *
  * For a2ui mode the previous iframe + postMessage approach has been replaced
  * with A2UIRenderer, which receives the parsed lines directly as props and

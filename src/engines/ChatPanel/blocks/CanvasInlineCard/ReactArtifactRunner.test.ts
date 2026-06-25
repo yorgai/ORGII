@@ -1,26 +1,30 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReactArtifactFactorySource } from "./ReactArtifactRunner";
+import { normalizeReactLiveSource } from "./ReactArtifactRunner";
 
 describe("ReactArtifactRunner", () => {
-  it("converts a default App export into a host-side factory", () => {
-    const factorySource = buildReactArtifactFactorySource(
-      "export default function App() { return React.createElement('button', null, 'Hi'); }"
+  it("converts a default App export into a react-live render call", () => {
+    const source = normalizeReactLiveSource(
+      "export default function App() { return <button>Hi</button>; }"
     );
 
-    expect(factorySource).toContain("function App()");
-    expect(factorySource).toContain("return App");
-    expect(factorySource).not.toContain("iframe");
-    expect(factorySource).not.toContain("srcDoc");
+    expect(source).toContain("function App()");
+    expect(source).toContain("render(<App />);");
+    expect(source).not.toContain("iframe");
+    expect(source).not.toContain("srcDoc");
   });
 
   it("supports declared App components without module syntax", () => {
-    const factorySource = buildReactArtifactFactorySource(
-      "function App() { return React.createElement('div', null, 'Hi'); }"
+    const source = normalizeReactLiveSource(
+      "function App() { return <div>Hi</div>; }"
     );
 
-    expect(factorySource).toContain(
-      'return typeof App !== "undefined" ? App : undefined'
-    );
+    expect(source).toContain("render(<App />);");
+  });
+
+  it("passes expression snippets through for inline react-live rendering", () => {
+    const source = normalizeReactLiveSource("<button>Hello</button>");
+
+    expect(source).toBe("<button>Hello</button>");
   });
 });
