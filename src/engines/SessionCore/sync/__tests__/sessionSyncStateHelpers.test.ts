@@ -9,6 +9,7 @@ import {
   markTurnTerminal,
 } from "@src/engines/SessionCore/control/turnLifecycle";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import { getLatestContextUsageSnapshot } from "@src/engines/SessionCore/sync/adapters/createRustAgentAdapter";
 import {
   applyPostLoadResult,
   createSessionEventHandlerCallbacks,
@@ -257,5 +258,33 @@ describe("applyPostLoadResult", () => {
 
     expect(actions.setSessionContextTokens).toHaveBeenCalledWith(1200);
     expect(actions.setSessionContextUsage).toHaveBeenCalledWith(contextUsage);
+  });
+});
+
+describe("getLatestContextUsageSnapshot", () => {
+  it("uses the latest persisted breakdown even when the newest token row has only totals", () => {
+    const contextUsage = {
+      usedTokens: 1200,
+      maxTokens: 8000,
+      percentUsed: 15,
+      updatedAt: "2026-06-25T00:00:00.000Z",
+      sections: [
+        {
+          category: "conversation" as const,
+          label: "Conversation",
+          estimatedTokens: 1200,
+          percent: 100,
+          items: [],
+        },
+      ],
+      warnings: [],
+    };
+
+    expect(
+      getLatestContextUsageSnapshot([
+        { contextUsageJson: JSON.stringify(contextUsage) },
+        { contextUsageJson: null },
+      ])
+    ).toEqual(contextUsage);
   });
 });
