@@ -316,6 +316,11 @@ impl UnifiedMessageProcessor {
             return;
         }
 
+        let context_usage_json = result
+            .context_usage_snapshot
+            .as_ref()
+            .and_then(|snapshot| serde_json::to_string(snapshot).ok());
+
         tokio::task::block_in_place(|| {
             use crate::foundation::session_bridge::{record_token_usage, TokenUsageRow};
             if let Err(err) = record_token_usage(TokenUsageRow {
@@ -332,6 +337,7 @@ impl UnifiedMessageProcessor {
                 cache_write_tokens: result.cache_write_tokens,
                 total_tokens: result.total_tokens,
                 context_tokens: result.context_tokens,
+                context_usage_json,
             }) {
                 warn!("[unified_processor] Failed to record token usage: {}", err);
             }
