@@ -88,8 +88,7 @@ impl AgentTool {
         // result `match` below, the guard's Drop emits a terminal Failed so the
         // registry/UI never get stuck on a ghost "running" row. Disarmed once
         // the real verdict is written.
-        let mut finalize_guard =
-            super::helpers::FinalizeGuard::new(subagent_session_id.clone());
+        let mut finalize_guard = super::helpers::FinalizeGuard::new(subagent_session_id.clone());
 
         // 1. Execute turn
         let turn_result = turn_executor::execute_turn(
