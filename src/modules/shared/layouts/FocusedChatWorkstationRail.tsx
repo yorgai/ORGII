@@ -284,17 +284,17 @@ export function FocusedChatWorkstationRail() {
   ];
 
   return (
-    <div className="pointer-events-none absolute right-3 top-12 z-20 hidden xl:flex">
+    <div className="pointer-events-none absolute right-1 top-12 z-20 hidden xl:flex">
       <div
         className={`pointer-events-auto flex bg-bg-2/90 transition-all ${
           collapsed
-            ? "flex-col items-center rounded-2xl border-[1px] border-border-1 p-1.5"
-            : "w-64 flex-col rounded-2xl border-[1px] border-border-1 p-1.5"
+            ? "flex-col items-center rounded-xl border-[1px] border-border-1 p-1"
+            : "w-64 flex-col rounded-xl border-[1px] border-border-1 p-1"
         }`}
       >
         <button
           type="button"
-          className="text-text-tertiary hover:text-text-primary mb-1 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-fill-2"
+          className="text-text-tertiary hover:text-text-primary mb-1 flex h-7 w-7 items-center justify-center self-end rounded-lg transition hover:bg-fill-2"
           onClick={() =>
             setCollapsed((value) => {
               const nextValue = !value;
