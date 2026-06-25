@@ -12,6 +12,7 @@ import type { GitHubIssue, GitHubIssueComment } from "@src/api/tauri/github";
 import Avatar from "@src/components/Avatar";
 import AvatarChip from "@src/components/AvatarChip";
 import Button from "@src/components/Button";
+import Markdown from "@src/components/MarkDown";
 import Tag from "@src/components/Tag";
 import Textarea from "@src/components/Textarea";
 import {
@@ -35,6 +36,25 @@ interface IssueDetailPanelProps {
   onCloseIssue: () => void;
   onReopenIssue: () => void;
   onAddComment: (body: string) => Promise<void>;
+}
+
+const GITHUB_IMAGE_TAG_RE = /<img\b([^>]*)\/?>/gi;
+const IMAGE_ATTR_RE = /([\w:-]+)\s*=\s*(["'])(.*?)\2/g;
+
+function normalizeGitHubMarkdownBody(body: string): string {
+  return body.replace(GITHUB_IMAGE_TAG_RE, (match, rawAttrs: string) => {
+    const attrs = new Map<string, string>();
+    for (const attrMatch of rawAttrs.matchAll(IMAGE_ATTR_RE)) {
+      attrs.set(attrMatch[1].toLowerCase(), attrMatch[3]);
+    }
+
+    const src = attrs.get("src");
+    if (!src) return match;
+
+    const alt = attrs.get("alt") ?? "image";
+    const safeAlt = alt.replaceAll("[", "").replaceAll("]", "");
+    return `![${safeAlt}](${src})`;
+  });
 }
 
 export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
@@ -157,9 +177,12 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
           {/* Issue body — same text style as CommitInfoPanel body */}
           {issue.body ? (
             <div className="min-h-0 overflow-y-auto scrollbar-hide">
-              <p className="max-w-[860px] whitespace-pre-wrap text-[12px] leading-5 text-text-2">
-                {issue.body}
-              </p>
+              <div className="chat-block-content max-w-[860px] text-[12px] leading-5 text-text-2 [&_.chat-markdown-body]:text-[12px] [&_.chat-markdown-body]:leading-5">
+                <Markdown
+                  textContent={normalizeGitHubMarkdownBody(issue.body)}
+                  skipPreprocess
+                />
+              </div>
             </div>
           ) : null}
 
@@ -228,9 +251,14 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
                         </span>
                         <span>{formatTimeAgo(comment.created_at)}</span>
                       </div>
-                      <p className="max-w-[860px] whitespace-pre-wrap text-[12px] leading-5 text-text-2">
-                        {comment.body}
-                      </p>
+                      <div className="chat-block-content max-w-[860px] text-[12px] leading-5 text-text-2 [&_.chat-markdown-body]:text-[12px] [&_.chat-markdown-body]:leading-5">
+                        <Markdown
+                          textContent={normalizeGitHubMarkdownBody(
+                            comment.body
+                          )}
+                          skipPreprocess
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
