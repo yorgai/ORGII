@@ -247,12 +247,12 @@ export function useLocalKeys(
           return next;
         });
         return saved;
-      } catch {
+      } catch (err) {
         if (appliedOptimisticUpdate) {
           publishAllKeys(previousKeys);
           replaceModelAliasesFromKeys(previousKeys);
         }
-        return null;
+        throw err;
       }
     },
     []
