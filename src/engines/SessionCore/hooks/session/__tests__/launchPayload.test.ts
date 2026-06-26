@@ -35,6 +35,48 @@ describe("launchPayload", () => {
     expect(session.repoPath).toBe("/workspace/repo-one");
   });
 
+  it("persists CLI agent type on the optimistic session row", () => {
+    const session = buildSessionFromLaunchResult({
+      agentExecMode: "build",
+      effectiveSource: null,
+      isBackgroundLaunch: false,
+      result: {
+        sessionId: "cliagent-opencode",
+        category: DISPATCH_CATEGORY.CLI_AGENT,
+        name: "OpenCode session",
+        status: "running",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        userInput: "hello",
+        background: false,
+        model: "minimax-m3",
+        cliAgentType: "opencode",
+      },
+    });
+
+    expect(session.cliAgentType).toBe("opencode");
+  });
+
+  it("falls back to the launch platform for the optimistic CLI session row", () => {
+    const session = buildSessionFromLaunchResult({
+      agentExecMode: "build",
+      effectiveSource: null,
+      isBackgroundLaunch: false,
+      launchCliAgentType: "opencode",
+      result: {
+        sessionId: "cliagent-opencode",
+        category: DISPATCH_CATEGORY.CLI_AGENT,
+        name: "OpenCode session",
+        status: "running",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        userInput: "hello",
+        background: false,
+        model: "minimax-m3",
+      },
+    });
+
+    expect(session.cliAgentType).toBe("opencode");
+  });
+
   it("hydrates optimistic session org context from launch readback", () => {
     const session = buildSessionFromLaunchResult({
       agentExecMode: "build",
