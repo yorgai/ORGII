@@ -138,10 +138,8 @@ pub fn final_diff_from_chunks(
     // first chunk's old fragment to the last chunk's new fragment (the previous
     // behaviour) diffs two unrelated fragments and collapses the cumulative
     // numstat to a tiny, wrong value (issue: Diff panel shows +4 instead of
-    // +105). The authoritative cumulative diff is the union of every chunk's
-    // unified-diff hunks, merged by old-file line number with later edits
-    // winning on overlap — exactly what the frontend `mergeUnifiedDiffStrings`
-    // does. We compute the numstat from those merged hunks.
+    // +105). The display diff is the union of every chunk's unified-diff hunks;
+    // the sidebar numstat comes from the authoritative per-chunk counters.
     let raw_diffs: Vec<&str> = file_chunks
         .iter()
         .filter_map(|chunk| chunk.diff.as_deref())
@@ -157,48 +155,58 @@ pub fn final_diff_from_chunks(
     // which carry whole-file content instead) do we fall back to whole-file
     // content stitching, correct for that single-snapshot shape.
     let has_fragment_diffs = !raw_diffs.is_empty();
-    // Whole-file old/new content is only trustworthy on the stitch path. On the
-    // merge path we never expose a fragment's content as if it were whole-file
-    // content -- the merged unified diff is the artifact.
-    let old_content = if has_fragment_diffs {
-        None
-    } else {
+    let stitch_old_content = || {
         baseline_chunk
             .and_then(|chunk| chunk.old_content.clone())
             .or_else(|| final_chunk.new_content.as_ref().map(|_| String::new()))
     };
-    let new_content = if has_fragment_diffs {
-        None
-    } else if final_chunk.is_deleted {
-        Some(String::new())
-    } else {
-        final_chunk.new_content.clone()
+    let stitch_new_content = || {
+        if final_chunk.is_deleted {
+            Some(String::new())
+        } else {
+            final_chunk.new_content.clone()
+        }
     };
 
-    let (diff, final_numstat) = if has_fragment_diffs {
-        // Merge path: union every chunk's hunks; numstat from the merged diff.
+    let (diff, final_numstat, old_content, new_content) = if has_fragment_diffs {
         match merge_unified_diff_hunks(&raw_diffs) {
-            Some((merged_diff, numstat)) => {
-                if numstat == (0, 0) {
-                    // Net-zero (an edit fully reverted by a later overlapping one).
-                    return None;
-                }
-                (Some(merged_diff), numstat)
-            }
-            // Diffs present but unparseable -- fall back to the per-chunk stat
-            // sum so we never silently report zero impact.
-            None => {
+            Some((merged_diff, _numstat)) => {
                 if summed_lines_added == 0 && summed_lines_removed == 0 {
-                    return None;
+                    match exact_fragment_diff(&file_chunks) {
+                        Some((diff, numstat, old_content, new_content)) => {
+                            (Some(diff), numstat, Some(old_content), Some(new_content))
+                        }
+                        None => return None,
+                    }
+                } else {
+                    (
+                        Some(merged_diff),
+                        (summed_lines_added, summed_lines_removed),
+                        None,
+                        None,
+                    )
                 }
-                (
-                    final_chunk.diff.clone(),
-                    (summed_lines_added, summed_lines_removed),
-                )
+            }
+            None => {
+                if let Some((diff, numstat, old_content, new_content)) =
+                    exact_fragment_diff(&file_chunks)
+                {
+                    (Some(diff), numstat, Some(old_content), Some(new_content))
+                } else if summed_lines_added == 0 && summed_lines_removed == 0 {
+                    return None;
+                } else {
+                    (
+                        final_chunk.diff.clone(),
+                        (summed_lines_added, summed_lines_removed),
+                        None,
+                        None,
+                    )
+                }
             }
         }
     } else {
-        // Stitch path: whole-file content snapshot (create / delete / overwrite).
+        let old_content = stitch_old_content();
+        let new_content = stitch_new_content();
         match (&old_content, &new_content) {
             (Some(old_content), Some(new_content)) => {
                 let text_diff = similar::TextDiff::from_lines(old_content, new_content);
@@ -206,19 +214,19 @@ pub fn final_diff_from_chunks(
                 if unified_diff.trim().is_empty() {
                     return None;
                 }
-                let numstat = text_diff.iter_all_changes().fold(
-                    (0_i32, 0_i32),
-                    |(added, removed), change| match change.tag() {
-                        similar::ChangeTag::Insert => (added + 1, removed),
-                        similar::ChangeTag::Delete => (added, removed + 1),
-                        similar::ChangeTag::Equal => (added, removed),
-                    },
-                );
-                (Some(unified_diff), numstat)
+                let numstat = numstat_between_lines(old_content, new_content);
+                (
+                    Some(unified_diff),
+                    numstat,
+                    Some(old_content.clone()),
+                    Some(new_content.clone()),
+                )
             }
             _ => (
                 final_chunk.diff.clone(),
                 (final_chunk.lines_added, final_chunk.lines_removed),
+                old_content,
+                new_content,
             ),
         }
     };
@@ -350,6 +358,36 @@ fn merge_unified_diff_hunks(diffs: &[&str]) -> Option<(String, (i32, i32))> {
     }
 
     Some((parts.join("\n"), (added, removed)))
+}
+
+fn exact_fragment_diff(
+    chunks: &[&SessionDiffChunkRecord],
+) -> Option<(String, (i32, i32), String, String)> {
+    let baseline = chunks.iter().find_map(|chunk| chunk.old_content.clone())?;
+    let final_content = chunks
+        .iter()
+        .rev()
+        .find_map(|chunk| chunk.new_content.clone())?;
+    let diff = similar::TextDiff::from_lines(&baseline, &final_content)
+        .unified_diff()
+        .to_string();
+    if diff.trim().is_empty() {
+        return None;
+    }
+    let numstat = numstat_between_lines(&baseline, &final_content);
+    Some((diff, numstat, baseline, final_content))
+}
+
+fn numstat_between_lines(old_content: &str, new_content: &str) -> (i32, i32) {
+    similar::TextDiff::from_lines(old_content, new_content)
+        .iter_all_changes()
+        .fold((0_i32, 0_i32), |(added, removed), change| {
+            match change.tag() {
+                similar::ChangeTag::Insert => (added + 1, removed),
+                similar::ChangeTag::Delete => (added, removed + 1),
+                similar::ChangeTag::Equal => (added, removed),
+            }
+        })
 }
 
 fn edit_quality(edit: &ExtractedEditData) -> ArtifactQuality {

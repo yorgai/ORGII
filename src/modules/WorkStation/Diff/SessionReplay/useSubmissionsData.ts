@@ -19,17 +19,17 @@
  * (session change → fetches kick off → derived rows resolve) read top to
  * bottom in one place.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { getGitCommitDiff, getGitCommits } from "@src/api/http/git";
 import type { CommitDiffResult, GitCommitInfo } from "@src/api/http/git/types";
 import { getPRLocal } from "@src/api/tauri/github";
 import {
   type OrgtrackSessionFinalDiff,
-  analyzeOrgtrackSessions,
   getOrgtrackDiffReplayPreview,
 } from "@src/api/tauri/lineage";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { loadEvents } from "@src/engines/SessionCore/storage/cacheAdapter";
 import { createLogger } from "@src/hooks/logger";
 import { normalizePrStatus } from "@src/shared/pr/prStatus";
 import type { Repo } from "@src/store/repo/types";
@@ -157,12 +157,9 @@ export function useSubmissionsData({
   const [orgtrackSubmissionCommits, setOrgtrackSubmissionCommits] = useState<
     SubmissionCommit[]
   >([]);
-  // One-shot guard: each sessionId may trigger at most one lazy rebuild of its
-  // orgtrack final diffs (to repair rows written before the cumulative-diff
-  // fix). Without this guard a session whose diffs are legitimately empty would
-  // re-request analysis on every render.
-  const rebuiltSessionsRef = useRef<Set<string>>(new Set());
-  const [rebuildNonce, setRebuildNonce] = useState(0);
+  const [cachedSessionEvents, setCachedSessionEvents] = useState<
+    SessionEvent[]
+  >([]);
 
   useEffect(() => {
     if (!sessionId) {
@@ -182,28 +179,6 @@ export function useSubmissionsData({
         if (cancelled) return;
         setOrgtrackFinalDiffs(preview.finalDiffs);
         setOrgtrackSubmissionCommits(preview.submissionCommits);
-        // Lazily repair sessions whose final diffs were never extracted (or
-        // were written by the pre-fix collapsing path, surfacing as zero rows
-        // despite the session having edited files). Re-run analysis once, then
-        // re-fetch. Guarded per-session so it never loops.
-        if (
-          preview.finalDiffs.length === 0 &&
-          !rebuiltSessionsRef.current.has(sessionId)
-        ) {
-          rebuiltSessionsRef.current.add(sessionId);
-          void analyzeOrgtrackSessions({ sessionId, rebuild: true })
-            .then((stats) => {
-              if (!cancelled && stats.analyzedSessions > 0) {
-                setRebuildNonce((nonce) => nonce + 1);
-              }
-            })
-            .catch((err: unknown) => {
-              logger.warn("failed to rebuild orgtrack final diffs", {
-                err,
-                sessionId,
-              });
-            });
-        }
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -225,19 +200,48 @@ export function useSubmissionsData({
   }, [
     sessionId,
     diffRefreshNonce,
-    rebuildNonce,
     fallbackRepoContext.repoId,
     fallbackRepoContext.repoPath,
   ]);
 
+  useEffect(() => {
+    if (!sessionId) {
+      setCachedSessionEvents([]);
+      return;
+    }
+
+    let cancelled = false;
+    void loadEvents(sessionId)
+      .then((events) => {
+        if (!cancelled) setCachedSessionEvents(events);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          logger.warn("failed to load full session events for submissions", {
+            err,
+            sessionId,
+          });
+          setCachedSessionEvents([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
+
   // ─────────────── derived: union of every commit submission ───────────────
-  const submissionsData = useMemo(
-    () =>
-      deriveSubmissionsData(
-        collectSubmissionArtifacts(simulatorEvents, fallbackRepoContext)
-      ),
-    [fallbackRepoContext, simulatorEvents]
-  );
+  const submissionsData = useMemo(() => {
+    const eventById = new Map<string, SessionEvent>();
+    for (const event of cachedSessionEvents) eventById.set(event.id, event);
+    for (const event of simulatorEvents) eventById.set(event.id, event);
+    return deriveSubmissionsData(
+      collectSubmissionArtifacts(
+        Array.from(eventById.values()),
+        fallbackRepoContext
+      )
+    );
+  }, [cachedSessionEvents, fallbackRepoContext, simulatorEvents]);
 
   const createdShellSubmissionCommits = useMemo<SubmissionCommit[]>(
     () => submissionsData.commits.filter((c) => c.origin === "created"),

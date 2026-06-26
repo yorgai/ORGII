@@ -228,33 +228,66 @@ fn final_diff_sums_disjoint_fragment_edits_instead_of_stitching() {
 }
 
 #[test]
-fn final_diff_merge_path_lets_later_overlapping_edit_win() {
-    let file_path = "src/overlap.ts";
-    // Two edits to the SAME old-line range: the later one replaces the earlier.
-    // Cumulative count must reflect only the surviving (later) hunk, not the sum.
+fn final_diff_sums_repeated_insertions_at_the_same_anchor() {
+    let file_path = "src/repeated.rs";
     let chunks = vec![
         diff_chunk(
             0,
             file_path,
-            "@@ -10,2 +10,3 @@\n keep\n+first attempt\n tail",
-            1,
+            "@@ -252,4 +252,8 @@\n }\n \n+fn helper_one() {\n+    one();\n+}\n fn existing() {}",
+            4,
             0,
         ),
         diff_chunk(
             1,
             file_path,
-            "@@ -10,2 +10,4 @@\n keep\n+second attempt a\n+second attempt b\n tail",
-            2,
+            "@@ -252,4 +252,7 @@\n }\n \n+fn helper_two() {\n+    two();\n+}\n fn existing() {}",
+            3,
             0,
+        ),
+        diff_chunk(
+            2,
+            file_path,
+            "@@ -252,6 +252,6 @@\n }\n \n-fn old_name() {}\n+fn new_name() {}\n fn existing() {}",
+            1,
+            1,
+        ),
+    ];
+
+    let final_diff = final_diff_from_chunks("test_source", "session-1", file_path, &chunks)
+        .expect("repeated insertion final diff");
+
+    assert_eq!(final_diff.lines_added, 8);
+    assert_eq!(final_diff.lines_removed, 1);
+    assert!(!final_diff.differs_from_summed_chunks);
+}
+
+#[test]
+fn final_diff_merge_path_lets_later_overlapping_edit_win() {
+    let file_path = "src/overlap.ts";
+    // The display diff lets the later hunk win, while the sidebar numstat stays
+    // on the authoritative per-chunk counters.
+    let chunks = vec![
+        diff_chunk(
+            0,
+            file_path,
+            "@@ -10,2 +10,3 @@\n keep\n-old tail\n+first attempt\n tail",
+            1,
+            1,
+        ),
+        diff_chunk(
+            1,
+            file_path,
+            "@@ -10,2 +10,4 @@\n keep\n-old tail\n+second attempt a\n+second attempt b\n tail",
+            2,
+            1,
         ),
     ];
 
     let final_diff = final_diff_from_chunks("test_source", "session-1", file_path, &chunks)
         .expect("overlap final diff");
 
-    // Later hunk (2 additions) wins over the earlier overlapping hunk (1).
-    assert_eq!(final_diff.lines_added, 2);
-    assert_eq!(final_diff.lines_removed, 0);
-    // Sum would have been 3; merge yields 2 -> differs flag set.
-    assert!(final_diff.differs_from_summed_chunks);
+    assert_eq!(final_diff.lines_added, 3);
+    assert_eq!(final_diff.lines_removed, 2);
+    assert!(!final_diff.differs_from_summed_chunks);
 }
