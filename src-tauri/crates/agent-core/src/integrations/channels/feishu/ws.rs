@@ -16,6 +16,7 @@ use std::time::Duration;
 use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, error, info, warn};
 
+use super::auth::FeishuAuth;
 use super::channel::{self, WsClientConfig};
 use super::codec::*;
 use super::event::{self, FeishuEventConfig};
@@ -35,6 +36,7 @@ pub(super) async fn feishu_ws_loop(
     inbound_tx: mpsc::Sender<InboundMessage>,
     channel_name: String,
     event_config: FeishuEventConfig,
+    auth: Arc<FeishuAuth>,
 ) {
     use futures_util::{SinkExt, StreamExt};
     use tokio_tungstenite::tungstenite::Message as WsMessage;
@@ -191,13 +193,14 @@ pub(super) async fn feishu_ws_loop(
 
                                     if let Some(payload) = payload_bytes {
                                         if let Ok(event_json) = serde_json::from_slice::<Value>(&payload) {
-                                            if let Some(inbound) = event::parse_feishu_event(
+                                            if let Some(mut inbound) = event::parse_feishu_event(
                                                 &event_json,
                                                 &channel_name,
                                                 &event_config,
                                                 &mut dedup_set,
                                                 &mut dedup_order,
                                             ) {
+                                                super::api::resolve_feishu_media(&auth, &mut inbound.media).await;
                                                 info!("[{}] Sending inbound to bus: session_key={}", channel_name, inbound.session_key());
                                                 if let Err(err) = inbound_tx.send(inbound).await {
                                                     error!("[{}] Failed to send inbound: {}", channel_name, err);
