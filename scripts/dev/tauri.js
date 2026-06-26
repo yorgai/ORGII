@@ -10,7 +10,7 @@
  *   [Webpack] building (43%) 4/5 entries           (or "idle")
  */
 
-const { spawn, execSync } = require("child_process");
+const { spawn, execFileSync, execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { tauriFeatureList } = require("../tauri/features.cjs");
@@ -339,7 +339,7 @@ function routeLine(line) {
 function cleanupOrphanedProcesses() {
   try {
     const cleanupScript = path.join(__dirname, "cleanup-orphans.cjs");
-    execSync(`${process.execPath} "${cleanupScript}" --quiet`, {
+    execFileSync(process.execPath, [cleanupScript, "--quiet"], {
       stdio: "inherit",
       cwd: rootDir,
     });
@@ -351,6 +351,17 @@ function cleanupOrphanedProcesses() {
 // ─── Start Tauri dev ──────────────────────────────────────────────────────────
 
 function killDescendants(pid) {
+  if (process.platform === "win32") {
+    try {
+      execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+        stdio: "ignore",
+      });
+    } catch (_err) {
+      // already dead
+    }
+    return;
+  }
+
   try {
     // Recursively find and kill all descendant processes
     const children = execSync(`pgrep -P ${pid} 2>/dev/null`, {
@@ -397,6 +408,81 @@ function createBinPath(name) {
   return fs.existsSync(localPath) ? localPath : name;
 }
 
+function createNodePackageCliCommand(packageName, binName, fallbackBinName) {
+  if (process.platform !== "win32") {
+    return {
+      command: createBinPath(fallbackBinName ?? binName),
+      argsPrefix: [],
+    };
+  }
+
+  const packageJsonPath = require.resolve(`${packageName}/package.json`, {
+    paths: [rootDir, __dirname],
+  });
+  const packageJson = require(packageJsonPath);
+  const bin =
+    typeof packageJson.bin === "string"
+      ? packageJson.bin
+      : packageJson.bin?.[binName];
+  if (!bin) {
+    throw new Error(`${packageName} does not expose a ${binName} CLI binary`);
+  }
+
+  return {
+    command: process.execPath,
+    argsPrefix: [path.resolve(path.dirname(packageJsonPath), bin)],
+  };
+}
+
+function createPackageCliCommand(packageName, binName) {
+  return createNodePackageCliCommand(packageName, binName);
+}
+
+function createPnpmCliCommand() {
+  if (process.platform !== "win32") {
+    return { command: createBinPath("pnpm"), argsPrefix: [] };
+  }
+
+  try {
+    return createNodePackageCliCommand("pnpm", "pnpm");
+  } catch (_error) {
+    // pnpm is commonly installed globally via Corepack/npm and is not listed as
+    // a project dependency. Avoid pnpm.cmd + shell:true by locating pnpm.cjs.
+  }
+
+  const candidates = [
+    process.env.PNPM_HOME && path.join(process.env.PNPM_HOME, "pnpm.cjs"),
+    process.env.APPDATA &&
+      path.join(
+        process.env.APPDATA,
+        "npm",
+        "node_modules",
+        "pnpm",
+        "bin",
+        "pnpm.cjs"
+      ),
+    process.env.LOCALAPPDATA &&
+      path.join(
+        process.env.LOCALAPPDATA,
+        "pnpm",
+        "global",
+        "5",
+        "node_modules",
+        "pnpm",
+        "bin",
+        "pnpm.cjs"
+      ),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return { command: process.execPath, argsPrefix: [candidate] };
+    }
+  }
+
+  return { command: createBinPath("pnpm"), argsPrefix: [] };
+}
+
 function pipeProcessLines(childProcess, onLine) {
   function handleStream(stream) {
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
@@ -411,18 +497,20 @@ function startFrontendDev() {
   const scriptName = createFrontendScriptName({
     lightDev: process.env.ORGII_LIGHT_DEV === "true",
   });
-  const pnpmBin = createBinPath("pnpm");
-  const isWindows = process.platform === "win32";
+  const pnpmCli = createPnpmCliCommand();
 
   setWebpackStatus("starting dev server...");
   printStartupMilestone("starting webpack dev server", "webpackStart");
 
-  const frontendProcess = spawn(pnpmBin, ["run", scriptName], {
-    stdio: ["inherit", "pipe", "pipe"],
-    cwd: rootDir,
-    env: cleanChildEnv(),
-    ...(isWindows ? { shell: true } : {}),
-  });
+  const frontendProcess = spawn(
+    pnpmCli.command,
+    [...pnpmCli.argsPrefix, "run", scriptName],
+    {
+      stdio: ["inherit", "pipe", "pipe"],
+      cwd: rootDir,
+      env: cleanChildEnv(),
+    }
+  );
 
   const ready = new Promise((resolve, reject) => {
     let settled = false;
@@ -479,16 +567,18 @@ function startTauriDev(features) {
     features,
     devUrl: createDevUrl(),
   });
-  const tauriBin = createBinPath("tauri");
-  const isWindows = process.platform === "win32";
+  const tauriCli = createPackageCliCommand("@tauri-apps/cli", "tauri");
   recordStartupMetric("rustStart");
   printStartupMilestone("starting Tauri dev process", "tauriStart");
-  const tauriProcess = spawn(tauriBin, args, {
-    stdio: ["inherit", "pipe", "pipe"],
-    cwd: rootDir,
-    env: cleanChildEnv(),
-    ...(isWindows ? { shell: true } : {}),
-  });
+  const tauriProcess = spawn(
+    tauriCli.command,
+    [...tauriCli.argsPrefix, ...args],
+    {
+      stdio: ["inherit", "pipe", "pipe"],
+      cwd: rootDir,
+      env: cleanChildEnv(),
+    }
+  );
 
   // Initialize status bar once the process starts
   writeStatusBar();
