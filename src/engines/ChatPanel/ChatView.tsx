@@ -106,6 +106,7 @@ import { useAgentOrgRunView } from "./InputArea/components/useAgentOrgRunView";
 import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useGitDiffActions } from "./InputArea/hooks/useGitDiffActions";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
+import { useBrowserAddToConversationAction } from "./hooks/useBrowserAddToConversationAction";
 import { useFollowAgent } from "./hooks/useFollowAgent";
 
 const logger = createLogger("ChatView");
@@ -380,6 +381,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
         handleFollowAgent,
       ]
     );
+    const browserAddToConversationNav = useBrowserAddToConversationAction();
     const stationMode = useAtomValue(stationModeAtom);
     const chatPanelMaximized = useAtomValue(chatPanelMaximizedAtom);
     const agentMessageClampEligible =
@@ -757,6 +759,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
                     onAgentOrgRunViewRefresh={refreshAgentOrgRunView}
                     onScrollNavChange={handleScrollNavChange}
                     followAgentNav={followAgentNav}
+                    browserAddToConversationNav={browserAddToConversationNav}
                     onRegisterSearchOpen={onRegisterSearchOpen}
                     displayMode={displayMode}
                     turnPaginationEnabled={turnPaginationEnabled}
