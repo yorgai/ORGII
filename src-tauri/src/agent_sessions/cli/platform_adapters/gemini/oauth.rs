@@ -186,7 +186,9 @@ pub async fn exchange_gemini_oauth_code(
             models = resp.available_models.len(),
             "[gemini-oauth] exchange_gemini_oauth_code succeeded"
         ),
-        Err(err) => tracing::warn!(error = %err, "[gemini-oauth] exchange_gemini_oauth_code failed"),
+        Err(err) => {
+            tracing::warn!(error = %err, "[gemini-oauth] exchange_gemini_oauth_code failed")
+        }
     }
     result
 }

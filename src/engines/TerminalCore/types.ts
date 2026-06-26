@@ -52,6 +52,8 @@ export interface AddSessionOptions {
   args?: string[];
   /** Custom environment variables */
   env?: Record<string, string>;
+  /** Initial working directory for the terminal session */
+  cwd?: string;
   /** User-assigned name for this terminal */
   name?: string;
 }

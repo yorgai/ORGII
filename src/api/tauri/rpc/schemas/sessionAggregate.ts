@@ -47,6 +47,7 @@ export const SessionFilterInput = z.object({
   textQuery: z.string().optional(),
   sortBy: z.string().optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
+  includeExternalHistory: z.boolean().optional(),
   activeOnly: z.boolean().optional(),
 });
 
@@ -263,6 +264,15 @@ export const SessionHeatmapCellSchema = z.object({
   count: z.number().int(),
   tokens: z.number().int(),
   cost: z.number(),
+  sessions: z.array(
+    z.object({
+      sessionId: z.string(),
+      name: z.string(),
+      userInput: z.string().optional(),
+      cliAgentType: CliAgentTypeSchema.optional(),
+      agentIconId: z.string().optional(),
+    })
+  ),
 });
 
 export const SessionHeatmapResponseSchema = z.object({

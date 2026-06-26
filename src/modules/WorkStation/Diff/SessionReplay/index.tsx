@@ -286,7 +286,12 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
 
   const handleTabClick = useCallback((eventId: string) => {
     const next = TAB_BY_ID[eventId];
-    if (next) setActiveTab(next);
+    if (!next) return;
+    setActiveTab(next);
+    if (next === "diff") {
+      setHistorySelection(null);
+      setHistoryRepoContext(null);
+    }
   }, []);
 
   const handleCollapseAll = useCallback(() => {

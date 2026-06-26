@@ -72,6 +72,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
     includeTrafficLightSpace = true,
     showCollapseButton = true,
     wrapInSurface = true,
+    solidSurface = false,
     forceVisible: forceVisibleProp = false,
     theme,
     onCollapse,
@@ -452,7 +453,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
           boxShadow: sidebarBoxShadow,
           backdropFilter: sidebarBackdropFilter,
           WebkitBackdropFilter: sidebarBackdropFilter,
-          ...(shouldForceVisible ? {} : sidebarOpacityStyle),
+          ...(shouldForceVisible || solidSurface ? {} : sidebarOpacityStyle),
           ...floatingSurfaceOverride,
         };
 

@@ -444,6 +444,7 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
       }
       return indexes;
     }, [virtualGroups]);
+    // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual exposes imperative helpers that cannot be memoized safely.
     const virtualizer = useVirtualizer({
       count: virtualGroups.length,
       getScrollElement: () => virtualScrollerRef.current,

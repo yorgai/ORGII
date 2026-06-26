@@ -91,7 +91,7 @@ export function deriveSourceControlMainProps({
 }: DeriveSourceControlMainPropsInput): SourceControlMainDerivedProps {
   const focusPath = tabData.focusPath ?? null;
   const mode: SourceControlPillMode =
-    tabData.mode === "all-changes" || !focusPath ? "all-changes" : "focus";
+    tabData.mode === "all-changes" ? "all-changes" : "focus";
   const staged = Boolean(tabData.staged);
   const historySelection = tabData.historySelection ?? null;
 

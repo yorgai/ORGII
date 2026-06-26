@@ -66,8 +66,7 @@ fn sidecar_status(sidecar: OptionalSidecar, bin_dir: &Path, os: &str, arch: &str
         OptionalSidecar::AgentBrowser => agent_browser_target(os, arch)
             .ok()
             .map(|(_, dest_name)| bin_dir.join(dest_name)),
-        OptionalSidecar::Peekaboo => peekaboo_supported(os)
-            .then(|| bin_dir.join("peekaboo")),
+        OptionalSidecar::Peekaboo => peekaboo_supported(os).then(|| bin_dir.join("peekaboo")),
     };
 
     let installed_path = candidate
