@@ -860,6 +860,7 @@ const ManageIssuesPanelView: React.FC = () => {
             </button>
           </div>
         ) : null}
+        <div className="h-12 shrink-0" aria-hidden />
       </>
     );
   })();
@@ -878,7 +879,7 @@ const ManageIssuesPanelView: React.FC = () => {
           }}
           variant="simple"
           fillWidth={false}
-          size="large"
+          size="chatPanel"
         />
       </div>
       <div
