@@ -147,6 +147,19 @@ describe("launchPayload", () => {
     expect(session.agentRole).toBe("custom");
   });
 
+  it("passes selected CLI agent type as the launch platform", () => {
+    const { launchParams } = buildSessionLaunchPayload({
+      ...baseLaunchOptions(),
+      dispatchCategory: DISPATCH_CATEGORY.CLI_AGENT,
+      resolvedKeys: {
+        ...baseLaunchOptions().resolvedKeys,
+        cliAgentType: "opencode",
+      },
+    });
+
+    expect(launchParams.platform).toBe("opencode");
+  });
+
   it("passes non-primary multi-root folders as additional directories", () => {
     const { launchParams } = buildSessionLaunchPayload({
       agentExecMode: "build",
