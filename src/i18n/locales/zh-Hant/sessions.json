@@ -718,10 +718,10 @@
       "tabs": {
         "work": "工作",
         "explore": "探索",
-        "heatmap": "Heat map"
+        "heatmap": "趨勢"
       },
       "heatmap": {
-        "loading": "正在載入活動 Heat map…",
+        "loading": "正在載入活動趨勢…",
         "empty": "尚無會話活動。",
         "sessions": "會話",
         "tokens": "Tokens",

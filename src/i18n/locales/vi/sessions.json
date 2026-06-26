@@ -714,10 +714,10 @@
       "tabs": {
         "work": "Làm việc",
         "explore": "Khám phá",
-        "heatmap": "Heat map"
+        "heatmap": "Xu hướng"
       },
       "heatmap": {
-        "loading": "Đang tải Heat map hoạt động…",
+        "loading": "Đang tải xu hướng hoạt động…",
         "empty": "Chưa có hoạt động phiên.",
         "sessions": "Phiên",
         "tokens": "Tokens",

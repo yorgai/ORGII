@@ -720,10 +720,10 @@
       "tabs": {
         "work": "Trabalho",
         "explore": "Explorar",
-        "heatmap": "Heat map"
+        "heatmap": "Tendências"
       },
       "heatmap": {
-        "loading": "Carregando Heat map de atividade…",
+        "loading": "Carregando tendências de atividade…",
         "empty": "Ainda não há atividade de sessões.",
         "sessions": "Sessões",
         "tokens": "Tokens",

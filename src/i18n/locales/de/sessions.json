@@ -714,10 +714,10 @@
       "tabs": {
         "work": "Arbeit",
         "explore": "Entdecken",
-        "heatmap": "Heat map"
+        "heatmap": "Trends"
       },
       "heatmap": {
-        "loading": "Aktivitäts-Heat map wird geladen…",
+        "loading": "Aktivitätstrends werden geladen…",
         "empty": "Noch keine Sitzungsaktivität.",
         "sessions": "Sitzungen",
         "tokens": "Tokens",

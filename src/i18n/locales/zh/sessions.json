@@ -739,10 +739,10 @@
       "tabs": {
         "work": "工作",
         "explore": "探索",
-        "heatmap": "Heat map"
+        "heatmap": "趋势"
       },
       "heatmap": {
-        "loading": "正在加载活动 Heat map…",
+        "loading": "正在加载活动趋势…",
         "empty": "还没有会话活动。",
         "sessions": "会话",
         "tokens": "Tokens",

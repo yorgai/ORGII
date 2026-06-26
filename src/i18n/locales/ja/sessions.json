@@ -714,10 +714,10 @@
       "tabs": {
         "work": "作業",
         "explore": "探索",
-        "heatmap": "Heat map"
+        "heatmap": "トレンド"
       },
       "heatmap": {
-        "loading": "アクティビティ Heat map を読み込み中…",
+        "loading": "アクティビティトレンドを読み込み中…",
         "empty": "まだセッションアクティビティはありません。",
         "sessions": "セッション",
         "tokens": "Tokens",
