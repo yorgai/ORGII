@@ -1,7 +1,14 @@
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import { BookOpen, CheckCircle2, ChevronDown, CircleDot } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { getGitRemotes } from "@src/api/http/git/remotes";
@@ -52,6 +59,8 @@ const ISSUE_REPO_FILTER = {
   ALL: "all",
 } as const;
 
+const ISSUE_PAGE_SIZE = 50;
+
 type IssueTab = (typeof ISSUE_TAB)[keyof typeof ISSUE_TAB];
 type IssueRepoFilter = string;
 
@@ -66,6 +75,7 @@ const manageIssuesSelectedRepoAtom = atomWithStorage<IssueRepoFilter>(
 );
 
 type IssueState = GitHubIssue["state"];
+type IssuePageState = Extract<IssueState, "open" | "closed">;
 
 type ManagedIssueLabel = GitHubIssue["labels"][number];
 
@@ -77,7 +87,6 @@ interface ManagedIssueItem {
   remoteUrl: string;
   rawIssue: GitHubIssue;
   author: string;
-  authorAvatarUrl: string;
   timeAgo: string;
   state: IssueState;
   labels: ManagedIssueLabel[];
@@ -101,18 +110,30 @@ interface GitHubRepoSource {
 interface RepoIssueState {
   openIssues: GitHubIssue[];
   closedIssues: GitHubIssue[];
+  openHasMore: boolean;
+  closedHasMore: boolean;
+  openNextPage: number | null;
+  closedNextPage: number | null;
 }
 
 interface RepoIssueLoadResult {
   source: GitHubRepoSource;
   openIssues: GitHubIssue[];
   closedIssues: GitHubIssue[];
+  openHasMore: boolean;
+  closedHasMore: boolean;
+  openNextPage: number | null;
+  closedNextPage: number | null;
   error: string | null;
 }
 
 const EMPTY_REPO_ISSUES: RepoIssueState = {
   openIssues: [],
   closedIssues: [],
+  openHasMore: false,
+  closedHasMore: false,
+  openNextPage: null,
+  closedNextPage: null,
 };
 
 function IssueStateIcon({ state }: { state: IssueState }): React.ReactNode {
@@ -151,10 +172,6 @@ function IssueLabelTag({
   );
 }
 
-function getAuthorInitial(login: string): string {
-  return login.trim().charAt(0).toUpperCase();
-}
-
 function formatIssueTimeAgo(value: string): string {
   const timestamp = Date.parse(value);
   if (Number.isNaN(timestamp)) return "";
@@ -176,35 +193,6 @@ function formatIssueTimeAgo(value: string): string {
   return `${Math.floor(elapsedMonths / 12)}y ago`;
 }
 
-function GitHubAuthorAvatar({
-  login,
-  avatarUrl,
-}: {
-  login: string;
-  avatarUrl: string;
-}): React.ReactNode {
-  const [failed, setFailed] = useState(false);
-  const initial = getAuthorInitial(login);
-
-  if (failed || !avatarUrl) {
-    return (
-      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-fill-2 text-[10px] font-medium text-text-2">
-        {initial}
-      </span>
-    );
-  }
-
-  return (
-    <img
-      src={avatarUrl}
-      alt=""
-      className="h-4 w-4 rounded-full bg-fill-2 object-cover"
-      loading="lazy"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
 function mapIssueToManagedIssue(
   issue: GitHubIssue,
   source: GitHubRepoSource
@@ -217,7 +205,6 @@ function mapIssueToManagedIssue(
     remoteUrl: source.remoteUrl,
     rawIssue: issue,
     author: issue.user.login,
-    authorAvatarUrl: issue.user.avatar_url,
     timeAgo: formatIssueTimeAgo(issue.updated_at),
     state: issue.state,
     labels: issue.labels,
@@ -249,17 +236,44 @@ function issueMatchesRepo(
   return repoFilter === ISSUE_REPO_FILTER.ALL || issue.repo === repoFilter;
 }
 
+function getIssuePageStatesForTab(activeTab: IssueTab): IssuePageState[] {
+  switch (activeTab) {
+    case ISSUE_TAB.ACTIVE:
+      return ["open"];
+    case ISSUE_TAB.DONE:
+      return ["closed"];
+    case ISSUE_TAB.ALL:
+    case ISSUE_TAB.REVIEW_REQUESTS:
+      return ["open", "closed"];
+  }
+}
+
 function getCachedRepoIssues(source: GitHubRepoSource): RepoIssueState {
   const cached = getCachedIssues(source.repoPath);
   if (!cached) return EMPTY_REPO_ISSUES;
   return {
     openIssues: cached.openIssues,
     closedIssues: cached.closedIssues,
+    openHasMore: cached.openIssues.length >= ISSUE_PAGE_SIZE,
+    closedHasMore: cached.closedIssues.length >= ISSUE_PAGE_SIZE,
+    openNextPage: cached.openIssues.length >= ISSUE_PAGE_SIZE ? 2 : null,
+    closedNextPage: cached.closedIssues.length >= ISSUE_PAGE_SIZE ? 2 : null,
   };
 }
 
 function getRepoIssueMapKey(source: GitHubRepoSource): string {
   return source.repoFullName;
+}
+
+function mergeUniqueIssues(
+  existingIssues: GitHubIssue[],
+  incomingIssues: GitHubIssue[]
+): GitHubIssue[] {
+  const seenIssueNumbers = new Set(existingIssues.map((issue) => issue.number));
+  return [
+    ...existingIssues,
+    ...incomingIssues.filter((issue) => !seenIssueNumbers.has(issue.number)),
+  ];
 }
 
 async function resolveGitHubRepoSource(
@@ -298,13 +312,25 @@ async function loadRepoIssues(
       source,
       openIssues: cached.openIssues,
       closedIssues: cached.closedIssues,
+      openHasMore: cached.openHasMore,
+      closedHasMore: cached.closedHasMore,
+      openNextPage: cached.openNextPage,
+      closedNextPage: cached.closedNextPage,
       error: null,
     };
   }
 
   const [openResult, closedResult] = await Promise.all([
-    fetchIssues(source.remoteUrl, { state: "open" }),
-    fetchIssues(source.remoteUrl, { state: "closed" }),
+    fetchIssues(source.remoteUrl, {
+      state: "open",
+      page: 1,
+      perPage: ISSUE_PAGE_SIZE,
+    }),
+    fetchIssues(source.remoteUrl, {
+      state: "closed",
+      page: 1,
+      perPage: ISSUE_PAGE_SIZE,
+    }),
   ]);
 
   const openIssues = openResult.data?.issues ?? cached.openIssues;
@@ -318,6 +344,10 @@ async function loadRepoIssues(
     source,
     openIssues,
     closedIssues,
+    openHasMore: openResult.data?.has_more ?? false,
+    closedHasMore: closedResult.data?.has_more ?? false,
+    openNextPage: openResult.data?.next_page ?? null,
+    closedNextPage: closedResult.data?.next_page ?? null,
     error: openResult.error ?? closedResult.error ?? null,
   };
 }
@@ -400,6 +430,7 @@ function ManagedIssueRow({
       type="button"
       className="focus-visible:ring-accent-5/50 group w-full rounded-xl px-3 py-3 text-left transition-colors hover:bg-fill-1/60 focus-visible:outline-none focus-visible:ring-2"
       onClick={() => onOpenIssue(issue)}
+      aria-label={`Open issue #${issue.id}: ${issue.title}`}
     >
       <div className="flex items-start gap-3">
         <span className={`mt-0.5 shrink-0 ${stateClassName}`}>
@@ -422,10 +453,6 @@ function ManagedIssueRow({
             <span>{issue.repo}</span>
             <span>·</span>
             <span>{issue.author}</span>
-            <GitHubAuthorAvatar
-              login={issue.author}
-              avatarUrl={issue.authorAvatarUrl}
-            />
             <span>·</span>
             <span>{issue.timeAgo}</span>
           </div>
@@ -449,6 +476,7 @@ const ManageIssuesPanelView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const gitRepos = useMemo(
     () => repos.filter((repo) => repo.kind === REPO_KIND.GIT && repo.path),
@@ -506,6 +534,10 @@ const ManageIssuesPanelView: React.FC = () => {
             {
               openIssues: result.openIssues,
               closedIssues: result.closedIssues,
+              openHasMore: result.openHasMore,
+              closedHasMore: result.closedHasMore,
+              openNextPage: result.openNextPage,
+              closedNextPage: result.closedNextPage,
             },
           ])
         )
@@ -563,6 +595,41 @@ const ManageIssuesPanelView: React.FC = () => {
     [activeTab, effectiveSelectedRepo, issues]
   );
 
+  const pageStates = useMemo(
+    () => getIssuePageStatesForTab(activeTab),
+    [activeTab]
+  );
+  const paginatedSources = useMemo(
+    () =>
+      effectiveSelectedRepo === ISSUE_REPO_FILTER.ALL
+        ? repoSources
+        : repoSources.filter(
+            (source) => source.repoFullName === effectiveSelectedRepo
+          ),
+    [effectiveSelectedRepo, repoSources]
+  );
+  const hasMoreFilteredIssues = useMemo(
+    () =>
+      paginatedSources.some((source) => {
+        const state = repoIssueMap[getRepoIssueMapKey(source)];
+        if (!state) return false;
+        return pageStates.some((pageState) =>
+          pageState === "open" ? state.openHasMore : state.closedHasMore
+        );
+      }),
+    [pageStates, paginatedSources, repoIssueMap]
+  );
+
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual exposes imperative helpers that cannot be memoized safely.
+  const issueVirtualizer = useVirtualizer({
+    count: filteredIssues.length,
+    getScrollElement: () => listScrollRef.current,
+    estimateSize: () => 88,
+    overscan: 8,
+  });
+  const virtualIssues = issueVirtualizer.getVirtualItems();
+
   const headerContent = useMemo(
     () => (
       <span className="flex min-w-0 max-w-full items-center gap-2">
@@ -588,6 +655,87 @@ const ManageIssuesPanelView: React.FC = () => {
   const handleRefresh = useCallback(() => {
     setRefreshNonce((current) => current + 1);
   }, []);
+
+  const handleLoadMore = useCallback(async () => {
+    if (loadingMore || !hasMoreFilteredIssues) return;
+    setLoadingMore(true);
+
+    const requests = paginatedSources.flatMap((source) => {
+      const repoIssueState = repoIssueMap[getRepoIssueMapKey(source)];
+      if (!repoIssueState) return [];
+
+      return pageStates.flatMap((pageState) => {
+        const hasMore =
+          pageState === "open"
+            ? repoIssueState.openHasMore
+            : repoIssueState.closedHasMore;
+        const nextPage =
+          pageState === "open"
+            ? repoIssueState.openNextPage
+            : repoIssueState.closedNextPage;
+        if (!hasMore || !nextPage) return [];
+
+        return [{ source, pageState, nextPage }];
+      });
+    });
+
+    const results = await Promise.all(
+      requests.map(async ({ source, pageState, nextPage }) => ({
+        source,
+        pageState,
+        result: await fetchIssues(source.remoteUrl, {
+          state: pageState,
+          page: nextPage,
+          perPage: ISSUE_PAGE_SIZE,
+        }),
+      }))
+    );
+
+    setRepoIssueMap((current) => {
+      const next = { ...current };
+      for (const { source, pageState, result } of results) {
+        if (!result.data) continue;
+        const key = getRepoIssueMapKey(source);
+        const currentState = next[key] ?? EMPTY_REPO_ISSUES;
+        if (pageState === "open") {
+          const openIssues = mergeUniqueIssues(
+            currentState.openIssues,
+            result.data.issues
+          );
+          next[key] = {
+            ...currentState,
+            openIssues,
+            openHasMore: result.data.has_more,
+            openNextPage: result.data.next_page,
+          };
+          updateCachedOpenIssues(source.repoPath, openIssues);
+        } else {
+          const closedIssues = mergeUniqueIssues(
+            currentState.closedIssues,
+            result.data.issues
+          );
+          next[key] = {
+            ...currentState,
+            closedIssues,
+            closedHasMore: result.data.has_more,
+            closedNextPage: result.data.next_page,
+          };
+          updateCachedClosedIssues(source.repoPath, closedIssues);
+        }
+      }
+      return next;
+    });
+    setLoadError(
+      results.find(({ result }) => result.error)?.result.error ?? null
+    );
+    setLoadingMore(false);
+  }, [
+    hasMoreFilteredIssues,
+    loadingMore,
+    pageStates,
+    paginatedSources,
+    repoIssueMap,
+  ]);
 
   const handleOpenIssue = useCallback(
     (issue: ManagedIssueItem) => {
@@ -648,15 +796,41 @@ const ManageIssuesPanelView: React.FC = () => {
     }
 
     return (
-      <div className="flex flex-col gap-0.5">
-        {filteredIssues.map((issue) => (
-          <ManagedIssueRow
-            key={`${issue.repo}-${issue.id}`}
-            issue={issue}
-            onOpenIssue={handleOpenIssue}
-          />
-        ))}
-      </div>
+      <>
+        <div
+          className="relative w-full"
+          style={{ height: issueVirtualizer.getTotalSize() }}
+        >
+          {virtualIssues.map((virtualIssue) => {
+            const issue = filteredIssues[virtualIssue.index];
+            return (
+              <div
+                key={`${issue.repo}-${issue.id}`}
+                ref={issueVirtualizer.measureElement}
+                data-index={virtualIssue.index}
+                className="absolute left-0 top-0 w-full pb-0.5"
+                style={{ transform: `translateY(${virtualIssue.start}px)` }}
+              >
+                <ManagedIssueRow issue={issue} onOpenIssue={handleOpenIssue} />
+              </div>
+            );
+          })}
+        </div>
+        {hasMoreFilteredIssues ? (
+          <div className="flex justify-center py-3">
+            <button
+              type="button"
+              className="rounded-lg px-3 py-1.5 text-[12px] font-medium text-text-2 transition-colors hover:bg-fill-1 disabled:cursor-default disabled:opacity-60"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore
+                ? t("common:actions.loading")
+                : t("common:actions.loadMore")}
+            </button>
+          </div>
+        ) : null}
+      </>
     );
   })();
 
@@ -675,7 +849,10 @@ const ManageIssuesPanelView: React.FC = () => {
           size="large"
         />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
+      <div
+        ref={listScrollRef}
+        className="min-h-0 flex-1 overflow-y-auto scrollbar-hide"
+      >
         {listContent}
       </div>
     </section>
