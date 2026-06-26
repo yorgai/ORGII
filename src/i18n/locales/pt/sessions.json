@@ -938,10 +938,10 @@
       "allRepositories": "Todos os repos",
       "newIssue": "Nova issue",
       "tabs": {
-        "all": "Tudo",
-        "active": "Ativas",
-        "reviewRequests": "Solicitações de review",
-        "done": "Concluído"
+        "recent": "Recentes",
+        "assigned": "Atribuídas",
+        "byMe": "Por mim",
+        "mentioned": "Mencionadas"
       }
     }
   },

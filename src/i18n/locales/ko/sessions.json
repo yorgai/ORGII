@@ -932,10 +932,10 @@
       "allRepositories": "모든 Repos",
       "newIssue": "새 Issue",
       "tabs": {
-        "all": "전체",
-        "active": "활성",
-        "reviewRequests": "Review 요청",
-        "done": "완료"
+        "recent": "최근",
+        "assigned": "내게 할당됨",
+        "byMe": "내가 작성",
+        "mentioned": "멘션됨"
       }
     }
   },

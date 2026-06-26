@@ -957,10 +957,10 @@
       "allRepositories": "所有 Repos",
       "newIssue": "新建 Issue",
       "tabs": {
-        "all": "全部",
-        "active": "活跃",
-        "reviewRequests": "Review 请求",
-        "done": "已完成"
+        "recent": "最近",
+        "assigned": "分配给我",
+        "byMe": "由我创建",
+        "mentioned": "提及我"
       }
     }
   },

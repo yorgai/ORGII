@@ -946,10 +946,10 @@
       "allRepositories": "Wszystkie repos",
       "newIssue": "Nowa issue",
       "tabs": {
-        "all": "Wszystkie",
-        "active": "Aktywne",
-        "reviewRequests": "Prośby o review",
-        "done": "Gotowe"
+        "recent": "Ostatnie",
+        "assigned": "Przypisane",
+        "byMe": "Moje",
+        "mentioned": "Wspomniane"
       }
     }
   },

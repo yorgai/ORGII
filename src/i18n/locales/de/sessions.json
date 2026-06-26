@@ -932,10 +932,10 @@
       "allRepositories": "Alle repos",
       "newIssue": "Neue issue",
       "tabs": {
-        "all": "Alle",
-        "active": "Aktiv",
-        "reviewRequests": "Review-Anfragen",
-        "done": "Erledigt"
+        "recent": "Zuletzt",
+        "assigned": "Zugewiesen",
+        "byMe": "Von mir",
+        "mentioned": "Erwähnt"
       }
     }
   },

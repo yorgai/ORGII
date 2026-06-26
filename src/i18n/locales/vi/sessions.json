@@ -932,10 +932,10 @@
       "allRepositories": "Tất cả repos",
       "newIssue": "Issue mới",
       "tabs": {
-        "all": "Tất cả",
-        "active": "Đang hoạt động",
-        "reviewRequests": "Yêu cầu review",
-        "done": "Xong"
+        "recent": "Gần đây",
+        "assigned": "Được giao",
+        "byMe": "Bởi tôi",
+        "mentioned": "Được nhắc đến"
       }
     }
   },

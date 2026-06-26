@@ -940,10 +940,10 @@
       "allRepositories": "Все repos",
       "newIssue": "Новая issue",
       "tabs": {
-        "all": "Все",
-        "active": "Активные",
-        "reviewRequests": "Запросы review",
-        "done": "Готово"
+        "recent": "Недавние",
+        "assigned": "Назначены мне",
+        "byMe": "Созданы мной",
+        "mentioned": "Упоминания"
       }
     }
   },

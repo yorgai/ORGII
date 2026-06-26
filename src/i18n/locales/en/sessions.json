@@ -963,10 +963,10 @@
       "allRepositories": "All repositories",
       "newIssue": "New issue",
       "tabs": {
-        "all": "All",
-        "active": "Active",
-        "reviewRequests": "Review requests",
-        "done": "Done"
+        "recent": "Recent",
+        "assigned": "Assigned",
+        "byMe": "By me",
+        "mentioned": "Mentioned"
       }
     }
   },

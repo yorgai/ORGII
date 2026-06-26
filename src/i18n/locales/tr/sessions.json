@@ -932,10 +932,10 @@
       "allRepositories": "Tüm repos",
       "newIssue": "Yeni issue",
       "tabs": {
-        "all": "Tümü",
-        "active": "Aktif",
-        "reviewRequests": "Review istekleri",
-        "done": "Bitti"
+        "recent": "Son",
+        "assigned": "Atananlar",
+        "byMe": "Benim tarafımdan",
+        "mentioned": "Bahsedilenler"
       }
     }
   },

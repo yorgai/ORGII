@@ -936,10 +936,10 @@
       "allRepositories": "所有 Repos",
       "newIssue": "新增 Issue",
       "tabs": {
-        "all": "全部",
-        "active": "活躍",
-        "reviewRequests": "Review 請求",
-        "done": "已完成"
+        "recent": "最近",
+        "assigned": "指派給我",
+        "byMe": "由我建立",
+        "mentioned": "提及我"
       }
     }
   },
