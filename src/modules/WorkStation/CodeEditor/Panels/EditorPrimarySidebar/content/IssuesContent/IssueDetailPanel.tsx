@@ -266,12 +266,6 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
                     </span>
                   </div>
                 </ConnectedTimelineItem>
-              ) : comments.length === 0 ? (
-                <ConnectedTimelineItem isLast>
-                  <div className="rounded-xl border border-dashed border-border-1 px-4 py-3 text-[12px] italic text-text-3">
-                    No comments yet
-                  </div>
-                </ConnectedTimelineItem>
               ) : (
                 comments.map((comment, index) => (
                   <ConnectedTimelineItem
