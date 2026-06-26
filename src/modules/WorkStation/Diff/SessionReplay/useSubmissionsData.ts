@@ -45,6 +45,8 @@ import {
   collectSubmissionArtifacts,
 } from "./submissionsArtifacts";
 
+export type { SubmissionRepoContext } from "./submissionsArtifacts";
+
 const logger = createLogger("useSubmissionsData");
 
 const SUBMISSION_COMMIT_RESOLVE_LIMIT = 200;

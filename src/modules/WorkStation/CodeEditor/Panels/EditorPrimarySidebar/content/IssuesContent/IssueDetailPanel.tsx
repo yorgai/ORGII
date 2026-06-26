@@ -33,6 +33,10 @@ interface IssueDetailPanelProps {
 const GITHUB_IMAGE_TAG_RE = /<img\b([^>]*)\/?>/gi;
 const IMAGE_ATTR_RE = /([\w:-]+)\s*=\s*(["'])(.*?)\2/g;
 
+function sanitizeMarkdownImageAlt(value: string): string {
+  return value.split("[").join("").split("]").join("");
+}
+
 function normalizeGitHubMarkdownBody(body: string): string {
   return body.replace(GITHUB_IMAGE_TAG_RE, (match, rawAttrs: string) => {
     const attrs = new Map<string, string>();
@@ -44,7 +48,7 @@ function normalizeGitHubMarkdownBody(body: string): string {
     if (!src) return match;
 
     const alt = attrs.get("alt") ?? "image";
-    const safeAlt = alt.replaceAll("[", "").replaceAll("]", "");
+    const safeAlt = sanitizeMarkdownImageAlt(alt);
     return `![${safeAlt}](${src})`;
   });
 }
