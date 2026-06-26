@@ -25,9 +25,7 @@ fn strip_extended_length_prefix(path_str: &str) -> &str {
 
 pub(crate) fn has_windows_users_prefix(path_str: &str) -> bool {
     let bytes = path_str.as_bytes();
-    bytes.len() >= 9
-        && bytes[0].is_ascii_alphabetic()
-        && bytes.get(1..9) == Some(br":\Users\")
+    bytes.len() >= 9 && bytes[0].is_ascii_alphabetic() && bytes.get(1..9) == Some(br":\Users\")
 }
 
 /// Check whether `path` falls under a user-accessible directory.
