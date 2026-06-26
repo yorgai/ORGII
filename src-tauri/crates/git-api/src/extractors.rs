@@ -23,6 +23,7 @@ fn strip_extended_length_prefix(path_str: &str) -> &str {
     path_str.strip_prefix(r"\\?\").unwrap_or(path_str)
 }
 
+#[cfg(windows)]
 pub(crate) fn has_windows_users_prefix(path_str: &str) -> bool {
     let bytes = path_str.as_bytes();
     bytes.len() >= 9
