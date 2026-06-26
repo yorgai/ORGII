@@ -745,6 +745,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "Gestionar issues"
       }
     },
     "defaultTitle": "Chat",
@@ -922,6 +925,18 @@
       "showLess": "Mostrar menos",
       "showMore_one": "Mostrar {{count}} más",
       "showMore_other": "Mostrar {{count}} más"
+    },
+    "manageIssues": {
+      "title": "Gestionar issues",
+      "myWork": "Mi trabajo",
+      "allRepositories": "Todos los repos",
+      "newIssue": "Nueva issue",
+      "tabs": {
+        "all": "Todo",
+        "active": "Activas",
+        "reviewRequests": "Solicitudes de review",
+        "done": "Listo"
+      }
     }
   },
   "chatStatus": {

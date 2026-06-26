@@ -770,6 +770,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "管理 Issues"
       }
     },
     "defaultTitle": "Session",
@@ -947,6 +950,18 @@
       "showLess": "收起",
       "showMore_one": "显示其余 {{count}} 个",
       "showMore_other": "显示其余 {{count}} 个"
+    },
+    "manageIssues": {
+      "title": "管理 Issues",
+      "myWork": "我的工作",
+      "allRepositories": "所有 Repos",
+      "newIssue": "新建 Issue",
+      "tabs": {
+        "all": "全部",
+        "active": "活跃",
+        "reviewRequests": "Review 请求",
+        "done": "已完成"
+      }
     }
   },
   "chatStatus": {

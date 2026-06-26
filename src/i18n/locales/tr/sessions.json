@@ -745,6 +745,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "Issues yönet"
       }
     },
     "defaultTitle": "Sohbet",
@@ -922,6 +925,18 @@
       "showLess": "Daha az göster",
       "showMore_one": "{{count}} tane daha göster",
       "showMore_other": "{{count}} tane daha göster"
+    },
+    "manageIssues": {
+      "title": "Issues yönet",
+      "myWork": "Çalışmalarım",
+      "allRepositories": "Tüm repos",
+      "newIssue": "Yeni issue",
+      "tabs": {
+        "all": "Tümü",
+        "active": "Aktif",
+        "reviewRequests": "Review istekleri",
+        "done": "Bitti"
+      }
     }
   },
   "chatStatus": {

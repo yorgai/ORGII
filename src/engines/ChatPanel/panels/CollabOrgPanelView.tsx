@@ -41,10 +41,10 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
 
   const descriptionContent = (
     <section
-      className={`${DETAIL_PANEL_TOKENS.contentWidth} flex flex-col`}
+      className={`${DETAIL_PANEL_TOKENS.contentWidth} flex min-h-0 flex-1 flex-col`}
       data-testid="chat-panel-collab-org-section"
     >
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
         <TabPill
           tabs={model.tabs}
           activeTab={model.activeTab}
@@ -64,7 +64,7 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto scrollbar-hide">
         {model.activeTab === COLLAB_ORG_TAB.WORK_ITEMS ? (
           <WorkItemsSection
             t={t}
@@ -147,7 +147,6 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
         <WorkItemContentStack
           descriptionContent={descriptionContent}
           descriptionFlexible
-          scrollable
         />
       </DetailPanelContainer>
     </div>

@@ -776,6 +776,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "Manage issues"
       }
     },
     "defaultTitle": "Chat",
@@ -952,6 +955,18 @@
         "exportFailed": "Failed to export Session JSON",
         "importReadFailed": "Failed to read the JSON file.",
         "importFailed": "Failed to import Session JSON."
+      }
+    },
+    "manageIssues": {
+      "title": "Manage issues",
+      "myWork": "My work",
+      "allRepositories": "All repositories",
+      "newIssue": "New issue",
+      "tabs": {
+        "all": "All",
+        "active": "Active",
+        "reviewRequests": "Review requests",
+        "done": "Done"
       }
     }
   },

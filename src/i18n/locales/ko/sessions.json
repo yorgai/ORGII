@@ -745,6 +745,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "Issues 관리"
       }
     },
     "defaultTitle": "채팅",
@@ -922,6 +925,18 @@
       "showLess": "간략히 보기",
       "showMore_one": "{{count}}개 더 보기",
       "showMore_other": "{{count}}개 더 보기"
+    },
+    "manageIssues": {
+      "title": "Issues 관리",
+      "myWork": "내 작업",
+      "allRepositories": "모든 Repos",
+      "newIssue": "새 Issue",
+      "tabs": {
+        "all": "전체",
+        "active": "활성",
+        "reviewRequests": "Review 요청",
+        "done": "완료"
+      }
     }
   },
   "chatStatus": {

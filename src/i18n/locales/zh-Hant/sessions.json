@@ -749,6 +749,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "管理 Issues"
       }
     },
     "defaultTitle": "Session",
@@ -926,6 +929,18 @@
       "showLess": "收合",
       "showMore_one": "顯示其餘 {{count}} 個",
       "showMore_other": "顯示其餘 {{count}} 個"
+    },
+    "manageIssues": {
+      "title": "管理 Issues",
+      "myWork": "我的工作",
+      "allRepositories": "所有 Repos",
+      "newIssue": "新增 Issue",
+      "tabs": {
+        "all": "全部",
+        "active": "活躍",
+        "reviewRequests": "Review 請求",
+        "done": "已完成"
+      }
     }
   },
   "chatStatus": {
