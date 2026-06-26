@@ -40,6 +40,7 @@ import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 import { openFileInEditor } from "@src/util/ui/openFileInEditor";
 
 import {
+  type MessageReferenceItem,
   extractMessageReferences,
   makeReferenceKey,
   resolveOpenPath,

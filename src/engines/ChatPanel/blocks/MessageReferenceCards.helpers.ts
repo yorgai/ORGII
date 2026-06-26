@@ -118,6 +118,39 @@ function shortSessionIdLabel(sessionId: string): string {
   return `${sessionId.slice(0, uuidStart)}${sessionId.slice(uuidStart, uuidStart + 8)}…`;
 }
 
+const SESSION_PILL_REFERENCE_PATTERN = /([^\n[]+?)\s*\[session:([^\]]+)\]/g;
+
+function lastTokenLabel(rawLabel: string): string {
+  const trimmed = rawLabel.trim();
+  const lastSpaceIdx = trimmed.search(/\s[^\s]*$/);
+  return lastSpaceIdx >= 0 ? trimmed.slice(lastSpaceIdx + 1).trim() : trimmed;
+}
+
+function makeSessionReferenceItem(
+  sessionId: string,
+  title?: string
+): MessageReferenceItem {
+  return {
+    kind: "session",
+    value: sessionId,
+    title: title?.trim() || shortSessionIdLabel(sessionId),
+    subtitle: sessionId,
+    sessionId,
+  };
+}
+
+function addReference(
+  item: MessageReferenceItem,
+  references: MessageReferenceItem[],
+  seen: Set<string>
+): boolean {
+  const key = makeReferenceKey(item);
+  if (seen.has(key)) return references.length >= MAX_REFERENCE_CARDS;
+  seen.add(key);
+  references.push(item);
+  return references.length >= MAX_REFERENCE_CARDS;
+}
+
 export function extractMessageReferences(
   content: string,
   excludeUrls?: ReadonlySet<string>
@@ -127,22 +160,23 @@ export function extractMessageReferences(
   const seen = new Set<string>();
 
   for (const match of searchableContent.matchAll(
+    SESSION_PILL_REFERENCE_PATTERN
+  )) {
+    if (
+      addReference(
+        makeSessionReferenceItem(match[2], lastTokenLabel(match[1])),
+        references,
+        seen
+      )
+    )
+      return references;
+  }
+
+  for (const match of searchableContent.matchAll(
     createSessionIdTextPattern()
   )) {
-    const sessionId = match[0];
-    const item: MessageReferenceItem = {
-      kind: "session",
-      value: sessionId,
-      title: shortSessionIdLabel(sessionId),
-      subtitle: sessionId,
-      sessionId,
-    };
-    const key = makeReferenceKey(item);
-    if (!seen.has(key)) {
-      seen.add(key);
-      references.push(item);
-    }
-    if (references.length >= MAX_REFERENCE_CARDS) return references;
+    if (addReference(makeSessionReferenceItem(match[0]), references, seen))
+      return references;
   }
 
   for (const artifact of parseGitArtifactsFromText(searchableContent)) {
