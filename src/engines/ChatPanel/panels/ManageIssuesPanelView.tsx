@@ -748,7 +748,12 @@ const ManageIssuesPanelView: React.FC = () => {
         submittingComment: false,
       });
       openTab(
-        createGitHubIssueDetailTab(issue.id, issue.title, issue.repoPath)
+        createGitHubIssueDetailTab(
+          issue.id,
+          issue.title,
+          issue.repoPath,
+          issue.remoteUrl
+        )
       );
 
       void (async () => {
