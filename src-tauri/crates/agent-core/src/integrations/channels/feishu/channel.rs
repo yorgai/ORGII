@@ -190,6 +190,7 @@ impl Channel for FeishuChannel {
         let app_secret = self.config.app_secret.clone();
         let api_base = self.auth.api_base().to_string();
         let http_client = self.auth.client().clone();
+        let auth = self.auth.clone();
 
         let handle = tokio::spawn(async move {
             ws::feishu_ws_loop(
@@ -205,6 +206,7 @@ impl Channel for FeishuChannel {
                 inbound_tx,
                 channel_name,
                 event_config,
+                auth,
             )
             .await;
         });
@@ -264,7 +266,7 @@ impl Channel for FeishuChannel {
         _chat_id: &str,
         message_id: &str,
     ) -> Result<(), ChannelError> {
-        api::add_reaction(&self.auth, message_id, "PROCESSING").await
+        api::add_reaction(&self.auth, message_id, "Typing").await
     }
 
     async fn on_processing_end(
@@ -272,7 +274,7 @@ impl Channel for FeishuChannel {
         _chat_id: &str,
         message_id: &str,
     ) -> Result<(), ChannelError> {
-        api::remove_reaction(&self.auth, message_id, "PROCESSING").await
+        api::remove_reaction(&self.auth, message_id, "Typing").await
     }
 
     async fn update_message(&self, message_id: &str, content: &str) -> Result<(), ChannelError> {

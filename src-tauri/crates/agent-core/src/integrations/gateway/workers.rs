@@ -4,6 +4,7 @@
 //! entry point stays focused on wiring rather than per-task logic.
 
 use std::sync::atomic::{AtomicBool, Ordering};
+use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
@@ -125,18 +126,52 @@ async fn handle_ready_message(
             .and_then(|mgr| mgr.typing_refresh_interval_for(&msg.channel))
     };
 
+    let message_id = msg
+        .metadata
+        .get("message_id")
+        .or_else(|| msg.metadata.get("source_message_id"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    let reaction_channel = msg
+        .metadata
+        .get("source_channel")
+        .and_then(|v| v.as_str())
+        .unwrap_or(&msg.channel)
+        .to_string();
+    let reaction_chat_id = msg
+        .metadata
+        .get("source_chat_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or(&msg.chat_id)
+        .to_string();
+
+    if !message_id.is_empty() {
+        info!(
+            channel = %reaction_channel,
+            chat_id = %reaction_chat_id,
+            message_id = %message_id,
+            "[gateway] processing reaction start"
+        );
+        let cm_lock = channel_manager.lock().await;
+        if let Some(ref mgr) = *cm_lock {
+            mgr.notify_processing_start(&reaction_channel, &reaction_chat_id, &message_id)
+                .await;
+        }
+    }
+
     let typing_task: Option<tokio::task::JoinHandle<()>> = typing_interval.map(|interval| {
         let cm = channel_manager.clone();
-        let channel_name = msg.channel.clone();
-        let chat_id = msg.chat_id.clone();
-        let message_id = msg
-            .metadata
-            .get("message_id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
+        let channel_name = reaction_channel.clone();
+        let chat_id = reaction_chat_id.clone();
+        let message_id = message_id.clone();
         tokio::spawn(async move {
             loop {
+                tokio::time::sleep(interval).await;
+                if message_id.is_empty() {
+                    continue;
+                }
                 {
                     let cm_lock = cm.lock().await;
                     if let Some(ref mgr) = *cm_lock {
@@ -144,25 +179,53 @@ async fn handle_ready_message(
                             .await;
                     }
                 }
-                tokio::time::sleep(interval).await;
             }
         })
     });
 
+    let mut remove_processing_on_handler_done = true;
+
     match handler.handle_message(msg.clone()).await {
-        Ok(Some(response)) => {
+        Ok(Some(mut response)) => {
+            if !message_id.is_empty() {
+                response.metadata.insert(
+                    "processing_reaction_chat_id".to_string(),
+                    Value::String(reaction_chat_id.clone()),
+                );
+                response.metadata.insert(
+                    "processing_reaction_message_id".to_string(),
+                    Value::String(message_id.clone()),
+                );
+                remove_processing_on_handler_done = false;
+            }
             let bus_lock = bus.lock().await;
             bus_lock.publish_outbound(response);
         }
-        Ok(None) => {}
+        Ok(None) => {
+            if !message_id.is_empty() && msg.metadata.contains_key("source_message_id") {
+                remove_processing_on_handler_done = false;
+            }
+        }
         Err(err_msg) => {
             error!("[gateway] Error processing message: {}", err_msg);
-            let bus_lock = bus.lock().await;
-            bus_lock.publish_outbound(OutboundMessage::new(
+            let mut response = OutboundMessage::new(
                 &msg.channel,
                 &msg.chat_id,
                 &format!("Sorry, I encountered an error: {}", err_msg),
-            ));
+            );
+            if !message_id.is_empty() {
+                response.metadata.insert(
+                    "processing_reaction_chat_id".to_string(),
+                    Value::String(reaction_chat_id.clone()),
+                );
+                response.metadata.insert(
+                    "processing_reaction_message_id".to_string(),
+                    Value::String(message_id.clone()),
+                );
+                remove_processing_on_handler_done = false;
+            }
+            let bus_lock = bus.lock().await;
+            bus_lock.publish_outbound(response);
         }
     }
 
@@ -170,15 +233,18 @@ async fn handle_ready_message(
         task.abort();
     }
 
-    let message_id = msg
-        .metadata
-        .get("message_id")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let cm_lock = channel_manager.lock().await;
-    if let Some(ref mgr) = *cm_lock {
-        mgr.notify_processing_end(&msg.channel, &msg.chat_id, message_id)
-            .await;
+    if remove_processing_on_handler_done && !message_id.is_empty() {
+        let cm_lock = channel_manager.lock().await;
+        if let Some(ref mgr) = *cm_lock {
+            info!(
+                channel = %reaction_channel,
+                chat_id = %reaction_chat_id,
+                message_id = %message_id,
+                "[gateway] processing reaction end after handler"
+            );
+            mgr.notify_processing_end(&reaction_channel, &reaction_chat_id, &message_id)
+                .await;
+        }
     }
 }
 
@@ -224,6 +290,20 @@ pub(super) async fn spawn_outbound_dispatcher(
                         crate::utils::safe_truncate_chars_to_string(&outbound_msg.content, 60)
                     );
 
+                    let processing_reaction = outbound_msg
+                        .metadata
+                        .get("processing_reaction_message_id")
+                        .and_then(|v| v.as_str())
+                        .map(|message_id| {
+                            let chat_id = outbound_msg
+                                .metadata
+                                .get("processing_reaction_chat_id")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or(&outbound_msg.chat_id)
+                                .to_string();
+                            (chat_id, message_id.to_string())
+                        });
+
                     let cm_lock = channel_manager.lock().await;
                     if let Some(ref manager) = *cm_lock {
                         if let Err(err) = manager.send_to_with_delivery(&outbound_msg).await {
@@ -231,6 +311,17 @@ pub(super) async fn spawn_outbound_dispatcher(
                                 "[gateway] Failed to deliver to channel {}: {}",
                                 outbound_msg.channel, err
                             );
+                        }
+                        if let Some((chat_id, message_id)) = processing_reaction {
+                            info!(
+                                channel = %outbound_msg.channel,
+                                chat_id = %chat_id,
+                                message_id = %message_id,
+                                "[gateway] processing reaction end after delivery"
+                            );
+                            manager
+                                .notify_processing_end(&outbound_msg.channel, &chat_id, &message_id)
+                                .await;
                         }
                     }
                     drop(cm_lock);
