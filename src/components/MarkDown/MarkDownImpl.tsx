@@ -36,6 +36,7 @@ import MermaidBlock from "./MermaidBlock";
 import "./index.scss";
 import {
   detectCodeType,
+  normalizeCopyableMarkdownDocumentFence,
   openFileInEditor,
   openUrlInBrowserApp,
   preprocessTextContent,
@@ -169,23 +170,26 @@ function splitIntoStableMarkdownBlocks(content: string): string[] {
 
   const blocks: string[] = [];
   let blockStart = 0;
-  let inFence = false;
+  let fenceLength = 0;
   let index = 0;
 
   while (index < content.length) {
-    if (
-      content[index] === "`" &&
-      index + 2 < content.length &&
-      content[index + 1] === "`" &&
-      content[index + 2] === "`"
-    ) {
-      inFence = !inFence;
-      index += 3;
-      continue;
+    if (content[index] === "`") {
+      const fenceMatch = /^`{3,}/.exec(content.slice(index));
+      if (fenceMatch) {
+        const currentFenceLength = fenceMatch[0].length;
+        if (fenceLength === 0) {
+          fenceLength = currentFenceLength;
+        } else if (currentFenceLength >= fenceLength) {
+          fenceLength = 0;
+        }
+        index += currentFenceLength;
+        continue;
+      }
     }
 
     if (
-      !inFence &&
+      fenceLength === 0 &&
       content[index] === "\n" &&
       index + 1 < content.length &&
       content[index + 1] === "\n"
@@ -651,10 +655,12 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
   // Preprocess text content to auto-detect and format code.
   // Skip the expensive regex pass when the caller guarantees the content is
   // already well-formed markdown (e.g., post-stream agent messages).
-  const processedContent = useMemo(
-    () => (skipPreprocess ? textContent : preprocessTextContent(textContent)),
-    [textContent, skipPreprocess]
-  );
+  const processedContent = useMemo(() => {
+    const content = skipPreprocess
+      ? textContent
+      : preprocessTextContent(textContent);
+    return normalizeCopyableMarkdownDocumentFence(content);
+  }, [textContent, skipPreprocess]);
 
   const streamingBlocks = useMemo(
     () => (streaming ? splitIntoStableMarkdownBlocks(processedContent) : null),
