@@ -35,6 +35,23 @@ pub struct ModelVariantInfo {
     pub base_model: String,
     pub reasoning: Option<String>,
     pub fast: bool,
+    /// Context window reported by the provider's `/v1/models` endpoint.
+    /// Round-tripped so a subsequent `save_key` carrying `model_variants`
+    /// doesn't erase the value written by `update_key_health`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_window: Option<u64>,
+}
+
+impl From<ModelVariantInfo> for ModelVariant {
+    fn from(v: ModelVariantInfo) -> Self {
+        ModelVariant {
+            model: v.model,
+            base_model: v.base_model,
+            reasoning: v.reasoning,
+            fast: v.fast,
+            context_window: v.context_window,
+        }
+    }
 }
 
 /// Serializable per-base-model default variant for API responses
@@ -290,6 +307,7 @@ impl From<ModelKey> for KeyInfo {
                     base_model: variant.base_model.clone(),
                     reasoning: variant.reasoning.clone(),
                     fast: variant.fast,
+                    context_window: variant.context_window,
                 })
                 .collect(),
             default_variants: entry
@@ -410,6 +428,7 @@ impl From<ModelKey> for FullKeyResponse {
                     base_model: variant.base_model,
                     reasoning: variant.reasoning,
                     fast: variant.fast,
+                    context_window: variant.context_window,
                 })
                 .collect(),
             default_variants: entry
@@ -564,16 +583,7 @@ pub async fn save_key(request: SaveKeyRequest) -> Result<KeyInfo, String> {
                 .collect();
         }
         if let Some(variants) = request.model_variants {
-            entry.model_variants = variants
-                .into_iter()
-                .map(|variant| ModelVariant {
-                    model: variant.model,
-                    base_model: variant.base_model,
-                    reasoning: variant.reasoning,
-                    fast: variant.fast,
-                    context_window: None,
-                })
-                .collect();
+            entry.model_variants = variants.into_iter().map(ModelVariant::from).collect();
         }
         if let Some(default_variants) = request.default_variants {
             entry.default_variants = default_variants

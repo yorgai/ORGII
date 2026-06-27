@@ -156,6 +156,7 @@ export const ModelVariantInfoSchema = z.object({
   base_model: z.string(),
   reasoning: z.string().nullable().optional(),
   fast: z.boolean().default(false),
+  context_window: z.number().int().nonnegative().nullable().optional(),
 });
 
 export const DefaultVariantInfoSchema = z.object({
