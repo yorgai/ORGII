@@ -40,6 +40,7 @@ import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 import { openFileInEditor } from "@src/util/ui/openFileInEditor";
 
 import {
+  type MessageReferenceItem,
   extractMessageReferences,
   makeReferenceKey,
   resolveOpenPath,
@@ -186,11 +187,12 @@ const SessionReferenceCard: React.FC<{ item: MessageReferenceItem }> = ({
         <Button
           variant="secondary"
           appearance="ghost"
-          size="small"
+          size="mini"
           icon={<Copy size={14} />}
           iconOnly
           aria-label={tCommon("actions.copy")}
           title={tCommon("actions.copy")}
+          className="shrink-0 text-text-3 hover:bg-fill-2 hover:text-text-1"
           onClick={handleCopy}
         />
         <Button variant="primary" size="small" onClick={handleJump}>
@@ -348,11 +350,12 @@ const MessageReferenceCard: React.FC<MessageReferenceCardProps> = ({
         <Button
           variant="secondary"
           appearance="ghost"
-          size="small"
+          size="mini"
           icon={<Copy size={14} />}
           iconOnly
           aria-label={copyLabel}
           title={copyLabel}
+          className="shrink-0 text-text-3 hover:bg-fill-2 hover:text-text-1"
           onClick={handleCopy}
         />
         {isCommit && (

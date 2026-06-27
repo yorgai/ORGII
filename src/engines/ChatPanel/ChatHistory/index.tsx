@@ -153,7 +153,15 @@ export interface FollowAgentNavState {
   onFollowAgent: () => void;
 }
 
-export interface ScrollNavState extends FollowAgentNavState {
+export interface BrowserAddToConversationNavState {
+  showAddToConversation: boolean;
+  addToConversationLabel: string;
+  addToConversationTooltipLabel: string;
+  onAddToConversation: () => void;
+}
+
+export interface ScrollNavState
+  extends FollowAgentNavState, BrowserAddToConversationNavState {
   showScrollToBottom: boolean;
   onScrollToBottom: () => void;
 }
@@ -165,6 +173,14 @@ const EMPTY_FOLLOW_AGENT_NAV: FollowAgentNavState = {
   followAgentShortcut: "",
   onFollowAgent: () => undefined,
 };
+
+const EMPTY_BROWSER_ADD_TO_CONVERSATION_NAV: BrowserAddToConversationNavState =
+  {
+    showAddToConversation: false,
+    addToConversationLabel: "",
+    addToConversationTooltipLabel: "",
+    onAddToConversation: () => undefined,
+  };
 
 interface ChatHistoryProps {
   /** Opaque background class for sticky headers. Must match the container surface. */
@@ -183,6 +199,7 @@ interface ChatHistoryProps {
   /** Called whenever scroll-nav visibility state changes. Used by ChatView to render buttons in the pill row. */
   onScrollNavChange?: (state: ScrollNavState) => void;
   followAgentNav?: FollowAgentNavState;
+  browserAddToConversationNav?: BrowserAddToConversationNavState;
   onRegisterSearchOpen?: (handler: (() => void) | null) => void;
   displayMode?: ChatHistoryDisplayMode;
   turnPaginationEnabled?: boolean;
@@ -269,6 +286,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   onAgentOrgRunViewRefresh,
   onScrollNavChange,
   followAgentNav = EMPTY_FOLLOW_AGENT_NAV,
+  browserAddToConversationNav = EMPTY_BROWSER_ADD_TO_CONVERSATION_NAV,
   onRegisterSearchOpen,
   displayMode = "full",
   turnPaginationEnabled = true,
@@ -332,6 +350,12 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     followAgentShortcut,
     onFollowAgent,
   } = followAgentNav;
+  const {
+    showAddToConversation,
+    addToConversationLabel,
+    addToConversationTooltipLabel,
+    onAddToConversation,
+  } = browserAddToConversationNav;
 
   const { hasPinnedContent: hasPinnedContentRaw } = usePinnedContent();
   // Subagent panes opt out of in-history pinned bars; they surface the same
@@ -776,6 +800,10 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       followAgentTooltipLabel,
       followAgentShortcut,
       onFollowAgent,
+      showAddToConversation,
+      addToConversationLabel,
+      addToConversationTooltipLabel,
+      onAddToConversation,
     });
   }, [
     showScrollToBottom,
@@ -785,6 +813,10 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     followAgentTooltipLabel,
     followAgentShortcut,
     onFollowAgent,
+    showAddToConversation,
+    addToConversationLabel,
+    addToConversationTooltipLabel,
+    onAddToConversation,
     onScrollNavChange,
   ]);
 
@@ -1093,9 +1125,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
               ref={scrollAreaRef}
               className="absolute inset-0 overflow-hidden"
             >
-              <div
-                className={`mx-auto h-full w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
-              >
+              <div className="h-full w-full">
                 {optimizedChatHistory.length > 0 ? (
                   <>
                     <PlanningIndicatorBridge

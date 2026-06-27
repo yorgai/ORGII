@@ -714,10 +714,10 @@
       "tabs": {
         "work": "Travail",
         "explore": "Explorer",
-        "heatmap": "Heat map"
+        "heatmap": "Tendances"
       },
       "heatmap": {
-        "loading": "Chargement de la Heat map d’activité…",
+        "loading": "Chargement des tendances d’activité…",
         "empty": "Aucune activité de session pour le moment.",
         "sessions": "Sessions",
         "tokens": "Tokens",
@@ -745,6 +745,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "Gérer les issues"
       }
     },
     "defaultTitle": "Chat",
@@ -922,6 +925,18 @@
       "showLess": "Afficher moins",
       "showMore_one": "Afficher {{count}} de plus",
       "showMore_other": "Afficher {{count}} de plus"
+    },
+    "manageIssues": {
+      "title": "Gérer les issues",
+      "myWork": "Mon travail",
+      "allRepositories": "Tous les repos",
+      "newIssue": "Nouvelle issue",
+      "tabs": {
+        "recent": "Récents",
+        "assigned": "Assignés",
+        "byMe": "Par moi",
+        "mentioned": "Mentionnés"
+      }
     }
   },
   "chatStatus": {

@@ -714,10 +714,10 @@
       "tabs": {
         "work": "作業",
         "explore": "探索",
-        "heatmap": "Heat map"
+        "heatmap": "トレンド"
       },
       "heatmap": {
-        "loading": "アクティビティ Heat map を読み込み中…",
+        "loading": "アクティビティトレンドを読み込み中…",
         "empty": "まだセッションアクティビティはありません。",
         "sessions": "セッション",
         "tokens": "Tokens",
@@ -745,6 +745,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "Issues を管理"
       }
     },
     "defaultTitle": "チャット",
@@ -922,6 +925,18 @@
       "showLess": "表示を減らす",
       "showMore_one": "他 {{count}} 件を表示",
       "showMore_other": "他 {{count}} 件を表示"
+    },
+    "manageIssues": {
+      "title": "Issues を管理",
+      "myWork": "自分の作業",
+      "allRepositories": "すべての Repos",
+      "newIssue": "新しい Issue",
+      "tabs": {
+        "recent": "最近",
+        "assigned": "自分に割り当て",
+        "byMe": "自分が作成",
+        "mentioned": "メンション"
+      }
     }
   },
   "chatStatus": {

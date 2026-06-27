@@ -714,10 +714,10 @@
       "tabs": {
         "work": "Arbeit",
         "explore": "Entdecken",
-        "heatmap": "Heat map"
+        "heatmap": "Trends"
       },
       "heatmap": {
-        "loading": "Aktivitäts-Heat map wird geladen…",
+        "loading": "Aktivitätstrends werden geladen…",
         "empty": "Noch keine Sitzungsaktivität.",
         "sessions": "Sitzungen",
         "tokens": "Tokens",
@@ -745,6 +745,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "Issues verwalten"
       }
     },
     "defaultTitle": "Chat",
@@ -922,6 +925,18 @@
       "showLess": "Weniger anzeigen",
       "showMore_one": "{{count}} weitere anzeigen",
       "showMore_other": "{{count}} weitere anzeigen"
+    },
+    "manageIssues": {
+      "title": "Issues verwalten",
+      "myWork": "Meine Arbeit",
+      "allRepositories": "Alle repos",
+      "newIssue": "Neue issue",
+      "tabs": {
+        "recent": "Zuletzt",
+        "assigned": "Zugewiesen",
+        "byMe": "Von mir",
+        "mentioned": "Erwähnt"
+      }
     }
   },
   "chatStatus": {

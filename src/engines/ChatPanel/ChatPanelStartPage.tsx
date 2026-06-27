@@ -6,6 +6,7 @@ import {
   ChevronRight,
   FolderGit2,
   KeyRound,
+  ListTodo,
   MessageSquarePlus,
   Search,
 } from "lucide-react";
@@ -48,6 +49,7 @@ interface ChatPanelStartPageProps {
   className?: string;
   onAddApiKey: () => void;
   onExploreRepos: () => void;
+  onManageIssues: () => void;
   onNewSession: () => void;
   onNewWorkItem: () => void;
   onSetupRepo: () => void;
@@ -319,6 +321,7 @@ export function ChatPanelStartPage({
   className,
   onAddApiKey,
   onExploreRepos,
+  onManageIssues,
   onNewSession,
   onNewWorkItem,
   onSetupRepo,
@@ -348,6 +351,12 @@ export function ChatPanelStartPage({
       title: t("chat.startPage.newWorkItem.title"),
       icon: <BriefcaseBusiness size={13} strokeWidth={1.8} />,
       onClick: onNewWorkItem,
+    },
+    {
+      id: "manage-issues",
+      title: t("chat.startPage.manageIssues.title"),
+      icon: <ListTodo size={13} strokeWidth={1.8} />,
+      onClick: onManageIssues,
     },
     {
       id: "add-api-key",

@@ -294,17 +294,21 @@ fn find_file_named(dir: &Path, name: &str) -> Option<PathBuf> {
     None
 }
 
+#[cfg(unix)]
 fn set_executable(path: &Path) -> Result<(), String> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let meta =
-            std::fs::metadata(path).map_err(|err| format!("metadata {}: {err}", path.display()))?;
-        let mut perms = meta.permissions();
-        perms.set_mode(perms.mode() | 0o755);
-        std::fs::set_permissions(path, perms)
-            .map_err(|err| format!("chmod {}: {err}", path.display()))?;
-    }
+    use std::os::unix::fs::PermissionsExt;
+
+    let meta =
+        std::fs::metadata(path).map_err(|err| format!("metadata {}: {err}", path.display()))?;
+    let mut perms = meta.permissions();
+    perms.set_mode(perms.mode() | 0o755);
+    std::fs::set_permissions(path, perms)
+        .map_err(|err| format!("chmod {}: {err}", path.display()))?;
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn set_executable(_path: &Path) -> Result<(), String> {
     Ok(())
 }
 

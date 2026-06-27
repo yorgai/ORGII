@@ -714,10 +714,10 @@
       "tabs": {
         "work": "Làm việc",
         "explore": "Khám phá",
-        "heatmap": "Heat map"
+        "heatmap": "Xu hướng"
       },
       "heatmap": {
-        "loading": "Đang tải Heat map hoạt động…",
+        "loading": "Đang tải xu hướng hoạt động…",
         "empty": "Chưa có hoạt động phiên.",
         "sessions": "Phiên",
         "tokens": "Tokens",
@@ -745,6 +745,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "Quản lý issues"
       }
     },
     "defaultTitle": "Chat",
@@ -922,6 +925,18 @@
       "showLess": "Thu gọn",
       "showMore_one": "Hiển thị thêm {{count}}",
       "showMore_other": "Hiển thị thêm {{count}}"
+    },
+    "manageIssues": {
+      "title": "Quản lý issues",
+      "myWork": "Việc của tôi",
+      "allRepositories": "Tất cả repos",
+      "newIssue": "Issue mới",
+      "tabs": {
+        "recent": "Gần đây",
+        "assigned": "Được giao",
+        "byMe": "Bởi tôi",
+        "mentioned": "Được nhắc đến"
+      }
     }
   },
   "chatStatus": {

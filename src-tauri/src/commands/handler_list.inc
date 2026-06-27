@@ -1141,6 +1141,8 @@ agent_core::state::commands::debug_seed_pending_plan,
 // User presence — global snapshot for runtime enforcement (auto-resolve
 // deadlines, goal loop). Pushed by the FE on every mode switch.
 agent_core::state::commands::set_user_presence,
+// User profile — global snapshot for backend-only/background prompt builds.
+agent_core::state::commands::set_user_profile,
 // Secret capture commands (out-of-band, plaintext never reaches LLM).
 // Backs the `manage_secrets` tool + `SecretCaptureModal` round-trip.
 agent_core::state::commands::agent_secret_capture_submit,

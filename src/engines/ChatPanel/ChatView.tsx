@@ -40,6 +40,7 @@ import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { useShowInteractArea } from "@src/contexts/workspace/ChatContext";
 import { AgentMessageClampProvider } from "@src/engines/ChatPanel/blocks";
 import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatStatusBanners";
+import { forkCodexAppHistoryIntoOrgiiSession } from "@src/engines/ChatPanel/externalHistoryFork";
 import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatController";
 import { AgentOrgGroupChatLiveSessions } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatLiveSessions";
 import { replayModeAtom } from "@src/engines/SessionCore";
@@ -49,7 +50,11 @@ import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { useFileReviewSync } from "@src/hooks/fileReview";
 import { createLogger } from "@src/hooks/logger";
 import { useSessionWorkspaceSync } from "@src/hooks/session/useSessionWorkspaceSync";
-import { activeSessionIdAtom, sessionByIdAtom } from "@src/store/session";
+import {
+  activeSessionIdAtom,
+  loadSessions,
+  sessionByIdAtom,
+} from "@src/store/session";
 import type { Session } from "@src/store/session";
 import {
   isSessionActiveAtom,
@@ -106,6 +111,7 @@ import { useAgentOrgRunView } from "./InputArea/components/useAgentOrgRunView";
 import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useGitDiffActions } from "./InputArea/hooks/useGitDiffActions";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
+import { useBrowserAddToConversationAction } from "./hooks/useBrowserAddToConversationAction";
 import { useFollowAgent } from "./hooks/useFollowAgent";
 
 const logger = createLogger("ChatView");
@@ -314,6 +320,20 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const showInteractArea = useShowInteractArea();
     const showExternalHistoryForkComposer =
       isCodexAppSession(sessionId) || isClaudeCodeHistorySession(sessionId);
+    const handleExternalHistoryForkSubmit = useCallback(
+      async (input: { displayText: string; agentContent?: string }) => {
+        if (!isCodexAppSession(sessionId)) return false;
+        const newSessionId = await forkCodexAppHistoryIntoOrgiiSession({
+          sourceSessionId: sessionId,
+          sourceSession: currentSession,
+          userMessage: input.agentContent ?? input.displayText,
+        });
+        await loadSessions({ forceRefresh: true });
+        setActiveSessionId(newSessionId);
+        return true;
+      },
+      [currentSession, sessionId, setActiveSessionId]
+    );
     const showFloatingComposer =
       (showInteractArea && !isReadOnlySurface) ||
       showExternalHistoryForkComposer;
@@ -380,6 +400,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
         handleFollowAgent,
       ]
     );
+    const browserAddToConversationNav = useBrowserAddToConversationAction();
     const stationMode = useAtomValue(stationModeAtom);
     const chatPanelMaximized = useAtomValue(chatPanelMaximizedAtom);
     const agentMessageClampEligible =
@@ -757,6 +778,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
                     onAgentOrgRunViewRefresh={refreshAgentOrgRunView}
                     onScrollNavChange={handleScrollNavChange}
                     followAgentNav={followAgentNav}
+                    browserAddToConversationNav={browserAddToConversationNav}
                     onRegisterSearchOpen={onRegisterSearchOpen}
                     displayMode={displayMode}
                     turnPaginationEnabled={turnPaginationEnabled}
@@ -784,8 +806,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
                     omitChatHeader
                     chatPanelPosition={position}
                     sessionScope="none"
-                    onSubmitOverride={() => Promise.resolve(true)}
-                    submitDisabled
+                    onSubmitOverride={handleExternalHistoryForkSubmit}
                     bottomAnchored
                   />
                 </ChatSessionContext.Provider>
