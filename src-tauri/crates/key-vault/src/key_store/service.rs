@@ -304,6 +304,7 @@ impl KeyService {
                     base_model: model.to_string(),
                     reasoning: Some(reasoning.to_string()),
                     fast: false,
+                    context_window: None,
                 });
             }
             entry.updated_at = chrono::Utc::now();
@@ -1270,6 +1271,7 @@ impl KeyService {
         available_models: Option<Vec<String>>,
         enabled_models: Option<Vec<String>>,
         quota_info: Option<serde_json::Value>,
+        model_context_lengths: Option<&HashMap<String, u64>>,
     ) -> Result<Option<ModelKey>, String> {
         self.update_store(|store| {
             if let Some(entry) = store.keys.get_mut(key_id) {
@@ -1279,6 +1281,26 @@ impl KeyService {
 
                 if let Some(models) = available_models {
                     entry.available_models = models;
+                }
+                if let Some(contexts) = model_context_lengths {
+                    // find-or-push: provider-reported context windows override
+                    // the static FAMILY_RULES default at runtime. Mirrors the
+                    // reasoning writeback above.
+                    for (model, ctx) in contexts {
+                        if let Some(variant) =
+                            entry.model_variants.iter_mut().find(|v| &v.model == model)
+                        {
+                            variant.context_window = Some(*ctx);
+                        } else {
+                            entry.model_variants.push(crate::key_store::ModelVariant {
+                                model: model.clone(),
+                                base_model: model.clone(),
+                                reasoning: None,
+                                fast: false,
+                                context_window: Some(*ctx),
+                            });
+                        }
+                    }
                 }
                 if let Some(enabled) = enabled_models {
                     entry.enabled_models = enabled;

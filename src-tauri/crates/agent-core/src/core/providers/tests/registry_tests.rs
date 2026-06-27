@@ -81,7 +81,7 @@ fn normalize_non_claude_passthrough() {
 #[test]
 fn context_window_hint_claude_models() {
     assert_eq!(context_window_hint("claude-sonnet-4-20250514"), 200_000);
-    assert_eq!(context_window_hint("claude-opus-4.5"), 1_000_000);
+    assert_eq!(context_window_hint("claude-opus-4.5"), 200_000);
     assert_eq!(context_window_hint("claude-3-5-sonnet"), 200_000);
 }
 

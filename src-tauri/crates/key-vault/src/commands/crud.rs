@@ -571,6 +571,7 @@ pub async fn save_key(request: SaveKeyRequest) -> Result<KeyInfo, String> {
                     base_model: variant.base_model,
                     reasoning: variant.reasoning,
                     fast: variant.fast,
+                    context_window: None,
                 })
                 .collect();
         }
@@ -698,6 +699,7 @@ pub async fn update_key_health(
     available_models: Option<Vec<String>>,
     enabled_models: Option<Vec<String>>,
     quota_info: Option<serde_json::Value>,
+    model_context_lengths: Option<HashMap<String, u64>>,
 ) -> Result<Option<KeyInfo>, String> {
     tokio::task::spawn_blocking(move || {
         let status = match health_status.as_str() {
@@ -718,6 +720,7 @@ pub async fn update_key_health(
                 available_models,
                 filtered_enabled,
                 quota_info,
+                model_context_lengths.as_ref(),
             )
             .and_then(|opt| opt.map(key_info_from_entry).transpose())
     })

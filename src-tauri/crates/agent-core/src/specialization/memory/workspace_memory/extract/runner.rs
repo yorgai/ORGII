@@ -90,6 +90,7 @@ pub async fn run_extraction(
 
     let turn_config = TurnConfig {
         model: params.model.to_string(),
+        account_id: None,
         max_iterations: Some(MAX_EXTRACTION_TURNS),
         max_tokens: agent_def.max_tokens.unwrap_or(4096) as u32,
         temperature: agent_def.temperature.unwrap_or(0.0) as f32,

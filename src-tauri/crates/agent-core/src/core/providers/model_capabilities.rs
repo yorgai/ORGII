@@ -140,10 +140,25 @@ const FAMILY_RULES: &[FamilyRule] = &[
         context_window: 1_000_000,
         thinking: ThinkingSupport::AlwaysOn,
     },
-    // claude-opus-4.* (4.6, 4.7, 4.8 …): 1M context window.
+    // claude-opus-4.6+ upgraded to 1M; 4 / 4.1 / 4.5 stayed at 200K.
+    FamilyRule {
+        pattern: "claude-opus-4.6",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    FamilyRule {
+        pattern: "claude-opus-4.7",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    FamilyRule {
+        pattern: "claude-opus-4.8",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
     FamilyRule {
         pattern: "claude-opus-4",
-        context_window: 1_000_000,
+        context_window: 200_000,
         thinking: ThinkingSupport::Optional,
     },
     // claude-sonnet-4.5: 200K. Must come BEFORE claude-sonnet-4 so the more
@@ -528,18 +543,42 @@ const FAMILY_RULES: &[FamilyRule] = &[
 /// Resolve capabilities for `model`, optionally consulting the KeyVault
 /// entry for `account_id`.
 ///
-/// KeyVault only *upgrades* thinking knowledge (a user/observation row
-/// saying "this model reasons" beats the family guess); context window
-/// always comes from the family table or default since KeyVault does not
-/// store it.
+/// Resolution chain for the context window:
+/// 1. **Static family table** ([`FAMILY_RULES`]) — the model's nominal
+///    capability (e.g. opus-4.6 = 1M).
+/// 2. **KeyVault override** — if the provider's `/v1/models` reported a
+///    `context_length` for this model on this account (stored as
+///    `ModelVariant.context_window`), it overrides the static value. This is
+///    what makes a proxy that caps a 1M model at 256K show the *real* limit
+///    instead of the nominal one. Absent (official OpenAI/Anthropic, which
+///    don't expose `context_length`) → keep the static value.
+///
+/// Thinking support is upgraded only (a KeyVault `reasoning` row beats the
+/// family guess); context window can be either raised or lowered by the
+/// provider override.
 pub fn resolve(model: &str, account_id: Option<&str>) -> ModelCapabilities {
     let mut caps = resolve_from_family_table(model);
+
+    if let Some(ctx) = resolve_context_from_keyvault(model, account_id) {
+        caps.context_window = ctx as usize;
+    }
 
     if let Some(vault_thinking) = resolve_thinking_from_keyvault(model, account_id) {
         caps.thinking = vault_thinking;
     }
 
     caps
+}
+
+/// KeyVault layer for the context window: a `ModelVariant.context_window`
+/// set during key validation (from the provider's `/v1/models` `context_length`)
+/// overrides the static family default. Returns `None` when the provider did
+/// not report one, leaving the family-table value in place.
+fn resolve_context_from_keyvault(model: &str, account_id: Option<&str>) -> Option<u64> {
+    let account_id = account_id?;
+    let key = KEY_SERVICE.get_key_by_id(account_id)?;
+    let variant = key.model_variants.iter().find(|v| v.model == model)?;
+    variant.context_window
 }
 
 fn resolve_from_family_table(model: &str) -> ModelCapabilities {

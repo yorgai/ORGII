@@ -837,6 +837,7 @@ impl Tool for AgentTool {
             .unwrap_or(DEFAULT_SUBAGENT_MAX_ITERATIONS);
         let turn_config = TurnConfig {
             model: model.clone(),
+            account_id: self.config.session_account_id.clone(),
             max_iterations: Some(max_iterations),
             max_tokens: agent.max_tokens.unwrap_or(self.config.max_tokens as u64) as u32,
             temperature: agent.temperature.unwrap_or(self.config.temperature as f64) as f32,

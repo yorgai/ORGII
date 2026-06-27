@@ -12,9 +12,20 @@ fn claude_fable_5_is_always_on() {
 
 #[test]
 fn claude_opus_4_is_optional() {
-    let caps = resolve("claude-opus-4-20250514", None);
-    assert_eq!(caps.thinking, ThinkingSupport::Optional);
-    assert_eq!(caps.context_window, 1_000_000);
+    // Only 4.6+ upgraded to 1M; 4 / 4.1 / 4.5 stayed at 200K.
+    assert_eq!(
+        resolve("claude-opus-4-20250514", None).context_window,
+        200_000
+    );
+    assert_eq!(resolve("claude-opus-4.1", None).context_window, 200_000);
+    assert_eq!(resolve("claude-opus-4.5", None).context_window, 200_000);
+    assert_eq!(resolve("claude-opus-4.6", None).context_window, 1_000_000);
+    assert_eq!(resolve("claude-opus-4.7", None).context_window, 1_000_000);
+    assert_eq!(resolve("claude-opus-4.8", None).context_window, 1_000_000);
+    assert_eq!(
+        resolve("claude-opus-4", None).thinking,
+        ThinkingSupport::Optional
+    );
 }
 
 #[test]
@@ -371,4 +382,71 @@ fn no_substring_capability_checks_outside_this_module() {
         stale.is_empty(),
         "Allowlist entries no longer contain a family substring check (remove them): {stale:?}"
     );
+}
+
+// ── KeyVault context-window override (Issue #121 step 2) ──
+//
+// A `ModelVariant.context_window` recorded during key validation (from the
+// provider's `/v1/models` `context_length`) overrides the static family
+// table. This is what makes a proxy capping a 1M model at 256K show the
+// real limit. Uses the global KEY_SERVICE with cleanup so tests stay isolated.
+
+use key_vault::key_store::KEY_SERVICE;
+use key_vault::key_store::{ModelKey, ModelType, ModelVariant};
+
+/// Build and register a key whose sole variant pins `model` to `ctx`, then
+/// return the key id. Caller must `KEY_SERVICE.delete_key_by_id(id)` to clean up.
+fn register_key_with_context(model: &str, ctx: Option<u64>) -> String {
+    let mut key = ModelKey::new(ModelType::AnthropicApi);
+    key.api_key = Some(format!("sk-test-{}-", key.id));
+    key.model_variants = vec![ModelVariant {
+        model: model.to_string(),
+        base_model: model.to_string(),
+        reasoning: None,
+        fast: false,
+        context_window: ctx,
+    }];
+    let id = key.id.clone();
+    KEY_SERVICE.save_key(key).expect("save_key");
+    id
+}
+
+#[test]
+fn keyvault_context_window_overrides_family_table() {
+    // opus-4.6 family rule = 1M; provider reports 256K → resolve must use 256K.
+    let id = register_key_with_context("claude-opus-4.6", Some(256_000));
+    let caps = resolve("claude-opus-4.6", Some(&id));
+    assert_eq!(caps.context_window, 256_000);
+    KEY_SERVICE.delete_key_by_id(&id).unwrap();
+}
+
+#[test]
+fn keyvault_none_context_window_falls_back_to_family() {
+    // Provider did not report context_length (official OpenAI/Anthropic) →
+    // family-table value (200K) stays.
+    let id = register_key_with_context("claude-opus-4", None);
+    let caps = resolve("claude-opus-4", Some(&id));
+    assert_eq!(caps.context_window, 200_000);
+    KEY_SERVICE.delete_key_by_id(&id).unwrap();
+}
+
+#[test]
+fn keyvault_override_is_per_account() {
+    // A different account_id (no key) must NOT pick up another account's override.
+    let id = register_key_with_context("claude-opus-4.6", Some(131_072));
+    let caps = resolve("claude-opus-4.6", Some("nonexistent-account"));
+    assert_eq!(
+        caps.context_window, 1_000_000,
+        "unknown account must fall back to family table, not leak another account's override"
+    );
+    KEY_SERVICE.delete_key_by_id(&id).unwrap();
+}
+
+#[test]
+fn keyvault_override_only_matches_exact_model() {
+    // Variant for "claude-opus-4.6" must not override a query for "claude-opus-4".
+    let id = register_key_with_context("claude-opus-4.6", Some(300_000));
+    let caps = resolve("claude-opus-4", Some(&id));
+    assert_eq!(caps.context_window, 200_000);
+    KEY_SERVICE.delete_key_by_id(&id).unwrap();
 }

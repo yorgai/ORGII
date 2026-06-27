@@ -156,6 +156,7 @@ fn test_e2e_with_real_keys() {
             Some(vec!["gpt-4".to_string(), "gpt-3.5-turbo".to_string()]),
             None,
             None,
+            None,
         )
         .unwrap();
     println!(

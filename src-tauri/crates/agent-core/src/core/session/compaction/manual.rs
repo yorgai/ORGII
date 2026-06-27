@@ -178,7 +178,8 @@ pub async fn run_manual_compact(
     let context_window = if runtime.resolved.context_window > 0 {
         runtime.resolved.context_window as usize
     } else {
-        crate::providers::model_hints::context_window_hint(&runtime.model)
+        crate::providers::model_capabilities::resolve(&runtime.model, runtime.account_id.as_deref())
+            .context_window
     };
     let (compacted, outcome) = {
         let mut compaction_state = session.compaction.lock().await;

@@ -323,7 +323,7 @@ impl UnifiedMessageProcessor {
                 (result.context_tokens > 0).then(|| {
                     let context_window = crate::core::providers::model_capabilities::resolve(
                         &self.runtime.model,
-                        None,
+                        self.runtime.account_id.as_deref(),
                     )
                     .context_window as i64;
                     ContextUsageSnapshot::from_payload(

@@ -176,6 +176,7 @@ pub async fn run_consolidation(
     // Turn config
     let turn_config = TurnConfig {
         model: params.model.to_string(),
+        account_id: None,
         max_iterations: Some(MAX_CONSOLIDATION_TURNS),
         max_tokens: agent_def.max_tokens.unwrap_or(8192) as u32,
         temperature: agent_def.temperature.unwrap_or(0.0) as f32,

@@ -71,6 +71,12 @@ pub trait TurnIterationHook: Send + Sync {
 pub struct TurnConfig {
     /// Model identifier (provider-specific).
     pub model: String,
+    /// KeyVault account id backing this turn. Threaded through so
+    /// `model_capabilities::resolve` can apply the provider-specific context
+    /// window override (from `/v1/models`). `None` for contexts without a
+    /// resolved key (tests, memory consolidation) — resolve then falls back
+    /// to the static family table.
+    pub account_id: Option<String>,
     /// Maximum tool call iterations per turn.
     /// `None` means unlimited — the loop runs until the model stops calling tools
     /// (guarded by repeat detection, error loop detection, and cancellation).
@@ -370,6 +376,7 @@ mod tests {
     fn turn_config_unlimited_iterations() {
         let config = TurnConfig {
             model: "test".to_string(),
+            account_id: None,
             max_iterations: None,
             max_tokens: 4096,
             temperature: 0.5,
@@ -385,6 +392,7 @@ mod tests {
     fn turn_config_limited_iterations() {
         let config = TurnConfig {
             model: "test".to_string(),
+            account_id: None,
             max_iterations: Some(15),
             max_tokens: 4096,
             temperature: 0.5,

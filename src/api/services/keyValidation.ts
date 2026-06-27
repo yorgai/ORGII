@@ -23,6 +23,7 @@ import type {
   GeminiOauthStartResponse,
   HealthStatus,
   KeyInfo,
+  ModelContextLengths,
   ModelType,
   ProviderProtocol,
   QuotaInfo,
@@ -45,6 +46,7 @@ export type {
   GeminiOauthStartResponse,
   HealthStatus,
   KeyInfo,
+  ModelContextLengths,
   ProviderProtocol,
   QuotaInfo,
   SaveKeyRequest,
@@ -298,7 +300,8 @@ export async function updateKeyHealth(
   errorMessage?: string,
   availableModels?: string[],
   enabledModels?: string[],
-  quotaInfo?: QuotaInfo
+  quotaInfo?: QuotaInfo,
+  modelContextLengths?: ModelContextLengths
 ): Promise<KeyInfo | null> {
   return rpc.validation.updateKeyHealth({
     keyId,
@@ -307,6 +310,7 @@ export async function updateKeyHealth(
     availableModels: availableModels ?? null,
     enabledModels: enabledModels ?? null,
     quotaInfo: quotaInfo ?? null,
+    modelContextLengths: modelContextLengths ?? null,
   });
 }
 

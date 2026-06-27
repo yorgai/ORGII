@@ -132,10 +132,13 @@ export const QuotaInfoSchema = z.object({
   named_message: z.string().nullable(),
 });
 
+export const ModelContextLengthsSchema = z.record(z.string(), z.number());
+
 export const ValidationResultSchema = z.object({
   valid: z.boolean(),
   message: z.string(),
   models_available: z.array(z.string()),
+  model_context_lengths: ModelContextLengthsSchema.default({}),
   disabled_models: z.array(z.string()),
   is_degraded: z.boolean(),
   quota_info: QuotaInfoSchema.nullable(),
@@ -416,6 +419,7 @@ export const UpdateKeyHealthInput = z.object({
   availableModels: z.array(z.string()).nullable().optional(),
   enabledModels: z.array(z.string()).nullable().optional(),
   quotaInfo: z.record(z.string(), z.unknown()).nullable().optional(),
+  modelContextLengths: ModelContextLengthsSchema.nullable().optional(),
 });
 
 export const GetEnvForAgentInput = z.object({
@@ -582,6 +586,7 @@ export type MergeStatus = z.infer<typeof MergeStatusSchema>;
 export type PriceTier = z.infer<typeof PriceTierSchema>;
 export type UsageItem = z.infer<typeof UsageItemSchema>;
 export type QuotaInfo = z.infer<typeof QuotaInfoSchema>;
+export type ModelContextLengths = z.infer<typeof ModelContextLengthsSchema>;
 export type ValidationResult = z.infer<typeof ValidationResultSchema>;
 export type ProviderProtocol = z.infer<typeof ProviderProtocolSchema>;
 export type KeyInfo = z.infer<typeof KeyInfoSchema>;

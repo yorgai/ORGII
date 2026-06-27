@@ -9,6 +9,7 @@
 use log::{debug, info, warn};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::types::ValidationResult;
@@ -40,6 +41,11 @@ struct ModelsResponse {
 #[derive(Debug, Deserialize)]
 struct ModelInfo {
     id: String,
+    /// OpenAI-compat aggregators/proxies (openrouter, zenmux, …) expose the
+    /// model's context window here; official OpenAI omits it. `#[serde(default)]`
+    /// keeps deserialization working for both.
+    #[serde(default)]
+    context_length: Option<u64>,
 }
 
 /// Minimal chat completion request for auth verification.
@@ -110,7 +116,7 @@ impl OpenAIValidator {
         }
 
         match self.get_models(api_key, base_url, provider).await {
-            Ok(models) => {
+            Ok((models, contexts)) => {
                 info!("[OpenAI] /v1/models returned {} models", models.len());
                 if models.is_empty() {
                     // No models detected — try test_model for auth verification if available
@@ -155,7 +161,9 @@ impl OpenAIValidator {
                     match self.test_completion(api_key, url, &models[0]).await {
                         Ok(()) => {
                             info!("[OpenAI] Proxy auth verified, {} models", models.len());
-                            ValidationResult::success("API key valid").with_models(models)
+                            ValidationResult::success("API key valid")
+                                .with_models(models)
+                                .with_contexts(contexts)
                         }
                         Err(e) if e == "Invalid API key" => {
                             warn!("[OpenAI] Proxy auth failed: invalid API key");
@@ -163,8 +171,9 @@ impl OpenAIValidator {
                         }
                         Err(e) => {
                             debug!("[OpenAI] Proxy completion test non-auth error: {}", e);
-                            let mut result =
-                                ValidationResult::success("API key valid").with_models(models);
+                            let mut result = ValidationResult::success("API key valid")
+                                .with_models(models)
+                                .with_contexts(contexts);
                             result.is_degraded = true;
                             result
                         }
@@ -172,7 +181,9 @@ impl OpenAIValidator {
                 } else {
                     // Official API: /v1/models already validates auth
                     info!("[OpenAI] Official API — {} models", models.len());
-                    ValidationResult::success("API key valid").with_models(models)
+                    ValidationResult::success("API key valid")
+                        .with_models(models)
+                        .with_contexts(contexts)
                 }
             }
             Err(e) if e == "Invalid API key" => {
@@ -223,12 +234,15 @@ impl OpenAIValidator {
     /// If base_url already ends with `/v1`, append `/models` only to avoid doubling the path.
     /// When a custom base_url is provided (proxy/gateway), skip provider-specific filtering
     /// since the proxy may serve models from multiple providers.
+    ///
+    /// Returns the model ids alongside any `context_length` the endpoint exposed
+    /// (empty map when the endpoint only returns ids, e.g. official OpenAI).
     async fn get_models(
         &self,
         api_key: &str,
         base_url: Option<&str>,
         provider: Option<&str>,
-    ) -> Result<Vec<String>, String> {
+    ) -> Result<(Vec<String>, HashMap<String, u64>), String> {
         let url = base_url.unwrap_or(DEFAULT_API_URL).trim_end_matches('/');
         // Support both /v1 (OpenAI standard) and /v4 (Zhipu API)
         let endpoint = if url.ends_with("/v1") || url.ends_with("/v4") {
@@ -263,25 +277,42 @@ impl OpenAIValidator {
             .await
             .map_err(|e| format!("Failed to parse response: {}", e))?;
 
-        let all_ids: Vec<String> = data.data.into_iter().map(|m| m.id).collect();
+        let models = data.data;
+        let mut all_ids: Vec<String> = Vec::with_capacity(models.len());
+        let mut contexts: HashMap<String, u64> = HashMap::new();
+        for m in models {
+            if let Some(ctx) = m.context_length {
+                contexts.insert(m.id.clone(), ctx);
+            }
+            all_ids.push(m.id);
+        }
 
         let has_custom_url = base_url.is_some();
-        let useful_models = if has_custom_url {
-            all_ids
+        let (useful_ids, useful_contexts) = if has_custom_url {
+            (all_ids, contexts)
         } else {
             match model_prefixes_for_provider(provider) {
-                Some(prefixes) => all_ids
-                    .into_iter()
-                    .filter(|id| {
-                        let id_lower = id.to_lowercase();
-                        prefixes.iter().any(|prefix| id_lower.contains(prefix))
-                    })
-                    .collect(),
-                None => all_ids,
+                Some(prefixes) => {
+                    let kept: std::collections::HashSet<String> = all_ids
+                        .iter()
+                        .filter(|id| {
+                            let id_lower = id.to_lowercase();
+                            prefixes.iter().any(|prefix| id_lower.contains(prefix))
+                        })
+                        .cloned()
+                        .collect();
+                    let filtered_contexts = contexts
+                        .into_iter()
+                        .filter(|(id, _)| kept.contains(id))
+                        .collect();
+                    let filtered_ids = all_ids.into_iter().filter(|id| kept.contains(id)).collect();
+                    (filtered_ids, filtered_contexts)
+                }
+                None => (all_ids, contexts),
             }
         };
 
-        Ok(useful_models)
+        Ok((useful_ids, useful_contexts))
     }
 
     /// Verify the API key by sending a minimal chat completion request.

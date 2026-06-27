@@ -127,7 +127,11 @@ impl UnifiedMessageProcessor {
         let context_window = if self.runtime.resolved.context_window > 0 {
             self.runtime.resolved.context_window as usize
         } else {
-            crate::providers::model_hints::context_window_hint(&self.runtime.model)
+            crate::providers::model_capabilities::resolve(
+                &self.runtime.model,
+                self.runtime.account_id.as_deref(),
+            )
+            .context_window
         };
         let prefix_len = leading_runtime_system_prefix_len(messages);
         let prefix = messages[..prefix_len].to_vec();

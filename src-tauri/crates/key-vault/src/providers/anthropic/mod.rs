@@ -15,6 +15,7 @@
 
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::Duration;
 use tracing::{debug, info, warn};
 
@@ -32,6 +33,10 @@ struct ModelsResponse {
 #[derive(Debug, Deserialize)]
 struct ModelInfo {
     id: String,
+    /// Anthropic-compat proxies/aggregators expose the context window here;
+    /// official Anthropic omits it.
+    #[serde(default)]
+    context_length: Option<u64>,
 }
 
 /// Minimal messages request for proxy fallback validation
@@ -109,7 +114,7 @@ impl AnthropicValidator {
         // Get available models — auth and model discovery are decoupled:
         // 401 = key invalid, other failures = key may work, user can add models manually.
         match self.get_models(api_key, base_url).await {
-            Ok(models) => {
+            Ok((models, contexts)) => {
                 if models.is_empty() {
                     warn!("[Anthropic] No models returned for key: {}", key_preview);
                     let mut result = ValidationResult::success(
@@ -132,7 +137,9 @@ impl AnthropicValidator {
                                 models.len(),
                                 &models[..models.len().min(3)]
                             );
-                            ValidationResult::success("API key valid").with_models(models)
+                            ValidationResult::success("API key valid")
+                                .with_models(models)
+                                .with_contexts(contexts)
                         }
                         Err(e) if e == "Invalid API key" => {
                             warn!("[Anthropic] Proxy auth verification failed: {}", e);
@@ -144,8 +151,9 @@ impl AnthropicValidator {
                                 "[Anthropic] Auth probe inconclusive, accepting with {} models",
                                 models.len()
                             );
-                            let mut result =
-                                ValidationResult::success("API key valid").with_models(models);
+                            let mut result = ValidationResult::success("API key valid")
+                                .with_models(models)
+                                .with_contexts(contexts);
                             result.is_degraded = true;
                             result
                         }
@@ -157,7 +165,9 @@ impl AnthropicValidator {
                         models.len(),
                         &models[..models.len().min(3)]
                     );
-                    ValidationResult::success("API key valid").with_models(models)
+                    ValidationResult::success("API key valid")
+                        .with_models(models)
+                        .with_contexts(contexts)
                 }
             }
             Err(models_err) if models_err == "Invalid API key" => {
@@ -231,7 +241,7 @@ impl AnthropicValidator {
         &self,
         api_key: &str,
         base_url: Option<&str>,
-    ) -> Result<Vec<String>, String> {
+    ) -> Result<(Vec<String>, HashMap<String, u64>), String> {
         let url = base_url.unwrap_or(DEFAULT_API_URL);
         let endpoint = format!("{}/v1/models", url);
         debug!("[Anthropic] Fetching models from: {}", endpoint);
@@ -259,9 +269,17 @@ impl AnthropicValidator {
             .await
             .map_err(|e| format!("Failed to parse response: {}", e))?;
 
-        let models: Vec<String> = data.data.into_iter().map(|m| m.id).collect();
+        let models = data.data;
+        let mut ids: Vec<String> = Vec::with_capacity(models.len());
+        let mut contexts: HashMap<String, u64> = HashMap::new();
+        for m in models {
+            if let Some(ctx) = m.context_length {
+                contexts.insert(m.id.clone(), ctx);
+            }
+            ids.push(m.id);
+        }
 
-        Ok(models)
+        Ok((ids, contexts))
     }
 
     /// Test the API key by sending a minimal messages request.
