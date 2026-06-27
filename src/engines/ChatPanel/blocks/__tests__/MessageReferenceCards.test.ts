@@ -135,6 +135,22 @@ staged file lint stats
     });
   });
 
+  it("strips trailing markdown emphasis markers from URL cards", () => {
+    const references = extractMessageReferences(
+      [
+        "Docs: **https://example.com/docs.**",
+        "Mirror: *https://mirror.example.com/path*",
+        "Old: ~~https://old.example.com/docs~~",
+      ].join("\n")
+    );
+
+    expect(references.map((item) => item.value)).toEqual([
+      "https://example.com/docs",
+      "https://mirror.example.com/path",
+      "https://old.example.com/docs",
+    ]);
+  });
+
   it("does not extract template placeholder hosts as URL cards", () => {
     const references = extractMessageReferences(
       "The server logs http://localhost:1998 and http://${host}/"

@@ -5,7 +5,6 @@ import { createSessionIdTextPattern } from "@src/util/session/sessionDispatch";
 import { normalizeHttpUrlCandidate } from "@src/util/url/validation";
 
 const WEB_URL_PATTERN = /https?:\/\/[^\s<>"'`\])}]+/gi;
-const TRAILING_REFERENCE_PUNCTUATION_PATTERN = /[.,;:!?]+$/;
 const MAX_REFERENCE_CARDS = 4;
 
 export type MessageReferenceKind =
@@ -43,9 +42,7 @@ function stripFencedCodeBlocks(content: string): string {
 }
 
 function normalizeUrlCandidate(candidate: string): string | null {
-  return normalizeHttpUrlCandidate(
-    candidate.replace(TRAILING_REFERENCE_PUNCTUATION_PATTERN, "")
-  );
+  return normalizeHttpUrlCandidate(candidate, { stripTextBoundaries: true });
 }
 
 function isUrlCitedInParentheses(

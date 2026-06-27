@@ -33,6 +33,28 @@ describe("normalizeHttpUrlCandidate", () => {
     ).toBe("https://example.com/$%7Bpath%7D?q={value}");
   });
 
+  it("preserves valid trailing URL characters by default", () => {
+    expect(normalizeHttpUrlCandidate("https://example.com/docs!")).toBe(
+      "https://example.com/docs!"
+    );
+    expect(normalizeHttpUrlCandidate("https://example.com/search?q=foo*")).toBe(
+      "https://example.com/search?q=foo*"
+    );
+  });
+
+  it("strips trailing markdown and sentence boundaries for text URL candidates", () => {
+    const options = { stripTextBoundaries: true };
+    expect(
+      normalizeHttpUrlCandidate("https://example.com/docs.**", options)
+    ).toBe("https://example.com/docs");
+    expect(
+      normalizeHttpUrlCandidate("https://example.com/docs*", options)
+    ).toBe("https://example.com/docs");
+    expect(
+      normalizeHttpUrlCandidate("https://example.com/docs~~", options)
+    ).toBe("https://example.com/docs");
+  });
+
   it("rejects non-HTTP schemes and template placeholder hosts", () => {
     expect(normalizeHttpUrlCandidate("file:///tmp/app.log")).toBeNull();
     expect(normalizeHttpUrlCandidate("http://${host}/")).toBeNull();
@@ -45,6 +67,8 @@ describe("normalizeHttpUrlCandidate", () => {
   it("rejects malformed or unsafe authorities", () => {
     expect(normalizeHttpUrlCandidate("https://example.com other")).toBeNull();
     expect(normalizeHttpUrlCandidate("https://exa mple.com")).toBeNull();
+    expect(normalizeHttpUrlCandidate("https://exa*mple.com")).toBeNull();
+    expect(normalizeHttpUrlCandidate("https://exa~mple.com")).toBeNull();
     expect(normalizeHttpUrlCandidate("http://example.com:99999")).toBeNull();
     expect(normalizeHttpUrlCandidate("http:///missing-host")).toBeNull();
   });

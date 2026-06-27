@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { parseWebsiteCardResult } from "../cardParsers";
 import {
   buildWorkspaceInfoRows,
   extractResultText,
@@ -14,6 +15,20 @@ import {
   parseManageWorkspaceResult,
   parseSearchFilesResult,
 } from "../resultParsers";
+
+// ── parseWebsiteCardResult ───────────────────────────────────────────────────
+
+describe("parseWebsiteCardResult", () => {
+  it("rejects malformed URL card data", () => {
+    const card = parseWebsiteCardResult(
+      "browser",
+      { url: "https://exa*mple.com/docs" },
+      {}
+    );
+
+    expect(card).toBeNull();
+  });
+});
 
 // ── extractResultText ─────────────────────────────────────────────────────────
 
