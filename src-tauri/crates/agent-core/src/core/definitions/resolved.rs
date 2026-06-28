@@ -198,6 +198,11 @@ pub struct ResolvedAgent {
     pub selected_model_id: String,
     pub max_tokens: u64,
     pub context_window: u64,
+    /// True when `context_window` came from an agent definition/override rather
+    /// than the resolver default. Skipped on the wire; runtime code uses it to
+    /// distinguish "custom context window" from "auto by model/account".
+    #[serde(default, skip_serializing)]
+    pub context_window_configured: bool,
     pub temperature: f64,
     pub compaction: CompactionConfig,
     pub load_workspace_resources: bool,
@@ -312,10 +317,8 @@ impl ResolvedAgent {
         let learnings = merged.learnings.clone().unwrap_or_default();
 
         let max_tokens = merged.max_tokens.unwrap_or(DEFAULT_MAX_TOKENS);
-        let context_window = merged
-            .context_window
-            .filter(|&v| v > 0)
-            .unwrap_or(DEFAULT_CONTEXT_WINDOW);
+        let configured_context_window = merged.context_window.filter(|&v| v > 0);
+        let context_window = configured_context_window.unwrap_or(DEFAULT_CONTEXT_WINDOW);
         let temperature = merged.temperature.unwrap_or(DEFAULT_TEMPERATURE);
 
         let compaction = session_model.compaction.clone().unwrap_or_default();
@@ -344,6 +347,7 @@ impl ResolvedAgent {
             selected_model_id,
             max_tokens,
             context_window,
+            context_window_configured: configured_context_window.is_some(),
             temperature,
             compaction,
             load_workspace_resources,

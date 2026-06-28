@@ -36,7 +36,7 @@
 use std::collections::HashSet;
 use std::sync::RwLock;
 
-use key_vault::key_store::KEY_SERVICE;
+use key_vault::key_store::{ModelVariant, KEY_SERVICE};
 
 /// Process-level set of models observed to REJECT the `temperature` request
 /// param outright (Anthropic's newer models — e.g. `claude-opus-4-8` — return
@@ -140,10 +140,26 @@ const FAMILY_RULES: &[FamilyRule] = &[
         context_window: 1_000_000,
         thinking: ThinkingSupport::AlwaysOn,
     },
-    // claude-opus-4.* (4.6, 4.7, 4.8 …): 1M context window.
+    // Known claude-opus-4.6/4.7/4.8 releases upgraded to 1M; 4 / 4.1 /
+    // 4.5 stayed at 200K. Add future releases explicitly.
+    FamilyRule {
+        pattern: "claude-opus-4.6",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    FamilyRule {
+        pattern: "claude-opus-4.7",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
+    FamilyRule {
+        pattern: "claude-opus-4.8",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
     FamilyRule {
         pattern: "claude-opus-4",
-        context_window: 1_000_000,
+        context_window: 200_000,
         thinking: ThinkingSupport::Optional,
     },
     // claude-sonnet-4.5: 200K. Must come BEFORE claude-sonnet-4 so the more
@@ -159,8 +175,8 @@ const FAMILY_RULES: &[FamilyRule] = &[
         context_window: 200_000,
         thinking: ThinkingSupport::Optional,
     },
-    // claude-sonnet-4.6+: 1M context window. Must come BEFORE claude-sonnet-4
-    // so it beats the base pattern.
+    // claude-sonnet-4.6: 1M context window. Must come BEFORE claude-sonnet-4
+    // so it beats the base pattern. Add future releases explicitly.
     FamilyRule {
         pattern: "claude-sonnet-4.6",
         context_window: 1_000_000,
@@ -397,6 +413,13 @@ const FAMILY_RULES: &[FamilyRule] = &[
         context_window: 128_000,
         thinking: ThinkingSupport::No,
     },
+    // glm-5.2: 1M context window — only the 5.2 release reached 1M;
+    // 5 / 5.1 / 5-turbo stay at 200K. Must come BEFORE glm-5.
+    FamilyRule {
+        pattern: "glm-5.2",
+        context_window: 1_000_000,
+        thinking: ThinkingSupport::Optional,
+    },
     FamilyRule {
         pattern: "glm-5",
         context_window: 200_000,
@@ -528,23 +551,69 @@ const FAMILY_RULES: &[FamilyRule] = &[
 /// Resolve capabilities for `model`, optionally consulting the KeyVault
 /// entry for `account_id`.
 ///
-/// KeyVault only *upgrades* thinking knowledge (a user/observation row
-/// saying "this model reasons" beats the family guess); context window
-/// always comes from the family table or default since KeyVault does not
-/// store it.
+/// Resolution chain for the context window:
+/// 1. **Static family table** ([`FAMILY_RULES`]) — the model's nominal
+///    capability (e.g. opus-4.6 = 1M).
+/// 2. **KeyVault override** — if the provider's `/v1/models` reported a
+///    `context_length` for this model on this account (stored as
+///    `ModelVariant.context_window`), it overrides the static value. This is
+///    what makes a proxy that caps a 1M model at 256K show the *real* limit
+///    instead of the nominal one. Absent (official OpenAI/Anthropic, which
+///    don't expose `context_length`) → keep the static value.
+///
+/// Thinking support is upgraded only (a KeyVault `reasoning` row beats the
+/// family guess); context window can be either raised or lowered by the
+/// provider override.
 pub fn resolve(model: &str, account_id: Option<&str>) -> ModelCapabilities {
     let mut caps = resolve_from_family_table(model);
 
-    if let Some(vault_thinking) = resolve_thinking_from_keyvault(model, account_id) {
-        caps.thinking = vault_thinking;
+    if let Some(account_id) = account_id {
+        if let Some(key) = KEY_SERVICE.get_key_by_id(account_id) {
+            apply_keyvault_overrides(&mut caps, model, &key.model_variants);
+        }
     }
 
     caps
 }
 
+/// Resolve the context window while preserving an explicitly configured agent
+/// override. `None` means "auto"; in that mode account-specific provider caps
+/// from KeyVault beat the static family table.
+pub fn resolve_effective_context_window(
+    model: &str,
+    account_id: Option<&str>,
+    explicit_context_window: Option<u64>,
+) -> usize {
+    explicit_context_window
+        .filter(|ctx| *ctx > 0)
+        .map(|ctx| ctx as usize)
+        .unwrap_or_else(|| resolve(model, account_id).context_window)
+}
+
+fn apply_keyvault_overrides(caps: &mut ModelCapabilities, model: &str, variants: &[ModelVariant]) {
+    let Some(variant) = variants.iter().find(|v| v.model == model) else {
+        return;
+    };
+
+    if let Some(ctx) = variant.context_window.filter(|ctx| *ctx > 0) {
+        caps.context_window = ctx as usize;
+    }
+
+    if let Some(vault_thinking) = resolve_thinking_from_variant(variant) {
+        caps.thinking = vault_thinking;
+    }
+}
+
+#[cfg(test)]
+fn resolve_with_keyvault_variants(model: &str, variants: &[ModelVariant]) -> ModelCapabilities {
+    let mut caps = resolve_from_family_table(model);
+    apply_keyvault_overrides(&mut caps, model, variants);
+    caps
+}
+
 fn resolve_from_family_table(model: &str) -> ModelCapabilities {
     let normalized = super::model_hints::normalize_claude_shorthand(model);
-    let model_lower = normalized.to_lowercase();
+    let model_lower = normalize_claude_release_separators(&normalized.to_lowercase());
     for rule in FAMILY_RULES {
         if model_lower.contains(rule.pattern) {
             return ModelCapabilities {
@@ -557,17 +626,27 @@ fn resolve_from_family_table(model: &str) -> ModelCapabilities {
     ModelCapabilities::unknown()
 }
 
+fn normalize_claude_release_separators(model: &str) -> String {
+    const ALIASES: &[(&str, &str)] = &[
+        ("claude-opus-4-6", "claude-opus-4.6"),
+        ("claude-opus-4-7", "claude-opus-4.7"),
+        ("claude-opus-4-8", "claude-opus-4.8"),
+        ("claude-sonnet-4-5", "claude-sonnet-4.5"),
+        ("claude-sonnet-4-6", "claude-sonnet-4.6"),
+    ];
+
+    let mut normalized = model.to_string();
+    for (from, to) in ALIASES {
+        normalized = normalized.replace(from, to);
+    }
+    normalized
+}
+
 /// KeyVault layer: a `ModelVariant` row with `reasoning: Some(..)` marks
 /// the model as a reasoning model for this account. The writeback in
 /// `side_query.rs` uses the value `"always_on"` to record observed
 /// always-on behavior; any other non-empty value means Optional.
-fn resolve_thinking_from_keyvault(
-    model: &str,
-    account_id: Option<&str>,
-) -> Option<ThinkingSupport> {
-    let account_id = account_id?;
-    let key = KEY_SERVICE.get_key_by_id(account_id)?;
-    let variant = key.model_variants.iter().find(|v| v.model == model)?;
+fn resolve_thinking_from_variant(variant: &ModelVariant) -> Option<ThinkingSupport> {
     let reasoning = variant.reasoning.as_deref()?;
     if reasoning.is_empty() {
         return None;

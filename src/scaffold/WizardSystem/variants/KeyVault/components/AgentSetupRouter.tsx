@@ -168,6 +168,7 @@ export const AgentSetupRouter: React.FC<AgentSetupRouterProps> = ({
                   : []),
               ],
               available_models: codexModels,
+              model_context_lengths: {},
               enabled_models: enabledModels,
               validated: true,
             });
@@ -213,6 +214,7 @@ export const AgentSetupRouter: React.FC<AgentSetupRouterProps> = ({
                   : []),
               ],
               available_models: geminiModels,
+              model_context_lengths: {},
               enabled_models: geminiModels.slice(0, 1),
               validated: true,
             });
@@ -340,6 +342,7 @@ export const AgentSetupRouter: React.FC<AgentSetupRouterProps> = ({
               raw_key_input: "",
               env_vars: envVars,
               available_models: claudeCodeModels,
+              model_context_lengths: {},
               enabled_models: enabledModels,
               validated: true,
             });

@@ -2,6 +2,7 @@ import { useAtomValue } from "jotai";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useKeyVault } from "@src/hooks/keyVault";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
 import type { ContextUsageSnapshot } from "@src/store/session/cliSessionStatusAtom";
 import {
@@ -60,14 +61,26 @@ export function useContextUsageInfo(): ContextUsageInfo {
   const sessionTokens = useAtomValue(sessionContextTokensAtom);
   const contextUsage = useAtomValue(sessionContextUsageAtom);
   const lastModel = useValidatedLastPair();
+  const { accounts } = useKeyVault({ autoLoad: true });
 
   const modelName = lastModel?.model || lastModel?.listingModel || "";
   const modelInfo = useMemo(
     () => (modelName ? getModelInfo(modelName) : null),
     [modelName]
   );
+  const accountContextWindow = useMemo(() => {
+    const accountId = lastModel?.selectedAccountId;
+    if (!modelName || !accountId) return null;
+    const account = accounts.find((entry) => entry.id === accountId);
+    const contextWindow = account?.modelVariants?.find(
+      (variant) => variant.model === modelName
+    )?.context_window;
+    return typeof contextWindow === "number" && contextWindow > 0
+      ? contextWindow
+      : null;
+  }, [accounts, lastModel?.selectedAccountId, modelName]);
   const contextWindowK = modelInfo?.contextWindow ?? 200;
-  const modelMaxTokens = contextWindowK * 1000;
+  const modelMaxTokens = accountContextWindow ?? contextWindowK * 1000;
   const maxTokens = contextUsage?.maxTokens ?? modelMaxTokens;
   const snapshotTokens = contextUsage?.usedTokens ?? 0;
   const displayTokens = sessionTokens > 0 ? sessionTokens : snapshotTokens;
