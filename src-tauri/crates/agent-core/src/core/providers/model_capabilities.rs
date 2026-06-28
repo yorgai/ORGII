@@ -674,6 +674,49 @@ pub fn resolve_model_context_k(model: String) -> usize {
     caps.context_window / 1_000
 }
 
+/// Coarse model family for thinking-mode classification.
+///
+/// This is the designated home for model-family prefix matching outside
+/// `FAMILY_RULES`: patterns are matched through the `FAMILY_TABLE` variable
+/// (`.contains(pat)`), never a family literal, so the
+/// `no_substring_capability_checks_outside_this_module` test stays green.
+/// Other modules (`thinking_mode`) route family-derived behavior through
+/// this function instead of re-doing their own substring checks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModelFamily {
+    Anthropic,
+    OpenAi,
+    Zhipu,
+    Other,
+}
+
+const FAMILY_TABLE: &[(&str, ModelFamily)] = &[
+    ("claude", ModelFamily::Anthropic),
+    ("glm", ModelFamily::Zhipu),
+    ("gpt-5", ModelFamily::OpenAi),
+    ("o1", ModelFamily::OpenAi),
+    ("o3", ModelFamily::OpenAi),
+    ("o4", ModelFamily::OpenAi),
+];
+
+/// Classify a model id into a coarse family. The provider name breaks ties
+/// when the id carries no known family prefix (e.g. a custom alias routed
+/// through a specific provider).
+pub fn classify_family(base_model: &str, provider_name: &str) -> ModelFamily {
+    let id = base_model.to_lowercase();
+    for (pat, fam) in FAMILY_TABLE {
+        if id.contains(pat) {
+            return *fam;
+        }
+    }
+    match provider_name {
+        crate::providers::registry::provider_id::ANTHROPIC => ModelFamily::Anthropic,
+        crate::providers::registry::provider_id::ZHIPU => ModelFamily::Zhipu,
+        crate::providers::registry::provider_id::OPENAI => ModelFamily::OpenAi,
+        _ => ModelFamily::Other,
+    }
+}
+
 #[cfg(test)]
 #[path = "tests/model_capabilities_tests.rs"]
 mod tests;

@@ -39,8 +39,12 @@ pub(super) fn prepare_request(
     temperature: f32,
     stream: bool,
 ) -> PreparedRequest {
+    // Strip the reasoning-level suffix ORG2 encodes into variant ids (e.g.
+    // `claude-opus-4-8-thinking-xhigh`) — providers reject the suffixed
+    // alias, and the decoded level drives thinking-mode parameter selection.
+    let parsed = crate::providers::thinking_mode::parse_model_variant(model);
     let resolved_model =
-        crate::providers::model_hints::wire_model_name(client.provider_spec, model);
+        crate::providers::model_hints::wire_model_name(client.provider_spec, &parsed.base_model);
     let (system, anthropic_messages) = extract_system(messages);
 
     // Extract tool_choice override (from side_query structured output)
@@ -62,8 +66,18 @@ pub(super) fn prepare_request(
         // Plain side queries: suppress thinking when possible.
         crate::providers::anthropic_native::thinking::ThinkingDirective::PlainText
     };
-    let (thinking, mut effective_temp, effective_max_tokens) =
-        build_thinking_params(&caps, directive, max_tokens, temperature);
+    let outcome = build_thinking_params(
+        &resolved_model,
+        parsed.level,
+        directive,
+        &caps,
+        max_tokens,
+        temperature,
+    );
+    let thinking = outcome.thinking;
+    let effort = outcome.effort;
+    let mut effective_temp = outcome.temperature;
+    let effective_max_tokens = outcome.max_tokens;
 
     // Self-healing: once a model has rejected `temperature` with a 400
     // (`temperature is deprecated for this model`), never send it again —
@@ -92,6 +106,7 @@ pub(super) fn prepare_request(
         temperature: effective_temp,
         stream,
         thinking,
+        effort,
         metadata: claude_oauth_metadata(client.auth_mode),
     };
 

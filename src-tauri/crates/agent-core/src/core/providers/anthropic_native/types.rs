@@ -24,6 +24,10 @@ pub(super) struct MessagesRequest {
     pub stream: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thinking: Option<Value>,
+    /// Top-level `effort` for adaptive-thinking Claude models (4.6 / 4.7+).
+    /// Sibling of `thinking`, not nested inside it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Value>,
 }

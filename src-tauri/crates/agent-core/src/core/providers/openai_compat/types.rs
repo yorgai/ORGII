@@ -28,6 +28,15 @@ pub(super) struct ChatCompletionRequest {
     /// Required for OpenAI-compatible streaming to include usage in the final chunk.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stream_options: Option<Value>,
+    /// OpenAI reasoning effort (gpt-5+/o-series). Top-level Chat Completions
+    /// parameter; sending it to a non-reasoning model returns HTTP 400.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning_effort: Option<String>,
+    /// Zhipu GLM thinking toggle `{type: enabled|disabled}`. Distinct from
+    /// OpenAI `reasoning_effort` — only one applies per request, decided by
+    /// `thinking_mode::resolve_thinking_mode`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<Value>,
 }
 
 /// Initial Chat Completions token-limit field hint from the model alias.
