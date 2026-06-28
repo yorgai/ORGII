@@ -764,6 +764,7 @@
     },
     "defaultTitle": "Chat",
     "hideChatPanel": "Ocultar painel de chat",
+    "showTokenUsage": "Mostrar Token",
     "compactDisplayMode": "Modo compacto",
     "replay": {
       "follow": "Acompanhar"

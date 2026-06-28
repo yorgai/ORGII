@@ -22,6 +22,7 @@ import {
   failOptimisticTurn,
 } from "@src/engines/SessionCore/control/optimisticTurnStatus";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 import {
   persistEditedPlanContent,
   updatePendingPlanContent,
@@ -46,6 +47,7 @@ import { activeSessionIdAtom } from "@src/store/session/viewAtom";
 import { activeWorkspaceRootPathAtom } from "@src/store/workspace";
 import { resolveModelForMessage } from "@src/util/session/resolveModelForMessage";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
@@ -111,6 +113,7 @@ export interface CreatePlanCardProps {
    * X button to collapse the card into its pill representation.
    */
   onCollapse?: () => void;
+  toolUsage?: ToolUsageMetadata;
 }
 
 const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
@@ -130,6 +133,7 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
     onOpenPreview,
     collapsed = false,
     onCollapse,
+    toolUsage,
   }) => {
     const { t } = useTranslation("sessions");
     const activeSessionId = useAtomValue(activeSessionIdAtom);
@@ -391,6 +395,13 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
           title={t("planDoc.collapse")}
         />
       ) : null;
+    const headerRight =
+      toolUsage || collapseButton ? (
+        <div className="flex items-center gap-2 pl-2">
+          {toolUsage && <ToolUsageBadge usage={toolUsage} />}
+          {collapseButton}
+        </div>
+      ) : undefined;
     const planActions = ownsActions ? (
       <div
         className={`flex items-center justify-end gap-1 px-3 py-2 ${isCollapsed ? "" : "border-t border-border-2"}`}
@@ -468,7 +479,7 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
           onNavigate={handlePreviewNavigate}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
-          rightContent={collapseButton}
+          rightContent={headerRight}
         >
           <EventBlockHeaderIcon
             icon={planIcon}

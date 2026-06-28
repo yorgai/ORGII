@@ -18,6 +18,8 @@
 import { useMemo } from "react";
 
 import {
+  LLM_USAGE_ARGS_KEY,
+  type LlmUsageMetadata,
   type SessionEvent,
   TOOL_USAGE_ARGS_KEY,
   type ToolUsageMetadata,
@@ -41,6 +43,16 @@ function readToolUsageMetadata(
   const raw = args[TOOL_USAGE_ARGS_KEY];
   if (!raw || typeof raw !== "object") return undefined;
   return raw as ToolUsageMetadata;
+}
+
+function readLlmUsageMetadata(
+  args: Record<string, unknown>,
+  eventLlmUsage?: LlmUsageMetadata
+): LlmUsageMetadata | undefined {
+  if (eventLlmUsage) return eventLlmUsage;
+  const raw = args[LLM_USAGE_ARGS_KEY];
+  if (!raw || typeof raw !== "object") return undefined;
+  return raw as LlmUsageMetadata;
 }
 
 function shouldShowActiveEventPainting(
@@ -216,12 +228,14 @@ export function normalizeEventProps(
       sessionEvent.displayStatus || inferStatusFromResult(result)
     );
     const toolUsage = readToolUsageMetadata(args, sessionEvent.toolUsage);
+    const llmUsage = readLlmUsageMetadata(args, sessionEvent.llmUsage);
     return {
       eventId: sessionEvent.id,
       eventType,
       functionName: sessionEvent.functionName,
       callId: sessionEvent.callId,
       toolUsage,
+      llmUsage,
       filePath: sessionEvent.filePath,
       repoPath: sessionEvent.repoPath,
       sessionId: sessionEvent.sessionId,
@@ -285,6 +299,7 @@ export function normalizeEventProps(
       (input as { repoPath?: string; repo_path?: string }).repo_path,
     args: normalized.args,
     result: normalized.result,
+    llmUsage: readLlmUsageMetadata(normalized.args),
     status,
     timestamp: normalized.createdAt,
     showActiveEventPainting: shouldShowActiveEventPainting(

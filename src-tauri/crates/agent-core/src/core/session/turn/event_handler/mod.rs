@@ -82,6 +82,15 @@ fn should_push_assistant_event(
     !has_tool_calls || !consumed_streamed_message
 }
 
+fn attach_turn_id(event: &mut SessionEvent, turn_id: Option<&str>) {
+    let Some(turn_id) = turn_id else {
+        return;
+    };
+    if let Some(args) = event.args.as_object_mut() {
+        args.insert("turnId".to_string(), serde_json::json!(turn_id));
+    }
+}
+
 /// Configuration for the unified event handler.
 #[derive(Clone, Default)]
 pub struct EventHandlerConfig {
@@ -189,7 +198,8 @@ impl UnifiedEventHandler {
         // event than to the message. SQLite orders by
         // `COALESCE(history_sequence, 0) ASC, created_at ASC`, so reversing
         // this order would render Thought *after* the answer on reload.
-        if let Some(event) = self.streaming_buffer.complete_thinking(session_id) {
+        if let Some(mut event) = self.streaming_buffer.complete_thinking(session_id) {
+            attach_turn_id(&mut event, self.config.turn_id.as_deref());
             self.push_to_store(session_id, event.clone());
             broadcast_event(
                 "agent:streaming_complete",
@@ -201,7 +211,8 @@ impl UnifiedEventHandler {
                 }),
             );
         }
-        if let Some(event) = self.streaming_buffer.complete_message(session_id) {
+        if let Some(mut event) = self.streaming_buffer.complete_message(session_id) {
+            attach_turn_id(&mut event, self.config.turn_id.as_deref());
             if let Ok(mut sessions) = self.flushed_message_sessions.lock() {
                 sessions.insert(session_id.to_string());
             }
@@ -667,10 +678,9 @@ impl TurnEventHandler for UnifiedEventHandler {
             has_active_message_stream,
             consumed_streamed_message,
         ) {
-            self.push_to_store(
-                session_id,
-                event_factory::build_assistant_message_event(session_id, text),
-            );
+            let mut event = event_factory::build_assistant_message_event(session_id, text);
+            attach_turn_id(&mut event, self.config.turn_id.as_deref());
+            self.push_to_store(session_id, event);
         }
     }
 

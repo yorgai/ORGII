@@ -14,12 +14,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getEventIcon, getToolIcon } from "@src/config/toolIcons";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 import { extractShellData } from "@src/engines/SessionCore/rendering/props/propsDataExtractors";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
 import { createLogger } from "@src/hooks/logger";
 import { killAgentShellProcess } from "@src/services/terminal";
 
 import TerminalBlock from "../TerminalBlock";
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
@@ -94,6 +96,7 @@ interface KillVariantProps {
   isLoading: boolean;
   resultMessage?: string;
   title: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 const KillVariant: React.FC<KillVariantProps> = ({
@@ -101,6 +104,7 @@ const KillVariant: React.FC<KillVariantProps> = ({
   isLoading,
   resultMessage,
   title,
+  toolUsage,
 }) => {
   const toolIcon = getToolIcon("run_shell", {
     size: 14,
@@ -109,7 +113,13 @@ const KillVariant: React.FC<KillVariantProps> = ({
 
   return (
     <div className={`animate-fade-in ${getEventBlockContainerClasses(false)}`}>
-      <EventBlockHeader isCollapsed withHover={false}>
+      <EventBlockHeader
+        isCollapsed
+        withHover={false}
+        rightContent={
+          toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+        }
+      >
         <EventBlockHeaderIcon
           icon={toolIcon}
           isCollapsed
@@ -222,6 +232,7 @@ const RunShellView: React.FC<ShellBlockProps> = (props) => {
         isLoading={isLoading}
         resultMessage={resultMessage}
         title={props.killTitle}
+        toolUsage={props.toolUsage}
       />
     );
   }
@@ -261,6 +272,7 @@ const RunShellView: React.FC<ShellBlockProps> = (props) => {
       pid={shellPid}
       processStatus={shellProcessStatus}
       onStop={handleStop}
+      toolUsage={props.toolUsage}
     />
   );
 };

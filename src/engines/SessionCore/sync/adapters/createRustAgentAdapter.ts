@@ -54,9 +54,9 @@ import {
   resetAllStreamingState,
 } from "./rustAgent/eventHandlers/streamHelpers";
 import {
+  applyLlmUsageToEvents,
   applyToolUsageToEvents,
-  loadAndCacheToolUsage,
-  withToolUsageArgs,
+  loadUsageTelemetry,
 } from "./rustAgent/toolUsageCache";
 import type {
   AgentTokenUsage,
@@ -134,25 +134,21 @@ function toTokenUsageInfo(usage: AgentTokenUsage): AgentTokenUsageInfo {
   };
 }
 
-async function refreshToolUsageForLatestEvents(
-  sessionId: string
-): Promise<void> {
-  const usageByCallId = await loadAndCacheToolUsage(sessionId);
-  if (usageByCallId.size === 0) return;
+async function refreshUsageForLatestEvents(sessionId: string): Promise<void> {
+  const { toolUsageByCallId, llmUsageByTurnId } =
+    await loadUsageTelemetry(sessionId);
+  if (toolUsageByCallId.size === 0 && llmUsageByTurnId.size === 0) return;
 
   const snapshot = eventStoreProxy.getLatestSessionSnapshot(sessionId);
   const events = snapshot?.chatEvents ?? [];
-  const updates = events.flatMap((event) => {
-    const toolUsage = event.callId
-      ? (usageByCallId.get(event.callId) ?? usageByCallId.get(event.id))
-      : usageByCallId.get(event.id);
-    if (!toolUsage) return [];
+  const hydratedEvents = applyLlmUsageToEvents(
+    applyToolUsageToEvents(events, toolUsageByCallId),
+    llmUsageByTurnId
+  );
+  const updates = hydratedEvents.flatMap((event, index) => {
+    if (event.args === events[index]?.args) return [];
     return [
-      eventStoreProxy.updateById(
-        event.id,
-        { args: withToolUsageArgs(event.args, toolUsage) },
-        sessionId
-      ),
+      eventStoreProxy.updateById(event.id, { args: event.args }, sessionId),
     ];
   });
   await Promise.all(updates);
@@ -199,9 +195,13 @@ export function createRustAgentAdapter(
       const merged = await mergeToolResults(events);
       if (signal.aborted) return merged;
 
-      const usageByCallId = await loadAndCacheToolUsage(sessionId);
+      const { toolUsageByCallId, llmUsageByTurnId } =
+        await loadUsageTelemetry(sessionId);
       if (signal.aborted) return merged;
-      const usageHydrated = applyToolUsageToEvents(merged, usageByCallId);
+      const usageHydrated = applyLlmUsageToEvents(
+        applyToolUsageToEvents(merged, toolUsageByCallId),
+        llmUsageByTurnId
+      );
 
       await backfillSubagentLinks(sessionId, usageHydrated);
       return usageHydrated;
@@ -517,7 +517,7 @@ export function createRustAgentAdapter(
               if (isTerminal) {
                 _runningSignaled = false;
                 _turnCompleted = true;
-                void refreshToolUsageForLatestEvents(sessionId).catch((err) => {
+                void refreshUsageForLatestEvents(sessionId).catch((err) => {
                   logger.warn(
                     `[${category}] terminal tool usage refresh failed:`,
                     err

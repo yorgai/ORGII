@@ -63,6 +63,7 @@ import {
   chatPanelSelectedWorkspaceAtom,
   chatPanelStartPageOpenAtom,
   chatPanelWorkspaceDashboardOpenAtom,
+  chatTokenUsageVisibleAtom,
   chatTurnPaginationEnabledAtom,
   chatWidthAtom,
   toggleChatPanelMaximizedAtom,
@@ -224,6 +225,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       chatTurnPaginationEnabledAtom
     );
     const [displayMode, setDisplayMode] = useAtom(chatHistoryDisplayModeAtom);
+    const [tokenUsageVisible, setTokenUsageVisible] = useAtom(
+      chatTokenUsageVisibleAtom
+    );
     const [exploreAgentSearchEnabled, setExploreAgentSearchEnabled] = useAtom(
       chatPanelExploreAgentSearchEnabledAtom
     );
@@ -290,6 +294,13 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         setDisplayMode(checked ? "compact" : "full");
       },
       [setDisplayMode]
+    );
+
+    const handleTokenUsageVisibleToggle = useCallback(
+      (checked: boolean) => {
+        setTokenUsageVisible(checked);
+      },
+      [setTokenUsageVisible]
     );
 
     const handleNewSession = useCallback(() => {
@@ -695,6 +706,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           handleProjectTitleChange={handleProjectTitleChange}
           handleReloadFromMenu={handleReloadFromMenu}
           handleToggleAllBlocksCollapsed={handleToggleAllBlocksCollapsed}
+          handleTokenUsageVisibleToggle={handleTokenUsageVisibleToggle}
           handleWorkItemAgentCreatorToggle={handleWorkItemAgentCreatorToggle}
           handleWorkItemTitleChange={handleWorkItemTitleChange}
           headerActionsDropdownRef={headerActionsDropdownRef}
@@ -708,6 +720,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           isHeaderActionsPositioned={isHeaderActionsPositioned}
           isProjectTarget={contentState.isProjectTarget}
           paginationEnabled={paginationEnabled}
+          tokenUsageVisible={tokenUsageVisible}
           showStartPageBackButton={
             !startPageOpen && !contentState.showSessionContent
           }

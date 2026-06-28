@@ -760,6 +760,7 @@
     },
     "defaultTitle": "Чат",
     "hideChatPanel": "Скрыть панель чата",
+    "showTokenUsage": "Показывать Token",
     "compactDisplayMode": "Компактный режим",
     "replay": {
       "follow": "Следовать"

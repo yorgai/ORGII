@@ -9,7 +9,9 @@ import React, { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getToolIcon } from "@src/config/toolIcons";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES,
   EventBlockHeader,
@@ -49,6 +51,7 @@ export interface TodoBlockProps {
   isLoading?: boolean;
   /** Pre-translated lifecycle label (e.g. "Updating to-do", "Updated to-do"). Falls back to the generic title key. */
   title?: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 // ============================================
@@ -148,10 +151,18 @@ interface StandardTodoBlockProps {
   wasMerge?: boolean;
   isLoading?: boolean;
   title?: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 const StandardTodoBlock: React.FC<StandardTodoBlockProps> = memo(
-  ({ todos, defaultCollapsed, wasMerge = false, isLoading = false, title }) => {
+  ({
+    todos,
+    defaultCollapsed,
+    wasMerge = false,
+    isLoading = false,
+    title,
+    toolUsage,
+  }) => {
     const { t } = useTranslation("sessions");
     const {
       isCollapsed,
@@ -198,6 +209,9 @@ const StandardTodoBlock: React.FC<StandardTodoBlockProps> = memo(
           onClick={handleHeaderClick}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
+          rightContent={
+            toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={todoIcon}
@@ -294,6 +308,7 @@ const TodoBlock: React.FC<TodoBlockProps> = memo(
     defaultCollapsed = true,
     isLoading = false,
     title,
+    toolUsage,
   }) => {
     if (todos.length === 0) return null;
 
@@ -304,6 +319,7 @@ const TodoBlock: React.FC<TodoBlockProps> = memo(
         wasMerge={wasMerge}
         isLoading={isLoading}
         title={title}
+        toolUsage={toolUsage}
       />
     );
   }

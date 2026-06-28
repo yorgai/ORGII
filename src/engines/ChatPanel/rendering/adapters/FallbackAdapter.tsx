@@ -142,6 +142,7 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
           entries={entries}
           eventId={props.eventId}
           title={worktreeLabels[state]}
+          toolUsage={props.toolUsage}
         />
       );
     }
@@ -157,6 +158,7 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
           props.status === "running" && props.showActiveEventPainting === true
         }
         eventId={props.eventId}
+        toolUsage={props.toolUsage}
       />
     );
   }
@@ -175,6 +177,7 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
         eventId={props.eventId}
         sessionId={props.sessionId}
         payloadRefs={props.payloadRefs}
+        toolUsage={props.toolUsage}
       />
     );
   }

@@ -332,6 +332,7 @@ export const ExploreAdapter: React.FC<UniversalEventProps> = (props) => {
           eventId={props.eventId}
           title={title}
           targetPath={targetLabel}
+          toolUsage={props.toolUsage}
         />
       </div>
     );
@@ -359,6 +360,7 @@ export const ExploreAdapter: React.FC<UniversalEventProps> = (props) => {
         title={title}
         toolName={props.eventType}
         action={exploreAction}
+        toolUsage={props.toolUsage}
         // `query_lsp` is routed through CbExplore but its "entries" are
         // diagnostic text lines (e.g. `L43:36 [hint] ...`), not real files.
         // Suppress the leading file-type icon so rows render as plain text.

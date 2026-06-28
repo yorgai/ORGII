@@ -758,6 +758,7 @@
     },
     "defaultTitle": "Chat",
     "hideChatPanel": "Ẩn bảng trò chuyện",
+    "showTokenUsage": "Hiển thị Token",
     "compactDisplayMode": "Chế độ gọn",
     "replay": {
       "follow": "Theo dõi"

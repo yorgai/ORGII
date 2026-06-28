@@ -60,11 +60,13 @@ export interface AgentMessageBlockProps {
    * event. Omitted for synthetic preview rendering where no event exists.
    */
   eventId?: string;
+  rightContent?: React.ReactNode;
 }
 
 const AgentMessageBlock: React.FC<AgentMessageBlockProps> = ({
   children,
   eventId,
+  rightContent,
 }) => {
   const { t } = useTranslation("common");
   const clampEligible = useContext(AgentMessageClampContext);
@@ -117,6 +119,9 @@ const AgentMessageBlock: React.FC<AgentMessageBlockProps> = ({
     return (
       <div className="w-full min-w-0 overflow-hidden px-2 py-0.5">
         {children}
+        {rightContent && (
+          <div className="mt-1 flex justify-end">{rightContent}</div>
+        )}
       </div>
     );
   }
@@ -157,6 +162,9 @@ const AgentMessageBlock: React.FC<AgentMessageBlockProps> = ({
           />
         )}
       </div>
+      {rightContent && (
+        <div className="mt-1 flex justify-end">{rightContent}</div>
+      )}
       {showLocateArrow && (
         <div className="mt-1 flex justify-end">
           <EventNavigateIcon

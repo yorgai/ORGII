@@ -766,6 +766,7 @@
     },
     "defaultTitle": "Czat",
     "hideChatPanel": "Ukryj panel czatu",
+    "showTokenUsage": "Pokaż Token",
     "compactDisplayMode": "Tryb kompaktowy",
     "replay": {
       "follow": "Śledź"

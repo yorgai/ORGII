@@ -10,6 +10,7 @@
  */
 import type {
   ExtractedData,
+  LlmUsageMetadata,
   PayloadRef,
   ToolUsageMetadata,
 } from "@src/engines/SessionCore/core/types";
@@ -91,6 +92,8 @@ export interface UniversalEventProps {
   callId?: string;
   /** Token/context attribution metadata for this tool call. */
   toolUsage?: ToolUsageMetadata;
+  /** Token usage metadata for the LLM span represented by this event. */
+  llmUsage?: LlmUsageMetadata;
   /** File path for file operations, when emitted as top-level event metadata. */
   filePath?: string;
   /** Repository filesystem path active when this event was emitted. */

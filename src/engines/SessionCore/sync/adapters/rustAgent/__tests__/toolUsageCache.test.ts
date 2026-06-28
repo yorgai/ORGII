@@ -2,26 +2,29 @@ import { describe, expect, it } from "vitest";
 
 import { TOOL_USAGE_ATTRIBUTION_METHOD } from "@src/api/tauri/session";
 import {
+  LLM_USAGE_ARGS_KEY,
   type SessionEvent,
   TOOL_USAGE_ARGS_KEY,
 } from "@src/engines/SessionCore/core/types";
 
 import {
+  applyLlmUsageToEvents,
   applyToolUsageToEvents,
+  buildLlmUsageByTurnMap,
   buildUsageMap,
   withToolUsageArgs,
 } from "../toolUsageCache";
 
-function makeEvent(callId?: string): SessionEvent {
+function makeEvent(callId?: string, turnId?: string): SessionEvent {
   return {
-    id: callId ? `tool-call-${callId}` : "message-1",
+    id: callId ? `tool-call-${callId}` : `message-${turnId ?? "1"}`,
     chunk_id: null,
     sessionId: "session-1",
     createdAt: "2026-06-28T00:00:00.000Z",
     functionName: callId ? "read_file" : "assistant_message",
     uiCanonical: callId ? "read_file" : "assistant_message",
     actionType: callId ? "tool_call" : "assistant",
-    args: { path: "README.md" },
+    args: { path: "README.md", ...(turnId ? { turnId } : {}) },
     result: {},
     source: "assistant",
     displayText: "Read file",
@@ -127,6 +130,59 @@ describe("toolUsageCache", () => {
     expect(enriched[0].args[TOOL_USAGE_ARGS_KEY]).toEqual(toolUsage);
     expect(enriched[1].toolUsage).toBeUndefined();
     expect(enriched[2].toolUsage).toBeUndefined();
+  });
+
+  it("attaches non-tool LLM span usage to the assistant event for a turn", () => {
+    const usageByTurnId = buildLlmUsageByTurnMap([
+      {
+        id: 1,
+        sessionId: "session-1",
+        turnId: "turn-1",
+        iterationIndex: 1,
+        model: "model-1",
+        accountId: null,
+        promptTokens: 100,
+        completionTokens: 20,
+        cacheReadTokens: 4,
+        cacheWriteTokens: 2,
+        totalTokens: 126,
+        contextTokens: 100,
+        relatedToolCallIdsJson: "[]",
+        contextUsageJson: null,
+        createdAt: "2026-06-28T00:00:00.000Z",
+      },
+      {
+        id: 2,
+        sessionId: "session-1",
+        turnId: "turn-1",
+        iterationIndex: 2,
+        model: "model-1",
+        accountId: null,
+        promptTokens: 80,
+        completionTokens: 10,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        totalTokens: 90,
+        contextTokens: 80,
+        relatedToolCallIdsJson: '["call-1"]',
+        contextUsageJson: null,
+        createdAt: "2026-06-28T00:00:01.000Z",
+      },
+    ]);
+    const enriched = applyLlmUsageToEvents(
+      [makeEvent(undefined, "turn-1")],
+      usageByTurnId
+    );
+
+    expect(enriched[0].llmUsage).toEqual({
+      inputTokens: 100,
+      outputTokens: 20,
+      cacheReadTokens: 4,
+      cacheWriteTokens: 2,
+      model: "model-1",
+      attributionMethod: TOOL_USAGE_ATTRIBUTION_METHOD.PROVIDER_EXACT,
+    });
+    expect(enriched[0].args[LLM_USAGE_ARGS_KEY]).toEqual(enriched[0].llmUsage);
   });
 
   it("stores usage metadata in args patch payloads", () => {

@@ -762,6 +762,7 @@
     },
     "defaultTitle": "Session",
     "hideChatPanel": "隱藏聊天面板",
+    "showTokenUsage": "顯示 Token",
     "compactDisplayMode": "精簡模式",
     "replay": {
       "follow": "跟隨"

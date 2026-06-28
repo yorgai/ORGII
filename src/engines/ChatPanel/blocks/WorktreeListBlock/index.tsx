@@ -5,7 +5,9 @@ import { GitBranch } from "lucide-react";
 import React from "react";
 
 import { getToolIcon } from "@src/config/toolIcons";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   ComposerStackListRow,
   EventBlockExpandableStackList,
@@ -31,6 +33,7 @@ export interface WorktreeListBlockProps {
    * `useLifecycleLabels("worktree", "list")`.
    */
   title: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 const VISIBLE_ITEMS = 6;
@@ -49,6 +52,7 @@ export const WorktreeListBlock: React.FC<WorktreeListBlockProps> = ({
   entries,
   eventId,
   title,
+  toolUsage,
 }) => {
   const {
     isCollapsed: isExpanded,
@@ -75,6 +79,9 @@ export const WorktreeListBlock: React.FC<WorktreeListBlockProps> = ({
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
         className={eventId ? "cursor-pointer" : undefined}
+        rightContent={
+          toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+        }
       >
         <EventBlockHeaderIcon
           icon={getToolIcon("worktree", {

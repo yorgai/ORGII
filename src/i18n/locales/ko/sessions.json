@@ -758,6 +758,7 @@
     },
     "defaultTitle": "채팅",
     "hideChatPanel": "채팅 패널 숨기기",
+    "showTokenUsage": "Token 표시",
     "compactDisplayMode": "컴팩트 모드",
     "replay": {
       "follow": "팔로우"

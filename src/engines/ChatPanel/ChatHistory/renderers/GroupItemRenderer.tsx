@@ -14,6 +14,7 @@ import {
 } from "@src/engines/ChatPanel/blocks/primitives";
 import { useBlockHeader } from "@src/engines/ChatPanel/blocks/useBlockLocate";
 import {
+  LLM_USAGE_ARGS_KEY,
   type SessionEvent,
   TOOL_USAGE_ARGS_KEY,
 } from "@src/engines/SessionCore/core/types";
@@ -91,6 +92,7 @@ const ARG_RENDER_KEYS = [
   "new_content",
   "subagentSessionId",
   TOOL_USAGE_ARGS_KEY,
+  LLM_USAGE_ARGS_KEY,
 ] as const;
 
 function sameRecordKeys(

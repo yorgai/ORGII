@@ -52,6 +52,7 @@ export const GlobAdapter: React.FC<UniversalEventProps> = (props) => {
         isLoading={isLoading}
         eventId={props.eventId}
         title={title}
+        toolUsage={props.toolUsage}
       />
     </div>
   );

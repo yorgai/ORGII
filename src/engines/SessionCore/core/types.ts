@@ -112,6 +112,16 @@ export interface SimulatorEventPreview {
 }
 
 export const TOOL_USAGE_ARGS_KEY = "__orgiiToolUsage";
+export const LLM_USAGE_ARGS_KEY = "__orgiiLlmUsage";
+
+export interface LlmUsageMetadata {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  model?: string | null;
+  attributionMethod: string;
+}
 
 export interface ToolUsageMetadata {
   decisionCompletionTokens: number;
@@ -194,6 +204,9 @@ export interface SessionEvent {
 
   /** Token/context attribution metadata for this tool call. */
   toolUsage?: ToolUsageMetadata;
+
+  /** Token usage metadata for the LLM span represented by this event. */
+  llmUsage?: LlmUsageMetadata;
 
   /** File path for file operations */
   filePath?: string;

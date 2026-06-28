@@ -18,8 +18,12 @@ import { useTranslation } from "react-i18next";
 
 import ExpandOverlay from "@src/components/ExpandOverlay";
 import { getToolIcon } from "@src/config/toolIcons";
-import type { PayloadRef } from "@src/engines/SessionCore/core/types";
+import type {
+  PayloadRef,
+  ToolUsageMetadata,
+} from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   BlockOutput,
   EVENT_BLOCK_FADE_FROM,
@@ -66,6 +70,8 @@ export interface TerminalBlockProps {
   processStatus?: "running" | "background" | "exited" | "killed";
   /** Callback when user clicks Stop */
   onStop?: (pid: number) => void;
+  /** Token/context attribution metadata for this shell call. */
+  toolUsage?: ToolUsageMetadata;
 }
 
 const TerminalBlock: React.FC<TerminalBlockProps> = memo(
@@ -88,6 +94,7 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     pid,
     processStatus,
     onStop,
+    toolUsage,
   }) => {
     const isErrorExit = exitCode !== undefined && exitCode !== 0;
     const isBackground = processStatus === "background";
@@ -205,8 +212,9 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     const hasContent = Boolean(command || displayOutput);
 
     const headerRight =
-      statusLabel || canStop ? (
+      toolUsage || statusLabel || canStop ? (
         <div className="flex items-center gap-2 pl-2">
+          {toolUsage && <ToolUsageBadge usage={toolUsage} />}
           {statusLabel}
           {canStop && (
             <button

@@ -758,6 +758,7 @@
     },
     "defaultTitle": "Sohbet",
     "hideChatPanel": "Sohbet panelini gizle",
+    "showTokenUsage": "Token göster",
     "compactDisplayMode": "Kompakt mod",
     "replay": {
       "follow": "Takip et"

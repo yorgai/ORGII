@@ -783,6 +783,7 @@
     },
     "defaultTitle": "Session",
     "hideChatPanel": "隐藏聊天面板",
+    "showTokenUsage": "显示 Token",
     "compactDisplayMode": "紧凑模式",
     "replay": {
       "follow": "跟随"
