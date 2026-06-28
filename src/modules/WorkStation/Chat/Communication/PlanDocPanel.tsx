@@ -64,7 +64,7 @@ export const PlanDocPanel: React.FC<PlanDocPanelProps> = memo(
               autoFocus
             />
           ) : isPreviewMode ? (
-            <div className="scrollbar-overlay h-full overflow-auto p-4">
+            <div className="scrollbar-overlay h-full overflow-auto px-4 pb-[120px] pt-4">
               {hasContent ? (
                 <Markdown textContent={content} skipPreprocess />
               ) : (
