@@ -1,5 +1,11 @@
-const INVALID_AUTHORITY_CHARACTER_PATTERN = /[$`{}<>"'\\\s]/;
+const INVALID_AUTHORITY_CHARACTER_PATTERN = /[$`{}<>"'\\\s*~]/;
 const IPV6_AUTHORITY_PATTERN = /^\[[0-9a-f:.]+\](?::\d+)?$/i;
+const TRAILING_TEXT_URL_BOUNDARY_PATTERN = /(?:[.,;:!?]+|\*+|_{2,}|~{2,})+$/;
+
+interface NormalizeHttpUrlCandidateOptions {
+  stripTextBoundaries?: boolean;
+}
+
 function getRawAuthority(candidate: string): string | null {
   const authorityMatch = candidate.match(/^https?:\/\/([^/?#]*)/i);
   return authorityMatch?.[1] ?? null;
@@ -21,8 +27,14 @@ function hasInvalidParsedPort(port: string): boolean {
   return !Number.isInteger(portNumber) || portNumber < 1 || portNumber > 65_535;
 }
 
-export function normalizeHttpUrlCandidate(candidate: string): string | null {
-  const trimmed = candidate.trim();
+export function normalizeHttpUrlCandidate(
+  candidate: string,
+  options: NormalizeHttpUrlCandidateOptions = {}
+): string | null {
+  const base = candidate.trim();
+  const trimmed = options.stripTextBoundaries
+    ? base.replace(TRAILING_TEXT_URL_BOUNDARY_PATTERN, "")
+    : base;
   if (!trimmed) return null;
 
   const rawAuthority = getRawAuthority(trimmed);
