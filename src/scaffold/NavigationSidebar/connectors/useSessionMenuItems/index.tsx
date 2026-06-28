@@ -32,11 +32,12 @@ import {
   buildByWorkspaceMenuItems,
 } from "./menuSectionBuilders";
 import {
-  LOAD_MORE_CATEGORIES,
   appendSessionGroup,
   getLoadMoreGroupId,
+  getUnifiedLoadMoreState,
   isLoadMoreId,
   loadMoreRow,
+  unifiedLoadMoreRow,
 } from "./paginationHelpers";
 import type {
   UseSessionMenuItemsParams,
@@ -176,13 +177,13 @@ export function useSessionMenuItems({
 
   const trailingLoadMoreItems = useMemo<NavigationMenuItem[]>(() => {
     if (isFiltering) return [];
-    const rows: NavigationMenuItem[] = [];
-    for (const category of LOAD_MORE_CATEGORIES) {
-      const row = loadMoreRowFor(category);
-      if (row) rows.push(row);
-    }
-    return rows;
-  }, [isFiltering, loadMoreRowFor]);
+    const state = getUnifiedLoadMoreState(pagination);
+    if (!state.visible) return [];
+    const label = state.loading
+      ? tCommon("sessions:chat.loading")
+      : tCommon("common:actions.loadMore");
+    return [unifiedLoadMoreRow(state.loading, label)];
+  }, [isFiltering, pagination, tCommon]);
 
   const appendTrailingLoadMoreItems = useCallback(
     (items: NavigationMenuItem[]) => {

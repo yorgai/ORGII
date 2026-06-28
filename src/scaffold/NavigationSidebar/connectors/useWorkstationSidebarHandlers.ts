@@ -1,6 +1,6 @@
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { type Dispatch, type SetStateAction, useCallback } from "react";
 
 import { deleteSession } from "@src/api/tauri/agent";
@@ -21,6 +21,7 @@ import {
   type SessionListCategory,
   loadMoreCategory,
   removeSession,
+  sessionPaginationAtom,
   upsertSession,
 } from "@src/store/session";
 import {
@@ -35,6 +36,10 @@ import {
   NEW_SESSION_MENU_ITEM_ID,
   getDraftIdFromMenuItemId,
 } from "./sidebarConnectorUtils";
+import {
+  isUnifiedLoadMoreId,
+  loadUnifiedReadyCategories,
+} from "./useSessionMenuItems/paginationHelpers";
 
 const log = createLogger("WorkstationSidebar");
 
@@ -86,6 +91,7 @@ export function useWorkstationSidebarHandlers({
   const setBenchmarkActiveBatchTaskId = useSetAtom(
     benchmarkActiveBatchTaskIdAtom
   );
+  const pagination = useAtomValue(sessionPaginationAtom);
   const handleDeleteSession = useCallback(
     async (sessionId: string) => {
       try {
@@ -156,6 +162,15 @@ export function useWorkstationSidebarHandlers({
         return;
       }
 
+      if (isUnifiedLoadMoreId(item.id)) {
+        void loadUnifiedReadyCategories({
+          disabled: item.disabled,
+          pagination,
+          loadCategory: loadMoreCategoryAction,
+        });
+        return;
+      }
+
       const loadMoreGroupId = getLoadMoreGroupId(item.id);
       if (loadMoreGroupId) {
         setGroupVisibleCounts((previousCounts) => {
@@ -209,6 +224,7 @@ export function useWorkstationSidebarHandlers({
     [
       getLoadMoreGroupId,
       isLoadMoreId,
+      pagination,
       sessionMap,
       openSession,
       goToNewSession,
