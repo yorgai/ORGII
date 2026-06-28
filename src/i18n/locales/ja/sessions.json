@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token コンテキスト",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token 判断",
+    "tooltip": "推定ツール属性。方法: {{method}}。入力: {{inputBytes}} bytes。出力: {{outputBytes}} bytes。判断: {{decisionTokens}} Token。コンテキスト: {{contextTokens}} Token。Follow-up: {{followupTokens}} Token。関連 LLM cache read: {{cacheReadTokens}} Token。関連 LLM cache write: {{cacheWriteTokens}} Token。"
+  },
   "history": {
     "untitledSession": "無題のSession",
     "prStatus": {

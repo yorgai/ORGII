@@ -193,6 +193,7 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
       iconOverride={isMcpTool ? MCP_ICON : undefined}
       callId={props.callId}
       sessionId={props.sessionId}
+      toolUsage={props.toolUsage}
       payloadRefs={props.payloadRefs}
     />
   );

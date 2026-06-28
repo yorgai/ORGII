@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use serde_json::Value;
 
 use crate::core::turn_executor::context_accounting::ContextUsageSnapshot;
+use crate::core::turn_executor::usage_telemetry::UsageTelemetry;
 use crate::tools::traits::ToolUIMetadata;
 use shared_state::ScreenshotStore;
 
@@ -128,6 +129,8 @@ pub struct TurnResult {
     pub cache_read_tokens: i64,
     /// Accumulated cache-write tokens (Anthropic prompt caching).
     pub cache_write_tokens: i64,
+    /// Per-LLM-call spans and per-tool-call attribution for diagnostics.
+    pub usage_telemetry: UsageTelemetry,
 }
 
 // ============================================
@@ -341,6 +344,7 @@ mod tests {
             context_usage_snapshot: None,
             cache_read_tokens: 0,
             cache_write_tokens: 0,
+            usage_telemetry: UsageTelemetry::default(),
             messages: vec![],
         };
         assert_eq!(result.cache_read_tokens, 0);
@@ -359,6 +363,7 @@ mod tests {
             context_usage_snapshot: None,
             cache_read_tokens: 500,
             cache_write_tokens: 300,
+            usage_telemetry: UsageTelemetry::default(),
             messages: vec![],
         };
         assert_eq!(result.cache_read_tokens, 500);

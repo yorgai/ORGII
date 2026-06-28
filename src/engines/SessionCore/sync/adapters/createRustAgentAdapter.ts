@@ -53,6 +53,11 @@ import {
   noteSessionStreamingTurn,
   resetAllStreamingState,
 } from "./rustAgent/eventHandlers/streamHelpers";
+import {
+  applyToolUsageToEvents,
+  loadAndCacheToolUsage,
+  withToolUsageArgs,
+} from "./rustAgent/toolUsageCache";
 import type {
   AgentTokenUsage,
   AgentWSEvent,
@@ -129,6 +134,30 @@ function toTokenUsageInfo(usage: AgentTokenUsage): AgentTokenUsageInfo {
   };
 }
 
+async function refreshToolUsageForLatestEvents(
+  sessionId: string
+): Promise<void> {
+  const usageByCallId = await loadAndCacheToolUsage(sessionId);
+  if (usageByCallId.size === 0) return;
+
+  const snapshot = eventStoreProxy.getLatestSessionSnapshot(sessionId);
+  const events = snapshot?.chatEvents ?? [];
+  const updates = events.flatMap((event) => {
+    const toolUsage = event.callId
+      ? (usageByCallId.get(event.callId) ?? usageByCallId.get(event.id))
+      : usageByCallId.get(event.id);
+    if (!toolUsage) return [];
+    return [
+      eventStoreProxy.updateById(
+        event.id,
+        { args: withToolUsageArgs(event.args, toolUsage) },
+        sessionId
+      ),
+    ];
+  });
+  await Promise.all(updates);
+}
+
 // ============================================================================
 // Factory
 // ============================================================================
@@ -170,8 +199,12 @@ export function createRustAgentAdapter(
       const merged = await mergeToolResults(events);
       if (signal.aborted) return merged;
 
-      await backfillSubagentLinks(sessionId, merged);
-      return merged;
+      const usageByCallId = await loadAndCacheToolUsage(sessionId);
+      if (signal.aborted) return merged;
+      const usageHydrated = applyToolUsageToEvents(merged, usageByCallId);
+
+      await backfillSubagentLinks(sessionId, usageHydrated);
+      return usageHydrated;
     },
 
     async postLoad(
@@ -484,6 +517,12 @@ export function createRustAgentAdapter(
               if (isTerminal) {
                 _runningSignaled = false;
                 _turnCompleted = true;
+                void refreshToolUsageForLatestEvents(sessionId).catch((err) => {
+                  logger.warn(
+                    `[${category}] terminal tool usage refresh failed:`,
+                    err
+                  );
+                });
               }
             })
             .catch((err) => {

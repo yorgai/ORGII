@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token context",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token decision",
+    "tooltip": "Estimated tool attribution. Method: {{method}}. Input: {{inputBytes}} bytes. Output: {{outputBytes}} bytes. Decision: {{decisionTokens}} Token. Context: {{contextTokens}} Token. Follow-up: {{followupTokens}} Token. 관련 LLM cache read: {{cacheReadTokens}} Token. 관련 LLM cache write: {{cacheWriteTokens}} Token."
+  },
   "history": {
     "untitledSession": "제목 없는 Session",
     "prStatus": {

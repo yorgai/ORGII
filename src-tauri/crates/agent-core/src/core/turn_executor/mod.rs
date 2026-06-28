@@ -17,6 +17,7 @@ pub(crate) mod tool_execution;
 pub(crate) mod tool_result_storage;
 mod types;
 mod usage_accumulator;
+mod usage_telemetry;
 
 // Items kept at the `turn_executor::` surface — checked one by one
 // against real call sites. The accessor / structured-key set
@@ -33,6 +34,7 @@ pub use types::{
     PermissionProvider, PermissionVerdict, ToolHookIntervention, TurnConfig, TurnEventHandler,
     TurnIterationHook, TurnResult,
 };
+pub use usage_telemetry::{AttributionMethod, LlmUsageSpan, ToolUsageAttribution, UsageTelemetry};
 
 // `MAX_TOOL_OUTPUT_CHARS` is consumed by `helpers::*` and a couple of test
 // modules via `use crate::core::turn_executor::MAX_TOOL_OUTPUT_CHARS`.
@@ -64,6 +66,7 @@ use screenshot::resolve_screenshot_markers;
 use stream_error_recovery::{handle_stream_error, RetryBudgets, StreamErrorOutcome};
 use tool_execution::{execute_tool_calls, ToolBatchOutcome};
 use usage_accumulator::UsageTotals;
+use usage_telemetry::UsageTelemetryCollector;
 
 #[cfg(test)]
 #[path = "../../tests/processor_tests.rs"]
@@ -108,6 +111,7 @@ pub async fn execute_turn(
     let mut final_is_stream_error = false;
 
     let mut usage = UsageTotals::default();
+    let mut usage_telemetry = UsageTelemetryCollector::default();
     let mut context_usage_snapshot: Option<ContextUsageSnapshot> = None;
 
     let mut last_tool_signature: Option<String> = None;
@@ -362,6 +366,13 @@ pub async fn execute_turn(
                 Some(context_window),
             );
             handler.on_context_usage(session_id, &snapshot);
+            usage_telemetry.record_llm_span(
+                iteration as i64,
+                &response.usage,
+                usage.last_prompt,
+                &response.tool_calls,
+                Some(&snapshot),
+            );
             context_usage_snapshot = Some(snapshot);
         }
 
@@ -498,7 +509,7 @@ pub async fn execute_turn(
                 &config.model,
             );
 
-            let (_count, outcome) = execute_tool_calls(
+            let (_count, tool_execution_usage, outcome) = execute_tool_calls(
                 messages,
                 &response.tool_calls,
                 tools,
@@ -514,6 +525,7 @@ pub async fn execute_turn(
                 config.max_tool_use_concurrency,
             )
             .await;
+            usage_telemetry.record_tool_results(iteration as i64, tool_execution_usage);
 
             // Backfill dummy results for any tool calls that don't have a
             // result yet after EarlyExit.
@@ -679,5 +691,6 @@ pub async fn execute_turn(
         context_usage_snapshot,
         cache_read_tokens: usage.cache_read,
         cache_write_tokens: usage.cache_write,
+        usage_telemetry: usage_telemetry.finish(),
     })
 }

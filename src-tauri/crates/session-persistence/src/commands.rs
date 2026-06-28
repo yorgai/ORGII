@@ -245,3 +245,42 @@ pub async fn get_session_token_usage_records(
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn get_session_llm_usage_spans(
+    session_id: String,
+    turn_id: Option<String>,
+) -> Result<Vec<super::tool_usage::LlmUsageSpanRecord>, String> {
+    tokio::task::spawn_blocking(move || {
+        super::tool_usage::get_llm_usage_spans(&session_id, turn_id.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_session_tool_usage_attributions(
+    session_id: String,
+    turn_id: Option<String>,
+) -> Result<Vec<super::tool_usage::ToolUsageAttributionRecord>, String> {
+    tokio::task::spawn_blocking(move || {
+        super::tool_usage::get_tool_usage_attributions(&session_id, turn_id.as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_session_tool_usage_attributions_for_call(
+    session_id: String,
+    tool_call_id: String,
+) -> Result<Vec<super::tool_usage::ToolUsageAttributionRecord>, String> {
+    tokio::task::spawn_blocking(move || {
+        super::tool_usage::get_tool_usage_attributions_for_call(&session_id, &tool_call_id)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
+}

@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token 上下文",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token 決策",
+    "tooltip": "估算的工具歸因。方法：{{method}}。輸入：{{inputBytes}} bytes。輸出：{{outputBytes}} bytes。決策：{{decisionTokens}} Token。上下文：{{contextTokens}} Token。Follow-up：{{followupTokens}} Token。相關 LLM cache read：{{cacheReadTokens}} Token。相關 LLM cache write：{{cacheWriteTokens}} Token。"
+  },
   "history": {
     "untitledSession": "未命名 Session",
     "prStatus": {

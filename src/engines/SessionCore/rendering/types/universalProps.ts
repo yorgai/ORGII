@@ -11,6 +11,7 @@
 import type {
   ExtractedData,
   PayloadRef,
+  ToolUsageMetadata,
 } from "@src/engines/SessionCore/core/types";
 import type { PlanSurface } from "@src/engines/SessionCore/derived/planDisplayEvents";
 
@@ -88,6 +89,8 @@ export interface UniversalEventProps {
    * to the chat bubble for this tool. Absent on non-tool events.
    */
   callId?: string;
+  /** Token/context attribution metadata for this tool call. */
+  toolUsage?: ToolUsageMetadata;
   /** File path for file operations, when emitted as top-level event metadata. */
   filePath?: string;
   /** Repository filesystem path active when this event was emitted. */

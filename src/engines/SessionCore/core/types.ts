@@ -111,6 +111,19 @@ export interface SimulatorEventPreview {
   repoPath?: string;
 }
 
+export const TOOL_USAGE_ARGS_KEY = "__orgiiToolUsage";
+
+export interface ToolUsageMetadata {
+  decisionCompletionTokens: number;
+  resultContextTokens: number;
+  followupCompletionTokens: number;
+  inputBytes: number;
+  outputBytes: number;
+  relatedCacheReadTokens: number;
+  relatedCacheWriteTokens: number;
+  attributionMethod: string;
+}
+
 export interface SessionEvent {
   chunk_id: string | null;
   // ============================================
@@ -178,6 +191,9 @@ export interface SessionEvent {
 
   /** Tool call ID for matching start/update/end events */
   callId?: string;
+
+  /** Token/context attribution metadata for this tool call. */
+  toolUsage?: ToolUsageMetadata;
 
   /** File path for file operations */
   filePath?: string;

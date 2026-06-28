@@ -13,7 +13,10 @@ import {
   getEventBlockContainerClasses,
 } from "@src/engines/ChatPanel/blocks/primitives";
 import { useBlockHeader } from "@src/engines/ChatPanel/blocks/useBlockLocate";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import {
+  type SessionEvent,
+  TOOL_USAGE_ARGS_KEY,
+} from "@src/engines/SessionCore/core/types";
 
 import {
   AgentTurnContext,
@@ -87,6 +90,7 @@ const ARG_RENDER_KEYS = [
   "new_string",
   "new_content",
   "subagentSessionId",
+  TOOL_USAGE_ARGS_KEY,
 ] as const;
 
 function sameRecordKeys(

@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token context",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token decision",
+    "tooltip": "Attribution estimée de l’outil. Méthode : {{method}}. Entrée : {{inputBytes}} bytes. Sortie : {{outputBytes}} bytes. Décision : {{decisionTokens}} Token. Contexte : {{contextTokens}} Token. Follow-up : {{followupTokens}} Token. Cache LLM lié lu : {{cacheReadTokens}} Token. Cache LLM lié écrit : {{cacheWriteTokens}} Token."
+  },
   "history": {
     "untitledSession": "Session sans titre",
     "prStatus": {

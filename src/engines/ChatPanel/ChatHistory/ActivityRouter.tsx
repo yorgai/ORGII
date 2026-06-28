@@ -9,7 +9,10 @@ import React, { Suspense, memo, useMemo } from "react";
 
 import { AgentMessageBlock } from "@src/engines/ChatPanel/blocks";
 import MessageReferenceCards from "@src/engines/ChatPanel/blocks/MessageReferenceCards";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import {
+  type SessionEvent,
+  TOOL_USAGE_ARGS_KEY,
+} from "@src/engines/SessionCore/core/types";
 import {
   chatRequiresItemIndex,
   chatShowsStatusLine,
@@ -123,6 +126,9 @@ function arePropsEqual(
   if (prevArgs?.command !== nextArgs?.command) return false;
   if (prevArgs?.action !== nextArgs?.action) return false;
   if (prevArgs?.subagentSessionId !== nextArgs?.subagentSessionId) return false;
+  if (prevArgs?.[TOOL_USAGE_ARGS_KEY] !== nextArgs?.[TOOL_USAGE_ARGS_KEY]) {
+    return false;
+  }
 
   return true;
 }

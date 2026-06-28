@@ -19,6 +19,7 @@ import React, {
 
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { PlanningFooter } from "@src/engines/ChatPanel/blocks/primitives";
+import { TOOL_USAGE_ARGS_KEY } from "@src/engines/SessionCore/core/types";
 
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
 import { CHAT_FOOTER_SPACER } from "../config/chatFooterSpacer";
@@ -98,6 +99,7 @@ const ARG_RENDER_KEYS = [
   "new_string",
   "new_content",
   "subagentSessionId",
+  TOOL_USAGE_ARGS_KEY,
 ] as const;
 
 function sameRecordKeys(
