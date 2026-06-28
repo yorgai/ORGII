@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { switchMode } from "./useModeSwitchActions";
+import { deferMode, switchMode } from "./useModeSwitchActions";
 
 const storeGetSpy = vi.hoisted(() => vi.fn());
 const sendMessageSpy = vi.hoisted(() => vi.fn());
@@ -152,5 +152,36 @@ describe("switchMode → switchAgentMode resume", () => {
 
     expect(sendMessageSpy).not.toHaveBeenCalled();
     expect(beginOptimisticTurnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("deferMode", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isCursorIdeSessionSpy.mockReturnValue(false);
+    isAgentSessionSpy.mockReturnValue(true);
+    delete (window as { __ORGII_E2E_MODE_SWITCH_MOCK__?: boolean })
+      .__ORGII_E2E_MODE_SWITCH_MOCK__;
+    respondModeSwitchSpy.mockResolvedValue(undefined);
+    updateByIdSpy.mockResolvedValue(undefined);
+  });
+
+  it("marks the event deferred and responds with defer WITHOUT resuming the turn", async () => {
+    // Defer's whole purpose is to pause so the user can keep typing — it must
+    // not re-send a message or start an optimistic turn (contrast switchMode).
+    setupStore({ lastUserText: "hold on, let me add context first" });
+
+    await deferMode("event-defer");
+
+    expect(sendMessageSpy).not.toHaveBeenCalled();
+    expect(beginOptimisticTurnSpy).not.toHaveBeenCalled();
+    expect(respondModeSwitchSpy).toHaveBeenCalledWith(SESSION_ID, "defer");
+    expect(updateByIdSpy).toHaveBeenCalledWith(
+      "event-defer",
+      expect.objectContaining({
+        result: expect.objectContaining({ choice: "defer" }),
+      }),
+      SESSION_ID
+    );
   });
 });

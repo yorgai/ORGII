@@ -843,6 +843,7 @@
     "skip": "Pular",
     "repoSetupLabel": "Configuração do Repo",
     "autoSkipCountdown": "Pulando automaticamente em {{seconds}}s",
+    "autoDeferCountdown": "Pausando automaticamente em {{seconds}}s",
     "questionProgress": "{{answered}} respondidas, {{pending}} pendentes",
     "autoExecuteCountdown": "Execução automática em {{seconds}}s",
     "settingsTitle": "Configurações",
@@ -1097,6 +1098,7 @@
       "label": "Alternar para modo {{mode}}",
       "switch": "Alternar",
       "skip": "Pular",
+      "defer": "Continuar conversando",
       "noReason": "O Agent sugere alternar de modo"
     },
     "askUserAnswered": "Respondido",
@@ -1407,6 +1409,7 @@
     "suggestModeSwitchFailed": "Não foi possível sugerir troca de modo",
     "suggestModeSwitchSwitched": "Alternado para o modo {{mode}}",
     "suggestModeSwitchSkipped": "Mudança de modo ignorada",
+    "suggestModeSwitchDeferred": "Permaneceu no modo atual",
     "queryLspRunning": "Consultando diagnósticos LSP",
     "queryLspDone": "Diagnósticos LSP consultados",
     "queryLspFailed": "Falha na consulta de diagnósticos LSP",

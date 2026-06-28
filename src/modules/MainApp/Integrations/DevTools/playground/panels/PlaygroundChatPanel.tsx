@@ -327,6 +327,7 @@ export function PlaygroundChatPanel({
                           reason={modeSwitchReason}
                           onSwitch={() => {}}
                           onSkip={() => {}}
+                          onDefer={() => {}}
                           collapsed={false}
                           onCollapse={collapseModeSwitch}
                         />

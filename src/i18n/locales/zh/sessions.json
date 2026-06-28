@@ -862,6 +862,7 @@
     "skip": "跳过",
     "repoSetupLabel": "Repo 配置",
     "autoSkipCountdown": "{{seconds}}s 后自动跳过",
+    "autoDeferCountdown": "{{seconds}}s 后自动暂停",
     "questionProgress": "{{answered}} 已回答，{{pending}} 待回答",
     "autoExecuteCountdown": "{{seconds}}s 后自动执行",
     "settingsTitle": "设置",
@@ -1102,6 +1103,7 @@
       "label": "切换到 {{mode}} Mode",
       "switch": "切换",
       "skip": "跳过",
+      "defer": "再聊聊",
       "noReason": "Agent 建议切换模式"
     },
     "exploreSummary": {
@@ -1401,6 +1403,7 @@
     "suggestModeSwitchFailed": "无法建议切换模式",
     "suggestModeSwitchSwitched": "切换到 {{mode}} 模式",
     "suggestModeSwitchSkipped": "跳过模式切换",
+    "suggestModeSwitchDeferred": "已暂停,继续当前对话",
     "queryLspRunning": "正在查询 LSP 诊断",
     "queryLspDone": "查询 LSP 诊断",
     "queryLspFailed": "LSP 诊断查询失败",

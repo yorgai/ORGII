@@ -837,6 +837,7 @@
     "skip": "Atla",
     "repoSetupLabel": "Repo Setup",
     "autoSkipCountdown": "{{seconds}}s sonra otomatik atla",
+    "autoDeferCountdown": "{{seconds}}s sonra otomatik duraklat",
     "questionProgress": "{{answered}} yanıtlandı, {{pending}} bekliyor",
     "autoExecuteCountdown": "{{seconds}}s sonra otomatik çalıştır",
     "settingsTitle": "Ayarlar",
@@ -1081,6 +1082,7 @@
       "label": "{{mode}} Mode'a geç",
       "switch": "Geç",
       "skip": "Atla",
+      "defer": "Sohbete devam et",
       "noReason": "Agent mod değiştirmeyi öneriyor"
     },
     "exploreSummary": {
@@ -1372,6 +1374,7 @@
     "suggestModeSwitchFailed": "Mod değişikliği önerilemedi",
     "suggestModeSwitchSwitched": "{{mode}} moduna geçildi",
     "suggestModeSwitchSkipped": "Mod değişikliği atlandı",
+    "suggestModeSwitchDeferred": "Mevcut modda sohbete devam edildi",
     "queryLspRunning": "LSP tanıları sorgulanıyor",
     "queryLspDone": "LSP tanıları sorgulandı",
     "queryLspFailed": "LSP tanı sorgusu başarısız",

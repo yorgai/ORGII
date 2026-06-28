@@ -3,8 +3,10 @@
 //! The agent calls `suggest_mode_switch` when it detects the user's intent
 //! would be better served in a different mode (e.g. Build → Plan).
 //!
-//! The tool blocks until the user confirms or skips in the frontend.
+//! The tool blocks until the user confirms, skips, or defers in the frontend.
 //! - **Skip** → returns "continue in current mode" → LLM loop continues.
+//! - **Defer** → returns "paused for chat" → processor breaks the loop and
+//!   the session drops to idle so the user can keep chatting first.
 //! - **Switch** → returns "mode switched" → processor breaks the loop
 //!   and the frontend re-sends with the new mode.
 
@@ -56,6 +58,9 @@ impl SuggestModeSwitchTool {
 /// Sentinel prefix in the tool result that the processor checks
 /// to decide whether to break the loop.
 pub const SWITCH_ACCEPTED_PREFIX: &str = "MODE_SWITCH_ACCEPTED:";
+/// Sentinel prefix telling the processor to end the turn so the user can
+/// keep chatting in the current mode (no mode change, no loop continuation).
+pub const MODE_SWITCH_DEFERRED_PREFIX: &str = "MODE_SWITCH_DEFERRED:";
 const MODE_SWITCH_AUTO_SKIP_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
 
 #[async_trait]
@@ -75,7 +80,9 @@ impl Tool for SuggestModeSwitchTool {
             "instead of exploring the codebase. ",
             "(3) The user's request is a large / risky / architectural task that benefits ",
             "from a written plan before implementation. ",
-            "The user sees a confirmation card and chooses Switch (enter Plan mode) or Skip. ",
+            "The user sees a confirmation card and chooses Switch (enter Plan mode), ",
+            "Skip (continue in the current mode), or Keep chatting / Defer (pause this turn ",
+            "so the user can add more context before deciding). ",
             "Do NOT call this for trivial tasks, for questions, or when the user explicitly ",
             "asked for direct implementation. ",
             "IMPORTANT: After calling this tool, STOP immediately — do not produce any more text or tool calls."
@@ -171,7 +178,7 @@ impl Tool for SuggestModeSwitchTool {
             cancel_flag,
             Some(AutoTimeoutPolicy {
                 timeout: MODE_SWITCH_AUTO_SKIP_TIMEOUT,
-                on_expire: Box::new(|| AutoTimeoutAction::Respond(ModeSwitchChoice::Skip)),
+                on_expire: Box::new(|| AutoTimeoutAction::Respond(ModeSwitchChoice::Defer)),
             }),
         )
         .await;
@@ -179,7 +186,7 @@ impl Tool for SuggestModeSwitchTool {
         let choice = match outcome {
             InteractionOutcome::Responded(c) => c,
             InteractionOutcome::AutoResponded(c) => {
-                self.context.manager.auto_skip_after_timeout().await;
+                self.context.manager.auto_defer_after_timeout().await;
                 c
             }
             InteractionOutcome::Cancelled => {
@@ -192,8 +199,8 @@ impl Tool for SuggestModeSwitchTool {
                 ));
             }
             InteractionOutcome::TimedOut => {
-                self.context.manager.auto_skip_after_timeout().await;
-                ModeSwitchChoice::Skip
+                self.context.manager.auto_defer_after_timeout().await;
+                ModeSwitchChoice::Defer
             }
             InteractionOutcome::Dropped => {
                 return Err(ToolError::ExecutionFailed(
@@ -230,6 +237,11 @@ impl Tool for SuggestModeSwitchTool {
                         .to_string(),
                 )
             }
+            ModeSwitchChoice::Defer => Ok(format!(
+                "{}The user wants to keep chatting in the current mode before deciding. \
+                 Stop here and wait for their next message.",
+                MODE_SWITCH_DEFERRED_PREFIX,
+            )),
         }
     }
 

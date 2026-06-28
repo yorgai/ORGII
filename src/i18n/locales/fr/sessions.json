@@ -837,6 +837,7 @@
     "skip": "Ignorer",
     "repoSetupLabel": "Repo Setup",
     "autoSkipCountdown": "Passer dans {{seconds}}s",
+    "autoDeferCountdown": "Pause dans {{seconds}}s",
     "questionProgress": "{{answered}} répondu(s), {{pending}} en attente",
     "autoExecuteCountdown": "Exécuter dans {{seconds}}s",
     "settingsTitle": "Paramètres",
@@ -1077,6 +1078,7 @@
       "label": "Passer en {{mode}} Mode",
       "switch": "Changer",
       "skip": "Ignorer",
+      "defer": "Continuer à discuter",
       "noReason": "L’agent suggère de changer de mode"
     },
     "exploreSummary": {
@@ -1372,6 +1374,7 @@
     "suggestModeSwitchFailed": "Impossible de suggérer le changement de mode",
     "suggestModeSwitchSwitched": "Passé en mode {{mode}}",
     "suggestModeSwitchSkipped": "Changement de mode ignoré",
+    "suggestModeSwitchDeferred": "Resté dans le mode actuel",
     "queryLspRunning": "Requête des diagnostics LSP",
     "queryLspDone": "Diagnostics LSP interrogés",
     "queryLspFailed": "Échec de la requête LSP",

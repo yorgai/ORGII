@@ -837,6 +837,7 @@
     "skip": "건너뛰기",
     "repoSetupLabel": "Repo Setup",
     "autoSkipCountdown": "{{seconds}}s 후 자동 건너뛰기",
+    "autoDeferCountdown": "{{seconds}}s 후 자동 일시 중지",
     "questionProgress": "{{answered}}개 답변, {{pending}}개 대기",
     "autoExecuteCountdown": "{{seconds}}s 후 자동 실행",
     "settingsTitle": "설정",
@@ -1077,6 +1078,7 @@
       "label": "{{mode}} Mode로 전환",
       "switch": "전환",
       "skip": "건너뛰기",
+      "defer": "계속 대화하기",
       "noReason": "Agent가 모드 전환을 제안합니다"
     },
     "exploreSummary": {
@@ -1372,6 +1374,7 @@
     "suggestModeSwitchFailed": "모드 전환을 제안할 수 없음",
     "suggestModeSwitchSwitched": "{{mode}} 모드로 전환됨",
     "suggestModeSwitchSkipped": "모드 전환 건너뜀",
+    "suggestModeSwitchDeferred": "현재 모드에서 대화 유지",
     "queryLspRunning": "LSP 진단 조회 중",
     "queryLspDone": "LSP 진단 조회 완료",
     "queryLspFailed": "LSP 진단 조회 실패",

@@ -837,6 +837,7 @@
     "skip": "Omitir",
     "repoSetupLabel": "Repo Setup",
     "autoSkipCountdown": "Omitir en {{seconds}}s",
+    "autoDeferCountdown": "Pausar en {{seconds}}s",
     "questionProgress": "{{answered}} respondida(s), {{pending}} pendiente(s)",
     "autoExecuteCountdown": "Ejecutar en {{seconds}}s",
     "settingsTitle": "Configuración",
@@ -1077,6 +1078,7 @@
       "label": "Cambiar a {{mode}} Mode",
       "switch": "Cambiar",
       "skip": "Omitir",
+      "defer": "Seguir conversando",
       "noReason": "El Agent sugiere cambiar de modo"
     },
     "exploreSummary": {
@@ -1372,6 +1374,7 @@
     "suggestModeSwitchFailed": "No se pudo sugerir cambio de modo",
     "suggestModeSwitchSwitched": "Cambiado a modo {{mode}}",
     "suggestModeSwitchSkipped": "Cambio de modo omitido",
+    "suggestModeSwitchDeferred": "Se mantuvo en el modo actual",
     "queryLspRunning": "Consultando diagnósticos LSP",
     "queryLspDone": "Diagnósticos LSP consultados",
     "queryLspFailed": "Error en la consulta LSP",

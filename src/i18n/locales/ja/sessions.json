@@ -837,6 +837,7 @@
     "skip": "スキップ",
     "repoSetupLabel": "Repo Setup",
     "autoSkipCountdown": "{{seconds}}s 後に自動スキップ",
+    "autoDeferCountdown": "{{seconds}}s 後に自動一時停止",
     "questionProgress": "{{answered}} 回答済み、{{pending}} 未回答",
     "autoExecuteCountdown": "{{seconds}}s 後に自動実行",
     "settingsTitle": "設定",
@@ -1077,6 +1078,7 @@
       "label": "{{mode}} Mode に切り替え",
       "switch": "切り替え",
       "skip": "スキップ",
+      "defer": "会話を続ける",
       "noReason": "Agent がモード切り替えを提案しています"
     },
     "exploreSummary": {
@@ -1376,6 +1378,7 @@
     "suggestModeSwitchFailed": "モード切替を提案できませんでした",
     "suggestModeSwitchSwitched": "{{mode}}モードに切り替えました",
     "suggestModeSwitchSkipped": "モード切替はスキップされました",
+    "suggestModeSwitchDeferred": "現在のモードで会話を継続",
     "queryLspRunning": "LSP 診断を照会中",
     "queryLspDone": "LSP 診断を照会しました",
     "queryLspFailed": "LSP 診断の照会に失敗",

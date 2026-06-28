@@ -837,6 +837,7 @@
     "skip": "Überspringen",
     "repoSetupLabel": "Repo Setup",
     "autoSkipCountdown": "Überspringen in {{seconds}}s",
+    "autoDeferCountdown": "Pausieren in {{seconds}}s",
     "questionProgress": "{{answered}} beantwortet, {{pending}} ausstehend",
     "autoExecuteCountdown": "Ausführen in {{seconds}}s",
     "settingsTitle": "Einstellungen",
@@ -1077,6 +1078,7 @@
       "label": "Zu {{mode}} Mode wechseln",
       "switch": "Wechseln",
       "skip": "Überspringen",
+      "defer": "Weiter chatten",
       "noReason": "Der Agent schlägt einen Moduswechsel vor"
     },
     "exploreSummary": {
@@ -1372,6 +1374,7 @@
     "suggestModeSwitchFailed": "Moduswechsel konnte nicht vorgeschlagen werden",
     "suggestModeSwitchSwitched": "Zu {{mode}}-Modus gewechselt",
     "suggestModeSwitchSkipped": "Moduswechsel übersprungen",
+    "suggestModeSwitchDeferred": "Im aktuellen Modus geblieben",
     "queryLspRunning": "LSP-Diagnose wird abgefragt",
     "queryLspDone": "LSP-Diagnose abgefragt",
     "queryLspFailed": "LSP-Diagnoseabfrage fehlgeschlagen",

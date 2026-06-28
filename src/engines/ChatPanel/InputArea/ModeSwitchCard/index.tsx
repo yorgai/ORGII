@@ -17,7 +17,12 @@ import { stripMcpPrefix } from "@src/engines/SessionCore/core/interactiveTools";
 import { createLogger } from "@src/hooks/logger";
 
 import { ModeSwitchCardBody } from "./ModeSwitchCardBody";
-import { isResolved, skipMode, switchMode } from "./useModeSwitchActions";
+import {
+  deferMode,
+  isResolved,
+  skipMode,
+  switchMode,
+} from "./useModeSwitchActions";
 
 const log = createLogger("ModeSwitchInputCard");
 
@@ -94,6 +99,14 @@ export function ModeSwitchInputCard({
     });
   }, [pending]);
 
+  const handleDefer = useCallback(() => {
+    if (!pending) return;
+    setDismissed(pending.eventId);
+    deferMode(pending.eventId).catch((err: unknown) => {
+      log.error("[ModeSwitchInputCard] Failed to defer mode switch:", err);
+    });
+  }, [pending]);
+
   const isActive = !!pending && dismissed !== pending.eventId;
 
   useEffect(() => {
@@ -114,6 +127,7 @@ export function ModeSwitchInputCard({
         createdAt={pending.createdAt}
         onSwitch={handleSwitch}
         onSkip={handleSkip}
+        onDefer={handleDefer}
         collapsed={collapsed}
         onCollapse={onCollapse}
       />

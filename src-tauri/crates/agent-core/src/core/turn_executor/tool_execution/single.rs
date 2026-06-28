@@ -381,6 +381,16 @@ pub(super) async fn execute_single_tool(
         return SingleResult::EarlyExit(ToolBatchOutcome::EndTurn(String::new()));
     }
 
+    if tool_call.name == crate::tools::names::SUGGEST_MODE_SWITCH
+        && result.starts_with(
+            crate::tools::impls::orchestration::suggest_mode_switch::MODE_SWITCH_DEFERRED_PREFIX,
+        )
+    {
+        // User deferred the switch to keep chatting — end the turn so the
+        // session drops to idle and the user can send a follow-up message.
+        return SingleResult::EarlyExit(ToolBatchOutcome::EndTurn(String::new()));
+    }
+
     if tool_call.name == crate::tools::names::CREATE_PLAN
         && result.starts_with(
             crate::tools::impls::plan_mode::create_plan::PLAN_SUBMITTED_END_TURN_PREFIX,

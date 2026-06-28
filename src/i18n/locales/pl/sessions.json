@@ -845,6 +845,7 @@
     "skip": "Pomiń",
     "repoSetupLabel": "Konfiguracja Repo",
     "autoSkipCountdown": "Automatyczne pominięcie za {{seconds}} s",
+    "autoDeferCountdown": "Automatyczne wstrzymanie za {{seconds}} s",
     "questionProgress": "Odpowiedziano: {{answered}}, oczekujących: {{pending}}",
     "autoExecuteCountdown": "Automatyczne wykonanie za {{seconds}} s",
     "settingsTitle": "Ustawienia",
@@ -1105,6 +1106,7 @@
       "label": "Przełącz na tryb {{mode}}",
       "switch": "Przełącz",
       "skip": "Pomiń",
+      "defer": "Rozmawiaj dalej",
       "noReason": "Agent sugeruje zmianę trybu"
     },
     "askUserAnswered": "Odpowiedziano",
@@ -1415,6 +1417,7 @@
     "suggestModeSwitchFailed": "Nie udało się zasugerować zmiany trybu",
     "suggestModeSwitchSwitched": "Przełączono na tryb {{mode}}",
     "suggestModeSwitchSkipped": "Pominięto zmianę trybu",
+    "suggestModeSwitchDeferred": "Pozostało w bieżącym trybie",
     "queryLspRunning": "Wykonywanie zapytania diagnostyki LSP",
     "queryLspDone": "Wykonano zapytanie diagnostyki LSP",
     "queryLspFailed": "Zapytanie diagnostyki LSP nieudane",

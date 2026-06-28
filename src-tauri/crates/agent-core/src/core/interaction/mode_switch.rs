@@ -1,5 +1,6 @@
 //! Mode-switch manager — blocks the `suggest_mode_switch` tool until
-//! the user confirms (switch) or dismisses (skip) in the frontend.
+//! the user confirms (switch), dismisses (skip), or defers (defer) in the
+//! frontend.
 //!
 //! Uses the shared [`super::finalize`] primitives so:
 //!   * Stop interrupts a pending wait via the session cancel flag.
@@ -19,14 +20,17 @@ use crate::session::AgentExecMode;
 pub enum ModeSwitchChoice {
     /// User accepted the switch. Carries the target mode string (e.g. "plan").
     Switch(String),
-    /// User chose to stay in the current mode.
+    /// User chose to stay in the current mode and let the agent continue.
     Skip,
+    /// User chose to stay AND end the turn so they can keep chatting first.
+    Defer,
 }
 
 impl ModeSwitchChoice {
     /// Wire format strings used by the frontend Tauri commands.
     pub const SWITCH_STR: &'static str = "switch";
     pub const SKIP_STR: &'static str = "skip";
+    pub const DEFER_STR: &'static str = "defer";
 
     /// Parse from the wire string sent by the frontend.
     ///
@@ -39,6 +43,7 @@ impl ModeSwitchChoice {
                 target_mode.unwrap_or_else(|| AgentExecMode::Plan.as_str().to_string()),
             )),
             Self::SKIP_STR => Some(Self::Skip),
+            Self::DEFER_STR => Some(Self::Defer),
             _ => None,
         }
     }
@@ -157,6 +162,12 @@ impl ModeSwitchManager {
                 "User chose to stay in the current mode.".to_string(),
                 "skip",
             ),
+            ModeSwitchChoice::Defer => (
+                FinalizedStatus::Answered,
+                "User deferred the mode switch to keep chatting in the current mode."
+                    .to_string(),
+                "defer",
+            ),
         };
 
         finalize_interaction_event(
@@ -182,12 +193,13 @@ impl ModeSwitchManager {
         self.pending.lock().await.is_some()
     }
 
-    /// Auto-skip a pending request after the user-visible timeout elapses.
+    /// Auto-defer a pending request after the user-visible timeout elapses.
     ///
-    /// Mode switching follows timeout-as-continue semantics: if the user does
-    /// not respond, continue in the current mode instead of surfacing a tool error
+    /// Mode switching follows timeout-as-pause semantics: if the user does
+    /// not respond, end the turn (stay in the current mode) so they can
+    /// resume chatting, instead of letting the agent continue unsupervised
     /// or leaving the UI card awaiting forever.
-    pub async fn auto_skip_after_timeout(&self) {
+    pub async fn auto_defer_after_timeout(&self) {
         let Some(entry) = self.pending.lock().await.take() else {
             return;
         };
@@ -197,9 +209,9 @@ impl ModeSwitchManager {
             entry.tool_call_id.as_deref(),
             crate::tools::names::SUGGEST_MODE_SWITCH,
             FinalizedStatus::Answered,
-            "Mode-switch suggestion timed out; continuing in the current mode.",
+            "Mode-switch suggestion timed out; pausing for user input.",
             serde_json::json!({
-                "choice": "skip",
+                "choice": "defer",
                 "targetMode": entry.target_mode,
                 "auto": "timeout",
             }),
@@ -248,7 +260,7 @@ mod tests {
     use super::ModeSwitchManager;
 
     #[tokio::test]
-    async fn auto_skip_after_timeout_clears_pending_request() {
+    async fn auto_defer_after_timeout_clears_pending_request() {
         let manager = ModeSwitchManager::new();
         let receiver = manager
             .ask(
@@ -260,7 +272,7 @@ mod tests {
             .await;
         assert!(manager.is_pending().await);
 
-        manager.auto_skip_after_timeout().await;
+        manager.auto_defer_after_timeout().await;
 
         assert!(!manager.is_pending().await);
         assert!(receiver.await.is_err());

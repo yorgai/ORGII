@@ -34,7 +34,7 @@ import {
 // Resolved cache
 // ============================================
 
-export type ModeSwitchResolution = "switched" | "skipped";
+export type ModeSwitchResolution = "switched" | "skipped" | "deferred";
 
 const MAX_RESOLVED_CACHE = 200;
 const resolvedEvents = new Map<string, ModeSwitchResolution>();
@@ -85,7 +85,12 @@ async function markModeSwitchEventResolved(
       displayStatus: "completed",
       activityStatus: "processed",
       result: {
-        choice: resolution === "switched" ? "switch" : "skip",
+        choice:
+          resolution === "switched"
+            ? "switch"
+            : resolution === "deferred"
+              ? "defer"
+              : "skip",
         targetMode,
       },
     },
@@ -285,5 +290,18 @@ export async function skipMode(eventId: string): Promise<void> {
 
   if (isAgentSession(sessionId)) {
     await respondModeSwitch(sessionId, "skip");
+  }
+}
+
+export async function deferMode(eventId: string): Promise<void> {
+  const store = getInstrumentedStore();
+  const sessionId = store.get(activeSessionIdAtom);
+  if (!sessionId) return;
+
+  markResolved(eventId, "deferred");
+  await markModeSwitchEventResolved(eventId, sessionId, "deferred");
+
+  if (isAgentSession(sessionId)) {
+    await respondModeSwitch(sessionId, "defer");
   }
 }

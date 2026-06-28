@@ -837,6 +837,7 @@
     "skip": "Bỏ qua",
     "repoSetupLabel": "Repo Setup",
     "autoSkipCountdown": "Tự bỏ qua sau {{seconds}}s",
+    "autoDeferCountdown": "Tự tạm dừng sau {{seconds}}s",
     "questionProgress": "{{answered}} đã trả lời, {{pending}} đang chờ",
     "autoExecuteCountdown": "Tự thực thi sau {{seconds}}s",
     "settingsTitle": "Cài đặt",
@@ -1077,6 +1078,7 @@
       "label": "Chuyển sang {{mode}} Mode",
       "switch": "Chuyển",
       "skip": "Bỏ qua",
+      "defer": "Tiếp tục trò chuyện",
       "noReason": "Agent đề xuất chuyển chế độ"
     },
     "exploreSummary": {
@@ -1372,6 +1374,7 @@
     "suggestModeSwitchFailed": "Không thể đề xuất chuyển chế độ",
     "suggestModeSwitchSwitched": "Đã chuyển sang chế độ {{mode}}",
     "suggestModeSwitchSkipped": "Đã bỏ qua việc đổi chế độ",
+    "suggestModeSwitchDeferred": "Đã giữ trò chuyện ở chế độ hiện tại",
     "queryLspRunning": "Đang truy vấn chẩn đoán LSP",
     "queryLspDone": "Đã truy vấn chẩn đoán LSP",
     "queryLspFailed": "Truy vấn chẩn đoán LSP thất bại",

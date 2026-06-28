@@ -32,6 +32,7 @@ import {
 import type { EventVariant } from "@src/engines/SessionCore/rendering/types/universalProps";
 
 import { AskQuestionHistoryBody } from "../ask-question/AskQuestionHistoryChrome";
+import { resolveModeSwitchChoiceFromResultContent } from "./helpers";
 
 // ============================================
 // Types
@@ -41,14 +42,14 @@ export interface ModeSwitchEventProps extends RawEventInput {
   variant?: EventVariant;
 }
 
-type ResolvedStatus = "switched" | "skipped" | "pending";
+type ResolvedStatus = "switched" | "skipped" | "deferred" | "pending";
 
 // ============================================
 // Resolved Card (switched or skipped — collapsible, default collapsed)
 // ============================================
 
 const ResolvedCard: React.FC<{
-  status: "switched" | "skipped";
+  status: "switched" | "skipped" | "deferred";
   targetMode: string;
   reason: string;
   eventId?: string;
@@ -156,20 +157,12 @@ export const ModeSwitchEvent: React.FC<ModeSwitchEventProps> = (props) => {
   // Fallback signal: if `choice` was clobbered by a later generic
   // `agent:tool_result` merge, Rust's `ModeSwitchManager::respond` still
   // leaves a stable content prefix on result.content ("User accepted the
-  // mode switch to ..." vs "User chose to stay in the current mode.").
+  // mode switch to ...", "User chose to stay ...", or MODE_SWITCH_DEFERRED).
   // Use it to recover the user's actual choice instead of guessing.
   const resultContent =
     (typeof result?.content === "string" ? result.content : "") ||
     (typeof result?.observation === "string" ? result.observation : "");
-  const contentChoice: "switch" | "skip" | undefined = resultContent.startsWith(
-    "User accepted the mode switch"
-  )
-    ? "switch"
-    : resultContent.startsWith("MODE_SWITCH_ACCEPTED")
-      ? "switch"
-      : resultContent.startsWith("User chose to stay in the current mode")
-        ? "skip"
-        : undefined;
+  const contentChoice = resolveModeSwitchChoiceFromResultContent(resultContent);
 
   const cachedResolution = eventId ? getResolution(eventId) : undefined;
 
@@ -180,13 +173,17 @@ export const ModeSwitchEvent: React.FC<ModeSwitchEventProps> = (props) => {
     resolvedStatus = "skipped";
   } else if (resultChoice === "switch") {
     resolvedStatus = "switched";
+  } else if (resultChoice === "defer") {
+    resolvedStatus = "deferred";
   } else if (contentChoice === "switch") {
     resolvedStatus = "switched";
   } else if (contentChoice === "skip") {
     resolvedStatus = "skipped";
+  } else if (contentChoice === "defer") {
+    resolvedStatus = "deferred";
   } else if (displayStatus === "completed" && !resultChoice) {
     // Rust's `finalize_interaction_event` always writes `choice` ("switch" /
-    // "skip") on every terminal path — including timeout, stop, and superseded.
+    // "skip" / "defer") on every terminal path — including timeout, stop, and superseded.
     // Reaching this fallback means the structured result lost its `choice`
     // field AND the content prefix didn't match either of the known phrases
     // (Rust copy drift). The user actually saw a Plan card and acted on it;

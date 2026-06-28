@@ -841,6 +841,7 @@
     "skip": "跳過",
     "repoSetupLabel": "Repo 配置",
     "autoSkipCountdown": "{{seconds}}s 後自動跳過",
+    "autoDeferCountdown": "{{seconds}}s 後自動暫停",
     "questionProgress": "{{answered}} 已回答，{{pending}} 待回答",
     "autoExecuteCountdown": "{{seconds}}s 後自動執行",
     "settingsTitle": "設置",
@@ -1081,6 +1082,7 @@
       "label": "切換到 {{mode}} Mode",
       "switch": "切換",
       "skip": "跳過",
+      "defer": "再聊聊",
       "noReason": "Agent 建議切換模式"
     },
     "exploreSummary": {
@@ -1380,6 +1382,7 @@
     "suggestModeSwitchFailed": "無法建議切換模式",
     "suggestModeSwitchSwitched": "切換到 {{mode}} 模式",
     "suggestModeSwitchSkipped": "跳過模式切換",
+    "suggestModeSwitchDeferred": "已暫停,繼續目前對話",
     "queryLspRunning": "正在查詢 LSP 診斷",
     "queryLspDone": "查詢 LSP 診斷",
     "queryLspFailed": "LSP 診斷查詢失敗",

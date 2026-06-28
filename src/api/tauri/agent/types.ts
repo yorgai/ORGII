@@ -22,7 +22,7 @@ export type AgentToolFilter =
 
 export type PermissionResponseValue = "allow" | "deny" | "always_allow";
 
-export type ModeSwitchChoice = "switch" | "skip";
+export type ModeSwitchChoice = "switch" | "skip" | "defer";
 
 export type PlanApprovalChoice = "approve" | "approve_with_edits" | "reject";
 

@@ -24,10 +24,12 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         status_icons: &[
             ("switched", "check-circle-2"),
             ("skipped", "arrow-right-left"),
+            ("deferred", "message-circle"),
         ],
         status_labels: &[
             ("switched", "tools.suggestModeSwitchSwitched"),
             ("skipped", "tools.suggestModeSwitchSkipped"),
+            ("deferred", "tools.suggestModeSwitchDeferred"),
         ],
         required_capability: CapOrch,
         ..DEFAULT_TOOL_ENTRY

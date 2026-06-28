@@ -839,6 +839,7 @@
     "skip": "Пропустить",
     "repoSetupLabel": "Repo Setup",
     "autoSkipCountdown": "Автопропуск через {{seconds}}с",
+    "autoDeferCountdown": "Автопауза через {{seconds}}с",
     "questionProgress": "{{answered}} отвечено, {{pending}} ожидает",
     "autoExecuteCountdown": "Автовыполнение через {{seconds}}с",
     "settingsTitle": "Настройки",
@@ -1093,6 +1094,7 @@
       "label": "Переключить на {{mode}} Mode",
       "switch": "Переключить",
       "skip": "Пропустить",
+      "defer": "Продолжить диалог",
       "noReason": "Agent предлагает сменить режим"
     },
     "exploreSummary": {
@@ -1384,6 +1386,7 @@
     "suggestModeSwitchFailed": "Не удалось предложить смену режима",
     "suggestModeSwitchSwitched": "Переключено в режим {{mode}}",
     "suggestModeSwitchSkipped": "Смена режима пропущена",
+    "suggestModeSwitchDeferred": "Остались в текущем режиме",
     "queryLspRunning": "Запрос LSP-диагностики",
     "queryLspDone": "LSP-диагностика получена",
     "queryLspFailed": "Сбой запроса LSP-диагностики",

@@ -145,7 +145,7 @@ export const PermissionResponseInput = z.object({
 
 export const ModeSwitchResponseInput = z.object({
   sessionId: z.string(),
-  choice: z.enum(["switch", "skip"]),
+  choice: z.enum(["switch", "skip", "defer"]),
   targetMode: z.string().optional(),
 });
 

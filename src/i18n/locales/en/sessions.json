@@ -878,6 +878,7 @@
     "skip": "Skip",
     "repoSetupLabel": "Repo Setup",
     "autoSkipCountdown": "Auto-skip in {{seconds}}s",
+    "autoDeferCountdown": "Auto-pause in {{seconds}}s",
     "questionProgress": "{{answered}} answered, {{pending}} pending",
     "autoExecuteCountdown": "Auto-execute in {{seconds}}s",
     "settingsTitle": "Settings",
@@ -1122,6 +1123,7 @@
       "label": "Switch to {{mode}} Mode",
       "switch": "Switch",
       "skip": "Skip",
+      "defer": "Keep chatting",
       "noReason": "The agent suggests switching modes"
     },
     "askUserAnswered": "Answered",
@@ -1432,6 +1434,7 @@
     "suggestModeSwitchFailed": "Could not suggest mode switch",
     "suggestModeSwitchSwitched": "Switched to {{mode}} Mode",
     "suggestModeSwitchSkipped": "Mode change skipped",
+    "suggestModeSwitchDeferred": "Kept chatting in current mode",
     "queryLspRunning": "Querying LSP diagnostics",
     "queryLspDone": "Queried LSP diagnostics",
     "queryLspFailed": "LSP diagnostics query failed",
