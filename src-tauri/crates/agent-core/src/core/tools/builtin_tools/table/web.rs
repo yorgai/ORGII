@@ -47,9 +47,6 @@ const INTERNAL_BROWSER_ACTION_ICONS: &[(&str, &str)] = &[
     ("input", "text-cursor-input"),
     ("select", "list-filter"),
     ("scroll", "move-vertical"),
-    ("show_mask", "eye"),
-    ("hide_mask", "eye-off"),
-    ("clean_up", "sparkles"),
 ];
 
 const INTERNAL_BROWSER_ACTIONS: &[ActionEntry] = &[
@@ -60,9 +57,6 @@ const INTERNAL_BROWSER_ACTIONS: &[ActionEntry] = &[
     action_sub!("input", "Input text into an indexed element in the internal browser", SubInternalBrowser, labels: "tools.internalBrowserInputRunning", "tools.internalBrowserInputDone", "tools.internalBrowserInputFailed"),
     action_sub!("select", "Select an option in the internal browser", SubInternalBrowser, labels: "tools.internalBrowserSelectRunning", "tools.internalBrowserSelectDone", "tools.internalBrowserSelectFailed"),
     action_sub!("scroll", "Scroll the internal browser viewport", SubInternalBrowser, labels: "tools.internalBrowserScrollRunning", "tools.internalBrowserScrollDone", "tools.internalBrowserScrollFailed"),
-    action_sub!("show_mask", "Show the internal browser element mask", SubInternalBrowser, labels: "tools.internalBrowserShowMaskRunning", "tools.internalBrowserShowMaskDone", "tools.internalBrowserShowMaskFailed"),
-    action_sub!("hide_mask", "Hide the internal browser element mask", SubInternalBrowser, labels: "tools.internalBrowserHideMaskRunning", "tools.internalBrowserHideMaskDone", "tools.internalBrowserHideMaskFailed"),
-    action_sub!("clean_up", "Clean up internal browser overlays", SubInternalBrowser, labels: "tools.internalBrowserCleanUpRunning", "tools.internalBrowserCleanUpDone", "tools.internalBrowserCleanUpFailed"),
 ];
 
 const PLAYWRIGHT_CLI_ACTIONS: &[ActionEntry] = &[
@@ -212,8 +206,8 @@ pub(super) static TOOLS: &[ToolEntry] = &[
     },
     ToolEntry {
         name: tool_names::CONTROL_INTERNAL_BROWSER,
-        description: "Inspect the currently visible ORGII internal Browser WebView.",
-        description_detail: "Targets the active internal browser-session WebView tracked by the frontend lifecycle. This read-only stage exposes list, is_ready, and get_state through the embedded Tauri/WebView Page Agent rather than external Chrome or Playwright, and never accepts arbitrary WebView labels from the model.",
+        description: "Inspect and control the currently visible ORGII internal Browser WebView.",
+        description_detail: "Targets the active internal browser-session WebView tracked by the frontend lifecycle. Exposes list, is_ready, get_state, click, input, select, and scroll through the embedded Tauri/WebView Page Agent rather than external Chrome or Playwright, and never accepts arbitrary WebView labels from the model.",
         category: tool_categories::WEB,
         icon_id: "mouse-pointer-click",
         simulator_app: AppBrowser,
