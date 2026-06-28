@@ -40,6 +40,8 @@ const AGENT_BROWSER_CLI_ACTIONS: &[ActionEntry] = &[
 ];
 
 const INTERNAL_BROWSER_ACTION_ICONS: &[(&str, &str)] = &[
+    ("list", "list"),
+    ("is_ready", "circle-check"),
     ("get_state", "scan-eye"),
     ("click", "mouse-pointer-click"),
     ("input", "text-cursor-input"),
@@ -51,6 +53,8 @@ const INTERNAL_BROWSER_ACTION_ICONS: &[(&str, &str)] = &[
 ];
 
 const INTERNAL_BROWSER_ACTIONS: &[ActionEntry] = &[
+    action_sub!("list", "List internal browser targets", SubInternalBrowser, labels: "tools.internalBrowserRunning", "tools.internalBrowserDone", "tools.internalBrowserFailed"),
+    action_sub!("is_ready", "Check whether the active internal browser Page Agent is ready", SubInternalBrowser, labels: "tools.internalBrowserRunning", "tools.internalBrowserDone", "tools.internalBrowserFailed"),
     action_sub!("get_state", "Read the internal browser state", SubInternalBrowser, labels: "tools.internalBrowserGetStateRunning", "tools.internalBrowserGetStateDone", "tools.internalBrowserGetStateFailed"),
     action_sub!("click", "Click an indexed element in the internal browser", SubInternalBrowser, labels: "tools.internalBrowserClickRunning", "tools.internalBrowserClickDone", "tools.internalBrowserClickFailed"),
     action_sub!("input", "Input text into an indexed element in the internal browser", SubInternalBrowser, labels: "tools.internalBrowserInputRunning", "tools.internalBrowserInputDone", "tools.internalBrowserInputFailed"),
@@ -208,8 +212,8 @@ pub(super) static TOOLS: &[ToolEntry] = &[
     },
     ToolEntry {
         name: tool_names::CONTROL_INTERNAL_BROWSER,
-        description: "Internal browser automation is currently unavailable to agents.",
-        description_detail: "Agents should use the selected external browser CLI provider tool for browser automation, or ask the user to use the Workstation Browser UI. Frontend/Tauri Workstation Browser commands remain available outside the agent tool runtime.",
+        description: "Inspect the currently visible ORGII internal Browser WebView.",
+        description_detail: "Targets the active internal browser-session WebView tracked by the frontend lifecycle. This read-only stage exposes list, is_ready, and get_state through the embedded Tauri/WebView Page Agent rather than external Chrome or Playwright, and never accepts arbitrary WebView labels from the model.",
         category: tool_categories::WEB,
         icon_id: "mouse-pointer-click",
         simulator_app: AppBrowser,
