@@ -3,10 +3,17 @@
 //! Direct frontend access to internal browser automation for testing and debugging.
 //! These commands expose the `window.__PAGE_AGENT__` API injected into inline webviews.
 
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tauri::{AppHandle, Manager};
+use tokio::time::{Duration, Instant};
+use uuid::Uuid;
 
 use super::logging::eval_js_with_result;
+
+const PAGE_AGENT_PENDING_RESULT: &str = "__ORGII_PAGE_AGENT_PENDING__";
+const PAGE_AGENT_POLL_INTERVAL_MS: u64 = 50;
 
 // ============================================================================
 // Types
@@ -29,6 +36,113 @@ pub struct InternalBrowserActionResult {
     pub message: String,
 }
 
+/// Lightweight browser location state, without rebuilding the Page Agent DOM tree.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InternalBrowserLocation {
+    pub url: String,
+    pub title: String,
+}
+
+fn page_agent_missing_action() -> serde_json::Value {
+    json!({
+        "success": false,
+        "message": "Page Agent not initialized"
+    })
+}
+
+async fn eval_browser_call<T>(
+    webview: &tauri::Webview,
+    expression: String,
+    timeout_ms: u64,
+) -> Result<T, String>
+where
+    T: DeserializeOwned,
+{
+    let call_id = Uuid::new_v4().to_string();
+    let call_id_literal = serde_json::to_string(&call_id)
+        .map_err(|err| format!("Failed to encode browser eval call id: {err}"))?;
+
+    let script = format!(
+        r#"
+        (async () => {{
+            const callId = {call_id_literal};
+            window.__PAGE_AGENT_RESULTS__ = window.__PAGE_AGENT_RESULTS__ || {{}};
+            try {{
+                window.__PAGE_AGENT_RESULTS__[callId] = await ({expression});
+            }} catch (error) {{
+                window.__PAGE_AGENT_RESULTS__[callId] = {{
+                    success: false,
+                    message: `Browser eval failed: ${{error?.message || String(error)}}`
+                }};
+            }}
+        }})();
+        "#
+    );
+
+    webview
+        .eval(&script)
+        .map_err(|err| format!("Failed to evaluate browser script: {err}"))?;
+
+    let pending_literal = serde_json::to_string(PAGE_AGENT_PENDING_RESULT)
+        .map_err(|err| format!("Failed to encode browser eval pending marker: {err}"))?;
+    let read_script = format!(
+        r#"
+        (() => {{
+            const callId = {call_id_literal};
+            const store = window.__PAGE_AGENT_RESULTS__;
+            if (!store || !Object.prototype.hasOwnProperty.call(store, callId)) {{
+                return {pending_literal};
+            }}
+            const value = store[callId];
+            delete store[callId];
+            return JSON.stringify(value);
+        }})()
+        "#
+    );
+
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+    loop {
+        let result = eval_js_with_result(webview, &read_script, PAGE_AGENT_PENDING_RESULT).await;
+        if result != PAGE_AGENT_PENDING_RESULT {
+            return serde_json::from_str(&result)
+                .map_err(|err| format!("Failed to parse browser eval result: {err}"));
+        }
+
+        if Instant::now() >= deadline {
+            return Err(format!(
+                "Timed out waiting for browser eval result after {timeout_ms}ms"
+            ));
+        }
+
+        tokio::time::sleep(Duration::from_millis(PAGE_AGENT_POLL_INTERVAL_MS)).await;
+    }
+}
+
+async fn eval_page_agent_call<T>(
+    webview: &tauri::Webview,
+    expression: String,
+    missing_value: serde_json::Value,
+    timeout_ms: u64,
+) -> Result<T, String>
+where
+    T: DeserializeOwned,
+{
+    let missing_literal = serde_json::to_string(&missing_value)
+        .map_err(|err| format!("Failed to encode Page Agent fallback: {err}"))?;
+    let guarded_expression = format!(
+        r#"
+        (async () => {{
+            if (!window.__PAGE_AGENT__) {{
+                return {missing_literal};
+            }}
+            return await ({expression});
+        }})()
+        "#
+    );
+
+    eval_browser_call(webview, guarded_expression, timeout_ms).await
+}
+
 // ============================================================================
 // Commands
 // ============================================================================
@@ -45,28 +159,47 @@ pub async fn internal_browser_get_state(
         .get_webview(&label)
         .ok_or_else(|| format!("Webview '{}' not found", label))?;
 
-    // Execute the getBrowserState function
-    let _ = webview.eval(
+    eval_browser_call(
+        &webview,
         r#"
-        if (window.__PAGE_AGENT__) {
-            window.__PAGE_AGENT_RESULT__ = JSON.stringify(window.__PAGE_AGENT__.getBrowserState());
-        } else {
-            window.__PAGE_AGENT_RESULT__ = JSON.stringify({
-                url: window.location.href,
-                title: document.title,
-                header: "Page Agent not initialized",
-                content: "",
-                footer: ""
-            });
-        }
-        "#,
-    );
+        (async () => {
+            if (!window.__PAGE_AGENT__) {
+                return {
+                    url: window.location.href,
+                    title: document.title || "",
+                    header: "Page Agent not initialized",
+                    content: "",
+                    footer: ""
+                };
+            }
+            return window.__PAGE_AGENT__.getBrowserState();
+        })()
+        "#
+        .to_string(),
+        2_000,
+    )
+    .await
+}
 
-    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+/// Get the current URL/title without invoking the Page Agent DOM snapshot path.
+pub async fn internal_browser_get_location(
+    app: AppHandle,
+    label: String,
+) -> Result<InternalBrowserLocation, String> {
+    let webview = app
+        .get_webview(&label)
+        .ok_or_else(|| format!("Webview '{}' not found", label))?;
 
-    let result = eval_js_with_result(&webview, "window.__PAGE_AGENT_RESULT__ || '{}'", "{}").await;
-
-    serde_json::from_str(&result).map_err(|e| format!("Failed to parse result: {}", e))
+    eval_browser_call(
+        &webview,
+        r#"(() => ({
+            url: window.location.href,
+            title: document.title || ""
+        }))()"#
+            .to_string(),
+        1_000,
+    )
+    .await
 }
 
 /// Click an element by its highlight index.
@@ -80,28 +213,13 @@ pub async fn internal_browser_click(
         .get_webview(&label)
         .ok_or_else(|| format!("Webview '{}' not found", label))?;
 
-    let script = format!(
-        r#"
-        (async () => {{
-            if (window.__PAGE_AGENT__) {{
-                window.__PAGE_AGENT_RESULT__ = JSON.stringify(await window.__PAGE_AGENT__.clickElement({}));
-            }} else {{
-                window.__PAGE_AGENT_RESULT__ = JSON.stringify({{
-                    success: false,
-                    message: "Page Agent not initialized"
-                }});
-            }}
-        }})();
-        "#,
-        index
-    );
-
-    let _ = webview.eval(&script);
-    tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-
-    let result = eval_js_with_result(&webview, "window.__PAGE_AGENT_RESULT__ || '{}'", "{}").await;
-
-    serde_json::from_str(&result).map_err(|e| format!("Failed to parse result: {}", e))
+    eval_page_agent_call(
+        &webview,
+        format!("window.__PAGE_AGENT__.clickElement({index})"),
+        page_agent_missing_action(),
+        2_000,
+    )
+    .await
 }
 
 /// Input text into an element by its highlight index.
@@ -116,35 +234,16 @@ pub async fn internal_browser_input(
         .get_webview(&label)
         .ok_or_else(|| format!("Webview '{}' not found", label))?;
 
-    // Escape the text for JavaScript
-    let escaped_text = text
-        .replace('\\', "\\\\")
-        .replace('"', "\\\"")
-        .replace('\n', "\\n")
-        .replace('\r', "\\r");
+    let text_literal = serde_json::to_string(&text)
+        .map_err(|err| format!("Failed to encode input text: {err}"))?;
 
-    let script = format!(
-        r#"
-        (async () => {{
-            if (window.__PAGE_AGENT__) {{
-                window.__PAGE_AGENT_RESULT__ = JSON.stringify(await window.__PAGE_AGENT__.inputText({}, "{}"));
-            }} else {{
-                window.__PAGE_AGENT_RESULT__ = JSON.stringify({{
-                    success: false,
-                    message: "Page Agent not initialized"
-                }});
-            }}
-        }})();
-        "#,
-        index, escaped_text
-    );
-
-    let _ = webview.eval(&script);
-    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-    let result = eval_js_with_result(&webview, "window.__PAGE_AGENT_RESULT__ || '{}'", "{}").await;
-
-    serde_json::from_str(&result).map_err(|e| format!("Failed to parse result: {}", e))
+    eval_page_agent_call(
+        &webview,
+        format!("window.__PAGE_AGENT__.inputText({index}, {text_literal})"),
+        page_agent_missing_action(),
+        2_000,
+    )
+    .await
 }
 
 /// Select an option from a dropdown by its highlight index.
@@ -159,30 +258,16 @@ pub async fn internal_browser_select(
         .get_webview(&label)
         .ok_or_else(|| format!("Webview '{}' not found", label))?;
 
-    let escaped_option = option.replace('\\', "\\\\").replace('"', "\\\"");
+    let option_literal = serde_json::to_string(&option)
+        .map_err(|err| format!("Failed to encode option text: {err}"))?;
 
-    let script = format!(
-        r#"
-        (async () => {{
-            if (window.__PAGE_AGENT__) {{
-                window.__PAGE_AGENT_RESULT__ = JSON.stringify(await window.__PAGE_AGENT__.selectOption({}, "{}"));
-            }} else {{
-                window.__PAGE_AGENT_RESULT__ = JSON.stringify({{
-                    success: false,
-                    message: "Page Agent not initialized"
-                }});
-            }}
-        }})();
-        "#,
-        index, escaped_option
-    );
-
-    let _ = webview.eval(&script);
-    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-    let result = eval_js_with_result(&webview, "window.__PAGE_AGENT_RESULT__ || '{}'", "{}").await;
-
-    serde_json::from_str(&result).map_err(|e| format!("Failed to parse result: {}", e))
+    eval_page_agent_call(
+        &webview,
+        format!("window.__PAGE_AGENT__.selectOption({index}, {option_literal})"),
+        page_agent_missing_action(),
+        2_000,
+    )
+    .await
 }
 
 /// Scroll the page or an element.
@@ -203,83 +288,85 @@ pub async fn internal_browser_scroll(
         Some(idx) => idx.to_string(),
         None => "null".to_string(),
     };
+    let direction_literal = serde_json::to_string(&direction)
+        .map_err(|err| format!("Failed to encode scroll direction: {err}"))?;
 
-    let script = format!(
-        r#"
-        (async () => {{
-            if (window.__PAGE_AGENT__) {{
-                window.__PAGE_AGENT_RESULT__ = JSON.stringify(await window.__PAGE_AGENT__.scroll("{}", {}, {}));
-            }} else {{
-                window.__PAGE_AGENT_RESULT__ = JSON.stringify({{
-                    success: false,
-                    message: "Page Agent not initialized"
-                }});
-            }}
-        }})();
-        "#,
-        direction, pages_val, element_arg
-    );
-
-    let _ = webview.eval(&script);
-    tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
-
-    let result = eval_js_with_result(&webview, "window.__PAGE_AGENT_RESULT__ || '{}'", "{}").await;
-
-    serde_json::from_str(&result).map_err(|e| format!("Failed to parse result: {}", e))
+    eval_page_agent_call(
+        &webview,
+        format!("window.__PAGE_AGENT__.scroll({direction_literal}, {pages_val}, {element_arg})"),
+        page_agent_missing_action(),
+        2_000,
+    )
+    .await
 }
 
 /// Show the user takeover mask (blocks user interaction).
 #[tauri::command]
-pub async fn internal_browser_show_mask(app: AppHandle, label: String) -> Result<(), String> {
+pub async fn internal_browser_show_mask(
+    app: AppHandle,
+    label: String,
+) -> Result<InternalBrowserActionResult, String> {
     let webview = app
         .get_webview(&label)
         .ok_or_else(|| format!("Webview '{}' not found", label))?;
 
-    let _ = webview.eval(
-        r#"
-        if (window.__PAGE_AGENT__) {
+    eval_page_agent_call(
+        &webview,
+        r#"(() => {
             window.__PAGE_AGENT__.showMask();
-        }
-        "#,
-    );
-
-    Ok(())
+            return { success: true, message: "Showed the Page Agent mask." };
+        })()"#
+            .to_string(),
+        page_agent_missing_action(),
+        2_000,
+    )
+    .await
 }
 
 /// Hide the user takeover mask (allows user interaction).
 #[tauri::command]
-pub async fn internal_browser_hide_mask(app: AppHandle, label: String) -> Result<(), String> {
+pub async fn internal_browser_hide_mask(
+    app: AppHandle,
+    label: String,
+) -> Result<InternalBrowserActionResult, String> {
     let webview = app
         .get_webview(&label)
         .ok_or_else(|| format!("Webview '{}' not found", label))?;
 
-    let _ = webview.eval(
-        r#"
-        if (window.__PAGE_AGENT__) {
+    eval_page_agent_call(
+        &webview,
+        r#"(() => {
             window.__PAGE_AGENT__.hideMask();
-        }
-        "#,
-    );
-
-    Ok(())
+            return { success: true, message: "Hid the Page Agent mask." };
+        })()"#
+            .to_string(),
+        page_agent_missing_action(),
+        2_000,
+    )
+    .await
 }
 
 /// Clean up element highlights.
 #[tauri::command]
-pub async fn internal_browser_clean_up(app: AppHandle, label: String) -> Result<(), String> {
+pub async fn internal_browser_clean_up(
+    app: AppHandle,
+    label: String,
+) -> Result<InternalBrowserActionResult, String> {
     let webview = app
         .get_webview(&label)
         .ok_or_else(|| format!("Webview '{}' not found", label))?;
 
-    let _ = webview.eval(
-        r#"
-        if (window.__PAGE_AGENT__) {
+    eval_page_agent_call(
+        &webview,
+        r#"(() => {
             window.__PAGE_AGENT__.cleanUpHighlights();
-        }
-        "#,
-    );
-
-    Ok(())
+            return { success: true, message: "Cleaned up Page Agent highlights and overlays." };
+        })()"#
+            .to_string(),
+        page_agent_missing_action(),
+        2_000,
+    )
+    .await
 }
 
 /// Check if Page Agent is initialized in a webview.
@@ -289,16 +376,11 @@ pub async fn internal_browser_is_ready(app: AppHandle, label: String) -> Result<
         .get_webview(&label)
         .ok_or_else(|| format!("Webview '{}' not found", label))?;
 
-    let _ = webview.eval(
-        r#"
-        window.__PAGE_AGENT_READY__ = (typeof window.__PAGE_AGENT__ !== 'undefined').toString();
-        "#,
-    );
-
-    tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-
-    let result =
-        eval_js_with_result(&webview, "window.__PAGE_AGENT_READY__ || 'false'", "false").await;
-
-    Ok(result == "true")
+    eval_page_agent_call(
+        &webview,
+        "(typeof window.__PAGE_AGENT__ !== 'undefined')".to_string(),
+        json!(false),
+        1_000,
+    )
+    .await
 }

@@ -7,8 +7,9 @@
 use async_trait::async_trait;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use tauri::AppHandle;
+use serde_json::{json, Value};
+use tauri::{AppHandle, Emitter};
+use tokio::time::{sleep, Duration, Instant};
 
 use crate::tools::categories as tool_categories;
 use crate::tools::names as tool_names;
@@ -16,6 +17,8 @@ use crate::tools::traits::{params_schema, parse_params_described, Tool, ToolErro
 
 const INTERNAL_BROWSER_NOT_READY_MESSAGE: &str =
     "Internal browser automation requires a running Tauri app handle.";
+const ACTION_URL_REFRESH_TIMEOUT_MS: u64 = 700;
+const ACTION_URL_REFRESH_POLL_MS: u64 = 100;
 
 #[derive(Debug, Clone, Copy, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -34,6 +37,12 @@ enum InternalBrowserAction {
     Select,
     /// Scroll the active page or an indexed scrollable element.
     Scroll,
+    /// Show the Page Agent mask in the active internal browser.
+    ShowMask,
+    /// Hide the Page Agent mask in the active internal browser.
+    HideMask,
+    /// Clean up Page Agent highlights and overlays in the active internal browser.
+    CleanUp,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -43,6 +52,13 @@ enum InternalBrowserScrollDirection {
     Down,
     Left,
     Right,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UrlRefreshMode {
+    None,
+    Immediate,
+    WaitForChange,
 }
 
 impl InternalBrowserScrollDirection {
@@ -140,6 +156,11 @@ struct InternalBrowserActionResponse {
     success: bool,
     action: &'static str,
     target: InternalBrowserToolTarget,
+    before_url: String,
+    actual_url: String,
+    actual_url_changed: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    url_refresh_error: Option<String>,
     result: browser::InternalBrowserActionResult,
     message: String,
 }
@@ -304,17 +325,11 @@ impl InternalBrowserTool {
     async fn execute_click(&self, params: &InternalBrowserParams) -> Result<String, ToolError> {
         let index = required_index(params, "click")?;
         let (app, target) = self.resolve_ready_target().await?;
-        let result = browser::internal_browser_click(app, target.label.clone(), index)
+        let result = browser::internal_browser_click(app.clone(), target.label.clone(), index)
             .await
             .map_err(|err| ToolError::ExecutionFailed(format!("Failed to click element: {err}")))?;
-        let response = InternalBrowserActionResponse {
-            success: result.success,
-            action: "click",
-            target,
-            message: result.message.clone(),
-            result,
-        };
-        Self::response_text(&response)
+        self.action_response(app, "click", target, result, UrlRefreshMode::WaitForChange)
+            .await
     }
 
     async fn execute_input(&self, params: &InternalBrowserParams) -> Result<String, ToolError> {
@@ -324,17 +339,14 @@ impl InternalBrowserTool {
             .clone()
             .ok_or_else(|| ToolError::InvalidParams("input requires text".to_string()))?;
         let (app, target) = self.resolve_ready_target().await?;
-        let result = browser::internal_browser_input(app, target.label.clone(), index, text)
+        let result =
+            browser::internal_browser_input(app.clone(), target.label.clone(), index, text)
+                .await
+                .map_err(|err| {
+                    ToolError::ExecutionFailed(format!("Failed to input text: {err}"))
+                })?;
+        self.action_response(app, "input", target, result, UrlRefreshMode::Immediate)
             .await
-            .map_err(|err| ToolError::ExecutionFailed(format!("Failed to input text: {err}")))?;
-        let response = InternalBrowserActionResponse {
-            success: result.success,
-            action: "input",
-            target,
-            message: result.message.clone(),
-            result,
-        };
-        Self::response_text(&response)
     }
 
     async fn execute_select(&self, params: &InternalBrowserParams) -> Result<String, ToolError> {
@@ -344,17 +356,14 @@ impl InternalBrowserTool {
             .clone()
             .ok_or_else(|| ToolError::InvalidParams("select requires option".to_string()))?;
         let (app, target) = self.resolve_ready_target().await?;
-        let result = browser::internal_browser_select(app, target.label.clone(), index, option)
+        let result =
+            browser::internal_browser_select(app.clone(), target.label.clone(), index, option)
+                .await
+                .map_err(|err| {
+                    ToolError::ExecutionFailed(format!("Failed to select option: {err}"))
+                })?;
+        self.action_response(app, "select", target, result, UrlRefreshMode::Immediate)
             .await
-            .map_err(|err| ToolError::ExecutionFailed(format!("Failed to select option: {err}")))?;
-        let response = InternalBrowserActionResponse {
-            success: result.success,
-            action: "select",
-            target,
-            message: result.message.clone(),
-            result,
-        };
-        Self::response_text(&response)
     }
 
     async fn execute_scroll(&self, params: &InternalBrowserParams) -> Result<String, ToolError> {
@@ -368,7 +377,7 @@ impl InternalBrowserTool {
 
         let (app, target) = self.resolve_ready_target().await?;
         let result = browser::internal_browser_scroll(
-            app,
+            app.clone(),
             target.label.clone(),
             direction.as_page_agent_str().to_string(),
             params.pages,
@@ -376,14 +385,143 @@ impl InternalBrowserTool {
         )
         .await
         .map_err(|err| ToolError::ExecutionFailed(format!("Failed to scroll: {err}")))?;
+        self.action_response(app, "scroll", target, result, UrlRefreshMode::Immediate)
+            .await
+    }
+
+    async fn execute_show_mask(&self) -> Result<String, ToolError> {
+        let (app, target) = self.resolve_ready_target().await?;
+        let result = browser::internal_browser_show_mask(app.clone(), target.label.clone())
+            .await
+            .map_err(|err| ToolError::ExecutionFailed(format!("Failed to show mask: {err}")))?;
+        self.action_response(app, "show_mask", target, result, UrlRefreshMode::None)
+            .await
+    }
+
+    async fn execute_hide_mask(&self) -> Result<String, ToolError> {
+        let (app, target) = self.resolve_ready_target().await?;
+        let result = browser::internal_browser_hide_mask(app.clone(), target.label.clone())
+            .await
+            .map_err(|err| ToolError::ExecutionFailed(format!("Failed to hide mask: {err}")))?;
+        self.action_response(app, "hide_mask", target, result, UrlRefreshMode::None)
+            .await
+    }
+
+    async fn execute_clean_up(&self) -> Result<String, ToolError> {
+        let (app, target) = self.resolve_ready_target().await?;
+        let result = browser::internal_browser_clean_up(app.clone(), target.label.clone())
+            .await
+            .map_err(|err| {
+                ToolError::ExecutionFailed(format!("Failed to clean up overlays: {err}"))
+            })?;
+        self.action_response(app, "clean_up", target, result, UrlRefreshMode::None)
+            .await
+    }
+
+    async fn action_response(
+        &self,
+        app: AppHandle,
+        action: &'static str,
+        target: InternalBrowserToolTarget,
+        result: browser::InternalBrowserActionResult,
+        refresh_url: UrlRefreshMode,
+    ) -> Result<String, ToolError> {
+        let before_url = target.url.clone();
+        let mut actual_url = before_url.clone();
+        let mut actual_title: Option<String> = None;
+        let mut url_refresh_error = None;
+
+        match Self::refresh_location_after_action(
+            app.clone(),
+            target.label.clone(),
+            &before_url,
+            refresh_url,
+        )
+        .await
+        {
+            Ok(Some(location)) => {
+                actual_url = location.url;
+                actual_title = Some(location.title);
+            }
+            Ok(None) => {}
+            Err(err) => {
+                url_refresh_error = Some(err);
+            }
+        }
+
+        let actual_url_changed = actual_url != before_url;
+        if actual_url_changed {
+            let _ = app.emit(
+                "internal-browser:url-changed",
+                json!({
+                    "browserSessionId": target.browser_session_id.clone(),
+                    "label": target.label.clone(),
+                    "url": actual_url.clone(),
+                    "title": actual_title.clone(),
+                    "source": "agent-dom-action"
+                }),
+            );
+        }
+
         let response = InternalBrowserActionResponse {
             success: result.success,
-            action: "scroll",
+            action,
             target,
+            before_url,
+            actual_url,
+            actual_url_changed,
+            url_refresh_error,
             message: result.message.clone(),
             result,
         };
         Self::response_text(&response)
+    }
+
+    async fn refresh_location_after_action(
+        app: AppHandle,
+        label: String,
+        before_url: &str,
+        mode: UrlRefreshMode,
+    ) -> Result<Option<browser::InternalBrowserLocation>, String> {
+        match mode {
+            UrlRefreshMode::None => Ok(None),
+            UrlRefreshMode::Immediate => browser::internal_browser_get_location(app, label)
+                .await
+                .map(Some),
+            UrlRefreshMode::WaitForChange => {
+                let deadline =
+                    Instant::now() + Duration::from_millis(ACTION_URL_REFRESH_TIMEOUT_MS);
+                let mut last_location = None;
+                let mut last_error = None;
+
+                loop {
+                    match browser::internal_browser_get_location(app.clone(), label.clone()).await {
+                        Ok(location) => {
+                            if location.url != before_url {
+                                return Ok(Some(location));
+                            }
+                            last_location = Some(location);
+                        }
+                        Err(err) => {
+                            last_error = Some(err);
+                        }
+                    }
+
+                    if Instant::now() >= deadline {
+                        return if let Some(location) = last_location {
+                            Ok(Some(location))
+                        } else {
+                            Err(last_error.unwrap_or_else(|| {
+                                "Timed out refreshing internal browser URL after action."
+                                    .to_string()
+                            }))
+                        };
+                    }
+
+                    sleep(Duration::from_millis(ACTION_URL_REFRESH_POLL_MS)).await;
+                }
+            }
+        }
     }
 }
 
@@ -461,7 +599,7 @@ impl Tool for InternalBrowserTool {
     }
 
     fn description(&self) -> &str {
-        "Inspect and control the currently visible ORGII internal Browser WebView. Resolves only the active internal browser target and supports list, is_ready, get_state, click, input, select, and scroll."
+        "Inspect and control the currently visible ORGII internal Browser WebView. Resolves only the active internal browser target and supports list, is_ready, get_state, click, input, select, scroll, show_mask, hide_mask, and clean_up. Call get_state before indexed actions; indexes are page-state snapshots and may become stale after DOM changes, scrolling, or navigation."
     }
 
     fn is_ready(&self) -> bool {
@@ -477,7 +615,7 @@ impl Tool for InternalBrowserTool {
     }
 
     fn search_hint(&self) -> &str {
-        "internal browser webview tauri webview2 dom page agent get_state click input select scroll is_ready"
+        "internal browser webview tauri webview2 dom page agent get_state click input select scroll show_mask hide_mask clean_up is_ready"
     }
 
     fn parameters(&self) -> Value {
@@ -498,6 +636,9 @@ impl Tool for InternalBrowserTool {
             InternalBrowserAction::Input => self.execute_input(&params).await,
             InternalBrowserAction::Select => self.execute_select(&params).await,
             InternalBrowserAction::Scroll => self.execute_scroll(&params).await,
+            InternalBrowserAction::ShowMask => self.execute_show_mask().await,
+            InternalBrowserAction::HideMask => self.execute_hide_mask().await,
+            InternalBrowserAction::CleanUp => self.execute_clean_up().await,
         }
     }
 
@@ -610,5 +751,19 @@ mod tests {
             InternalBrowserScrollDirection::Right.as_page_agent_str(),
             "right"
         );
+    }
+
+    #[test]
+    fn parses_overlay_actions() {
+        for (action, expected) in [
+            ("show_mask", InternalBrowserAction::ShowMask),
+            ("hide_mask", InternalBrowserAction::HideMask),
+            ("clean_up", InternalBrowserAction::CleanUp),
+        ] {
+            let params: InternalBrowserParams =
+                serde_json::from_value(serde_json::json!({ "action": action }))
+                    .expect("overlay action should parse");
+            assert_eq!(params.action, expected);
+        }
     }
 }
