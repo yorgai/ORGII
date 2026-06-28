@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
 const BROWSER_SESSION_LABEL_PREFIX: &str = "browser-session-";
+const ABOUT_BLANK_URL: &str = "about:blank";
 
 static ACTIVE_INTERNAL_BROWSER: OnceLock<Mutex<Option<ActiveInternalBrowserState>>> =
     OnceLock::new();
@@ -59,7 +60,8 @@ fn validate_active_state(state: &ActiveInternalBrowserState) -> Result<(), Strin
     if !state.visible {
         return Err("active internal browser state must be visible".to_string());
     }
-    if state.url.trim().is_empty() || state.url.trim().eq_ignore_ascii_case("about:blank") {
+    let normalized_url = state.url.trim().to_ascii_lowercase();
+    if normalized_url.is_empty() || normalized_url.starts_with(ABOUT_BLANK_URL) {
         return Err("active internal browser url must be navigable".to_string());
     }
     Ok(())
@@ -232,6 +234,17 @@ mod tests {
         invalid.label = "browser-session-other".to_string();
 
         assert!(validate_active_state(&invalid).is_err());
+    }
+
+    #[test]
+    fn rejects_blank_active_browser_urls() {
+        let mut empty = state("abc", 1);
+        empty.url = "   ".to_string();
+        assert!(validate_active_state(&empty).is_err());
+
+        let mut about_blank = state("abc", 1);
+        about_blank.url = "about:blank#blocked".to_string();
+        assert!(validate_active_state(&about_blank).is_err());
     }
 
     #[test]

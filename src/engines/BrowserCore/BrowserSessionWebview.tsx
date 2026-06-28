@@ -40,9 +40,13 @@ interface ActiveInternalBrowserSync {
 }
 
 function clearActiveInternalBrowserState(
-  sync: ActiveInternalBrowserSync,
+  sync: ActiveInternalBrowserSync | null,
   reason: string
 ): void {
+  if (!sync) {
+    return;
+  }
+
   void invoke("clear_active_internal_browser_state", {
     label: sync.label,
     browserSessionId: sync.browserSessionId,
@@ -123,10 +127,22 @@ const BrowserSessionWebview: React.FC<BrowserSessionWebviewProps> = ({
       },
       onError: (error: string | Error) => {
         log.error("[BrowserSessionWebview] WebView error:", error);
+        clearActiveInternalBrowserState(
+          activeInternalBrowserSyncRef.current,
+          "browser-session-webview-error"
+        );
+        activeInternalBrowserSyncRef.current = null;
         onSessionUpdate(session.id, {
           error: typeof error === "string" ? error : error.message,
           isLoading: false,
         });
+      },
+      onDestroyed: () => {
+        clearActiveInternalBrowserState(
+          activeInternalBrowserSyncRef.current,
+          "browser-session-webview-destroyed"
+        );
+        activeInternalBrowserSyncRef.current = null;
       },
       onNavigate: (url: string) => {
         if (!isBlankBrowserUrl(url) && url !== session.url) {
@@ -183,6 +199,11 @@ const BrowserSessionWebview: React.FC<BrowserSessionWebviewProps> = ({
 
   useEffect(() => {
     if (!isWebviewAvailable) {
+      clearActiveInternalBrowserState(
+        activeInternalBrowserSyncRef.current,
+        "browser-session-webview-unavailable"
+      );
+      activeInternalBrowserSyncRef.current = null;
       return;
     }
 
