@@ -53,6 +53,58 @@ function getEventArgs(event: SessionEvent): Record<string, unknown> {
     : {};
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseJsonRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trimStart();
+  if (!trimmed.startsWith("{")) return null;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function getRecordField(
+  record: Record<string, unknown> | null | undefined,
+  key: string
+): Record<string, unknown> | null {
+  const value = record?.[key];
+  return isRecord(value) ? value : null;
+}
+
+function getStringField(
+  record: Record<string, unknown> | null | undefined,
+  key: string
+): string | undefined {
+  const value = record?.[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function getBooleanField(
+  record: Record<string, unknown> | null | undefined,
+  key: string
+): boolean | undefined {
+  const value = record?.[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
+function extractToolResultObject(event: SessionEvent): Record<string, unknown> {
+  const parsedDirect = parseJsonRecord(event.result);
+  if (parsedDirect) return parsedDirect;
+
+  const direct = isRecord(event.result) ? event.result : {};
+  for (const field of ["output", "content", "observation"] as const) {
+    const parsed = parseJsonRecord(direct[field]);
+    if (parsed) return parsed;
+  }
+  return direct;
+}
+
 function getBrowserEntrySubtitle(
   event: SessionEvent,
   args: Record<string, unknown>
@@ -179,20 +231,35 @@ function buildInternalBrowserEntry(
   event: SessionEvent,
   currentEventId: string | null
 ): InternalBrowserEntry | null {
-  const args = event.args as Record<string, unknown> | undefined;
-  const result = event.result as Record<string, unknown> | undefined;
+  const args = getEventArgs(event);
+  const result = extractToolResultObject(event);
 
   const action = args?.action;
   if (typeof action !== "string") return null;
 
-  const webviewLabel = args?.webview;
-  if (typeof webviewLabel !== "string") return null;
+  const target = getRecordField(result, "target");
+  const active = getRecordField(result, "active");
+  const nestedResult = getRecordField(result, "result");
+  const webviewLabel =
+    getStringField(args, "webview") ||
+    getStringField(args, "label") ||
+    getStringField(target, "label") ||
+    getStringField(active, "label") ||
+    "internal-browser";
+  const browserSessionId =
+    getStringField(args, "browserSessionId") ||
+    getStringField(args, "browser_session_id") ||
+    getStringField(target, "browserSessionId") ||
+    getStringField(target, "browser_session_id") ||
+    getStringField(active, "browserSessionId") ||
+    getStringField(active, "browser_session_id");
 
   return {
     entryId: event.id,
     event,
     action: action as InternalBrowserAction,
     webviewLabel,
+    browserSessionId,
     timestamp: event.createdAt,
     isCurrent: event.id === currentEventId,
     index: typeof args?.index === "number" ? args.index : undefined,
@@ -200,8 +267,15 @@ function buildInternalBrowserEntry(
     option: typeof args?.option === "string" ? args.option : undefined,
     direction: typeof args?.direction === "string" ? args.direction : undefined,
     pages: typeof args?.pages === "number" ? args.pages : undefined,
-    success: typeof result?.success === "boolean" ? result.success : undefined,
-    message: typeof result?.message === "string" ? result.message : undefined,
+    success:
+      getBooleanField(result, "success") ??
+      getBooleanField(nestedResult, "success"),
+    message:
+      getStringField(result, "message") ??
+      getStringField(nestedResult, "message"),
+    beforeUrl: getStringField(result, "beforeUrl"),
+    actualUrl: getStringField(result, "actualUrl"),
+    actualUrlChanged: getBooleanField(result, "actualUrlChanged"),
   };
 }
 

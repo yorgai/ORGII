@@ -2,7 +2,7 @@
 //!
 //! The OS agent specializes in desktop automation tasks:
 //! - Desktop control through the bundled Peekaboo CLI
-//! - Browser automation through bundled browser control CLIs
+//! - Browser automation through bundled browser control CLIs and the internal WebView
 //!
 //! It uses a singleton session model (one global session).
 
@@ -25,7 +25,7 @@ pub const OS_AGENT_ID: &str = "builtin:os";
 ///
 /// Capabilities:
 /// - Desktop automation through the bundled Peekaboo CLI
-/// - Browser automation through bundled browser control CLIs
+/// - Browser automation through bundled browser control CLIs and the internal WebView
 ///
 /// Session Model:
 /// - Singleton (single global session)
@@ -41,7 +41,7 @@ pub fn os_agent() -> AgentDefinition {
         desktop: Some(DesktopCapability { enabled: true }),
         browser: Some(BrowserCapability {
             external: true,
-            internal: false,
+            internal: true,
         }),
         coding: None,
         gateway: None,
@@ -169,6 +169,28 @@ mod tests {
         assert!(
             caps.desktop.is_some(),
             "OS Agent's desktop capability must stay on"
+        );
+    }
+
+    #[test]
+    fn os_agent_has_browser_automation_capability() {
+        let caps = os_agent().capabilities.expect("OS Agent declares caps");
+        let browser = caps.browser.expect("OS Agent declares browser capability");
+        assert!(
+            browser.external,
+            "OS Agent should keep external browser automation available"
+        );
+        assert!(
+            browser.internal,
+            "OS Agent should expose internal WebView browser automation"
+        );
+        assert!(
+            !os_agent()
+                .tools
+                .excluded_tools
+                .iter()
+                .any(|tool| tool == tool_names::CONTROL_INTERNAL_BROWSER),
+            "OS Agent must not exclude control_internal_browser"
         );
     }
 
