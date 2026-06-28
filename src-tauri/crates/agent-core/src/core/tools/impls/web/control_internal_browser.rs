@@ -26,13 +26,59 @@ enum InternalBrowserAction {
     IsReady,
     /// Read the active internal browser DOM state.
     GetState,
+    /// Click an indexed element in the active internal browser.
+    Click,
+    /// Replace text in an indexed input, textarea, or contenteditable element.
+    Input,
+    /// Select an option by visible text in an indexed select element.
+    Select,
+    /// Scroll the active page or an indexed scrollable element.
+    Scroll,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum InternalBrowserScrollDirection {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl InternalBrowserScrollDirection {
+    fn as_page_agent_str(self) -> &'static str {
+        match self {
+            Self::Up => "up",
+            Self::Down => "down",
+            Self::Left => "left",
+            Self::Right => "right",
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct InternalBrowserParams {
-    /// Read-only internal browser action to perform.
+    /// Internal browser action to perform.
     action: InternalBrowserAction,
+    /// Highlight index from get_state. Required for click, input, and select.
+    #[serde(default)]
+    index: Option<i64>,
+    /// Text to write into the target element. Required for input.
+    #[serde(default)]
+    text: Option<String>,
+    /// Visible option text to select. Required for select.
+    #[serde(default)]
+    option: Option<String>,
+    /// Direction to scroll. Required for scroll.
+    #[serde(default)]
+    direction: Option<InternalBrowserScrollDirection>,
+    /// Number of viewport pages to scroll. Defaults to 1.0.
+    #[serde(default)]
+    pages: Option<f64>,
+    /// Optional highlight index of a scrollable element. Omit to scroll the page.
+    #[serde(default)]
+    element_index: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -88,6 +134,16 @@ struct InternalBrowserStateResponse {
     message: String,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InternalBrowserActionResponse {
+    success: bool,
+    action: &'static str,
+    target: InternalBrowserToolTarget,
+    result: browser::InternalBrowserActionResult,
+    message: String,
+}
+
 pub struct InternalBrowserTool {
     app_handle: Option<AppHandle>,
 }
@@ -109,6 +165,33 @@ impl InternalBrowserTool {
                 "Failed to serialize internal browser response: {err}"
             ))
         })
+    }
+
+    async fn resolve_ready_target(
+        &self,
+    ) -> Result<(AppHandle, InternalBrowserToolTarget), ToolError> {
+        let app = self.app_handle()?;
+        let targets = browser::list_internal_browser_targets(app.clone()).map_err(|err| {
+            ToolError::ExecutionFailed(format!("Failed to list internal browser targets: {err}"))
+        })?;
+        let Some(target) = resolvable_active_target(&targets) else {
+            return Err(ToolError::ExecutionFailed(inactive_target_message(
+                &targets,
+            )));
+        };
+
+        let ready = browser::internal_browser_is_ready(app.clone(), target.label.clone())
+            .await
+            .map_err(|err| {
+                ToolError::ExecutionFailed(format!("Failed to check Page Agent readiness: {err}"))
+            })?;
+        if !ready {
+            return Err(ToolError::ExecutionFailed(
+                "Page Agent is not ready in the active internal browser.".to_string(),
+            ));
+        }
+
+        Ok((app, target))
     }
 
     async fn execute_list(&self) -> Result<String, ToolError> {
@@ -217,6 +300,114 @@ impl InternalBrowserTool {
         };
         Self::response_text(&response)
     }
+
+    async fn execute_click(&self, params: &InternalBrowserParams) -> Result<String, ToolError> {
+        let index = required_index(params, "click")?;
+        let (app, target) = self.resolve_ready_target().await?;
+        let result = browser::internal_browser_click(app, target.label.clone(), index)
+            .await
+            .map_err(|err| ToolError::ExecutionFailed(format!("Failed to click element: {err}")))?;
+        let response = InternalBrowserActionResponse {
+            success: result.success,
+            action: "click",
+            target,
+            message: result.message.clone(),
+            result,
+        };
+        Self::response_text(&response)
+    }
+
+    async fn execute_input(&self, params: &InternalBrowserParams) -> Result<String, ToolError> {
+        let index = required_index(params, "input")?;
+        let text = params
+            .text
+            .clone()
+            .ok_or_else(|| ToolError::InvalidParams("input requires text".to_string()))?;
+        let (app, target) = self.resolve_ready_target().await?;
+        let result = browser::internal_browser_input(app, target.label.clone(), index, text)
+            .await
+            .map_err(|err| ToolError::ExecutionFailed(format!("Failed to input text: {err}")))?;
+        let response = InternalBrowserActionResponse {
+            success: result.success,
+            action: "input",
+            target,
+            message: result.message.clone(),
+            result,
+        };
+        Self::response_text(&response)
+    }
+
+    async fn execute_select(&self, params: &InternalBrowserParams) -> Result<String, ToolError> {
+        let index = required_index(params, "select")?;
+        let option = params
+            .option
+            .clone()
+            .ok_or_else(|| ToolError::InvalidParams("select requires option".to_string()))?;
+        let (app, target) = self.resolve_ready_target().await?;
+        let result = browser::internal_browser_select(app, target.label.clone(), index, option)
+            .await
+            .map_err(|err| ToolError::ExecutionFailed(format!("Failed to select option: {err}")))?;
+        let response = InternalBrowserActionResponse {
+            success: result.success,
+            action: "select",
+            target,
+            message: result.message.clone(),
+            result,
+        };
+        Self::response_text(&response)
+    }
+
+    async fn execute_scroll(&self, params: &InternalBrowserParams) -> Result<String, ToolError> {
+        let direction = params
+            .direction
+            .ok_or_else(|| ToolError::InvalidParams("scroll requires direction".to_string()))?;
+        if let Some(pages) = params.pages {
+            if !pages.is_finite() || pages <= 0.0 {
+                return Err(ToolError::InvalidParams(
+                    "scroll pages must be a positive finite number".to_string(),
+                ));
+            }
+        }
+        if let Some(element_index) = params.element_index {
+            validate_index(element_index, "elementIndex")?;
+        }
+
+        let (app, target) = self.resolve_ready_target().await?;
+        let result = browser::internal_browser_scroll(
+            app,
+            target.label.clone(),
+            direction.as_page_agent_str().to_string(),
+            params.pages,
+            params.element_index,
+        )
+        .await
+        .map_err(|err| ToolError::ExecutionFailed(format!("Failed to scroll: {err}")))?;
+        let response = InternalBrowserActionResponse {
+            success: result.success,
+            action: "scroll",
+            target,
+            message: result.message.clone(),
+            result,
+        };
+        Self::response_text(&response)
+    }
+}
+
+fn required_index(params: &InternalBrowserParams, action: &str) -> Result<i64, ToolError> {
+    let index = params
+        .index
+        .ok_or_else(|| ToolError::InvalidParams(format!("{action} requires index")))?;
+    validate_index(index, "index")?;
+    Ok(index)
+}
+
+fn validate_index(index: i64, field: &str) -> Result<(), ToolError> {
+    if index < 0 {
+        return Err(ToolError::InvalidParams(format!(
+            "{field} must be greater than or equal to 0"
+        )));
+    }
+    Ok(())
 }
 
 fn active_target(
@@ -265,7 +456,7 @@ impl Tool for InternalBrowserTool {
     }
 
     fn description(&self) -> &str {
-        "Inspect the currently visible ORGII internal Browser WebView. This read-only step supports list, is_ready, and get_state; DOM actions are added separately."
+        "Inspect and control the currently visible ORGII internal Browser WebView. Resolves only the active internal browser target and supports list, is_ready, get_state, click, input, select, and scroll."
     }
 
     fn is_ready(&self) -> bool {
@@ -281,7 +472,7 @@ impl Tool for InternalBrowserTool {
     }
 
     fn search_hint(&self) -> &str {
-        "internal browser webview tauri webview2 dom page agent get_state is_ready"
+        "internal browser webview tauri webview2 dom page agent get_state click input select scroll is_ready"
     }
 
     fn parameters(&self) -> Value {
@@ -298,11 +489,11 @@ impl Tool for InternalBrowserTool {
             InternalBrowserAction::List => self.execute_list().await,
             InternalBrowserAction::IsReady => self.execute_is_ready().await,
             InternalBrowserAction::GetState => self.execute_get_state().await,
+            InternalBrowserAction::Click => self.execute_click(&params).await,
+            InternalBrowserAction::Input => self.execute_input(&params).await,
+            InternalBrowserAction::Select => self.execute_select(&params).await,
+            InternalBrowserAction::Scroll => self.execute_scroll(&params).await,
         }
-    }
-
-    fn is_read_only(&self) -> bool {
-        true
     }
 
     fn priority(&self) -> ToolPriority {
@@ -359,5 +550,35 @@ mod tests {
 
         assert!(resolvable_active_target(&targets).is_none());
         assert!(inactive_target_message(&targets).contains("No active"));
+    }
+
+    #[test]
+    fn validates_required_action_index() {
+        let params = InternalBrowserParams {
+            action: InternalBrowserAction::Click,
+            index: None,
+            text: None,
+            option: None,
+            direction: None,
+            pages: None,
+            element_index: None,
+        };
+
+        assert!(required_index(&params, "click").is_err());
+    }
+
+    #[test]
+    fn rejects_negative_action_index() {
+        let params = InternalBrowserParams {
+            action: InternalBrowserAction::Click,
+            index: Some(-1),
+            text: None,
+            option: None,
+            direction: None,
+            pages: None,
+            element_index: None,
+        };
+
+        assert!(required_index(&params, "click").is_err());
     }
 }
