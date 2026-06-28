@@ -23,6 +23,14 @@ fn claude_opus_4_is_optional() {
     assert_eq!(resolve("claude-opus-4.7", None).context_window, 1_000_000);
     assert_eq!(resolve("claude-opus-4.8", None).context_window, 1_000_000);
     assert_eq!(
+        resolve("anthropic/claude-opus-4-8", None).context_window,
+        1_000_000
+    );
+    assert_eq!(
+        resolve("anthropic/claude-opus-4-8-fast", None).context_window,
+        1_000_000
+    );
+    assert_eq!(
         resolve("claude-opus-4", None).thinking,
         ThinkingSupport::Optional
     );

@@ -613,7 +613,7 @@ fn resolve_with_keyvault_variants(model: &str, variants: &[ModelVariant]) -> Mod
 
 fn resolve_from_family_table(model: &str) -> ModelCapabilities {
     let normalized = super::model_hints::normalize_claude_shorthand(model);
-    let model_lower = normalized.to_lowercase();
+    let model_lower = normalize_claude_release_separators(&normalized.to_lowercase());
     for rule in FAMILY_RULES {
         if model_lower.contains(rule.pattern) {
             return ModelCapabilities {
@@ -624,6 +624,22 @@ fn resolve_from_family_table(model: &str) -> ModelCapabilities {
         }
     }
     ModelCapabilities::unknown()
+}
+
+fn normalize_claude_release_separators(model: &str) -> String {
+    const ALIASES: &[(&str, &str)] = &[
+        ("claude-opus-4-6", "claude-opus-4.6"),
+        ("claude-opus-4-7", "claude-opus-4.7"),
+        ("claude-opus-4-8", "claude-opus-4.8"),
+        ("claude-sonnet-4-5", "claude-sonnet-4.5"),
+        ("claude-sonnet-4-6", "claude-sonnet-4.6"),
+    ];
+
+    let mut normalized = model.to_string();
+    for (from, to) in ALIASES {
+        normalized = normalized.replace(from, to);
+    }
+    normalized
 }
 
 /// KeyVault layer: a `ModelVariant` row with `reasoning: Some(..)` marks

@@ -852,8 +852,18 @@ const MODEL_INFO_ENTRIES: Array<{ pattern: string; info: ModelInfo }> = [
  * Uses prefix/substring matching against registered patterns.
  * Returns the first (most specific) match, or null if no match.
  */
+function normalizeModelInfoCategory(category: string): string {
+  return category
+    .toLowerCase()
+    .replaceAll("claude-opus-4-6", "claude-opus-4.6")
+    .replaceAll("claude-opus-4-7", "claude-opus-4.7")
+    .replaceAll("claude-opus-4-8", "claude-opus-4.8")
+    .replaceAll("claude-sonnet-4-5", "claude-sonnet-4.5")
+    .replaceAll("claude-sonnet-4-6", "claude-sonnet-4.6");
+}
+
 export function getModelInfo(category: string): ModelInfo | null {
-  const lower = category.toLowerCase();
+  const lower = normalizeModelInfoCategory(category);
   for (const entry of MODEL_INFO_ENTRIES) {
     if (lower.includes(entry.pattern)) {
       return entry.info;
