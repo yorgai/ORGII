@@ -28,6 +28,8 @@ export interface BrowserEntry {
 
 /** Action types for control_internal_browser tool */
 export type InternalBrowserAction =
+  | "list"
+  | "is_ready"
   | "get_state"
   | "click"
   | "input"
@@ -43,6 +45,7 @@ export interface InternalBrowserEntry {
   event: SessionEvent;
   action: InternalBrowserAction;
   webviewLabel: string;
+  browserSessionId?: string;
   timestamp: string;
   isCurrent: boolean;
   // Action-specific data
@@ -54,6 +57,9 @@ export interface InternalBrowserEntry {
   // Result data
   success?: boolean;
   message?: string;
+  beforeUrl?: string;
+  actualUrl?: string;
+  actualUrlChanged?: boolean;
 }
 
 // ============================================

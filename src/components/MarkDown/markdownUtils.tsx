@@ -62,6 +62,9 @@ const CODE_PATTERNS = [
 ];
 
 const ASCII_DIAGRAM_HINT_PATTERN = /[│├─└┌┐┘┤┬┴┼┃╔╗╚╝╠╣╦╩╬━|+=\\]/;
+const COPYABLE_MARKDOWN_DOCUMENT_PATTERN =
+  /^(\s*)(`{3,})(md|markdown)([^\n]*)\n([\s\S]*?)\n(`{3,})(\s*)$/i;
+const FENCE_RUN_PATTERN = /`{3,}/g;
 const MAX_INLINE_CODE_CACHE_SIZE = 300;
 const inlineCodeTypeCache = new Map<string, InlineCodeType>();
 
@@ -155,6 +158,33 @@ function mayContainAsciiDiagram(text: string): boolean {
   if (secondNewline < 0) return false;
 
   return ASCII_DIAGRAM_HINT_PATTERN.test(text);
+}
+
+export function normalizeCopyableMarkdownDocumentFence(text: string): string {
+  const match = text.match(COPYABLE_MARKDOWN_DOCUMENT_PATTERN);
+  if (!match) return text;
+
+  const [
+    ,
+    leadingWhitespace,
+    openingFence,
+    language,
+    openingSuffix,
+    body,
+    closingFence,
+    trailingWhitespace,
+  ] = match;
+
+  if (openingFence.length !== closingFence.length) return text;
+  if (!body.includes(openingFence)) return text;
+
+  const maxFenceLength = Math.max(
+    openingFence.length,
+    ...Array.from(body.matchAll(FENCE_RUN_PATTERN), ([fence]) => fence.length)
+  );
+  const wrapperFence = "`".repeat(maxFenceLength + 1);
+
+  return `${leadingWhitespace}${wrapperFence}${language}${openingSuffix}\n${body}\n${wrapperFence}${trailingWhitespace}`;
 }
 
 /**

@@ -116,8 +116,8 @@ pub fn supported_agents_for(tool_name: &str) -> Vec<AgentKind> {
 /// grant SDE workers app/session administration. Result:
 ///
 /// - **OS Agent** (`coding: None`, `desktop: Some`, `browser: Some`):
-///   excludes coding tools (edit_file, query_lsp, manage_lsp)
-///   and internal browser automation. Keeps desktop, external browser, core.
+///   excludes coding tools (edit_file, query_lsp, manage_lsp). Keeps desktop,
+///   external browser, internal browser, core.
 /// - **SDE Agent** (`coding: Some`, all others None): excludes the 15
 ///   desktop tools and browser tools. Keeps coding,
 ///   core, orchestration.
@@ -210,7 +210,7 @@ mod tests {
         use crate::definitions::capabilities::{
             BrowserCapability, CapabilitySet, DesktopCapability, ManagementCapability,
         };
-        let os_caps = CapabilitySet {
+        let os_caps_without_internal_browser = CapabilitySet {
             desktop: Some(DesktopCapability { enabled: true }),
             browser: Some(BrowserCapability {
                 external: true,
@@ -221,7 +221,7 @@ mod tests {
             data: None,
             management: Some(ManagementCapability {}),
         };
-        let excluded = default_excluded_tools_for_capabilities(&os_caps);
+        let excluded = default_excluded_tools_for_capabilities(&os_caps_without_internal_browser);
 
         // Coding tools must be excluded.
         assert!(
@@ -248,7 +248,7 @@ mod tests {
         );
         assert!(
             excluded.contains(&tool_names::CONTROL_INTERNAL_BROWSER.to_string()),
-            "OS should exclude internal browser automation by default"
+            "capabilities with browser.internal=false should exclude internal browser automation"
         );
 
         // Core tools (read_file, etc.) always satisfied.

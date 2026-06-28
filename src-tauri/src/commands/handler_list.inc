@@ -99,6 +99,11 @@ browser::browser_inline_capture,
 browser::browser_webview_send_to_back,
 browser::browser_webview_bring_to_front,
 browser::browser_webviews_set_layer_for_all,
+// Browser commands - Active internal browser target state
+browser::set_active_internal_browser_state,
+browser::clear_active_internal_browser_state,
+browser::get_active_internal_browser_state,
+browser::list_internal_browser_targets,
 // Browser commands - Internal browser automation (DOM automation for inline webviews)
 browser::internal_browser_get_state,
 browser::internal_browser_click,
