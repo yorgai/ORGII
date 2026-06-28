@@ -168,4 +168,13 @@ fn test_model_variant_info_to_variant_preserves_context_window() {
         context_window: None,
     };
     assert_eq!(ModelVariant::from(without_ctx).context_window, None);
+
+    let zero_ctx = ModelVariantInfo {
+        model: "gpt-4o".to_string(),
+        base_model: "gpt-4o".to_string(),
+        reasoning: None,
+        fast: false,
+        context_window: Some(0),
+    };
+    assert_eq!(ModelVariant::from(zero_ctx).context_window, None);
 }

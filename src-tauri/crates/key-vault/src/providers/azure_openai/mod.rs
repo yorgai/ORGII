@@ -142,7 +142,7 @@ impl AzureOpenAIValidator {
         let mut ids: Vec<String> = Vec::new();
         let mut contexts: HashMap<String, u64> = HashMap::new();
         for m in data.data.unwrap_or_default() {
-            if let Some(ctx) = m.context_length {
+            if let Some(ctx) = m.context_length.filter(|ctx| *ctx > 0) {
                 contexts.insert(m.id.clone(), ctx);
             }
             ids.push(m.id);

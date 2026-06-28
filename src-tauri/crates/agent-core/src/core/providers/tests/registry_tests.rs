@@ -98,6 +98,17 @@ fn context_window_hint_gemini() {
 }
 
 #[test]
+fn context_window_hint_glm() {
+    // Only 5.2 reached 1M; 5 / 5.1 / 5-turbo stay at 200K.
+    assert_eq!(context_window_hint("glm-5.2"), 1_000_000);
+    assert_eq!(context_window_hint("glm-5"), 200_000);
+    assert_eq!(context_window_hint("glm-5.1"), 200_000);
+    assert_eq!(context_window_hint("glm-5-turbo"), 200_000);
+    assert_eq!(context_window_hint("glm-4.6"), 200_000);
+    assert_eq!(context_window_hint("glm-4.5"), 128_000);
+}
+
+#[test]
 fn context_window_hint_unknown_returns_default() {
     assert_eq!(
         context_window_hint("totally-unknown"),

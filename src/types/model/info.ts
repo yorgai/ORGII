@@ -53,12 +53,53 @@ export interface ModelInfo {
  */
 const MODEL_INFO_ENTRIES: Array<{ pattern: string; info: ModelInfo }> = [
   // ─── Anthropic (Claude) ───────────────────────────────────
+  // Known claude-opus-4.6/4.7/4.8 releases upgraded to 1M; 4 / 4.1 /
+  // 4.5 stayed at 200K. Mirror the Rust FAMILY_RULES split.
+  {
+    pattern: "claude-opus-4.6",
+    info: {
+      provider: "Anthropic",
+      providerKey: "anthropic",
+      contextWindow: 1000,
+      maxOutput: 32,
+      vision: true,
+      reasoning: true,
+      strengthKeys: ["coding", "agentic", "reasoning", "planning"],
+      pricingTier: "expensive",
+    },
+  },
+  {
+    pattern: "claude-opus-4.7",
+    info: {
+      provider: "Anthropic",
+      providerKey: "anthropic",
+      contextWindow: 1000,
+      maxOutput: 32,
+      vision: true,
+      reasoning: true,
+      strengthKeys: ["coding", "agentic", "reasoning", "planning"],
+      pricingTier: "expensive",
+    },
+  },
+  {
+    pattern: "claude-opus-4.8",
+    info: {
+      provider: "Anthropic",
+      providerKey: "anthropic",
+      contextWindow: 1000,
+      maxOutput: 32,
+      vision: true,
+      reasoning: true,
+      strengthKeys: ["coding", "agentic", "reasoning", "planning"],
+      pricingTier: "expensive",
+    },
+  },
   {
     pattern: "claude-opus-4",
     info: {
       provider: "Anthropic",
       providerKey: "anthropic",
-      contextWindow: 1000,
+      contextWindow: 200,
       maxOutput: 32,
       vision: true,
       reasoning: true,
@@ -732,6 +773,18 @@ const MODEL_INFO_ENTRIES: Array<{ pattern: string; info: ModelInfo }> = [
   },
 
   // ─── Z.AI (GLM) ───────────────────────────────────────────
+  {
+    pattern: "glm-5.2",
+    info: {
+      provider: "Z.AI",
+      providerKey: "zai",
+      contextWindow: 1000,
+      vision: false,
+      reasoning: true,
+      strengthKeys: ["coding", "reasoning", "agentic"],
+      pricingTier: "budget",
+    },
+  },
   {
     pattern: "glm-5",
     info: {

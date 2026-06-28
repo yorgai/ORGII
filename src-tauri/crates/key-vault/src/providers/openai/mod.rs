@@ -281,7 +281,7 @@ impl OpenAIValidator {
         let mut all_ids: Vec<String> = Vec::with_capacity(models.len());
         let mut contexts: HashMap<String, u64> = HashMap::new();
         for m in models {
-            if let Some(ctx) = m.context_length {
+            if let Some(ctx) = m.context_length.filter(|ctx| *ctx > 0) {
                 contexts.insert(m.id.clone(), ctx);
             }
             all_ids.push(m.id);

@@ -175,12 +175,14 @@ pub async fn run_manual_compact(
     //    compaction state so the cumulative failure counter is
     //    honoured (and so back-to-back manual compacts don't thrash
     //    the provider).
-    let context_window = if runtime.resolved.context_window > 0 {
-        runtime.resolved.context_window as usize
-    } else {
-        crate::providers::model_capabilities::resolve(&runtime.model, runtime.account_id.as_deref())
-            .context_window
-    };
+    let context_window = crate::providers::model_capabilities::resolve_effective_context_window(
+        &runtime.model,
+        runtime.account_id.as_deref(),
+        runtime
+            .resolved
+            .context_window_configured
+            .then_some(runtime.resolved.context_window),
+    );
     let (compacted, outcome) = {
         let mut compaction_state = session.compaction.lock().await;
         ContextCompactor::compact(

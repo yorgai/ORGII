@@ -1,6 +1,7 @@
 import type {
   DetectedKey,
   KeyInfo,
+  ModelContextLengths,
   QuotaInfo,
 } from "@src/api/tauri/rpc/schemas/validation";
 
@@ -39,6 +40,7 @@ export type {
   UsageItem,
   ValidationResult,
   ModelAliasInfo,
+  ModelContextLengths,
   ModelVariantInfo,
   DefaultVariantInfo,
 } from "@src/api/tauri/rpc/schemas/validation";
@@ -56,6 +58,7 @@ export interface ValidateKeyResponse {
   valid: boolean;
   message: string;
   available_models: string[];
+  model_context_lengths?: ModelContextLengths;
   extracted_api_key_preview?: string;
   extracted_api_key?: string;
   extracted_base_url?: string;

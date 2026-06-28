@@ -228,6 +228,103 @@ fn test_context_window_survives_save_key_roundtrip() {
     );
 }
 
+#[test]
+fn test_update_key_health_clears_stale_context_window_when_provider_omits_it() {
+    let temp_dir = tempdir().unwrap();
+    let service = KeyService::new(Some(temp_dir.path().to_path_buf()));
+
+    let mut cred = ModelKey::new(ModelType::OpenaiApi);
+    cred.name = Some("Ctx Clear Test".to_string());
+    cred.api_key = Some("sk-test".to_string());
+    let saved = service.save_key(cred).unwrap();
+
+    let mut contexts = HashMap::new();
+    contexts.insert("gpt-4o".to_string(), 128_000u64);
+    service
+        .update_key_health(
+            &saved.id,
+            HealthStatus::Valid,
+            None,
+            Some(vec!["gpt-4o".to_string()]),
+            None,
+            None,
+            Some(&contexts),
+        )
+        .unwrap();
+
+    service
+        .update_key_health(
+            &saved.id,
+            HealthStatus::Valid,
+            None,
+            Some(vec!["gpt-4o".to_string()]),
+            None,
+            None,
+            Some(&HashMap::new()),
+        )
+        .unwrap();
+
+    let loaded = service.get_key_by_id(&saved.id).unwrap();
+    let variant = loaded
+        .model_variants
+        .iter()
+        .find(|v| v.model == "gpt-4o")
+        .expect("variant remains for reasoning/default metadata");
+    assert_eq!(
+        variant.context_window, None,
+        "missing context_length in a fresh provider response must clear stale override"
+    );
+}
+
+#[test]
+fn test_update_key_health_preserves_context_window_without_model_refresh() {
+    let temp_dir = tempdir().unwrap();
+    let service = KeyService::new(Some(temp_dir.path().to_path_buf()));
+
+    let mut cred = ModelKey::new(ModelType::OpenaiApi);
+    cred.name = Some("Ctx Preserve Test".to_string());
+    cred.api_key = Some("sk-test".to_string());
+    let saved = service.save_key(cred).unwrap();
+
+    let mut contexts = HashMap::new();
+    contexts.insert("gpt-4o".to_string(), 128_000u64);
+    service
+        .update_key_health(
+            &saved.id,
+            HealthStatus::Valid,
+            None,
+            Some(vec!["gpt-4o".to_string()]),
+            None,
+            None,
+            Some(&contexts),
+        )
+        .unwrap();
+
+    service
+        .update_key_health(
+            &saved.id,
+            HealthStatus::Valid,
+            None,
+            None,
+            None,
+            None,
+            Some(&HashMap::new()),
+        )
+        .unwrap();
+
+    let loaded = service.get_key_by_id(&saved.id).unwrap();
+    let variant = loaded
+        .model_variants
+        .iter()
+        .find(|v| v.model == "gpt-4o")
+        .expect("variant remains after health-only update");
+    assert_eq!(
+        variant.context_window,
+        Some(128_000),
+        "health-only updates must not clear provider context_window overrides"
+    );
+}
+
 /// Debug test to check parsing of real credentials file
 #[test]
 fn test_parse_real_credentials_file() {

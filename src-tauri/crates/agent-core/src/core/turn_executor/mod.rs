@@ -309,11 +309,12 @@ pub async fn execute_turn(
                 if stats.chars_saved == 0 && stats.images_cleared == 0 {
                     // Nothing left to clear — hard-truncate the history while
                     // keeping the head (system prompt + task statement).
-                    let window = crate::providers::model_capabilities::resolve(
-                        &config.model,
-                        config.account_id.as_deref(),
-                    )
-                    .context_window;
+                    let window =
+                        crate::providers::model_capabilities::resolve_effective_context_window(
+                            &config.model,
+                            config.account_id.as_deref(),
+                            config.context_window_override,
+                        );
                     let budget = window.saturating_mul(3) / 4;
                     let truncated =
                         crate::model_context::compaction::ContextCompactor::simple_truncate(
@@ -354,11 +355,12 @@ pub async fn execute_turn(
             // `/v1/models` context_length for this account (stored in
             // KeyVault). This keeps the frontend gauge honest when a proxy
             // caps a 1M model at 256K.
-            let context_window = crate::core::providers::model_capabilities::resolve(
-                &config.model,
-                config.account_id.as_deref(),
-            )
-            .context_window as i64;
+            let context_window =
+                crate::core::providers::model_capabilities::resolve_effective_context_window(
+                    &config.model,
+                    config.account_id.as_deref(),
+                    config.context_window_override,
+                ) as i64;
             let snapshot = ContextUsageSnapshot::from_payload(
                 &llm_messages,
                 &tool_defs,

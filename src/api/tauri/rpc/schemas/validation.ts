@@ -132,7 +132,10 @@ export const QuotaInfoSchema = z.object({
   named_message: z.string().nullable(),
 });
 
-export const ModelContextLengthsSchema = z.record(z.string(), z.number());
+export const ModelContextLengthsSchema = z.record(
+  z.string(),
+  z.number().int().positive()
+);
 
 export const ValidationResultSchema = z.object({
   valid: z.boolean(),
@@ -156,7 +159,7 @@ export const ModelVariantInfoSchema = z.object({
   base_model: z.string(),
   reasoning: z.string().nullable().optional(),
   fast: z.boolean().default(false),
-  context_window: z.number().int().nonnegative().nullable().optional(),
+  context_window: z.number().int().positive().nullable().optional(),
 });
 
 export const DefaultVariantInfoSchema = z.object({

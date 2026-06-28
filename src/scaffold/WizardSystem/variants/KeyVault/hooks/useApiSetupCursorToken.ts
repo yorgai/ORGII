@@ -163,6 +163,7 @@ export function useApiSetupCursorToken({
           cursor_session_token: trimmed,
           env_vars: cursorEnvVars,
           available_models: effectiveModels,
+          model_context_lengths: {},
           enabled_models: getDefaultEnabledModels(effectiveModels),
           model_aliases: data.model_aliases ?? [],
           validated: true,
@@ -181,6 +182,7 @@ export function useApiSetupCursorToken({
           cursor_session_token: trimmed,
           env_vars: cursorEnvVars,
           available_models: fallbackModels,
+          model_context_lengths: {},
           enabled_models: getDefaultEnabledModels(fallbackModels),
           model_aliases: data.model_aliases ?? [],
           validated: true,
@@ -263,6 +265,7 @@ export function useApiSetupCursorToken({
           ),
           validated: false,
           available_models: [],
+          model_context_lengths: {},
           enabled_models: [],
         });
         return;

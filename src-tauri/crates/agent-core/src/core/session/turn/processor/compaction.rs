@@ -124,15 +124,14 @@ impl UnifiedMessageProcessor {
         }
 
         // 6. Context compaction
-        let context_window = if self.runtime.resolved.context_window > 0 {
-            self.runtime.resolved.context_window as usize
-        } else {
-            crate::providers::model_capabilities::resolve(
-                &self.runtime.model,
-                self.runtime.account_id.as_deref(),
-            )
-            .context_window
-        };
+        let context_window = crate::providers::model_capabilities::resolve_effective_context_window(
+            &self.runtime.model,
+            self.runtime.account_id.as_deref(),
+            self.runtime
+                .resolved
+                .context_window_configured
+                .then_some(self.runtime.resolved.context_window),
+        );
         let prefix_len = leading_runtime_system_prefix_len(messages);
         let prefix = messages[..prefix_len].to_vec();
         let mut compactable_tail = messages[prefix_len..].to_vec();

@@ -49,7 +49,7 @@ impl From<ModelVariantInfo> for ModelVariant {
             base_model: v.base_model,
             reasoning: v.reasoning,
             fast: v.fast,
-            context_window: v.context_window,
+            context_window: v.context_window.filter(|ctx| *ctx > 0),
         }
     }
 }
@@ -307,7 +307,7 @@ impl From<ModelKey> for KeyInfo {
                     base_model: variant.base_model.clone(),
                     reasoning: variant.reasoning.clone(),
                     fast: variant.fast,
-                    context_window: variant.context_window,
+                    context_window: variant.context_window.filter(|ctx| *ctx > 0),
                 })
                 .collect(),
             default_variants: entry
@@ -428,7 +428,7 @@ impl From<ModelKey> for FullKeyResponse {
                     base_model: variant.base_model,
                     reasoning: variant.reasoning,
                     fast: variant.fast,
-                    context_window: variant.context_window,
+                    context_window: variant.context_window.filter(|ctx| *ctx > 0),
                 })
                 .collect(),
             default_variants: entry
