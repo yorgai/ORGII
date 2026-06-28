@@ -361,13 +361,7 @@ impl InternalBrowserTool {
         let direction = params
             .direction
             .ok_or_else(|| ToolError::InvalidParams("scroll requires direction".to_string()))?;
-        if let Some(pages) = params.pages {
-            if !pages.is_finite() || pages <= 0.0 {
-                return Err(ToolError::InvalidParams(
-                    "scroll pages must be a positive finite number".to_string(),
-                ));
-            }
-        }
+        validate_scroll_pages(params.pages)?;
         if let Some(element_index) = params.element_index {
             validate_index(element_index, "elementIndex")?;
         }
@@ -406,6 +400,17 @@ fn validate_index(index: i64, field: &str) -> Result<(), ToolError> {
         return Err(ToolError::InvalidParams(format!(
             "{field} must be greater than or equal to 0"
         )));
+    }
+    Ok(())
+}
+
+fn validate_scroll_pages(pages: Option<f64>) -> Result<(), ToolError> {
+    if let Some(pages) = pages {
+        if !pages.is_finite() || pages <= 0.0 {
+            return Err(ToolError::InvalidParams(
+                "scroll pages must be a positive finite number".to_string(),
+            ));
+        }
     }
     Ok(())
 }
@@ -580,5 +585,30 @@ mod tests {
         };
 
         assert!(required_index(&params, "click").is_err());
+    }
+
+    #[test]
+    fn validates_scroll_pages() {
+        assert!(validate_scroll_pages(None).is_ok());
+        assert!(validate_scroll_pages(Some(1.0)).is_ok());
+        assert!(validate_scroll_pages(Some(0.0)).is_err());
+        assert!(validate_scroll_pages(Some(f64::NAN)).is_err());
+    }
+
+    #[test]
+    fn maps_scroll_direction_for_page_agent() {
+        assert_eq!(InternalBrowserScrollDirection::Up.as_page_agent_str(), "up");
+        assert_eq!(
+            InternalBrowserScrollDirection::Down.as_page_agent_str(),
+            "down"
+        );
+        assert_eq!(
+            InternalBrowserScrollDirection::Left.as_page_agent_str(),
+            "left"
+        );
+        assert_eq!(
+            InternalBrowserScrollDirection::Right.as_page_agent_str(),
+            "right"
+        );
     }
 }
