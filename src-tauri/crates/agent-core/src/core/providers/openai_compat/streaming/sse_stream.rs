@@ -54,7 +54,19 @@ pub(super) async fn run_chat_streaming(
         crate::providers::model_hints::wire_model_name(this.provider_spec, model)
     };
 
-    let url = this.chat_url(&resolved_model);
+    // Strip the reasoning-level suffix ORG2 encodes into variant ids and
+    // resolve `reasoning_effort` (OpenAI) or the `thinking` toggle (Zhipu
+    // GLM). Shared with the non-streaming path via `resolve_openai_compat_thinking`.
+    let crate::providers::thinking_mode::OpenAiCompatThinking {
+        base_model,
+        reasoning_effort,
+        thinking,
+    } = crate::providers::thinking_mode::resolve_openai_compat_thinking(
+        &resolved_model,
+        this.provider_spec.name,
+    );
+
+    let url = this.chat_url(&base_model);
 
     let sanitized_messages = sanitize_openai_compat_messages(messages);
     let wire_messages = if this.provider_spec.name == provider_id::DEEPSEEK {
@@ -91,9 +103,9 @@ pub(super) async fn run_chat_streaming(
     };
     let wire_tools_final = clean_wire_tools.or(wire_tools);
 
-    let wire_policy = this.chat_wire_policy(&resolved_model);
+    let wire_policy = this.chat_wire_policy(&base_model);
     let request_body = ChatCompletionRequest {
-        model: resolved_model.clone(),
+        model: base_model.clone(),
         messages: wire_messages,
         tools: wire_tools_final,
         tool_choice: if let Some(ovr) = tool_choice_override {
@@ -122,6 +134,8 @@ pub(super) async fn run_chat_streaming(
         } else {
             None
         },
+        reasoning_effort,
+        thinking,
     };
 
     let mut request = this

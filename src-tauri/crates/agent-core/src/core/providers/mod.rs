@@ -27,6 +27,7 @@ pub mod registry;
 pub mod reliable;
 pub mod responses_common;
 pub mod safe_truncate;
+pub mod thinking_mode;
 pub mod traits;
 pub mod wire_sanitize;
 

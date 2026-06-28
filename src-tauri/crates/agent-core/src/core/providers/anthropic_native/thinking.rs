@@ -1,16 +1,31 @@
-//! Extended-thinking request parameters, driven by [`ModelCapabilities`].
+//! Extended-thinking request parameters, driven by [`ThinkingMode`].
 //!
-//! The old substring matcher (`supports_thinking`) lived here until the
-//! 2026-06-12 incident: `claude-fable-5` wasn't matched, got no thinking
-//! handling, and returned thinking-only side-query responses that broke
-//! compaction + session-memory extraction. Capability questions now go
-//! through `model_capabilities::resolve` — this module only translates a
-//! resolved capability + the caller's [`ThinkingDirective`] into the
-//! Anthropic request triad `(thinking, temperature, max_tokens)`.
+//! Anthropic exposes thinking control through three mutually incompatible
+//! shapes depending on model generation, so a single `thinking` object
+//! cannot be correct for all of them. [`ThinkingMode`] (classified by
+//! `thinking_mode::resolve_thinking_mode`) decides which:
+//!
+//! - **Adaptive** (Opus 4.7/4.8, Fable-5, Mythos): `thinking:{type:adaptive,
+//!   display:summarized}` + top-level `effort`. Rejects `budget_tokens`
+//!   (HTTP 400) and rejects `temperature`/`top_p`/`top_k` (also 400).
+//! - **4.6** (opus-4.6 / sonnet-4.6): `thinking:{type:adaptive}` + `effort`
+//!   (UI extra_high → API `max`).
+//! - **Legacy** (Opus 4/4.1/4.5, Sonnet 4/4.5, 3.7): `thinking:{type:enabled,
+//!   budget_tokens}`.
+//!
+//! This module only translates a resolved mode + the caller's
+//! [`ThinkingDirective`] + selected [`ReasoningLevel`] into the Anthropic
+//! request quad `(thinking, effort, temperature, max_tokens)`. Mode
+//! classification and level→parameter mapping live in `thinking_mode`.
 
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::providers::model_capabilities::{ModelCapabilities, ThinkingSupport};
+use crate::providers::registry::provider_id;
+use crate::providers::thinking_mode::{
+    anthropic_effort, anthropic_max_tokens_floor, anthropic_thinking_param,
+    is_claude_rejects_sampling, resolve_thinking_mode, ReasoningLevel, ThinkingMode,
+};
 
 /// What the caller wants from thinking, independent of what the model can do.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -19,7 +34,7 @@ pub enum ThinkingDirective {
     #[default]
     Auto,
     /// Caller needs plain text (side queries: summarization, extraction,
-    /// classification). For `Optional` models we send
+    /// classification). For adaptive/legacy models we send
     /// `{"type": "disabled"}`; for `AlwaysOn` models — which reject
     /// `disabled` with a 400 — we instead pad `max_tokens` so thinking
     /// can't exhaust the output budget before the answer is emitted.
@@ -31,66 +46,103 @@ pub enum ThinkingDirective {
 /// classifier calls; 2048 gives comfortable margin.
 const ALWAYS_ON_THINKING_PAD_TOKENS: u32 = 2048;
 
-/// Build the `thinking` request param and adjust max_tokens / temperature.
-///
-/// Returns `(thinking_param, temperature, max_tokens)`. When thinking is
-/// enabled and `caps.omit_temperature_with_thinking` is set, temperature is
-/// `None` (Anthropic rejects requests carrying both).
-pub(super) fn build_thinking_params(
-    caps: &ModelCapabilities,
-    directive: ThinkingDirective,
-    max_tokens: u32,
-    temperature: f32,
-) -> (Option<Value>, Option<f32>, u32) {
-    match (caps.thinking, directive) {
-        (ThinkingSupport::No, _) => (None, Some(temperature), max_tokens),
-
-        (ThinkingSupport::Optional, ThinkingDirective::PlainText) => (
-            Some(serde_json::json!({ "type": "disabled" })),
-            Some(temperature),
-            max_tokens,
-        ),
-
-        (ThinkingSupport::AlwaysOn, ThinkingDirective::PlainText) => {
-            // `disabled` would be rejected with a 400; pad the budget so
-            // the visible answer survives the model's obligatory thinking.
-            (
-                None,
-                temperature_for_thinking(caps, temperature),
-                max_tokens.saturating_add(ALWAYS_ON_THINKING_PAD_TOKENS),
-            )
-        }
-
-        (ThinkingSupport::Optional, ThinkingDirective::Auto) => {
-            let budget = (max_tokens / 2).clamp(1024, 32768);
-            let effective_max = max_tokens.max(budget + 1024);
-            (
-                Some(serde_json::json!({
-                    "type": "enabled",
-                    "budget_tokens": budget,
-                })),
-                temperature_for_thinking(caps, temperature),
-                effective_max,
-            )
-        }
-
-        (ThinkingSupport::AlwaysOn, ThinkingDirective::Auto) => {
-            // Model thinks server-side without being asked; send no
-            // thinking param and make sure the output budget has room.
-            (
-                None,
-                temperature_for_thinking(caps, temperature),
-                max_tokens.max(ALWAYS_ON_THINKING_PAD_TOKENS + 1024),
-            )
-        }
-    }
+/// The Anthropic request quad produced by [`build_thinking_params`].
+pub(super) struct ThinkingOutcome {
+    pub thinking: Option<Value>,
+    /// Top-level `effort` (sibling of `thinking`) for adaptive/4.6 modes.
+    pub effort: Option<String>,
+    pub temperature: Option<f32>,
+    pub max_tokens: u32,
 }
 
-fn temperature_for_thinking(caps: &ModelCapabilities, temperature: f32) -> Option<f32> {
-    if caps.omit_temperature_with_thinking {
+/// Build the `(thinking, effort, temperature, max_tokens)` quad for one
+/// Anthropic chat call.
+///
+/// `base_model` is the real model id (variant suffix already stripped by the
+/// caller via `thinking_mode::parse_model_variant`) — it drives mode
+/// classification and the sampling-rejection check. `level` is the
+/// user-selected reasoning level decoded from the suffix (`None` when no
+/// level was encoded).
+pub(super) fn build_thinking_params(
+    base_model: &str,
+    level: Option<ReasoningLevel>,
+    directive: ThinkingDirective,
+    caps: &ModelCapabilities,
+    max_tokens: u32,
+    temperature: f32,
+) -> ThinkingOutcome {
+    let mode = resolve_thinking_mode(base_model, provider_id::ANTHROPIC);
+
+    // Non-thinking model: pass everything through unchanged.
+    if caps.thinking == ThinkingSupport::No || mode == ThinkingMode::None {
+        return ThinkingOutcome {
+            thinking: None,
+            effort: None,
+            temperature: Some(temperature),
+            max_tokens,
+        };
+    }
+
+    let (thinking, effort, effective_max) = match directive {
+        ThinkingDirective::PlainText => {
+            // Side query wants plain text. How to suppress thinking depends
+            // on the generation:
+            //  - AlwaysOn adaptive (Fable/Mythos): `disabled` returns 400 and
+            //    thinking is unconditional — pad the output budget instead.
+            //  - Legacy (4.0/4.5/3.7): accept `{type:disabled}`.
+            //  - Adaptive (4.6/4.7/4.8): thinking is OFF BY DEFAULT when no
+            //    `thinking` field is sent, so omit it. Sending `{type:disabled}`
+            //    is non-standard here (400s on Fable/Mythos).
+            if caps.thinking == ThinkingSupport::AlwaysOn {
+                (
+                    None,
+                    None,
+                    max_tokens.saturating_add(ALWAYS_ON_THINKING_PAD_TOKENS),
+                )
+            } else if mode == ThinkingMode::AnthropicLegacyBudget {
+                (Some(json!({ "type": "disabled" })), None, max_tokens)
+            } else {
+                (None, None, max_tokens)
+            }
+        }
+        ThinkingDirective::Auto => {
+            let thinking = anthropic_thinking_param(mode, level, max_tokens);
+            let effort = anthropic_effort(mode, level).map(str::to_string);
+            let floor = anthropic_max_tokens_floor(mode, level, max_tokens);
+            // AlwaysOn adaptive (mythos): thinking is obligatory, make sure
+            // the output budget has room even though we send no thinking param.
+            let floor = if caps.thinking == ThinkingSupport::AlwaysOn
+                && mode == ThinkingMode::AnthropicAdaptive
+            {
+                floor.max(ALWAYS_ON_THINKING_PAD_TOKENS + 1024)
+            } else {
+                floor
+            };
+            (thinking, effort, floor)
+        }
+    };
+
+    // Temperature: 4.7+ rejects sampling params unconditionally (400);
+    // otherwise omit when thinking is actually engaged and the model
+    // requires it (Anthropic rejects enabled-thinking + temperature).
+    let thinking_engaged = thinking
+        .as_ref()
+        .and_then(|t| t.get("type").and_then(|v| v.as_str()))
+        .map(|ty| ty == "enabled" || ty == "adaptive")
+        .unwrap_or(false);
+    let temperature = if is_claude_rejects_sampling(base_model)
+        || (thinking_engaged && caps.omit_temperature_with_thinking)
+    {
         None
     } else {
         Some(temperature)
+    };
+
+    ThinkingOutcome {
+        thinking,
+        effort,
+        temperature,
+        max_tokens: effective_max,
     }
 }
 
@@ -98,80 +150,160 @@ fn temperature_for_thinking(caps: &ModelCapabilities, temperature: f32) -> Optio
 mod tests {
     use super::*;
 
-    fn optional_caps() -> ModelCapabilities {
+    fn caps(thinking: ThinkingSupport) -> ModelCapabilities {
         ModelCapabilities {
             context_window: 200_000,
-            thinking: ThinkingSupport::Optional,
+            thinking,
             omit_temperature_with_thinking: true,
         }
     }
 
-    fn always_on_caps() -> ModelCapabilities {
-        ModelCapabilities {
-            context_window: 200_000,
-            thinking: ThinkingSupport::AlwaysOn,
-            omit_temperature_with_thinking: true,
-        }
-    }
-
-    fn no_thinking_caps() -> ModelCapabilities {
-        ModelCapabilities {
-            context_window: 128_000,
-            thinking: ThinkingSupport::No,
-            omit_temperature_with_thinking: false,
-        }
+    #[test]
+    fn non_thinking_model_passes_through() {
+        let o = build_thinking_params(
+            "claude-3-5-haiku",
+            None,
+            ThinkingDirective::Auto,
+            &caps(ThinkingSupport::No),
+            4096,
+            0.7,
+        );
+        assert!(o.thinking.is_none());
+        assert!(o.effort.is_none());
+        assert_eq!(o.temperature, Some(0.7));
+        assert_eq!(o.max_tokens, 4096);
     }
 
     #[test]
-    fn no_thinking_model_passes_temperature_through() {
-        let (thinking, temp, max_tokens) =
-            build_thinking_params(&no_thinking_caps(), ThinkingDirective::Auto, 4096, 0.7);
-        assert!(thinking.is_none());
-        assert_eq!(temp, Some(0.7));
-        assert_eq!(max_tokens, 4096);
+    fn adaptive_emits_summarized_and_effort_without_budget() {
+        let o = build_thinking_params(
+            "claude-opus-4-8",
+            Some(ReasoningLevel::High),
+            ThinkingDirective::Auto,
+            &caps(ThinkingSupport::Optional),
+            8192,
+            0.7,
+        );
+        let thinking = o.thinking.expect("adaptive sends thinking");
+        assert_eq!(thinking["type"], "adaptive");
+        assert_eq!(thinking["display"], "summarized");
+        assert!(
+            thinking.get("budget_tokens").is_none(),
+            "budget_tokens would 400"
+        );
+        assert_eq!(o.effort.as_deref(), Some("high"));
+        // 4.7+ rejects temperature unconditionally.
+        assert!(o.temperature.is_none());
     }
 
     #[test]
-    fn optional_plain_text_sends_disabled() {
-        let (thinking, temp, max_tokens) =
-            build_thinking_params(&optional_caps(), ThinkingDirective::PlainText, 1024, 0.0);
-        assert_eq!(thinking.unwrap()["type"], "disabled");
-        assert_eq!(temp, Some(0.0));
-        assert_eq!(max_tokens, 1024);
+    fn adaptive_baseline_sends_no_effort() {
+        let o = build_thinking_params(
+            "claude-opus-4-8",
+            Some(ReasoningLevel::Baseline),
+            ThinkingDirective::Auto,
+            &caps(ThinkingSupport::Optional),
+            8192,
+            0.7,
+        );
+        assert_eq!(o.thinking.unwrap()["type"], "adaptive");
+        assert!(o.effort.is_none());
     }
 
     #[test]
-    fn always_on_plain_text_pads_max_tokens_no_disabled() {
-        let (thinking, temp, max_tokens) =
-            build_thinking_params(&always_on_caps(), ThinkingDirective::PlainText, 1024, 0.5);
-        // Must NOT send {"type":"disabled"} — that would be rejected with a 400
-        assert!(thinking.is_none());
-        // Temperature omitted for thinking models
-        assert!(temp.is_none());
-        // max_tokens padded for thinking overhead
-        assert!(max_tokens > 1024);
-        assert_eq!(max_tokens, 1024 + 2048);
+    fn claude46_maps_extra_high_to_max_effort() {
+        let o = build_thinking_params(
+            "claude-opus-4-6",
+            Some(ReasoningLevel::ExtraHigh),
+            ThinkingDirective::Auto,
+            &caps(ThinkingSupport::Optional),
+            8192,
+            0.7,
+        );
+        assert_eq!(o.thinking.unwrap()["type"], "adaptive");
+        assert_eq!(o.effort.as_deref(), Some("max"));
     }
 
     #[test]
-    fn optional_auto_enables_thinking_with_budget() {
-        let (thinking, temp, max_tokens) =
-            build_thinking_params(&optional_caps(), ThinkingDirective::Auto, 8192, 0.7);
-        let thinking = thinking.unwrap();
+    fn legacy_budget_uses_level_and_omits_temperature_when_engaged() {
+        let o = build_thinking_params(
+            "claude-opus-4-5",
+            Some(ReasoningLevel::High),
+            ThinkingDirective::Auto,
+            &caps(ThinkingSupport::Optional),
+            8192,
+            0.7,
+        );
+        let thinking = o.thinking.unwrap();
         assert_eq!(thinking["type"], "enabled");
-        assert!(thinking["budget_tokens"].as_u64().unwrap() > 0);
-        // Temperature omitted when thinking is enabled
-        assert!(temp.is_none());
-        assert!(max_tokens >= 8192);
+        assert_eq!(thinking["budget_tokens"], 24_576);
+        assert!(o.effort.is_none());
+        // thinking engaged + omit_temperature_with_thinking → None
+        assert!(o.temperature.is_none());
+        // floor ensures budget + 1024 room
+        assert!(o.max_tokens >= 24_576 + 1024);
     }
 
     #[test]
-    fn always_on_auto_ensures_min_budget() {
-        let (thinking, _temp, max_tokens) =
-            build_thinking_params(&always_on_caps(), ThinkingDirective::Auto, 1024, 0.0);
-        // No thinking param needed — server handles it
-        assert!(thinking.is_none());
-        // But max_tokens must have room
-        assert!(max_tokens >= 2048 + 1024);
+    fn legacy_baseline_preserves_half_max_tokens_budget() {
+        let o = build_thinking_params(
+            "claude-opus-4-5",
+            None,
+            ThinkingDirective::Auto,
+            &caps(ThinkingSupport::Optional),
+            8192,
+            0.7,
+        );
+        assert_eq!(o.thinking.unwrap()["budget_tokens"], 4096);
+    }
+
+    #[test]
+    fn plain_text_disables_thinking_on_optional_and_keeps_temperature() {
+        let o = build_thinking_params(
+            "claude-opus-4-5",
+            None,
+            ThinkingDirective::PlainText,
+            &caps(ThinkingSupport::Optional),
+            1024,
+            0.5,
+        );
+        assert_eq!(o.thinking.unwrap()["type"], "disabled");
+        // thinking not engaged → temperature retained (not 4.7+)
+        assert_eq!(o.temperature, Some(0.5));
+    }
+
+    #[test]
+    fn plain_text_on_alwayson_pads_and_omits_temperature_for_mythos() {
+        let o = build_thinking_params(
+            "claude-mythos",
+            None,
+            ThinkingDirective::PlainText,
+            &caps(ThinkingSupport::AlwaysOn),
+            1024,
+            0.5,
+        );
+        // Must NOT send disabled (would 400).
+        assert!(o.thinking.is_none());
+        assert!(o.max_tokens > 1024);
+        // mythos is adaptive-line → rejects sampling.
+        assert!(o.temperature.is_none());
+    }
+
+    #[test]
+    fn plain_text_on_adaptive_omits_thinking_and_temperature() {
+        let o = build_thinking_params(
+            "claude-opus-4-8",
+            Some(ReasoningLevel::High),
+            ThinkingDirective::PlainText,
+            &caps(ThinkingSupport::Optional),
+            1024,
+            0.5,
+        );
+        // Adaptive (4.7/4.8): thinking is off by default when no `thinking`
+        // field is sent — omit rather than sending `{type:disabled}`, which
+        // is non-standard (400s on Fable/Mythos).
+        assert!(o.thinking.is_none());
+        // 4.7+ rejects sampling regardless of the thinking state.
+        assert!(o.temperature.is_none());
     }
 }
