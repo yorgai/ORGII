@@ -393,7 +393,7 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
       ) : null;
     const planActions = ownsActions ? (
       <div
-        className="flex items-center justify-end gap-1 border-t border-border-2 px-3 py-2"
+        className={`flex items-center justify-end gap-1 px-3 py-2 ${isCollapsed ? "" : "border-t border-border-2"}`}
         onClick={(event) => event.stopPropagation()}
       >
         {autoApproveRemaining !== null && ready && !isEditing && (
@@ -517,7 +517,7 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
               )}
             </div>
           ))}
-        {!isCollapsed && planActions}
+        {planActions}
       </div>
     );
   }
