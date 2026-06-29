@@ -9,6 +9,7 @@ import {
   deleteSearchTabSessionState,
 } from "@src/store/workstation/codeEditor/search";
 
+import { TAB_RETURN_TARGET_DATA_KEY } from "./types";
 import type { PanelState, WorkStationTab } from "./types";
 
 // ============================================
@@ -102,7 +103,14 @@ export function closeTab(state: PanelState, tabId: string): PanelState {
   // If closing the active tab, select another
   let newActiveTabId = state?.activeTabId ?? null;
   if (state?.activeTabId === tabId) {
-    if (newTabs.length === 0) {
+    const returnTabId = target.data[TAB_RETURN_TARGET_DATA_KEY];
+    const canReturnToTab =
+      typeof returnTabId === "string" &&
+      newTabs.some((tab) => tab.id === returnTabId);
+
+    if (canReturnToTab) {
+      newActiveTabId = returnTabId;
+    } else if (newTabs.length === 0) {
       newActiveTabId = null;
     } else {
       // Switch to next tab, or previous if it was the last
