@@ -28,8 +28,8 @@ import {
   EventBlockHeaderSubtitle,
   EventBlockHeaderTitle,
   getEventBlockContainerClasses,
+  useEventBlockHeader,
 } from "../primitives";
-import { useBlockHeader } from "../useBlockLocate";
 import { CanvasErrorBoundary } from "./CanvasErrorBoundary";
 import CanvasPreviewSurface, {
   type CanvasPreviewSurfaceHandle,
@@ -97,7 +97,7 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
     handleHeaderClick,
     handleHeaderMouseEnter,
     handleHeaderMouseLeave,
-  } = useBlockHeader({ defaultCollapsed: false });
+  } = useEventBlockHeader({ defaultCollapsed: false, collapseAllValue: true });
 
   const currentHeight = HEIGHT_STEPS[heightStep % HEIGHT_STEPS.length];
 
