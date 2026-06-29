@@ -281,7 +281,9 @@
       "in_review": "In Review",
       "completed": "Done",
       "cancelled": "Cancelled",
-      "duplicate": "Duplicate"
+      "duplicate": "Duplicate",
+      "open": "Open",
+      "closed": "Closed"
     },
     "priorityLabels": {
       "none": "No priority",

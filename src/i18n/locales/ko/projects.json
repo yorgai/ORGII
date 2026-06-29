@@ -282,7 +282,9 @@
       "in_review": "검토 중",
       "completed": "완료",
       "cancelled": "취소됨",
-      "duplicate": "중복"
+      "duplicate": "중복",
+      "open": "Open",
+      "closed": "Closed"
     },
     "priorityLabels": {
       "none": "우선순위 없음",

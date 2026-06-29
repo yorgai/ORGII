@@ -108,6 +108,8 @@ export const WORK_ITEM_STATUS_COLOR: Record<
   completed: "green",
   cancelled: "slate",
   duplicate: "slate",
+  open: "blue",
+  closed: "green",
 };
 
 /**
@@ -160,6 +162,8 @@ export const workItemToKanban: Record<WorkItemStatus, KanbanStatus> = {
   completed: "completed",
   cancelled: "cancelled",
   duplicate: "duplicate",
+  open: "planned",
+  closed: "completed",
 };
 
 /**
@@ -173,6 +177,8 @@ export const workItemToGantt: Record<WorkItemStatus, GanttStatus> = {
   completed: "completed",
   cancelled: "cancelled",
   duplicate: "cancelled",
+  open: "not_started",
+  closed: "completed",
 };
 
 /**
@@ -186,6 +192,8 @@ export const workItemToCalendar: Record<WorkItemStatus, CalendarStatus> = {
   completed: "completed",
   cancelled: "cancelled",
   duplicate: "cancelled",
+  open: "scheduled",
+  closed: "completed",
 };
 
 // ============================================

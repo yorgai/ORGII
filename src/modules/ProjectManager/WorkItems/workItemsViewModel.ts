@@ -1,6 +1,9 @@
 import type { KanbanTask } from "@src/features/KanbanBoard";
 import type { StatusCounts } from "@src/modules/ProjectManager/WorkItems/components/WorkItemsPageHeader";
-import { WORK_ITEM_STATUS_OPTIONS } from "@src/modules/ProjectManager/config/manage";
+import {
+  GITHUB_ISSUE_STATUS_OPTIONS,
+  WORK_ITEM_STATUS_OPTIONS,
+} from "@src/modules/ProjectManager/config/manage";
 import type { DropdownOption } from "@src/types/core/shared";
 import type { WorkItem, WorkItemStatus } from "@src/types/core/workItem";
 
@@ -50,12 +53,29 @@ export function filterWorkItemsByStatus<TWorkItem extends WorkItem>(
 
 export function groupWorkItemsByStatus<TWorkItem extends WorkItem>(
   workItems: TWorkItem[],
-  options: readonly DropdownOption[] = WORK_ITEM_STATUS_OPTIONS
+  options?: readonly DropdownOption[]
 ): WorkItemGroup<TWorkItem>[] {
   const activeItems = workItems.filter(
     (workItem) => !isDeletedWorkItem(workItem)
   );
-  return options.map((option) => ({
+  const hasGitHubIssueStatuses = activeItems.some((workItem) =>
+    GITHUB_ISSUE_STATUS_OPTIONS.some(
+      (option) => option.value === getWorkItemStatus(workItem)
+    )
+  );
+  const hasWorkflowStatuses = activeItems.some((workItem) =>
+    WORK_ITEM_STATUS_OPTIONS.some(
+      (option) => option.value === getWorkItemStatus(workItem)
+    )
+  );
+  const statusOptions =
+    options ??
+    (hasGitHubIssueStatuses
+      ? hasWorkflowStatuses
+        ? [...GITHUB_ISSUE_STATUS_OPTIONS, ...WORK_ITEM_STATUS_OPTIONS]
+        : GITHUB_ISSUE_STATUS_OPTIONS
+      : WORK_ITEM_STATUS_OPTIONS);
+  return statusOptions.map((option) => ({
     status: option.value as WorkItemStatus,
     config: option,
     items: activeItems.filter(

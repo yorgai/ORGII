@@ -13,10 +13,11 @@ import type {
   ProjectStatus,
   Project as UIProject,
 } from "@src/types/core/project";
-import type {
-  WorkItem as UIWorkItem,
-  WorkItemPriority,
-  WorkItemStatus,
+import {
+  GITHUB_ISSUE_STATUS,
+  type WorkItem as UIWorkItem,
+  type WorkItemPriority,
+  type WorkItemStatus,
 } from "@src/types/core/workItem";
 
 import type {
@@ -69,6 +70,16 @@ function validateEnum<T extends string>(
   return fallback;
 }
 
+function mapWorkItemStatus(status: string | undefined): WorkItemStatus {
+  if (
+    status === GITHUB_ISSUE_STATUS.OPEN ||
+    status === GITHUB_ISSUE_STATUS.CLOSED
+  ) {
+    return status;
+  }
+  return FILE_TO_UI_STATUS[status ?? ""] ?? "backlog";
+}
+
 // ============================================
 // Lookup helpers
 // ============================================
@@ -77,29 +88,44 @@ function resolveLabelIds(
   ids: string[],
   labelMap: Map<string, LabelEntry>
 ): { id: string; name: string; color: string }[] {
-  return ids
-    .map((labelId) => labelMap.get(labelId))
-    .filter((label): label is LabelEntry => label !== undefined);
+  return ids.map((labelId) => {
+    const label = labelMap.get(labelId);
+    return {
+      id: label?.id ?? labelId,
+      name: label?.name ?? labelId,
+      color: label?.color ?? FALLBACK_MEMBER_COLOR,
+    };
+  });
 }
 
 function resolveMemberId(
   memberId: string | undefined,
   memberMap: Map<string, MemberEntry>
-): { id: string; name: string; color: string } | undefined {
+): { id: string; name: string; avatar?: string; color: string } | undefined {
   if (!memberId) return undefined;
   const member = memberMap.get(memberId);
   const name = member?.name ?? memberId;
-  return { id: memberId, name, color: FALLBACK_MEMBER_COLOR };
+  return {
+    id: memberId,
+    name,
+    avatar: member?.avatar,
+    color: FALLBACK_MEMBER_COLOR,
+  };
 }
 
 function resolveMemberIds(
   ids: string[],
   memberMap: Map<string, MemberEntry>
-): { id: string; name: string; color: string }[] {
+): { id: string; name: string; avatar?: string; color: string }[] {
   return ids.map((memberId) => {
     const member = memberMap.get(memberId);
     const name = member?.name ?? memberId;
-    return { id: memberId, name, color: FALLBACK_MEMBER_COLOR };
+    return {
+      id: memberId,
+      name,
+      avatar: member?.avatar,
+      color: FALLBACK_MEMBER_COLOR,
+    };
   });
 }
 
@@ -126,6 +152,8 @@ const UI_TO_FILE_STATUS: Record<WorkItemStatus, string> = {
   completed: "completed",
   cancelled: "cancelled",
   duplicate: "duplicate",
+  open: "open",
+  closed: "closed",
 };
 
 // ============================================
@@ -232,7 +260,7 @@ export function workItemDataToUI(
     star: frontmatter.starred,
     spec: itemData.body,
     status: frontmatter.status,
-    workItemStatus: FILE_TO_UI_STATUS[frontmatter.status] ?? "backlog",
+    workItemStatus: mapWorkItemStatus(frontmatter.status),
     priority: validateEnum<WorkItemPriority>(
       frontmatter.priority,
       VALID_WORK_ITEM_PRIORITIES,
@@ -373,7 +401,7 @@ export function enrichedWorkItemToUI(item: EnrichedWorkItem): UIWorkItem {
     star: item.starred,
     spec: item.body,
     status: item.status,
-    workItemStatus: FILE_TO_UI_STATUS[item.status] ?? "backlog",
+    workItemStatus: mapWorkItemStatus(item.status),
     priority: validateEnum<WorkItemPriority>(
       item.priority,
       VALID_WORK_ITEM_PRIORITIES,

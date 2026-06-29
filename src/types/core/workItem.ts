@@ -27,6 +27,8 @@ import type { Label, Person } from "./shared";
 /**
  * Work item status
  */
+export type GitHubIssueStatus = "open" | "closed";
+
 export type WorkItemStatus =
   | "backlog"
   | "planned"
@@ -34,7 +36,8 @@ export type WorkItemStatus =
   | "in_review"
   | "completed"
   | "cancelled"
-  | "duplicate";
+  | "duplicate"
+  | GitHubIssueStatus;
 
 export const WORK_ITEM_STATUS = {
   BACKLOG: "backlog",
@@ -44,6 +47,13 @@ export const WORK_ITEM_STATUS = {
   COMPLETED: "completed",
   CANCELLED: "cancelled",
   DUPLICATE: "duplicate",
+  GITHUB_OPEN: "open",
+  GITHUB_CLOSED: "closed",
+} as const;
+
+export const GITHUB_ISSUE_STATUS = {
+  OPEN: WORK_ITEM_STATUS.GITHUB_OPEN,
+  CLOSED: WORK_ITEM_STATUS.GITHUB_CLOSED,
 } as const;
 
 /**

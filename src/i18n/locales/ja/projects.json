@@ -282,7 +282,9 @@
       "in_review": "レビュー中",
       "completed": "完了",
       "cancelled": "キャンセル",
-      "duplicate": "重複"
+      "duplicate": "重複",
+      "open": "Open",
+      "closed": "Closed"
     },
     "priorityLabels": {
       "none": "優先度なし",

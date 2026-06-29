@@ -282,7 +282,9 @@
       "in_review": "Đang xem xét",
       "completed": "Hoàn thành",
       "cancelled": "Đã hủy",
-      "duplicate": "Trùng lặp"
+      "duplicate": "Trùng lặp",
+      "open": "Mở",
+      "closed": "Đã đóng"
     },
     "priorityLabels": {
       "none": "Không ưu tiên",

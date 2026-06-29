@@ -282,7 +282,9 @@
       "in_review": "Em Revisão",
       "completed": "Concluído",
       "cancelled": "Cancelado",
-      "duplicate": "Duplicado"
+      "duplicate": "Duplicado",
+      "open": "Aberto",
+      "closed": "Fechado"
     },
     "priorityLabels": {
       "none": "Sem prioridade",

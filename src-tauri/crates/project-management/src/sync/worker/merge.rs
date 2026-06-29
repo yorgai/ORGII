@@ -4,12 +4,15 @@ use tracing::{debug, info, warn};
 
 use super::{events, finalize_failure, finalize_success, io, now_ms};
 use crate::projects::io::{
-    allocate_short_id, apply_remote_merge, delete_work_item, find_by_external_ref,
-    read_sync_metadata, read_work_item, update_work_item_partial_with_revisions, write_work_item,
+    allocate_short_id, apply_remote_merge, delete_work_item, find_by_external_ref, read_labels,
+    read_members, read_project, read_sync_metadata, read_work_item,
+    update_work_item_partial_with_revisions, write_labels, write_members, write_work_item,
     FieldRevision, SyncMetadata,
 };
 use crate::projects::types::work_items::{default_priority, default_status};
-use crate::projects::types::{WorkItemData, WorkItemFrontmatter};
+use crate::projects::types::{
+    LabelEntry, LabelsFile, MemberEntry, MembersFile, WorkItemData, WorkItemFrontmatter,
+};
 use crate::sync::adapter::ExternalChange;
 use crate::sync::events::SyncEventTrigger;
 use crate::sync::types::{EntityType, OutboxEntry};
@@ -141,6 +144,15 @@ async fn process_merge_entry_inner(entry: OutboxEntry, id: i64) -> Result<(), St
     if change.deleted {
         return apply_remote_delete(id, &project_slug, &short_id, &change.external_id).await;
     }
+
+    let catalog_slug = project_slug.clone();
+    let catalog_fields = change.fields.clone();
+    tokio::task::spawn_blocking(move || -> Result<(), String> {
+        let project_id = read_project(&catalog_slug)?.meta.id;
+        upsert_remote_catalog_entries(&project_id, &catalog_fields)
+    })
+    .await
+    .map_err(|err| format!("merge catalog join error: {}", err))??;
 
     // Resolve. Read the metadata + the local view of the work item
     // (both feed the resolver: metadata drives the merge decision and
@@ -334,6 +346,8 @@ async fn apply_inbound_create(
 
     let outcome = tokio::task::spawn_blocking(move || -> Result<String, String> {
         let short_id = allocate_short_id(&create_slug)?;
+        let project_id = read_project(&create_slug)?.meta.id;
+        upsert_remote_catalog_entries(&project_id, &create_fields)?;
         let (frontmatter, body) = build_inbound_create_frontmatter(&short_id, &create_fields);
         write_work_item(&create_slug, &short_id, &frontmatter, &body)?;
 
@@ -484,6 +498,94 @@ fn build_inbound_create_frontmatter(
 
     let body = pick_string("body").unwrap_or_default();
     (frontmatter, body)
+}
+
+fn upsert_remote_catalog_entries(
+    project_id: &str,
+    fields: &serde_json::Value,
+) -> Result<(), String> {
+    upsert_remote_labels(project_id, fields)?;
+    upsert_remote_members(project_id, fields)?;
+    Ok(())
+}
+
+fn upsert_remote_labels(project_id: &str, fields: &serde_json::Value) -> Result<(), String> {
+    let Some(label_nodes) = fields
+        .get("label_details")
+        .and_then(|value| value.as_array())
+    else {
+        return Ok(());
+    };
+
+    let mut labels = read_labels(project_id)?.labels;
+    for label_node in label_nodes {
+        let Some(name) = label_node.get("name").and_then(|value| value.as_str()) else {
+            continue;
+        };
+        let color =
+            normalize_github_color(label_node.get("color").and_then(|value| value.as_str()));
+        match labels.iter_mut().find(|entry| entry.id == name) {
+            Some(existing) => {
+                existing.name = name.to_string();
+                existing.color = color;
+            }
+            None => labels.push(LabelEntry {
+                id: name.to_string(),
+                name: name.to_string(),
+                color,
+            }),
+        }
+    }
+    write_labels(project_id, &LabelsFile { labels })
+}
+
+fn upsert_remote_members(project_id: &str, fields: &serde_json::Value) -> Result<(), String> {
+    let Some(assignee_nodes) = fields
+        .get("assignee_details")
+        .and_then(|value| value.as_array())
+    else {
+        return Ok(());
+    };
+
+    let mut members = read_members(project_id)?.members;
+    for assignee_node in assignee_nodes {
+        let Some(login) = assignee_node.get("login").and_then(|value| value.as_str()) else {
+            continue;
+        };
+        let avatar = assignee_node
+            .get("avatar_url")
+            .and_then(|value| value.as_str())
+            .map(str::to_string);
+        match members.iter_mut().find(|entry| entry.id == login) {
+            Some(existing) => {
+                existing.name = login.to_string();
+                existing.github_username = Some(login.to_string());
+                existing.avatar = avatar;
+                existing.active = true;
+            }
+            None => members.push(MemberEntry {
+                id: login.to_string(),
+                name: login.to_string(),
+                email: None,
+                avatar,
+                github_username: Some(login.to_string()),
+                last_commit_date: None,
+                active: true,
+            }),
+        }
+    }
+    write_members(project_id, &MembersFile { members })
+}
+
+fn normalize_github_color(color: Option<&str>) -> String {
+    let Some(raw_color) = color.map(str::trim).filter(|value| !value.is_empty()) else {
+        return "#6b7280".to_string();
+    };
+    if raw_color.starts_with('#') {
+        raw_color.to_string()
+    } else {
+        format!("#{raw_color}")
+    }
 }
 
 /// Build the per-field watermark map for an inbound-create. Every

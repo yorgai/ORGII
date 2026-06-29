@@ -282,7 +282,9 @@
       "in_review": "審覈中",
       "completed": "完成",
       "cancelled": "已取消",
-      "duplicate": "重複"
+      "duplicate": "重複",
+      "open": "開放",
+      "closed": "已關閉"
     },
     "priorityLabels": {
       "none": "無優先級",

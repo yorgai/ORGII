@@ -282,7 +282,9 @@
       "in_review": "На проверке",
       "completed": "Готово",
       "cancelled": "Отменено",
-      "duplicate": "Дубликат"
+      "duplicate": "Дубликат",
+      "open": "Открыто",
+      "closed": "Закрыто"
     },
     "priorityLabels": {
       "none": "Без приоритета",
