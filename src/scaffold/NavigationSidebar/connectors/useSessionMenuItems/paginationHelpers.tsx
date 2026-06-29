@@ -20,6 +20,7 @@ export const UNIFIED_LOAD_MORE_ID = "load-more-unified";
 interface UnifiedLoadMoreState {
   visible: boolean;
   loading: boolean;
+  disabled: boolean;
   readyCategories: SessionListCategory[];
 }
 
@@ -64,7 +65,7 @@ export function groupLoadMoreRow(
 }
 
 export function unifiedLoadMoreRow(
-  loading: boolean,
+  state: UnifiedLoadMoreState,
   label: string
 ): NavigationMenuItem {
   return {
@@ -73,9 +74,9 @@ export function unifiedLoadMoreRow(
     label,
     icon: MoreHorizontal,
     iconName: "more-horizontal",
-    trailingElement: loading ? renderBreathingStatusDot() : undefined,
+    trailingElement: state.loading ? renderBreathingStatusDot() : undefined,
     visualTone: "secondary",
-    disabled: loading,
+    disabled: state.disabled,
   };
 }
 
@@ -114,7 +115,12 @@ export function getUnifiedLoadMoreState(
     }
   }
 
-  return { visible, loading, readyCategories };
+  return {
+    visible,
+    loading,
+    disabled: readyCategories.length === 0,
+    readyCategories,
+  };
 }
 
 export function loadUnifiedReadyCategories({

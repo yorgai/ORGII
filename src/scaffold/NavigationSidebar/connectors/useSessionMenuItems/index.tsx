@@ -182,7 +182,7 @@ export function useSessionMenuItems({
     const label = state.loading
       ? tCommon("sessions:chat.loading")
       : tCommon("common:actions.loadMore");
-    return [unifiedLoadMoreRow(state.loading, label)];
+    return [unifiedLoadMoreRow(state, label)];
   }, [isFiltering, pagination, tCommon]);
 
   const appendTrailingLoadMoreItems = useCallback(

@@ -98,6 +98,7 @@ describe("unified backend load-more helpers", () => {
     expect(state).toEqual({
       visible: true,
       loading: false,
+      disabled: false,
       readyCategories: [firstCategory, secondCategory],
     });
   });
@@ -114,17 +115,42 @@ describe("unified backend load-more helpers", () => {
 
     expect(state.visible).toBe(true);
     expect(state.loading).toBe(true);
+    expect(state.disabled).toBe(false);
     expect(state.readyCategories).toEqual([readyCategory]);
   });
 
-  it("builds a disabled unified row while loading", () => {
-    const row = unifiedLoadMoreRow(true, "Loading");
+  it("keeps the unified row enabled while loading when categories are ready", () => {
+    const readyCategory = SESSION_LIST_CATEGORIES[0] as SessionListCategory;
+    const state = getUnifiedLoadMoreState(
+      makePagination({
+        [readyCategory]: { loaded: 10, hasMore: true, loading: false },
+        [SESSION_LIST_CATEGORIES[1] as SessionListCategory]: {
+          loaded: 10,
+          hasMore: true,
+          loading: true,
+        },
+      })
+    );
+    const row = unifiedLoadMoreRow(state, "Loading");
 
     expect(row.id).toBe(UNIFIED_LOAD_MORE_ID);
     expect(row.key).toBe(UNIFIED_LOAD_MORE_ID);
     expect(row.label).toBe("Loading");
-    expect(row.disabled).toBe(true);
+    expect(row.disabled).toBe(false);
     expect(row.trailingElement).toBeDefined();
+  });
+
+  it("disables the unified row when every remaining category is already loading", () => {
+    const loadingCategory = SESSION_LIST_CATEGORIES[0] as SessionListCategory;
+    const state = getUnifiedLoadMoreState(
+      makePagination({
+        [loadingCategory]: { loaded: 10, hasMore: true, loading: true },
+      })
+    );
+    const row = unifiedLoadMoreRow(state, "Loading");
+
+    expect(state.disabled).toBe(true);
+    expect(row.disabled).toBe(true);
   });
 
   it("only matches the unified backend load-more id", () => {
