@@ -46,6 +46,10 @@ export interface InlineSection {
 export interface CollapsedInlineRowProps {
   sections: InlineSection[];
   scrollNav?: ScrollNavState | null;
+  canvasPreview?: {
+    label: string;
+    onOpen: () => void;
+  } | null;
 }
 
 function renderSectionContent(section: InlineSection) {
@@ -62,9 +66,9 @@ function getButtonClassName(section: InlineSection) {
 }
 
 const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
-  ({ sections, scrollNav }) => {
+  ({ sections, scrollNav, canvasPreview }) => {
     const showFollowAgent = scrollNav?.showFollowAgent ?? false;
-    const showCanvasPreview = scrollNav?.showCanvasPreview ?? false;
+    const showCanvasPreview = Boolean(canvasPreview);
     const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
 
     if (sections.length === 0 && !showFollowAgent && !showCanvasPreview)
@@ -120,17 +124,17 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
           );
         })}
 
-        {showCanvasPreview && scrollNav?.onOpenCanvasPreview && (
+        {canvasPreview && (
           <Button
             variant="secondary"
             appearance="outline"
             size="small"
             shape="round"
             icon={<Layout size={13} strokeWidth={2} />}
-            onClick={scrollNav.onOpenCanvasPreview}
-            aria-label={scrollNav.canvasPreviewLabel ?? "Canvas"}
+            onClick={canvasPreview.onOpen}
+            aria-label={canvasPreview.label}
           >
-            {scrollNav.canvasPreviewLabel ?? "Canvas"}
+            {canvasPreview.label}
           </Button>
         )}
 

@@ -397,16 +397,16 @@ const ChatView: React.FC<ChatViewProps> = memo(
       sessionId,
       latestCanvasPayload
     );
-    const canvasPreviewNav = useMemo(
-      () => ({
-        showCanvasPreview: Boolean(
-          latestCanvasPayload &&
-          !canvasPreview?.openedInSimulator &&
-          openLatestCanvas
-        ),
-        canvasPreviewLabel: latestCanvasPayload?.title || "Canvas",
-        onOpenCanvasPreview: openLatestCanvas ?? undefined,
-      }),
+    const canvasPreviewPill = useMemo(
+      () =>
+        latestCanvasPayload &&
+        !canvasPreview?.openedInSimulator &&
+        openLatestCanvas
+          ? {
+              label: latestCanvasPayload.title || "Canvas",
+              onOpen: openLatestCanvas,
+            }
+          : null,
       [canvasPreview?.openedInSimulator, latestCanvasPayload, openLatestCanvas]
     );
     const currentPlanApproval = useAtomValue(pendingPlanApprovalsAtom).get(
@@ -850,9 +850,8 @@ const ChatView: React.FC<ChatViewProps> = memo(
               groupChatPendingMessage={groupChatPendingMessage}
               groupChatViewActive={groupChatViewActive}
               hasAnyInlineSection={hasAny}
-              scrollNav={
-                scrollNav ? { ...scrollNav, ...canvasPreviewNav } : null
-              }
+              scrollNav={scrollNav}
+              canvasPreview={canvasPreviewPill}
               inlineSections={inlineSections}
               hasModeSwitch={hasModeSwitch}
               agentOrgIntervention={

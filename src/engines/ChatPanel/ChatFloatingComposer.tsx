@@ -55,6 +55,11 @@ interface GroupChatPendingMessageView {
   targetMemberName: string;
 }
 
+interface CanvasPreviewPillView {
+  label: string;
+  onOpen: () => void;
+}
+
 interface ChatFloatingComposerProps {
   composerRef: React.Ref<HTMLDivElement>;
   inputBoxRef?: React.Ref<HTMLDivElement>;
@@ -93,6 +98,7 @@ interface ChatFloatingComposerProps {
   groupChatViewActive: boolean;
   hasAnyInlineSection: boolean;
   scrollNav: ScrollNavState | null;
+  canvasPreview: CanvasPreviewPillView | null;
   inlineSections: InlineSection[];
   hasModeSwitch: boolean;
   agentOrgIntervention: AgentOrgInterventionView | null;
@@ -142,6 +148,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
     groupChatViewActive,
     hasAnyInlineSection,
     scrollNav,
+    canvasPreview,
     inlineSections,
     hasModeSwitch,
     agentOrgIntervention,
@@ -187,9 +194,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
     const hasLocalInlineSection =
       hasAnyInlineSection || fileChangeStats.count > 0;
     const showTopRowPills =
-      hasLocalInlineSection ||
-      scrollNav?.showFollowAgent ||
-      scrollNav?.showCanvasPreview;
+      hasLocalInlineSection || scrollNav?.showFollowAgent || canvasPreview;
     const trailingScrollButton = scrollNav?.showScrollToBottom ? (
       <Button
         variant="secondary"
@@ -316,6 +321,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
                 <CollapsedInlineRow
                   sections={localInlineSections}
                   scrollNav={scrollNav}
+                  canvasPreview={canvasPreview}
                 />
               ) : null
             }
