@@ -16,11 +16,9 @@
  *   - url: not embedded to avoid iframe memory overhead
  *   - a2ui: DOMPurify sanitizes type="html" elements in A2UIRenderer
  */
-import { Layout, Monitor } from "lucide-react";
+import { Layout } from "lucide-react";
 import React, { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
-import Button from "@src/components/Button";
 
 import {
   EventBlockHeader,
@@ -35,7 +33,6 @@ import CanvasPreviewSurface, {
   type CanvasPreviewSurfaceHandle,
 } from "./CanvasPreviewSurface";
 import type { CanvasInlineCardProps } from "./types";
-import { useJumpToSimulatorCanvas } from "./useJumpToSimulatorCanvas";
 
 // ─── height steps ─────────────────────────────────────────────────────────────
 
@@ -105,10 +102,6 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
     () => ({ mode, content, url, title, streaming: isStreaming }),
     [mode, content, url, title, isStreaming]
   );
-  const handleJumpToSimulator = useJumpToSimulatorCanvas(
-    sessionId,
-    simulatorPayload
-  );
 
   const cardTitle =
     title ??
@@ -158,24 +151,6 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
         withHover
-        rightContent={
-          handleJumpToSimulator && !isCollapsed ? (
-            <Button
-              variant="tertiary"
-              appearance="ghost"
-              size="mini"
-              iconOnly
-              icon={<Monitor size={12} strokeWidth={1.75} />}
-              title={t("canvasCard.viewInSimulator", "View in Simulator")}
-              aria-label={t("canvasCard.viewInSimulator", "View in Simulator")}
-              className="text-text-4 hover:text-text-2"
-              onClick={(event) => {
-                event.stopPropagation();
-                handleJumpToSimulator();
-              }}
-            />
-          ) : null
-        }
       >
         <EventBlockHeaderIcon
           icon={<Layout size={14} className="text-primary-6" />}
