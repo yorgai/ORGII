@@ -156,6 +156,9 @@ export interface FollowAgentNavState {
 export interface ScrollNavState extends FollowAgentNavState {
   showScrollToBottom: boolean;
   onScrollToBottom: () => void;
+  showCanvasPreview?: boolean;
+  canvasPreviewLabel?: string;
+  onOpenCanvasPreview?: () => void;
 }
 
 const EMPTY_FOLLOW_AGENT_NAV: FollowAgentNavState = {

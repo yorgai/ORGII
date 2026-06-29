@@ -51,6 +51,7 @@ import { createLogger } from "@src/hooks/logger";
 import { useSessionWorkspaceSync } from "@src/hooks/session/useSessionWorkspaceSync";
 import { activeSessionIdAtom, sessionByIdAtom } from "@src/store/session";
 import type { Session } from "@src/store/session";
+import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
 import {
   isSessionActiveAtom,
   sessionRuntimeStatusAtom,
@@ -106,6 +107,7 @@ import { useAgentOrgRunView } from "./InputArea/components/useAgentOrgRunView";
 import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useGitDiffActions } from "./InputArea/hooks/useGitDiffActions";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
+import { useJumpToSimulatorCanvas } from "./blocks/CanvasInlineCard/useJumpToSimulatorCanvas";
 import { useFollowAgent } from "./hooks/useFollowAgent";
 
 const logger = createLogger("ChatView");
@@ -388,6 +390,25 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const streamRetryStatus = useAtomValue(streamRetryStatusAtom);
     const streamRetry =
       streamRetryStatus?.sessionId === sessionId ? streamRetryStatus : null;
+    const canvasPreview = useAtomValue(canvasPreviewAtom);
+    const latestCanvasPayload =
+      canvasPreview?.sessionId === sessionId ? canvasPreview.payload : null;
+    const openLatestCanvas = useJumpToSimulatorCanvas(
+      sessionId,
+      latestCanvasPayload
+    );
+    const canvasPreviewNav = useMemo(
+      () => ({
+        showCanvasPreview: Boolean(
+          latestCanvasPayload &&
+          !canvasPreview?.openedInSimulator &&
+          openLatestCanvas
+        ),
+        canvasPreviewLabel: latestCanvasPayload?.title || "Canvas",
+        onOpenCanvasPreview: openLatestCanvas ?? undefined,
+      }),
+      [canvasPreview?.openedInSimulator, latestCanvasPayload, openLatestCanvas]
+    );
     const currentPlanApproval = useAtomValue(pendingPlanApprovalsAtom).get(
       sessionId
     )?.current;
@@ -829,7 +850,9 @@ const ChatView: React.FC<ChatViewProps> = memo(
               groupChatPendingMessage={groupChatPendingMessage}
               groupChatViewActive={groupChatViewActive}
               hasAnyInlineSection={hasAny}
-              scrollNav={scrollNav}
+              scrollNav={
+                scrollNav ? { ...scrollNav, ...canvasPreviewNav } : null
+              }
               inlineSections={inlineSections}
               hasModeSwitch={hasModeSwitch}
               agentOrgIntervention={

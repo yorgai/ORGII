@@ -9,6 +9,7 @@
  *
  * Each pill shows icon + numeric count only. gap-1 between pills.
  */
+import { Layout } from "lucide-react";
 import React, { memo, useState } from "react";
 
 import Button from "@src/components/Button";
@@ -63,9 +64,11 @@ function getButtonClassName(section: InlineSection) {
 const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
   ({ sections, scrollNav }) => {
     const showFollowAgent = scrollNav?.showFollowAgent ?? false;
+    const showCanvasPreview = scrollNav?.showCanvasPreview ?? false;
     const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
 
-    if (sections.length === 0 && !showFollowAgent) return null;
+    if (sections.length === 0 && !showFollowAgent && !showCanvasPreview)
+      return null;
 
     return (
       <div className="flex items-center gap-1 px-0.5">
@@ -116,6 +119,20 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
             </Dropdown>
           );
         })}
+
+        {showCanvasPreview && scrollNav?.onOpenCanvasPreview && (
+          <Button
+            variant="secondary"
+            appearance="outline"
+            size="small"
+            shape="round"
+            icon={<Layout size={13} strokeWidth={2} />}
+            onClick={scrollNav.onOpenCanvasPreview}
+            aria-label={scrollNav.canvasPreviewLabel ?? "Canvas"}
+          >
+            {scrollNav.canvasPreviewLabel ?? "Canvas"}
+          </Button>
+        )}
 
         {showFollowAgent && (
           <Tooltip
