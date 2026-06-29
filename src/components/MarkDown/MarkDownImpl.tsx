@@ -143,6 +143,7 @@ export interface MarkdownProps {
    * streaming path).
    */
   skipPreprocess?: boolean;
+  disableCanvasInline?: boolean;
 }
 
 // ============================================
@@ -389,6 +390,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
   enableFileNavigation = false,
   streaming = false,
   skipPreprocess = false,
+  disableCanvasInline = false,
 }) => {
   const themes = useAtomValue(themesAtom);
   const activeWorkspaceRoot = useAtomValue(activeWorkspaceRootAtom);
@@ -446,7 +448,10 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
           }
 
           // Canvas / preview fenced blocks — render as CanvasInlineCard
-          if (CANVAS_FENCED_LANGUAGES.has(language.toLowerCase())) {
+          if (
+            !disableCanvasInline &&
+            CANVAS_FENCED_LANGUAGES.has(language.toLowerCase())
+          ) {
             let mode: CanvasFencedMode = "html";
             let cardContent: string | undefined;
             let cardUrl: string | undefined;
@@ -647,6 +652,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
     enableFileNavigation,
     handleLinkClick,
     activeWorkspaceRootPath,
+    disableCanvasInline,
   ]);
 
   // Memoize plugins array to prevent recreation
@@ -707,6 +713,7 @@ const arePropsEqual = (prev: MarkdownProps, next: MarkdownProps): boolean => {
   if (prev.enableFileNavigation !== next.enableFileNavigation) return false;
   if (prev.streaming !== next.streaming) return false;
   if (prev.skipPreprocess !== next.skipPreprocess) return false;
+  if (prev.disableCanvasInline !== next.disableCanvasInline) return false;
   return true;
 };
 

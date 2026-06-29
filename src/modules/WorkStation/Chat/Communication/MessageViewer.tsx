@@ -12,8 +12,6 @@ import { useTranslation } from "react-i18next";
 
 import type { AgentOrgRunMemberView } from "@src/api/tauri/agent";
 import Button from "@src/components/Button";
-import CanvasInlineCard from "@src/engines/ChatPanel/blocks/CanvasInlineCard";
-import type { CanvasInlinePayload } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/useCanvasInlineStream";
 import {
   derivePlanApprovalViewState,
   isPlanDisplayEvent,
@@ -101,8 +99,6 @@ export interface MessageViewerProps {
   previewSelectedPlan?: boolean;
   /** Current replay event id; used to keep transcript views pinned to bottom. */
   currentEventId?: string | null;
-  /** Canvas payload from agent's render_inline_canvas; rendered as the last item in the stream. */
-  canvasPayload?: CanvasInlinePayload | null;
   /**
    * Switch the Communication view mode. Used by the Agent Team task-list
    * card's navigate arrow to jump from the chat stream to the Todo Kanban
@@ -130,7 +126,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   selectedMessage,
   previewSelectedPlan = false,
   currentEventId,
-  canvasPayload,
   setViewMode,
   orgMembers,
 }) => {
@@ -356,15 +351,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
               </React.Fragment>
             );
           })}
-          {viewMode === "chat" && canvasPayload && (
-            <CanvasInlineCard
-              mode={canvasPayload.mode}
-              title={canvasPayload.title}
-              content={canvasPayload.content}
-              url={canvasPayload.url}
-              isStreaming={canvasPayload.streaming ?? false}
-            />
-          )}
         </div>
       </div>
     </div>
