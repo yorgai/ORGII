@@ -247,6 +247,14 @@ staged file lint stats
     expect(references.find((item) => item.kind === "session")).toBeUndefined();
   });
 
+  it("does not extract session cards from inline code examples", () => {
+    const references = extractMessageReferences(
+      "- `ChatHistory` 内容容器改成全宽\n- `审计-policy-啊permission-那些... [session:sdeagent-ee970f47-dfcb-4a78-97e5-fc56e3451821]`"
+    );
+
+    expect(references.find((item) => item.kind === "session")).toBeUndefined();
+  });
+
   it("keeps serialized session pill labels instead of falling back to ids", () => {
     const id = "sdeagent-ee970f47-dfcb-4a78-97e5-fc56e3451821";
     const references = extractMessageReferences(

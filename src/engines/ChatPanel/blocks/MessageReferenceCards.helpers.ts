@@ -41,6 +41,10 @@ function stripFencedCodeBlocks(content: string): string {
     .join("\n");
 }
 
+function stripInlineCodeSpans(content: string): string {
+  return content.replace(/(`+)[^\n]*?\1/g, "");
+}
+
 function normalizeUrlCandidate(candidate: string): string | null {
   return normalizeHttpUrlCandidate(candidate, { stripTextBoundaries: true });
 }
@@ -152,7 +156,9 @@ export function extractMessageReferences(
   content: string,
   excludeUrls?: ReadonlySet<string>
 ): MessageReferenceItem[] {
-  const searchableContent = stripFencedCodeBlocks(content);
+  const searchableContent = stripInlineCodeSpans(
+    stripFencedCodeBlocks(content)
+  );
   const references: MessageReferenceItem[] = [];
   const seen = new Set<string>();
 
