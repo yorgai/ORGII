@@ -1,24 +1,27 @@
+import DOMPurify from "dompurify";
+import { ExternalLink, Layout } from "lucide-react";
 import React, {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
+
+import Button from "@src/components/Button";
 
 import type { A2UIActionHandler } from "./A2UIActionContext";
 import A2UIRenderer, { type A2UIRendererHandle } from "./A2UIRenderer";
 import ReactArtifactRunner, {
   type ReactArtifactError,
 } from "./ReactArtifactRunner";
-import { buildHtmlDocument } from "./canvasBuilder";
 import {
-  CANVAS_HTML_IFRAME_SANDBOX,
   type CanvasPreviewPayload,
   type CanvasPreviewSurfaceVariant,
   getCanvasPreviewRenderKind,
-  getCanvasUrlIframeSandbox,
   splitA2UIContent,
 } from "./canvasPreviewPolicy";
 
@@ -26,12 +29,95 @@ export interface CanvasPreviewSurfaceHandle {
   evalScript: (javascript: string) => void;
 }
 
+const STATIC_HTML_STYLES = `
+  :host{display:block;height:100%;min-width:100%;overflow:auto;background:var(--color-bg-1,#141420);color:var(--color-text-1,#e2e2e8);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;}
+  *,*::before,*::after{box-sizing:border-box;}
+  a{color:var(--color-primary-6,#7c9ef7);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  pre,code{font-family:monospace;background:rgba(255,255,255,.06);padding:2px 5px;border-radius:4px;font-size:.875em;}
+  pre{padding:12px 16px;overflow-x:auto;border-radius:6px;border:1px solid rgba(255,255,255,.08);}
+  pre code{background:none;padding:0;}
+  img{max-width:100%;height:auto;border-radius:4px;}
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px;}
+`;
+
+function extractStaticHtmlBody(content: string): string {
+  const bodyMatch = content.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+  return bodyMatch?.[1] ?? content;
+}
+
+function extractStaticHtmlStyles(content: string): string {
+  return Array.from(content.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi))
+    .map((match) => match[1].replace(/<\/style/gi, ""))
+    .join("\n");
+}
+
+const StaticHtmlCanvas: React.FC<{ content: string }> = ({ content }) => {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const safeContent = useMemo(() => {
+    return DOMPurify.sanitize(extractStaticHtmlBody(content), {
+      FORBID_TAGS: [
+        "script",
+        "iframe",
+        "object",
+        "embed",
+        "link",
+        "meta",
+        "base",
+        "style",
+      ],
+      FORBID_ATTR: ["srcdoc"],
+    });
+  }, [content]);
+  const styles = useMemo(() => extractStaticHtmlStyles(content), [content]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const root = host.shadowRoot ?? host.attachShadow({ mode: "open" });
+    root.innerHTML = `<style>${STATIC_HTML_STYLES}\n${styles}</style><div class="canvas-static-html">${safeContent}</div>`;
+  }, [safeContent, styles]);
+
+  return <div ref={hostRef} className="h-full min-w-full" />;
+};
+
+const NonEmbeddedUrlNotice: React.FC<{ url: string }> = ({ url }) => {
+  const { t } = useTranslation("sessions");
+  return (
+    <div className="flex h-full items-center justify-center p-4">
+      <div className="flex max-w-sm flex-col items-center gap-3 text-center">
+        <Layout size={24} strokeWidth={1.5} className="text-text-4" />
+        <div className="space-y-1">
+          <div className="text-sm font-medium text-text-2">
+            {t("canvasCard.openUrlTitle", "Preview not embedded")}
+          </div>
+          <div className="text-xs leading-5 text-text-4">
+            {t(
+              "canvasCard.openUrlDescription",
+              "External URLs are not embedded to avoid iframe memory overhead."
+            )}
+          </div>
+        </div>
+        <Button
+          variant="secondary"
+          size="small"
+          onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
+          icon={<ExternalLink size={14} />}
+        >
+          {t("canvasCard.openExternal", "Open in Browser")}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 export interface CanvasPreviewSurfaceProps {
   payload: CanvasPreviewPayload | null | undefined;
   variant?: CanvasPreviewSurfaceVariant;
   title?: string;
   className?: string;
-  iframeClassName?: string;
   a2uiClassName?: string;
   emptyFallback?: React.ReactNode;
   loadingFallback?: React.ReactNode;
@@ -47,10 +133,7 @@ const CanvasPreviewSurface = forwardRef<
   (
     {
       payload,
-      variant = "inline",
-      title = "Canvas Preview",
       className = "relative h-full w-full",
-      iframeClassName = "h-full w-full border-0",
       a2uiClassName = "h-full",
       emptyFallback = null,
       loadingFallback = emptyFallback,
@@ -99,23 +182,10 @@ const CanvasPreviewSurface = forwardRef<
       return splitA2UIContent(payloadContent);
     }, [renderKind, payloadContent]);
 
-    const htmlSrcDoc = useMemo(() => {
-      if (renderKind !== "html" || !payloadContent) return undefined;
-      return buildHtmlDocument(payloadContent);
-    }, [renderKind, payloadContent]);
-
     let content: React.ReactNode;
 
     if (renderKind === "url" && payload?.url) {
-      content = (
-        <iframe
-          key={reloadKey === undefined ? undefined : `url-${reloadKey}`}
-          src={payload.url}
-          className={iframeClassName}
-          sandbox={getCanvasUrlIframeSandbox(variant)}
-          title={title}
-        />
-      );
+      content = <NonEmbeddedUrlNotice url={payload.url} />;
     } else if (renderKind === "a2ui") {
       content =
         a2uiLines.length === 0 ? (
@@ -130,16 +200,8 @@ const CanvasPreviewSurface = forwardRef<
             className={a2uiClassName}
           />
         );
-    } else if (renderKind === "html" && htmlSrcDoc) {
-      content = (
-        <iframe
-          key={reloadKey === undefined ? undefined : `doc-${reloadKey}`}
-          srcDoc={htmlSrcDoc}
-          className={iframeClassName}
-          sandbox={CANVAS_HTML_IFRAME_SANDBOX}
-          title={title}
-        />
-      );
+    } else if (renderKind === "html" && payloadContent) {
+      content = <StaticHtmlCanvas content={payloadContent} />;
     } else if (renderKind === "react" && payloadContent) {
       content = (
         <ReactArtifactRunner

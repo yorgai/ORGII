@@ -2,8 +2,8 @@
  * Types for the CanvasInlineCard chat block.
  *
  * Three rendering modes mirror the WorkStation Canvas app:
- *   html  — Agent-provided HTML string rendered in a sandboxed iframe
- *   url   — External URL loaded in a sandboxed iframe (no allow-same-origin)
+ *   html  — Agent-provided HTML sanitized and rendered in Shadow DOM
+ *   url   — External URL shown as an open action, not embedded
  *   a2ui  — Agent-to-UI JSONL stream, rendered incrementally as native React
  */
 

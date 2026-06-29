@@ -2,8 +2,8 @@
  * CanvasInlineCard — Agent-generated interactive preview embedded in chat.
  *
  * Renders a card directly in the message stream. Three modes:
- *   html  — static HTML from the agent, sandboxed iframe (security isolation)
- *   url   — external URL, sandboxed iframe with allow-same-origin
+ *   html  — sanitized HTML rendered in Shadow DOM
+ *   url   — external URL shown as an open action, not embedded
  *   a2ui  — incremental JSONL stream rendered as native React components
  *   react — generated React App source rendered through react-live
  *
@@ -12,15 +12,19 @@
  * re-renders incrementally without any full reload.
  *
  * Security:
- *   - html iframes: sandbox="allow-scripts" only (no allow-same-origin)
- *   - url iframes: allow-same-origin so cross-origin assets load correctly
+ *   - html path: DOMPurify + Shadow DOM, no scripts/events
+ *   - url: not embedded to avoid iframe memory overhead
  *   - a2ui: DOMPurify sanitizes type="html" elements in A2UIRenderer
  */
 import { Layout, Monitor } from "lucide-react";
 import React, { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import IconButton from "@src/components/IconButton";
+import Button from "@src/components/Button";
+import {
+  PANEL_HEADER_TOKENS,
+  PanelHeader,
+} from "@src/modules/shared/layouts/blocks";
 
 import { CanvasErrorBoundary } from "./CanvasErrorBoundary";
 import CanvasPreviewSurface, {
@@ -37,15 +41,6 @@ function resolveInitialStep(initialHeight: number): number {
   const idx = HEIGHT_STEPS.findIndex((h) => h >= initialHeight);
   return idx >= 0 ? idx : 0;
 }
-
-// ─── streaming cursor ─────────────────────────────────────────────────────────
-
-const StreamingDot: React.FC = () => (
-  <span
-    aria-hidden
-    className="ml-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary-6"
-  />
-);
 
 // ─── loading skeleton ─────────────────────────────────────────────────────────
 
@@ -114,6 +109,12 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
           ? t("canvasCard.titleReact", "React Artifact")
           : t("canvasCard.titleHtml"));
 
+  const headerSubtitle = isStreaming
+    ? t("canvasCard.streaming", "streaming")
+    : mode === "url" && url
+      ? url
+      : undefined;
+
   const emptyFallback = (
     <div className="flex h-full items-center justify-center">
       <span className="text-xs text-text-4">{t("canvasCard.empty")}</span>
@@ -135,33 +136,29 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
 
   return (
     <div className="group/canvas my-2 overflow-hidden rounded-lg border border-border-1 bg-bg-2">
-      {/* ── Toolbar ── */}
-      <div className="flex items-center justify-between border-b border-border-1 bg-fill-2 px-3 py-1.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <Layout size={13} className="shrink-0 text-primary-6" />
-          <span className="truncate text-xs font-medium text-text-2">
-            {cardTitle}
-          </span>
-          {isStreaming && <StreamingDot />}
-          {mode === "url" && url && (
-            <span className="max-w-[160px] truncate text-xs text-text-4">
-              {url}
-            </span>
-          )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/canvas:opacity-100">
-          {handleJumpToSimulator && (
-            <IconButton
+      <PanelHeader
+        title={cardTitle}
+        icon={Layout}
+        subtitle={headerSubtitle}
+        borderBottom
+        background="transparent"
+        className="!h-8 !px-3"
+        actions={
+          handleJumpToSimulator ? (
+            <Button
+              {...PANEL_HEADER_TOKENS.actionButton}
               onClick={handleJumpToSimulator}
-              className="text-text-4 hover:bg-fill-3 hover:text-primary-6"
               title={t("canvasCard.viewInSimulator", "View in Simulator")}
-            >
-              <Monitor size={12} />
-            </IconButton>
-          )}
-        </div>
-      </div>
+              icon={
+                <Monitor
+                  size={PANEL_HEADER_TOKENS.buttonIconSize}
+                  strokeWidth={PANEL_HEADER_TOKENS.iconStrokeWidth}
+                />
+              }
+            />
+          ) : null
+        }
+      />
 
       {/* ── Content ── */}
       <div

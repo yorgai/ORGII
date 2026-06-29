@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  CANVAS_HTML_IFRAME_SANDBOX,
-  CANVAS_URL_IFRAME_SANDBOX,
-  CANVAS_URL_IFRAME_SANDBOX_WITH_POPUPS,
   getCanvasPreviewRenderKind,
-  getCanvasUrlIframeSandbox,
   splitA2UIContent,
 } from "./canvasPreviewPolicy";
 
@@ -31,20 +27,6 @@ describe("canvasPreviewPolicy", () => {
     expect(
       getCanvasPreviewRenderKind({ mode: "url", url: "https://example.com" })
     ).toBe("url");
-  });
-
-  it("keeps raw HTML in the strongest iframe sandbox", () => {
-    expect(CANVAS_HTML_IFRAME_SANDBOX).toBe("allow-scripts");
-  });
-
-  it("uses explicit URL iframe policies per surface variant", () => {
-    expect(getCanvasUrlIframeSandbox("inline")).toBe(CANVAS_URL_IFRAME_SANDBOX);
-    expect(getCanvasUrlIframeSandbox("simulator")).toBe(
-      CANVAS_URL_IFRAME_SANDBOX
-    );
-    expect(getCanvasUrlIframeSandbox("tab")).toBe(
-      CANVAS_URL_IFRAME_SANDBOX_WITH_POPUPS
-    );
   });
 
   it("preserves multiline JSON records while splitting A2UI JSONL", () => {
