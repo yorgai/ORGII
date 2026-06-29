@@ -168,14 +168,15 @@ jobs:
 
           UPDATER_TAR=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz" ! -name "*.sig" | head -1)
           UPDATER_SIG=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz.sig" | head -1)
-          echo "updater_tar=$UPDATER_TAR" >> "$GITHUB_OUTPUT"
+          LATEST_UPDATER_TAR="ORG2-updater-mac-apple-silicon.app.tar.gz"
+          cp "$UPDATER_TAR" "$LATEST_UPDATER_TAR"
+          echo "updater_tar=$LATEST_UPDATER_TAR" >> "$GITHUB_OUTPUT"
           echo "updater_sig=$UPDATER_SIG" >> "$GITHUB_OUTPUT"
-          echo "updater_tar_name=$(basename "$UPDATER_TAR")" >> "$GITHUB_OUTPUT"
-          echo "updater_sig_name=$(basename "$UPDATER_SIG")" >> "$GITHUB_OUTPUT"
+          echo "updater_tar_name=$LATEST_UPDATER_TAR" >> "$GITHUB_OUTPUT"
 
           echo "=== Release artifacts ==="
           echo "DMG:         $DMG"
-          echo "Updater tar: $UPDATER_TAR"
+          echo "Updater tar: $LATEST_UPDATER_TAR"
           echo "Updater sig: $UPDATER_SIG"
 
       # ── Generate updater manifest (latest.json) ───────────────
@@ -212,10 +213,8 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-nightly') }}
           generate_release_notes: true
           files: |
-            ${{ steps.artifacts.outputs.dmg }}
             ${{ steps.artifacts.outputs.latest_dmg }}
             ${{ steps.artifacts.outputs.updater_tar }}
-            ${{ steps.artifacts.outputs.updater_sig }}
             latest.json
 
       # ── Cleanup keychain ────────────────────────────────────────
@@ -385,7 +384,7 @@ jobs:
           gh release download "$TAG" --pattern latest.json --output latest.json
 
           SIGNATURE=$(cat "${{ steps.artifacts.outputs.nsis_sig }}")
-          NSIS_NAME=$(basename "${{ steps.artifacts.outputs.nsis }}")
+          NSIS_NAME="${{ steps.artifacts.outputs.latest_nsis }}"
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${NSIS_NAME}"
 
           jq \
@@ -407,12 +406,8 @@ jobs:
           overwrite_files: true
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-nightly') }}
           files: |
-            ${{ steps.artifacts.outputs.msi }}
             ${{ steps.artifacts.outputs.latest_msi }}
-            ${{ steps.artifacts.outputs.msi_sig }}
-            ${{ steps.artifacts.outputs.nsis }}
             ${{ steps.artifacts.outputs.latest_nsis }}
-            ${{ steps.artifacts.outputs.nsis_sig }}
             latest.json
 
   # ── Linux x64 build ───────────────────────────────────────────────────
@@ -484,7 +479,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           ORGII_DIAGNOSTICS_TOKEN: ${{ secrets.ORGII_DIAGNOSTICS_TOKEN }}
           ORGII_APP_VERSION: ${{ env.SEMVER }}
-        run: pnpm tauri build --target x86_64-unknown-linux-gnu
+        run: pnpm tauri build --target x86_64-unknown-linux-gnu --bundles deb,appimage
 
       # ── Gather artifacts ─────────────────────────────────────────
       - name: Gather release artifacts
@@ -493,13 +488,10 @@ jobs:
           BUNDLE_DIR="src-tauri/target/x86_64-unknown-linux-gnu/release/bundle"
 
           DEB=$(find "$BUNDLE_DIR/deb" -name "*.deb" | head -1)
-          DEB_SIG=$(find "$BUNDLE_DIR/deb" -name "*.deb.sig" | head -1)
-          RPM=$(find "$BUNDLE_DIR/rpm" -name "*.rpm" | head -1)
-          RPM_SIG=$(find "$BUNDLE_DIR/rpm" -name "*.rpm.sig" | head -1)
           APPIMAGE=$(find "$BUNDLE_DIR/appimage" -name "*.AppImage" | head -1)
           APPIMAGE_SIG=$(find "$BUNDLE_DIR/appimage" -name "*.AppImage.sig" | head -1)
 
-          for artifact in "$DEB" "$DEB_SIG" "$RPM" "$RPM_SIG" "$APPIMAGE" "$APPIMAGE_SIG"; do
+          for artifact in "$DEB" "$APPIMAGE" "$APPIMAGE_SIG"; do
             if [ ! -f "$artifact" ]; then
               echo "Missing Linux release artifact: $artifact" >&2
               find "$BUNDLE_DIR" -maxdepth 3 -type f -print >&2
@@ -508,28 +500,17 @@ jobs:
           done
 
           LATEST_DEB="ORG2-latest-linux-x64.deb"
-          LATEST_RPM="ORG2-latest-linux-x64.rpm"
           LATEST_APPIMAGE="ORG2-latest-linux-x64.AppImage"
           cp "$DEB" "$LATEST_DEB"
-          cp "$RPM" "$LATEST_RPM"
           cp "$APPIMAGE" "$LATEST_APPIMAGE"
 
-          echo "deb=$DEB" >> "$GITHUB_OUTPUT"
-          echo "deb_sig=$DEB_SIG" >> "$GITHUB_OUTPUT"
-          echo "rpm=$RPM" >> "$GITHUB_OUTPUT"
-          echo "rpm_sig=$RPM_SIG" >> "$GITHUB_OUTPUT"
-          echo "appimage=$APPIMAGE" >> "$GITHUB_OUTPUT"
           echo "appimage_sig=$APPIMAGE_SIG" >> "$GITHUB_OUTPUT"
           echo "latest_deb=$LATEST_DEB" >> "$GITHUB_OUTPUT"
-          echo "latest_rpm=$LATEST_RPM" >> "$GITHUB_OUTPUT"
           echo "latest_appimage=$LATEST_APPIMAGE" >> "$GITHUB_OUTPUT"
-          echo "appimage_name=$(basename "$APPIMAGE")" >> "$GITHUB_OUTPUT"
+          echo "latest_appimage_name=$LATEST_APPIMAGE" >> "$GITHUB_OUTPUT"
 
           echo "=== Linux artifacts ==="
           echo "DEB:          $DEB"
-          echo "DEB sig:      $DEB_SIG"
-          echo "RPM:          $RPM"
-          echo "RPM sig:      $RPM_SIG"
           echo "AppImage:     $APPIMAGE"
           echo "AppImage sig: $APPIMAGE_SIG"
 
@@ -542,7 +523,7 @@ jobs:
           gh release download "$TAG" --pattern latest.json --output latest.json
 
           SIGNATURE=$(cat "${{ steps.artifacts.outputs.appimage_sig }}")
-          APPIMAGE_NAME="${{ steps.artifacts.outputs.appimage_name }}"
+          APPIMAGE_NAME="${{ steps.artifacts.outputs.latest_appimage_name }}"
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${APPIMAGE_NAME}"
 
           jq \
@@ -564,13 +545,6 @@ jobs:
           overwrite_files: true
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-nightly') }}
           files: |
-            ${{ steps.artifacts.outputs.deb }}
-            ${{ steps.artifacts.outputs.deb_sig }}
             ${{ steps.artifacts.outputs.latest_deb }}
-            ${{ steps.artifacts.outputs.rpm }}
-            ${{ steps.artifacts.outputs.rpm_sig }}
-            ${{ steps.artifacts.outputs.latest_rpm }}
-            ${{ steps.artifacts.outputs.appimage }}
-            ${{ steps.artifacts.outputs.appimage_sig }}
             ${{ steps.artifacts.outputs.latest_appimage }}
             latest.json
