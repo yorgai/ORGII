@@ -217,6 +217,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
             url={canvasPayload.url}
             title={canvasPayload.title}
             isStreaming={canvasPayload.streaming ?? isStreaming}
+            eventId={eventId}
           />
         </div>
       )}
