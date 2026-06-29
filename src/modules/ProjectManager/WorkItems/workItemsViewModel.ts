@@ -1,3 +1,4 @@
+import type { KanbanTask } from "@src/features/KanbanBoard";
 import type { StatusCounts } from "@src/modules/ProjectManager/WorkItems/components/WorkItemsPageHeader";
 import { WORK_ITEM_STATUS_OPTIONS } from "@src/modules/ProjectManager/config/manage";
 import type { DropdownOption } from "@src/types/core/shared";
@@ -87,6 +88,24 @@ export function groupWorkItemsForStatusFilter<TWorkItem extends WorkItem>(
 
   const mappedStatus = FILTER_TO_STATUS[statusFilter];
   return groups.filter((group) => group.status === mappedStatus);
+}
+
+export function workItemToKanbanTask(workItem: WorkItem): KanbanTask {
+  return {
+    id: workItem.session_id,
+    title: workItem.name,
+    description: workItem.spec,
+    status: getWorkItemStatus(workItem) as KanbanTask["status"],
+    priority: workItem.priority as KanbanTask["priority"],
+    assignee: workItem.assignee?.name,
+    labels: workItem.labels,
+  };
+}
+
+export function workItemsToKanbanTasks(workItems: WorkItem[]): KanbanTask[] {
+  return workItems
+    .filter((workItem) => !isDeletedWorkItem(workItem))
+    .map(workItemToKanbanTask);
 }
 
 export function countWorkItemsByStatus(workItems: WorkItem[]): StatusCounts {

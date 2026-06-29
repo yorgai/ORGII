@@ -93,6 +93,14 @@
   }
 }
 
+.kanban-column__empty {
+  display: flex;
+  height: 100%;
+  min-height: inherit;
+  align-items: center;
+  justify-content: center;
+}
+
 // ============================================
 // Task wrapper - for smooth transitions
 // ============================================
