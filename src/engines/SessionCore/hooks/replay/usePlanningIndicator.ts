@@ -54,6 +54,7 @@ import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
 import {
   globalAnyRunningAtom,
   globalHasAwaitingUserInteractionAtom,
+  globalHasRunningAwaitWaitForAtom,
   globalLastIsSettledAssistantMessageAtom,
 } from "@src/engines/SessionCore/derived/planningIndicatorAtoms";
 import {
@@ -104,6 +105,12 @@ export interface PlanningIndicatorVisibilityInput {
    * would vanish during that gap even though work is clearly ongoing.
    */
   hasLiveSubagent: boolean;
+  /**
+   * True while the latest turn has a still-running `await_output` wait_for.
+   * That call renders its own live "Waiting {countdown} for …" title, so the
+   * planning footer is suppressed to avoid two stacked waiting indicators.
+   */
+  hasRunningAwaitWaitFor: boolean;
 }
 
 export function shouldShowPlanningIndicator({
@@ -115,6 +122,7 @@ export function shouldShowPlanningIndicator({
   idleAfterVersion,
   version,
   hasLiveSubagent,
+  hasRunningAwaitWaitFor,
 }: PlanningIndicatorVisibilityInput): boolean {
   const runtimeCanShowPlanning =
     runtimeStatus === "running" ||
@@ -127,6 +135,7 @@ export function shouldShowPlanningIndicator({
     isSessionActive &&
     !isPendingCancel &&
     !hasAwaitingUserInteraction &&
+    !hasRunningAwaitWaitFor &&
     (coldStartVisible || idleAfterVersion === version)
   );
 }
@@ -208,6 +217,15 @@ export function usePlanningIndicator(
   const hasAwaitingUserInteraction = scoped
     ? scopedMeta.hasAwaitingUserInteraction
     : globalHasAwaitingUserInteraction;
+
+  // Running wait_for in the latest turn → its own countdown title is the
+  // activity signal; suppress the duplicate planning footer.
+  const globalHasRunningAwaitWaitFor = useAtomValue(
+    globalHasRunningAwaitWaitForAtom
+  );
+  const hasRunningAwaitWaitFor = scoped
+    ? scopedMeta.hasRunningAwaitWaitFor
+    : globalHasRunningAwaitWaitFor;
 
   // True when the most recent chat-visible event is a non-streaming
   // assistant message that has already settled. In this state the user
@@ -315,6 +333,7 @@ export function usePlanningIndicator(
     idleAfterVersion,
     version,
     hasLiveSubagent,
+    hasRunningAwaitWaitFor,
   });
 
   const [showSlowHint, setShowSlowHint] = useState(false);

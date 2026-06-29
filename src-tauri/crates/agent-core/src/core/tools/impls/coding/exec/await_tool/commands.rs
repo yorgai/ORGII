@@ -11,8 +11,8 @@ use tokio::time::Instant;
 use super::super::registry;
 use super::body::{find_match_line, read_body};
 use super::params::{
-    lookup_job, parse_handles, parse_tail_lines, parse_wait_mode, WaitMode, DEFAULT_BLOCK_MS,
-    POLL_INTERVAL_MS,
+    parse_handles, parse_tail_lines, parse_wait_mode, resolve_job_or_unknown, WaitMode,
+    DEFAULT_BLOCK_MS, POLL_INTERVAL_MS,
 };
 use super::response::{build_list_response, build_response};
 use super::snapshot::{running_snapshot, terminal_snapshot, HandleSnapshot, AWAIT_STATUS_RUNNING};
@@ -52,10 +52,13 @@ impl AwaitTool {
             None
         };
 
-        // Resolve all handles up-front so missing ones fail fast with a clean error.
+        // Resolve all handles up-front. A vanished-but-tombstoned handle
+        // resolves to its real terminal status (precise "it finished"); a
+        // genuinely unknown handle returns an error so the agent learns it
+        // mistyped, instead of being told a non-existent job "completed".
         let jobs: Vec<(String, registry::JobKind)> = handles
             .iter()
-            .map(|h| lookup_job(h).map(|(_, kind)| (h.clone(), kind)))
+            .map(|h| resolve_job_or_unknown(h).map(|(_, kind)| (h.clone(), kind)))
             .collect::<Result<_, _>>()?;
 
         // Non-blocking call (block_until_ms=0): return immediate snapshots.
@@ -191,7 +194,13 @@ impl AwaitTool {
                     }
                     None => {
                         registry::acknowledge_output(h);
-                        terminal_snapshot(h, kind, &registry::JobStatus::Completed, body)
+                        // Reaped between resolution and now: use the tombstoned
+                        // terminal status when available (precise), else fall
+                        // back to Completed (the job is gone, so it's done).
+                        let status = registry::resolve_status_with_tombstone(h)
+                            .map(|(s, _)| s)
+                            .unwrap_or(registry::JobStatus::Completed);
+                        terminal_snapshot(h, kind, &status, body)
                     }
                     Some(_) => {
                         let matched = regex.as_ref().map(|re| re.is_match(&body));
@@ -244,7 +253,10 @@ impl AwaitTool {
         let snapshots: Vec<HandleSnapshot> = handles
             .iter()
             .map(|h| {
-                let (status, kind) = lookup_job(h)?;
+                // A reaped-but-tombstoned job renders with its real terminal
+                // status; a genuinely unknown handle errors so the agent learns
+                // it mistyped rather than seeing a fake "completed".
+                let (status, kind) = resolve_job_or_unknown(h)?;
                 let body = read_body(h, &kind);
                 if !matches!(status, registry::JobStatus::Running) {
                     registry::acknowledge_output(h);

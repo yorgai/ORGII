@@ -17,6 +17,7 @@
 //! Helpers:
 //! - [`context_builders`]     — shared context-builder helpers used by orchestration tools
 //! - [`subagent_handler`]     — shared Agent-worker event handler for Delegate/Shadow runs (used by `agent`)
+//! - [`subagent_wake`]        — process-wide hook to wake an idle parent when a background subagent completes
 
 pub mod agent;
 pub mod agent_org;
@@ -29,6 +30,7 @@ pub mod manage_session;
 pub mod member_idle;
 pub mod member_shutdown;
 pub mod subagent_handler;
+pub mod subagent_wake;
 pub mod suggest_mode_switch;
 pub mod suggest_next_steps;
 

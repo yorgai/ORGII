@@ -50,6 +50,17 @@ pub struct AutoDreamState {
     last_scan_at: Option<Instant>,
 }
 
+impl AutoDreamState {
+    /// Record that a scan/consolidation attempt is starting now. Set by the
+    /// post-turn dispatcher under a brief lock so the throttle advances even
+    /// though `run_consolidation` itself no longer holds the state mutex
+    /// (it must not — the consolidation LLM call would otherwise block the
+    /// next turn's brief `ad_state` reads).
+    pub fn mark_scan_now(&mut self) {
+        self.last_scan_at = Some(Instant::now());
+    }
+}
+
 // ============================================
 // Core Logic
 // ============================================
@@ -84,11 +95,8 @@ pub fn should_attempt(state: &AutoDreamState, workspace: &Path) -> bool {
 /// 4. On success, the lock mtime advances (recording consolidation)
 /// 5. On failure, rolls back the lock
 pub async fn run_consolidation(
-    state: &mut AutoDreamState,
     params: super::super::MemoryAgentParams<'_>,
 ) -> Result<(), String> {
-    state.last_scan_at = Some(Instant::now());
-
     let workspace = params.workspace;
     let mem_dir = super::memory_dir(workspace);
 

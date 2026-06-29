@@ -12,6 +12,7 @@ const baseInput = {
   idleAfterVersion: 10,
   version: 10,
   hasLiveSubagent: false,
+  hasRunningAwaitWaitFor: false,
 };
 
 describe("shouldShowPlanningIndicator", () => {
@@ -78,5 +79,27 @@ describe("shouldShowPlanningIndicator", () => {
         anyRunning: true,
       })
     ).toBe(true);
+  });
+
+  it("hides while a running await_output wait_for shows its own countdown", () => {
+    // The wait_for block renders a live "Waiting {countdown} for …" title, so
+    // the planning footer would be a redundant second waiting indicator.
+    expect(
+      shouldShowPlanningIndicator({
+        ...baseInput,
+        hasRunningAwaitWaitFor: true,
+      })
+    ).toBe(false);
+  });
+
+  it("still hides the footer during a wait_for even if a subagent is live", () => {
+    expect(
+      shouldShowPlanningIndicator({
+        ...baseInput,
+        runtimeStatus: "idle",
+        hasLiveSubagent: true,
+        hasRunningAwaitWaitFor: true,
+      })
+    ).toBe(false);
   });
 });

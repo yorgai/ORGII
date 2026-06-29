@@ -496,6 +496,16 @@ fn all_scenarios() -> Vec<ScenarioDef> {
             "background-launch-msg-no-poll",
             subagent::background_launch_msg_no_poll
         ),
+        scenario!(
+            "subagent",
+            "subagent-completion-wakes-parent",
+            subagent::subagent_completion_wakes_parent
+        ),
+        scenario!(
+            "subagent",
+            "subagent-wake-race-after-poll",
+            subagent::subagent_wake_race_after_poll
+        ),
         // Housekeeping (deferred disk cleanup)
         scenario!(
             "housekeeping",
