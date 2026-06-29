@@ -64,6 +64,8 @@ const GitHubIssuesImportWizard: React.FC<GitHubIssuesImportWizardProps> = ({
   const [connections, setConnections] = useState<SyncConnection[]>([]);
   const [connectionsLoading, setConnectionsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [repoInputTouched, setRepoInputTouched] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,10 +94,13 @@ const GitHubIssuesImportWizard: React.FC<GitHubIssuesImportWizardProps> = ({
   }, []);
 
   const parsedRepo = useMemo(() => parseGitHubRepo(repoInput), [repoInput]);
-  const repoError =
-    repoInput.trim() && !parsedRepo
-      ? t("projects:githubIssuesImport.errors.invalidRepo")
-      : undefined;
+  const shouldShowRepoError =
+    Boolean(repoInput.trim()) &&
+    !parsedRepo &&
+    (repoInputTouched || submitAttempted);
+  const repoError = shouldShowRepoError
+    ? t("projects:githubIssuesImport.errors.invalidRepo")
+    : undefined;
   const connectionOptions = useMemo<SelectOption[]>(
     () =>
       connections.map((connection) => ({
@@ -110,6 +115,7 @@ const GitHubIssuesImportWizard: React.FC<GitHubIssuesImportWizardProps> = ({
   );
 
   const handleSubmit = useCallback(async () => {
+    setSubmitAttempted(true);
     if (!canSubmit || !parsedRepo) return;
 
     setSaving(true);
@@ -205,7 +211,11 @@ const GitHubIssuesImportWizard: React.FC<GitHubIssuesImportWizardProps> = ({
               >
                 <Input
                   value={repoInput}
-                  onChange={setRepoInput}
+                  onChange={(value) => {
+                    setRepoInput(value);
+                    if (parsedRepo) setRepoInputTouched(false);
+                  }}
+                  onBlur={() => setRepoInputTouched(true)}
                   placeholder={t(
                     "projects:githubIssuesImport.placeholders.repo"
                   )}
