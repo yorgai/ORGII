@@ -568,16 +568,18 @@ export const ProjectWorkItemsTabContent: React.FC<
         workstationHeaderHost={workstationHeaderHost}
       />
 
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
         {activeViewTab === "Kanban" ? (
-          <KanbanBoard
-            tasks={kanbanTasks}
-            onTaskMove={handleKanbanTaskMove}
-            onTaskClick={handleKanbanTaskClick}
-            onAddTask={handleAddKanbanTask}
-            showAddButton={Boolean(onCreateWorkItem)}
-            className="kanban-board--linear"
-          />
+          <div className="h-full min-h-0">
+            <KanbanBoard
+              tasks={kanbanTasks}
+              onTaskMove={handleKanbanTaskMove}
+              onTaskClick={handleKanbanTaskClick}
+              onAddTask={handleAddKanbanTask}
+              showAddButton={Boolean(onCreateWorkItem)}
+              className="kanban-board--linear"
+            />
+          </div>
         ) : (
           <WorkItemsListSurface
             groupedWorkItems={groupedWorkItems}

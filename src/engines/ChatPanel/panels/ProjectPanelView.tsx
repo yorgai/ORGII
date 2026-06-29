@@ -524,20 +524,28 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
       }}
     />
   ) : (
-    <div className="h-full min-h-0 flex-1 overflow-hidden">
+    <div
+      className={
+        activeWorkItemsView === "Kanban"
+          ? "h-full min-h-0 flex-1 overflow-hidden"
+          : "overflow-visible"
+      }
+    >
       {activeWorkItemsView === "Kanban" ? (
-        <KanbanBoard
-          tasks={kanbanTasks}
-          onTaskMove={(taskId: string, newStatus: TaskStatus) => {
-            void handleUpdateWorkItem(taskId, { workItemStatus: newStatus });
-          }}
-          onTaskClick={handleSelectWorkItemFromKanban}
-          onAddTask={(status: TaskStatus) => {
-            void handleAddKanbanTask(status);
-          }}
-          showAddButton={true}
-          className="kanban-board--linear"
-        />
+        <div className="h-full min-h-0">
+          <KanbanBoard
+            tasks={kanbanTasks}
+            onTaskMove={(taskId: string, newStatus: TaskStatus) => {
+              void handleUpdateWorkItem(taskId, { workItemStatus: newStatus });
+            }}
+            onTaskClick={handleSelectWorkItemFromKanban}
+            onAddTask={(status: TaskStatus) => {
+              void handleAddKanbanTask(status);
+            }}
+            showAddButton={true}
+            className="kanban-board--linear"
+          />
+        </div>
       ) : (
         <WorkItemsListContent
           groupedWorkItems={groupedWorkItems}
@@ -558,6 +566,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
           readonly
           disableProjectEdit
           compactRows
+          scrollMode="page"
           workItemPrefix={selectedProject.project.workItemPrefix}
         />
       )}
@@ -605,7 +614,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
           </div>
         ) : null}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
         {activePanelTab === "overview" ? overviewContent : workItemsContent}
       </div>
     </section>
@@ -621,6 +630,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
           propertiesContent={inlineProperties}
           descriptionContent={descriptionContent}
           descriptionFlexible
+          descriptionClassName="min-h-0 flex flex-1 flex-col px-4 py-4"
         />
         {activePanelTab === "workItems" ? (
           <MultiSelectBar
