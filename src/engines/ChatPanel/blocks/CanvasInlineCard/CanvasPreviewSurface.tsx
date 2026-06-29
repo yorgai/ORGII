@@ -30,17 +30,17 @@ export interface CanvasPreviewSurfaceHandle {
 }
 
 const STATIC_HTML_STYLES = `
-  :host{display:block;height:100%;min-width:100%;overflow:auto;background:var(--color-bg-1,#141420);color:var(--color-text-1,#e2e2e8);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;}
+  :host{display:block;height:100%;min-width:100%;overflow:auto;background:var(--color-bg-1);color:var(--color-text-1);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;}
   *,*::before,*::after{box-sizing:border-box;}
-  a{color:var(--color-primary-6,#7c9ef7);text-decoration:none;}
+  a{color:var(--color-primary-6);text-decoration:none;}
   a:hover{text-decoration:underline;}
-  pre,code{font-family:monospace;background:rgba(255,255,255,.06);padding:2px 5px;border-radius:4px;font-size:.875em;}
-  pre{padding:12px 16px;overflow-x:auto;border-radius:6px;border:1px solid rgba(255,255,255,.08);}
+  pre,code{font-family:monospace;background:var(--color-fill-2);padding:2px 5px;border-radius:4px;font-size:.875em;}
+  pre{padding:12px 16px;overflow-x:auto;border-radius:6px;border:1px solid var(--color-border-1);}
   pre code{background:none;padding:0;}
   img{max-width:100%;height:auto;border-radius:4px;}
   ::-webkit-scrollbar{width:6px;height:6px;}
   ::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px;}
+  ::-webkit-scrollbar-thumb{background:var(--color-fill-4);border-radius:3px;}
 `;
 
 function extractStaticHtmlBody(content: string): string {

@@ -187,12 +187,12 @@ const TableEl: React.FC<{ el: A2UITable }> = ({ el }) => (
 );
 
 const CHART_COLORS = [
-  "#7c9ef7",
-  "#a78bfa",
-  "#34d399",
-  "#fb923c",
-  "#f472b6",
-  "#60a5fa",
+  "var(--color-primary-6)",
+  "var(--color-success-6)",
+  "var(--color-warning-6)",
+  "var(--color-danger-6)",
+  "var(--color-primary-4)",
+  "var(--color-text-3)",
 ];
 
 const ChartEl: React.FC<{ el: A2UIChart }> = ({ el }) => {
@@ -216,34 +216,31 @@ const ChartEl: React.FC<{ el: A2UIChart }> = ({ el }) => {
       )}
       <ResponsiveContainer width="100%" height={200}>
         <ChartComponent data={chartData}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="rgba(255,255,255,0.06)"
-          />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-1)" />
           <XAxis
             dataKey="label"
-            tick={{ fill: "var(--color-text-3, #9ca3af)", fontSize: 11 }}
-            axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+            tick={{ fill: "var(--color-text-3)", fontSize: 11 }}
+            axisLine={{ stroke: "var(--color-border-2)" }}
             tickLine={false}
           />
           <YAxis
-            tick={{ fill: "var(--color-text-3, #9ca3af)", fontSize: 11 }}
-            axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+            tick={{ fill: "var(--color-text-3)", fontSize: 11 }}
+            axisLine={{ stroke: "var(--color-border-2)" }}
             tickLine={false}
           />
           <Tooltip
             contentStyle={{
-              background: "var(--color-bg-2, #1e1e2e)",
-              border: "1px solid var(--color-border-1, rgba(255,255,255,0.1))",
+              background: "var(--color-bg-2)",
+              border: "1px solid var(--color-border-1)",
               borderRadius: 6,
               fontSize: 12,
-              color: "var(--color-text-1, #f0f0f5)",
+              color: "var(--color-text-1)",
             }}
           />
           <Legend
             wrapperStyle={{
               fontSize: 11,
-              color: "var(--color-text-3, #9ca3af)",
+              color: "var(--color-text-3)",
             }}
           />
           {data.datasets.map((ds, i) =>
