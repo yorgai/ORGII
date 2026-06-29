@@ -2245,6 +2245,7 @@
     "insufficientBalance": "ORGII 托管服务余额不足，请前往 orgii.ai/wallet 充值。"
   },
   "planning": {
+    "agentTyping": "Agent 正在输入...",
     "nextStepVariants": [
       "正在规划下一步...",
       "思考中...",

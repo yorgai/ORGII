@@ -57,7 +57,10 @@ function setLiveContent(
   sessionId: string,
   content: string
 ) {
-  store.set(streamingDeltaContentAtom, new Map([[sessionId, content]]));
+  store.set(
+    streamingDeltaContentAtom,
+    new Map([[sessionId, { kind: "message" as const, content }]])
+  );
 }
 
 afterEach(() => {
@@ -113,6 +116,23 @@ describe("chatEventsAtom live streaming overlay", () => {
         isDelta: true,
       }),
     ]);
+  });
+
+  it("does not render live thinking as an Agent Station assistant message", () => {
+    const store = createStore();
+    store.set(sessionIdAtom, "session-1");
+    store.set(derivedSnapshotAtom, makeSnapshot());
+    store.set(
+      streamingDeltaContentAtom,
+      new Map([
+        [
+          "session-1",
+          { kind: "thinking" as const, content: "reasoning token" },
+        ],
+      ])
+    );
+
+    expect(store.get(messagesEventsAtom)).toEqual([]);
   });
 
   it("keeps the live assistant after existing thinking and preserves first-live timestamp", () => {

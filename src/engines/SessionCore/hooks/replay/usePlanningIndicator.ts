@@ -7,17 +7,6 @@
  *
  * The indicator stays visible until new events arrive or the session ends.
  *
- * After PLANNING_SLOW_HINT_MS (10s) with the indicator still visible,
- * `showSlowHint` becomes true (e.g. "Taking longer than usual.") — UNLESS
- * the most recent chat-visible event is already a settled assistant message,
- * in which case the slow hint is suppressed. From the user's point of view
- * the agent has just finished talking; promoting the footer to "taking
- * longer than usual" while the turn executor is doing its post-batch
- * "anything else?" LLM round trip is misleading. The base indicator itself
- * is NOT suppressed in that state: mid-turn the agent routinely narrates
- * (settled assistant message) and then thinks for seconds before the next
- * tool call, and hiding the footer there reads as a frozen UI.
- *
  * Watchdog: if the indicator stays visible for PLANNING_WATCHDOG_MS (60s),
  * we assume Rust dropped `agent:complete` (or `agent:queue_status` idle)
  * and force `sessionRuntimeStatusAtom` to `completed` so the UI cannot stay
@@ -55,7 +44,6 @@ import {
   globalAnyRunningAtom,
   globalHasAwaitingUserInteractionAtom,
   globalHasRunningAwaitWaitForAtom,
-  globalLastIsSettledAssistantMessageAtom,
 } from "@src/engines/SessionCore/derived/planningIndicatorAtoms";
 import {
   noopSessionScopedPlanningMetaAtom,
@@ -77,9 +65,6 @@ const log = createLogger("usePlanningIndicator");
 
 /** How long (ms) to wait without new events before showing the indicator */
 const IDLE_THRESHOLD_MS = 1000;
-
-/** How long (ms) the planning indicator must stay visible before showing the slow hint */
-const PLANNING_SLOW_HINT_MS = 10_000;
 
 /**
  * How long (ms) the planning indicator may stay visible before the watchdog
@@ -143,14 +128,11 @@ export function shouldShowPlanningIndicator({
 export interface PlanningIndicatorState {
   /** 1 when the planning footer should show, 0 when hidden */
   count: 0 | 1;
-  /** True after the indicator has been visible for PLANNING_SLOW_HINT_MS */
-  showSlowHint: boolean;
   /**
    * Stable random index used by the footer to pick one phrasing variant
    * from the localized variant array. Re-rolled every time the indicator
    * transitions hidden → visible; stays fixed for the whole visible span
-   * (including the slow-hint transition at 10s) so the text does not
-   * shuffle mid-wait.
+   * so the text does not shuffle mid-wait.
    */
   variantIndex: number;
 }
@@ -226,18 +208,6 @@ export function usePlanningIndicator(
   const hasRunningAwaitWaitFor = scoped
     ? scopedMeta.hasRunningAwaitWaitFor
     : globalHasRunningAwaitWaitFor;
-
-  // True when the most recent chat-visible event is a non-streaming
-  // assistant message that has already settled. In this state the user
-  // has seen the final reply, so showing a planning footer is misleading
-  // even if the backend terminal event is still winding down.
-  // The derived atom only fires when the value actually changes, not every token.
-  const globalLastIsSettledAssistantMessage = useAtomValue(
-    globalLastIsSettledAssistantMessageAtom
-  );
-  const lastIsSettledAssistantMessage = scoped
-    ? false
-    : globalLastIsSettledAssistantMessage;
 
   const [idleAfterVersion, setIdleAfterVersion] = useState<number | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -336,21 +306,6 @@ export function usePlanningIndicator(
     hasRunningAwaitWaitFor,
   });
 
-  const [showSlowHint, setShowSlowHint] = useState(false);
-
-  useEffect(() => {
-    if (!visible) {
-      return;
-    }
-    const timerId = window.setTimeout(() => {
-      setShowSlowHint(true);
-    }, PLANNING_SLOW_HINT_MS);
-    return () => {
-      window.clearTimeout(timerId);
-      setShowSlowHint(false);
-    };
-  }, [visible]);
-
   // Watchdog: force-complete the session if the planning indicator stays
   // visible past PLANNING_WATCHDOG_MS. Any new store mutation flips
   // `visible` to false (via the idle-timer arm in the effect above),
@@ -423,13 +378,8 @@ export function usePlanningIndicator(
     };
   }, [visible]);
 
-  // Slow-hint suppression is derived (not gated inside the timer effect)
-  // so that `useEffect` body stays pure — no synchronous setState inside
-  // an effect, no extra schedule/clear cycle when the chat tail flips
-  // between "settled assistant message" and "thinking again".
   return {
     count: visible ? 1 : 0,
-    showSlowHint: visible && showSlowHint && !lastIsSettledAssistantMessage,
     variantIndex,
   };
 }

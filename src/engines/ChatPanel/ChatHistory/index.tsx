@@ -24,6 +24,8 @@ import type { AgentOrgRunMemberView } from "@src/api/tauri/agent";
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
+import { streamingDeltaContentAtom } from "@src/engines/SessionCore/core/atoms";
+import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
 import { usePlanningIndicator } from "@src/engines/SessionCore/hooks";
 import {
   estimateRuntimeValueBytes,
@@ -96,7 +98,7 @@ import "./index.scss";
  */
 interface PlanningIndicatorBridgeProps extends Omit<
   React.ComponentProps<typeof ChatHistoryList>,
-  "planningIndicatorCount" | "planningShowSlowHint" | "planningVariantIndex"
+  "planningIndicatorCount" | "planningVariantIndex" | "planningFooterMode"
 > {
   planningIndicatorScope: { sessionId: string; isLive: boolean } | null;
   planningIndicatorEnabled: boolean;
@@ -113,10 +115,20 @@ const PlanningIndicatorBridge: React.FC<PlanningIndicatorBridgeProps> = ({
   onPlanningIndicatorCount,
   ...chatHistoryListProps
 }) => {
-  const { count, showSlowHint, variantIndex } = usePlanningIndicator(
-    planningIndicatorScope
-  );
-  const visibleCount = planningIndicatorEnabled ? count : 0;
+  const { count, variantIndex } = usePlanningIndicator(planningIndicatorScope);
+  const activeSessionId = useAtomValue(sessionIdAtom);
+  const streamingDeltaMap = useAtomValue(streamingDeltaContentAtom);
+  const scopedSessionId = planningIndicatorScope?.sessionId ?? activeSessionId;
+  const liveDelta = scopedSessionId
+    ? streamingDeltaMap.get(scopedSessionId)
+    : undefined;
+  const isAgentTyping = liveDelta?.kind === "message";
+  const planningFooterMode = isAgentTyping ? "agentTyping" : "planning";
+  const visibleCount = planningIndicatorEnabled
+    ? isAgentTyping
+      ? 1
+      : count
+    : 0;
 
   // Notify the orchestrator whenever the count flips so useChatFooterSpacer
   // can schedule a re-measurement.
@@ -128,8 +140,8 @@ const PlanningIndicatorBridge: React.FC<PlanningIndicatorBridgeProps> = ({
     <ChatHistoryList
       {...chatHistoryListProps}
       planningIndicatorCount={visibleCount}
-      planningShowSlowHint={planningIndicatorEnabled && showSlowHint}
       planningVariantIndex={variantIndex}
+      planningFooterMode={planningFooterMode}
     />
   );
 };
@@ -437,7 +449,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   // useChatFooterSpacer can re-measure when the planning footer appears /
   // disappears. The count itself is 0 or 1, so this setter is called at most
   // twice per session; it does NOT subscribe to eventStoreVersionAtom here.
-  // showSlowHint and variantIndex stay inside PlanningIndicatorBridge.
+  // variantIndex stays inside PlanningIndicatorBridge.
   const [planningIndicatorCount, setPlanningIndicatorCount] = useState<0 | 1>(
     0
   );

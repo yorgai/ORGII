@@ -48,7 +48,9 @@ const ActivityRow: React.FC<{
 }> = ({ event, index, itemKey, totalOccurrences }) => {
   const sessionId = useAtomValue(sessionIdAtom);
   const streamingMap = useAtomValue(streamingDeltaContentAtom);
-  const streamingContent = sessionId ? streamingMap.get(sessionId) : undefined;
+  const liveDelta = sessionId ? streamingMap.get(sessionId) : undefined;
+  const streamingContent =
+    liveDelta?.kind === "message" ? liveDelta.content : undefined;
 
   if (isSyntheticLiveActivity(event) && !streamingContent?.trim()) {
     return null;

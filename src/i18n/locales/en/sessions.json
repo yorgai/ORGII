@@ -996,6 +996,7 @@
     "complete": "Complete"
   },
   "planning": {
+    "agentTyping": "Agent is typing...",
     "nextStepVariants": [
       "Planning next step...",
       "Thinking it through...",

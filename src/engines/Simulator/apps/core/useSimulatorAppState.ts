@@ -91,24 +91,33 @@ function filterEventIdsForApp(
   });
 }
 
+function isSyntheticLiveEvent(event: SessionEvent): boolean {
+  return event.args?.syntheticLive === true;
+}
+
 function filterLegacyEventsForApp(
   allEvents: SessionEvent[],
   currentEventId: string | null,
   matchesEvent: (eventFunction: string) => boolean,
   skip: boolean
 ): SessionEvent[] {
-  if (!currentEventId) return [];
-
-  const currentIndex = allEvents.findIndex(
-    (event) => event.id === currentEventId
-  );
+  const currentIndex = currentEventId
+    ? allEvents.findIndex((event) => event.id === currentEventId)
+    : -1;
   const endIndex = currentIndex === -1 ? allEvents.length : currentIndex + 1;
   const startIndex = Math.max(0, endIndex - MAX_APP_HYDRATION_WINDOW);
   const eventsUpToCurrent = allEvents.slice(startIndex, endIndex);
+  const trailingLiveEvents = allEvents
+    .slice(endIndex)
+    .filter(isSyntheticLiveEvent);
+  const visibleEvents =
+    trailingLiveEvents.length > 0
+      ? [...eventsUpToCurrent, ...trailingLiveEvents]
+      : eventsUpToCurrent;
 
   return skip
-    ? eventsUpToCurrent
-    : eventsUpToCurrent.filter((event) => matchesEvent(event.functionName));
+    ? visibleEvents
+    : visibleEvents.filter((event) => matchesEvent(event.functionName));
 }
 
 // ============================================
@@ -153,12 +162,7 @@ export function useSimulatorAppState<TState extends SimulatorAppBaseState>(
 
   const appEventIds = useMemo(() => {
     if (prefiltered) {
-      return filterLegacyEventsForApp(
-        legacyEvents,
-        currentEventId,
-        matchesEvent,
-        true
-      ).map((event) => event.id);
+      return [];
     }
 
     return filterEventIdsForApp(
@@ -171,7 +175,6 @@ export function useSimulatorAppState<TState extends SimulatorAppBaseState>(
     );
   }, [
     prefiltered,
-    legacyEvents,
     currentEventId,
     appType,
     matchesEvent,
@@ -179,12 +182,26 @@ export function useSimulatorAppState<TState extends SimulatorAppBaseState>(
     previewById,
   ]);
 
+  const prefilteredAppEvents = useMemo(() => {
+    if (!prefiltered) return [];
+    return filterLegacyEventsForApp(
+      legacyEvents,
+      currentEventId,
+      matchesEvent,
+      true
+    );
+  }, [prefiltered, legacyEvents, currentEventId, matchesEvent]);
+
   const appEvents = useMemo(() => {
+    if (prefiltered) {
+      return hydrateFullEventWindow(prefilteredAppEvents);
+    }
+
     const hydratedEvents = appEventIds
       .map((eventId) => eventById.get(eventId))
       .filter((event): event is SessionEvent => Boolean(event));
     return hydrateFullEventWindow(hydratedEvents);
-  }, [appEventIds, eventById]);
+  }, [appEventIds, eventById, prefiltered, prefilteredAppEvents]);
 
   // Derive app-specific state
   const derivedState = useMemo(
