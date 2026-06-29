@@ -33,6 +33,65 @@ interface UseSimulatorSubagentsOptions {
   sessionId: string;
   eventStoreVersion: number;
   currentEvent: SessionEvent | null;
+  allEvents: SessionEvent[];
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : null;
+}
+
+function subagentIdFromEvent(event: SessionEvent): string | null {
+  const isSubagentTool =
+    event.actionType === "tool_call" &&
+    (event.functionName === "subagent" || event.uiCanonical === "subagent");
+  if (!isSubagentTool) {
+    return null;
+  }
+  return (
+    nonEmptyString(event.args?.subagentSessionId) ??
+    nonEmptyString(event.result?.subagentSessionId)
+  );
+}
+
+function taskTitleFromEvent(event: SessionEvent, sessionId: string): string {
+  return (
+    nonEmptyString(event.args?.prompt) ??
+    nonEmptyString(event.args?.description) ??
+    nonEmptyString(event.result?.summary) ??
+    nonEmptyString(event.result?.content) ??
+    sessionId
+  );
+}
+
+function fallbackSubagentSessionsFromEvents(
+  events: readonly SessionEvent[]
+): SubagentSession[] {
+  const sessions = new Map<string, SubagentSession>();
+  for (const event of events) {
+    const sessionId = subagentIdFromEvent(event);
+    if (!sessionId || sessions.has(sessionId)) continue;
+    const createdMs = new Date(event.createdAt).getTime();
+    const safeCreatedMs = Number.isFinite(createdMs) ? createdMs : Date.now();
+    const isCompleted =
+      event.displayStatus === "completed" ||
+      event.activityStatus === "processed";
+    const isFailed = event.displayStatus === "failed";
+    sessions.set(sessionId, {
+      key: sessionId,
+      sessionId,
+      name: "OpenCode",
+      description: taskTitleFromEvent(event, sessionId),
+      sessionType: "subagent",
+      status: isFailed ? "failed" : isCompleted ? "completed" : "running",
+      isBackground: true,
+      startedAtMs: safeCreatedMs,
+      endedAtMs: isCompleted || isFailed ? safeCreatedMs : null,
+      isTerminal: isCompleted || isFailed,
+    });
+  }
+  return Array.from(sessions.values());
 }
 
 export interface UseSimulatorSubagentsReturn {
@@ -46,6 +105,7 @@ export function useSimulatorSubagents({
   sessionId,
   eventStoreVersion,
   currentEvent,
+  allEvents,
 }: UseSimulatorSubagentsOptions): UseSimulatorSubagentsReturn {
   const panelRevealRequest = useAtomValue(subagentPanelRevealRequestAtom);
   const focusedCellId = useAtomValue(focusedSubagentCellAtom);
@@ -56,10 +116,24 @@ export function useSimulatorSubagents({
 
   // DB query — re-triggered by eventStoreVersion (bumped on every EventStore
   // mutation, including args patches like stamp_subagent_session_id_on_parent).
-  const allSubagentSessions = useSubagentSessions(
+  const dbSubagentSessions = useSubagentSessions(
     sessionId || null,
     eventStoreVersion
   );
+  const eventSubagentSessions = useMemo(
+    () => fallbackSubagentSessionsFromEvents(allEvents),
+    [allEvents]
+  );
+  const allSubagentSessions = useMemo(() => {
+    if (eventSubagentSessions.length === 0) return dbSubagentSessions;
+    const byId = new Map(dbSubagentSessions.map((sub) => [sub.sessionId, sub]));
+    for (const fallback of eventSubagentSessions) {
+      if (!byId.has(fallback.sessionId)) {
+        byId.set(fallback.sessionId, fallback);
+      }
+    }
+    return Array.from(byId.values());
+  }, [dbSubagentSessions, eventSubagentSessions]);
 
   // Sync to atom so SessionReplayMessages can read without prop drilling.
   // Cleanup clears the atom when ActivitySimulator unmounts so stale sessions
@@ -90,6 +164,23 @@ export function useSimulatorSubagents({
     () => allSubagentSessions.filter((sub) => sub.endedAtMs === null),
     [allSubagentSessions]
   );
+  // Imported OpenCode subagent history is already completed by the time it
+  // shows up in the simulator. Only resurface a completed clip when the replay
+  // cursor is on that subagent delegate event; once the cursor moves past the
+  // clip, terminal DB-backed clips must still retire like native SDE subagents.
+  const currentEventSubagentId = useMemo(
+    () => (currentEvent ? subagentIdFromEvent(currentEvent) : null),
+    [currentEvent]
+  );
+  const currentEventCompletedSubagent = useMemo(() => {
+    if (!currentEventSubagentId) return [];
+    const sub = allSubagentSessions.find(
+      (session) =>
+        session.sessionId === currentEventSubagentId &&
+        session.endedAtMs !== null
+    );
+    return sub ? [sub] : [];
+  }, [allSubagentSessions, currentEventSubagentId]);
   // A subagent the user explicitly navigated to (clicked the chat block's
   // locate arrow) must surface even when the replay cursor doesn't land inside
   // its clip window. The spawning tool_call is filtered out of the simulator
@@ -105,7 +196,11 @@ export function useSimulatorSubagents({
     [allSubagentSessions, focusedCellId]
   );
   const baseSubagents =
-    cursorActiveSubagents.length > 0 ? cursorActiveSubagents : openSubagents;
+    cursorActiveSubagents.length > 0
+      ? cursorActiveSubagents
+      : openSubagents.length > 0
+        ? openSubagents
+        : currentEventCompletedSubagent;
   const cursorOrAllSubagents = useMemo(() => {
     if (!focusedSubagent) return baseSubagents;
     if (

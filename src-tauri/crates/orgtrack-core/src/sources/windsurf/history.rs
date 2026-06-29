@@ -276,6 +276,7 @@ fn composer_meta_to_cache_input(meta: WindsurfComposerMeta) -> ImportedHistoryCa
         impact: ImportedHistoryImpactStats::default(),
         listable: meta.listable,
         source_metadata_json: None,
+        parent_session_id: None,
     }
 }
 

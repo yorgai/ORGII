@@ -107,6 +107,8 @@ function importedHistoryRowToSession(
     touchedFiles: row.touchedFiles,
     agentIconId: source.iconId,
     agentDisplayName: source.displayName,
+    parentSessionId: row.parentSessionId,
+    readOnly: row.readOnly ?? true,
   };
 }
 
@@ -187,9 +189,9 @@ async function loadImportedHistorySourcePage(
     offset,
   });
   return {
-    sessions: page.sessions.map((row) =>
-      importedHistoryRowToSession(row, source)
-    ),
+    sessions: page.sessions
+      .map((row) => importedHistoryRowToSession(row, source))
+      .filter(isPrimarySessionListSession),
     hasMore: page.hasMore,
   };
 }
@@ -276,9 +278,9 @@ export const loadSessions = async (options?: {
     for (const result of importedPageResults) {
       if (result.status === "fulfilled") {
         fetched.push(
-          ...result.value.sessions.map((row) =>
-            importedHistoryRowToSession(row, result.source)
-          )
+          ...result.value.sessions
+            .map((row) => importedHistoryRowToSession(row, result.source))
+            .filter(isPrimarySessionListSession)
         );
       } else {
         log.warn(
@@ -492,7 +494,8 @@ export const loadMoreCategory = async (
       current.loaded,
       pageSize
     );
-    store.set(sessionsAtom, (prev) => mergeSessions(prev, sessions));
+    const primarySessions = sessions.filter(isPrimarySessionListSession);
+    store.set(sessionsAtom, (prev) => mergeSessions(prev, primarySessions));
     setPaginationFor(category, {
       loaded: current.loaded + sessions.length,
       hasMore,

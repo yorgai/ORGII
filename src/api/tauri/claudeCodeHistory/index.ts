@@ -21,6 +21,7 @@ export interface ClaudeCodeHistorySessionRow {
   linesAdded: number;
   linesRemoved: number;
   touchedFiles: string[];
+  parentSessionId?: string;
 }
 
 export interface ClaudeCodeHistorySessionPage {

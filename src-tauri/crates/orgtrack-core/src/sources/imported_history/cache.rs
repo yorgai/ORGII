@@ -38,6 +38,7 @@ pub struct ImportedHistoryCachedSession {
     pub impact: ImportedHistoryImpactStats,
     pub listable: bool,
     pub source_metadata_json: Option<String>,
+    pub parent_session_id: Option<String>,
 }
 
 impl ImportedHistoryCachedSession {
@@ -56,6 +57,7 @@ impl ImportedHistoryCachedSession {
             lines_added: self.impact.lines_added,
             lines_removed: self.impact.lines_removed,
             touched_files: self.impact.touched_files.clone(),
+            parent_session_id: self.parent_session_id.clone(),
         })
     }
 }
@@ -124,10 +126,11 @@ pub fn upsert_imported_session_cache_from_conn(
                     source_mtime_ms, source_size_bytes, source_fingerprint, parser_version,
                     name, created_at_ms, updated_at_ms, model, input_tokens, output_tokens,
                     repo_path, branch, files_changed, lines_added, lines_removed,
-                    touched_files_json, listable, source_metadata_json, updated_at
+                    touched_files_json, listable, source_metadata_json, parent_session_id,
+                    updated_at
                 ) VALUES (
                     ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-                    ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24
+                    ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25
                 )
                 ON CONFLICT(source, source_session_id) DO UPDATE SET
                     session_id = excluded.session_id,
@@ -151,6 +154,7 @@ pub fn upsert_imported_session_cache_from_conn(
                     touched_files_json = excluded.touched_files_json,
                     listable = excluded.listable,
                     source_metadata_json = excluded.source_metadata_json,
+                    parent_session_id = excluded.parent_session_id,
                     updated_at = excluded.updated_at",
             )
             .map_err(|err| format!("Failed to prepare imported history cache upsert: {err}"))?;
@@ -181,6 +185,7 @@ pub fn upsert_imported_session_cache_from_conn(
                 touched_files_json,
                 if input.listable { 1_i64 } else { 0_i64 },
                 input.source_metadata_json.as_deref().unwrap_or_default(),
+                input.parent_session_id.as_deref().unwrap_or_default(),
                 updated_at,
             ])
             .map_err(|err| format!("Failed to upsert imported history cache row: {err}"))?;
@@ -209,7 +214,7 @@ fn core_session_record_from_imported_input(input: &ImportedHistoryCacheInput) ->
         completed_at: Some(super::epoch_ms_to_iso(input.updated_at_ms)),
         workspace_path: input.repo_path.clone(),
         branch: input.branch.clone(),
-        parent_session_id: None,
+        parent_session_id: input.parent_session_id.clone(),
         org_member_id: None,
         metadata: AgentMetadata {
             origin: Some(input.source.to_string()),
@@ -328,7 +333,7 @@ fn query_cached_sessions_by_filter_from_conn(
                 source_mtime_ms, source_size_bytes, source_fingerprint, parser_version,
                 name, created_at_ms, updated_at_ms, model, input_tokens, output_tokens,
                 repo_path, branch, files_changed, lines_added, lines_removed,
-                touched_files_json, listable, source_metadata_json
+                touched_files_json, listable, source_metadata_json, parent_session_id
          FROM imported_history_session_cache
          WHERE source = ?1 AND {filter_sql}
          ORDER BY updated_at_ms DESC, created_at_ms DESC, source_session_id ASC
@@ -353,6 +358,7 @@ fn query_cached_sessions_by_filter_from_conn(
                 serde_json::from_str::<Vec<String>>(&touched_files_json).map_err(|err| {
                     rusqlite::Error::FromSqlConversionFailure(19, Type::Text, Box::new(err))
                 })?;
+            let parent_session_id: String = row.get(22)?;
             Ok(ImportedHistoryCachedSession {
                 source_session_id: row.get(0)?,
                 session_id: row.get(1)?,
@@ -378,6 +384,7 @@ fn query_cached_sessions_by_filter_from_conn(
                 },
                 listable: row.get::<_, i64>(20)? != 0,
                 source_metadata_json: non_empty_string(row.get(21)?),
+                parent_session_id: non_empty_string(parent_session_id),
             })
         })
         .map_err(|err| {

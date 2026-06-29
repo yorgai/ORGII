@@ -192,7 +192,7 @@ fn sync_workbuddy_history_cache(conn: &mut Connection) -> Result<(), String> {
         })?;
     let mut inputs = Vec::new();
     for record in changed {
-        if let Some(meta) = parse_workbuddy_session_meta(&record)? {
+        if let Some(meta) = parse_workbuddy_session_meta(record)? {
             inputs.push(session_meta_to_cache_input(meta));
         }
     }
@@ -249,9 +249,9 @@ fn collect_workbuddy_session_files(
 }
 
 fn push_workbuddy_session_file(path: &Path, out: &mut Vec<WorkBuddySessionFile>) {
-    if !path
+    if path
         .extension()
-        .is_some_and(|extension| extension == "jsonl")
+        .is_none_or(|extension| extension != "jsonl")
     {
         return;
     }
@@ -409,6 +409,7 @@ fn session_meta_to_cache_input(meta: WorkBuddyHistoryMeta) -> ImportedHistoryCac
         impact: meta.impact,
         listable: true,
         source_metadata_json: None,
+        parent_session_id: None,
     }
 }
 
@@ -1047,13 +1048,14 @@ fn workbuddy_history_roots() -> Result<Vec<PathBuf>, String> {
 }
 
 fn workbuddy_history_root_candidates(home: &Path) -> Vec<PathBuf> {
-    let mut roots = Vec::new();
-    roots.push(home.join(".workbuddy").join("projects"));
-    roots.push(home.join(".workbuddy").join("sessions"));
-    roots.push(home.join(".workbuddy").join("history.jsonl"));
-    roots.push(home.join(".codebuddy").join("projects"));
-    roots.push(home.join(".codebuddy").join("sessions"));
-    roots.push(home.join(".codebuddy").join("history.jsonl"));
+    let mut roots = vec![
+        home.join(".workbuddy").join("projects"),
+        home.join(".workbuddy").join("sessions"),
+        home.join(".workbuddy").join("history.jsonl"),
+        home.join(".codebuddy").join("projects"),
+        home.join(".codebuddy").join("sessions"),
+        home.join(".codebuddy").join("history.jsonl"),
+    ];
 
     #[cfg(target_os = "macos")]
     {

@@ -260,6 +260,7 @@ impl<'conn> SqliteRecordStore<'conn> {
                 touched_files_json  TEXT NOT NULL DEFAULT '[]',
                 listable            INTEGER NOT NULL DEFAULT 1,
                 source_metadata_json TEXT NOT NULL DEFAULT '',
+                parent_session_id   TEXT NOT NULL DEFAULT '',
                 updated_at          TEXT NOT NULL DEFAULT '',
                 PRIMARY KEY (source, source_session_id)
             );
@@ -299,6 +300,12 @@ impl<'conn> SqliteRecordStore<'conn> {
             conn,
             "imported_history_session_cache",
             "source_metadata_json",
+            "TEXT NOT NULL DEFAULT ''",
+        )?;
+        ensure_column(
+            conn,
+            "imported_history_session_cache",
+            "parent_session_id",
             "TEXT NOT NULL DEFAULT ''",
         )
     }

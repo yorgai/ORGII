@@ -2,26 +2,191 @@
 //!
 //! Load/save events from SQLite cache with SessionEvent <-> CachedEvent conversion.
 
+use core_types::activity::ActivityChunk;
+use database::db::get_connection;
 use orgtrack_core::sources::cursor_ide::history::CURSORIDE_SESSION_PREFIX;
+use orgtrack_core::sources::opencode::history as opencode_history;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 
 use crate::agent_sessions::event_pipeline::payload_compaction::{
-    load_event_payload_body, EventPayloadBody,
+    EventPayloadBody, load_event_payload_body,
 };
-use crate::agent_sessions::event_pipeline::types::SessionEvent;
+use crate::agent_sessions::event_pipeline::types::{
+    ActivityStatus, EventDisplayStatus, EventDisplayVariant, EventSource, SessionEvent,
+};
 use session_persistence as sqlite_cache;
 
 use super::{
+    BULK_WRITE_MAX_RETRIES, EventStoreState,
     event_conversion::{
         backfill_subagent_links, backfill_tool_inputs_from_messages, cached_event_to_session_event,
         dedup_by_call_id, is_synthetic_persistence_artifact, session_event_to_cached_event,
     },
-    save_events_retry, schedule_notify, EventStoreState, BULK_WRITE_MAX_RETRIES,
+    save_events_retry, schedule_notify,
 };
 
 fn is_cursor_ide_session_id(session_id: &str) -> bool {
     session_id.starts_with(CURSORIDE_SESSION_PREFIX)
+}
+
+fn is_opencode_app_session_id(session_id: &str) -> bool {
+    session_id.starts_with("opencodeapp-")
+}
+
+fn activity_chunk_to_session_event(chunk: &ActivityChunk) -> SessionEvent {
+    let function_name = if chunk.function.is_empty() {
+        chunk.action_type.clone()
+    } else {
+        chunk.function.clone()
+    };
+    SessionEvent {
+        id: if chunk.chunk_id.is_empty() {
+            uuid::Uuid::new_v4().to_string()
+        } else {
+            chunk.chunk_id.clone()
+        },
+        chunk_id: if chunk.chunk_id.is_empty() {
+            None
+        } else {
+            Some(chunk.chunk_id.clone())
+        },
+        session_id: chunk.session_id.clone(),
+        created_at: chunk.created_at.clone(),
+        function_name: function_name.clone(),
+        ui_canonical: function_name,
+        action_type: chunk.action_type.clone(),
+        args: chunk.args.clone(),
+        result: chunk.result.clone(),
+        source: EventSource::Assistant,
+        display_text: format!("{}: {}", chunk.action_type, chunk.function),
+        display_status: EventDisplayStatus::Completed,
+        display_variant: EventDisplayVariant::ToolCall,
+        activity_status: ActivityStatus::Processed,
+        thread_id: chunk.thread_id.clone(),
+        process_id: chunk.process_id.clone(),
+        call_id: None,
+        file_path: None,
+        command: None,
+        is_delta: None,
+        repo_id: None,
+        repo_path: None,
+        extracted: None,
+        payload_refs: Vec::new(),
+        last_extract_at: None,
+    }
+}
+
+fn try_load_opencode_history_events(session_id: &str) -> Result<Vec<SessionEvent>, String> {
+    let chunks = opencode_history::load_opencode_history_for_session(session_id)?;
+    Ok(chunks.iter().map(activity_chunk_to_session_event).collect())
+}
+
+fn is_generic_opencode_task_label(value: &str) -> bool {
+    matches!(value.trim().to_ascii_lowercase().as_str(), "task" | "todo")
+}
+
+fn strip_known_opencode_prompt_prelude(value: &str) -> &str {
+    let mut rest = value.trim();
+    loop {
+        let tag = if rest.starts_with("<skills>") {
+            "skills"
+        } else if rest.starts_with("<orgii_cli_exec_mode_bridge>") {
+            "orgii_cli_exec_mode_bridge"
+        } else {
+            break;
+        };
+        let close_tag = format!("</{tag}>");
+        let Some(close_idx) = rest.find(&close_tag) else {
+            break;
+        };
+        rest = rest[close_idx + close_tag.len()..].trim_start();
+    }
+    rest.trim()
+}
+
+fn is_good_opencode_subagent_prompt(value: &str) -> bool {
+    let value = strip_known_opencode_prompt_prelude(value);
+    !value.is_empty() && !is_generic_opencode_task_label(value)
+}
+
+fn non_generic_opencode_prompt(value: String) -> Option<String> {
+    let value = strip_known_opencode_prompt_prelude(&value).to_string();
+    (!value.is_empty() && !is_generic_opencode_task_label(&value)).then_some(value)
+}
+
+fn opencode_subagent_prompt(parent_session_id: &str, child_session_id: &str) -> Option<String> {
+    if !is_opencode_app_session_id(child_session_id) {
+        return None;
+    }
+    let conn = get_connection().ok()?;
+    if let Ok(prompt) = conn.query_row(
+        "SELECT user_input FROM code_sessions WHERE session_id = ?1 AND cli_agent_type = 'opencode'",
+        [child_session_id],
+        |row| row.get::<_, String>(0),
+    ) {
+        if let Some(prompt) = non_generic_opencode_prompt(prompt) {
+            return Some(prompt);
+        }
+    }
+    if let Ok(name) = conn.query_row(
+        "SELECT name FROM imported_history_session_cache WHERE session_id = ?1 AND source = 'opencode'",
+        [child_session_id],
+        |row| row.get::<_, String>(0),
+    ) {
+        if let Some(name) = non_generic_opencode_prompt(name) {
+            return Some(name);
+        }
+    }
+    conn.query_row(
+        "SELECT user_input FROM code_sessions WHERE session_id = ?1 AND cli_agent_type = 'opencode'",
+        [parent_session_id],
+        |row| row.get::<_, String>(0),
+    )
+    .ok()
+    .and_then(non_generic_opencode_prompt)
+}
+
+fn backfill_opencode_subagent_prompts(session_id: &str, events: &mut [SessionEvent]) {
+    for event in events {
+        if event.function_name != "subagent" && event.ui_canonical != "subagent" {
+            continue;
+        }
+        let Some(args) = event.args.as_object_mut() else {
+            continue;
+        };
+        let has_prompt = args
+            .get("prompt")
+            .and_then(|value| value.as_str())
+            .map(is_good_opencode_subagent_prompt)
+            .unwrap_or(false);
+        if has_prompt {
+            continue;
+        }
+        let Some(child_session_id) = args
+            .get("subagentSessionId")
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        else {
+            continue;
+        };
+        let Some(prompt) = opencode_subagent_prompt(session_id, child_session_id) else {
+            continue;
+        };
+        args.insert(
+            "prompt".to_string(),
+            serde_json::Value::String(prompt.clone()),
+        );
+        let should_replace_description = args
+            .get("description")
+            .and_then(|value| value.as_str())
+            .map(|description| !is_good_opencode_subagent_prompt(description))
+            .unwrap_or(true);
+        if should_replace_description {
+            args.insert("description".to_string(), serde_json::Value::String(prompt));
+        }
+    }
 }
 
 // ============================================================================
@@ -52,13 +217,25 @@ pub async fn es_load_from_cache(
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())?;
-    let events: Vec<SessionEvent> = cached
+    let mut events: Vec<SessionEvent> = cached
         .into_iter()
         .map(|ce| cached_event_to_session_event(&ce))
         .collect();
+
+    if events.is_empty() && is_opencode_app_session_id(&session_id) {
+        match try_load_opencode_history_events(&session_id) {
+            Ok(loaded) if !loaded.is_empty() => events = loaded,
+            Ok(_) => {}
+            Err(err) => tracing::warn!(
+                "[cache_bridge] failed to load OpenCode history for {session_id}: {err}"
+            ),
+        }
+    }
+
     let mut events = dedup_by_call_id(events);
     backfill_tool_inputs_from_messages(&session_id, &mut events);
     backfill_subagent_links(&session_id, &mut events);
+    backfill_opencode_subagent_prompts(&session_id, &mut events);
     let count = events.len();
     if count > 0 {
         state.with_store_mut(&session_id, |store| {
@@ -173,10 +350,20 @@ pub async fn cache_load_session_events(session_id: String) -> Result<Vec<Session
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())?;
-    let events: Vec<SessionEvent> = cached.iter().map(cached_event_to_session_event).collect();
+    let mut events: Vec<SessionEvent> = cached.iter().map(cached_event_to_session_event).collect();
+    if events.is_empty() && is_opencode_app_session_id(&session_id) {
+        match try_load_opencode_history_events(&session_id) {
+            Ok(loaded) if !loaded.is_empty() => events = loaded,
+            Ok(_) => {}
+            Err(err) => tracing::warn!(
+                "[cache_bridge] failed to load OpenCode history for {session_id}: {err}"
+            ),
+        }
+    }
     let mut events = dedup_by_call_id(events);
     backfill_tool_inputs_from_messages(&session_id, &mut events);
     backfill_subagent_links(&session_id, &mut events);
+    backfill_opencode_subagent_prompts(&session_id, &mut events);
     Ok(events)
 }
 
@@ -328,6 +515,7 @@ pub async fn cache_load_full_session(
         let mut events = dedup_by_call_id(events);
         backfill_tool_inputs_from_messages(&s.session_id, &mut events);
         backfill_subagent_links(&s.session_id, &mut events);
+        backfill_opencode_subagent_prompts(&s.session_id, &mut events);
         FullSessionPayload {
             session_id: s.session_id,
             events,

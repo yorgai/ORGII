@@ -21,6 +21,7 @@ export interface WindsurfHistorySessionRow {
   linesAdded: number;
   linesRemoved: number;
   touchedFiles: string[];
+  parentSessionId?: string;
 }
 
 export interface WindsurfHistorySessionPage {

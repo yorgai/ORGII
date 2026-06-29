@@ -21,6 +21,7 @@ export interface OpenCodeHistorySessionRow {
   linesAdded: number;
   linesRemoved: number;
   touchedFiles: string[];
+  parentSessionId?: string;
 }
 
 export interface OpenCodeHistorySessionPage {

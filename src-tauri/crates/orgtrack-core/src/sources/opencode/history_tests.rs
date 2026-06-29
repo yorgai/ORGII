@@ -1,6 +1,7 @@
 use super::*;
 use rusqlite::Connection;
 use serde_json::Value;
+use std::collections::HashSet;
 
 fn fixture_conn() -> Connection {
     let conn = Connection::open_in_memory().expect("open in-memory db");
@@ -17,7 +18,8 @@ fn fixture_conn() -> Connection {
             tokens_cache_write INTEGER NOT NULL,
             time_created INTEGER NOT NULL,
             time_updated INTEGER NOT NULL,
-            time_archived INTEGER
+            time_archived INTEGER,
+            parent_id TEXT
         )",
         [],
     )
@@ -179,7 +181,7 @@ fn maps_opencode_session_metadata_to_cache_input() {
     .expect("list session metadata");
     let inputs = metas
         .into_iter()
-        .map(session_meta_to_cache_input)
+        .map(|meta| session_meta_to_cache_input(meta, &HashSet::new()))
         .collect::<Vec<_>>();
 
     assert_eq!(inputs.len(), 1);
@@ -203,6 +205,7 @@ fn maps_opencode_session_metadata_to_cache_input() {
         impact: inputs[0].impact.clone(),
         listable: inputs[0].listable,
         source_metadata_json: inputs[0].source_metadata_json.clone(),
+        parent_session_id: inputs[0].parent_session_id.clone(),
     }
     .to_row();
     assert_eq!(row.session_id, "opencodeapp-ses_1");
@@ -238,7 +241,7 @@ fn opencode_recent_paths_use_all_sessions_before_limiting() {
     let rows = list_all_opencode_session_meta_from_conn(&conn, std::path::Path::new(""), 0, 0)
         .expect("list all sessions")
         .into_iter()
-        .map(session_meta_to_cache_input)
+        .map(|meta| session_meta_to_cache_input(meta, &HashSet::new()))
         .map(|input| {
             imported_cache::ImportedHistoryCachedSession {
                 source_session_id: input.source_session_id,
@@ -260,6 +263,7 @@ fn opencode_recent_paths_use_all_sessions_before_limiting() {
                 impact: input.impact,
                 listable: input.listable,
                 source_metadata_json: input.source_metadata_json,
+                parent_session_id: input.parent_session_id,
             }
             .to_row()
         })
@@ -318,4 +322,65 @@ fn rejects_invalid_opencode_prefixed_ids() {
         opencode_source_id_from_session_id("opencodeapp-ses_1").expect("source id"),
         "ses_1"
     );
+}
+
+#[test]
+fn maps_opencode_parent_id_to_parent_session_id() {
+    let conn = fixture_conn();
+    conn.execute(
+        "INSERT INTO session (
+            id, title, directory, model, tokens_input, tokens_output,
+            tokens_reasoning, tokens_cache_read, tokens_cache_write,
+            time_created, time_updated, time_archived, parent_id
+        ) VALUES (?1, ?2, ?3, ?4, 0, 0, 0, 0, 0, ?5, ?6, NULL, ?7)",
+        (
+            "ses_child",
+            "Subagent run",
+            "/tmp/opencode-repo",
+            "gpt-5",
+            1770000020000_i64,
+            1770000025000_i64,
+            "ses_1",
+        ),
+    )
+    .expect("insert child session");
+
+    let metas = list_all_opencode_session_meta_from_conn(
+        &conn,
+        std::path::Path::new("/tmp/opencode.db"),
+        0,
+        0,
+    )
+    .expect("list sessions");
+
+    let container_parent_ids: HashSet<String> = metas
+        .iter()
+        .filter_map(|meta| meta.parent_id.clone())
+        .filter(|parent_id| metas.iter().any(|m| &m.source_session_id == parent_id))
+        .collect();
+
+    let inputs: Vec<ImportedHistoryCacheInput> = metas
+        .into_iter()
+        .map(|meta| session_meta_to_cache_input(meta, &container_parent_ids))
+        .collect();
+
+    let container = inputs
+        .iter()
+        .find(|input| input.source_session_id == "ses_1")
+        .expect("container input");
+    assert!(
+        !container.listable,
+        "referenced container row must be hidden from sidebar"
+    );
+    assert!(container.parent_session_id.is_none());
+
+    let task = inputs
+        .iter()
+        .find(|input| input.source_session_id == "ses_child")
+        .expect("task input");
+    assert!(
+        task.listable,
+        "task row remains listable and carries parent relation"
+    );
+    assert_eq!(task.parent_session_id.as_deref(), Some("opencodeapp-ses_1"));
 }

@@ -14,14 +14,16 @@
  * its expandable payload.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 
 import { navigateToEventAtom } from "@src/engines/SessionCore/core/atoms/actions";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
+import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
 import {
   focusedSubagentCellAtom,
+  stationModeAtom,
   subagentPanelRevealRequestAtom,
 } from "@src/store/ui/simulatorAtom";
 
@@ -143,6 +145,8 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
 
   const setFocusedCell = useSetAtom(focusedSubagentCellAtom);
   const setPanelReveal = useSetAtom(subagentPanelRevealRequestAtom);
+  const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
+  const setStationMode = useSetAtom(stationModeAtom);
   const navigateToEvent = useSetAtom(navigateToEventAtom);
   const handleNavigate = useCallback(() => {
     if (!data.subagentSessionId) return;
@@ -154,14 +158,32 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
     // also flips replayMode to "replay" (free-browse), pausing tail-follow at
     // that moment. The cell then re-materialises and focus/reveal take effect.
     navigateToEvent(props.eventId);
+    setStationMode("agent-station");
+    setChatPanelMaximized(false);
     setFocusedCell(data.subagentSessionId);
     setPanelReveal((prev) => prev + 1);
   }, [
     data.subagentSessionId,
     props.eventId,
     navigateToEvent,
+    setChatPanelMaximized,
     setFocusedCell,
     setPanelReveal,
+    setStationMode,
+  ]);
+
+  useEffect(() => {
+    if (!data.subagentSessionId) return;
+    setStationMode("agent-station");
+    setChatPanelMaximized(false);
+    setFocusedCell(data.subagentSessionId);
+    setPanelReveal((prev) => prev + 1);
+  }, [
+    data.subagentSessionId,
+    setChatPanelMaximized,
+    setFocusedCell,
+    setPanelReveal,
+    setStationMode,
   ]);
 
   return (

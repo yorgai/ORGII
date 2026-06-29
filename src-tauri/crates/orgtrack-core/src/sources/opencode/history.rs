@@ -21,7 +21,7 @@ use crate::sources::imported_history::{
 const OPENCODE_SESSION_PREFIX: &str = "opencodeapp-";
 const OPENCODE_PROVIDER_SLUG: &str = "opencode";
 const OPENCODE_DB_FILENAME: &str = "opencode.db";
-const OPENCODE_METADATA_PARSER_VERSION: i64 = 1;
+const OPENCODE_METADATA_PARSER_VERSION: i64 = 2;
 
 pub type OpenCodeHistorySessionRow = ImportedHistorySessionRow;
 pub type OpenCodeHistorySessionPage = ImportedHistorySessionPage;
@@ -42,6 +42,7 @@ struct OpenCodeSessionMeta {
     output_tokens: i64,
     time_created: i64,
     time_updated: i64,
+    parent_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -53,7 +54,7 @@ struct OpenCodePartRow {
     time_created: i64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 struct OpenCodeModelValue {
     id: String,
@@ -61,17 +62,7 @@ struct OpenCodeModelValue {
     provider_id: String,
 }
 
-impl Default for OpenCodeModelValue {
-    fn default() -> Self {
-        Self {
-            id: String::new(),
-            model_id: String::new(),
-            provider_id: String::new(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 struct OpenCodePart {
     #[serde(rename = "type")]
@@ -81,19 +72,6 @@ struct OpenCodePart {
     call_id: String,
     state: Option<OpenCodeToolState>,
     time: Option<OpenCodePartTime>,
-}
-
-impl Default for OpenCodePart {
-    fn default() -> Self {
-        Self {
-            part_type: String::new(),
-            text: String::new(),
-            tool: String::new(),
-            call_id: String::new(),
-            state: None,
-            time: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -168,13 +146,18 @@ fn sync_opencode_history_cache(cache_conn: &mut Connection) -> Result<(), String
         source_mtime_ms,
         source_size_bytes,
     )?;
+    let container_parent_ids: HashSet<String> = metas
+        .iter()
+        .filter_map(|meta| meta.parent_id.clone())
+        .filter(|parent_id| metas.iter().any(|m| &m.source_session_id == parent_id))
+        .collect();
     let live_ids = metas
         .iter()
         .map(|meta| meta.source_session_id.clone())
         .collect::<Vec<_>>();
     let inputs = metas
         .into_iter()
-        .map(session_meta_to_cache_input)
+        .map(|meta| session_meta_to_cache_input(meta, &container_parent_ids))
         .collect::<Vec<_>>();
     imported_cache::sync_source_cache_from_conn(cache_conn, SOURCE_OPENCODE, live_ids, inputs)
 }
@@ -189,7 +172,7 @@ fn list_all_opencode_session_meta_from_conn(
         .prepare(
             "SELECT id, title, directory, model, tokens_input, tokens_output, \
                     tokens_reasoning, tokens_cache_read, tokens_cache_write, \
-                    time_created, time_updated \
+                    time_created, time_updated, parent_id \
              FROM session \
              WHERE time_archived IS NULL",
         )
@@ -215,6 +198,10 @@ fn list_all_opencode_session_meta_from_conn(
                 output_tokens,
                 time_created: row.get::<_, Option<i64>>(9)?.unwrap_or_default(),
                 time_updated: row.get::<_, Option<i64>>(10)?.unwrap_or_default(),
+                parent_id: row
+                    .get::<_, Option<String>>(11)?
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty()),
             })
         })
         .map_err(|err| format!("Failed to query OpenCode sessions: {err}"))?;
@@ -235,13 +222,23 @@ fn list_all_opencode_session_meta_from_conn(
     Ok(sessions)
 }
 
-fn session_meta_to_cache_input(meta: OpenCodeSessionMeta) -> ImportedHistoryCacheInput {
+fn session_meta_to_cache_input(
+    meta: OpenCodeSessionMeta,
+    container_parent_ids: &HashSet<String>,
+) -> ImportedHistoryCacheInput {
     let model = meta.model.as_deref().and_then(parse_model_name);
     let updated_at_ms = if meta.time_updated > 0 {
         meta.time_updated
     } else {
         meta.time_created
     };
+    let is_container_parent = container_parent_ids.contains(&meta.source_session_id);
+    let listable = !is_container_parent;
+    let parent_session_id = meta
+        .parent_id
+        .as_deref()
+        .filter(|parent_id| container_parent_ids.contains(*parent_id))
+        .map(|parent_id| format!("{OPENCODE_SESSION_PREFIX}{parent_id}"));
     ImportedHistoryCacheInput {
         source: SOURCE_OPENCODE,
         source_session_id: meta.source_session_id.clone(),
@@ -261,8 +258,9 @@ fn session_meta_to_cache_input(meta: OpenCodeSessionMeta) -> ImportedHistoryCach
         repo_path: (!meta.directory.trim().is_empty()).then_some(meta.directory),
         branch: None,
         impact: ImportedHistoryImpactStats::default(),
-        listable: true,
+        listable,
         source_metadata_json: None,
+        parent_session_id,
     }
 }
 

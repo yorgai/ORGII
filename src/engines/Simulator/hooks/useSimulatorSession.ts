@@ -15,6 +15,7 @@ import {
   effectiveSimulatorEventIdsAtom,
   navigateToFirstSimulatorEventAtom,
   simulatorEventPreviewByIdAtom,
+  sortedEventsAtom,
   sortedSimulatorEventIdsAtom,
 } from "@src/engines/SessionCore";
 import type {
@@ -41,6 +42,7 @@ export interface UseSimulatorSessionReturn {
   previewById: Record<string, SimulatorEventPreview>;
   specs: ReturnType<typeof useSimulatorEvents>["specs"];
   filteredEvents: SessionEvent[];
+  allEvents: SessionEvent[];
   currentEvent: SessionEvent | null;
   currentEventIndex: number;
   eventStoreVersion: number;
@@ -65,6 +67,7 @@ export function useSimulatorSession(): UseSimulatorSessionReturn {
 
   const effectiveEventIds = useAtomValue(effectiveSimulatorEventIdsAtom);
   const sortedSimulatorEventIds = useAtomValue(sortedSimulatorEventIdsAtom);
+  const allEvents = useAtomValue(sortedEventsAtom);
   const previewById = useAtomValue(simulatorEventPreviewByIdAtom);
   const eventById = useAtomValue(eventIndexAtom);
   const eventStoreVersion = useAtomValue(eventStoreVersionAtom);
@@ -165,6 +168,7 @@ export function useSimulatorSession(): UseSimulatorSessionReturn {
     previewById,
     specs,
     filteredEvents,
+    allEvents,
     currentEvent,
     currentEventIndex,
     eventStoreVersion,

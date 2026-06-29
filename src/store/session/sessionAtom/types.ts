@@ -83,6 +83,8 @@ export interface Session {
   agentRole?: AgentRole | string;
   /** Parent/root session id for child sessions such as Agent Team member sessions. */
   parentSessionId?: string;
+  /** True for imported history rows that cannot be written back. */
+  readOnly?: boolean;
   /** Agent Team roster member id for team member session rows. */
   orgMemberId?: string;
   /** Agent Team definition id for root/coordinator rows launched from a team. */

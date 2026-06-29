@@ -37,6 +37,7 @@ pub struct ImportedHistoryCacheInput {
     pub impact: ImportedHistoryImpactStats,
     pub listable: bool,
     pub source_metadata_json: Option<String>,
+    pub parent_session_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]

@@ -21,6 +21,7 @@ export interface WorkBuddyHistorySessionRow {
   linesAdded: number;
   linesRemoved: number;
   touchedFiles: string[];
+  parentSessionId?: string;
 }
 
 export interface WorkBuddyHistorySessionPage {

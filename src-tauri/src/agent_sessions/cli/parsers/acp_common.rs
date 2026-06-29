@@ -9,7 +9,7 @@ use std::sync::Arc;
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{ChildStdin, ChildStdout};
-use tokio::sync::{mpsc, oneshot, Mutex};
+use tokio::sync::{Mutex, mpsc, oneshot};
 
 use core_types::activity::ActivityChunk;
 
@@ -93,6 +93,10 @@ pub trait AcpAgentAdapter: Send {
         _session_id: &str,
         _cursor_name: &str,
         _result_text: &str,
+        _detailed_text: &str,
+        _raw_input: Option<&Value>,
+        _title: Option<&str>,
+        _parent_task: Option<&str>,
         _is_error: bool,
     ) -> Option<ActivityChunk> {
         None
@@ -129,6 +133,7 @@ struct PendingToolCall {
     cursor_name: String,
     file_path: String,
     raw_input: Value,
+    title: String,
 }
 
 // ============================================
@@ -407,16 +412,18 @@ fn extract_tool_call_content(update: &Value) -> (String, String) {
 pub(crate) struct AcpNotificationParser<A: AcpAgentAdapter> {
     pub adapter: A,
     session_id: String,
+    task: String,
     pending_tools: HashMap<String, PendingToolCall>,
     thought_json_buf: String,
     buffering_thought_json: bool,
 }
 
 impl<A: AcpAgentAdapter> AcpNotificationParser<A> {
-    pub fn new(adapter: A, session_id: &str) -> Self {
+    pub fn new_with_task(adapter: A, session_id: &str, task: &str) -> Self {
         Self {
             adapter,
             session_id: session_id.to_string(),
+            task: task.to_string(),
             pending_tools: HashMap::new(),
             thought_json_buf: String::new(),
             buffering_thought_json: false,
@@ -694,7 +701,7 @@ impl<A: AcpAgentAdapter> AcpNotificationParser<A> {
         };
 
         let effective_path = if file_path.is_empty() && !title.is_empty() {
-            title
+            title.clone()
         } else {
             file_path
         };
@@ -704,6 +711,7 @@ impl<A: AcpAgentAdapter> AcpNotificationParser<A> {
                 cursor_name: cursor_name.clone(),
                 file_path: effective_path,
                 raw_input,
+                title,
             },
         );
 
@@ -745,20 +753,23 @@ impl<A: AcpAgentAdapter> AcpNotificationParser<A> {
             is_error,
             pending,
         );
-        if is_terminal {
-            self.pending_tools.remove(&tool_call_id);
-        }
         if let Some(obj) = result.as_object_mut() {
-            obj.insert("call_id".to_string(), Value::String(tool_call_id));
+            obj.insert("call_id".to_string(), Value::String(tool_call_id.clone()));
         }
 
         if is_terminal {
-            if let Some(chunk) = self.adapter.map_tool_result_chunk(
+            let mapped_chunk = self.adapter.map_tool_result_chunk(
                 &self.session_id,
                 &cursor_name,
                 &result_text,
+                &detailed_text,
+                pending.map(|pt| &pt.raw_input),
+                pending.map(|pt| pt.title.as_str()),
+                Some(self.task.as_str()),
                 is_error,
-            ) {
+            );
+            self.pending_tools.remove(&tool_call_id);
+            if let Some(chunk) = mapped_chunk {
                 return vec![chunk];
             }
         }
@@ -868,7 +879,7 @@ pub async fn run_acp_protocol<A: AcpAgentAdapter>(
     image_paths: Vec<String>,
 ) -> Result<AcpSessionResult, String> {
     let mut reader = BufReader::new(stdout);
-    let mut parser = AcpNotificationParser::new(adapter, session_id);
+    let mut parser = AcpNotificationParser::new_with_task(adapter, session_id, task);
     let mut line_buf = String::new();
     let mut request_id: u64 = 0;
 

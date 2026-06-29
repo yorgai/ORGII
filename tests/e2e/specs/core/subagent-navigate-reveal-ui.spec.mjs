@@ -141,10 +141,11 @@ const PARENT_EVENTS = [
   makeLateEvent(PARENT_SESSION_ID, atOffset(20)),
 ];
 
-async function seedParentAtCursor(currentEventId) {
+async function seedParentAtCursor(currentEventId, options = {}) {
+  const { chatPanelMaximized = false } = options;
   unwrap(
     await invokeE2E("seedChatEvents", PARENT_SESSION_ID, PARENT_EVENTS, {
-      chatPanelMaximized: false,
+      chatPanelMaximized,
       chatWidth: 460,
       currentEventId,
       stationMode: "agent-station",
@@ -154,25 +155,35 @@ async function seedParentAtCursor(currentEventId) {
 }
 
 async function cellSnapshot() {
-  return execJS(`
-    const childId = ${JSON.stringify(CHILD_ID)};
-    const cell = document.querySelector(
-      '[data-subagent-cell-thread-id="' + childId + '"]'
-    );
-    const navBtn = document.querySelector(
-      '[data-tool-call-name="agent"] [data-testid="event-navigate"]'
-    );
-    return {
-      cellPresent: !!cell,
-      cellFocused: cell
-        ? cell.getAttribute('data-subagent-cell-focused') === 'true'
-        : false,
-      navBtnPresent: !!navBtn,
-      monitorTaskInBody: (document.body.innerText || '').includes(
-        ${JSON.stringify(MONITOR_TASK)}
-      ),
-    };
-  `);
+  const [dom, chatState] = await Promise.all([
+    execJS(`
+      const childId = ${JSON.stringify(CHILD_ID)};
+      const body = document.body.innerText || '';
+      const cell = document.querySelector(
+        '[data-subagent-cell-thread-id="' + childId + '"]'
+      );
+      const navBtn = document.querySelector(
+        '[data-tool-call-name="agent"] [data-testid="event-navigate"]'
+      );
+      return {
+        cellPresent: !!cell,
+        cellFocused: cell
+          ? cell.getAttribute('data-subagent-cell-focused') === 'true'
+          : false,
+        navBtnPresent: !!navBtn,
+        monitorTaskInBody: body.includes(
+          ${JSON.stringify(MONITOR_TASK)}
+        ),
+        hasMonitoringHeader: /Monitoring the progress of \\d+ subagents|正在监控 \\d+ 个 Subagent 的进度/.test(body),
+      };
+    `),
+    invokeE2E("inspectChatState"),
+  ]);
+  const state = chatState?.ok === true ? chatState.value : chatState;
+  return {
+    ...dom,
+    chatFocused: Boolean(state?.chatPanelMaximized),
+  };
 }
 
 async function clickChatNavigate() {
@@ -239,24 +250,26 @@ describe("Subagent navigate-arrow revives a retired monitor cell", () => {
     expect(snap.monitorTaskInBody).toBe(false);
   });
 
-  it("clicking the arrow seeks the cursor back so the cell re-materialises AND focuses", async () => {
+  it("clicking the arrow reveals the monitor cell from a Messages-focused transcript", async () => {
+    await seedParentAtCursor(LATE_EVENT_ID, { chatPanelMaximized: true });
+
+    await waitForCell(
+      (snap) => snap.navBtnPresent && !snap.cellPresent,
+      "baseline should hide the retired monitor cell while the chat arrow remains visible"
+    );
+
     const click = await clickChatNavigate();
     expect(click.clicked).toBe(true);
 
-    // navigateToEventAtom(delegateEventId) moves the cursor to +2min, inside
-    // the [2,8] clip window → cursor-filtered subagent reappears in the
-    // monitor strip, and focusedSubagentCellAtom rings it.
     await waitForCell(
-      (snap) => snap.cellPresent && snap.cellFocused,
-      "navigate click must revive the retired monitor cell and focus it"
+      (snap) =>
+        snap.cellPresent && snap.cellFocused && snap.hasMonitoringHeader,
+      "navigate click must reveal the monitor snapshot"
     );
 
     const snap = await cellSnapshot();
     expect(snap.cellPresent).toBe(true);
     expect(snap.cellFocused).toBe(true);
-    // The monitor cell's own task label is now on screen (it was absent in the
-    // baseline), confirming the cell is genuinely rendered, not just attribute
-    // residue.
-    expect(snap.monitorTaskInBody).toBe(true);
+    expect(snap.hasMonitoringHeader).toBe(true);
   });
 });

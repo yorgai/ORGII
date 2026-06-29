@@ -65,6 +65,7 @@ export interface ImportedHistorySessionRow {
   linesAdded: number;
   linesRemoved: number;
   touchedFiles: string[];
+  parentSessionId?: string;
 }
 
 export interface ImportedHistorySessionPage {
