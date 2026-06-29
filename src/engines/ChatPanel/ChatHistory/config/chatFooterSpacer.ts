@@ -8,7 +8,7 @@
 export const CHAT_FOOTER_SPACER = {
   /** Minimum spacer before the bottom overlay guard. */
   MIN_WHEN_FULL_PX: 32,
-  /** Extra guard added on top of bottomInset for the input overlay. */
+  /** Extra guard added on top of bottomInset for the input overlay. Do not tune casually; follow reliability depends on this target. */
   BOTTOM_GUARD_PX: 120,
   /** Ignore sub-pixel / tiny remeasure noise, but keep spacer state and rendering in sync. */
   UPDATE_THRESHOLD_PX: 8,
@@ -36,4 +36,33 @@ export function computeChatFooterSpacerHeight(params: {
     bottomInset +
     CHAT_FOOTER_SPACER.BOTTOM_GUARD_PX
   );
+}
+
+export function getChatContentBottomScrollTop(params: {
+  scrollHeight: number;
+  clientHeight: number;
+  footerSpacerHeight: number;
+  bottomInset: number;
+}): number {
+  const contentBottom = Math.max(
+    0,
+    params.scrollHeight - params.footerSpacerHeight
+  );
+  return Math.max(
+    0,
+    contentBottom -
+      params.clientHeight +
+      Math.max(0, params.bottomInset) +
+      CHAT_FOOTER_SPACER.BOTTOM_GUARD_PX
+  );
+}
+
+export function getChatContentBottomDistance(params: {
+  scrollTop: number;
+  scrollHeight: number;
+  clientHeight: number;
+  footerSpacerHeight: number;
+  bottomInset: number;
+}): number {
+  return getChatContentBottomScrollTop(params) - Math.max(0, params.scrollTop);
 }

@@ -58,6 +58,7 @@ import ChatPinnedHeaderLayer from "./components/ChatPinnedHeaderLayer";
 import ChatSearchBar from "./components/ChatSearchBar";
 import RevertConfirmDialog from "./components/RevertConfirmDialog";
 import TurnPageList from "./components/TurnPageList";
+import { getChatContentBottomDistance } from "./config/chatFooterSpacer";
 import {
   useChatEmptyState,
   useChatFooterSpacer,
@@ -587,6 +588,24 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   const virtualListDataKey = `${activeId ?? "no-session"}:${
     turnPaginationEnabled ? `page-${currentPageIndex}` : "all"
   }:${virtualListGroupShapeKey}:${virtualListItemShapeKey}:${collapseStateKey}`;
+  const tailFollowKey = useMemo(() => {
+    const tailItem = displayFlatItems[displayFlatItems.length - 1];
+    const tailEvent = tailItem?.event;
+    return [
+      activeId ?? "no-session",
+      tailItem?.chunk_id ?? "no-tail",
+      tailEvent?.displayStatus ?? "",
+      tailEvent?.activityStatus ?? "",
+      tailEvent?.displayText?.length ?? 0,
+      displayTotalFlatItems,
+      planningIndicatorCount,
+    ].join(":");
+  }, [
+    activeId,
+    displayFlatItems,
+    displayTotalFlatItems,
+    planningIndicatorCount,
+  ]);
 
   // --- Empty-state grace period ---
   const optimizedLen = chatHistory.length;
@@ -644,6 +663,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   // they coordinate without re-renders.
   const pinLastGroupRef = useRef(false);
   const manualScrollAtRef = useRef(0);
+  const programmaticScrollAtRef = useRef(0);
   const turnCollapseInteractionAtRef = useRef(0);
   const [reservePinToTop, setReservePinToTop] = React.useState(false);
   const handlePinToTopChange = useCallback((active: boolean) => {
@@ -697,10 +717,14 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
         if (measurementKey === lastMeasurementKey) return;
         lastMeasurementKey = measurementKey;
 
-        const distanceToPhysicalBottom =
-          root.scrollHeight - root.scrollTop - root.clientHeight;
         const nextVisible =
-          distanceToPhysicalBottom <= SCROLL_NAV_SHOW_THRESHOLD_PX;
+          getChatContentBottomDistance({
+            scrollTop: root.scrollTop,
+            scrollHeight: root.scrollHeight,
+            clientHeight: root.clientHeight,
+            footerSpacerHeight,
+            bottomInset,
+          }) <= SCROLL_NAV_SHOW_THRESHOLD_PX;
         setIsBottomSentinelVisible((previousVisible) =>
           previousVisible === nextVisible ? previousVisible : nextVisible
         );
@@ -725,6 +749,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     };
   }, [
     activeId,
+    bottomInset,
     displayTotalFlatItems,
     footerSpacerHeight,
     staticScrollerRef,
@@ -742,10 +767,14 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     visibleRangeEndRef,
     pinLastGroupRef,
     manualScrollAtRef,
+    programmaticScrollAtRef,
     turnCollapseInteractionAtRef,
     isContentOverflowingRef,
     activeSessionId: activeId,
     staticScrollerRef,
+    footerSpacerHeight,
+    bottomInset,
+    tailFollowKey,
     alwaysFollowTail: disableTailCollapse,
   });
   // Subagent panes pass `disableTailCollapse` because every paginated page
@@ -775,6 +804,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     activeId,
     groupCounts: displayGroupCounts,
     totalFlatItems: displayTotalFlatItems,
+    footerSpacerHeight,
+    bottomInset,
     sessionLoadStatus,
     virtuosoScrollerRef,
     atBottom,
@@ -783,6 +814,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     optimizedChatHistoryLength: optimizedChatHistory.length,
     pinLastGroupRef,
     manualScrollAtRef,
+    programmaticScrollAtRef,
     onPinToTopChange: handlePinToTopChange,
     staticScrollerRef,
   });
@@ -1140,6 +1172,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                       }
                       codeBlockContainerWidth={codeBlockContainerWidth ?? 0}
                       footerSpacerHeight={footerSpacerHeight}
+                      bottomInset={bottomInset}
                       virtualListRef={virtualListRef}
                       virtualListDataKey={virtualListDataKey}
                       getIsWpGeneWorking={getIsWpGeneWorking}
