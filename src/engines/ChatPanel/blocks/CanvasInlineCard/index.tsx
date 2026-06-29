@@ -258,7 +258,6 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
           {handleJumpToSimulator && (
             <IconButton
               onClick={handleJumpToSimulator}
-              className="text-text-4 hover:bg-fill-3 hover:text-primary-6"
               title={t("canvasCard.viewInSimulator", "View in Simulator")}
             >
               <Monitor size={12} />
