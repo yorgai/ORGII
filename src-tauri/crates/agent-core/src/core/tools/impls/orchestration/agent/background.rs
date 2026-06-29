@@ -77,6 +77,7 @@ impl AgentTool {
         } = args;
 
         let bg_session_id = subagent_session_id.clone();
+        let bg_parent_session_id = parent_session_id.clone();
         let bg_agent_name = agent.name.clone();
         let bg_model = model;
         let bg_provider = provider;
@@ -259,6 +260,17 @@ impl AgentTool {
             // Disarm so the guard's Drop does not overwrite it with Failed.
             finalize_guard.disarm();
 
+            // Push completion to the (possibly idle) parent. When the parent
+            // launched this worker in background and then ended its own turn,
+            // there is no active parent turn to surface the result via the
+            // Background Jobs reminder. The wake hook resumes the parent's
+            // turn loop so it consumes the result; it is a no-op when the
+            // parent is still running (the next turn's reminder covers that)
+            // or when no app handle is installed (headless / tests). Mirrors
+            // Claude Code's task-notification → idle-queue-processor design.
+            crate::tools::impls::orchestration::subagent_wake::current_subagent_completion_wake_hook()
+                .wake_parent(&bg_parent_session_id);
+
             // Clean up worktree isolation after the task completes.
             // Runs before the grace-period sleep so `await_output` callers
             // see the result before the disk is cleaned up, and the worktree
@@ -277,8 +289,36 @@ impl AgentTool {
                 }
             }
 
-            // Remove from registry after grace period
-            tokio::time::sleep(Duration::from_secs(120)).await;
+            // Remove from registry once the parent has consumed the result,
+            // or after a hard cap if it never does.
+            //
+            // The old behaviour — an unconditional 120s sleep then remove —
+            // raced the parent: a worker that finished while the parent was
+            // idle (and slow to take its next turn) had its result deleted
+            // before the Background Jobs reminder could ever surface it, so
+            // the parent never learned the worker completed. Now we retain
+            // the job until `acknowledge_output` is called (the reminder /
+            // await path marks it read), polling at a coarse interval, with
+            // a hard upper bound so a parent that never returns cannot leak
+            // the entry forever.
+            const ACK_POLL_INTERVAL: Duration = Duration::from_secs(5);
+            const MAX_RETENTION: Duration = Duration::from_secs(30 * 60);
+            let retain_deadline = std::time::Instant::now() + MAX_RETENTION;
+            loop {
+                tokio::time::sleep(ACK_POLL_INTERVAL).await;
+                // Missing (already removed elsewhere) or acknowledged → done.
+                match job_registry::is_output_acknowledged(&bg_session_id) {
+                    None | Some(true) => break,
+                    Some(false) => {}
+                }
+                if std::time::Instant::now() >= retain_deadline {
+                    warn!(
+                        "[agent:bg] '{}' result was never acknowledged within retention window; evicting",
+                        bg_session_id
+                    );
+                    break;
+                }
+            }
             job_registry::remove(&bg_session_id);
         });
 

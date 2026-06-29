@@ -64,6 +64,13 @@ impl ExtractMemoriesState {
     pub fn is_in_progress(&self) -> bool {
         self.in_progress
     }
+
+    /// Clear the overlap-guard flag. Used by the post-turn dispatcher when a
+    /// provider build fails before `run_extraction` is reached, so the guard
+    /// doesn't stay stuck `true` and block every future extraction.
+    pub fn clear_in_progress(&mut self) {
+        self.in_progress = false;
+    }
 }
 
 #[cfg(test)]
