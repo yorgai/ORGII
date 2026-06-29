@@ -531,19 +531,13 @@ const CanvasApp: React.FC<SimulatorAppProps> = () => {
 
   // Jump to matching event when canvasPreviewAtom changes (chat card click)
   useEffect(() => {
-    if (!canvasPreviewEntry) return;
-    const preview = canvasPreviewEntry.payload;
-    const match = appEvents.find((ev) => {
-      const args = ev.args as Record<string, unknown> | undefined;
-      if (!args) return false;
-      return (
-        args.mode === preview.mode &&
-        (preview.title ? args.title === preview.title : true)
-      );
-    });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (match) setSelectedEventId(match.id);
-  }, [canvasPreviewEntry, appEvents]);
+    const eventId = canvasPreviewEntry?.payload.eventId;
+    if (!eventId) return;
+    if (appEvents.some((event) => event.id === eventId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedEventId(eventId);
+    }
+  }, [canvasPreviewEntry?.payload.eventId, appEvents]);
 
   const handleCompareToggle = useCallback((id: string) => {
     setCompareEventIds((prev) => {

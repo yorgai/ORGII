@@ -43,7 +43,7 @@ import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatSta
 import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatController";
 import { AgentOrgGroupChatLiveSessions } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatLiveSessions";
 import { replayModeAtom } from "@src/engines/SessionCore";
-import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
+import { derivedSnapshotAtom } from "@src/engines/SessionCore/core/atoms/events";
 import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { useFileReviewSync } from "@src/hooks/fileReview";
@@ -113,6 +113,7 @@ import { useFollowAgent } from "./hooks/useFollowAgent";
 const logger = createLogger("ChatView");
 
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
+const EMPTY_CHAT_EVENTS = [];
 
 function impactFileChanges(input: {
   filesChanged?: number;
@@ -390,9 +391,24 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const streamRetryStatus = useAtomValue(streamRetryStatusAtom);
     const streamRetry =
       streamRetryStatus?.sessionId === sessionId ? streamRetryStatus : null;
+    const snapshot = useAtomValue(derivedSnapshotAtom);
     const canvasPreview = useAtomValue(canvasPreviewAtom);
-    const latestCanvasPayload =
-      canvasPreview?.sessionId === sessionId ? canvasPreview.payload : null;
+    const latestCanvasPreview = snapshot?.latestCanvasPreview ?? null;
+    const latestCanvasPayload = useMemo(
+      () =>
+        canvasPreview?.sessionId === sessionId
+          ? canvasPreview.payload
+          : latestCanvasPreview
+            ? {
+                mode: latestCanvasPreview.mode,
+                url: latestCanvasPreview.url,
+                title: latestCanvasPreview.title,
+                streaming: latestCanvasPreview.streaming,
+                eventId: latestCanvasPreview.eventId,
+              }
+            : null,
+      [canvasPreview, latestCanvasPreview, sessionId]
+    );
     const openLatestCanvas = useJumpToSimulatorCanvas(
       sessionId,
       latestCanvasPayload
@@ -403,7 +419,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
         !canvasPreview?.openedInSimulator &&
         openLatestCanvas
           ? {
-              label: latestCanvasPayload.title || "Canvas",
+              label: "Canvas",
               onOpen: openLatestCanvas,
             }
           : null,
@@ -412,7 +428,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const currentPlanApproval = useAtomValue(pendingPlanApprovalsAtom).get(
       sessionId
     )?.current;
-    const chatEvents = useAtomValue(chatEventsAtom);
+    const chatEvents = snapshot?.chatEvents ?? EMPTY_CHAT_EVENTS;
     const isAgentWorking = useAtomValue(isSessionActiveAtom);
 
     const gitArtifactStats = useMemo(
