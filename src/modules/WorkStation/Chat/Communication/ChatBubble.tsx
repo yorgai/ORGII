@@ -129,6 +129,7 @@ const ReplayMarkdown: React.FC<{ content: string }> = memo(({ content }) => (
     useChatCodeBlock={true}
     enableFileNavigation={true}
     skipPreprocess={false}
+    disableCanvasInline={true}
   />
 ));
 ReplayMarkdown.displayName = "ReplayMarkdown";
@@ -420,6 +421,7 @@ const SkillContextCard: React.FC<{
                 useChatCodeBlock={false}
                 enableFileNavigation={false}
                 skipPreprocess={false}
+                disableCanvasInline={true}
               />
             </div>
           )}

@@ -13,8 +13,20 @@ import type { CanvasInlinePayload } from "./useCanvasInlineStream";
 
 export function openInSimulatorCanvas(
   sessionId: string,
-  payload: CanvasInlinePayload
+  payload: CanvasInlinePayload,
+  options?: { openedInSimulator?: boolean }
 ): void {
   const store = getInstrumentedStore();
-  store.set(canvasPreviewAtom, { sessionId, payload });
+  const previous = store.get(canvasPreviewAtom);
+  const sameCanvas =
+    previous?.sessionId === sessionId &&
+    previous.payload.eventId &&
+    previous.payload.eventId === payload.eventId;
+  store.set(canvasPreviewAtom, {
+    sessionId,
+    payload,
+    openedInSimulator:
+      options?.openedInSimulator ??
+      (sameCanvas ? previous?.openedInSimulator : undefined),
+  });
 }

@@ -43,7 +43,6 @@ import {
   chatFontSizeAtom,
   chatLineHeightAtom,
 } from "@src/store/config/configAtom";
-import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
 import { addToAgentAtom } from "@src/store/ui/addToAgentAtom";
 import { simulatorEffectiveDockAppAtom } from "@src/store/ui/simulatorAtom";
 import type { BackendEvent } from "@src/types/session/steps";
@@ -312,10 +311,6 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
   // global atom, which may lag or point to a different surface's active session.
   const sessionId = propSessionId ?? atomSessionId;
 
-  const canvasPreview = useAtomValue(canvasPreviewAtom);
-  const activeCanvasPayload =
-    canvasPreview?.sessionId === sessionId ? canvasPreview.payload : null;
-
   // Resolve org-run member info so simulator message bubbles can show the
   // correct sender label (e.g. "Planner updated task" instead of the
   // generic "Agent"). One hook instance per Communication panel — bubbles
@@ -396,7 +391,6 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
           }
           onMessageClick={handleMessageClick}
           currentEventId={state.currentEventId}
-          canvasPayload={activeCanvasPayload}
         />
       </div>
     </InSimulatorReplayContext.Provider>
