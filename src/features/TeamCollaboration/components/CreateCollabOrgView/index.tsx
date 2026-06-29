@@ -7,12 +7,14 @@ import type { ProjectOrg } from "@src/api/http/project";
 import Button from "@src/components/Button";
 import Input from "@src/components/Input";
 import Markdown from "@src/components/MarkDown";
-import { DetailSplitLayout } from "@src/modules/ProjectManager/shared";
 import {
   SectionContainer,
   SectionRow,
 } from "@src/modules/shared/layouts/SectionLayout";
-import { CollapsibleSection } from "@src/modules/shared/layouts/blocks";
+import {
+  CollapsibleSection,
+  PANEL_FOOTER_TOKENS,
+} from "@src/modules/shared/layouts/blocks";
 import SelectionGrid from "@src/scaffold/WizardSystem/primitives/SelectionGrid";
 import type { SelectionGridOption } from "@src/scaffold/WizardSystem/primitives/SelectionGrid";
 import {
@@ -377,261 +379,252 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
   }, [latestInviteLink]);
 
   return (
-    <DetailSplitLayout
-      title={t("navigation:collaboration.addOrg")}
-      borderlessHeader
-      hideHeader
-      leftContent={
+    <div className="flex h-full w-full min-w-0 flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <div
-          className="h-full min-h-0 overflow-y-auto py-4"
+          className="mx-auto flex h-full w-full max-w-[932px] flex-col gap-4 overflow-y-auto px-4"
           data-testid="create-collab-org-body"
         >
-          <div className="mx-auto flex w-full max-w-[932px] flex-col gap-4 px-4 pb-6">
-            <SectionContainer color="chatPanelInfo">
+          <SectionContainer bare>
+            <SectionRow
+              label={t("navigation:collaboration.orgSource")}
+              layout="vertical"
+              required
+            >
+              <SelectionGrid
+                options={sourceOptions}
+                selected={source}
+                columns={2}
+                cardVariant="subtle"
+                compactCards
+                onSelect={setSource}
+              />
+            </SectionRow>
+          </SectionContainer>
+
+          {source === SUPABASE_SOURCE && (
+            <SectionContainer bare>
               <SectionRow
-                label={t("navigation:collaboration.orgSource")}
+                label={t("navigation:collaboration.setupMode")}
+                layout="vertical"
+              >
+                <SelectionGrid
+                  options={modeOptions}
+                  selected={mode}
+                  columns={2}
+                  cardVariant="subtle"
+                  compactCards
+                  onSelect={setMode}
+                />
+              </SectionRow>
+            </SectionContainer>
+          )}
+
+          {source !== null && (
+            <SectionContainer bare>
+              {mode === CREATE_MODE || source === LOCAL_SOURCE ? (
+                <SectionRow
+                  label={t("navigation:collaboration.orgName")}
+                  layout="vertical"
+                  required
+                >
+                  <Input
+                    value={orgName}
+                    onChange={setOrgName}
+                    placeholder={t(
+                      "navigation:collaboration.orgNamePlaceholder"
+                    )}
+                    style={COLLAB_FORM_CONTROL_STYLE}
+                  />
+                </SectionRow>
+              ) : (
+                <SectionRow
+                  label={t("navigation:collaboration.inviteCode")}
+                  layout="vertical"
+                  required
+                >
+                  <Input
+                    value={inviteInput}
+                    onChange={setInviteInput}
+                    placeholder={t(
+                      "navigation:collaboration.inviteCodePlaceholder"
+                    )}
+                    style={COLLAB_FORM_CONTROL_STYLE}
+                  />
+                </SectionRow>
+              )}
+
+              {source === SUPABASE_SOURCE && (
+                <SectionRow
+                  label={t("navigation:collaboration.joinAs")}
+                  layout="vertical"
+                  required
+                >
+                  <Input
+                    value={displayName}
+                    onChange={setDisplayName}
+                    placeholder={t(
+                      "navigation:collaboration.joinAsPlaceholder"
+                    )}
+                    style={COLLAB_FORM_CONTROL_STYLE}
+                  />
+                </SectionRow>
+              )}
+            </SectionContainer>
+          )}
+
+          {source === SUPABASE_SOURCE && (
+            <>
+              <SectionContainer bare>
+                <SectionRow
+                  label={t("navigation:collaboration.supabaseUrl")}
+                  layout="vertical"
+                  required
+                >
+                  <Input
+                    value={supabaseUrl}
+                    onChange={setSupabaseUrl}
+                    placeholder="https://your-project.supabase.co"
+                    type="url"
+                    style={COLLAB_FORM_CONTROL_STYLE}
+                  />
+                </SectionRow>
+                <SectionRow
+                  label={t("navigation:collaboration.supabaseAnonKey")}
+                  layout="vertical"
+                  required
+                >
+                  <Input
+                    value={anonKey}
+                    onChange={setAnonKey}
+                    placeholder="eyJhbGciOi..."
+                    style={COLLAB_FORM_CONTROL_STYLE}
+                  />
+                </SectionRow>
+                {mode === CREATE_MODE ? (
+                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                    <Button
+                      htmlType="button"
+                      size="small"
+                      disabled={
+                        !supabaseUrl.trim() || !anonKey.trim() || verifying
+                      }
+                      loading={verifying}
+                      onClick={() => void handleVerifySetup()}
+                    >
+                      {t("navigation:collaboration.verifySupabaseSetup")}
+                    </Button>
+                    <Button
+                      htmlType="button"
+                      size="small"
+                      onClick={() => void handleCopySetupSql()}
+                    >
+                      {copiedSql
+                        ? t("navigation:collaboration.copiedSetupSql")
+                        : t("navigation:collaboration.copySetupSql")}
+                    </Button>
+                    <Button
+                      htmlType="button"
+                      size="small"
+                      onClick={() =>
+                        window.open(SUPABASE_SQL_EDITOR_URL, "_blank")
+                      }
+                    >
+                      {t("navigation:collaboration.openSupabaseSqlEditor")}
+                    </Button>
+                    {verificationStatus === "ok" ? (
+                      <span className="text-[12px] text-success-6">
+                        {t("navigation:collaboration.supabaseSetupVerified")}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </SectionContainer>
+
+              {mode === CREATE_MODE ? (
+                <CollapsibleSection
+                  title={t("navigation:collaboration.supabaseSetupTitle")}
+                  defaultOpen={false}
+                  compact
+                  headerRowClassName="h-5 px-1"
+                  titleButtonClassName="text-[12px] font-medium text-text-2 hover:text-text-1"
+                  chevronSize={12}
+                >
+                  <div className="cursor-text select-text px-1 text-[12px] leading-[18px] text-text-2">
+                    <Markdown
+                      textContent={SUPABASE_SETUP_MARKDOWN}
+                      useChatCodeBlock
+                      skipPreprocess
+                    />
+                  </div>
+                </CollapsibleSection>
+              ) : null}
+            </>
+          )}
+
+          {source === SUPABASE_SOURCE && mode === JOIN_MODE && (
+            <SectionContainer bare>
+              <SectionRow
+                label={t("navigation:collaboration.identityKind")}
                 layout="vertical"
                 required
               >
                 <SelectionGrid
-                  options={sourceOptions}
-                  selected={source}
+                  options={identityOptions}
+                  selected={identityKind}
                   columns={2}
                   cardVariant="subtle"
                   compactCards
-                  onSelect={setSource}
+                  onSelect={setIdentityKind}
                 />
               </SectionRow>
             </SectionContainer>
+          )}
 
-            {source === SUPABASE_SOURCE && (
-              <SectionContainer color="chatPanelInfo">
-                <SectionRow
-                  label={t("navigation:collaboration.setupMode")}
-                  layout="vertical"
-                >
-                  <SelectionGrid
-                    options={modeOptions}
-                    selected={mode}
-                    columns={2}
-                    cardVariant="subtle"
-                    compactCards
-                    onSelect={setMode}
+          {latestInviteLink && (
+            <SectionContainer bare>
+              <SectionRow
+                label={t("navigation:collaboration.inviteReady")}
+                layout="vertical"
+              >
+                <div className="space-y-3">
+                  <Input
+                    readOnly
+                    value={latestInviteLink}
+                    style={COLLAB_FORM_CONTROL_STYLE}
                   />
-                </SectionRow>
-              </SectionContainer>
-            )}
+                  <Button size="small" onClick={() => void handleCopyInvite()}>
+                    {copied
+                      ? t("navigation:collaboration.copiedInvite")
+                      : t("navigation:collaboration.copyInvite")}
+                  </Button>
+                </div>
+              </SectionRow>
+            </SectionContainer>
+          )}
 
-            {source !== null && (
-              <SectionContainer color="chatPanelInfo">
-                {mode === CREATE_MODE || source === LOCAL_SOURCE ? (
-                  <SectionRow
-                    label={t("navigation:collaboration.orgName")}
-                    layout="vertical"
-                    required
-                  >
-                    <Input
-                      value={orgName}
-                      onChange={setOrgName}
-                      placeholder={t(
-                        "navigation:collaboration.orgNamePlaceholder"
-                      )}
-                      style={COLLAB_FORM_CONTROL_STYLE}
-                    />
-                  </SectionRow>
-                ) : (
-                  <SectionRow
-                    label={t("navigation:collaboration.inviteCode")}
-                    layout="vertical"
-                    required
-                  >
-                    <Input
-                      value={inviteInput}
-                      onChange={setInviteInput}
-                      placeholder={t(
-                        "navigation:collaboration.inviteCodePlaceholder"
-                      )}
-                      style={COLLAB_FORM_CONTROL_STYLE}
-                    />
-                  </SectionRow>
-                )}
-
-                {source === SUPABASE_SOURCE && (
-                  <SectionRow
-                    label={t("navigation:collaboration.joinAs")}
-                    layout="vertical"
-                    required
-                  >
-                    <Input
-                      value={displayName}
-                      onChange={setDisplayName}
-                      placeholder={t(
-                        "navigation:collaboration.joinAsPlaceholder"
-                      )}
-                      style={COLLAB_FORM_CONTROL_STYLE}
-                    />
-                  </SectionRow>
-                )}
-              </SectionContainer>
-            )}
-
-            {source === SUPABASE_SOURCE && (
-              <>
-                <SectionContainer color="chatPanelInfo">
-                  <SectionRow
-                    label={t("navigation:collaboration.supabaseUrl")}
-                    layout="vertical"
-                    required
-                  >
-                    <Input
-                      value={supabaseUrl}
-                      onChange={setSupabaseUrl}
-                      placeholder="https://your-project.supabase.co"
-                      type="url"
-                      style={COLLAB_FORM_CONTROL_STYLE}
-                    />
-                  </SectionRow>
-                  <SectionRow
-                    label={t("navigation:collaboration.supabaseAnonKey")}
-                    layout="vertical"
-                    required
-                  >
-                    <Input
-                      value={anonKey}
-                      onChange={setAnonKey}
-                      placeholder="eyJhbGciOi..."
-                      style={COLLAB_FORM_CONTROL_STYLE}
-                    />
-                  </SectionRow>
-                  {mode === CREATE_MODE ? (
-                    <div className="flex flex-wrap items-center gap-2 pt-2">
-                      <Button
-                        htmlType="button"
-                        size="small"
-                        disabled={
-                          !supabaseUrl.trim() || !anonKey.trim() || verifying
-                        }
-                        loading={verifying}
-                        onClick={() => void handleVerifySetup()}
-                      >
-                        {t("navigation:collaboration.verifySupabaseSetup")}
-                      </Button>
-                      <Button
-                        htmlType="button"
-                        size="small"
-                        onClick={() => void handleCopySetupSql()}
-                      >
-                        {copiedSql
-                          ? t("navigation:collaboration.copiedSetupSql")
-                          : t("navigation:collaboration.copySetupSql")}
-                      </Button>
-                      <Button
-                        htmlType="button"
-                        size="small"
-                        onClick={() =>
-                          window.open(SUPABASE_SQL_EDITOR_URL, "_blank")
-                        }
-                      >
-                        {t("navigation:collaboration.openSupabaseSqlEditor")}
-                      </Button>
-                      {verificationStatus === "ok" ? (
-                        <span className="text-[12px] text-success-6">
-                          {t("navigation:collaboration.supabaseSetupVerified")}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </SectionContainer>
-
-                {mode === CREATE_MODE ? (
-                  <CollapsibleSection
-                    title={t("navigation:collaboration.supabaseSetupTitle")}
-                    defaultOpen={false}
-                    compact
-                    headerRowClassName="h-5 px-1"
-                    titleButtonClassName="text-[12px] font-medium text-text-2 hover:text-text-1"
-                    chevronSize={12}
-                  >
-                    <div className="cursor-text select-text px-1 text-[12px] leading-[18px] text-text-2">
-                      <Markdown
-                        textContent={SUPABASE_SETUP_MARKDOWN}
-                        useChatCodeBlock
-                        skipPreprocess
-                      />
-                    </div>
-                  </CollapsibleSection>
-                ) : null}
-              </>
-            )}
-
-            {source === SUPABASE_SOURCE && mode === JOIN_MODE && (
-              <SectionContainer color="chatPanelInfo">
-                <SectionRow
-                  label={t("navigation:collaboration.identityKind")}
-                  layout="vertical"
-                  required
-                >
-                  <SelectionGrid
-                    options={identityOptions}
-                    selected={identityKind}
-                    columns={2}
-                    cardVariant="subtle"
-                    compactCards
-                    onSelect={setIdentityKind}
-                  />
-                </SectionRow>
-              </SectionContainer>
-            )}
-
-            {latestInviteLink && (
-              <SectionContainer color="chatPanelInfo">
-                <SectionRow
-                  label={t("navigation:collaboration.inviteReady")}
-                  layout="vertical"
-                >
-                  <div className="space-y-3">
-                    <Input
-                      readOnly
-                      value={latestInviteLink}
-                      style={COLLAB_FORM_CONTROL_STYLE}
-                    />
-                    <Button
-                      size="small"
-                      onClick={() => void handleCopyInvite()}
-                    >
-                      {copied
-                        ? t("navigation:collaboration.copiedInvite")
-                        : t("navigation:collaboration.copyInvite")}
-                    </Button>
-                  </div>
-                </SectionRow>
-              </SectionContainer>
-            )}
-
-            {error && <p className="text-sm text-danger-6">{error}</p>}
-          </div>
+          {error && <p className="text-sm text-danger-6">{error}</p>}
         </div>
-      }
-      footer={
-        <>
-          <Button variant="secondary" size="small" onClick={onCancel}>
-            {t("common:actions.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            size="small"
-            onClick={() => void handleSubmit()}
-            disabled={!canSubmit}
-            loading={loading}
-            data-testid="create-collab-org-submit"
-          >
-            {source === LOCAL_SOURCE || mode === CREATE_MODE
-              ? t("navigation:collaboration.createOrg")
-              : t("navigation:collaboration.joinOrg")}
-          </Button>
-        </>
-      }
-    />
+      </div>
+
+      <div className={`${PANEL_FOOTER_TOKENS.container} justify-end`}>
+        <Button variant="secondary" size="small" onClick={onCancel}>
+          {t("common:actions.cancel")}
+        </Button>
+        <Button
+          variant="primary"
+          size="small"
+          onClick={() => void handleSubmit()}
+          disabled={!canSubmit}
+          loading={loading}
+          data-testid="create-collab-org-submit"
+        >
+          {source === LOCAL_SOURCE || mode === CREATE_MODE
+            ? t("navigation:collaboration.createOrg")
+            : t("navigation:collaboration.joinOrg")}
+        </Button>
+      </div>
+    </div>
   );
 };
 
