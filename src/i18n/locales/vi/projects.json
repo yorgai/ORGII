@@ -69,6 +69,52 @@
     },
     "viewProjects": "Xem Projects"
   },
+  "githubIssuesImport": {
+    "title": "Nhập GitHub Issues",
+    "menuLabel": "Nhập GitHub Issues",
+    "createTarget": "GitHub Issues Project",
+    "heading": "Tạo Project từ GitHub Issues",
+    "description": "Chọn một kho GitHub, tạo ORGII Project và đồng bộ GitHub Issues thành work items.",
+    "importButton": "Nhập GitHub Issues",
+    "projectDescription": "Được đồng bộ từ GitHub Issues trong {{owner}}/{{repo}}.",
+    "fields": {
+      "projectName": "Tên Project",
+      "repo": "Kho GitHub",
+      "connection": "Kết nối GitHub"
+    },
+    "placeholders": {
+      "projectName": "ORGII GitHub Issues",
+      "repo": "owner/repo hoặc https://github.com/owner/repo",
+      "connection": "Chọn kết nối GitHub"
+    },
+    "loadingConnections": "Đang tải kết nối GitHub...",
+    "noConnectionTitle": "Không tìm thấy kết nối GitHub",
+    "noConnectionDescription": "Trước tiên hãy thêm kết nối GitHub trong Integrations, sau đó quay lại đây để nhập GitHub Issues.",
+    "linkedRepoHint": "Project này cũng sẽ được liên kết với Workspace repo hiện tại: {{repoName}}.",
+    "createdTitle": "{{name}} đã sẵn sàng",
+    "createdDescription": "ORGII đang nhập GitHub Issues từ {{owner}}/{{repo}}. Bạn có thể tiếp tục làm việc trong khi đồng bộ tiếp tục.",
+    "createdDescriptionFallback": "ORGII đang nhập GitHub Issues. Bạn có thể tiếp tục làm việc trong khi đồng bộ tiếp tục.",
+    "errors": {
+      "invalidRepo": "Dùng owner/repo hoặc URL kho GitHub."
+    },
+    "importStatus": {
+      "title": "Trạng thái nhập",
+      "pendingDescription": "Worker nhập đã được đưa vào hàng đợi và sẽ bắt đầu sớm.",
+      "runningDescription": "GitHub Issues đang được nhập vào Project này dưới dạng work items.",
+      "completedDescription": "Tất cả GitHub Issues khả dụng đã được nhập.",
+      "failedDescription": "Worker nhập đã báo lỗi. Bạn có thể thử lại từ cài đặt đồng bộ Project.",
+      "cancelledDescription": "Quá trình nhập đã bị hủy trước khi tất cả GitHub Issues được nhập.",
+      "progressWithTotal": "Đã nhập {{count}} / {{total}} GitHub Issues",
+      "progressNoTotal": "Đã nhập {{count}} GitHub Issues",
+      "state": {
+        "pending": "Đang chờ",
+        "running": "Đang chạy",
+        "completed": "Hoàn tất",
+        "failed": "Thất bại",
+        "cancelled": "Đã hủy"
+      }
+    }
+  },
   "orgs": {
     "yourOrgs": "Tổ chức của bạn",
     "sectionTitle": "Tổ chức",
@@ -226,7 +272,8 @@
       "inProgress": "Đang tiến hành",
       "inReview": "Đang xem xét",
       "done": "Hoàn thành",
-      "cancelled": "Đã hủy"
+      "cancelled": "Đã hủy",
+      "duplicate": "Trùng lặp"
     },
     "statusLabels": {
       "backlog": "Backlog",

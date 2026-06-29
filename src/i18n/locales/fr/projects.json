@@ -69,6 +69,52 @@
     },
     "viewProjects": "Voir les projects"
   },
+  "githubIssuesImport": {
+    "title": "Importer GitHub Issues",
+    "menuLabel": "Importer GitHub Issues",
+    "createTarget": "Project GitHub Issues",
+    "heading": "Créer un Project depuis GitHub Issues",
+    "description": "Choisissez un dépôt GitHub, créez un Project ORGII et gardez ses GitHub Issues synchronisées comme work items.",
+    "importButton": "Importer GitHub Issues",
+    "projectDescription": "Synchronisé depuis GitHub Issues dans {{owner}}/{{repo}}.",
+    "fields": {
+      "projectName": "Nom du Project",
+      "repo": "Dépôt GitHub",
+      "connection": "Connexion GitHub"
+    },
+    "placeholders": {
+      "projectName": "ORGII GitHub Issues",
+      "repo": "owner/repo ou https://github.com/owner/repo",
+      "connection": "Sélectionner une connexion GitHub"
+    },
+    "loadingConnections": "Chargement des connexions GitHub...",
+    "noConnectionTitle": "Aucune connexion GitHub trouvée",
+    "noConnectionDescription": "Ajoutez d'abord une connexion GitHub dans Integrations, puis revenez ici pour importer GitHub Issues.",
+    "linkedRepoHint": "Ce Project sera aussi lié au repo du Workspace actuel : {{repoName}}.",
+    "createdTitle": "{{name}} est prêt",
+    "createdDescription": "ORGII importe GitHub Issues depuis {{owner}}/{{repo}}. Vous pouvez continuer pendant la synchronisation.",
+    "createdDescriptionFallback": "ORGII importe GitHub Issues. Vous pouvez continuer pendant la synchronisation.",
+    "errors": {
+      "invalidRepo": "Utilisez owner/repo ou une URL de dépôt GitHub."
+    },
+    "importStatus": {
+      "title": "Statut de l'import",
+      "pendingDescription": "Le worker d'import est en file d'attente et va démarrer bientôt.",
+      "runningDescription": "GitHub Issues est importé dans ce Project comme work items.",
+      "completedDescription": "Tous les GitHub Issues disponibles ont été importés.",
+      "failedDescription": "Le worker d'import a signalé une erreur. Vous pouvez réessayer depuis les paramètres de synchronisation du Project.",
+      "cancelledDescription": "L'import a été annulé avant que tous les GitHub Issues soient importés.",
+      "progressWithTotal": "{{count}} / {{total}} GitHub Issues importés",
+      "progressNoTotal": "{{count}} GitHub Issues importés",
+      "state": {
+        "pending": "En attente",
+        "running": "En cours",
+        "completed": "Terminé",
+        "failed": "Échec",
+        "cancelled": "Annulé"
+      }
+    }
+  },
   "orgs": {
     "yourOrgs": "Vos organisations",
     "sectionTitle": "Organisations",
@@ -226,7 +272,8 @@
       "inProgress": "En cours",
       "inReview": "En révision",
       "done": "Terminé",
-      "cancelled": "Annulé"
+      "cancelled": "Annulé",
+      "duplicate": "Doublon"
     },
     "statusLabels": {
       "backlog": "Backlog",

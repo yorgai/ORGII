@@ -1,6 +1,7 @@
 import {
   Box,
   Compass,
+  Github,
   LayoutDashboard,
   Plus,
   Radar,
@@ -16,6 +17,7 @@ import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 import {
   NEW_SESSION_MENU_ITEM_ID,
   OPS_CONTROL_MENU_ITEM_ID,
+  PROJECTS_IMPORT_GITHUB_ISSUES_MENU_ITEM_ID,
   PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
   PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
   getDraftMenuItemId,
@@ -33,6 +35,7 @@ interface BuildPinnedMenuItemsParams {
 interface BuildProjectsPinnedMenuItemsParams {
   createProjectLabel: string;
   createWorkItemLabel: string;
+  importGithubIssuesLabel: string;
 }
 
 interface BuildFoldersPinnedMenuItemsParams {
@@ -73,6 +76,7 @@ export function buildPinnedMenuItems({
 export function buildProjectsPinnedMenuItems({
   createProjectLabel,
   createWorkItemLabel,
+  importGithubIssuesLabel,
 }: BuildProjectsPinnedMenuItemsParams): NavigationMenuItem[] {
   return [
     {
@@ -88,6 +92,13 @@ export function buildProjectsPinnedMenuItems({
       label: createProjectLabel,
       icon: Box,
       iconName: "box",
+    },
+    {
+      id: PROJECTS_IMPORT_GITHUB_ISSUES_MENU_ITEM_ID,
+      key: PROJECTS_IMPORT_GITHUB_ISSUES_MENU_ITEM_ID,
+      label: importGithubIssuesLabel,
+      icon: Github,
+      iconName: "github",
     },
   ];
 }

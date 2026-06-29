@@ -269,7 +269,9 @@ export function useChatPanelContentState({
 
   const showNewSessionButton =
     showSessionContent && sidebarCollapsed && !sessionSidebarVisible;
-  const isProjectTarget = createTarget === CHAT_PANEL_CREATE_TARGET.PROJECT;
+  const isProjectTarget =
+    createTarget === CHAT_PANEL_CREATE_TARGET.PROJECT ||
+    createTarget === CHAT_PANEL_CREATE_TARGET.GITHUB_ISSUES_PROJECT;
   const isWorkItemTarget = createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM;
   const isCollabOrgTarget =
     createTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG;
@@ -306,7 +308,7 @@ export function useChatPanelContentState({
     !selectedCollabOrg &&
     !showExploreContent &&
     !showManageIssuesContent &&
-    isProjectTarget &&
+    createTarget === CHAT_PANEL_CREATE_TARGET.PROJECT &&
     sessionCreatorAvailable;
   const showEmptyChatFocusRestoreButton =
     !showBenchmarkSessionGroupContent &&

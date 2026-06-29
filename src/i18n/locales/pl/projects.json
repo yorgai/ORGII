@@ -69,6 +69,52 @@
     },
     "viewProjects": "Pokaż Projects"
   },
+  "githubIssuesImport": {
+    "title": "Importuj GitHub Issues",
+    "menuLabel": "Importuj GitHub Issues",
+    "createTarget": "GitHub Issues Project",
+    "heading": "Utwórz Project z GitHub Issues",
+    "description": "Wybierz repozytorium GitHub, utwórz ORGII Project i synchronizuj GitHub Issues jako work items.",
+    "importButton": "Importuj GitHub Issues",
+    "projectDescription": "Zsynchronizowano z GitHub Issues w {{owner}}/{{repo}}.",
+    "fields": {
+      "projectName": "Nazwa Project",
+      "repo": "Repozytorium GitHub",
+      "connection": "Połączenie GitHub"
+    },
+    "placeholders": {
+      "projectName": "ORGII GitHub Issues",
+      "repo": "owner/repo lub https://github.com/owner/repo",
+      "connection": "Wybierz połączenie GitHub"
+    },
+    "loadingConnections": "Ładowanie połączeń GitHub...",
+    "noConnectionTitle": "Nie znaleziono połączenia GitHub",
+    "noConnectionDescription": "Najpierw dodaj połączenie GitHub w Integrations, a potem wróć tutaj, aby zaimportować GitHub Issues.",
+    "linkedRepoHint": "Ten Project zostanie też połączony z bieżącym Workspace repo: {{repoName}}.",
+    "createdTitle": "{{name}} jest gotowy",
+    "createdDescription": "ORGII importuje GitHub Issues z {{owner}}/{{repo}}. Możesz kontynuować pracę podczas synchronizacji.",
+    "createdDescriptionFallback": "ORGII importuje GitHub Issues. Możesz kontynuować pracę podczas synchronizacji.",
+    "errors": {
+      "invalidRepo": "Użyj owner/repo albo adresu URL repozytorium GitHub."
+    },
+    "importStatus": {
+      "title": "Status importu",
+      "pendingDescription": "Worker importu jest w kolejce i wkrótce rozpocznie pracę.",
+      "runningDescription": "GitHub Issues są importowane do tego Project jako work items.",
+      "completedDescription": "Wszystkie dostępne GitHub Issues zostały zaimportowane.",
+      "failedDescription": "Worker importu zgłosił błąd. Możesz spróbować ponownie w ustawieniach synchronizacji Project.",
+      "cancelledDescription": "Import został anulowany przed zaimportowaniem wszystkich GitHub Issues.",
+      "progressWithTotal": "Zaimportowano {{count}} / {{total}} GitHub Issues",
+      "progressNoTotal": "Zaimportowano {{count}} GitHub Issues",
+      "state": {
+        "pending": "Oczekuje",
+        "running": "W toku",
+        "completed": "Ukończono",
+        "failed": "Niepowodzenie",
+        "cancelled": "Anulowano"
+      }
+    }
+  },
   "orgs": {
     "yourOrgs": "Twoje organizacje",
     "sectionTitle": "Organizacje",
@@ -226,7 +272,8 @@
       "inProgress": "W toku",
       "inReview": "W recenzji",
       "done": "Ukończone",
-      "cancelled": "Anulowane"
+      "cancelled": "Anulowane",
+      "duplicate": "Duplikat"
     },
     "statusLabels": {
       "backlog": "Backlog",

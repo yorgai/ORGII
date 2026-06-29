@@ -69,6 +69,52 @@
     },
     "viewProjects": "Ver projects"
   },
+  "githubIssuesImport": {
+    "title": "Importar GitHub Issues",
+    "menuLabel": "Importar GitHub Issues",
+    "createTarget": "Project GitHub Issues",
+    "heading": "Crear un Project desde GitHub Issues",
+    "description": "Elige un repositorio de GitHub, crea un Project de ORGII y mantén sus GitHub Issues sincronizadas como work items.",
+    "importButton": "Importar GitHub Issues",
+    "projectDescription": "Sincronizado desde GitHub Issues en {{owner}}/{{repo}}.",
+    "fields": {
+      "projectName": "Nombre del Project",
+      "repo": "Repositorio de GitHub",
+      "connection": "Conexión de GitHub"
+    },
+    "placeholders": {
+      "projectName": "ORGII GitHub Issues",
+      "repo": "owner/repo o https://github.com/owner/repo",
+      "connection": "Selecciona una conexión de GitHub"
+    },
+    "loadingConnections": "Cargando conexiones de GitHub...",
+    "noConnectionTitle": "No se encontró ninguna conexión de GitHub",
+    "noConnectionDescription": "Primero agrega una conexión de GitHub en Integrations y luego vuelve aquí para importar GitHub Issues.",
+    "linkedRepoHint": "Este Project también se vinculará al repo del Workspace actual: {{repoName}}.",
+    "createdTitle": "{{name}} está listo",
+    "createdDescription": "ORGII está importando GitHub Issues desde {{owner}}/{{repo}}. Puedes seguir trabajando mientras continúa la sincronización.",
+    "createdDescriptionFallback": "ORGII está importando GitHub Issues. Puedes seguir trabajando mientras continúa la sincronización.",
+    "errors": {
+      "invalidRepo": "Usa owner/repo o una URL de repositorio de GitHub."
+    },
+    "importStatus": {
+      "title": "Estado de importación",
+      "pendingDescription": "El worker de importación está en cola y comenzará pronto.",
+      "runningDescription": "GitHub Issues se están importando en este Project como work items.",
+      "completedDescription": "Se importaron todos los GitHub Issues disponibles.",
+      "failedDescription": "El worker de importación informó un error. Puedes reintentarlo desde la configuración de sincronización del Project.",
+      "cancelledDescription": "La importación se canceló antes de importar todos los GitHub Issues.",
+      "progressWithTotal": "{{count}} / {{total}} GitHub Issues importados",
+      "progressNoTotal": "{{count}} GitHub Issues importados",
+      "state": {
+        "pending": "Pendiente",
+        "running": "En curso",
+        "completed": "Completado",
+        "failed": "Error",
+        "cancelled": "Cancelado"
+      }
+    }
+  },
   "orgs": {
     "yourOrgs": "Tus organizaciones",
     "sectionTitle": "Organizaciones",
@@ -226,7 +272,8 @@
       "inProgress": "En progreso",
       "inReview": "En revisión",
       "done": "Hecho",
-      "cancelled": "Cancelado"
+      "cancelled": "Cancelado",
+      "duplicate": "Duplicado"
     },
     "statusLabels": {
       "backlog": "Backlog",
