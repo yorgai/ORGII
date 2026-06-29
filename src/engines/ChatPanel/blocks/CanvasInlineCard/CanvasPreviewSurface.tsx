@@ -30,7 +30,7 @@ export interface CanvasPreviewSurfaceHandle {
 }
 
 const STATIC_HTML_STYLES = `
-  :host{display:block;height:100%;min-width:100%;overflow:auto;background:var(--color-bg-1);color:var(--color-text-1);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;}
+  :host{display:block;height:100%;min-width:0;overflow:hidden;background:var(--color-bg-1);color:var(--color-text-1);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;}
   *,*::before,*::after{box-sizing:border-box;}
   a{color:var(--color-primary-6);text-decoration:none;}
   a:hover{text-decoration:underline;}
@@ -41,6 +41,12 @@ const STATIC_HTML_STYLES = `
   ::-webkit-scrollbar{width:6px;height:6px;}
   ::-webkit-scrollbar-track{background:transparent;}
   ::-webkit-scrollbar-thumb{background:var(--color-fill-4);border-radius:3px;}
+`;
+
+const STATIC_HTML_CONTAINMENT_STYLES = `
+  :host{contain:layout paint style;isolation:isolate;}
+  .canvas-static-html{position:relative;height:100%;min-width:0;max-width:100%;overflow:auto;contain:layout paint style;isolation:isolate;}
+  .canvas-static-html *{max-width:100%;}
 `;
 
 function extractStaticHtmlBody(content: string): string {
@@ -77,10 +83,12 @@ const StaticHtmlCanvas: React.FC<{ content: string }> = ({ content }) => {
     const host = hostRef.current;
     if (!host) return;
     const root = host.shadowRoot ?? host.attachShadow({ mode: "open" });
-    root.innerHTML = `<style>${STATIC_HTML_STYLES}\n${styles}</style><div class="canvas-static-html">${safeContent}</div>`;
+    root.innerHTML = `<style>${STATIC_HTML_STYLES}</style><style>${styles}</style><style>${STATIC_HTML_CONTAINMENT_STYLES}</style><div class="canvas-static-html">${safeContent}</div>`;
   }, [safeContent, styles]);
 
-  return <div ref={hostRef} className="h-full min-w-full" />;
+  return (
+    <div ref={hostRef} className="h-full min-w-0 max-w-full overflow-hidden" />
+  );
 };
 
 const NonEmbeddedUrlNotice: React.FC<{ url: string }> = ({ url }) => {
@@ -133,7 +141,7 @@ const CanvasPreviewSurface = forwardRef<
   (
     {
       payload,
-      className = "relative h-full w-full",
+      className = "relative h-full w-full overflow-hidden",
       a2uiClassName = "h-full",
       emptyFallback = null,
       loadingFallback = emptyFallback,

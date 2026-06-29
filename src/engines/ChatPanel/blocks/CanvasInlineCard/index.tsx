@@ -169,10 +169,10 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
 
       {!isCollapsed && (
         <div
-          className="relative w-full overflow-x-auto overflow-y-hidden transition-[height] duration-300 ease-in-out"
+          className="relative w-full overflow-hidden transition-[height] duration-300 ease-in-out"
           style={{ height: currentHeight }}
         >
-          <div className="h-full min-w-full">{contentArea}</div>
+          <div className="h-full min-w-0 max-w-full">{contentArea}</div>
 
           {/* Streaming progress bar — pulsing accent line at bottom edge */}
           {isStreaming && (
