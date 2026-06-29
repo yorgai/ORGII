@@ -21,11 +21,15 @@ import React, { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
-import {
-  PANEL_HEADER_TOKENS,
-  PanelHeader,
-} from "@src/modules/shared/layouts/blocks";
 
+import {
+  EventBlockHeader,
+  EventBlockHeaderIcon,
+  EventBlockHeaderSubtitle,
+  EventBlockHeaderTitle,
+  getEventBlockContainerClasses,
+} from "../primitives";
+import { useBlockHeader } from "../useBlockLocate";
 import { CanvasErrorBoundary } from "./CanvasErrorBoundary";
 import CanvasPreviewSurface, {
   type CanvasPreviewSurfaceHandle,
@@ -87,6 +91,13 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
 
   const [heightStep] = useState(() => resolveInitialStep(initialHeight));
   const rendererRef = useRef<CanvasPreviewSurfaceHandle>(null);
+  const {
+    isCollapsed,
+    isHeaderHovered,
+    handleHeaderClick,
+    handleHeaderMouseEnter,
+    handleHeaderMouseLeave,
+  } = useBlockHeader({ defaultCollapsed: false });
 
   const currentHeight = HEIGHT_STEPS[heightStep % HEIGHT_STEPS.length];
 
@@ -135,46 +146,68 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
   );
 
   return (
-    <div className="group/canvas my-2 overflow-hidden rounded-lg border border-border-1 bg-bg-2">
-      <PanelHeader
-        title={cardTitle}
-        icon={Layout}
-        subtitle={headerSubtitle}
-        borderBottom
-        background="transparent"
-        className="!h-8 !px-3"
-        actions={
-          handleJumpToSimulator ? (
+    <div className={`group/canvas ${getEventBlockContainerClasses()}`}>
+      <EventBlockHeader
+        isCollapsed={isCollapsed}
+        className={
+          isCollapsed
+            ? "border-b border-solid border-transparent"
+            : "border-b border-solid border-border-1"
+        }
+        onClick={handleHeaderClick}
+        onMouseEnter={handleHeaderMouseEnter}
+        onMouseLeave={handleHeaderMouseLeave}
+        withHover
+        rightContent={
+          handleJumpToSimulator && !isCollapsed ? (
             <Button
-              {...PANEL_HEADER_TOKENS.actionButton}
-              onClick={handleJumpToSimulator}
+              variant="tertiary"
+              appearance="ghost"
+              size="mini"
+              iconOnly
+              icon={<Monitor size={12} strokeWidth={1.75} />}
               title={t("canvasCard.viewInSimulator", "View in Simulator")}
-              icon={
-                <Monitor
-                  size={PANEL_HEADER_TOKENS.buttonIconSize}
-                  strokeWidth={PANEL_HEADER_TOKENS.iconStrokeWidth}
-                />
-              }
+              aria-label={t("canvasCard.viewInSimulator", "View in Simulator")}
+              className="text-text-4 hover:text-text-2"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleJumpToSimulator();
+              }}
             />
           ) : null
         }
-      />
-
-      {/* ── Content ── */}
-      <div
-        className="relative w-full overflow-x-auto overflow-y-hidden transition-[height] duration-300 ease-in-out"
-        style={{ height: currentHeight }}
       >
-        <div className="h-full min-w-full">{contentArea}</div>
-
-        {/* Streaming progress bar — pulsing accent line at bottom edge */}
-        {isStreaming && (
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 animate-pulse bg-primary-6/40"
-            aria-hidden
-          />
+        <EventBlockHeaderIcon
+          icon={<Layout size={14} className="text-primary-6" />}
+          isCollapsed={isCollapsed}
+          isHeaderHovered={isHeaderHovered}
+          onToggle={handleHeaderClick}
+          hasContent
+        />
+        <EventBlockHeaderTitle>{cardTitle}</EventBlockHeaderTitle>
+        {headerSubtitle && (
+          <EventBlockHeaderSubtitle title={headerSubtitle}>
+            {headerSubtitle}
+          </EventBlockHeaderSubtitle>
         )}
-      </div>
+      </EventBlockHeader>
+
+      {!isCollapsed && (
+        <div
+          className="relative w-full overflow-x-auto overflow-y-hidden transition-[height] duration-300 ease-in-out"
+          style={{ height: currentHeight }}
+        >
+          <div className="h-full min-w-full">{contentArea}</div>
+
+          {/* Streaming progress bar — pulsing accent line at bottom edge */}
+          {isStreaming && (
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 animate-pulse bg-primary-6/40"
+              aria-hidden
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };
