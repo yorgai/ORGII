@@ -53,6 +53,9 @@ const log = createLogger("SidebarBase");
 
 const HOST_DESKTOP_KIND = resolveHostDesktop();
 const IS_WINDOWS_HOST = HOST_DESKTOP_KIND === HOST_DESKTOP.WINDOWS;
+const SHOW_HOST_TITLE =
+  HOST_DESKTOP_KIND === HOST_DESKTOP.WINDOWS ||
+  HOST_DESKTOP_KIND === HOST_DESKTOP.LINUX;
 const PLATFORM_SIDEBAR_RADIUS =
   HOST_DESKTOP_KIND === HOST_DESKTOP.MACOS ? SIDEBAR_STYLE.borderRadius : 8;
 
@@ -254,7 +257,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
             } as React.CSSProperties
           }
         >
-          {IS_WINDOWS_HOST ? (
+          {SHOW_HOST_TITLE ? (
             <span className="select-none text-[13px] font-semibold tracking-wide text-text-2">
               ORG2
             </span>
