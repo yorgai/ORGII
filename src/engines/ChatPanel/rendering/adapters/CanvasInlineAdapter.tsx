@@ -100,6 +100,7 @@ export const CanvasInlineAdapter: React.FC<UniversalEventProps> = (props) => {
         isStreaming={
           isRunning && (props.showActiveEventPainting === true || !hasContent)
         }
+        eventId={props.eventId}
         sessionId={props.sessionId}
       />
     </div>

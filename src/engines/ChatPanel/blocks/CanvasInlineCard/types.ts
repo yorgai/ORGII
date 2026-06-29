@@ -28,6 +28,8 @@ export interface CanvasInlineCardProps {
   initialHeight?: number;
   /** Whether the agent is still streaming content into this card. */
   isStreaming?: boolean;
+  /** Event id used by the header jump-to-simulator action. */
+  eventId?: string;
   /**
    * Session ID for the canvas preview. When provided together with the
    * card's content, the toolbar shows a "View in Simulator" button that
