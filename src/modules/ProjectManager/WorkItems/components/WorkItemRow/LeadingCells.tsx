@@ -1,5 +1,6 @@
 import Checkbox from "@src/components/Checkbox";
 import {
+  GITHUB_ISSUE_STATUS_OPTIONS,
   WORK_ITEM_PRIORITY_OPTIONS,
   WORK_ITEM_STATUS_OPTIONS,
 } from "@src/modules/ProjectManager/config/manage";
@@ -25,9 +26,13 @@ export function LeadingCells({
   const priorityOption = WORK_ITEM_PRIORITY_OPTIONS.find(
     (option) => option.value === priority
   );
-  const statusOption = WORK_ITEM_STATUS_OPTIONS.find(
+  const isGitHubIssueStatus = GITHUB_ISSUE_STATUS_OPTIONS.some(
     (option) => option.value === status
   );
+  const statusOptions = isGitHubIssueStatus
+    ? GITHUB_ISSUE_STATUS_OPTIONS
+    : WORK_ITEM_STATUS_OPTIONS;
+  const statusOption = statusOptions.find((option) => option.value === status);
   const currentExternalStatusOption = externalStatusOptions?.find(
     (option) => option.value === externalStatusValue
   );
@@ -85,7 +90,7 @@ export function LeadingCells({
         iconColor={currentExternalStatusOption?.color ?? statusOption?.color}
         options={(canUseExternalStatusDropdown
           ? externalStatusOptions
-          : WORK_ITEM_STATUS_OPTIONS
+          : statusOptions
         ).map((option) => ({
           value: option.value,
           label: option.label,

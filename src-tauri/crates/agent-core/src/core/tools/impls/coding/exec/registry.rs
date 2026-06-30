@@ -76,6 +76,17 @@ pub struct BackgroundJob {
     /// from the per-turn system reminder to avoid the stale-reminder
     /// problem common to background bash notifications.
     output_acknowledged: bool,
+    /// Set to `true` once a parent-session wake has been dispatched to deliver
+    /// this (completed) subagent's result. Distinct from `output_acknowledged`:
+    /// dispatch means "we resumed the idle parent so it COULD read the result",
+    /// ack means "the agent actually read it via await_output". Together they
+    /// make the subagent-wake coordinator behaviour-independent and exactly-once:
+    /// a result triggers AT MOST ONE wake dispatch, regardless of whether the
+    /// woken agent goes on to read it. This single flag subsumes both the
+    /// empty-wake loop (woken parent ignores the result → no re-wake) and the
+    /// retry storm (a failed wake turn → no re-wake for the same result).
+    /// Always `false` for shell jobs (only subagents trigger parent wakes).
+    wake_dispatched: bool,
 }
 
 impl BackgroundJob {
@@ -131,6 +142,27 @@ const BROADCAST_CAPACITY: usize = 512;
 static REGISTRY: LazyLock<Mutex<HashMap<String, BackgroundJob>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// How long a finished job's tombstone is retained after it leaves the live
+/// registry. Long enough that an `await_output` arriving just after the grace
+/// eviction still gets a precise "completed" answer (with the real kind), short
+/// enough that the map cannot grow unbounded. Distinct from the live-job
+/// retention window in `background.rs`.
+const TOMBSTONE_TTL: std::time::Duration = std::time::Duration::from_secs(10 * 60);
+
+/// A lightweight record of a job that has left the live registry. Lets
+/// `await_output` distinguish "this handle finished and was reaped" (precise
+/// terminal status + real kind) from "this handle never existed" (the agent
+/// mistyped it), instead of synthesising a guess from the handle string.
+#[derive(Clone)]
+struct Tombstone {
+    status: JobStatus,
+    kind: JobKind,
+    created_at: Instant,
+}
+
+static TOMBSTONES: LazyLock<Mutex<HashMap<String, Tombstone>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
 /// Register a backgrounded shell process. Returns a `broadcast::Sender` the
 /// caller should use to feed live output lines.
 pub fn register_shell(
@@ -155,6 +187,7 @@ pub fn register_shell(
         join_handle: None,
         cancel_flag: None,
         output_acknowledged: false,
+        wake_dispatched: false,
     };
     let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     reg.insert(handle, job);
@@ -215,6 +248,7 @@ pub fn register_subagent_with_flag(
         join_handle: None,
         cancel_flag: Some(Arc::clone(&cancel_flag)),
         output_acknowledged: false,
+        wake_dispatched: false,
     };
     let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     reg.insert(handle.clone(), job);
@@ -293,9 +327,30 @@ pub fn set_final_result(handle: &str, result: String) {
 }
 
 /// Remove a job from the registry (called after grace period).
+///
+/// Leaves a short-lived [`Tombstone`] behind so a late `await_output` can
+/// still report a precise terminal status with the real job kind, rather than
+/// the caller having to guess from the handle shape. Opportunistically prunes
+/// expired tombstones on the same pass so the map stays bounded without a
+/// dedicated reaper.
 pub fn remove(handle: &str) {
-    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
-    reg.remove(handle);
+    let removed = {
+        let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+        reg.remove(handle)
+    };
+    if let Some(job) = removed {
+        let mut tombs = TOMBSTONES.lock().unwrap_or_else(|e| e.into_inner());
+        let now = Instant::now();
+        tombs.retain(|_, t| now.duration_since(t.created_at) < TOMBSTONE_TTL);
+        tombs.insert(
+            handle.to_string(),
+            Tombstone {
+                status: job.status.clone(),
+                kind: job.kind.clone(),
+                created_at: now,
+            },
+        );
+    }
 }
 
 /// Retrieve a snapshot of job metadata. Returns `None` if not found.
@@ -303,6 +358,33 @@ pub fn get_status(handle: &str) -> Option<(JobStatus, JobKind)> {
     let reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
     reg.get(handle)
         .map(|job| (job.status.clone(), job.kind.clone()))
+}
+
+/// Resolve a handle's terminal status + kind, consulting the tombstone map
+/// when the job has already left the live registry.
+///
+/// Three-way outcome:
+/// - **live job present** → its real `(status, kind)`.
+/// - **tombstone present (not expired)** → the reaped job's real terminal
+///   `(status, kind)` — a precise "it finished" answer.
+/// - **neither** → `None`, meaning the handle genuinely never existed (or its
+///   tombstone expired): the caller can report a real "unknown handle" error.
+///
+/// This replaces the old "synthesise a Completed status and guess the kind from
+/// the handle string" heuristic, which could not tell a just-reaped job from a
+/// typo.
+pub fn resolve_status_with_tombstone(handle: &str) -> Option<(JobStatus, JobKind)> {
+    if let Some(found) = get_status(handle) {
+        return Some(found);
+    }
+    let tombs = TOMBSTONES.lock().unwrap_or_else(|e| e.into_inner());
+    tombs.get(handle).and_then(|t| {
+        if Instant::now().duration_since(t.created_at) < TOMBSTONE_TTL {
+            Some((t.status.clone(), t.kind.clone()))
+        } else {
+            None
+        }
+    })
 }
 
 /// Get the final result text for a job.
@@ -353,6 +435,14 @@ pub fn acknowledge_output(handle: &str) {
     }
 }
 
+/// Whether a job's output has been acknowledged (read via the reminder /
+/// await path). Returns `None` if the handle is no longer in the registry —
+/// callers treat a missing job as "nothing left to retain" (acknowledged).
+pub fn is_output_acknowledged(handle: &str) -> Option<bool> {
+    let reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.get(handle).map(|job| job.output_acknowledged)
+}
+
 /// List jobs that should appear in the per-turn system reminder.
 ///
 /// Includes:
@@ -369,6 +459,65 @@ pub fn list_jobs_for_reminder(session_id: &str) -> Vec<JobSnapshot> {
         })
         .map(|job| job.snapshot())
         .collect()
+}
+
+/// Atomically claim every completed-but-unconsumed **subagent** job for
+/// `session_id` that has not already had a parent wake dispatched, marking
+/// each as `wake_dispatched` and returning whether any were claimed.
+///
+/// This is the single exactly-once primitive behind the subagent-wake
+/// coordinator. "Needs a wake" means the job is:
+///   * a subagent (shells never wake the parent),
+///   * finished (not running),
+///   * not yet acknowledged (the agent hasn't read it via await_output), and
+///   * not yet wake-dispatched (no prior wake already delivered it).
+///
+/// Marking `wake_dispatched = true` in the same locked pass guarantees a
+/// given result triggers AT MOST ONE wake, no matter how many triggers fire
+/// (the completion push AND the turn-end re-check both call this; whichever
+/// runs first claims it, the other sees nothing). This makes exactly-once an
+/// invariant of the registry, not of caller ordering — and subsumes both the
+/// empty-wake loop and the failed-wake retry storm without any `response.is_ok`
+/// / status gating in the callers.
+///
+/// Returns `true` if at least one job was newly claimed (caller should
+/// dispatch a wake), `false` if there was nothing new to deliver.
+pub fn claim_subagent_wake_for_session(session_id: &str) -> bool {
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    let mut claimed = false;
+    for job in reg.values_mut() {
+        if job.session_id == session_id
+            && matches!(job.kind, JobKind::Subagent { .. })
+            && !job.is_running()
+            && !job.output_acknowledged
+            && !job.wake_dispatched
+        {
+            job.wake_dispatched = true;
+            claimed = true;
+        }
+    }
+    claimed
+}
+
+/// Release a wake claim previously taken by `claim_subagent_wake_for_session`
+/// for every completed-unconsumed subagent of `session_id`.
+///
+/// Used when the coordinator claimed a result but then found the parent was
+/// still running (so it could not dispatch a resume turn). Releasing restores
+/// `wake_dispatched = false` so the turn-end re-check can re-claim it once the
+/// parent goes idle. Only clears the flag on jobs that are still unconsumed —
+/// an already-acknowledged job needs no further wake regardless.
+pub fn release_subagent_wake_for_session(session_id: &str) {
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    for job in reg.values_mut() {
+        if job.session_id == session_id
+            && matches!(job.kind, JobKind::Subagent { .. })
+            && !job.is_running()
+            && !job.output_acknowledged
+        {
+            job.wake_dispatched = false;
+        }
+    }
 }
 
 /// Lightweight snapshot of a running shell job, suitable for frontend

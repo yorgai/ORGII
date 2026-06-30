@@ -68,6 +68,52 @@
     },
     "viewProjects": "View projects"
   },
+  "githubIssuesImport": {
+    "title": "Import GitHub Issues",
+    "menuLabel": "Import GitHub Issues",
+    "createTarget": "GitHub Issues project",
+    "heading": "Create a project from GitHub Issues",
+    "description": "Pick a GitHub repository, create an ORGII project, and keep its GitHub Issues synced as work items.",
+    "importButton": "Import GitHub Issues",
+    "projectDescription": "Synced from GitHub Issues in {{owner}}/{{repo}}.",
+    "fields": {
+      "projectName": "Project name",
+      "repo": "GitHub repository",
+      "connection": "GitHub connection"
+    },
+    "placeholders": {
+      "projectName": "ORGII GitHub Issues",
+      "repo": "owner/repo or https://github.com/owner/repo",
+      "connection": "Select a GitHub connection"
+    },
+    "loadingConnections": "Loading GitHub connections...",
+    "noConnectionTitle": "No GitHub connection found",
+    "noConnectionDescription": "Add a GitHub connection in Integrations first, then return here to import GitHub Issues.",
+    "linkedRepoHint": "This project will also be linked to the current workspace repo: {{repoName}}.",
+    "createdTitle": "{{name}} is ready",
+    "createdDescription": "ORGII is importing GitHub Issues from {{owner}}/{{repo}}. You can keep working while sync continues.",
+    "createdDescriptionFallback": "ORGII is importing GitHub Issues. You can keep working while sync continues.",
+    "errors": {
+      "invalidRepo": "Use owner/repo or a GitHub repository URL."
+    },
+    "importStatus": {
+      "title": "Import status",
+      "pendingDescription": "The import worker is queued and will start shortly.",
+      "runningDescription": "GitHub Issues are being imported into this project as work items.",
+      "completedDescription": "All available GitHub Issues have been imported.",
+      "failedDescription": "The import worker reported an error. You can retry from the project sync settings.",
+      "cancelledDescription": "The import was cancelled before all GitHub Issues were imported.",
+      "progressWithTotal": "{{count}} / {{total}} GitHub Issues imported",
+      "progressNoTotal": "{{count}} GitHub Issues imported",
+      "state": {
+        "pending": "Pending",
+        "running": "Running",
+        "completed": "Completed",
+        "failed": "Failed",
+        "cancelled": "Cancelled"
+      }
+    }
+  },
   "orgs": {
     "yourOrgs": "Your Orgs",
     "sectionTitle": "Orgs",
@@ -225,7 +271,8 @@
       "inProgress": "In Progress",
       "inReview": "In Review",
       "done": "Done",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "duplicate": "Duplicate"
     },
     "statusLabels": {
       "backlog": "Backlog",
@@ -234,7 +281,9 @@
       "in_review": "In Review",
       "completed": "Done",
       "cancelled": "Cancelled",
-      "duplicate": "Duplicate"
+      "duplicate": "Duplicate",
+      "open": "Open",
+      "closed": "Closed"
     },
     "priorityLabels": {
       "none": "No priority",

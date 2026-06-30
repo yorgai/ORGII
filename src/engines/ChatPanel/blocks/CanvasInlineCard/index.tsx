@@ -2,31 +2,38 @@
  * CanvasInlineCard — Agent-generated interactive preview embedded in chat.
  *
  * Renders a card directly in the message stream. Three modes:
- *   html  — static HTML from the agent, sandboxed iframe (security isolation)
- *   url   — external URL, sandboxed iframe with allow-same-origin
+ *   html  — sanitized HTML rendered in Shadow DOM
+ *   url   — external URL shown as an open action, not embedded
  *   a2ui  — incremental JSONL stream rendered as native React components
- *   react — React App component rendered in an iframe sandbox with runtime errors
+ *   react — script source is not executed inline; use a2ui for native rendering
  *
  * For a2ui mode the previous iframe + postMessage approach has been replaced
  * with A2UIRenderer, which receives the parsed lines directly as props and
  * re-renders incrementally without any full reload.
  *
  * Security:
- *   - html/react iframes: sandbox="allow-scripts" only (no allow-same-origin)
- *   - url iframes: allow-same-origin so cross-origin assets load correctly
+ *   - html path: DOMPurify + Shadow DOM, no scripts/events
+ *   - url/react: not embedded in chat to avoid iframe/runtime overhead
  *   - a2ui: DOMPurify sanitizes type="html" elements in A2UIRenderer
  */
+import DOMPurify from "dompurify";
 import { Layout, Monitor } from "lucide-react";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import IconButton from "@src/components/IconButton";
+import Button from "@src/components/Button";
 
+import {
+  EventBlockHeader,
+  EventBlockHeaderIcon,
+  EventBlockHeaderSubtitle,
+  EventBlockHeaderTitle,
+  getEventBlockContainerClasses,
+} from "../primitives";
+import { useBlockHeader } from "../useBlockLocate";
 import A2UIRenderer, { type A2UIRendererHandle } from "./A2UIRenderer";
 import { CanvasErrorBoundary } from "./CanvasErrorBoundary";
-import { buildHtmlDocument, buildReactDocument } from "./canvasBuilder";
 import type { CanvasInlineCardProps } from "./types";
-import { useJumpToSimulatorCanvas } from "./useJumpToSimulatorCanvas";
 
 // ─── height steps ─────────────────────────────────────────────────────────────
 
@@ -77,15 +84,6 @@ function splitA2UIContent(content: string): string[] {
   return result;
 }
 
-// ─── streaming cursor ─────────────────────────────────────────────────────────
-
-const StreamingDot: React.FC = () => (
-  <span
-    aria-hidden
-    className="ml-1.5 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary-6"
-  />
-);
-
 // ─── loading skeleton ─────────────────────────────────────────────────────────
 
 /**
@@ -115,6 +113,87 @@ const CanvasLoadingSkeleton: React.FC = () => (
   </div>
 );
 
+// ─── static HTML lightweight renderer ─────────────────────────────────────────
+
+const STATIC_HTML_STYLES = `
+  :host{display:block;height:100%;min-width:0;overflow:hidden;background:var(--color-bg-1);color:var(--color-text-1);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;}
+  *,*::before,*::after{box-sizing:border-box;}
+  a{color:var(--color-primary-6);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  pre,code{font-family:monospace;background:var(--color-fill-2);padding:2px 5px;border-radius:4px;font-size:.875em;}
+  pre{padding:12px 16px;overflow-x:auto;border-radius:6px;border:1px solid var(--color-border-1);}
+  pre code{background:none;padding:0;}
+  img{max-width:100%;height:auto;border-radius:4px;}
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--color-fill-4);border-radius:3px;}
+`;
+
+const STATIC_HTML_CONTAINMENT_STYLES = `
+  :host{contain:layout paint style;isolation:isolate;}
+  .canvas-static-html{position:relative;height:100%;min-width:0;max-width:100%;overflow:auto;contain:layout paint style;isolation:isolate;}
+  .canvas-static-html *{max-width:100%;}
+`;
+
+function extractStaticHtmlBody(content: string): string {
+  const bodyMatch = content.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+  return bodyMatch?.[1] ?? content;
+}
+
+function extractStaticHtmlStyles(content: string): string {
+  return Array.from(content.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi))
+    .map((match) => match[1].replace(/<\/style/gi, ""))
+    .join("\n");
+}
+
+const StaticHtmlCanvas: React.FC<{ content: string }> = ({ content }) => {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const safeContent = useMemo(() => {
+    return DOMPurify.sanitize(extractStaticHtmlBody(content), {
+      FORBID_TAGS: [
+        "script",
+        "iframe",
+        "object",
+        "embed",
+        "link",
+        "meta",
+        "base",
+        "style",
+      ],
+      FORBID_ATTR: ["srcdoc"],
+    });
+  }, [content]);
+  const styles = useMemo(() => extractStaticHtmlStyles(content), [content]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const root = host.shadowRoot ?? host.attachShadow({ mode: "open" });
+    root.innerHTML = `<style>${STATIC_HTML_STYLES}</style><style>${styles}</style><style>${STATIC_HTML_CONTAINMENT_STYLES}</style><div class="canvas-static-html">${safeContent}</div>`;
+  }, [safeContent, styles]);
+
+  return (
+    <div ref={hostRef} className="h-full min-w-0 max-w-full overflow-hidden" />
+  );
+};
+
+const NonEmbeddedCanvasNotice: React.FC<{
+  title: string;
+  description: string;
+  action?: React.ReactNode;
+}> = ({ title, description, action }) => (
+  <div className="flex h-full items-center justify-center p-4">
+    <div className="flex max-w-sm flex-col items-center gap-3 text-center">
+      <Layout size={24} strokeWidth={1.5} className="text-text-4" />
+      <div className="space-y-1">
+        <div className="text-sm font-medium text-text-2">{title}</div>
+        <div className="text-xs leading-5 text-text-4">{description}</div>
+      </div>
+      {action}
+    </div>
+  </div>
+);
+
 // ─── main component ───────────────────────────────────────────────────────────
 
 const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
@@ -124,6 +203,7 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
   title,
   initialHeight = 280,
   isStreaming = false,
+  eventId,
   sessionId,
   onAction,
 }) => {
@@ -131,6 +211,18 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
 
   const [heightStep] = useState(() => resolveInitialStep(initialHeight));
   const rendererRef = useRef<A2UIRendererHandle>(null);
+  const {
+    isCollapsed,
+    isHeaderHovered,
+    handleHeaderClick,
+    handleLocate,
+    handleHeaderMouseEnter,
+    handleHeaderMouseLeave,
+  } = useBlockHeader({
+    defaultCollapsed: false,
+    eventId,
+    collapseAllValue: true,
+  });
 
   const currentHeight = HEIGHT_STEPS[heightStep % HEIGHT_STEPS.length];
 
@@ -147,28 +239,6 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
     if (mode !== "a2ui" || !content) return [];
     return splitA2UIContent(content);
   }, [mode, content]);
-
-  // Build the srcDoc only for html mode. For a2ui mode we no longer generate
-  // a document — native React handles the incremental rendering.
-  const htmlSrcDoc = useMemo(() => {
-    if (mode === "html" && content) return buildHtmlDocument(content);
-    return undefined;
-  }, [mode, content]);
-
-  const reactSrcDoc = useMemo(() => {
-    if (mode === "react" && content) return buildReactDocument(content);
-    return undefined;
-  }, [mode, content]);
-
-  const simulatorPayload = useMemo(
-    () => ({ mode, content, url, title, streaming: isStreaming }),
-    [mode, content, url, title, isStreaming]
-  );
-  const handleJumpToSimulator = useJumpToSimulatorCanvas(
-    sessionId,
-    simulatorPayload
-  );
-
   const cardTitle =
     title ??
     (mode === "url"
@@ -179,40 +249,46 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
           ? t("canvasCard.titleReact", "React Preview")
           : t("canvasCard.titleHtml"));
 
+  const headerSubtitle = isStreaming
+    ? t("canvasCard.streaming", "streaming")
+    : mode === "url" && url
+      ? url
+      : undefined;
+
   // ── render content area ───────────────────────────────────────────────────
 
   let contentArea: React.ReactNode;
 
   if (mode === "url" && url) {
     contentArea = (
-      <iframe
-        src={url}
-        className="h-full w-full border-0"
-        sandbox="allow-scripts allow-same-origin allow-forms"
-        title={cardTitle}
+      <NonEmbeddedCanvasNotice
+        title={t("canvasCard.openUrlTitle", "Preview not embedded")}
+        description={t(
+          "canvasCard.openUrlDescription",
+          "External URLs are not embedded in chat to avoid iframe memory overhead."
+        )}
+        action={
+          <Button
+            variant="secondary"
+            size="small"
+            onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
+            icon={<Monitor size={14} />}
+          >
+            {t("canvasCard.openExternal", "Open in Browser")}
+          </Button>
+        }
       />
     );
-  } else if (mode === "html" && htmlSrcDoc) {
-    // HTML mode: still uses iframe for sandboxed security isolation.
-    // Setting key={htmlSrcDoc.length} avoids full reload on every char — the
-    // document only reloads when the content length changes by a meaningful
-    // amount (streaming updates to existing content are stable here since the
-    // agent typically sends the full document in one shot for html mode).
+  } else if (mode === "html" && content) {
+    contentArea = <StaticHtmlCanvas content={content} />;
+  } else if (mode === "react" && content) {
     contentArea = (
-      <iframe
-        srcDoc={htmlSrcDoc}
-        className="h-full w-full border-0"
-        sandbox="allow-scripts"
-        title={cardTitle}
-      />
-    );
-  } else if (mode === "react" && reactSrcDoc) {
-    contentArea = (
-      <iframe
-        srcDoc={reactSrcDoc}
-        className="h-full w-full border-0"
-        sandbox="allow-scripts"
-        title={cardTitle}
+      <NonEmbeddedCanvasNotice
+        title={t("canvasCard.reactDisabledTitle", "React preview disabled")}
+        description={t(
+          "canvasCard.reactDisabledDescription",
+          "Agent JavaScript is not executed inside chat. Use A2UI for native interactive previews."
+        )}
       />
     );
   } else if (mode === "a2ui" && isStreaming && a2uiLines.length === 0) {
@@ -238,50 +314,51 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
   }
 
   return (
-    <div className="group/canvas my-2 overflow-hidden rounded-lg border border-border-1 bg-bg-2">
-      {/* ── Toolbar ── */}
-      <div className="flex items-center justify-between border-b border-border-1 bg-fill-2 px-3 py-1.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <Layout size={13} className="shrink-0 text-primary-6" />
-          <span className="truncate text-xs font-medium text-text-2">
-            {cardTitle}
-          </span>
-          {isStreaming && <StreamingDot />}
-          {mode === "url" && url && (
-            <span className="max-w-[160px] truncate text-xs text-text-4">
-              {url}
-            </span>
-          )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/canvas:opacity-100">
-          {handleJumpToSimulator && (
-            <IconButton
-              onClick={handleJumpToSimulator}
-              className="text-text-4 hover:bg-fill-3 hover:text-primary-6"
-              title={t("canvasCard.viewInSimulator", "View in Simulator")}
-            >
-              <Monitor size={12} />
-            </IconButton>
-          )}
-        </div>
-      </div>
-
-      {/* ── Content ── */}
-      <div
-        className="relative w-full overflow-x-auto overflow-y-hidden transition-[height] duration-300 ease-in-out"
-        style={{ height: currentHeight }}
+    <div className={`group/canvas ${getEventBlockContainerClasses()}`}>
+      <EventBlockHeader
+        isCollapsed={isCollapsed}
+        className={
+          isCollapsed
+            ? "border-b border-solid border-transparent"
+            : "border-b border-solid border-border-1"
+        }
+        onClick={handleHeaderClick}
+        onNavigate={eventId ? handleLocate : undefined}
+        onMouseEnter={handleHeaderMouseEnter}
+        onMouseLeave={handleHeaderMouseLeave}
+        withHover
       >
-        <div className="h-full min-w-full">{contentArea}</div>
-
-        {/* Streaming progress bar — pulsing accent line at bottom edge */}
-        {isStreaming && (
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 animate-pulse bg-primary-6/40"
-            aria-hidden
-          />
+        <EventBlockHeaderIcon
+          icon={<Layout size={14} className="text-primary-6" />}
+          isCollapsed={isCollapsed}
+          isHeaderHovered={isHeaderHovered}
+          onToggle={handleHeaderClick}
+          hasContent
+        />
+        <EventBlockHeaderTitle>{cardTitle}</EventBlockHeaderTitle>
+        {headerSubtitle && (
+          <EventBlockHeaderSubtitle title={headerSubtitle}>
+            {headerSubtitle}
+          </EventBlockHeaderSubtitle>
         )}
-      </div>
+      </EventBlockHeader>
+
+      {!isCollapsed && (
+        <div
+          className="relative w-full overflow-hidden transition-[height] duration-300 ease-in-out"
+          style={{ height: currentHeight }}
+        >
+          <div className="h-full min-w-0 max-w-full">{contentArea}</div>
+
+          {/* Streaming progress bar — pulsing accent line at bottom edge */}
+          {isStreaming && (
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 animate-pulse bg-primary-6/40"
+              aria-hidden
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };

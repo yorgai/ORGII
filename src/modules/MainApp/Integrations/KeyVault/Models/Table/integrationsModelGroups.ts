@@ -213,6 +213,7 @@ export function buildVariantsByModelFromAccounts(
           base_model: variant.base_model,
           reasoning: variant.reasoning,
           fast: variant.fast,
+          context_window: variant.context_window,
         });
       }
     }

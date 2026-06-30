@@ -2,7 +2,11 @@ import { MoreHorizontal } from "lucide-react";
 
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import { SESSION_LIST_CATEGORIES } from "@src/store/session";
-import type { Session, SessionListCategory } from "@src/store/session";
+import type {
+  Session,
+  SessionListCategory,
+  SessionPaginationMap,
+} from "@src/store/session";
 
 import { LOAD_MORE_GROUP_PREFIX, LOAD_MORE_PREFIX } from "../types";
 import { DEFAULT_GROUP_VISIBLE_COUNT } from "./dateGroupingHelpers";
@@ -11,6 +15,20 @@ import type { BuildSessionRow } from "./types";
 
 export const LOAD_MORE_CATEGORIES: readonly SessionListCategory[] =
   SESSION_LIST_CATEGORIES;
+export const UNIFIED_LOAD_MORE_ID = "load-more-unified";
+
+interface UnifiedLoadMoreState {
+  visible: boolean;
+  loading: boolean;
+  disabled: boolean;
+  readyCategories: SessionListCategory[];
+}
+
+interface LoadUnifiedReadyCategoriesParams {
+  disabled?: boolean;
+  pagination: SessionPaginationMap;
+  loadCategory: (category: SessionListCategory) => Promise<void>;
+}
 
 export function loadMoreRow(
   category: SessionListCategory,
@@ -46,15 +64,74 @@ export function groupLoadMoreRow(
   };
 }
 
+export function unifiedLoadMoreRow(
+  state: UnifiedLoadMoreState,
+  label: string
+): NavigationMenuItem {
+  return {
+    id: UNIFIED_LOAD_MORE_ID,
+    key: UNIFIED_LOAD_MORE_ID,
+    label,
+    icon: MoreHorizontal,
+    iconName: "more-horizontal",
+    trailingElement: state.loading ? renderBreathingStatusDot() : undefined,
+    visualTone: "secondary",
+    disabled: state.disabled,
+  };
+}
+
 export function isLoadMoreId(id: string): SessionListCategory | null {
   if (!id.startsWith(LOAD_MORE_PREFIX)) return null;
   const category = id.slice(LOAD_MORE_PREFIX.length) as SessionListCategory;
   return SESSION_LIST_CATEGORIES.includes(category) ? category : null;
 }
 
+export function isUnifiedLoadMoreId(id: string): boolean {
+  return id === UNIFIED_LOAD_MORE_ID;
+}
+
 export function getLoadMoreGroupId(id: string): string | null {
   if (!id.startsWith(LOAD_MORE_GROUP_PREFIX)) return null;
   return id.slice(LOAD_MORE_GROUP_PREFIX.length) || null;
+}
+
+export function getUnifiedLoadMoreState(
+  pagination: SessionPaginationMap
+): UnifiedLoadMoreState {
+  let visible = false;
+  let loading = false;
+  const readyCategories: SessionListCategory[] = [];
+
+  for (const category of LOAD_MORE_CATEGORIES) {
+    const state = pagination[category];
+    if (state.loading) {
+      visible = true;
+      loading = true;
+      continue;
+    }
+    if (state.hasMore) {
+      visible = true;
+      readyCategories.push(category);
+    }
+  }
+
+  return {
+    visible,
+    loading,
+    disabled: readyCategories.length === 0,
+    readyCategories,
+  };
+}
+
+export function loadUnifiedReadyCategories({
+  disabled,
+  pagination,
+  loadCategory,
+}: LoadUnifiedReadyCategoriesParams): Promise<void[]> | null {
+  if (disabled) return null;
+  const { readyCategories } = getUnifiedLoadMoreState(pagination);
+  if (readyCategories.length === 0) return null;
+  return Promise.all(readyCategories.map((category) => loadCategory(category)));
 }
 
 interface AppendSessionGroupParams {

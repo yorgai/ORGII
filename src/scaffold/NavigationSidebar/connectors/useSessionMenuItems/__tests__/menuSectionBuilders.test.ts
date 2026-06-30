@@ -6,14 +6,20 @@ import type { Session, SessionListCategory } from "@src/store/session";
 import {
   buildByAgentMenuItems,
   buildByTimeMenuItems,
+  buildByWorkspaceMenuItems,
 } from "../menuSectionBuilders";
 
-function makeSession(sessionId: string, updatedAt: string): Session {
+function makeSession(
+  sessionId: string,
+  updatedAt: string,
+  repoPath?: string
+): Session {
   return {
     session_id: sessionId,
     status: "completed",
     created_at: updatedAt,
     updated_at: updatedAt,
+    repoPath,
   };
 }
 
@@ -47,8 +53,8 @@ function appendGroupSessions(
 
 function appendTrailingLoadMoreItems(items: NavigationMenuItem[]): void {
   items.push({
-    id: "load-more-cursor_ide",
-    key: "load-more-cursor_ide",
+    id: "load-more-unified",
+    key: "load-more-unified",
     label: "Load more",
   });
 }
@@ -70,6 +76,43 @@ function getLoadMoreItemIds(items: readonly NavigationMenuItem[]): string[] {
 }
 
 describe("session menu section builders", () => {
+  it("appends one unified backend load-more row in the by-time view", () => {
+    const today = new Date().toISOString();
+    const items = buildByTimeMenuItems({
+      unpinnedSessions: [makeSession("cursoride-1", today)],
+      dateGroupLabels: {
+        today: "Today",
+        yesterday: "Yesterday",
+        thisWeek: "This Week",
+        older: "Older",
+      },
+      appendPinnedSessions,
+      appendGroupSessions,
+      appendTrailingLoadMoreItems,
+    });
+
+    expect(getLoadMoreItemIds(items)).toEqual(["load-more-unified"]);
+  });
+
+  it("appends one unified backend load-more row in the by-workspace view", () => {
+    const items = buildByWorkspaceMenuItems({
+      unpinnedSessions: [
+        makeSession(
+          "cursoride-1",
+          "2026-06-09T00:00:00.000Z",
+          "/workspace/orgii"
+        ),
+      ],
+      repoPathToName: new Map([["/workspace/orgii", "ORGII"]]),
+      noWorkspaceLabel: "No Workspace",
+      appendPinnedSessions,
+      appendGroupSessions,
+      appendTrailingLoadMoreItems,
+    });
+
+    expect(getLoadMoreItemIds(items)).toEqual(["load-more-unified"]);
+  });
+
   it("does not append a backend load-more row when a time group has local hidden sessions", () => {
     // Use the current day so the sessions always land in the "today" group
     // regardless of when the suite runs (a fixed past date would drift into
@@ -95,6 +138,29 @@ describe("session menu section builders", () => {
     expect(getLoadMoreItemIds(items)).toEqual(["load-more-group-time:today"]);
   });
 
+  it("does not append a backend load-more row when a workspace group has local hidden sessions", () => {
+    const sessions = Array.from({ length: 11 }, (_, index) =>
+      makeSession(
+        `cursoride-${index}`,
+        "2026-06-09T00:00:00.000Z",
+        "/workspace/orgii"
+      )
+    );
+
+    const items = buildByWorkspaceMenuItems({
+      unpinnedSessions: sessions,
+      repoPathToName: new Map([["/workspace/orgii", "ORGII"]]),
+      noWorkspaceLabel: "No Workspace",
+      appendPinnedSessions,
+      appendGroupSessions,
+      appendTrailingLoadMoreItems,
+    });
+
+    expect(getLoadMoreItemIds(items)).toEqual([
+      "load-more-group-workspace:/workspace/orgii",
+    ]);
+  });
+
   it("does not append a backend load-more row below an agent group with local hidden sessions", () => {
     const sessions = Array.from({ length: 11 }, (_, index) =>
       makeSession(`cursoride-${index}`, "2026-06-09T00:00:00.000Z")
@@ -112,7 +178,7 @@ describe("session menu section builders", () => {
     ]);
   });
 
-  it("appends the backend load-more row after local hidden sessions are expanded", () => {
+  it("appends the per-category backend load-more row in the by-agent view", () => {
     const sessions = Array.from({ length: 10 }, (_, index) =>
       makeSession(`cursoride-${index}`, "2026-06-09T00:00:00.000Z")
     );

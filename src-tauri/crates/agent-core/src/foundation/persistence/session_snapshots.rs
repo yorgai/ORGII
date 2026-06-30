@@ -302,13 +302,18 @@ pub fn get_snapshots_after(session_id: &str, created_at: &str) -> SqliteResult<V
     let conn = get_connection()?;
     let mut stmt = conn.prepare(
         "SELECT hash FROM agent_snapshots
-         WHERE session_id = ?1 AND created_at >= ?2
+         WHERE session_id = ?1 AND created_at >= ?2 AND tool_call_id != ?3
          ORDER BY created_at ASC",
     )?;
     let rows = stmt
-        .query_map(params![session_id, created_at], |row| {
-            row.get::<_, String>(0)
-        })?
+        .query_map(
+            params![
+                session_id,
+                created_at,
+                crate::tools::file_history::REDO_SNAPSHOT_TOOL_CALL_ID
+            ],
+            |row| row.get::<_, String>(0),
+        )?
         .collect::<SqliteResult<Vec<_>>>()?;
     Ok(rows)
 }

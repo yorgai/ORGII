@@ -150,6 +150,7 @@ pub(super) fn enrich_work_item(
             name: member
                 .map(|entry| entry.name.clone())
                 .unwrap_or_else(|| assignee_id.clone()),
+            avatar: member.and_then(|entry| entry.avatar.clone()),
             color: FALLBACK_MEMBER_COLOR.to_string(),
         }
     });
@@ -157,12 +158,20 @@ pub(super) fn enrich_work_item(
     let labels: Vec<ResolvedLabel> = fm
         .labels
         .iter()
-        .filter_map(|label_id| {
-            label_map.get(label_id).map(|label| ResolvedLabel {
-                id: label.id.clone(),
-                name: label.name.clone(),
-                color: label.color.clone(),
-            })
+        .map(|label_id| {
+            if let Some(label) = label_map.get(label_id) {
+                return ResolvedLabel {
+                    id: label.id.clone(),
+                    name: label.name.clone(),
+                    color: label.color.clone(),
+                };
+            }
+
+            ResolvedLabel {
+                id: label_id.clone(),
+                name: label_id.clone(),
+                color: FALLBACK_MEMBER_COLOR.to_string(),
+            }
         })
         .collect();
 
@@ -352,8 +361,8 @@ mod tests {
                     id: "alice".into(),
                     name: "Alice Walker".into(),
                     email: Some("alice@example.com".into()),
-                    avatar: None,
-                    github_username: None,
+                    avatar: Some("https://avatars.githubusercontent.com/u/1?v=4".into()),
+                    github_username: Some("alice".into()),
                     last_commit_date: None,
                     active: true,
                 }],
@@ -381,9 +390,7 @@ mod tests {
     }
 
     #[test]
-    fn enrich_drops_unknown_label_ids_silently() {
-        // Filtering unknown IDs (vs erroring) matches the legacy behavior:
-        // a stale label reference shouldn't kill the whole list view.
+    fn enrich_keeps_unknown_label_ids_visible() {
         let _sandbox = test_env::sandbox();
         seed_project_with_lookups();
 
@@ -392,8 +399,11 @@ mod tests {
         write_work_item("demo", "AAA-0001", &fm, "").expect("write");
 
         let items = read_all_work_items_enriched("demo").expect("enriched");
-        assert_eq!(items[0].labels.len(), 1, "ghost label dropped");
+        assert_eq!(items[0].labels.len(), 2);
         assert_eq!(items[0].labels[0].id, "bug");
+        assert_eq!(items[0].labels[1].id, "ghost-label");
+        assert_eq!(items[0].labels[1].name, "ghost-label");
+        assert_eq!(items[0].labels[1].color, FALLBACK_MEMBER_COLOR);
     }
 
     #[test]
@@ -417,6 +427,10 @@ mod tests {
         let resolved_known = by_short[0].assignee.as_ref().expect("alice present");
         assert_eq!(resolved_known.id, "alice");
         assert_eq!(resolved_known.name, "Alice Walker");
+        assert_eq!(
+            resolved_known.avatar.as_deref(),
+            Some("https://avatars.githubusercontent.com/u/1?v=4")
+        );
 
         let resolved_unknown = by_short[1].assignee.as_ref().expect("ghost present");
         assert_eq!(resolved_unknown.id, "ghost-user");

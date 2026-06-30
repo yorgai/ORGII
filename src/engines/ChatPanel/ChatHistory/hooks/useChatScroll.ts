@@ -23,6 +23,8 @@ import {
 
 import { useDebouncedCallback } from "@src/hooks/perf";
 
+import { getChatContentBottomScrollTop } from "../config/chatFooterSpacer";
+
 // ============================================
 // Types
 // ============================================
@@ -48,6 +50,8 @@ export interface UseChatScrollOptions {
   /** Timestamp of the latest user scroll on the chat scroller. Used to keep
    *  auto-follow from fighting trackpad/wheel momentum near the bottom. */
   manualScrollAtRef?: MutableRefObject<number>;
+  /** Timestamp of the latest programmatic scroll correction. */
+  programmaticScrollAtRef: MutableRefObject<number>;
   /** Timestamp of the latest user-triggered turn collapse/expand. During
    *  this short window, structural list-size changes must preserve the
    *  user's local viewport instead of following the virtualized tail. */
@@ -60,6 +64,12 @@ export interface UseChatScrollOptions {
   activeSessionId: string | null | undefined;
   /** Static renderer scroll root used when Virtuoso is not mounted. */
   staticScrollerRef?: MutableRefObject<HTMLDivElement | null>;
+  /** Height of the reserved footer spacer after the last rendered chat row. */
+  footerSpacerHeight: number;
+  /** Height of the overlapping composer/input area. */
+  bottomInset: number;
+  /** Changes when tail content streams without adding/removing list items. */
+  tailFollowKey: string;
   /** When true, bypass the `isContentOverflowingRef` guard so auto-scroll
    *  engages even in small viewports (subagent monitor cells). */
   alwaysFollowTail?: boolean;
@@ -82,6 +92,7 @@ export interface UseChatScrollReturn {
 const AT_BOTTOM_DEBOUNCE_MS = 150;
 const MANUAL_SCROLL_AUTO_FOLLOW_SUPPRESS_MS = 450;
 const TURN_COLLAPSE_AUTO_FOLLOW_SUPPRESS_MS = 700;
+const FOLLOW_SETTLE_FRAME_COUNT = 4;
 
 export function useChatScroll({
   optimizedChatHistoryLength,
@@ -93,10 +104,14 @@ export function useChatScroll({
   visibleRangeEndRef,
   pinLastGroupRef,
   manualScrollAtRef,
+  programmaticScrollAtRef,
   turnCollapseInteractionAtRef,
   isContentOverflowingRef,
   activeSessionId,
   staticScrollerRef,
+  footerSpacerHeight,
+  bottomInset,
+  tailFollowKey,
   alwaysFollowTail = false,
 }: UseChatScrollOptions): UseChatScrollReturn {
   const atBottomRef = useRef(true);
@@ -109,14 +124,12 @@ export function useChatScroll({
     chatHistoryLengthRef.current = optimizedChatHistoryLength;
   }, [optimizedChatHistoryLength]);
 
-  const scrollRafRef = useRef(0);
-  const scrollSecondRafRef = useRef(0);
+  const scheduledFollowCleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => {
-    const scrollRafRefForCleanup = scrollRafRef;
-    const scrollSecondRafRefForCleanup = scrollSecondRafRef;
+    const scheduledFollowCleanupRefForCleanup = scheduledFollowCleanupRef;
     return () => {
-      cancelAnimationFrame(scrollRafRefForCleanup.current);
-      cancelAnimationFrame(scrollSecondRafRefForCleanup.current);
+      scheduledFollowCleanupRefForCleanup.current?.();
+      scheduledFollowCleanupRefForCleanup.current = null;
     };
   }, []);
 
@@ -140,23 +153,69 @@ export function useChatScroll({
     (behavior: ScrollBehavior = "auto") => {
       const el = staticScrollerRef?.current ?? virtuosoScrollerRef.current;
       if (!el) return false;
+      programmaticScrollAtRef.current = performance.now();
       el.scrollTo({
-        top: Math.max(0, el.scrollHeight - el.clientHeight),
+        top: getChatContentBottomScrollTop({
+          scrollHeight: el.scrollHeight,
+          clientHeight: el.clientHeight,
+          footerSpacerHeight,
+          bottomInset,
+        }),
         behavior,
       });
       return true;
     },
-    [staticScrollerRef, virtuosoScrollerRef]
+    [
+      bottomInset,
+      footerSpacerHeight,
+      programmaticScrollAtRef,
+      staticScrollerRef,
+      virtuosoScrollerRef,
+    ]
   );
 
-  const scrollToBottom = useCallback(() => {
-    if (scrollElementToBottom()) {
-      window.requestAnimationFrame(() => scrollElementToBottom());
-      return;
-    }
-
-    scrollElementToBottom("smooth");
+  const scheduleSettledFollow = useCallback(() => {
+    scheduledFollowCleanupRef.current?.();
+    const frameIds: number[] = [];
+    const runFrame = (remainingFrames: number) => {
+      const frameId = requestAnimationFrame(() => {
+        scrollElementToBottom();
+        if (remainingFrames > 1) {
+          runFrame(remainingFrames - 1);
+        }
+      });
+      frameIds.push(frameId);
+    };
+    scrollElementToBottom();
+    runFrame(FOLLOW_SETTLE_FRAME_COUNT);
+    const cleanup = () => {
+      for (const frameId of frameIds) {
+        cancelAnimationFrame(frameId);
+      }
+    };
+    scheduledFollowCleanupRef.current = cleanup;
+    return cleanup;
   }, [scrollElementToBottom]);
+
+  const scrollToBottom = useCallback(() => {
+    pinLastGroupRef.current = false;
+    if (manualScrollAtRef) {
+      manualScrollAtRef.current = 0;
+    } else {
+      fallbackManualScrollAtRef.current = 0;
+    }
+    atBottomRef.current = true;
+    setAtBottom(true);
+    setIsChatScrolledToBottom(true);
+    scheduleSettledFollow();
+  }, [
+    fallbackManualScrollAtRef,
+    manualScrollAtRef,
+    pinLastGroupRef,
+    scheduleSettledFollow,
+    setAtBottom,
+    setIsChatScrolledToBottom,
+  ]);
 
   useEffect(() => {
     const scrollRoot =
@@ -164,10 +223,8 @@ export function useChatScroll({
     if (!scrollRoot) return;
 
     let frameId = 0;
-    let secondFrameId = 0;
     const followIfPinnedToTail = () => {
       cancelAnimationFrame(frameId);
-      cancelAnimationFrame(secondFrameId);
       frameId = requestAnimationFrame(() => {
         if (pinLastGroupRef.current) return;
         if (
@@ -178,8 +235,7 @@ export function useChatScroll({
           return;
         }
         if (!alwaysFollowTail && !atBottomRef.current) return;
-        scrollElementToBottom();
-        secondFrameId = requestAnimationFrame(() => scrollElementToBottom());
+        scheduleSettledFollow();
       });
     };
 
@@ -191,7 +247,6 @@ export function useChatScroll({
 
     return () => {
       cancelAnimationFrame(frameId);
-      cancelAnimationFrame(secondFrameId);
       resizeObserver.disconnect();
     };
   }, [
@@ -199,9 +254,28 @@ export function useChatScroll({
     alwaysFollowTail,
     effectiveManualScrollAtRef,
     pinLastGroupRef,
-    scrollElementToBottom,
+    scheduleSettledFollow,
     staticScrollerRef,
     virtuosoScrollerRef,
+  ]);
+
+  useEffect(() => {
+    if (!tailFollowKey) return;
+    if (pinLastGroupRef.current) return;
+    if (!alwaysFollowTail && !atBottomRef.current) return;
+    if (
+      performance.now() - effectiveManualScrollAtRef.current <
+      MANUAL_SCROLL_AUTO_FOLLOW_SUPPRESS_MS
+    ) {
+      return;
+    }
+    return scheduleSettledFollow();
+  }, [
+    alwaysFollowTail,
+    effectiveManualScrollAtRef,
+    pinLastGroupRef,
+    scheduleSettledFollow,
+    tailFollowKey,
   ]);
 
   // Auto-scroll when new messages arrive if user was at content bottom.
@@ -264,14 +338,14 @@ export function useChatScroll({
           return;
         }
         if (!alwaysFollowTail && !isContentOverflowingRef.current) return;
-        scrollToBottom();
+        scheduleSettledFollow();
       }, 50);
       return () => clearTimeout(timer);
     }
   }, [
     optimizedChatHistoryLength,
     atBottom,
-    scrollToBottom,
+    scheduleSettledFollow,
     visibleRangeEndRef,
     pinLastGroupRef,
     effectiveManualScrollAtRef,

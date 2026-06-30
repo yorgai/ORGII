@@ -30,7 +30,10 @@ import { atomFamily } from "jotai-family";
 import { createLogger } from "@src/hooks/logger";
 
 import { isInteractiveTool } from "../core/interactiveTools";
-import { hasLiveRuntimeResourceInLatestTurn } from "../core/runningEventGate";
+import {
+  hasLiveRuntimeResourceInLatestTurn,
+  hasRunningAwaitWaitForInLatestTurn,
+} from "../core/runningEventGate";
 import type { Snapshot } from "../core/store/EventStoreProxy";
 import {
   eventStoreProxy,
@@ -183,12 +186,18 @@ export interface SessionScopedPlanningMeta {
   anyRunning: boolean;
   /** True while an interactive tool is blocked waiting for user input. */
   hasAwaitingUserInteraction: boolean;
+  /**
+   * True while the latest turn has a still-running `await_output` wait_for —
+   * its own live countdown title makes the planning footer redundant.
+   */
+  hasRunningAwaitWaitFor: boolean;
 }
 
 const EMPTY_PLANNING_META: SessionScopedPlanningMeta = {
   version: 0,
   anyRunning: false,
   hasAwaitingUserInteraction: false,
+  hasRunningAwaitWaitFor: false,
 };
 
 export const sessionScopedPlanningMetaAtomFamily = atomFamily(
@@ -208,11 +217,13 @@ export const sessionScopedPlanningMetaAtomFamily = atomFamily(
             event.activityStatus !== "processed" &&
             isInteractiveTool(event.functionName)
         ),
+        hasRunningAwaitWaitFor: hasRunningAwaitWaitForInLatestTurn(chatEvents),
       };
       if (
         next.version === prev.version &&
         next.anyRunning === prev.anyRunning &&
-        next.hasAwaitingUserInteraction === prev.hasAwaitingUserInteraction
+        next.hasAwaitingUserInteraction === prev.hasAwaitingUserInteraction &&
+        next.hasRunningAwaitWaitFor === prev.hasRunningAwaitWaitFor
       ) {
         return prev;
       }

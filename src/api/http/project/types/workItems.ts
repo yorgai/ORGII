@@ -220,6 +220,7 @@ export interface WorkItemPartialUpdate {
 export interface ResolvedPerson {
   id: string;
   name: string;
+  avatar?: string;
   color: string;
 }
 

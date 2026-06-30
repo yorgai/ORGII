@@ -81,7 +81,7 @@ fn normalize_non_claude_passthrough() {
 #[test]
 fn context_window_hint_claude_models() {
     assert_eq!(context_window_hint("claude-sonnet-4-20250514"), 200_000);
-    assert_eq!(context_window_hint("claude-opus-4.5"), 1_000_000);
+    assert_eq!(context_window_hint("claude-opus-4.5"), 200_000);
     assert_eq!(context_window_hint("claude-3-5-sonnet"), 200_000);
 }
 
@@ -95,6 +95,17 @@ fn context_window_hint_gpt_models() {
 #[test]
 fn context_window_hint_gemini() {
     assert_eq!(context_window_hint("gemini-2.0-flash"), 1_000_000);
+}
+
+#[test]
+fn context_window_hint_glm() {
+    // Only 5.2 reached 1M; 5 / 5.1 / 5-turbo stay at 200K.
+    assert_eq!(context_window_hint("glm-5.2"), 1_000_000);
+    assert_eq!(context_window_hint("glm-5"), 200_000);
+    assert_eq!(context_window_hint("glm-5.1"), 200_000);
+    assert_eq!(context_window_hint("glm-5-turbo"), 200_000);
+    assert_eq!(context_window_hint("glm-4.6"), 200_000);
+    assert_eq!(context_window_hint("glm-4.5"), 128_000);
 }
 
 #[test]

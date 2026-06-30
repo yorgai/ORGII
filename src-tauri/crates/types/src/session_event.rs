@@ -410,6 +410,19 @@ impl From<&SessionEvent> for SimulatorEventPreview {
 /// `sortedSimulatorEvents` serves both roles — the frontend reads it for
 /// `simulatorEventsAtom` and `sortedEventsAtom`, saving two full-array
 /// clones and their serialization cost on every snapshot push.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LatestCanvasPreview {
+    pub event_id: String,
+    pub mode: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub streaming: Option<bool>,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DerivedSnapshot {
@@ -443,6 +456,8 @@ pub struct DerivedSnapshot {
     pub chat_event_count: usize,
     /// Pre-computed: whether any event has displayStatus === "running".
     pub has_running_event: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_canvas_preview: Option<LatestCanvasPreview>,
 }
 
 /// Lightweight snapshot pushed during streaming.
@@ -477,6 +492,8 @@ pub struct StreamingSnapshot {
     /// Checked against ALL events (not just chatEvents) so that non-visible
     /// running events (e.g. thinking deltas) are still detected.
     pub has_running_event: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_canvas_preview: Option<LatestCanvasPreview>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -506,6 +523,8 @@ pub struct SnapshotDelta {
     pub last_event_id: Option<String>,
     pub chat_event_count: usize,
     pub has_running_event: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub latest_canvas_preview: Option<LatestCanvasPreview>,
     pub snapshot_delta: bool,
 }
 

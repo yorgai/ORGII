@@ -321,11 +321,15 @@ impl UnifiedMessageProcessor {
             .clone()
             .or_else(|| {
                 (result.context_tokens > 0).then(|| {
-                    let context_window = crate::core::providers::model_capabilities::resolve(
+                    let context_window =
+                        crate::core::providers::model_capabilities::resolve_effective_context_window(
                         &self.runtime.model,
-                        None,
-                    )
-                    .context_window as i64;
+                        self.runtime.account_id.as_deref(),
+                        self.runtime
+                            .resolved
+                            .context_window_configured
+                            .then_some(self.runtime.resolved.context_window),
+                    ) as i64;
                     ContextUsageSnapshot::from_payload(
                         &result.messages,
                         &[],
@@ -634,6 +638,24 @@ impl UnifiedMessageProcessor {
         if let Some(guard) = inbox_guard.take() {
             guard.commit();
         }
+
+        // 4d. Subagent-wake prefill safety net.
+        //
+        // A background-subagent completion resumes the parent with empty
+        // content (no persisted user row → same round, no new bubble). But a
+        // plain SDE session has no inbox_drain to append a trailing user
+        // message, so the conversation can still end on the parent's last
+        // assistant turn ("已在后台启动。"). Providers (Anthropic, OpenAI)
+        // reject that with HTTP 400 "conversation must end with a user
+        // message". When a resume leaves an assistant-tailed message list,
+        // append a single TRANSIENT user nudge — in-memory only, never
+        // persisted, so it neither creates a round nor a visible bubble.
+        // Mirrors inbox_drain's transient injection, generalized to the SDE
+        // path.
+        if context.is_resume {
+            Self::inject_subagent_wake_nudge_if_needed(&mut messages, session_id);
+        }
+
         // 5/5b/6. Pre-turn message-list compaction (microcompact +
         // aggregate budget + LLM context compaction + compact-fork).
         if let CompactionPhaseOutcome::ForkRedirect(redirect) = self
@@ -752,6 +774,47 @@ impl UnifiedMessageProcessor {
             turn_summary: None,
             fork_redirect: None,
         })
+    }
+
+    /// Append a transient, in-memory-only trailing user message when a resumed
+    /// turn's assembled message list still ends on an assistant turn.
+    ///
+    /// Background-subagent wakes resume the parent with empty content (so no
+    /// user row is persisted and no new round is created), but a plain SDE
+    /// session has no inbox_drain to supply the trailing user message that
+    /// providers require ("conversation must end with a user message"). This
+    /// closes that gap without persisting anything: the nudge lives only in
+    /// the provider request, never in the DB or the UI, so the parent
+    /// continues in the SAME round with no synthetic bubble.
+    ///
+    /// No-op unless the last non-system message is an assistant message —
+    /// normal resumes (e.g. mode-switch) that already end on a user or tool
+    /// message are left untouched.
+    fn inject_subagent_wake_nudge_if_needed(messages: &mut Vec<Value>, session_id: &str) {
+        let last_non_system_role = messages
+            .iter()
+            .rev()
+            .find_map(|m| m.get("role").and_then(|v| v.as_str()))
+            .filter(|role| *role != "system");
+
+        if last_non_system_role != Some("assistant") {
+            return;
+        }
+
+        const WAKE_NUDGE: &str = "<system-reminder>A background subagent you launched has \
+            finished. Its result is now available in the Background Jobs list above. Read the \
+            completed worker's output and continue the task you were doing — do not re-launch \
+            it.</system-reminder>";
+
+        messages.push(serde_json::json!({
+            "role": "user",
+            "content": WAKE_NUDGE,
+        }));
+
+        info!(
+            "[unified_processor] Injected transient subagent-wake nudge to satisfy prefill (session={})",
+            session_id
+        );
     }
 }
 

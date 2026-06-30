@@ -13,6 +13,8 @@ export const CURSOR_IDE_REFRESH_INTERVAL_MS = 60_000;
 
 export const NEW_SESSION_MENU_ITEM_ID = "new-session";
 export const PROJECTS_NEW_PROJECT_MENU_ITEM_ID = "projects-new-project";
+export const PROJECTS_IMPORT_GITHUB_ISSUES_MENU_ITEM_ID =
+  "projects-import-github-issues";
 export const PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID = "projects-new-work-item";
 export const OPS_CONTROL_MENU_ITEM_ID = "ops-control";
 export const COLLAB_ADD_ORG_MENU_ITEM_ID = "colleagues-add-org";

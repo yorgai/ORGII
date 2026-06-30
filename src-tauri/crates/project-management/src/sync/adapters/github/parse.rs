@@ -88,9 +88,9 @@ pub fn parse_github_issue(node: &Value) -> Result<ExternalChange, String> {
         fields.insert("status".to_string(), json!(state));
     }
     if let Some(assignees) = node.get("assignees").and_then(Value::as_array) {
-        // Multiple assignees collapse to the first; full multi-assignee
-        // support is a resolver concern (local schema is
-        // single-assignee). Empty array → no assignee.
+        // Multiple assignees collapse to the first for the local work item,
+        // but keep the full GitHub user details so enrichment can render
+        // GitHub avatars from the project member catalog.
         if let Some(first) = assignees
             .iter()
             .filter_map(|a| a.get("login").and_then(Value::as_str))
@@ -98,6 +98,21 @@ pub fn parse_github_issue(node: &Value) -> Result<ExternalChange, String> {
         {
             fields.insert("assignee".to_string(), json!(first));
         }
+        let assignee_details: Vec<Value> = assignees
+            .iter()
+            .filter_map(|assignee| {
+                let login = assignee.get("login").and_then(Value::as_str)?;
+                let avatar_url = assignee.get("avatar_url").and_then(Value::as_str);
+                Some(json!({
+                    "login": login,
+                    "avatar_url": avatar_url,
+                }))
+            })
+            .collect();
+        fields.insert(
+            "assignee_details".to_string(),
+            Value::Array(assignee_details),
+        );
     }
     if let Some(label_nodes) = node.get("labels").and_then(Value::as_array) {
         let labels: Vec<Value> = label_nodes
@@ -105,7 +120,19 @@ pub fn parse_github_issue(node: &Value) -> Result<ExternalChange, String> {
             .filter_map(|n| n.get("name").and_then(Value::as_str))
             .map(|name| json!(name))
             .collect();
+        let label_details: Vec<Value> = label_nodes
+            .iter()
+            .filter_map(|label| {
+                let name = label.get("name").and_then(Value::as_str)?;
+                let color = label.get("color").and_then(Value::as_str);
+                Some(json!({
+                    "name": name,
+                    "color": color,
+                }))
+            })
+            .collect();
         fields.insert("labels".to_string(), Value::Array(labels));
+        fields.insert("label_details".to_string(), Value::Array(label_details));
     }
     if let Some(milestone_title) = node.pointer("/milestone/title").and_then(Value::as_str) {
         fields.insert("milestone".to_string(), json!(milestone_title));
@@ -274,12 +301,12 @@ mod tests {
             "state": "open",
             "updated_at": "2026-04-29T01:23:45Z",
             "assignees": [
-                { "login": "alice" },
-                { "login": "bob" },
+                { "login": "alice", "avatar_url": "https://avatars.githubusercontent.com/u/1?v=4" },
+                { "login": "bob", "avatar_url": "https://avatars.githubusercontent.com/u/2?v=4" },
             ],
             "labels": [
-                { "id": 1, "name": "backend" },
-                { "id": 2, "name": "p1" },
+                { "id": 1, "name": "backend", "color": "0366d6" },
+                { "id": 2, "name": "p1", "color": "d73a4a" },
             ],
             "milestone": { "title": "v1.0", "number": 7 },
         })
@@ -294,7 +321,12 @@ mod tests {
         assert_eq!(change.fields["title"], "Implement GitHub adapter");
         assert_eq!(change.fields["status"], "open");
         assert_eq!(change.fields["assignee"], "alice");
+        assert_eq!(
+            change.fields["assignee_details"][0]["avatar_url"],
+            "https://avatars.githubusercontent.com/u/1?v=4"
+        );
         assert_eq!(change.fields["labels"], json!(["backend", "p1"]));
+        assert_eq!(change.fields["label_details"][0]["color"], "0366d6");
         assert_eq!(change.fields["milestone"], "v1.0");
     }
 

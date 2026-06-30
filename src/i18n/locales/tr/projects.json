@@ -69,6 +69,52 @@
     },
     "viewProjects": "Project'leri görüntüle"
   },
+  "githubIssuesImport": {
+    "title": "GitHub Issues içe aktar",
+    "menuLabel": "GitHub Issues içe aktar",
+    "createTarget": "GitHub Issues Project",
+    "heading": "GitHub Issues üzerinden Project oluştur",
+    "description": "Bir GitHub deposu seçin, ORGII Project oluşturun ve GitHub Issues öğelerini work items olarak senkronize tutun.",
+    "importButton": "GitHub Issues içe aktar",
+    "projectDescription": "{{owner}}/{{repo}} içindeki GitHub Issues üzerinden senkronize edildi.",
+    "fields": {
+      "projectName": "Project adı",
+      "repo": "GitHub deposu",
+      "connection": "GitHub bağlantısı"
+    },
+    "placeholders": {
+      "projectName": "ORGII GitHub Issues",
+      "repo": "owner/repo veya https://github.com/owner/repo",
+      "connection": "GitHub bağlantısı seç"
+    },
+    "loadingConnections": "GitHub bağlantıları yükleniyor...",
+    "noConnectionTitle": "GitHub bağlantısı bulunamadı",
+    "noConnectionDescription": "Önce Integrations içinde bir GitHub bağlantısı ekleyin, ardından GitHub Issues içe aktarmak için buraya dönün.",
+    "linkedRepoHint": "Bu Project ayrıca geçerli Workspace repo ile ilişkilendirilecek: {{repoName}}.",
+    "createdTitle": "{{name}} hazır",
+    "createdDescription": "ORGII, {{owner}}/{{repo}} üzerinden GitHub Issues içe aktarıyor. Senkronizasyon sürerken çalışmaya devam edebilirsiniz.",
+    "createdDescriptionFallback": "ORGII GitHub Issues içe aktarıyor. Senkronizasyon sürerken çalışmaya devam edebilirsiniz.",
+    "errors": {
+      "invalidRepo": "owner/repo veya GitHub depo URL'si kullanın."
+    },
+    "importStatus": {
+      "title": "İçe aktarma durumu",
+      "pendingDescription": "İçe aktarma worker sıraya alındı ve kısa süre içinde başlayacak.",
+      "runningDescription": "GitHub Issues bu Project içine work items olarak aktarılıyor.",
+      "completedDescription": "Kullanılabilir tüm GitHub Issues içe aktarıldı.",
+      "failedDescription": "İçe aktarma worker bir hata bildirdi. Project senkronizasyon ayarlarından yeniden deneyebilirsiniz.",
+      "cancelledDescription": "Tüm GitHub Issues içe aktarılmadan işlem iptal edildi.",
+      "progressWithTotal": "{{count}} / {{total}} GitHub Issues içe aktarıldı",
+      "progressNoTotal": "{{count}} GitHub Issues içe aktarıldı",
+      "state": {
+        "pending": "Bekliyor",
+        "running": "Çalışıyor",
+        "completed": "Tamamlandı",
+        "failed": "Başarısız",
+        "cancelled": "İptal edildi"
+      }
+    }
+  },
   "orgs": {
     "yourOrgs": "Kuruluşlarınız",
     "sectionTitle": "Kuruluşlar",
@@ -226,7 +272,8 @@
       "inProgress": "Devam ediyor",
       "inReview": "İncelemede",
       "done": "Tamamlandı",
-      "cancelled": "İptal edildi"
+      "cancelled": "İptal edildi",
+      "duplicate": "Yinelenen"
     },
     "statusLabels": {
       "backlog": "Backlog",
@@ -235,7 +282,9 @@
       "in_review": "İncelemede",
       "completed": "Tamamlandı",
       "cancelled": "İptal edildi",
-      "duplicate": "Yinelenen"
+      "duplicate": "Yinelenen",
+      "open": "Açık",
+      "closed": "Kapalı"
     },
     "priorityLabels": {
       "none": "Öncelik yok",

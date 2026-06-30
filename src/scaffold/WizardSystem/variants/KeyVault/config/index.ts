@@ -38,6 +38,7 @@ export const DEFAULT_WIZARD_DATA: WizardData = {
   env_vars: [],
   validated: false,
   available_models: [],
+  model_context_lengths: {},
   enabled_models: [],
   custom_models: [],
   model_aliases: [],

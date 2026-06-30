@@ -140,3 +140,41 @@ fn test_infer_install_unknown() {
         None
     );
 }
+
+/// Guards the `save_key` command's `SaveKeyRequest.model_variants` ->
+/// `ModelVariant` mapping (crud.rs). A regression that hardcodes
+/// `context_window: None` here would silently erase provider-reported context
+/// windows on every save, so this test must exercise the conversion directly
+/// (not the storage layer, which preserves the field trivially).
+#[test]
+fn test_model_variant_info_to_variant_preserves_context_window() {
+    use crate::commands::crud::ModelVariantInfo;
+    use crate::key_store::ModelVariant;
+
+    let with_ctx = ModelVariantInfo {
+        model: "gpt-4o".to_string(),
+        base_model: "gpt-4o".to_string(),
+        reasoning: None,
+        fast: false,
+        context_window: Some(128_000),
+    };
+    assert_eq!(ModelVariant::from(with_ctx).context_window, Some(128_000));
+
+    let without_ctx = ModelVariantInfo {
+        model: "gpt-4o".to_string(),
+        base_model: "gpt-4o".to_string(),
+        reasoning: None,
+        fast: false,
+        context_window: None,
+    };
+    assert_eq!(ModelVariant::from(without_ctx).context_window, None);
+
+    let zero_ctx = ModelVariantInfo {
+        model: "gpt-4o".to_string(),
+        base_model: "gpt-4o".to_string(),
+        reasoning: None,
+        fast: false,
+        context_window: Some(0),
+    };
+    assert_eq!(ModelVariant::from(zero_ctx).context_window, None);
+}

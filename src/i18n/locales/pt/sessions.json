@@ -971,6 +971,7 @@
     "complete": "Concluir"
   },
   "planning": {
+    "agentTyping": "Agent está digitando...",
     "nextStepVariants": [
       "Planejando próximo passo...",
       "Refletindo sobre isso...",

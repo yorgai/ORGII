@@ -5,6 +5,7 @@
 
 use reqwest::Client;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::types::ValidationResult;
@@ -20,6 +21,8 @@ struct ModelsResponse {
 #[derive(Debug, Deserialize)]
 struct ModelInfo {
     id: String,
+    #[serde(default)]
+    context_length: Option<u64>,
 }
 
 pub struct AzureOpenAIValidator {
@@ -50,14 +53,16 @@ impl AzureOpenAIValidator {
 
         // Try listing models via the OpenAI-compatible models endpoint
         match self.get_models(api_key, base_url).await {
-            Ok(models) => {
+            Ok((models, contexts)) => {
                 if models.is_empty() {
                     // Models endpoint worked but returned empty — key is valid
                     ValidationResult::success(
                         "API key valid (no models listed — specify model names manually)",
                     )
                 } else {
-                    ValidationResult::success("API key valid").with_models(models)
+                    ValidationResult::success("API key valid")
+                        .with_models(models)
+                        .with_contexts(contexts)
                 }
             }
             Err(err) => {
@@ -76,7 +81,11 @@ impl AzureOpenAIValidator {
         }
     }
 
-    async fn get_models(&self, api_key: &str, base_url: &str) -> Result<Vec<String>, String> {
+    async fn get_models(
+        &self,
+        api_key: &str,
+        base_url: &str,
+    ) -> Result<(Vec<String>, HashMap<String, u64>), String> {
         // Try two URL variants:
         // 1. Traditional Azure: {base}/models?api-version=...
         // 2. AI Foundry / plain OpenAI-compat: {base}/models (no api-version)
@@ -100,7 +109,11 @@ impl AzureOpenAIValidator {
         Err(last_err)
     }
 
-    async fn try_get_models(&self, api_key: &str, endpoint: &str) -> Result<Vec<String>, String> {
+    async fn try_get_models(
+        &self,
+        api_key: &str,
+        endpoint: &str,
+    ) -> Result<(Vec<String>, HashMap<String, u64>), String> {
         let response = self
             .client
             .get(endpoint)
@@ -126,14 +139,16 @@ impl AzureOpenAIValidator {
             .await
             .map_err(|err| format!("Failed to parse response: {}", err))?;
 
-        let models: Vec<String> = data
-            .data
-            .unwrap_or_default()
-            .into_iter()
-            .map(|m| m.id)
-            .collect();
+        let mut ids: Vec<String> = Vec::new();
+        let mut contexts: HashMap<String, u64> = HashMap::new();
+        for m in data.data.unwrap_or_default() {
+            if let Some(ctx) = m.context_length.filter(|ctx| *ctx > 0) {
+                contexts.insert(m.id.clone(), ctx);
+            }
+            ids.push(m.id);
+        }
 
-        Ok(models)
+        Ok((ids, contexts))
     }
 
     pub fn validate_format(&self, api_key: &str) -> (bool, String) {

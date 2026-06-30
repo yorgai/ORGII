@@ -7,10 +7,14 @@ import {
   useRef,
 } from "react";
 
+import { getChatContentBottomScrollTop } from "../config/chatFooterSpacer";
+
 export interface UseChatScrollPinOptions {
   activeId: string | null;
   groupCounts: number[];
   totalFlatItems: number;
+  footerSpacerHeight: number;
+  bottomInset: number;
   sessionLoadStatus: string;
   virtuosoScrollerRef: RefObject<HTMLElement | null>;
   atBottom: boolean;
@@ -24,6 +28,8 @@ export interface UseChatScrollPinOptions {
   pinLastGroupRef: MutableRefObject<boolean>;
   /** Updated when the scroller receives a real user scroll, not a programmatic correction. */
   manualScrollAtRef?: MutableRefObject<number>;
+  /** Updated before any programmatic scroll correction. */
+  programmaticScrollAtRef: MutableRefObject<number>;
   onPinToTopChange?: (active: boolean) => void;
   /**
    * Fallback scroll container for the static rendering path.
@@ -53,6 +59,8 @@ export function useChatScrollPin({
   activeId,
   groupCounts,
   totalFlatItems: _totalFlatItems,
+  footerSpacerHeight,
+  bottomInset,
   sessionLoadStatus: _sessionLoadStatus,
   virtuosoScrollerRef,
   atBottom: _atBottom,
@@ -61,10 +69,10 @@ export function useChatScrollPin({
   optimizedChatHistoryLength,
   pinLastGroupRef,
   manualScrollAtRef,
+  programmaticScrollAtRef,
   onPinToTopChange,
   staticScrollerRef,
 }: UseChatScrollPinOptions): UseChatScrollPinReturn {
-  const programmaticScrollAtRef = useRef(0);
   const fallbackManualScrollAtRef = useRef(0);
   const effectiveManualScrollAtRef =
     manualScrollAtRef ?? fallbackManualScrollAtRef;
@@ -82,11 +90,16 @@ export function useChatScrollPin({
       virtuosoScrollerRef.current ?? staticScrollerRef?.current;
     if (scrollRoot) {
       scrollRoot.scrollTo({
-        top: Math.max(0, scrollRoot.scrollHeight - scrollRoot.clientHeight),
+        top: getChatContentBottomScrollTop({
+          scrollHeight: scrollRoot.scrollHeight,
+          clientHeight: scrollRoot.clientHeight,
+          footerSpacerHeight,
+          bottomInset,
+        }),
         behavior: "auto",
       });
     }
-  }, [staticScrollerRef, virtuosoScrollerRef]);
+  }, [bottomInset, footerSpacerHeight, staticScrollerRef, virtuosoScrollerRef]);
 
   const scheduleFollowToEnd = useCallback(() => {
     effectiveManualScrollAtRef.current = 0;
@@ -104,7 +117,7 @@ export function useChatScrollPin({
       cancelAnimationFrame(firstFrameId);
       cancelAnimationFrame(secondFrameId);
     };
-  }, [effectiveManualScrollAtRef, scrollToEnd]);
+  }, [effectiveManualScrollAtRef, programmaticScrollAtRef, scrollToEnd]);
 
   // Effect 1: always scroll to end on session switch.
   // New-event tail following is owned by useChatScroll;
@@ -131,6 +144,7 @@ export function useChatScrollPin({
     scheduleFollowToEnd,
     onPinToTopChange,
     pinLastGroupRef,
+    programmaticScrollAtRef,
   ]);
 
   // Effect 2: scroll to bottom only when a new user-message group is added.

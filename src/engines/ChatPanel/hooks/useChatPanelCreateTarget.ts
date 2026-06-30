@@ -58,6 +58,11 @@ export function useChatPanelCreateTarget({
         dataTestId: "chat-panel-create-target-project-option",
       },
       {
+        value: CHAT_PANEL_CREATE_TARGET.GITHUB_ISSUES_PROJECT,
+        label: t("projects:githubIssuesImport.createTarget"),
+        dataTestId: "chat-panel-create-target-github-issues-project-option",
+      },
+      {
         value: CHAT_PANEL_CREATE_TARGET.WORK_ITEM,
         label: t("creator.createTarget.workItem"),
         dataTestId: "chat-panel-create-target-work-item-option",
@@ -98,7 +103,9 @@ export function useChatPanelCreateTarget({
         setWorkItemCreateDraft(null);
         setShowWorkItemAgentCreator(sessionCreatorAvailable);
       }
-      if (nextTarget !== CHAT_PANEL_CREATE_TARGET.PROJECT) {
+      if (nextTarget === CHAT_PANEL_CREATE_TARGET.GITHUB_ISSUES_PROJECT) {
+        setShowProjectAgentCreator(false);
+      } else if (nextTarget !== CHAT_PANEL_CREATE_TARGET.PROJECT) {
         setShowProjectAgentCreator(sessionCreatorAvailable);
       }
       setCreateTarget(nextTarget);

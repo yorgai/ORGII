@@ -36,6 +36,8 @@ const WORK_ITEM_STATUS_TO_FILE: Record<WorkItemStatus, string> = {
   completed: "completed",
   cancelled: "cancelled",
   duplicate: "duplicate",
+  open: "open",
+  closed: "closed",
 };
 
 interface UseWorkItemsHandlersParams {

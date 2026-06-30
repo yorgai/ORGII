@@ -81,14 +81,32 @@ impl OpenAIResponsesClient {
         let (instructions, input) = convert_messages(messages);
         let (converted_tools, tool_choice) = convert_tools_with_choice(tools);
 
+        // Strip the reasoning-level suffix ORG2 encodes into variant ids and
+        // map the level to the Responses API `reasoning.effort` parameter.
+        // The Responses API rejects the suffixed alias; sending reasoning to
+        // a non-reasoning model returns HTTP 400, so only OpenAiEffort modes
+        // set it.
+        let parsed = crate::providers::thinking_mode::parse_model_variant(model);
+        let mode = crate::providers::thinking_mode::resolve_thinking_mode(
+            &parsed.base_model,
+            crate::providers::registry::provider_id::OPENAI,
+        );
+        let reasoning = if mode == crate::providers::thinking_mode::ThinkingMode::OpenAiEffort {
+            crate::providers::thinking_mode::openai_effort(parsed.level)
+                .map(|effort| serde_json::json!({ "effort": effort }))
+        } else {
+            None
+        };
+
         ResponsesRequest {
-            model: model.to_string(),
+            model: parsed.base_model,
             input,
             instructions,
             tools: converted_tools,
             tool_choice,
             max_output_tokens: Some(max_tokens),
             temperature: None,
+            reasoning,
             store: false,
             stream,
         }
@@ -106,5 +124,40 @@ impl OpenAIResponsesClient {
             404 => ProviderError::ModelNotFound(message),
             _ => ProviderError::RequestFailed(format!("HTTP {}: {}", status, message)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_responses_request_strips_suffix_and_sets_reasoning() {
+        let req = OpenAIResponsesClient::build_responses_request(
+            &[],
+            None,
+            "gpt-5.5-high",
+            1024,
+            0.0,
+            false,
+        );
+        assert_eq!(req.model, "gpt-5.5");
+        assert_eq!(req.reasoning.as_ref().unwrap()["effort"], "high");
+    }
+
+    #[test]
+    fn build_responses_request_default_omits_reasoning() {
+        let req =
+            OpenAIResponsesClient::build_responses_request(&[], None, "gpt-5.5", 1024, 0.0, false);
+        assert_eq!(req.model, "gpt-5.5");
+        assert!(req.reasoning.is_none());
+    }
+
+    #[test]
+    fn build_responses_request_non_reasoning_omits_reasoning() {
+        let req =
+            OpenAIResponsesClient::build_responses_request(&[], None, "gpt-4o", 1024, 0.0, false);
+        assert_eq!(req.model, "gpt-4o");
+        assert!(req.reasoning.is_none());
     }
 }

@@ -258,6 +258,222 @@ pub async fn dispatch_subagent_cannot_spawn_subagent(cfg: &Config) -> bool {
     )
 }
 
+/// Subagent-completion push-wake: a background subagent that finishes while
+/// its parent is idle must wake the parent's turn loop so the result is
+/// consumed — without this, the parent silently never continues. Mirrors
+/// Claude Code's task-notification → idle-queue-processor wake.
+///
+/// Flow:
+///   turn 1 (no_cleanup): parent launches an Explore subagent with
+///     `background:true` and is instructed to END ITS TURN IMMEDIATELY so it
+///     goes idle while the worker is still running.
+///   wait: poll the parent transcript. The production
+///     `SubagentCompletionWakeHook` (installed in lib.rs) fires when the
+///     worker terminates and resumes the parent via
+///     `send_message_impl_for_subagent_wake`. The resumed turn carries the
+///     Background Jobs reminder with the completed worker's unread output, so
+///     the parent's message count grows AFTER the HTTP call returned.
+///
+/// Assertions:
+///   - turn 1 actually dispatched a background subagent (tool_calls has
+///     `agent`), proving the worker path ran.
+///   - the parent transcript GROWS after going idle (the auto-woken turn),
+///     proving the push-wake fired without any second user message.
+pub async fn subagent_completion_wakes_parent(cfg: &Config) -> bool {
+    let session_id = format!("{}-wake-parent", cfg.session_prefix);
+    let project = crate::sde::tmp_workspace_path("wake-parent");
+
+    // Turn 1: launch a background subagent, then stop the turn immediately.
+    let opts = harness::SdeMessageOpts {
+        no_cleanup: true,
+        ..Default::default()
+    };
+    let turn1 = harness::send_sde_message_with_opts(
+        cfg,
+        "Use the `agent` tool with agent_id=\"builtin:explore\" and background=true \
+         to launch ONE background subagent whose prompt is: \"List the files in the \
+         repository root and report what you find.\" \
+         As soon as the agent tool returns the launch confirmation, STOP and END YOUR \
+         TURN IMMEDIATELY with a one-sentence acknowledgement. Do NOT call await_output, \
+         do NOT wait for the subagent, do NOT do any other work this turn.",
+        &session_id,
+        "build",
+        &project,
+        &opts,
+    )
+    .await;
+
+    let turn1 = match turn1 {
+        Err(err) => return harness::print_error("Subagent completion wakes idle parent", &err),
+        Ok(resp) => resp,
+    };
+
+    let launched_background = harness::assert_sde_tool_used(&turn1, "agent");
+
+    // Snapshot the parent's message count right after it went idle.
+    let baseline = harness::fetch_transcript(cfg, &session_id)
+        .await
+        .map(|t| t.messages.len())
+        .unwrap_or(0);
+
+    // Poll for the auto-woken turn: the worker finishes within a few seconds,
+    // the wake hook resumes the parent, and its transcript grows.
+    //
+    // CRITICAL (anti-false-positive): a resume that 400s on assistant-prefill
+    // does NOT append to `load_llm_history` (failed turns aren't persisted as
+    // LLM rows), so a bare "len grew" check is necessary but not sufficient.
+    // We additionally require the woken turn to END with a non-empty
+    // **assistant** message — proving the resumed turn actually produced model
+    // output instead of erroring. This is exactly the gap that let the earlier
+    // version pass while the real app 400'd.
+    let mut grew_to = baseline;
+    let mut woke = false;
+    let mut produced_assistant = false;
+    for _ in 0..40 {
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        if let Ok(snap) = harness::fetch_transcript(cfg, &session_id).await {
+            if snap.messages.len() > baseline {
+                grew_to = snap.messages.len();
+                woke = true;
+                produced_assistant = snap.messages.iter().rev().any(|m| {
+                    m.get("role").and_then(|v| v.as_str()) == Some("assistant")
+                        && m.get("content")
+                            .and_then(|v| v.as_str())
+                            .map(|s| !s.trim().is_empty())
+                            .unwrap_or(false)
+                });
+                if produced_assistant {
+                    break;
+                }
+            }
+        }
+    }
+
+    let _ = harness::cleanup_sde_session(cfg, &session_id).await;
+
+    harness::print_result(
+        "Subagent completion wakes idle parent",
+        &format!(
+            "turn1 tools={:?}, baseline_msgs={}, grew_to={}, produced_assistant={}",
+            turn1.tool_calls, baseline, grew_to, produced_assistant
+        ),
+        &[
+            (
+                "Turn 1 dispatched a background subagent (agent tool)",
+                launched_background,
+            ),
+            ("Parent had a transcript after going idle", baseline > 0),
+            (
+                "Parent was auto-woken (transcript grew with no new user message)",
+                woke,
+            ),
+            (
+                "Woken turn produced a real assistant response (no prefill 400)",
+                produced_assistant,
+            ),
+        ],
+    )
+}
+
+/// Wake-race close: the parent launches a background subagent, polls ONCE
+/// with `await_output` (which returns `running`), then ends its turn — and the
+/// worker finishes a moment later, while the parent is still mid-turn. The
+/// completion push is suppressed by `should_wake_parent`'s running gate, so if
+/// nothing re-fired the wake once the turn ended, the parent would silently
+/// never consume the result.
+///
+/// The fix is the turn-end re-check in `finalize_session`: it re-invokes the
+/// subagent-wake coordinator, which atomically claims the unconsumed result
+/// (`claim_subagent_wake_for_session`) and resumes the now-idle parent. This
+/// scenario drives the poll-then-stop path and asserts the parent still
+/// resumes.
+pub async fn subagent_wake_race_after_poll(cfg: &Config) -> bool {
+    let session_id = format!("{}-wake-race", cfg.session_prefix);
+    let project = crate::sde::tmp_workspace_path("wake-race");
+
+    let opts = harness::SdeMessageOpts {
+        no_cleanup: true,
+        ..Default::default()
+    };
+    // Mirror the real session: launch in background, poll progress ONCE,
+    // then stop — inviting the race where the worker finishes during this
+    // same turn.
+    let turn1 = harness::send_sde_message_with_opts(
+        cfg,
+        "Use the `agent` tool with agent_id=\"builtin:explore\" and background=true \
+         to launch ONE background subagent whose prompt is: \"List the files in the \
+         repository root and summarize the structure.\" \
+         After it launches, call await_output EXACTLY ONCE to peek at its progress, \
+         then END YOUR TURN with a one-sentence status — do NOT loop on await_output, \
+         do NOT wait for completion.",
+        &session_id,
+        "build",
+        &project,
+        &opts,
+    )
+    .await;
+
+    let turn1 = match turn1 {
+        Err(err) => return harness::print_error("Subagent wake race (poll-then-stop)", &err),
+        Ok(resp) => resp,
+    };
+
+    let launched_background = harness::assert_sde_tool_used(&turn1, "agent");
+
+    let baseline = harness::fetch_transcript(cfg, &session_id)
+        .await
+        .map(|t| t.messages.len())
+        .unwrap_or(0);
+
+    let mut grew_to = baseline;
+    let mut woke = false;
+    let mut produced_assistant = false;
+    for _ in 0..40 {
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        if let Ok(snap) = harness::fetch_transcript(cfg, &session_id).await {
+            if snap.messages.len() > baseline {
+                grew_to = snap.messages.len();
+                woke = true;
+                produced_assistant = snap.messages.iter().rev().any(|m| {
+                    m.get("role").and_then(|v| v.as_str()) == Some("assistant")
+                        && m.get("content")
+                            .and_then(|v| v.as_str())
+                            .map(|s| !s.trim().is_empty())
+                            .unwrap_or(false)
+                });
+                if produced_assistant {
+                    break;
+                }
+            }
+        }
+    }
+
+    let _ = harness::cleanup_sde_session(cfg, &session_id).await;
+
+    harness::print_result(
+        "Subagent wake race (poll-then-stop)",
+        &format!(
+            "turn1 tools={:?}, baseline_msgs={}, grew_to={}, produced_assistant={}",
+            turn1.tool_calls, baseline, grew_to, produced_assistant
+        ),
+        &[
+            (
+                "Turn 1 dispatched a background subagent (agent tool)",
+                launched_background,
+            ),
+            ("Parent had a transcript after the turn", baseline > 0),
+            (
+                "Parent self-woke after the race (transcript grew, no new user message)",
+                woke,
+            ),
+            (
+                "Woken turn produced a real assistant response (no prefill 400)",
+                produced_assistant,
+            ),
+        ],
+    )
+}
+
 /// Background-launch message contract: when a subagent is launched with
 /// `background:true`, the tool_result handed back to the parent agent must
 /// (a) carry the subagent's session_id (the DB key), (b) hand the parent a

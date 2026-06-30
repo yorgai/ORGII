@@ -15,7 +15,10 @@ import { atom } from "jotai";
 
 import { derivedSnapshotAtom } from "../core/atoms/events";
 import { isInteractiveTool } from "../core/interactiveTools";
-import { hasLiveRuntimeResourceInLatestTurn } from "../core/runningEventGate";
+import {
+  hasLiveRuntimeResourceInLatestTurn,
+  hasRunningAwaitWaitForInLatestTurn,
+} from "../core/runningEventGate";
 
 /**
  * True when the latest agent turn has at least one live runtime resource
@@ -28,6 +31,20 @@ export const globalAnyRunningAtom = atom((get) => {
   return hasLiveRuntimeResourceInLatestTurn(snapshot.chatEvents);
 });
 globalAnyRunningAtom.debugLabel = "planning/globalAnyRunning";
+
+/**
+ * True when the latest turn has a still-running `await_output` wait_for call.
+ * Its own live "Waiting {countdown} for …" title already conveys activity, so
+ * the planning footer is suppressed in this window to avoid two stacked
+ * waiting indicators. Changes only when the wait_for starts/ends.
+ */
+export const globalHasRunningAwaitWaitForAtom = atom((get) => {
+  const snapshot = get(derivedSnapshotAtom);
+  if (!snapshot || !("chatEvents" in snapshot)) return false;
+  return hasRunningAwaitWaitForInLatestTurn(snapshot.chatEvents);
+});
+globalHasRunningAwaitWaitForAtom.debugLabel =
+  "planning/globalHasRunningAwaitWaitFor";
 
 /**
  * True when there is a pending interactive tool call awaiting user input.

@@ -227,6 +227,7 @@ export function materializeSnapshot(
       eventIndex: buildEventIndex(events),
       chatEventCount: delta.chatEventCount,
       hasRunningEvent: delta.hasRunningEvent,
+      latestCanvasPreview: delta.latestCanvasPreview,
     },
     cache
   );

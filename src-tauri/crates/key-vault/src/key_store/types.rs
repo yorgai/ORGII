@@ -370,6 +370,11 @@ pub struct ModelVariant {
     pub reasoning: Option<String>,
     #[serde(default)]
     pub fast: bool,
+    /// Context window (tokens) reported by this provider's `/v1/models`
+    /// endpoint, overriding the static `FAMILY_RULES` default at runtime.
+    /// `None` when the provider did not report one (official OpenAI/Anthropic).
+    #[serde(default)]
+    pub context_window: Option<u64>,
 }
 
 /// A user-chosen default variant for one base model family. `base_model` is

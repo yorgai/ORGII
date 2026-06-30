@@ -1,5 +1,9 @@
+import type { KanbanTask } from "@src/features/KanbanBoard";
 import type { StatusCounts } from "@src/modules/ProjectManager/WorkItems/components/WorkItemsPageHeader";
-import { WORK_ITEM_STATUS_OPTIONS } from "@src/modules/ProjectManager/config/manage";
+import {
+  GITHUB_ISSUE_STATUS_OPTIONS,
+  WORK_ITEM_STATUS_OPTIONS,
+} from "@src/modules/ProjectManager/config/manage";
 import type { DropdownOption } from "@src/types/core/shared";
 import type { WorkItem, WorkItemStatus } from "@src/types/core/workItem";
 
@@ -49,12 +53,29 @@ export function filterWorkItemsByStatus<TWorkItem extends WorkItem>(
 
 export function groupWorkItemsByStatus<TWorkItem extends WorkItem>(
   workItems: TWorkItem[],
-  options: readonly DropdownOption[] = WORK_ITEM_STATUS_OPTIONS
+  options?: readonly DropdownOption[]
 ): WorkItemGroup<TWorkItem>[] {
   const activeItems = workItems.filter(
     (workItem) => !isDeletedWorkItem(workItem)
   );
-  return options.map((option) => ({
+  const hasGitHubIssueStatuses = activeItems.some((workItem) =>
+    GITHUB_ISSUE_STATUS_OPTIONS.some(
+      (option) => option.value === getWorkItemStatus(workItem)
+    )
+  );
+  const hasWorkflowStatuses = activeItems.some((workItem) =>
+    WORK_ITEM_STATUS_OPTIONS.some(
+      (option) => option.value === getWorkItemStatus(workItem)
+    )
+  );
+  const statusOptions =
+    options ??
+    (hasGitHubIssueStatuses
+      ? hasWorkflowStatuses
+        ? [...GITHUB_ISSUE_STATUS_OPTIONS, ...WORK_ITEM_STATUS_OPTIONS]
+        : GITHUB_ISSUE_STATUS_OPTIONS
+      : WORK_ITEM_STATUS_OPTIONS);
+  return statusOptions.map((option) => ({
     status: option.value as WorkItemStatus,
     config: option,
     items: activeItems.filter(
@@ -87,6 +108,24 @@ export function groupWorkItemsForStatusFilter<TWorkItem extends WorkItem>(
 
   const mappedStatus = FILTER_TO_STATUS[statusFilter];
   return groups.filter((group) => group.status === mappedStatus);
+}
+
+export function workItemToKanbanTask(workItem: WorkItem): KanbanTask {
+  return {
+    id: workItem.session_id,
+    title: workItem.name,
+    description: workItem.spec,
+    status: getWorkItemStatus(workItem) as KanbanTask["status"],
+    priority: workItem.priority as KanbanTask["priority"],
+    assignee: workItem.assignee?.name,
+    labels: workItem.labels,
+  };
+}
+
+export function workItemsToKanbanTasks(workItems: WorkItem[]): KanbanTask[] {
+  return workItems
+    .filter((workItem) => !isDeletedWorkItem(workItem))
+    .map(workItemToKanbanTask);
 }
 
 export function countWorkItemsByStatus(workItems: WorkItem[]): StatusCounts {

@@ -101,12 +101,27 @@ pub(super) fn parse_tail_lines(params: &Value) -> usize {
         .unwrap_or(DEFAULT_TAIL_LINES)
 }
 
-pub(super) fn lookup_job(
+/// Resolve a handle's status + kind, consulting the tombstone map for jobs
+/// that already finished and were reaped from the live registry.
+///
+/// Three outcomes (see [`registry::resolve_status_with_tombstone`]):
+/// - live job → its real `(status, kind)`.
+/// - reaped-but-tombstoned job → its real terminal `(status, kind)` — a precise
+///   "it finished" answer (kind is the actual recorded kind, not a guess).
+/// - genuinely unknown handle → `Err`, so the caller reports a real error
+///   instead of pretending a typo'd handle "completed".
+///
+/// This replaces the earlier lenient resolver that synthesised a `Completed`
+/// status and *guessed* the kind from the handle shape, which could not tell a
+/// just-reaped job from a mistyped handle.
+pub(super) fn resolve_job_or_unknown(
     handle: &str,
 ) -> Result<(registry::JobStatus, registry::JobKind), ToolError> {
-    registry::get_status(handle).ok_or_else(|| {
+    registry::resolve_status_with_tombstone(handle).ok_or_else(|| {
         ToolError::ExecutionFailed(format!(
-            "No background job with handle \"{}\". It may have already completed and been cleaned up.",
+            "No background job with handle \"{}\". The handle is unknown — it was never \
+             registered, or it finished long enough ago that its record has expired. \
+             Check the handle, or call await_output(command=\"list\") to see active jobs.",
             handle
         ))
     })

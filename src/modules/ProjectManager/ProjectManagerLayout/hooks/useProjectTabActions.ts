@@ -365,11 +365,12 @@ export function useProjectTabActions({
           workItemId,
           workItemName,
           projectSlug,
-          pendingUpdates
+          pendingUpdates,
+          activeTab?.id
         )
       );
     },
-    [openTab]
+    [activeTab?.id, openTab]
   );
 
   const handleOpenChatSession = useCallback(

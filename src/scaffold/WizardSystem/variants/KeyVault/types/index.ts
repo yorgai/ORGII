@@ -57,6 +57,8 @@ export interface WizardData {
   validated: boolean;
   /** Auto-detected models returned by the validator (e.g. /v1/models). */
   available_models: string[];
+  /** Provider-reported context windows keyed by model id. */
+  model_context_lengths: Record<string, number>;
   /** Models the user has enabled (checked) from the detected list */
   enabled_models: string[];
   /** Models the user has explicitly added on top of auto-detection.

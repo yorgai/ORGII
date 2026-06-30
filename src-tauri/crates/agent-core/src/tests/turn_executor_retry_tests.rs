@@ -209,6 +209,8 @@ fn empty_policy() -> ResolvedToolPolicy {
 fn test_config() -> TurnConfig {
     TurnConfig {
         model: "mock-model".to_string(),
+        account_id: None,
+        context_window_override: None,
         max_iterations: Some(50),
         max_tokens: 1024,
         temperature: 0.0,

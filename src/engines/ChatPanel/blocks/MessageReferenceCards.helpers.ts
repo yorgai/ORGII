@@ -5,7 +5,6 @@ import { createSessionIdTextPattern } from "@src/util/session/sessionDispatch";
 import { normalizeHttpUrlCandidate } from "@src/util/url/validation";
 
 const WEB_URL_PATTERN = /https?:\/\/[^\s<>"'`\])}]+/gi;
-const TRAILING_REFERENCE_PUNCTUATION_PATTERN = /[.,;:!?]+$/;
 const MAX_REFERENCE_CARDS = 4;
 
 export type MessageReferenceKind =
@@ -42,10 +41,12 @@ function stripFencedCodeBlocks(content: string): string {
     .join("\n");
 }
 
+function stripInlineCodeSpans(content: string): string {
+  return content.replace(/(`+)[^\n]*?\1/g, "");
+}
+
 function normalizeUrlCandidate(candidate: string): string | null {
-  return normalizeHttpUrlCandidate(
-    candidate.replace(TRAILING_REFERENCE_PUNCTUATION_PATTERN, "")
-  );
+  return normalizeHttpUrlCandidate(candidate, { stripTextBoundaries: true });
 }
 
 function isUrlCitedInParentheses(
@@ -155,7 +156,9 @@ export function extractMessageReferences(
   content: string,
   excludeUrls?: ReadonlySet<string>
 ): MessageReferenceItem[] {
-  const searchableContent = stripFencedCodeBlocks(content);
+  const searchableContent = stripInlineCodeSpans(
+    stripFencedCodeBlocks(content)
+  );
   const references: MessageReferenceItem[] = [];
   const seen = new Set<string>();
 

@@ -69,6 +69,52 @@
     },
     "viewProjects": "Смотреть Projects"
   },
+  "githubIssuesImport": {
+    "title": "Импорт GitHub Issues",
+    "menuLabel": "Импорт GitHub Issues",
+    "createTarget": "GitHub Issues Project",
+    "heading": "Создать Project из GitHub Issues",
+    "description": "Выберите репозиторий GitHub, создайте ORGII Project и синхронизируйте GitHub Issues как work items.",
+    "importButton": "Импортировать GitHub Issues",
+    "projectDescription": "Синхронизировано из GitHub Issues в {{owner}}/{{repo}}.",
+    "fields": {
+      "projectName": "Название Project",
+      "repo": "Репозиторий GitHub",
+      "connection": "Подключение GitHub"
+    },
+    "placeholders": {
+      "projectName": "ORGII GitHub Issues",
+      "repo": "owner/repo или https://github.com/owner/repo",
+      "connection": "Выберите подключение GitHub"
+    },
+    "loadingConnections": "Загрузка подключений GitHub...",
+    "noConnectionTitle": "Подключение GitHub не найдено",
+    "noConnectionDescription": "Сначала добавьте подключение GitHub в Integrations, затем вернитесь сюда, чтобы импортировать GitHub Issues.",
+    "linkedRepoHint": "Этот Project также будет связан с текущим Workspace repo: {{repoName}}.",
+    "createdTitle": "{{name}} готов",
+    "createdDescription": "ORGII импортирует GitHub Issues из {{owner}}/{{repo}}. Вы можете продолжать работу, пока идет синхронизация.",
+    "createdDescriptionFallback": "ORGII импортирует GitHub Issues. Вы можете продолжать работу, пока идет синхронизация.",
+    "errors": {
+      "invalidRepo": "Используйте owner/repo или URL репозитория GitHub."
+    },
+    "importStatus": {
+      "title": "Статус импорта",
+      "pendingDescription": "Worker импорта поставлен в очередь и скоро начнет работу.",
+      "runningDescription": "GitHub Issues импортируются в этот Project как work items.",
+      "completedDescription": "Все доступные GitHub Issues импортированы.",
+      "failedDescription": "Worker импорта сообщил об ошибке. Повторить можно в настройках синхронизации Project.",
+      "cancelledDescription": "Импорт был отменен до завершения импорта всех GitHub Issues.",
+      "progressWithTotal": "Импортировано {{count}} / {{total}} GitHub Issues",
+      "progressNoTotal": "Импортировано {{count}} GitHub Issues",
+      "state": {
+        "pending": "Ожидание",
+        "running": "Выполняется",
+        "completed": "Завершено",
+        "failed": "Ошибка",
+        "cancelled": "Отменено"
+      }
+    }
+  },
   "orgs": {
     "yourOrgs": "Ваши организации",
     "sectionTitle": "Организации",
@@ -226,7 +272,8 @@
       "inProgress": "В работе",
       "inReview": "На проверке",
       "done": "Готово",
-      "cancelled": "Отменено"
+      "cancelled": "Отменено",
+      "duplicate": "Дубликат"
     },
     "statusLabels": {
       "backlog": "Backlog",
@@ -235,7 +282,9 @@
       "in_review": "На проверке",
       "completed": "Готово",
       "cancelled": "Отменено",
-      "duplicate": "Дубликат"
+      "duplicate": "Дубликат",
+      "open": "Открыто",
+      "closed": "Закрыто"
     },
     "priorityLabels": {
       "none": "Без приоритета",

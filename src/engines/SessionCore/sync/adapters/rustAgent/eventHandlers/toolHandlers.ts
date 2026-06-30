@@ -92,7 +92,7 @@ export function handleToolCall(
   // full args payload is available — tool_result only carries a 4000-char
   // preview of the result string, not the original args.
   if (event.tool === "render_inline_canvas" && event.args) {
-    dispatchCanvasInlineEventFromArgs(sessionId, event.args);
+    dispatchCanvasInlineEventFromArgs(sessionId, event.args, toolCallId);
   }
 }
 
@@ -195,6 +195,7 @@ interface CanvasInlineDispatchPayload {
   url?: string;
   title?: string;
   streaming?: boolean;
+  eventId?: string;
 }
 
 /**
@@ -205,7 +206,8 @@ interface CanvasInlineDispatchPayload {
  */
 function dispatchCanvasInlineEventFromArgs(
   sessionId: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  toolCallId: string
 ): void {
   const mode = isCanvasInlineMode(args.mode) ? args.mode : "html";
   const payload: CanvasInlineDispatchPayload = {
@@ -214,6 +216,7 @@ function dispatchCanvasInlineEventFromArgs(
     url: typeof args.url === "string" ? args.url : undefined,
     title: typeof args.title === "string" ? args.title : undefined,
     streaming: typeof args.streaming === "boolean" ? args.streaming : undefined,
+    eventId: `tool-call-${toolCallId}`,
   };
 
   openInSimulatorCanvas(sessionId, payload);
