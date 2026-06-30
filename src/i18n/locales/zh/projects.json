@@ -12,6 +12,9 @@
       "project": "按项目",
       "status": "按状态",
       "priority": "按优先级",
+      "person": "按人员",
+      "assignedTo": "按指派对象",
+      "createdBy": "按创建者",
       "targetDate": "按目标日期"
     },
     "source": {
@@ -273,7 +276,9 @@
       "inReview": "审核中",
       "done": "完成",
       "cancelled": "已取消",
-      "duplicate": "重复"
+      "duplicate": "重复",
+      "open": "开放",
+      "closed": "已关闭"
     },
     "statusLabels": {
       "backlog": "Backlog",

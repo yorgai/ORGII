@@ -13,7 +13,7 @@
 
 use std::collections::HashMap;
 
-use rusqlite::{params, OptionalExtension};
+use rusqlite::{OptionalExtension, params};
 
 use super::super::helpers::{conn, map_db};
 use super::super::projects::read_project_scoped;
@@ -143,17 +143,14 @@ pub(super) fn enrich_work_item(
 ) -> EnrichedWorkItem {
     let fm = &item.frontmatter;
 
-    let assignee = fm.assignee.as_ref().map(|assignee_id| {
-        let member = member_map.get(assignee_id);
-        ResolvedPerson {
-            id: assignee_id.clone(),
-            name: member
-                .map(|entry| entry.name.clone())
-                .unwrap_or_else(|| assignee_id.clone()),
-            avatar: member.and_then(|entry| entry.avatar.clone()),
-            color: FALLBACK_MEMBER_COLOR.to_string(),
-        }
-    });
+    let assignee = fm
+        .assignee
+        .as_ref()
+        .map(|assignee_id| resolve_person(assignee_id, member_map));
+    let created_by_person = fm
+        .created_by
+        .as_ref()
+        .map(|created_by_id| resolve_person(created_by_id, member_map));
 
     let labels: Vec<ResolvedLabel> = fm
         .labels
@@ -210,6 +207,7 @@ pub(super) fn enrich_work_item(
         updated_at: fm.updated_at.clone(),
         deleted_at: fm.deleted_at.clone(),
         created_by: fm.created_by.clone(),
+        created_by_person,
 
         todos: fm.todos.clone(),
         comments: fm.comments.clone(),
@@ -233,6 +231,18 @@ pub(super) fn enrich_work_item(
 // `read_all_work_items_enriched`, `update_work_item_partial_enriched`,
 // and the batch ops — all of which live in this crate.
 // ---------------------------------------------------------------------
+
+fn resolve_person(id: &str, member_map: &HashMap<String, &MemberEntry>) -> ResolvedPerson {
+    let member = member_map.get(id);
+    ResolvedPerson {
+        id: id.to_string(),
+        name: member
+            .map(|entry| entry.name.clone())
+            .unwrap_or_else(|| id.to_string()),
+        avatar: member.and_then(|entry| entry.avatar.clone()),
+        color: FALLBACK_MEMBER_COLOR.to_string(),
+    }
+}
 
 fn read_project_name_by_id(project_id: &str) -> Result<String, String> {
     let connection = conn()?;

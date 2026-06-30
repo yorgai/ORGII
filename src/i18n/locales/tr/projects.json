@@ -12,6 +12,9 @@
       "project": "Projeye göre",
       "status": "Duruma göre",
       "priority": "Önceliğe göre",
+      "person": "Kişiye göre",
+      "assignedTo": "Atanana göre",
+      "createdBy": "Oluşturan göre",
       "targetDate": "Hedef tarihe göre"
     },
     "source": {
@@ -273,7 +276,9 @@
       "inReview": "İncelemede",
       "done": "Tamamlandı",
       "cancelled": "İptal edildi",
-      "duplicate": "Yinelenen"
+      "duplicate": "Yinelenen",
+      "open": "Açık",
+      "closed": "Kapalı"
     },
     "statusLabels": {
       "backlog": "Backlog",

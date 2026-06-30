@@ -40,6 +40,10 @@ const WORK_ITEM_STATUS_TO_FILE: Record<WorkItemStatus, string> = {
   closed: "closed",
 };
 
+function isWorkItemStatus(status: TaskStatus): status is WorkItemStatus {
+  return status in WORK_ITEM_STATUS_TO_FILE;
+}
+
 interface UseWorkItemsHandlersParams {
   selectedWorkItemId: string | null;
   showProperties: boolean;
@@ -170,6 +174,7 @@ export function useWorkItemsHandlers({
 
   const handleKanbanTaskMove = useCallback(
     (taskId: string, newStatus: TaskStatus) => {
+      if (!isWorkItemStatus(newStatus)) return;
       handleUpdate(taskId, {
         workItemStatus: newStatus,
       });
@@ -194,6 +199,7 @@ export function useWorkItemsHandlers({
 
   const handleAddTask = useCallback(
     async (status: TaskStatus) => {
+      if (!isWorkItemStatus(status)) return;
       await createAndSelectItem(WORK_ITEM_STATUS_TO_FILE[status]);
     },
     [createAndSelectItem]

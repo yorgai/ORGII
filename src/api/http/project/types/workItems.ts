@@ -267,6 +267,7 @@ export interface EnrichedWorkItem {
   updatedAt: string;
   deletedAt?: string;
   createdBy?: string;
+  createdByPerson?: ResolvedPerson;
 
   todos: TodoEntry[];
   comments: CommentEntry[];

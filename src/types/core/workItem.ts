@@ -200,6 +200,7 @@ export interface WorkItem extends WorkItemBase {
   priority?: WorkItemPriority;
   assignee?: Person;
   assigneeType?: string;
+  createdBy?: Person;
   lead?: Person[];
   members?: Person[];
   labels?: WorkItemLabel[];

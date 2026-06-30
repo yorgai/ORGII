@@ -12,6 +12,9 @@
       "project": "Nach Projekt",
       "status": "Nach Status",
       "priority": "Nach Priorität",
+      "person": "Nach Person",
+      "assignedTo": "Zugewiesen an",
+      "createdBy": "Erstellt von",
       "targetDate": "Nach Zieldatum"
     },
     "source": {
@@ -273,7 +276,9 @@
       "inReview": "In Überprüfung",
       "done": "Erledigt",
       "cancelled": "Abgebrochen",
-      "duplicate": "Duplikat"
+      "duplicate": "Duplikat",
+      "open": "Offen",
+      "closed": "Geschlossen"
     },
     "statusLabels": {
       "backlog": "Backlog",
