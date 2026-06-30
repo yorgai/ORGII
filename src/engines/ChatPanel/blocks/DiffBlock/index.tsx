@@ -31,6 +31,7 @@ import { getFileName } from "@src/util/file/pathUtils";
 import { useChatHistoryDisplayMode } from "../../ChatHistory/chatDisplayModeContext";
 import ChatCodeBlock from "../CodeBlock";
 import EventFileHoverPreview from "../EventFileHoverPreview";
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
@@ -210,6 +211,7 @@ interface CompactSegmentViewProps {
   status: EventStatus;
   isLoading: boolean;
   isNewFile?: boolean;
+  toolUsage?: UniversalEventProps["toolUsage"];
 }
 
 const CompactSegmentView: React.FC<CompactSegmentViewProps> = ({
@@ -218,6 +220,7 @@ const CompactSegmentView: React.FC<CompactSegmentViewProps> = ({
   status,
   isLoading,
   isNewFile,
+  toolUsage,
 }) => {
   const { t } = useTranslation("sessions");
   const displayTitle =
@@ -260,6 +263,9 @@ const CompactSegmentView: React.FC<CompactSegmentViewProps> = ({
         onNavigate={handleLocate}
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
+        rightContent={
+          toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+        }
       >
         <EventBlockHeaderIcon
           icon={editIcon}
@@ -349,7 +355,15 @@ const DeleteFileView: React.FC<DiffBlockProps> = (props) => {
     });
     const isLoading = props.showActiveEventPainting === true;
     return (
-      <EventBlockHeader isCollapsed withHover={false}>
+      <EventBlockHeader
+        isCollapsed
+        withHover={false}
+        rightContent={
+          props.toolUsage ? (
+            <ToolUsageBadge usage={props.toolUsage} />
+          ) : undefined
+        }
+      >
         <EventBlockHeaderIcon icon={deleteIcon} isLoading={isLoading} />
         <EventBlockHeaderTitle isLoading={isLoading}>
           {title}
@@ -424,6 +438,11 @@ const EditView: React.FC<EditViewProps> = (props) => {
           onNavigate={handleLocate}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
+          rightContent={
+            props.toolUsage ? (
+              <ToolUsageBadge usage={props.toolUsage} />
+            ) : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={editIcon}
@@ -454,7 +473,15 @@ const EditView: React.FC<EditViewProps> = (props) => {
 
   if (status === "running" && !hasStreamingContent(segments)) {
     return (
-      <EventBlockHeader isCollapsed withHover={false}>
+      <EventBlockHeader
+        isCollapsed
+        withHover={false}
+        rightContent={
+          props.toolUsage ? (
+            <ToolUsageBadge usage={props.toolUsage} />
+          ) : undefined
+        }
+      >
         <EventBlockHeaderIcon icon={editIcon} isLoading={isLoading} />
         <EventBlockHeaderTitle isLoading={isLoading}>
           {title}
@@ -474,6 +501,7 @@ const EditView: React.FC<EditViewProps> = (props) => {
             status={status}
             isLoading={isLoading}
             isNewFile={isNewFile}
+            toolUsage={segmentIndex === 0 ? props.toolUsage : undefined}
           />
         ))}
       </div>

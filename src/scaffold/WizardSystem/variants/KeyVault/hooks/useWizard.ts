@@ -12,7 +12,7 @@ import {
   CLI_AGENT,
   type SaveKeyRequest,
 } from "@src/api/tauri/rpc/schemas/validation";
-import type { ModelType } from "@src/api/types/keys";
+import { LOCAL_MODEL_PROVIDER, type ModelType } from "@src/api/types/keys";
 import { isPlaceholderModelName } from "@src/components/ModelTable/unifiedCustomFlatExtras";
 import { useUndoableState } from "@src/hooks/ui";
 import { parseModelVariants } from "@src/util/modelVariants";
@@ -136,9 +136,9 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
       Boolean(oauthRefreshToken || oauthIdToken || oauthAccessTokenFromEnv);
 
     const isCursorCli = data.agent_type === CLI_AGENT.CURSOR;
-    const rawApiKeyForRequest = cleanInput(
-      data.extracted_api_key || data.raw_key_input
-    );
+    const rawApiKeyForRequest =
+      cleanInput(data.extracted_api_key || data.raw_key_input) ??
+      (data.agent_type === LOCAL_MODEL_PROVIDER ? "local-model" : undefined);
     const apiKeyForRequest =
       (isCursorCli || !isOAuth) && rawApiKeyForRequest
         ? rawApiKeyForRequest

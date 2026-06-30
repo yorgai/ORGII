@@ -12,16 +12,21 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CLI_AGENT } from "@src/api/tauri/rpc/schemas/validation";
-import type { CliAgentType, ModelType } from "@src/api/types/keys";
+import { LOCAL_MODEL_PROVIDER, type ModelType } from "@src/api/types/keys";
 import type { SelectionGridOption } from "@src/scaffold/WizardSystem/primitives";
 
 import {
-  buildProviderGridOptions,
+  buildProviderGridOptionGroups,
   buildProviderSelectOptions,
   buildVariantGridOptions,
   buildVariantSelectOptions,
 } from "../components/providerOptions";
-import { type UnifiedProvider, useProviderRegistry } from "../config";
+import {
+  type UnifiedProvider,
+  getLocalProviderKeyForRuntime,
+  getLocalRuntimeForProviderKey,
+  useProviderRegistry,
+} from "../config";
 import type { ApiSetupProps } from "../types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -37,7 +42,7 @@ export interface UseProviderSelectionReturn {
   selectedProviderKey: string | null;
   selectedProvider: UnifiedProvider | undefined;
   hasMultipleVariants: boolean;
-  providerGridOptions: ReturnType<typeof buildProviderGridOptions>;
+  providerGridOptionGroups: ReturnType<typeof buildProviderGridOptionGroups>;
   providerSelectOptions: ReturnType<typeof buildProviderSelectOptions>;
   variantGridOptions: ReturnType<typeof buildVariantGridOptions>;
   variantSelectOptions: ReturnType<typeof buildVariantSelectOptions>;
@@ -64,9 +69,16 @@ export function useProviderSelection({
   const [selectedProviderKeyOverride, setSelectedProviderKeyOverride] =
     useState<string | null>(null);
 
-  const selectedProviderKey = data.agent_type
-    ? (modelTypeToProviderKey[data.agent_type] ?? null)
-    : selectedProviderKeyOverride;
+  const selectedProviderKey =
+    data.agent_type === LOCAL_MODEL_PROVIDER
+      ? (getLocalProviderKeyForRuntime(data.setup_method) ??
+        selectedProviderKeyOverride ??
+        getLocalProviderKeyForRuntime("vllm") ??
+        modelTypeToProviderKey[data.agent_type] ??
+        null)
+      : data.agent_type
+        ? (modelTypeToProviderKey[data.agent_type] ?? null)
+        : selectedProviderKeyOverride;
 
   const selectedProvider = useMemo(
     () => unifiedProviders.find((p) => p.key === selectedProviderKey),
@@ -95,14 +107,14 @@ export function useProviderSelection({
   }, [onChange]);
 
   const setAgentType = useCallback(
-    (agentValue: string) => {
-      if (data.agent_type !== agentValue) {
-        const typedAgent = agentValue as CliAgentType;
+    (agentValue: string, localRuntime?: string) => {
+      if (data.agent_type !== agentValue || localRuntime) {
+        const typedModelType = agentValue as ModelType;
         const selectedVariant = selectedProvider?.variants.find(
           (variant) => variant.modelType === agentValue
         );
         onChange({
-          agent_type: typedAgent,
+          agent_type: typedModelType,
           raw_key_input: "",
           cursor_session_token: "",
           oauth_session_token: "",
@@ -116,14 +128,15 @@ export function useProviderSelection({
           extracted_base_url: undefined,
           protocol: selectedVariant?.defaultProtocol,
           setup_method:
-            typedAgent === CLI_AGENT.CURSOR
+            localRuntime ??
+            (typedModelType === CLI_AGENT.CURSOR
               ? "guided"
-              : typedAgent === CLI_AGENT.KIRO
+              : typedModelType === CLI_AGENT.KIRO
                 ? "autodetect"
-                : typedAgent === CLI_AGENT.CLAUDE_CODE ||
-                    typedAgent === CLI_AGENT.CODEX
+                : typedModelType === CLI_AGENT.CLAUDE_CODE ||
+                    typedModelType === CLI_AGENT.CODEX
                   ? "signin"
-                  : undefined,
+                  : undefined),
         });
       }
     },
@@ -136,7 +149,10 @@ export function useProviderSelection({
       if (!provider) return;
       setSelectedProviderKeyOverride(providerKey);
       if (provider.variants.length === 1) {
-        setAgentType(provider.variants[0].modelType);
+        setAgentType(
+          provider.variants[0].modelType,
+          getLocalRuntimeForProviderKey(providerKey)
+        );
       } else {
         resetAgentType();
       }
@@ -159,8 +175,8 @@ export function useProviderSelection({
     [resetAgentType]
   );
 
-  const providerGridOptions = useMemo(
-    () => buildProviderGridOptions(unifiedProviders),
+  const providerGridOptionGroups = useMemo(
+    () => buildProviderGridOptionGroups(unifiedProviders),
     [unifiedProviders]
   );
   const providerSelectOptions = useMemo(
@@ -236,7 +252,7 @@ export function useProviderSelection({
     selectedProviderKey,
     selectedProvider,
     hasMultipleVariants,
-    providerGridOptions,
+    providerGridOptionGroups,
     providerSelectOptions,
     variantGridOptions,
     variantSelectOptions,

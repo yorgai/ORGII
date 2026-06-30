@@ -248,6 +248,69 @@ pub fn init_session_tables(conn: &Connection) -> SqliteResult<()> {
     )
     .ok();
 
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS session_llm_usage_spans (
+            id                         INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id                 TEXT NOT NULL,
+            turn_id                    TEXT NOT NULL,
+            iteration_index            INTEGER NOT NULL,
+            model                      TEXT,
+            account_id                 TEXT,
+            prompt_tokens              INTEGER NOT NULL DEFAULT 0,
+            completion_tokens          INTEGER NOT NULL DEFAULT 0,
+            cache_read_tokens          INTEGER NOT NULL DEFAULT 0,
+            cache_write_tokens         INTEGER NOT NULL DEFAULT 0,
+            total_tokens               INTEGER NOT NULL DEFAULT 0,
+            context_tokens             INTEGER NOT NULL DEFAULT 0,
+            related_tool_call_ids_json TEXT,
+            context_usage_json         TEXT,
+            created_at                 TEXT NOT NULL
+        )",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_slus_session_turn ON session_llm_usage_spans(session_id, turn_id)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_slus_session_iteration ON session_llm_usage_spans(session_id, iteration_index)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS session_tool_usage (
+            id                         INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id                 TEXT NOT NULL,
+            turn_id                    TEXT NOT NULL,
+            event_id                   TEXT NOT NULL,
+            tool_call_id               TEXT NOT NULL,
+            tool_name                  TEXT NOT NULL,
+            iteration_index            INTEGER NOT NULL,
+            decision_completion_tokens INTEGER NOT NULL DEFAULT 0,
+            result_context_tokens      INTEGER NOT NULL DEFAULT 0,
+            followup_completion_tokens INTEGER NOT NULL DEFAULT 0,
+            input_bytes                INTEGER NOT NULL DEFAULT 0,
+            output_bytes               INTEGER NOT NULL DEFAULT 0,
+            attribution_method         TEXT NOT NULL,
+            created_at                 TEXT NOT NULL
+        )",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_stool_session_turn ON session_tool_usage(session_id, turn_id)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_stool_session_call ON session_tool_usage(session_id, tool_call_id)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_stool_session_iteration ON session_tool_usage(session_id, iteration_index)",
+        [],
+    )?;
+
     // ============================================
     // Repository tracking table
     // ============================================
@@ -346,4 +409,41 @@ pub fn init_session_tables(conn: &Connection) -> SqliteResult<()> {
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn index_exists(conn: &Connection, index_name: &str) -> bool {
+        conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?1)",
+            [index_name],
+            |row| row.get::<_, bool>(0),
+        )
+        .expect("query index existence")
+    }
+
+    fn table_exists(conn: &Connection, table_name: &str) -> bool {
+        conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?1)",
+            [table_name],
+            |row| row.get::<_, bool>(0),
+        )
+        .expect("query table existence")
+    }
+
+    #[test]
+    fn init_session_tables_creates_usage_telemetry_tables_and_indexes() {
+        let conn = Connection::open_in_memory().expect("open in-memory sqlite");
+        init_session_tables(&conn).expect("init session schema");
+
+        assert!(table_exists(&conn, "session_llm_usage_spans"));
+        assert!(table_exists(&conn, "session_tool_usage"));
+        assert!(index_exists(&conn, "idx_slus_session_turn"));
+        assert!(index_exists(&conn, "idx_slus_session_iteration"));
+        assert!(index_exists(&conn, "idx_stool_session_turn"));
+        assert!(index_exists(&conn, "idx_stool_session_call"));
+        assert!(index_exists(&conn, "idx_stool_session_iteration"));
+    }
 }

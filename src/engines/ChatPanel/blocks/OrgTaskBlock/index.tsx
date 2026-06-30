@@ -11,6 +11,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { getToolIconComponent } from "@src/config/toolIcons";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 import { PriorityIndicator } from "@src/features/KanbanBoard/utils/priority";
 import { formatSmartDateTime } from "@src/util/data/formatters/date";
 
@@ -19,6 +20,7 @@ import {
   OrgTaskMetaRows,
   OrgTaskOwnerChangedBadge,
 } from "../OrgTaskBadges";
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES,
   EventBlockHeader,
@@ -67,6 +69,7 @@ export interface OrgTaskBlockProps {
   hideHeader?: boolean;
   /** Optional group-chat sender name merged into the task header title. */
   groupSenderName?: string | null;
+  toolUsage?: ToolUsageMetadata;
 }
 
 // ============================================
@@ -285,6 +288,7 @@ const OrgTaskBlock: React.FC<OrgTaskBlockProps> = ({
   timestamp,
   hideHeader = false,
   groupSenderName = null,
+  toolUsage,
 }) => {
   const { t } = useTranslation("sessions");
   const yesterdayLabel = t("common:relativeDate.yesterday", {
@@ -414,6 +418,9 @@ const OrgTaskBlock: React.FC<OrgTaskBlockProps> = ({
         onNavigate={handleLocate}
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
+        rightContent={
+          toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+        }
       >
         <EventBlockHeaderIcon
           icon={icon}

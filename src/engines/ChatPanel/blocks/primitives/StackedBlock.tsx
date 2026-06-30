@@ -46,6 +46,8 @@ export interface StackedBlockProps<T> {
   collapseWhen?: boolean;
   /** Optional event ID used by the group header navigate icon. */
   eventId?: string;
+  /** Optional content shown on the right side of the group header. */
+  rightContent?: React.ReactNode;
 }
 
 // ============================================
@@ -61,6 +63,7 @@ function StackedBlockInner<T>({
   defaultCollapsed = true,
   collapseWhen,
   eventId,
+  rightContent,
 }: StackedBlockProps<T>) {
   const {
     isCollapsed,
@@ -91,6 +94,7 @@ function StackedBlockInner<T>({
         onNavigate={eventId ? handleLocate : undefined}
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
+        rightContent={rightContent}
       >
         <EventBlockHeaderIcon
           icon={icon || <span />}

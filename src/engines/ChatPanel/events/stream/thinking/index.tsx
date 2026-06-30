@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import Markdown from "@src/components/MarkDown";
 import { getEventIcon } from "@src/config/toolIcons";
 import { hasThinkingEventType } from "@src/engines/ChatPanel/ChatHistory/chatItemPipeline/filters";
+import LlmUsageBadge from "@src/engines/ChatPanel/blocks/ToolCallBlock/LlmUsageBadge";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
@@ -37,7 +38,10 @@ import {
   extractThinkingData,
   useNormalizedEventProps,
 } from "@src/engines/SessionCore/rendering/props";
-import type { EventVariant } from "@src/engines/SessionCore/rendering/types/universalProps";
+import type {
+  EventVariant,
+  UniversalEventProps,
+} from "@src/engines/SessionCore/rendering/types/universalProps";
 import { formatDuration } from "@src/util/time/formatDuration";
 
 const LazySimulatorMessages = lazy(
@@ -108,6 +112,7 @@ interface ChatVariantProps {
   isLoading: boolean;
   isStreaming?: boolean;
   eventId?: string;
+  llmUsage?: UniversalEventProps["llmUsage"];
 }
 
 const ChatVariant: React.FC<ChatVariantProps> = ({
@@ -116,6 +121,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
   isLoading,
   isStreaming = false,
   eventId,
+  llmUsage,
 }) => {
   const { t } = useTranslation("sessions");
   const {
@@ -148,6 +154,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
         onNavigate={eventId ? handleLocate : undefined}
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
+        rightContent={llmUsage ? <LlmUsageBadge usage={llmUsage} /> : undefined}
       >
         <EventBlockHeaderIcon
           icon={getEventIcon("thinking")}
@@ -222,6 +229,7 @@ export const ThinkingEvent: React.FC<ThinkingEventProps> = (props) => {
         isLoading={isLoading}
         isStreaming={props.isStreaming}
         eventId={normalizedProps.eventId}
+        llmUsage={normalizedProps.llmUsage}
       />
     );
   }

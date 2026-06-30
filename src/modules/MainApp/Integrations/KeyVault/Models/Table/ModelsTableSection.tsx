@@ -1,7 +1,8 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { ORGII_ORCHESTRATOR } from "@src/assets/providers/types";
+import Button from "@src/components/Button";
 import ModelIcon from "@src/components/ModelIcon";
 import GroupRowEraTag from "@src/components/ModelTable/GroupRowEraTag";
 import { MODEL_TABLE_SWITCH_SIZE } from "@src/components/ModelTable/types";
@@ -325,6 +326,18 @@ export default function ModelsTableSection({
     [expandedGroupKeys, renderExpandedGroupCard]
   );
 
+  const addProviderButton = (
+    <Button
+      variant="secondary"
+      size="default"
+      icon={<Plus size={14} />}
+      onClick={onAdd}
+      data-testid="key-vault-models-add-provider-button"
+    >
+      {t("keyVault.addAccount")}
+    </Button>
+  );
+
   return (
     <SettingsTable<IntegrationsModelGroupRow>
       hover
@@ -342,6 +355,7 @@ export default function ModelsTableSection({
         onSearchChange: setModelsSearchQuery,
         searchPlaceholder: t("modelsTable.searchPlaceholder"),
         allowSearchClear: true,
+        rightContent: addProviderButton,
       }}
       emptyTitle={t("modelsTable.noModels")}
       emptyAction={{

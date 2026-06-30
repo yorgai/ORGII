@@ -16,6 +16,9 @@
  */
 import React from "react";
 
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
+
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
@@ -38,10 +41,19 @@ export interface TitleOnlyBlockProps {
   isFailed?: boolean;
   /** Optional event ID — wires header click to event-replay locate. */
   eventId?: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 const TitleOnlyBlock: React.FC<TitleOnlyBlockProps> = React.memo(
-  ({ title, icon, subtitle, isLoading = false, isFailed = false, eventId }) => {
+  ({
+    title,
+    icon,
+    subtitle,
+    isLoading = false,
+    isFailed = false,
+    eventId,
+    toolUsage,
+  }) => {
     const {
       isHeaderHovered,
       handleHeaderMouseEnter,
@@ -61,6 +73,9 @@ const TitleOnlyBlock: React.FC<TitleOnlyBlockProps> = React.memo(
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
           className={eventId ? "cursor-pointer" : undefined}
+          rightContent={
+            toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={icon}

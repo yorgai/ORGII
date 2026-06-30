@@ -9,6 +9,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { TOOL_NAMES } from "@src/api/tauri/agent/toolNames";
+import { TOOL_USAGE_ARGS_KEY } from "@src/engines/SessionCore/core/types";
 import { formatToolName } from "@src/util/ui/rendering/formatToolName";
 import { getRegistryToolLabelText } from "@src/util/ui/rendering/registryToolLabel";
 import { deriveToolAction } from "@src/util/ui/rendering/toolAction";
@@ -27,6 +28,7 @@ import { useBlockHeader } from "../useBlockLocate";
 import McpProgressRow from "./McpProgressRow";
 import OutputContent from "./OutputContent";
 import ToolResultActions from "./ToolResultActions";
+import ToolUsageBadge from "./ToolUsageBadge";
 import {
   DEFAULT_VISIBLE_LINES,
   SEARCH_NO_RESULT_MESSAGES,
@@ -73,6 +75,7 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
     iconOverride,
     callId,
     sessionId,
+    toolUsage,
     payloadRefs,
   }) => {
     const result = useMemo(() => rawResult ?? {}, [rawResult]);
@@ -89,7 +92,10 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
           : "";
     const displayArgs = Object.fromEntries(
       Object.entries(args).filter(
-        ([key]) => key !== "streamOutput" && key !== "streamContent"
+        ([key]) =>
+          key !== "streamOutput" &&
+          key !== "streamContent" &&
+          key !== TOOL_USAGE_ARGS_KEY
       )
     );
     const hasArgs = Object.keys(displayArgs).length > 0;
@@ -329,6 +335,9 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
           onNavigate={handleLocate}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
+          rightContent={
+            toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={icon}

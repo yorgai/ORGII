@@ -325,6 +325,9 @@ orgtrack::orgtrack_get_session_checkpoints,
 orgtrack::orgtrack_get_checkpoint_file_states,
 // Per-round token usage
 session_persistence::get_session_token_usage_records,
+session_persistence::get_session_llm_usage_spans,
+session_persistence::get_session_tool_usage_attributions,
+session_persistence::get_session_tool_usage_attributions_for_call,
 // Git Bundle commands (for cloud session upload - preserves git history)
 git::bundle::create_git_bundle,
 git::bundle::get_git_repo_info,
