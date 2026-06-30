@@ -9,7 +9,8 @@ import type { SessionCreatorDraft } from "@src/store/session";
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 /** Poll interval for Cursor IDE session list refresh. */
-export const CURSOR_IDE_REFRESH_INTERVAL_MS = 60_000;
+export const CURSOR_IDE_ACTIVE_REFRESH_INTERVAL_MS = 60_000;
+export const CURSOR_IDE_IDLE_REFRESH_INTERVAL_MS = 5 * 60_000;
 
 export const NEW_SESSION_MENU_ITEM_ID = "new-session";
 export const PROJECTS_NEW_PROJECT_MENU_ITEM_ID = "projects-new-project";
