@@ -7,7 +7,12 @@
  * sidebar level.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { Infinity as InfinityIcon, ChevronLeft, Search } from "lucide-react";
+import {
+  Infinity as InfinityIcon,
+  ChevronLeft,
+  Search,
+  Settings,
+} from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -34,6 +39,9 @@ import {
   SidebarHeaderNavButton,
   SidebarList,
 } from "../blocks";
+import HoverAnimatedIcon, {
+  triggerIconAnimation,
+} from "../components/HoverAnimatedIcon";
 import NavigationMenu from "../components/NavigationMenu";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
 import { SidebarRamMonitorButton } from "../connectors/SidebarRamMonitorButton";
@@ -51,6 +59,32 @@ type SettingsRootItemSegment =
 
 const AGENT_ORG_ROW_KEY = "agent-orgs";
 const AGENT_ORG_PATH = buildAgentOrgsPath({ tab: "agents" });
+
+interface SettingsFooterBackButtonProps {
+  label: string;
+  onClick: () => void;
+}
+
+const SettingsFooterBackButton: React.FC<SettingsFooterBackButtonProps> = ({
+  label,
+  onClick,
+}) => (
+  <button
+    type="button"
+    aria-label={label}
+    className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-bg-1 p-0 text-primary-6 transition-colors duration-150 hover:bg-fill-2"
+    onClick={onClick}
+    onMouseEnter={(event) => triggerIconAnimation(event.currentTarget)}
+  >
+    <HoverAnimatedIcon
+      icon={Settings}
+      iconName="settings"
+      size={16}
+      strokeWidth={2}
+      className="text-primary-6"
+    />
+  </button>
+);
 
 function isAgentOrgsRoute(pathname: string): boolean {
   const topTab = parseSettingsTopTab(pathname);
@@ -134,7 +168,15 @@ const SettingsSidebar: React.FC = () => {
       <div className="shrink-0 px-3">{settingsReturnItem}</div>
       <SettingsRootBody />
       <SidebarBottomBar
-        rightActions={<SidebarRamMonitorButton />}
+        rightActions={
+          <>
+            <SidebarRamMonitorButton />
+            <SettingsFooterBackButton
+              label={t("sidebar.bottomBar.settings")}
+              onClick={handleBack}
+            />
+          </>
+        }
         hideSettings
       />
     </SidebarBase>
