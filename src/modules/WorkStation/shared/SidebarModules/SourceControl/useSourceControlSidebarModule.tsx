@@ -426,6 +426,7 @@ export function useSourceControlSidebarModule({
   const tab = useSourceControlTabConfig({
     repoPath,
     repoId,
+    branchName,
     onGitFileSelect,
     onGitFilesChange,
     onGitHistorySelectionChange,

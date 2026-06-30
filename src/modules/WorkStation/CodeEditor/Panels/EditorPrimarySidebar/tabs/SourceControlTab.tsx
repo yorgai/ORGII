@@ -21,7 +21,6 @@ import { useGitStatus } from "@src/contexts/git";
 import { useRepoGitInitialization } from "@src/hooks/git";
 import type { PrimarySidebarTab } from "@src/modules/WorkStation/shared/PrimarySidebarLayout";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { workspaceGitStatusMapAtom } from "@src/store/git";
 import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
 import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
 import type { GitFile } from "@src/types/git/types";
@@ -147,6 +146,7 @@ function SourceControlScopePicker({
 export interface SourceControlTabConfigProps {
   repoPath: string;
   repoId: string;
+  branchName?: string;
   onGitFileSelect?: (file: GitFile) => void;
   /**
    * Notified when any source-control pane's file list changes. The optional
@@ -184,6 +184,7 @@ export interface SourceControlTabConfigProps {
 export function useSourceControlTabConfig({
   repoPath,
   repoId,
+  branchName,
   onGitFileSelect,
   onGitFilesChange,
   onGitHistorySelectionChange,
@@ -201,8 +202,6 @@ export function useSourceControlTabConfig({
   const { t } = useTranslation();
   const SourceControlIcon = ICON_CONFIG.sourceControl;
   const workspaceFolders = useAtomValue(workspaceFoldersAtom);
-  const gitStatusMap = useAtomValue(workspaceGitStatusMapAtom);
-  const mainBranch = gitStatusMap.get(repoPath)?.current_branch;
 
   const { isGitInitialized, refreshGitInitialization } =
     useRepoGitInitialization(repoPath);
@@ -310,7 +309,7 @@ export function useSourceControlTabConfig({
           }
           scopePicker={
             <SourceControlScopePicker
-              branchLabel={mainBranch || repoName}
+              branchLabel={branchName || repoName}
               repoPath={repoPath}
               worktrees={worktrees}
               scope={effectiveScope}
@@ -351,7 +350,7 @@ export function useSourceControlTabConfig({
     isMultiRoot,
     workspaceFolders,
     effectiveScope,
-    mainBranch,
+    branchName,
     repoPath,
     repoId,
     repoName,
