@@ -152,7 +152,7 @@ export const WorktreeListBlock: React.FC<WorktreeListBlockProps> = ({
   isFailed = false,
 }) => {
   const {
-    isCollapsed: isExpanded,
+    isCollapsed,
     isHeaderHovered,
     handleHeaderClick,
     handleHeaderMouseEnter,
@@ -163,6 +163,8 @@ export const WorktreeListBlock: React.FC<WorktreeListBlockProps> = ({
     eventId,
     collapseAllValue: false,
   });
+
+  const isExpanded = !isCollapsed;
 
   const hasEntries = entries.length > 0;
   const hasRows = rows.length > 0;
