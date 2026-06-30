@@ -3774,6 +3774,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tauri",
+ "tempfile",
  "time",
  "tokio",
  "tokio-rustls",

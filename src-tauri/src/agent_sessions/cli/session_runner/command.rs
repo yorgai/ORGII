@@ -5,22 +5,25 @@ use crate::agent_sessions::cli::parsers::codex::CodexParser;
 use crate::agent_sessions::cli::parsers::cursor::CursorParser;
 use crate::agent_sessions::cli::parsers::gemini::GeminiParser;
 use crate::agent_sessions::cli::parsers::CliAgentParser;
+use integrations::cli_binary_resolver::{resolve_cli_binary_command, CliBinaryId};
 use key_vault::key_store::ModelType;
 
-/// Resolve the full path to the `cursor-agent` binary.
-///
-/// Prefers `~/.local/bin/cursor-agent` (installed by `cursor-agent update` or
-/// `curl -sS https://cursor.com/install | bash`). Falls back to the bare
-/// command name if the home directory cannot be resolved (which would be
-/// extraordinary on macOS/Linux).
-pub(super) fn resolve_cursor_agent_path() -> String {
-    if let Some(home) = dirs::home_dir() {
-        let path = home.join(".local/bin/cursor-agent");
-        if path.is_file() {
-            return path.to_string_lossy().to_string();
-        }
-    }
-    "cursor-agent".to_string()
+pub(super) fn resolve_cli_agent_command(agent: &ModelType) -> String {
+    let binary_id = match agent {
+        ModelType::CursorCli => CliBinaryId::CursorCli,
+        ModelType::ClaudeCode => CliBinaryId::ClaudeCode,
+        ModelType::Codex => CliBinaryId::Codex,
+        ModelType::GeminiCli => CliBinaryId::GeminiCli,
+        ModelType::Kiro => CliBinaryId::Kiro,
+        ModelType::Copilot => CliBinaryId::Copilot,
+        ModelType::OpenCode => CliBinaryId::OpenCode,
+        ModelType::KimiCli => CliBinaryId::KimiCli,
+        other => panic!(
+            "ModelType::{:?} is not a CLI agent — cannot resolve command",
+            other
+        ),
+    };
+    resolve_cli_binary_command(binary_id)
 }
 
 /// Build the CLI command for a given CLI agent type.
@@ -56,8 +59,7 @@ pub(super) fn build_command(
     }
     match agent {
         ModelType::CursorCli => {
-            let cursor_agent_bin = resolve_cursor_agent_path();
-            let mut cmd = vec![cursor_agent_bin, "agent".into()];
+            let mut cmd = vec![resolve_cli_agent_command(agent), "agent".into()];
             cmd.push("--output-format".into());
             cmd.push("stream-json".into());
             cmd.push("--stream-partial-output".into());
@@ -99,7 +101,7 @@ pub(super) fn build_command(
             cmd
         }
         ModelType::ClaudeCode => {
-            let mut cmd = vec!["claude".into()];
+            let mut cmd = vec![resolve_cli_agent_command(agent)];
             cmd.push("--output-format".into());
             cmd.push("stream-json".into());
             cmd.push("--verbose".into());
@@ -127,7 +129,7 @@ pub(super) fn build_command(
             cmd
         }
         ModelType::Codex => {
-            let mut cmd = vec!["codex".into(), "exec".into()];
+            let mut cmd = vec![resolve_cli_agent_command(agent), "exec".into()];
             cmd.push("--json".into());
             cmd.push("--skip-git-repo-check".into());
             cmd.push("--sandbox".into());
@@ -156,7 +158,7 @@ pub(super) fn build_command(
             cmd
         }
         ModelType::GeminiCli => {
-            let mut cmd = vec!["gemini".into()];
+            let mut cmd = vec![resolve_cli_agent_command(agent)];
             cmd.push("--output-format".into());
             cmd.push("stream-json".into());
             cmd.push("--yolo".into());
@@ -172,12 +174,13 @@ pub(super) fn build_command(
             cmd.push(task.into());
             cmd
         }
-        ModelType::Kiro => {
-            let cmd = vec!["kiro-cli".into(), "acp".into()];
-            cmd
-        }
+        ModelType::Kiro => vec![resolve_cli_agent_command(agent), "acp".into()],
         ModelType::Copilot => {
-            let mut cmd = vec!["copilot".into(), "--acp".into(), "--stdio".into()];
+            let mut cmd = vec![
+                resolve_cli_agent_command(agent),
+                "--acp".into(),
+                "--stdio".into(),
+            ];
             cmd.push("--allow-all-tools".to_string());
             if let Some(rid) = resume_id {
                 cmd.push("--resume".into());
@@ -189,10 +192,7 @@ pub(super) fn build_command(
             }
             cmd
         }
-        ModelType::OpenCode => {
-            let cmd = vec!["opencode".into(), "acp".into()];
-            cmd
-        }
+        ModelType::OpenCode => vec![resolve_cli_agent_command(agent), "acp".into()],
         other => {
             panic!(
                 "ModelType::{:?} is not a CLI agent — cannot build command",

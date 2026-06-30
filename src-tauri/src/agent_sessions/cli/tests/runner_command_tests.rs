@@ -1,5 +1,13 @@
 use super::command::{build_command, map_claude_model};
 use key_vault::key_store::ModelType;
+use std::path::Path;
+
+fn command_name(command: &str) -> &str {
+    Path::new(command)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(command)
+}
 
 // ============================================
 // build_command — CursorCli
@@ -18,7 +26,7 @@ fn build_cursor_cli_basic() {
         None,
         &[],
     );
-    assert!(cmd[0].contains("cursor-agent") || cmd[0] == "cursor-agent");
+    assert_eq!(command_name(&cmd[0]), "cursor-agent");
     assert!(cmd.contains(&"agent".to_string()));
     assert!(cmd.contains(&"--output-format".to_string()));
     assert!(cmd.contains(&"stream-json".to_string()));
@@ -87,7 +95,7 @@ fn build_claude_code_basic() {
         None,
         &[],
     );
-    assert_eq!(cmd[0], "claude");
+    assert_eq!(command_name(&cmd[0]), "claude");
     assert!(cmd.contains(&"--output-format".to_string()));
     assert!(cmd.contains(&"--verbose".to_string()));
     assert!(cmd.contains(&"--dangerously-skip-permissions".to_string()));
@@ -130,7 +138,7 @@ fn build_codex_basic() {
         None,
         &[],
     );
-    assert_eq!(cmd[0], "codex");
+    assert_eq!(command_name(&cmd[0]), "codex");
     assert_eq!(cmd[1], "exec");
     assert!(cmd.contains(&"--json".to_string()));
     assert!(cmd.contains(&"-m".to_string()));
@@ -172,7 +180,7 @@ fn build_gemini_cli_basic() {
         None,
         &[],
     );
-    assert_eq!(cmd[0], "gemini");
+    assert_eq!(command_name(&cmd[0]), "gemini");
     assert!(cmd.contains(&"--yolo".to_string()));
     assert!(cmd.contains(&"--model".to_string()));
     assert!(cmd.contains(&"-p".to_string()));
@@ -195,7 +203,7 @@ fn build_kiro_basic() {
         None,
         &[],
     );
-    assert_eq!(cmd[0], "kiro-cli");
+    assert_eq!(command_name(&cmd[0]), "kiro-cli");
     assert_eq!(cmd[1], "acp");
 }
 
@@ -216,10 +224,31 @@ fn build_copilot_basic() {
         None,
         &[],
     );
-    assert_eq!(cmd[0], "copilot");
+    assert_eq!(command_name(&cmd[0]), "copilot");
     assert!(cmd.contains(&"--acp".to_string()));
     assert!(cmd.contains(&"--stdio".to_string()));
     assert!(cmd.contains(&"--allow-all-tools".to_string()));
+}
+
+// ============================================
+// build_command — OpenCode
+// ============================================
+
+#[test]
+fn build_opencode_basic() {
+    let cmd = build_command(
+        &ModelType::OpenCode,
+        None,
+        "task",
+        None,
+        None,
+        None,
+        None,
+        None,
+        &[],
+    );
+    assert_eq!(command_name(&cmd[0]), "opencode");
+    assert_eq!(cmd[1], "acp");
 }
 
 // ============================================

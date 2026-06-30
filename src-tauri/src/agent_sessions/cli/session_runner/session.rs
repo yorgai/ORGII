@@ -14,6 +14,7 @@ use tokio::sync::Mutex;
 use crate::agent_sessions::cli::parsers::copilot;
 use crate::agent_sessions::cli::parsers::kiro;
 use crate::api::websocket_handler;
+use integrations::cli_binary_resolver::{resolve_cli_binary_command, CliBinaryId};
 use key_vault::key_store::{KeyService, ModelKey, ModelType, KEY_SERVICE};
 
 use super::super::persistence;
@@ -799,8 +800,12 @@ pub async fn run_session(
 
         let api_key_val = session.proxy_token.as_deref().unwrap_or("");
         if !api_key_val.is_empty() {
-            tracing::info!("[CodeSession] Running codex login --with-api-key...");
-            let mut login_cmd = Command::new("codex");
+            let codex_bin = resolve_cli_binary_command(CliBinaryId::Codex);
+            tracing::info!(
+                "[CodeSession] Running codex login --with-api-key via {}...",
+                codex_bin
+            );
+            let mut login_cmd = Command::new(&codex_bin);
             login_cmd
                 .arg("login")
                 .arg("--with-api-key")

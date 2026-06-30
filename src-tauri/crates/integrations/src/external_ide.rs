@@ -5,6 +5,8 @@
 use std::process::Command;
 use tokio::process::Command as AsyncCommand;
 
+use crate::cli_binary_resolver::{all_cli_binary_metadata, resolve_cli_binary};
+
 // ============================================
 // IDE Detection
 // ============================================
@@ -20,7 +22,7 @@ use tokio::process::Command as AsyncCommand;
 /// - **last_used**: via macOS Spotlight (`mdls`), or file modification time
 #[tauri::command]
 pub async fn server_detect_ides() -> Result<Vec<serde_json::Value>, String> {
-    // (id, display_name, cli_binary, category) — detected via `which`/`where`
+    // (id, display_name, cli_binary, category) — GUI IDE CLIs stay on `which`/`where`.
     let cli_ides: Vec<(&str, &str, &str, &str)> = vec![
         ("vscode", "Visual Studio Code", "code", "ide"),
         (
@@ -54,21 +56,11 @@ pub async fn server_detect_ides() -> Result<Vec<serde_json::Value>, String> {
         ("eclipse", "Eclipse", "eclipse", "ide"),
         ("netbeans", "NetBeans", "netbeans", "ide"),
         ("atom", "Atom", "atom", "ide"),
-        ("claude", "Claude Code", "claude", "ai_cli"),
-        ("codex", "Codex", "codex", "ai_cli"),
-        ("aider", "Aider", "aider", "ai_cli"),
-        ("gemini-cli", "Gemini CLI", "gemini", "ai_cli"),
-        ("kiro", "Kiro", "kiro", "ai_cli"),
-        ("copilot", "Copilot", "copilot", "ai_cli"),
-        ("cline", "Cline", "cline", "ai_cli"),
-        ("goose", "Goose", "goose", "ai_cli"),
-        ("opencode", "OpenCode", "opencode", "ai_cli"),
-        ("kimi", "Kimi", "kimi", "ai_cli"),
     ];
 
     let which_cmd = if cfg!(windows) { "where" } else { "which" };
 
-    // Stage 1: detect which CLIs are present (parallel)
+    // Stage 1: detect which GUI IDE CLIs are present (parallel)
     let cli_futures: Vec<_> = cli_ides
         .iter()
         .map(|(ide_id, name, binary, category)| async move {
@@ -94,7 +86,22 @@ pub async fn server_detect_ides() -> Result<Vec<serde_json::Value>, String> {
         })
         .collect();
 
-    let cli_results = futures::future::join_all(cli_futures).await;
+    let mut cli_results = futures::future::join_all(cli_futures).await;
+    let ai_cli_results = all_cli_binary_metadata()
+        .iter()
+        .map(|metadata| {
+            let resolution = resolve_cli_binary(metadata.id);
+            (
+                metadata.row_id,
+                metadata.display_name,
+                metadata.command,
+                "ai_cli",
+                resolution.installed(),
+                resolution.path_for_detection(),
+            )
+        })
+        .collect::<Vec<_>>();
+    cli_results.extend(ai_cli_results);
 
     let mut results = Vec::new();
     let mut found_ids = std::collections::HashSet::<String>::new();
