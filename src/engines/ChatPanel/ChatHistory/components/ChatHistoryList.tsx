@@ -18,14 +18,20 @@ import React, {
 } from "react";
 
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
-import { PlanningFooter } from "@src/engines/ChatPanel/blocks/primitives";
+import {
+  PlanningFooter,
+  type PlanningFooterMode,
+} from "@src/engines/ChatPanel/blocks/primitives";
 import {
   LLM_USAGE_ARGS_KEY,
   TOOL_USAGE_ARGS_KEY,
 } from "@src/engines/SessionCore/core/types";
 
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
-import { CHAT_FOOTER_SPACER } from "../config/chatFooterSpacer";
+import {
+  CHAT_FOOTER_SPACER,
+  getChatContentBottomDistance,
+} from "../config/chatFooterSpacer";
 import { getUnloadedTurnMeta } from "../hooks/useChatGroups";
 import { GroupItemRenderer } from "../renderers";
 import type { GroupHeaderRenderPart } from "../renderers/GroupHeaderRenderer";
@@ -33,10 +39,19 @@ import type { GroupHeaderRenderPart } from "../renderers/GroupHeaderRenderer";
 const STATIC_RENDER_ITEM_LIMIT = 24;
 const AT_BOTTOM_EPSILON_PX = 4;
 
-function isScrolledToPhysicalBottom(element: HTMLElement): boolean {
+function isScrolledToContentBottom(params: {
+  element: HTMLElement;
+  footerSpacerHeight: number;
+  bottomInset: number;
+}): boolean {
   return (
-    element.scrollHeight - element.scrollTop - element.clientHeight <=
-    AT_BOTTOM_EPSILON_PX
+    getChatContentBottomDistance({
+      scrollTop: params.element.scrollTop,
+      scrollHeight: params.element.scrollHeight,
+      clientHeight: params.element.clientHeight,
+      footerSpacerHeight: params.footerSpacerHeight,
+      bottomInset: params.bottomInset,
+    }) <= AT_BOTTOM_EPSILON_PX
   );
 }
 
@@ -242,17 +257,18 @@ function sameChatHistoryListProps(
       previous.codeBlockContainerWidth === next.codeBlockContainerWidth,
     ],
     ["footerSpacerHeight", sameFooterSpacer],
+    ["bottomInset", previous.bottomInset === next.bottomInset],
     [
       "planningIndicatorCount",
       previous.planningIndicatorCount === next.planningIndicatorCount,
     ],
     [
-      "planningShowSlowHint",
-      previous.planningShowSlowHint === next.planningShowSlowHint,
-    ],
-    [
       "planningVariantIndex",
       previous.planningVariantIndex === next.planningVariantIndex,
+    ],
+    [
+      "planningFooterMode",
+      previous.planningFooterMode === next.planningFooterMode,
     ],
     ["virtualListRef", previous.virtualListRef === next.virtualListRef],
     [
@@ -316,9 +332,10 @@ interface ChatHistoryListProps {
   lastAssistantFlatIndexPerItem: (number | null)[];
   codeBlockContainerWidth: number;
   footerSpacerHeight: number;
+  bottomInset: number;
   planningIndicatorCount: number;
-  planningShowSlowHint: boolean;
   planningVariantIndex: number;
+  planningFooterMode: PlanningFooterMode;
   virtualListRef: React.RefObject<ChatHistoryListHandle | null>;
   virtualListDataKey: string;
   /**
@@ -385,9 +402,10 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
     lastAssistantFlatIndexPerItem,
     codeBlockContainerWidth,
     footerSpacerHeight,
+    bottomInset,
     planningIndicatorCount,
-    planningShowSlowHint,
     planningVariantIndex,
+    planningFooterMode,
     virtualListRef,
     virtualListDataKey,
     getIsWpGeneWorking,
@@ -409,10 +427,10 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
     // renderGroupItem's useCallback (Root Cause 2 fix).
     const planningIndicatorCountRef = useRef(planningIndicatorCount);
     planningIndicatorCountRef.current = planningIndicatorCount;
-    const planningShowSlowHintRef = useRef(planningShowSlowHint);
-    planningShowSlowHintRef.current = planningShowSlowHint;
     const planningVariantIndexRef = useRef(planningVariantIndex);
     planningVariantIndexRef.current = planningVariantIndex;
+    const planningFooterModeRef = useRef(planningFooterMode);
+    planningFooterModeRef.current = planningFooterMode;
 
     // flatItems and previousChatItems in refs so renderGroupItem's useCallback
     // is not re-created on every token during streaming (Root Cause 1 fix).
@@ -461,7 +479,16 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         if (!group) return `chat-group-${index}:0`;
         const itemKeys = flatItems
           .slice(group.startFlatIndex, group.startFlatIndex + group.itemCount)
-          .map((item) => item.chunk_id)
+          .map((item) => {
+            const event = item.event;
+            const displayTextLength = event?.displayText?.length ?? 0;
+            return [
+              item.chunk_id,
+              event?.displayStatus ?? "",
+              event?.activityStatus ?? "",
+              displayTextLength,
+            ].join(":");
+          })
           .join("|");
         return `${index}:${group.itemCount}:${itemKeys}`;
       },
@@ -597,8 +624,8 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
             <PlanningFooter
               key={`planning-footer-${flatIndex}`}
               count={planningIndicatorCountRef.current}
-              showSlowHint={planningShowSlowHintRef.current}
               variantIndex={planningVariantIndexRef.current}
+              mode={planningFooterModeRef.current}
             />
           );
         }
@@ -665,7 +692,13 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
           className="h-full overflow-y-auto overscroll-contain scrollbar-hide"
           onScroll={(event) => {
             const element = event.currentTarget;
-            onAtBottomStateChange(isScrolledToPhysicalBottom(element));
+            onAtBottomStateChange(
+              isScrolledToContentBottom({
+                element,
+                footerSpacerHeight,
+                bottomInset,
+              })
+            );
             reportActiveGroupIndex(element);
           }}
         >
@@ -688,8 +721,8 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
                       <PlanningFooter
                         key={`planning-footer-${itemFlatIndex}`}
                         count={planningIndicatorCount}
-                        showSlowHint={planningShowSlowHint}
                         variantIndex={planningVariantIndex}
+                        mode={planningFooterMode}
                       />
                     );
                   }
@@ -735,7 +768,11 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
         className="h-full w-full overflow-y-auto overscroll-contain scrollbar-hide"
         onScroll={(event) => {
           const element = event.currentTarget;
-          const isAtBottom = isScrolledToPhysicalBottom(element);
+          const isAtBottom = isScrolledToContentBottom({
+            element,
+            footerSpacerHeight,
+            bottomInset,
+          });
           onAtBottomStateChange(isAtBottom);
           reportActiveGroupIndex(element);
           if (isAtBottom) onEndReached();

@@ -196,6 +196,36 @@ mod tests {
     }
 
     #[test]
+    fn rewind_to_message_excludes_redo_snapshot_from_later_rewinds() {
+        with_sandbox(|sandbox| {
+            crate::persistence::session_snapshots::ensure_tables().unwrap();
+
+            let project = sandbox.join("proj");
+            fs::create_dir_all(&project).unwrap();
+            let file = project.join("a.txt");
+            fs::write(&file, b"v1").unwrap();
+
+            let sid = "sess-redo-filter";
+            let snap = make_snapshot(sid).unwrap();
+            track_edit(sid, &snap, &file).unwrap();
+            crate::core::session::persistence::save_snapshot(sid, "tool-call-1", &snap).unwrap();
+            let created_at = crate::persistence::session_snapshots::get_snapshot_created_at_by_hash(
+                sid, &snap,
+            )
+            .unwrap()
+            .unwrap();
+
+            fs::write(&file, b"v2").unwrap();
+            let rewind_stats = rewind_to_message(sid, &created_at).unwrap();
+            assert!(rewind_stats.redo_snapshot_id.is_some());
+            assert_eq!(fs::read(&file).unwrap(), b"v1");
+
+            let candidates = inspect::rewind_snapshot_ids(sid, &created_at).unwrap();
+            assert_eq!(candidates, vec![snap]);
+        });
+    }
+
+    #[test]
     fn track_edit_is_idempotent_first_capture_wins() {
         with_sandbox(|sandbox| {
             let project = sandbox.join("proj");

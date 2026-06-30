@@ -15,7 +15,10 @@ import type {
   OrgMember,
 } from "@src/modules/MainApp/AgentOrgs/types";
 import type { Person } from "@src/types/core/shared";
-import type { WorkItem as WorkItemExtended } from "@src/types/core/workItem";
+import {
+  GITHUB_ISSUE_STATUS,
+  type WorkItem as WorkItemExtended,
+} from "@src/types/core/workItem";
 
 interface AssigneePropertyFieldProps {
   workItem: WorkItemExtended;
@@ -35,6 +38,31 @@ interface AssigneePropertyFieldProps {
   borderless?: boolean;
 }
 
+function isGitHubIssueWorkItem(workItem: WorkItemExtended): boolean {
+  return (
+    workItem.workItemStatus === GITHUB_ISSUE_STATUS.OPEN ||
+    workItem.workItemStatus === GITHUB_ISSUE_STATUS.CLOSED
+  );
+}
+
+function buildGitHubAvatarFallback(person: Person): string | undefined {
+  const login = person.id.trim();
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(login)) {
+    return undefined;
+  }
+  return `https://github.com/${login}.png?size=64`;
+}
+
+function getAssigneeAvatarSrc(workItem: WorkItemExtended): string | undefined {
+  if (!workItem.assignee) return undefined;
+  return (
+    workItem.assignee.avatar ??
+    (isGitHubIssueWorkItem(workItem)
+      ? buildGitHubAvatarFallback(workItem.assignee)
+      : undefined)
+  );
+}
+
 function renderAssigneeIcon(workItem: WorkItemExtended) {
   if (!workItem.assignee) return <User size={DROPDOWN_ITEM.iconSize} />;
   if (workItem.assigneeType === "agent") {
@@ -46,7 +74,7 @@ function renderAssigneeIcon(workItem: WorkItemExtended) {
   return (
     <Avatar
       size={DROPDOWN_ITEM.iconSize}
-      src={workItem.assignee.avatar}
+      src={getAssigneeAvatarSrc(workItem)}
       style={{
         backgroundColor: workItem.assignee.color || "var(--color-fill-3)",
         color: "var(--color-text-white)",

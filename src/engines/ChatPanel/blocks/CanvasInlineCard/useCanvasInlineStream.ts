@@ -26,6 +26,7 @@ export interface CanvasInlinePayload {
   url?: string;
   title?: string;
   streaming?: boolean;
+  eventId?: string;
 }
 
 interface CanvasInlineEventDetail {

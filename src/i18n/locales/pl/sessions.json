@@ -986,6 +986,7 @@
     "complete": "Zakończ"
   },
   "planning": {
+    "agentTyping": "Agent pisze...",
     "nextStepVariants": [
       "Planowanie następnego kroku...",
       "Przemyśliwanie tego...",

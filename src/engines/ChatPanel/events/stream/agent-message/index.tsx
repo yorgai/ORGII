@@ -190,6 +190,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
       {hasVisibleContent && (
         <AgentMessageBlock
           eventId={eventId}
+          isStreaming={isStreaming}
           rightContent={
             llmUsage ? <LlmUsageBadge usage={llmUsage} /> : undefined
           }
@@ -228,6 +229,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
             url={canvasPayload.url}
             title={canvasPayload.title}
             isStreaming={canvasPayload.streaming ?? isStreaming}
+            eventId={eventId}
           />
         </div>
       )}
@@ -343,9 +345,9 @@ export const AgentMessageEvent: React.FC<AgentMessageEventProps> = (props) => {
   const normalizedProps = useNormalizedEventProps(props, "agent_message");
   const sessionId = useAtomValue(sessionIdAtom);
   const streamingMap = useAtomValue(streamingDeltaContentAtom);
-  const directStreamContent = sessionId
-    ? (streamingMap.get(sessionId) ?? null)
-    : null;
+  const liveDelta = sessionId ? (streamingMap.get(sessionId) ?? null) : null;
+  const directStreamContent =
+    liveDelta?.kind === "message" ? liveDelta.content : null;
 
   const isSyntheticLiveEvent =
     props.event?.args?.syntheticLive === true ||

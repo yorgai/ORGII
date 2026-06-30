@@ -217,6 +217,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
         className={cn("kanban-column__body", {
           "kanban-column__body--dragging-over":
             isOver || dropIndicator !== null,
+          "kanban-column__body--empty": filteredTasks.length === 0,
           "kanban-column__body--at-top": scrollEdges.atTop,
           "kanban-column__body--at-bottom": scrollEdges.atBottom,
         })}
@@ -228,7 +229,9 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
           disabled={!allowTaskDrag}
         >
           {filteredTasks.length === 0 && !showEndIndicator ? (
-            <Placeholder variant="empty" title={t("placeholders.noTasks")} />
+            <div className="kanban-column__empty">
+              <Placeholder variant="empty" title={t("placeholders.noTasks")} />
+            </div>
           ) : (
             <>
               {filteredTasks.map((task) => (

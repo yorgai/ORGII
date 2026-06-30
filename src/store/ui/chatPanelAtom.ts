@@ -249,6 +249,7 @@ export const CHAT_PANEL_CREATE_TARGET = {
   AGENT_SESSION: "agentSession",
   MANAGE_AGENTS: "manageAgents",
   PROJECT: "project",
+  GITHUB_ISSUES_PROJECT: "githubIssuesProject",
   WORK_ITEM: "workItem",
   COLLAB_ORG: "collabOrg",
   BENCHMARK: "benchmark",
@@ -408,6 +409,7 @@ export const CHAT_PANEL_SURFACE_KIND = {
   SESSION: "session",
   BENCHMARK_SESSION_GROUP: "benchmarkSessionGroup",
   NEW_PROJECT: "newProject",
+  NEW_GITHUB_ISSUES_PROJECT: "newGithubIssuesProject",
   NEW_WORK_ITEM: "newWorkItem",
   NEW_COLLAB_ORG: "newCollabOrg",
   PROJECT: "project",
@@ -427,6 +429,7 @@ export type ChatPanelSurfaceState =
   | { kind: typeof CHAT_PANEL_SURFACE_KIND.SESSION }
   | { kind: typeof CHAT_PANEL_SURFACE_KIND.BENCHMARK_SESSION_GROUP }
   | { kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_PROJECT }
+  | { kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_GITHUB_ISSUES_PROJECT }
   | { kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM }
   | { kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_COLLAB_ORG }
   | {
@@ -459,6 +462,10 @@ export type ChatPanelNavigateCommand =
   | { kind: typeof CHAT_PANEL_SURFACE_KIND.BENCHMARK_SESSION_GROUP }
   | {
       kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_PROJECT;
+      createProjectContext?: ChatPanelCreateProjectContext | null;
+    }
+  | {
+      kind: typeof CHAT_PANEL_SURFACE_KIND.NEW_GITHUB_ISSUES_PROJECT;
       createProjectContext?: ChatPanelCreateProjectContext | null;
     }
   | {
@@ -530,6 +537,17 @@ export const chatPanelNavigateAtom = atom(
       case CHAT_PANEL_SURFACE_KIND.NEW_PROJECT:
         set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.NON_SESSION);
         set(chatPanelCreateTargetAtom, CHAT_PANEL_CREATE_TARGET.PROJECT);
+        set(
+          chatPanelCreateProjectContextAtom,
+          command.createProjectContext ?? null
+        );
+        return;
+      case CHAT_PANEL_SURFACE_KIND.NEW_GITHUB_ISSUES_PROJECT:
+        set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        set(
+          chatPanelCreateTargetAtom,
+          CHAT_PANEL_CREATE_TARGET.GITHUB_ISSUES_PROJECT
+        );
         set(
           chatPanelCreateProjectContextAtom,
           command.createProjectContext ?? null

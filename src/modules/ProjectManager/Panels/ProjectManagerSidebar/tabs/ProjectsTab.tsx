@@ -4,6 +4,7 @@
 import {
   Box,
   FolderKanban,
+  Github,
   Import,
   ListChecks,
   Plus,
@@ -44,10 +45,12 @@ const TAB_ICON_SIZE = 16;
 interface CreateActionsDropdownProps {
   onCreateProject: () => void;
   onCreateWorkItem: () => void;
+  onImportGithubIssuesProject: () => void;
   onOpenChange: (open: boolean) => void;
   createLabel: string;
   createProjectLabel: string;
   createWorkItemLabel: string;
+  importGithubIssuesProjectLabel: string;
 }
 
 interface OrgActionsDropdownProps {
@@ -165,10 +168,12 @@ const OrgActionsDropdown: React.FC<OrgActionsDropdownProps> = ({
 const CreateActionsDropdown: React.FC<CreateActionsDropdownProps> = ({
   onCreateProject,
   onCreateWorkItem,
+  onImportGithubIssuesProject,
   onOpenChange,
   createLabel,
   createProjectLabel,
   createWorkItemLabel,
+  importGithubIssuesProjectLabel,
 }) => {
   const {
     isOpen,
@@ -195,6 +200,11 @@ const CreateActionsDropdown: React.FC<CreateActionsDropdownProps> = ({
     close();
     onCreateProject();
   }, [close, onCreateProject]);
+
+  const handleImportGithubIssuesProject = useCallback(() => {
+    close();
+    onImportGithubIssuesProject();
+  }, [close, onImportGithubIssuesProject]);
 
   return (
     <>
@@ -264,6 +274,21 @@ const CreateActionsDropdown: React.FC<CreateActionsDropdownProps> = ({
                 {createProjectLabel}
               </span>
             </button>
+            <button
+              type="button"
+              onClick={handleImportGithubIssuesProject}
+              className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+              role="menuitem"
+            >
+              <Github
+                size={ACTION_ICON_SIZE}
+                strokeWidth={ACTION_ICON_STROKE}
+                className="text-text-2"
+              />
+              <span className="min-w-0 flex-1 truncate">
+                {importGithubIssuesProjectLabel}
+              </span>
+            </button>
           </div>,
           document.body
         )}
@@ -275,6 +300,7 @@ export interface UseProjectsTabConfigProps {
   loading: boolean;
   onCreateProject: () => void;
   onCreateWorkItem: () => void;
+  onImportGithubIssuesProject: () => void;
   onCreateOrg: () => void;
   onImportOrgs: () => void;
   onOpenProjects: () => void;
@@ -302,6 +328,7 @@ export function useProjectsTabConfig({
   loading,
   onCreateProject,
   onCreateWorkItem,
+  onImportGithubIssuesProject,
   onCreateOrg,
   onImportOrgs,
   onOpenProjects,
@@ -346,10 +373,14 @@ export function useProjectsTabConfig({
           <CreateActionsDropdown
             onCreateProject={onCreateProject}
             onCreateWorkItem={onCreateWorkItem}
+            onImportGithubIssuesProject={onImportGithubIssuesProject}
             onOpenChange={setCreateDropdownOpen}
             createLabel={t("common:actions.create")}
             createProjectLabel={t("projects:projects.createProject")}
             createWorkItemLabel={t("projects:workItems.createWorkItem")}
+            importGithubIssuesProjectLabel={t(
+              "projects:githubIssuesImport.menuLabel"
+            )}
           />
         ),
         forceVisible: createDropdownOpen,
@@ -382,6 +413,7 @@ export function useProjectsTabConfig({
       handleRefreshClick,
       onCreateProject,
       onCreateWorkItem,
+      onImportGithubIssuesProject,
       onOpenSettings,
     ]
   );

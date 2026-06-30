@@ -281,6 +281,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const unpinFolderLabel = tCommon("sessions:chat.unpinSession", "Unpin");
   const createProjectLabel = tProjects("projects.createProject");
   const createWorkItemLabel = tProjects("workItems.createWorkItem");
+  const importGithubIssuesLabel = tProjects("githubIssuesImport.menuLabel");
   const addOrgLabel = t("collaboration.addOrg");
   const homeLabel = t("sidebar.tabs.build");
   const searchPlaceholder =
@@ -368,6 +369,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     activeSidebarKey,
     createProjectLabel,
     createWorkItemLabel,
+    importGithubIssuesLabel,
     newSessionLabel,
     t,
   });
@@ -758,7 +760,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
         onMenuItemContextMenu={resolvedMenuItemContextMenu}
         renderMenuItemWrapper={resolvedRenderMenuItemWrapper}
         compactRows
-        solidSurface
         onAddNew={handleOpenSpotlight}
         addIcon={Search}
         addLabel={tCommon("actions.search")}

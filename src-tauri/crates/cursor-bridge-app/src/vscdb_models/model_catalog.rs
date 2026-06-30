@@ -1,13 +1,61 @@
 //! Read Cursor's available-model catalog from `state.vscdb`.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant, SystemTime};
 
 use cursor_bridge::{ModelCapabilities, ModelEntry};
 use rusqlite::{Connection, OpenFlags};
 use serde::Deserialize;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 use super::db_path::{real_user_db, APPLICATION_USER_KEY, DEFAULT_MODEL_NAME, PROBE_DB_PATH};
+
+const MODEL_CATALOG_CACHE_TTL: Duration = Duration::from_secs(60);
+
+#[derive(Clone)]
+struct ModelCatalogCacheEntry {
+    path: PathBuf,
+    modified_at: Option<SystemTime>,
+    captured_at: Instant,
+    models: Vec<ModelEntry>,
+}
+
+static MODEL_CATALOG_CACHE: OnceLock<Mutex<Option<ModelCatalogCacheEntry>>> = OnceLock::new();
+
+fn path_modified_at(path: &Path) -> Option<SystemTime> {
+    std::fs::metadata(path).ok()?.modified().ok()
+}
+
+fn cached_models(path: &Path) -> Option<Vec<ModelEntry>> {
+    let cache = MODEL_CATALOG_CACHE.get_or_init(|| Mutex::new(None));
+    let Ok(cache) = cache.lock() else {
+        return None;
+    };
+    let Some(entry) = cache.as_ref() else {
+        return None;
+    };
+    if entry.path == path
+        && entry.modified_at == path_modified_at(path)
+        && entry.captured_at.elapsed() < MODEL_CATALOG_CACHE_TTL
+    {
+        return Some(entry.models.clone());
+    }
+    None
+}
+
+fn store_models_cache(path: &Path, models: Vec<ModelEntry>) {
+    let cache = MODEL_CATALOG_CACHE.get_or_init(|| Mutex::new(None));
+    let Ok(mut cache) = cache.lock() else {
+        return;
+    };
+    *cache = Some(ModelCatalogCacheEntry {
+        path: path.to_path_buf(),
+        modified_at: path_modified_at(path),
+        captured_at: Instant::now(),
+        models,
+    });
+}
 
 /// Read Cursor's available-model list straight from `state.vscdb`.
 ///
@@ -28,9 +76,13 @@ pub(super) fn read_models_from_disk_candidates(paths: &[&Path]) -> Result<Vec<Mo
         if !path.exists() {
             continue;
         }
-        info!(path = %path.display(), "reading models from state.vscdb");
+        if let Some(models) = cached_models(path) {
+            return Ok(models);
+        }
+        debug!(path = %path.display(), "reading models from state.vscdb");
         let models = read_models_at(path)?;
         if has_model_catalog(&models) {
+            store_models_cache(path, models.clone());
             return Ok(models);
         }
         debug!(

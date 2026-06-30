@@ -7,6 +7,7 @@
   flex: 1 0 320px;
   flex-direction: column;
   min-width: 320px;
+  min-height: 0;
   height: 100%;
   transition: opacity 0.2s ease;
 
@@ -84,13 +85,21 @@
   overflow-y: auto;
   overflow-x: hidden;
   transition: background-color 0.2s ease;
-  min-height: 200px;
+  min-height: 0;
   -ms-overflow-style: none;
   scrollbar-width: none;
 
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+.kanban-column__empty {
+  display: flex;
+  height: 100%;
+  min-height: inherit;
+  align-items: center;
+  justify-content: center;
 }
 
 // ============================================

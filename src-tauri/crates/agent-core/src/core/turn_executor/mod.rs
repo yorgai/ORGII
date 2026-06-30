@@ -313,7 +313,12 @@ pub async fn execute_turn(
                 if stats.chars_saved == 0 && stats.images_cleared == 0 {
                     // Nothing left to clear — hard-truncate the history while
                     // keeping the head (system prompt + task statement).
-                    let window = crate::providers::model_hints::context_window_hint(&config.model);
+                    let window =
+                        crate::providers::model_capabilities::resolve_effective_context_window(
+                            &config.model,
+                            config.account_id.as_deref(),
+                            config.context_window_override,
+                        );
                     let budget = window.saturating_mul(3) / 4;
                     let truncated =
                         crate::model_context::compaction::ContextCompactor::simple_truncate(
@@ -349,14 +354,17 @@ pub async fn execute_turn(
 
         if !response.usage.is_empty() {
             usage.accumulate(&response.usage, session_id);
-            // Authoritative context window: the FAMILY_RULES resolver knows the
-            // model's real window (e.g. opus-4.x = 1M), so the frontend gauge no
-            // longer divides by a stale 200K and falsely shows "red / full".
-            // account_id is irrelevant here — KeyVault only upgrades thinking
-            // support, never the context window.
+            // Authoritative context window: FAMILY_RULES gives the model's
+            // nominal capability, optionally overridden by the provider's
+            // `/v1/models` context_length for this account (stored in
+            // KeyVault). This keeps the frontend gauge honest when a proxy
+            // caps a 1M model at 256K.
             let context_window =
-                crate::core::providers::model_capabilities::resolve(&config.model, None)
-                    .context_window as i64;
+                crate::core::providers::model_capabilities::resolve_effective_context_window(
+                    &config.model,
+                    config.account_id.as_deref(),
+                    config.context_window_override,
+                ) as i64;
             let snapshot = ContextUsageSnapshot::from_payload(
                 &llm_messages,
                 &tool_defs,

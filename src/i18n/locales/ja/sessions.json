@@ -2225,6 +2225,7 @@
     "insufficientBalance": "ホスト型 ORGII サービスの残高が不足しています。orgii.ai/wallet でチャージしてください。"
   },
   "planning": {
+    "agentTyping": "Agent が入力中...",
     "nextStepVariants": [
       "次のステップを計画中...",
       "考え中...",

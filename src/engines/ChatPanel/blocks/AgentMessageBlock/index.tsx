@@ -61,12 +61,15 @@ export interface AgentMessageBlockProps {
    */
   eventId?: string;
   rightContent?: React.ReactNode;
+  /** Hide footer chrome while tokens are still streaming. */
+  isStreaming?: boolean;
 }
 
 const AgentMessageBlock: React.FC<AgentMessageBlockProps> = ({
   children,
   eventId,
   rightContent,
+  isStreaming = false,
 }) => {
   const { t } = useTranslation("common");
   const clampEligible = useContext(AgentMessageClampContext);
@@ -127,11 +130,9 @@ const AgentMessageBlock: React.FC<AgentMessageBlockProps> = ({
   }
 
   const showOverlay = overflows || isExpanded;
-  // Locate arrow shows whenever the message is clamp-eligible AND has an
-  // event id to jump to. We don't gate on `overflows` — even short messages
-  // benefit from a one-click way to find the matching simulator event when
-  // the simulator is visible side-by-side.
-  const showLocateArrow = Boolean(eventId);
+  // Locate arrow shows for settled clamped messages with an event id. Hide it
+  // while streaming so the footer chrome does not trail the growing text.
+  const showLocateArrow = Boolean(eventId) && !isStreaming;
   return (
     <div className="group/agent-message w-full min-w-0 overflow-hidden px-2 py-0.5">
       <div

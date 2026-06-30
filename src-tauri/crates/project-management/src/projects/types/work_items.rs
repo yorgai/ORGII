@@ -359,6 +359,8 @@ pub struct WorkItemPartialUpdate {
     )]
     pub target_date: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub todos: Option<Vec<TodoEntry>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub comments: Option<Vec<CommentEntry>>,

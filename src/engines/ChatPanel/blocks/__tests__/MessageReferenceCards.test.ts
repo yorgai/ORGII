@@ -135,6 +135,22 @@ staged file lint stats
     });
   });
 
+  it("strips trailing markdown emphasis markers from URL cards", () => {
+    const references = extractMessageReferences(
+      [
+        "Docs: **https://example.com/docs.**",
+        "Mirror: *https://mirror.example.com/path*",
+        "Old: ~~https://old.example.com/docs~~",
+      ].join("\n")
+    );
+
+    expect(references.map((item) => item.value)).toEqual([
+      "https://example.com/docs",
+      "https://mirror.example.com/path",
+      "https://old.example.com/docs",
+    ]);
+  });
+
   it("does not extract template placeholder hosts as URL cards", () => {
     const references = extractMessageReferences(
       "The server logs http://localhost:1998 and http://${host}/"
@@ -226,6 +242,14 @@ staged file lint stats
   it("does not extract session ids embedded in longer job handles", () => {
     const references = extractMessageReferences(
       "job extract-mem-sdeagent-9be175b5-aacb-4b2b-b23a-b46a8d4d6a35-ad0ba9f1-b874-4927-b2f9-03b936aa0aef ran"
+    );
+
+    expect(references.find((item) => item.kind === "session")).toBeUndefined();
+  });
+
+  it("does not extract session cards from inline code examples", () => {
+    const references = extractMessageReferences(
+      "- `ChatHistory` 内容容器改成全宽\n- `审计-policy-啊permission-那些... [session:sdeagent-ee970f47-dfcb-4a78-97e5-fc56e3451821]`"
     );
 
     expect(references.find((item) => item.kind === "session")).toBeUndefined();

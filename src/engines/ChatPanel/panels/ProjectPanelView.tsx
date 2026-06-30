@@ -8,19 +8,44 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { enrichedWorkItemToUI, projectApi } from "@src/api/http/project";
+import {
+  type MemberEntry,
+  type WorkItemFrontmatter,
+  enrichedWorkItemToUI,
+  projectApi,
+} from "@src/api/http/project";
 import TabPill from "@src/components/TabPill";
+import type { TabPillItem } from "@src/components/TabPill";
 import {
   ChatPanelHeaderBreadcrumb,
   usePublishChatPanelHeader,
 } from "@src/engines/ChatPanel/header";
+import KanbanBoard from "@src/features/KanbanBoard";
+import type { KanbanTask, TaskStatus } from "@src/features/KanbanBoard";
 import { createLogger } from "@src/hooks/logger";
-import { useProjectDataChanged } from "@src/hooks/project";
+import {
+  useCurrentUserMemberIds,
+  useProjectDataChanged,
+} from "@src/hooks/project";
 import WorkItemContentStack from "@src/modules/ProjectManager/WorkItems/components/WorkItemContentStack";
 import { MultiSelectBar } from "@src/modules/ProjectManager/WorkItems/components/WorkItemsFooterBars";
 import WorkItemsListContent from "@src/modules/ProjectManager/WorkItems/components/WorkItemsListContent";
+import WorkItemsStatusFilterSelect from "@src/modules/ProjectManager/WorkItems/components/WorkItemsStatusFilterSelect";
 import { useMultiSelect } from "@src/modules/ProjectManager/WorkItems/hooks/useMultiSelect";
-import { groupWorkItemsForStatusFilter } from "@src/modules/ProjectManager/WorkItems/workItemsViewModel";
+import {
+  type StatusFilterType,
+  WORK_ITEMS_DEFAULT_STATUS,
+} from "@src/modules/ProjectManager/WorkItems/types";
+import {
+  WORK_ITEMS_KANBAN_GROUP,
+  type WorkItemsKanbanGroup,
+  countWorkItemsByStatus,
+  filterWorkItemsByStatus,
+  getStatusFilterKeysForWorkItems,
+  getWorkItemsKanbanColumns,
+  groupWorkItemsForStatusFilter,
+  workItemsToKanbanTasks,
+} from "@src/modules/ProjectManager/WorkItems/workItemsViewModel";
 import {
   PROJECT_PROPERTY_CONCISE_FIELDS,
   ProjectContentEditor,
@@ -44,13 +69,13 @@ import type { WorkItem } from "@src/types/core/workItem";
 
 const logger = createLogger("ProjectPanelView");
 
-type ProjectPanelTab = "overview" | "workItems";
+type ProjectPanelTab = "overview" | "list" | "kanban";
 
 interface ProjectPanelViewProps {
   selectedProject: ChatPanelSelectedProject;
 }
 
-const PROJECT_PANEL_TABS: ProjectPanelTab[] = ["overview", "workItems"];
+const PROJECT_PANEL_TABS: ProjectPanelTab[] = ["overview", "list", "kanban"];
 
 function getProjectOverviewDescription(
   project: ChatPanelSelectedProject["project"]
@@ -67,8 +92,11 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
   const sidebarProjectDescription = getProjectOverviewDescription(
     selectedProject.project
   );
-  const [activePanelTab, setActivePanelTab] =
-    useState<ProjectPanelTab>("overview");
+  const [activePanelTab, setActivePanelTab] = useState<ProjectPanelTab>("list");
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>("all");
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<WorkItemsKanbanGroup>(
+    WORK_ITEMS_KANBAN_GROUP.STATUS
+  );
   const [projectDescription, setProjectDescription] = useState(
     sidebarProjectDescription
   );
@@ -235,6 +263,68 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
     [getWorkItemShortId, loadProjectWorkItems, projectSlug]
   );
 
+  const statusCounts = useMemo(
+    () => countWorkItemsByStatus(workItems),
+    [workItems]
+  );
+
+  const statusFilterKeys = useMemo(
+    () => getStatusFilterKeysForWorkItems(workItems),
+    [workItems]
+  );
+  useEffect(() => {
+    if (!statusFilterKeys.includes(statusFilter)) {
+      setStatusFilter("all");
+    }
+  }, [statusFilter, statusFilterKeys]);
+
+  const filteredWorkItems = useMemo(
+    () => filterWorkItemsByStatus(workItems, statusFilter),
+    [statusFilter, workItems]
+  );
+
+  const groupedWorkItems = useMemo(
+    () => groupWorkItemsForStatusFilter(filteredWorkItems, statusFilter),
+    [filteredWorkItems, statusFilter]
+  );
+
+  const workItemPeople = useMemo<MemberEntry[]>(() => {
+    const people = new Map<string, MemberEntry>();
+    for (const workItem of workItems) {
+      for (const person of [workItem.assignee, workItem.createdBy]) {
+        if (!person) continue;
+        people.set(person.id, {
+          id: person.id,
+          name: person.name,
+          avatar: person.avatar,
+          active: true,
+        });
+      }
+    }
+    return [...people.values()];
+  }, [workItems]);
+  const { memberIds: currentUserMemberIds } =
+    useCurrentUserMemberIds(workItemPeople);
+  const pinnedKanbanColumnIds = useMemo(
+    () => [...currentUserMemberIds].map((memberId) => `person:${memberId}`),
+    [currentUserMemberIds]
+  );
+
+  const kanbanTasks = useMemo<KanbanTask[]>(
+    () => workItemsToKanbanTasks(filteredWorkItems, kanbanGroupBy),
+    [filteredWorkItems, kanbanGroupBy]
+  );
+  const kanbanColumns = useMemo(
+    () =>
+      getWorkItemsKanbanColumns(
+        filteredWorkItems,
+        kanbanGroupBy,
+        t("projects:workItems.properties.noAssignee"),
+        pinnedKanbanColumnIds
+      ),
+    [filteredWorkItems, kanbanGroupBy, pinnedKanbanColumnIds, t]
+  );
+
   const {
     selectedIds,
     bulkDeleting,
@@ -243,7 +333,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
     handleUnselectAll,
     handleBulkDelete,
   } = useMultiSelect({
-    filteredWorkItems: workItems,
+    filteredWorkItems,
     onDelete: handleDeleteWorkItem,
     projectSlug,
     getShortId: getWorkItemShortId,
@@ -323,8 +413,27 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
     label:
       tab === "overview"
         ? t("projects:orgs.management.overview")
-        : t("projects:workItems.label"),
+        : tab === "list"
+          ? t("projects:workItems.tabs.list")
+          : t("projects:workItems.tabs.kanban"),
   }));
+  const kanbanGroupTabs = useMemo<TabPillItem[]>(
+    () => [
+      {
+        key: WORK_ITEMS_KANBAN_GROUP.STATUS,
+        label: t("projects:projects.groupBy.status"),
+      },
+      {
+        key: WORK_ITEMS_KANBAN_GROUP.ASSIGNED_TO,
+        label: t("projects:projects.groupBy.assignedTo"),
+      },
+      {
+        key: WORK_ITEMS_KANBAN_GROUP.CREATED_BY,
+        label: t("projects:projects.groupBy.createdBy"),
+      },
+    ],
+    [t]
+  );
 
   const handleSelectWorkItem = useCallback(
     (workItemId: string) => {
@@ -351,6 +460,71 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
       workItemShortIds,
       workItems,
     ]
+  );
+
+  const handleSelectWorkItemFromKanban = useCallback(
+    (task: KanbanTask) => {
+      handleSelectWorkItem(task.id);
+    },
+    [handleSelectWorkItem]
+  );
+
+  const handleUpdateWorkItem = useCallback(
+    async (workItemId: string, updates: Partial<WorkItem>) => {
+      if (!projectSlug) return;
+      const shortId = getWorkItemShortId(workItemId);
+      if (!shortId) return;
+
+      const payload = {} as Parameters<
+        typeof projectApi.updateWorkItemPartial
+      >[2];
+      if (updates.name !== undefined) payload.title = updates.name;
+      if (updates.spec !== undefined) payload.body = updates.spec;
+      if (updates.workItemStatus !== undefined) {
+        payload.status = updates.workItemStatus;
+      }
+      if (updates.priority !== undefined) payload.priority = updates.priority;
+      if (Object.keys(payload).length === 0) return;
+
+      const updated = await projectApi.updateWorkItemPartial(
+        projectSlug,
+        shortId,
+        payload
+      );
+      const updatedItem = enrichedWorkItemToUI(updated);
+      setWorkItems((currentItems) =>
+        currentItems.map((item) =>
+          item.session_id === workItemId ? updatedItem : item
+        )
+      );
+    },
+    [getWorkItemShortId, projectSlug]
+  );
+
+  const handleAddKanbanTask = useCallback(
+    async (status: TaskStatus) => {
+      if (!projectSlug) return;
+      const shortId = await projectApi.allocateWorkItemId(projectSlug);
+      const now = new Date().toISOString();
+      const frontmatter: WorkItemFrontmatter = {
+        id: shortId,
+        short_id: shortId,
+        title: t("projects:workItems.newWorkItemName", {
+          defaultValue: "New Work Item",
+        }),
+        project: selectedProject.project.id,
+        status: status || WORK_ITEMS_DEFAULT_STATUS,
+        priority: "none",
+        labels: [],
+        created_at: now,
+        updated_at: now,
+        starred: false,
+        todos: [],
+      };
+      await projectApi.writeWorkItem(projectSlug, shortId, frontmatter, "");
+      await loadProjectWorkItems();
+    },
+    [loadProjectWorkItems, projectSlug, selectedProject.project.id, t]
   );
 
   const handleDescriptionChange = useCallback((markdown: string) => {
@@ -384,11 +558,6 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
     </section>
   );
 
-  const groupedWorkItems = useMemo(
-    () => groupWorkItemsForStatusFilter(workItems, "all"),
-    [workItems]
-  );
-
   const workItemsContent = workItemsLoading ? (
     <Placeholder
       variant="loading"
@@ -406,27 +575,59 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
       }}
     />
   ) : (
-    <WorkItemsListContent
-      groupedWorkItems={groupedWorkItems}
-      filteredWorkItems={workItems}
-      workItems={workItems}
-      selectedWorkItemId={null}
-      availableMembers={selectedProject.project.members ?? []}
-      availableProjects={[
-        {
-          id: selectedProject.project.id,
-          name: selectedProject.project.name,
-        },
-      ]}
-      availableLabels={selectedProject.project.labels ?? []}
-      checkedWorkItemIds={selectedIds}
-      onCheckedChange={handleCheckedChange}
-      onSelectWorkItem={handleSelectWorkItem}
-      readonly
-      disableProjectEdit
-      compactRows
-      workItemPrefix={selectedProject.project.workItemPrefix}
-    />
+    <div
+      className={
+        activePanelTab === "kanban"
+          ? "h-full min-h-0 flex-1 overflow-hidden"
+          : "overflow-visible"
+      }
+    >
+      {activePanelTab === "kanban" ? (
+        <div className="h-full min-h-0">
+          <KanbanBoard
+            tasks={kanbanTasks}
+            columnOrder={kanbanColumns}
+            allowColumnReorder={false}
+            allowTaskDrag={kanbanGroupBy === WORK_ITEMS_KANBAN_GROUP.STATUS}
+            onTaskMove={(taskId: string, newStatus: TaskStatus) => {
+              if (kanbanGroupBy !== WORK_ITEMS_KANBAN_GROUP.STATUS) return;
+              void handleUpdateWorkItem(taskId, {
+                workItemStatus: newStatus as WorkItem["workItemStatus"],
+              });
+            }}
+            onTaskClick={handleSelectWorkItemFromKanban}
+            onAddTask={(status: TaskStatus) => {
+              void handleAddKanbanTask(status);
+            }}
+            showAddButton={kanbanGroupBy === WORK_ITEMS_KANBAN_GROUP.STATUS}
+            className="kanban-board--linear"
+          />
+        </div>
+      ) : (
+        <WorkItemsListContent
+          groupedWorkItems={groupedWorkItems}
+          filteredWorkItems={filteredWorkItems}
+          workItems={workItems}
+          selectedWorkItemId={null}
+          availableMembers={selectedProject.project.members ?? []}
+          availableProjects={[
+            {
+              id: selectedProject.project.id,
+              name: selectedProject.project.name,
+            },
+          ]}
+          availableLabels={selectedProject.project.labels ?? []}
+          checkedWorkItemIds={selectedIds}
+          onCheckedChange={handleCheckedChange}
+          onSelectWorkItem={handleSelectWorkItem}
+          readonly
+          disableProjectEdit
+          compactRows
+          scrollMode="page"
+          workItemPrefix={selectedProject.project.workItemPrefix}
+        />
+      )}
+    </div>
   );
 
   const descriptionContent = (
@@ -434,7 +635,7 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
       className="flex min-h-0 flex-1 flex-col"
       data-testid="chat-panel-project-section"
     >
-      <div className="mb-4 flex shrink-0 items-center justify-start">
+      <div className="mb-4 flex shrink-0 items-center justify-between gap-2">
         <TabPill
           tabs={panelTabItems}
           activeTab={activePanelTab}
@@ -443,8 +644,31 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
           fillWidth={false}
           size="chatPanel"
         />
+        {activePanelTab !== "overview" ? (
+          <div className="flex shrink-0 items-center gap-1">
+            {activePanelTab === "kanban" ? (
+              <TabPill
+                tabs={kanbanGroupTabs}
+                activeTab={kanbanGroupBy}
+                onChange={(key) =>
+                  setKanbanGroupBy(key as WorkItemsKanbanGroup)
+                }
+                variant="pill"
+                color="fill"
+                fillWidth={false}
+                size="small"
+              />
+            ) : null}
+            <WorkItemsStatusFilterSelect
+              value={statusFilter}
+              onChange={setStatusFilter}
+              statusCounts={statusCounts}
+              filterKeys={statusFilterKeys}
+            />
+          </div>
+        ) : null}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
         {activePanelTab === "overview" ? overviewContent : workItemsContent}
       </div>
     </section>
@@ -460,8 +684,9 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
           propertiesContent={inlineProperties}
           descriptionContent={descriptionContent}
           descriptionFlexible
+          descriptionClassName="min-h-0 flex flex-1 flex-col px-4 py-4"
         />
-        {activePanelTab === "workItems" ? (
+        {activePanelTab !== "overview" ? (
           <MultiSelectBar
             selectedCount={selectedIds.size}
             visibleItemCount={workItems.length}

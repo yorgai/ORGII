@@ -44,7 +44,12 @@ export function useApiSetupValidation({
     baseUrl: data.extracted_base_url,
     protocol: data.protocol,
     inputMode: inputMode,
-    onValidationSuccess: ({ models, envVars, extractedConfig: config }) => {
+    onValidationSuccess: ({
+      models,
+      modelContextLengths,
+      envVars,
+      extractedConfig: config,
+    }) => {
       const effectiveModels = (() => {
         const validationModels = getEffectiveValidationModels(
           models,
@@ -64,6 +69,7 @@ export function useApiSetupValidation({
         );
       onChange({
         available_models: effectiveModels,
+        model_context_lengths: modelContextLengths,
         enabled_models: isClaudeCode
           ? getClaudeCodeOAuthDefaultEnabledModels()
           : isCodex
@@ -94,12 +100,14 @@ export function useApiSetupValidation({
     if ((data.available_models?.length ?? 0) > 0) return;
     onChange({
       available_models: validation.fetchedModels,
+      model_context_lengths: validation.fetchedModelContextLengths,
       enabled_models: getDefaultEnabledModels(validation.fetchedModels),
       validated: true,
     });
   }, [
     isCursor,
     validation.fetchedModels,
+    validation.fetchedModelContextLengths,
     data.available_models?.length,
     onChange,
   ]);

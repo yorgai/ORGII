@@ -79,39 +79,54 @@ pub(super) async fn spawn_session_memory_extraction(input: SessionMemoryExtracti
         fork_provider,
     } = input;
 
-    let current_tokens = if prompt_tokens > 0 {
-        prompt_tokens as usize
-    } else {
-        crate::model_context::tokenizer::count_messages_tokens(messages)
-    };
-    let has_tool_calls = session_memory::last_turn_has_tool_calls(messages);
-    let mut sm_state_guard = sm_state.lock().await;
-
-    sm_state_guard.record_tool_calls(tool_calls_count as usize);
-
-    if !session_memory::should_extract(&sm_state_guard, &sm_config, current_tokens, has_tool_calls)
-    {
-        return;
-    }
-
-    info!(
-        "[unified_processor] Spawning async SM extraction for session {} (tokens={}, tc_since={})",
-        session_id, current_tokens, sm_state_guard.tool_calls_since_extraction
-    );
-    drop(sm_state_guard);
-
+    // Everything below — including the `sm_state.lock()` gate pre-check —
+    // runs inside a detached task. This is the turn-completion hot path:
+    // `dispatch_post_turn_work` awaits this fn and the scheduler only emits
+    // the idle queue-status (which hides the "Planning…" footer) AFTER
+    // `process()` returns. The previous version `await`ed the `sm_state.lock()`
+    // pre-check directly here, so when the PRIOR turn's extractor still held
+    // that lock across its (up-to-60s) LLM round-trip, this turn's completion
+    // signal was blocked for the whole extraction. Spawning the entire body
+    // keeps the function a true fire-and-forget so completion is instant.
     let sm_messages = messages.to_vec();
     let sm_session_id = session_id.to_string();
 
     tokio::spawn(async move {
+        let current_tokens = if prompt_tokens > 0 {
+            prompt_tokens as usize
+        } else {
+            crate::model_context::tokenizer::count_messages_tokens(&sm_messages)
+        };
+        let has_tool_calls = session_memory::last_turn_has_tool_calls(&sm_messages);
+        let mut sm_state_guard = sm_state.lock().await;
+
+        sm_state_guard.record_tool_calls(tool_calls_count as usize);
+
+        if !session_memory::should_extract(
+            &sm_state_guard,
+            &sm_config,
+            current_tokens,
+            has_tool_calls,
+        ) {
+            return;
+        }
+
+        info!(
+            "[unified_processor] Spawning async SM extraction for session {} (tokens={}, tc_since={})",
+            sm_session_id, current_tokens, sm_state_guard.tool_calls_since_extraction
+        );
+        drop(sm_state_guard);
+
         const SM_TIMEOUT: Duration = Duration::from_secs(60);
 
         let extraction = async {
             let provider = fresh_fork_provider(&fork_provider).await?;
-            let mut state = sm_state.lock().await;
+            // `extract_session_memory` now manages the `sm_state` lock
+            // internally (brief prepare + finalize, never across the LLM
+            // call), so we pass the Arc instead of holding the guard here.
             let result = session_memory::extract_session_memory(
                 &sm_messages,
-                &mut state,
+                sm_state.clone(),
                 &sm_config,
                 provider.as_ref(),
                 &fork_provider.model,
@@ -121,7 +136,7 @@ pub(super) async fn spawn_session_memory_extraction(input: SessionMemoryExtracti
             if let Ok(ref sm_content) = result {
                 let sid = sm_session_id.clone();
                 let content = sm_content.clone();
-                let last_idx = state.last_summarized_msg_idx;
+                let last_idx = sm_state.lock().await.last_summarized_msg_idx;
                 tokio::task::block_in_place(|| {
                     if let Err(err) =
                         unified_persistence::save_session_memory_state(&sid, &content, last_idx)
@@ -219,6 +234,54 @@ pub(super) async fn spawn_extract_memories(input: ExtractMemoriesInput<'_>) {
     }
     let messages = em_messages;
 
+    // Everything below — including the gate pre-checks that lock `em_state` —
+    // runs inside a detached task. This is the turn-completion hot path:
+    // `dispatch_post_turn_work` awaits this fn, and the scheduler only
+    // broadcasts the idle queue-status (which hides the "Planning…" footer)
+    // AFTER `process()` returns. The previous version `await`ed the
+    // `em_state.lock()` gate pre-checks directly here, so when the PRIOR
+    // turn's extractor still held that lock across its (minutes-long) LLM
+    // round-trip, this turn's completion signal was blocked for the whole
+    // extraction — the footer kept spinning "Figuring out what to do next…"
+    // long after the agent had clearly finished. Spawning the entire body
+    // keeps the function a true fire-and-forget so completion is instant.
+    let sid = session_id.to_string();
+    tokio::spawn(async move {
+        run_extract_memories_task(RunExtractMemoriesTask {
+            session_id: sid,
+            ws_path,
+            messages,
+            em_state,
+            fork_provider,
+            tool_registry,
+        })
+        .await;
+    });
+}
+
+struct RunExtractMemoriesTask {
+    session_id: String,
+    ws_path: PathBuf,
+    messages: Vec<Value>,
+    em_state: Arc<Mutex<ExtractMemoriesState>>,
+    fork_provider: ForkProviderSpec,
+    tool_registry: Arc<ToolRegistry>,
+}
+
+/// Owned-data body of [`spawn_extract_memories`], run inside a detached task.
+///
+/// Performs the gate pre-checks (Stages 1–2) and then the extraction loop.
+/// All `em_state` lock contention lives here, off the turn-completion path.
+async fn run_extract_memories_task(task: RunExtractMemoriesTask) {
+    let RunExtractMemoriesTask {
+        session_id,
+        ws_path,
+        messages,
+        em_state,
+        fork_provider,
+        tool_registry,
+    } = task;
+
     // Stage 1: main agent wrote memory → skip + advance cursor.
     let main_wrote = {
         let mut state = em_state.lock().await;
@@ -252,59 +315,61 @@ pub(super) async fn spawn_extract_memories(input: ExtractMemoriesInput<'_>) {
         return;
     }
 
-    let sid = session_id.to_string();
+    let sid = session_id;
     info!(
         "[unified_processor] Spawning extract_memories for session {}",
         sid
     );
 
-    tokio::spawn(async move {
-        // Loop until no pending trailing transcript remains. Each
-        // iteration runs the extractor on the current transcript and, if
-        // a new transcript was stashed while we were running, picks it up
-        // on the next pass — guaranteeing every transcript is processed
-        // even when extractions arrive faster than they finish.
-        let mut current_msgs = messages;
-        loop {
-            {
-                let mut state = em_state.lock().await;
-                let provider = match fresh_fork_provider(&fork_provider).await {
-                    Ok(provider) => provider,
-                    Err(err) => {
-                        warn!("[extract_memories] Failed for session {}: {}", sid, err);
-                        break;
-                    }
-                };
-                let params = crate::memory::MemoryAgentParams {
-                    messages: &current_msgs,
-                    provider,
-                    model: &fork_provider.model,
-                    workspace: &ws_path,
-                    parent_tools: tool_registry.clone(),
-                    session_id: &sid,
-                    definitions_store: None,
-                };
-                if let Err(err) = extract_memories::run_extraction(&mut state, params).await {
-                    warn!("[extract_memories] Failed for session {}: {}", sid, err);
-                    // Still drain pending to avoid stashed work becoming stuck.
-                }
+    // Already inside a detached task (see `spawn_extract_memories`); run the
+    // extraction loop inline. Loop until no pending trailing transcript
+    // remains. Each iteration runs the extractor on the current transcript
+    // and, if a new transcript was stashed while we were running, picks it up
+    // on the next pass — guaranteeing every transcript is processed even when
+    // extractions arrive faster than they finish.
+    let mut current_msgs = messages;
+    loop {
+        // `fresh_fork_provider` and `run_extraction` both run WITHOUT holding
+        // `em_state` — provider creation can do a network preflight and the
+        // extractor runs a multi-iteration forked agent, neither of which may
+        // block the next turn's brief `em_state` reads. `run_extraction`
+        // manages the lock internally (brief prepare + finalize).
+        let provider = match fresh_fork_provider(&fork_provider).await {
+            Ok(provider) => provider,
+            Err(err) => {
+                warn!("[extract_memories] Failed for session {}: {}", sid, err);
+                em_state.lock().await.clear_in_progress();
+                break;
             }
-            let trailing = {
-                let mut state = em_state.lock().await;
-                extract_memories::take_pending(&mut state)
-            };
-            match trailing {
-                Some(next) => {
-                    info!(
-                        "[extract_memories] Running trailing extraction for session {}",
-                        sid
-                    );
-                    current_msgs = next;
-                }
-                None => break,
-            }
+        };
+        let params = crate::memory::MemoryAgentParams {
+            messages: &current_msgs,
+            provider,
+            model: &fork_provider.model,
+            workspace: &ws_path,
+            parent_tools: tool_registry.clone(),
+            session_id: &sid,
+            definitions_store: None,
+        };
+        if let Err(err) = extract_memories::run_extraction(em_state.clone(), params).await {
+            warn!("[extract_memories] Failed for session {}: {}", sid, err);
+            // Still drain pending to avoid stashed work becoming stuck.
         }
-    });
+        let trailing = {
+            let mut state = em_state.lock().await;
+            extract_memories::take_pending(&mut state)
+        };
+        match trailing {
+            Some(next) => {
+                info!(
+                    "[extract_memories] Running trailing extraction for session {}",
+                    sid
+                );
+                current_msgs = next;
+            }
+            None => break,
+        }
+    }
 }
 
 // ── Auto-dream consolidation (step 9d) ──────────────────────────────
@@ -330,39 +395,45 @@ pub(super) async fn spawn_auto_dream(input: AutoDreamInput<'_>) {
         tool_registry,
     } = input;
 
-    let should_run = {
-        let state = ad_state.lock().await;
-        auto_dream::should_attempt(&state, &ws_path)
-    };
-    if !should_run {
-        return;
-    }
-
+    // Everything below — including the `ad_state.lock()` gate pre-check —
+    // runs inside a detached task. This is the turn-completion hot path:
+    // `dispatch_post_turn_work` awaits this fn and the scheduler only emits
+    // the idle queue-status (which hides the "Planning…" footer) AFTER
+    // `process()` returns. The previous version `await`ed the `ad_state.lock()`
+    // pre-check directly here, so when the PRIOR turn's consolidation still
+    // held that lock across its (minutes-long) LLM round-trip, this turn's
+    // completion signal was blocked. Spawning the entire body keeps the
+    // function a true fire-and-forget so completion is instant.
     let sid = session_id.to_string();
-    info!(
-        "[unified_processor] Spawning auto_dream for session {}",
-        sid
-    );
-
     tokio::spawn(async move {
-        let provider = match fresh_fork_provider(&fork_provider).await {
-            Ok(provider) => provider,
-            Err(err) => {
-                warn!("[auto_dream] Failed for session {}: {}", sid, err);
+        // Brief lock ONLY for the throttle gate + advance — never held across
+        // the consolidation LLM call below.
+        {
+            let mut state = ad_state.lock().await;
+            if !auto_dream::should_attempt(&state, &ws_path) {
                 return;
             }
-        };
-        let mut state = ad_state.lock().await;
+            state.mark_scan_now();
+        }
+
+        info!("[unified_processor] Spawning auto_dream for session {}", sid);
+
         let params = crate::memory::MemoryAgentParams {
             messages: &messages,
-            provider,
+            provider: match fresh_fork_provider(&fork_provider).await {
+                Ok(provider) => provider,
+                Err(err) => {
+                    warn!("[auto_dream] Failed for session {}: {}", sid, err);
+                    return;
+                }
+            },
             model: &fork_provider.model,
             workspace: &ws_path,
             parent_tools: tool_registry,
             session_id: &sid,
             definitions_store: None,
         };
-        if let Err(err) = auto_dream::run_consolidation(&mut state, params).await {
+        if let Err(err) = auto_dream::run_consolidation(params).await {
             warn!("[auto_dream] Failed for session {}: {}", sid, err);
         }
     });

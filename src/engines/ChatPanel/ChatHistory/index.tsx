@@ -24,6 +24,8 @@ import type { AgentOrgRunMemberView } from "@src/api/tauri/agent";
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
+import { streamingDeltaContentAtom } from "@src/engines/SessionCore/core/atoms";
+import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
 import { usePlanningIndicator } from "@src/engines/SessionCore/hooks";
 import {
   estimateRuntimeValueBytes,
@@ -58,6 +60,7 @@ import ChatPinnedHeaderLayer from "./components/ChatPinnedHeaderLayer";
 import ChatSearchBar from "./components/ChatSearchBar";
 import RevertConfirmDialog from "./components/RevertConfirmDialog";
 import TurnPageList from "./components/TurnPageList";
+import { getChatContentBottomDistance } from "./config/chatFooterSpacer";
 import {
   useChatEmptyState,
   useChatFooterSpacer,
@@ -95,7 +98,7 @@ import "./index.scss";
  */
 interface PlanningIndicatorBridgeProps extends Omit<
   React.ComponentProps<typeof ChatHistoryList>,
-  "planningIndicatorCount" | "planningShowSlowHint" | "planningVariantIndex"
+  "planningIndicatorCount" | "planningVariantIndex" | "planningFooterMode"
 > {
   planningIndicatorScope: { sessionId: string; isLive: boolean } | null;
   planningIndicatorEnabled: boolean;
@@ -112,10 +115,20 @@ const PlanningIndicatorBridge: React.FC<PlanningIndicatorBridgeProps> = ({
   onPlanningIndicatorCount,
   ...chatHistoryListProps
 }) => {
-  const { count, showSlowHint, variantIndex } = usePlanningIndicator(
-    planningIndicatorScope
-  );
-  const visibleCount = planningIndicatorEnabled ? count : 0;
+  const { count, variantIndex } = usePlanningIndicator(planningIndicatorScope);
+  const activeSessionId = useAtomValue(sessionIdAtom);
+  const streamingDeltaMap = useAtomValue(streamingDeltaContentAtom);
+  const scopedSessionId = planningIndicatorScope?.sessionId ?? activeSessionId;
+  const liveDelta = scopedSessionId
+    ? streamingDeltaMap.get(scopedSessionId)
+    : undefined;
+  const isAgentTyping = liveDelta?.kind === "message";
+  const planningFooterMode = isAgentTyping ? "agentTyping" : "planning";
+  const visibleCount = planningIndicatorEnabled
+    ? isAgentTyping
+      ? 1
+      : count
+    : 0;
 
   // Notify the orchestrator whenever the count flips so useChatFooterSpacer
   // can schedule a re-measurement.
@@ -127,8 +140,8 @@ const PlanningIndicatorBridge: React.FC<PlanningIndicatorBridgeProps> = ({
     <ChatHistoryList
       {...chatHistoryListProps}
       planningIndicatorCount={visibleCount}
-      planningShowSlowHint={planningIndicatorEnabled && showSlowHint}
       planningVariantIndex={variantIndex}
+      planningFooterMode={planningFooterMode}
     />
   );
 };
@@ -436,7 +449,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   // useChatFooterSpacer can re-measure when the planning footer appears /
   // disappears. The count itself is 0 or 1, so this setter is called at most
   // twice per session; it does NOT subscribe to eventStoreVersionAtom here.
-  // showSlowHint and variantIndex stay inside PlanningIndicatorBridge.
+  // variantIndex stays inside PlanningIndicatorBridge.
   const [planningIndicatorCount, setPlanningIndicatorCount] = useState<0 | 1>(
     0
   );
@@ -587,6 +600,24 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   const virtualListDataKey = `${activeId ?? "no-session"}:${
     turnPaginationEnabled ? `page-${currentPageIndex}` : "all"
   }:${virtualListGroupShapeKey}:${virtualListItemShapeKey}:${collapseStateKey}`;
+  const tailFollowKey = useMemo(() => {
+    const tailItem = displayFlatItems[displayFlatItems.length - 1];
+    const tailEvent = tailItem?.event;
+    return [
+      activeId ?? "no-session",
+      tailItem?.chunk_id ?? "no-tail",
+      tailEvent?.displayStatus ?? "",
+      tailEvent?.activityStatus ?? "",
+      tailEvent?.displayText?.length ?? 0,
+      displayTotalFlatItems,
+      planningIndicatorCount,
+    ].join(":");
+  }, [
+    activeId,
+    displayFlatItems,
+    displayTotalFlatItems,
+    planningIndicatorCount,
+  ]);
 
   // --- Empty-state grace period ---
   const optimizedLen = chatHistory.length;
@@ -644,6 +675,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   // they coordinate without re-renders.
   const pinLastGroupRef = useRef(false);
   const manualScrollAtRef = useRef(0);
+  const programmaticScrollAtRef = useRef(0);
   const turnCollapseInteractionAtRef = useRef(0);
   const [reservePinToTop, setReservePinToTop] = React.useState(false);
   const handlePinToTopChange = useCallback((active: boolean) => {
@@ -697,10 +729,14 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
         if (measurementKey === lastMeasurementKey) return;
         lastMeasurementKey = measurementKey;
 
-        const distanceToPhysicalBottom =
-          root.scrollHeight - root.scrollTop - root.clientHeight;
         const nextVisible =
-          distanceToPhysicalBottom <= SCROLL_NAV_SHOW_THRESHOLD_PX;
+          getChatContentBottomDistance({
+            scrollTop: root.scrollTop,
+            scrollHeight: root.scrollHeight,
+            clientHeight: root.clientHeight,
+            footerSpacerHeight,
+            bottomInset,
+          }) <= SCROLL_NAV_SHOW_THRESHOLD_PX;
         setIsBottomSentinelVisible((previousVisible) =>
           previousVisible === nextVisible ? previousVisible : nextVisible
         );
@@ -725,6 +761,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     };
   }, [
     activeId,
+    bottomInset,
     displayTotalFlatItems,
     footerSpacerHeight,
     staticScrollerRef,
@@ -742,10 +779,14 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     visibleRangeEndRef,
     pinLastGroupRef,
     manualScrollAtRef,
+    programmaticScrollAtRef,
     turnCollapseInteractionAtRef,
     isContentOverflowingRef,
     activeSessionId: activeId,
     staticScrollerRef,
+    footerSpacerHeight,
+    bottomInset,
+    tailFollowKey,
     alwaysFollowTail: disableTailCollapse,
   });
   // Subagent panes pass `disableTailCollapse` because every paginated page
@@ -775,6 +816,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     activeId,
     groupCounts: displayGroupCounts,
     totalFlatItems: displayTotalFlatItems,
+    footerSpacerHeight,
+    bottomInset,
     sessionLoadStatus,
     virtuosoScrollerRef,
     atBottom,
@@ -783,6 +826,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     optimizedChatHistoryLength: optimizedChatHistory.length,
     pinLastGroupRef,
     manualScrollAtRef,
+    programmaticScrollAtRef,
     onPinToTopChange: handlePinToTopChange,
     staticScrollerRef,
   });
@@ -1140,6 +1184,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                       }
                       codeBlockContainerWidth={codeBlockContainerWidth ?? 0}
                       footerSpacerHeight={footerSpacerHeight}
+                      bottomInset={bottomInset}
                       virtualListRef={virtualListRef}
                       virtualListDataKey={virtualListDataKey}
                       getIsWpGeneWorking={getIsWpGeneWorking}

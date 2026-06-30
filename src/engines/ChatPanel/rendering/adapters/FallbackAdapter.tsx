@@ -4,7 +4,7 @@
  * Renders any tool without a specialized chat view (MCP tools, `manage_lsp`,
  * `setup_repo`, browser-control actions, misc utilities) via `ToolCallBlock`.
  * Exceptions that branch to richer blocks:
- *   - `worktree` + action=list (done)  → WorktreeListBlock
+ *   - `worktree` → WorktreeListBlock
  *
  * Title resolution: built-in tools use the Rust registry via
  * `useLifecycleLabels`; only unregistered tools fall back to `formatToolName()`.
@@ -27,29 +27,14 @@ import ManageAgentDefBlock, {
 import ManageCodeMapBlock from "../../blocks/ManageCodeMapBlock";
 import ToolCallBlock from "../../blocks/ToolCallBlock";
 import WorktreeListBlock, {
-  type WorktreeEntryItem,
+  buildWorktreeRows,
+  extractWorktreeEntries,
 } from "../../blocks/WorktreeListBlock";
 
 const MCP_ICON = getEventIcon("mcp_tool");
 
-function isWorktreeListDone(props: UniversalEventProps): boolean {
-  if (props.status !== "success") return false;
-  if (props.eventType !== "worktree") return false;
-  return (props.args?.action as string | undefined) === "list";
-}
-
-function extractWorktreeEntries(
-  props: UniversalEventProps
-): WorktreeEntryItem[] {
-  const raw = props.result?.entries;
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (entry): entry is WorktreeEntryItem =>
-      entry !== null &&
-      typeof entry === "object" &&
-      typeof (entry as Record<string, unknown>).path === "string" &&
-      typeof (entry as Record<string, unknown>).branch === "string"
-  );
+function isWorktreeTool(toolName: string): boolean {
+  return stripMcpPrefix(toolName) === "worktree";
 }
 
 // ============================================
@@ -118,9 +103,6 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
       : props.eventType || "tool_call";
   const action = deriveToolAction(displayToolName, props.args);
 
-  // Resolve worktree-list labels unconditionally so hook order stays stable
-  // even when the branch taken changes between renders.
-  const worktreeLabels = useLifecycleLabels("worktree", "list");
   const state = statusToLifecycle(props.status);
 
   const toolLabels = useLifecycleLabels(displayToolName, action);
@@ -134,18 +116,21 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
   if (PLAN_SIGNAL_TOOLS.has(stripMcpPrefix(props.functionName ?? "")))
     return null;
 
-  if (isWorktreeListDone(props)) {
-    const entries = extractWorktreeEntries(props);
-    if (entries.length > 0) {
-      return (
-        <WorktreeListBlock
-          entries={entries}
-          eventId={props.eventId}
-          title={worktreeLabels[state]}
-          toolUsage={props.toolUsage}
-        />
-      );
-    }
+  if (isWorktreeTool(displayToolName)) {
+    return (
+      <WorktreeListBlock
+        action={action ?? "list"}
+        entries={extractWorktreeEntries(props.result)}
+        rows={buildWorktreeRows(action ?? "list", props.args, props.result)}
+        eventId={props.eventId}
+        title={title}
+        isLoading={
+          props.status === "running" && props.showActiveEventPainting === true
+        }
+        isFailed={state === "failed"}
+        toolUsage={props.toolUsage}
+      />
+    );
   }
 
   if (isManageAgentDefTool(props)) {

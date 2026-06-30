@@ -2225,6 +2225,7 @@
     "insufficientBalance": "Saldo insuficiente para el servicio alojado de ORGII. Recarga en orgii.ai/wallet."
   },
   "planning": {
+    "agentTyping": "Agent está escribiendo...",
     "nextStepVariants": [
       "Planificando el siguiente paso...",
       "Pensándolo bien...",

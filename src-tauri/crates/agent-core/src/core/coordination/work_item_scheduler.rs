@@ -10,12 +10,18 @@
 //!
 //! On failure, writes a notification to the user's inbox.
 
-use tracing::{info, warn};
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
+
+use tracing::{debug, info, warn};
 
 use project_management::projects::io;
 use project_management::projects::types::{WorkItemFrontmatter, WorkItemSchedule};
 
 const POLL_INTERVAL_SECS: u64 = 30;
+const BLOCKED_NOTIFICATION_COOLDOWN_SECS: i64 = 60 * 60;
+
+static BLOCKED_NOTIFICATION_LAST_SENT: OnceLock<Mutex<HashMap<String, i64>>> = OnceLock::new();
 
 /// Spawn the scheduler background task.
 ///
@@ -298,15 +304,38 @@ pub fn migrate_cron_schedules() -> Result<usize, String> {
     Ok(migrated)
 }
 
+fn blocked_notification_key(short_id: &str, reason: &str) -> String {
+    format!("{short_id}:{}", truncate(reason, 160))
+}
+
+fn should_emit_blocked_notification(key: &str, now_ts: i64) -> bool {
+    let cache = BLOCKED_NOTIFICATION_LAST_SENT.get_or_init(|| Mutex::new(HashMap::new()));
+    let Ok(mut cache) = cache.lock() else {
+        return true;
+    };
+
+    if let Some(last_sent_at) = cache.get(key) {
+        if now_ts.saturating_sub(*last_sent_at) < BLOCKED_NOTIFICATION_COOLDOWN_SECS {
+            return false;
+        }
+    }
+
+    cache.insert(key.to_string(), now_ts);
+    true
+}
+
 /// Write a "blocked" notification to the user's inbox.
 fn notify_inbox_blocked(short_id: &str, title: &str, reason: &str) {
-    let now = chrono::Utc::now().to_rfc3339();
+    let now = chrono::Utc::now();
+    let key = blocked_notification_key(short_id, reason);
+    if !should_emit_blocked_notification(&key, now.timestamp()) {
+        debug!("[scheduler] Suppressed duplicate blocked notification for {}", short_id);
+        return;
+    }
+
+    let now_rfc3339 = now.to_rfc3339();
     let msg = inbox::persistence::InboxMessage {
-        id: format!(
-            "schedule-blocked-{}-{}",
-            short_id,
-            chrono::Utc::now().timestamp()
-        ),
+        id: format!("schedule-blocked-{}", short_id),
         title: format!("[Scheduled Task Blocked] {} \"{}\"", short_id, title),
         preview: format!("Reason: {}", truncate(reason, 100)),
         content: format!(
@@ -326,8 +355,8 @@ fn notify_inbox_blocked(short_id: &str, title: &str, reason: &str) {
         metadata: "{}".to_string(),
         labels: serde_json::to_string(&["schedule-blocked"])
             .expect("serializing a static [&str] is infallible"),
-        created_at: now.clone(),
-        updated_at: now,
+        created_at: now_rfc3339.clone(),
+        updated_at: now_rfc3339,
     };
     if let Err(err) = inbox::persistence::upsert_message(&msg) {
         warn!(

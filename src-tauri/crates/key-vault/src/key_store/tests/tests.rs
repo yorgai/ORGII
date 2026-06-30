@@ -156,6 +156,7 @@ fn test_e2e_with_real_keys() {
             Some(vec!["gpt-4".to_string(), "gpt-3.5-turbo".to_string()]),
             None,
             None,
+            None,
         )
         .unwrap();
     println!(
@@ -173,6 +174,155 @@ fn test_e2e_with_real_keys() {
     println!("   Verified: storage is empty");
 
     println!("\n=== E2E Test Complete ===\n");
+}
+
+/// `update_key_health` writes provider-reported context windows onto
+/// `model_variants`; a subsequent `save_key` (e.g. the user editing an
+/// unrelated field) must preserve them. Regression guard for the
+/// account-aware context-window feature.
+#[test]
+fn test_context_window_survives_save_key_roundtrip() {
+    let temp_dir = tempdir().unwrap();
+    let service = KeyService::new(Some(temp_dir.path().to_path_buf()));
+
+    let mut cred = ModelKey::new(ModelType::OpenaiApi);
+    cred.name = Some("Ctx Test".to_string());
+    cred.api_key = Some("sk-test".to_string());
+    let saved = service.save_key(cred).unwrap();
+
+    // Provider's /v1/models reports a context window for this account.
+    let mut contexts = HashMap::new();
+    contexts.insert("gpt-4o".to_string(), 128_000u64);
+    service
+        .update_key_health(
+            &saved.id,
+            HealthStatus::Valid,
+            None,
+            Some(vec!["gpt-4o".to_string()]),
+            None,
+            None,
+            Some(&contexts),
+        )
+        .unwrap();
+
+    let loaded = service.get_key_by_id(&saved.id).unwrap();
+    let variant = loaded
+        .model_variants
+        .iter()
+        .find(|v| v.model == "gpt-4o")
+        .expect("gpt-4o variant written by update_key_health");
+    assert_eq!(variant.context_window, Some(128_000));
+
+    // Round-trip through save_key with the entry as-is.
+    service.save_key(loaded).unwrap();
+    let reloaded = service.get_key_by_id(&saved.id).unwrap();
+    let variant_after = reloaded
+        .model_variants
+        .iter()
+        .find(|v| v.model == "gpt-4o")
+        .unwrap();
+    assert_eq!(
+        variant_after.context_window,
+        Some(128_000),
+        "save_key must not erase provider-reported context_window"
+    );
+}
+
+#[test]
+fn test_update_key_health_clears_stale_context_window_when_provider_omits_it() {
+    let temp_dir = tempdir().unwrap();
+    let service = KeyService::new(Some(temp_dir.path().to_path_buf()));
+
+    let mut cred = ModelKey::new(ModelType::OpenaiApi);
+    cred.name = Some("Ctx Clear Test".to_string());
+    cred.api_key = Some("sk-test".to_string());
+    let saved = service.save_key(cred).unwrap();
+
+    let mut contexts = HashMap::new();
+    contexts.insert("gpt-4o".to_string(), 128_000u64);
+    service
+        .update_key_health(
+            &saved.id,
+            HealthStatus::Valid,
+            None,
+            Some(vec!["gpt-4o".to_string()]),
+            None,
+            None,
+            Some(&contexts),
+        )
+        .unwrap();
+
+    service
+        .update_key_health(
+            &saved.id,
+            HealthStatus::Valid,
+            None,
+            Some(vec!["gpt-4o".to_string()]),
+            None,
+            None,
+            Some(&HashMap::new()),
+        )
+        .unwrap();
+
+    let loaded = service.get_key_by_id(&saved.id).unwrap();
+    let variant = loaded
+        .model_variants
+        .iter()
+        .find(|v| v.model == "gpt-4o")
+        .expect("variant remains for reasoning/default metadata");
+    assert_eq!(
+        variant.context_window, None,
+        "missing context_length in a fresh provider response must clear stale override"
+    );
+}
+
+#[test]
+fn test_update_key_health_preserves_context_window_without_model_refresh() {
+    let temp_dir = tempdir().unwrap();
+    let service = KeyService::new(Some(temp_dir.path().to_path_buf()));
+
+    let mut cred = ModelKey::new(ModelType::OpenaiApi);
+    cred.name = Some("Ctx Preserve Test".to_string());
+    cred.api_key = Some("sk-test".to_string());
+    let saved = service.save_key(cred).unwrap();
+
+    let mut contexts = HashMap::new();
+    contexts.insert("gpt-4o".to_string(), 128_000u64);
+    service
+        .update_key_health(
+            &saved.id,
+            HealthStatus::Valid,
+            None,
+            Some(vec!["gpt-4o".to_string()]),
+            None,
+            None,
+            Some(&contexts),
+        )
+        .unwrap();
+
+    service
+        .update_key_health(
+            &saved.id,
+            HealthStatus::Valid,
+            None,
+            None,
+            None,
+            None,
+            Some(&HashMap::new()),
+        )
+        .unwrap();
+
+    let loaded = service.get_key_by_id(&saved.id).unwrap();
+    let variant = loaded
+        .model_variants
+        .iter()
+        .find(|v| v.model == "gpt-4o")
+        .expect("variant remains after health-only update");
+    assert_eq!(
+        variant.context_window,
+        Some(128_000),
+        "health-only updates must not clear provider context_window overrides"
+    );
 }
 
 /// Debug test to check parsing of real credentials file

@@ -33,6 +33,7 @@ interface UsePinnedMenuItemsParams {
   activeSidebarKey: WorkstationSidebarKey;
   createProjectLabel: string;
   createWorkItemLabel: string;
+  importGithubIssuesLabel: string;
   newSessionLabel: string;
   t: TFunction<"navigation">;
 }
@@ -46,6 +47,7 @@ export function usePinnedMenuItems({
   activeSidebarKey,
   createProjectLabel,
   createWorkItemLabel,
+  importGithubIssuesLabel,
   newSessionLabel,
   t,
 }: UsePinnedMenuItemsParams): UsePinnedMenuItemsResult {
@@ -65,8 +67,9 @@ export function usePinnedMenuItems({
       buildProjectsPinnedMenuItems({
         createProjectLabel,
         createWorkItemLabel,
+        importGithubIssuesLabel,
       }),
-    [createProjectLabel, createWorkItemLabel]
+    [createProjectLabel, createWorkItemLabel, importGithubIssuesLabel]
   );
   const foldersPinnedMenuItems = useMemo<NavigationMenuItem[]>(
     () =>

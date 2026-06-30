@@ -2,6 +2,8 @@
 //!
 //! These types mirror the Python `orgii_shared.validation.types` module.
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 /// Single usage type (plan, on_demand, chat, completions, premium, etc.)
@@ -92,6 +94,14 @@ pub struct ValidationResult {
     /// List of available model IDs
     #[serde(default)]
     pub models_available: Vec<String>,
+    /// Per-model context window (tokens) reported by the provider's
+    /// `/v1/models` endpoint. Empty for providers that only return ids
+    /// (official OpenAI/Anthropic); populated by OpenAI-compat proxies and
+    /// aggregators that expose `context_length`. Consumed at runtime to
+    /// override the static `FAMILY_RULES` defaults — see
+    /// `agent_core::providers::model_capabilities::resolve`.
+    #[serde(default)]
+    pub model_context_lengths: HashMap<String, u64>,
     /// List of disabled/unavailable model IDs
     #[serde(default)]
     pub disabled_models: Vec<String>,
@@ -112,6 +122,7 @@ impl ValidationResult {
             valid: true,
             message: message.to_string(),
             models_available: Vec::new(),
+            model_context_lengths: HashMap::new(),
             disabled_models: Vec::new(),
             is_degraded: false,
             quota_info: None,
@@ -125,6 +136,7 @@ impl ValidationResult {
             valid: false,
             message: message.to_string(),
             models_available: Vec::new(),
+            model_context_lengths: HashMap::new(),
             disabled_models: Vec::new(),
             is_degraded: false,
             quota_info: None,
@@ -135,6 +147,15 @@ impl ValidationResult {
     /// Set models available
     pub fn with_models(mut self, models: Vec<String>) -> Self {
         self.models_available = models;
+        self
+    }
+
+    /// Attach per-model context windows reported by the provider. Only the
+    /// OpenAI-compat providers (openai/anthropic-proxy/azure) that expose
+    /// `context_length` on `/v1/models` call this; other providers leave the
+    /// map empty and the runtime falls back to the static family table.
+    pub fn with_contexts(mut self, contexts: HashMap<String, u64>) -> Self {
+        self.model_context_lengths = contexts;
         self
     }
 

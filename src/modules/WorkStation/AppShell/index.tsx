@@ -14,6 +14,10 @@ import {
 } from "@src/hooks/workStation";
 import { GUIDE_TARGETS } from "@src/scaffold/Tutorials";
 import { workstationActiveSessionIdAtom } from "@src/store/session";
+import {
+  CHAT_PANEL_SURFACE_KIND,
+  activeChatPanelSurfaceAtom,
+} from "@src/store/ui/chatPanelAtom";
 import { simulatorCaptionBarEnabledAtom } from "@src/store/ui/simulatorAtom";
 import {
   workStationDockAutoHideAtom,
@@ -73,6 +77,13 @@ const AppShell = React.memo(
     const workstationActiveSessionId = useAtomValue(
       workstationActiveSessionIdAtom
     );
+    const chatPanelSurface = useAtomValue(activeChatPanelSurfaceAtom);
+    const hideWorkstationDockForChatPanel =
+      chatPanelFocused &&
+      (chatPanelSurface.kind === CHAT_PANEL_SURFACE_KIND.PROJECT ||
+        chatPanelSurface.kind === CHAT_PANEL_SURFACE_KIND.PROJECT_ORG ||
+        chatPanelSurface.kind === CHAT_PANEL_SURFACE_KIND.WORK_ITEM ||
+        chatPanelSurface.kind === CHAT_PANEL_SURFACE_KIND.MANAGE_ISSUES);
 
     const { repoPath, repoName, pathExists, lastSeenPath } = useAppShellRepo();
     const { visitedModes, handleDockClick } = useAppShellDock();
@@ -208,20 +219,22 @@ const AppShell = React.memo(
           {showStatusBar && !showOpsControlEmptyStatusBar && (
             <StatusBarRenderer floating={useFloatingStatusBar} />
           )}
-          {!isAgentStation && !isOpsControlStation && (
-            <StationDockChrome
-              autoHide={dockAutoHide}
-              showTopBorder={!useFloatingStatusBar}
-            >
-              <div data-guide-target={GUIDE_TARGETS.WORKSTATION_DOCK}>
-                <Dock
-                  segments={myStationDockSegments}
-                  activeApp={activeDockApp}
-                  onAppClick={handleDockClick}
-                />
-              </div>
-            </StationDockChrome>
-          )}
+          {!isAgentStation &&
+            !isOpsControlStation &&
+            !hideWorkstationDockForChatPanel && (
+              <StationDockChrome
+                autoHide={dockAutoHide}
+                showTopBorder={!useFloatingStatusBar}
+              >
+                <div data-guide-target={GUIDE_TARGETS.WORKSTATION_DOCK}>
+                  <Dock
+                    segments={myStationDockSegments}
+                    activeApp={activeDockApp}
+                    onAppClick={handleDockClick}
+                  />
+                </div>
+              </StationDockChrome>
+            )}
         </AgentStationChromeFrame>
       </div>
     );

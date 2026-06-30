@@ -12,6 +12,9 @@
       "project": "プロジェクト別",
       "status": "ステータス別",
       "priority": "優先度別",
+      "person": "担当者別",
+      "assignedTo": "割り当て先別",
+      "createdBy": "作成者別",
       "targetDate": "目標日別"
     },
     "source": {
@@ -68,6 +71,52 @@
       "unprioritized": "優先度未設定"
     },
     "viewProjects": "Project を表示"
+  },
+  "githubIssuesImport": {
+    "title": "GitHub Issues をインポート",
+    "menuLabel": "GitHub Issues をインポート",
+    "createTarget": "GitHub Issues Project",
+    "heading": "GitHub Issues から Project を作成",
+    "description": "GitHub リポジトリを選択し、ORGII Project を作成して、GitHub Issues を work items として同期します。",
+    "importButton": "GitHub Issues をインポート",
+    "projectDescription": "{{owner}}/{{repo}} の GitHub Issues から同期。",
+    "fields": {
+      "projectName": "Project 名",
+      "repo": "GitHub リポジトリ",
+      "connection": "GitHub 接続"
+    },
+    "placeholders": {
+      "projectName": "ORGII GitHub Issues",
+      "repo": "owner/repo または https://github.com/owner/repo",
+      "connection": "GitHub 接続を選択"
+    },
+    "loadingConnections": "GitHub 接続を読み込み中...",
+    "noConnectionTitle": "GitHub 接続が見つかりません",
+    "noConnectionDescription": "先に Integrations で GitHub 接続を追加してから、ここに戻って GitHub Issues をインポートしてください。",
+    "linkedRepoHint": "この Project は現在の Workspace repo にもリンクされます: {{repoName}}。",
+    "createdTitle": "{{name}} の準備ができました",
+    "createdDescription": "ORGII は {{owner}}/{{repo}} から GitHub Issues をインポートしています。同期中も作業を続けられます。",
+    "createdDescriptionFallback": "ORGII は GitHub Issues をインポートしています。同期中も作業を続けられます。",
+    "errors": {
+      "invalidRepo": "owner/repo または GitHub リポジトリ URL を使用してください。"
+    },
+    "importStatus": {
+      "title": "インポート状態",
+      "pendingDescription": "インポート worker はキューに入り、まもなく開始されます。",
+      "runningDescription": "GitHub Issues をこの Project に work items としてインポートしています。",
+      "completedDescription": "利用可能な GitHub Issues はすべてインポートされました。",
+      "failedDescription": "インポート worker がエラーを報告しました。Project の同期設定から再試行できます。",
+      "cancelledDescription": "すべての GitHub Issues がインポートされる前にインポートがキャンセルされました。",
+      "progressWithTotal": "{{count}} / {{total}} GitHub Issues をインポート済み",
+      "progressNoTotal": "{{count}} GitHub Issues をインポート済み",
+      "state": {
+        "pending": "保留中",
+        "running": "実行中",
+        "completed": "完了",
+        "failed": "失敗",
+        "cancelled": "キャンセル済み"
+      }
+    }
   },
   "orgs": {
     "yourOrgs": "あなたの組織",
@@ -226,7 +275,10 @@
       "inProgress": "進行中",
       "inReview": "レビュー中",
       "done": "完了",
-      "cancelled": "キャンセル"
+      "cancelled": "キャンセル",
+      "duplicate": "重複",
+      "open": "Open",
+      "closed": "Closed"
     },
     "statusLabels": {
       "backlog": "Backlog",
@@ -235,7 +287,9 @@
       "in_review": "レビュー中",
       "completed": "完了",
       "cancelled": "キャンセル",
-      "duplicate": "重複"
+      "duplicate": "重複",
+      "open": "Open",
+      "closed": "Closed"
     },
     "priorityLabels": {
       "none": "優先度なし",

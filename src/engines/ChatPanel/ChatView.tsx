@@ -44,7 +44,8 @@ import { forkCodexAppHistoryIntoOrgiiSession } from "@src/engines/ChatPanel/exte
 import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatController";
 import { AgentOrgGroupChatLiveSessions } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatLiveSessions";
 import { replayModeAtom } from "@src/engines/SessionCore";
-import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
+import { derivedSnapshotAtom } from "@src/engines/SessionCore/core/atoms/events";
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { useFileReviewSync } from "@src/hooks/fileReview";
@@ -56,6 +57,7 @@ import {
   sessionByIdAtom,
 } from "@src/store/session";
 import type { Session } from "@src/store/session";
+import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
 import {
   isSessionActiveAtom,
   sessionRuntimeStatusAtom,
@@ -111,12 +113,14 @@ import { useAgentOrgRunView } from "./InputArea/components/useAgentOrgRunView";
 import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useGitDiffActions } from "./InputArea/hooks/useGitDiffActions";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
+import { useJumpToSimulatorCanvas } from "./blocks/CanvasInlineCard/useJumpToSimulatorCanvas";
 import { useBrowserAddToConversationAction } from "./hooks/useBrowserAddToConversationAction";
 import { useFollowAgent } from "./hooks/useFollowAgent";
 
 const logger = createLogger("ChatView");
 
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
+const EMPTY_CHAT_EVENTS: SessionEvent[] = [];
 
 function impactFileChanges(input: {
   filesChanged?: number;
@@ -409,10 +413,44 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const streamRetryStatus = useAtomValue(streamRetryStatusAtom);
     const streamRetry =
       streamRetryStatus?.sessionId === sessionId ? streamRetryStatus : null;
+    const snapshot = useAtomValue(derivedSnapshotAtom);
+    const canvasPreview = useAtomValue(canvasPreviewAtom);
+    const latestCanvasPreview = snapshot?.latestCanvasPreview ?? null;
+    const latestCanvasPayload = useMemo(
+      () =>
+        canvasPreview?.sessionId === sessionId
+          ? canvasPreview.payload
+          : latestCanvasPreview
+            ? {
+                mode: latestCanvasPreview.mode,
+                url: latestCanvasPreview.url,
+                title: latestCanvasPreview.title,
+                streaming: latestCanvasPreview.streaming,
+                eventId: latestCanvasPreview.eventId,
+              }
+            : null,
+      [canvasPreview, latestCanvasPreview, sessionId]
+    );
+    const openLatestCanvas = useJumpToSimulatorCanvas(
+      sessionId,
+      latestCanvasPayload
+    );
+    const canvasPreviewPill = useMemo(
+      () =>
+        latestCanvasPayload &&
+        !canvasPreview?.openedInSimulator &&
+        openLatestCanvas
+          ? {
+              label: "Canvas",
+              onOpen: openLatestCanvas,
+            }
+          : null,
+      [canvasPreview?.openedInSimulator, latestCanvasPayload, openLatestCanvas]
+    );
     const currentPlanApproval = useAtomValue(pendingPlanApprovalsAtom).get(
       sessionId
     )?.current;
-    const chatEvents = useAtomValue(chatEventsAtom);
+    const chatEvents = snapshot?.chatEvents ?? EMPTY_CHAT_EVENTS;
     const isAgentWorking = useAtomValue(isSessionActiveAtom);
 
     const gitArtifactStats = useMemo(
@@ -851,6 +889,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
               groupChatViewActive={groupChatViewActive}
               hasAnyInlineSection={hasAny}
               scrollNav={scrollNav}
+              canvasPreview={canvasPreviewPill}
               inlineSections={inlineSections}
               hasModeSwitch={hasModeSwitch}
               agentOrgIntervention={

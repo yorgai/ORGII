@@ -221,6 +221,18 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
     })();
 
     const variantMetadata = parseModelVariants(allAvailableModels);
+    const variantMetadataByModel = new Map(
+      variantMetadata.map((variant) => [variant.model, variant])
+    );
+    const contextModels = new Set(
+      Object.keys(data.model_context_lengths ?? {}).filter((model) =>
+        allAvailableModels.includes(model)
+      )
+    );
+    const modelVariantIds = new Set([
+      ...variantMetadata.map((variant) => variant.model),
+      ...contextModels,
+    ]);
 
     const request: SaveKeyRequest = {
       name: resolvedName,
@@ -249,13 +261,17 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
               }))
           : undefined,
       model_variants:
-        variantMetadata.length > 0
-          ? variantMetadata.map((variant) => ({
-              model: variant.model,
-              base_model: variant.baseModel,
-              reasoning: variant.reasoning,
-              fast: variant.fast,
-            }))
+        modelVariantIds.size > 0
+          ? [...modelVariantIds].map((model) => {
+              const variant = variantMetadataByModel.get(model);
+              return {
+                model,
+                base_model: variant?.baseModel ?? model,
+                reasoning: variant?.reasoning,
+                fast: variant?.fast ?? false,
+                context_window: data.model_context_lengths?.[model],
+              };
+            })
           : undefined,
       default_variants:
         data.default_variants.length > 0 ? data.default_variants : undefined,

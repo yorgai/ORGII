@@ -169,7 +169,10 @@ export function useLocalKeys(
           fullKey.id,
           result.valid ? "valid" : "invalid",
           result.valid ? undefined : result.message,
-          result.models_available
+          result.models_available,
+          undefined,
+          undefined,
+          result.model_context_lengths
         );
 
         const updated = await getKey(agentType, keyId);
@@ -357,7 +360,10 @@ export function useLocalKeys(
             fullKey.id,
             result.valid ? "valid" : "invalid",
             result.valid ? undefined : result.message,
-            modelsToSave
+            modelsToSave,
+            undefined,
+            undefined,
+            result.model_context_lengths
           );
         } else {
           return false;

@@ -118,9 +118,10 @@ simulatorEventsAtom.debugLabel = "session/simulatorEvents";
 export const messagesEventsAtom = atom((get) => {
   const snap = get(derivedSnapshotAtom);
   const sessionId = get(sessionIdAtom);
-  const liveContent = sessionId
+  const liveDelta = sessionId
     ? (get(streamingDeltaContentAtom).get(sessionId) ?? null)
     : null;
+  const liveContent = liveDelta?.kind === "message" ? liveDelta.content : null;
 
   if (snap && "messagesEvents" in snap) {
     return appendLiveAssistantEvent(

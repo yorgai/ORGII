@@ -181,3 +181,146 @@ async fn test_cancel_subagents_for_session_scopes_to_session() {
     registry::remove(&mine);
     registry::remove(&other);
 }
+
+/// Wake-claim lifecycle: `claim_subagent_wake_for_session` is the exactly-once
+/// signal the subagent-wake coordinator uses. It claims a finished,
+/// not-acknowledged, not-yet-dispatched subagent result and marks it dispatched
+/// in the same pass — so a second call returns false (no double wake).
+#[test]
+fn test_claim_subagent_wake_lifecycle() {
+    let session = "wake-claim-session";
+    let handle = "agent-builtin:explore-wakeclaim".to_string();
+    let (_tx, _cancel) = registry::register_subagent(
+        handle.clone(),
+        "delegate".into(),
+        "Explore".into(),
+        session.into(),
+    );
+
+    // Still running → nothing to claim.
+    assert!(!registry::claim_subagent_wake_for_session(session));
+
+    // Completed but unacknowledged → first claim succeeds.
+    registry::set_final_result(&handle, "explored 12 files".into());
+    registry::mark_exited(&handle, JobStatus::Completed);
+    assert!(registry::claim_subagent_wake_for_session(session));
+
+    // EXACTLY-ONCE invariant: a second claim of the same result returns false,
+    // because the first marked it wake_dispatched. This is what makes the two
+    // wake triggers (completion push + turn-end re-check) collapse to a single
+    // dispatch regardless of ordering.
+    assert!(
+        !registry::claim_subagent_wake_for_session(session),
+        "a result must be claimable at most once"
+    );
+
+    // After release, it becomes claimable again (the running-parent path frees
+    // the claim so the turn-end re-check can pick it up).
+    registry::release_subagent_wake_for_session(session);
+    assert!(registry::claim_subagent_wake_for_session(session));
+
+    // Once acknowledged (the agent read it), no further claims fire.
+    registry::acknowledge_output(&handle);
+    registry::release_subagent_wake_for_session(session);
+    assert!(
+        !registry::claim_subagent_wake_for_session(session),
+        "an acknowledged result needs no wake"
+    );
+
+    // Other sessions are never matched.
+    assert!(!registry::claim_subagent_wake_for_session("some-other-session"));
+
+    registry::remove(&handle);
+}
+
+/// A finished **shell** job must NOT trigger a subagent wake — the coordinator
+/// is subagent-specific (shells surface via the reminder only).
+#[test]
+fn test_claim_subagent_wake_ignores_shell_jobs() {
+    let session = "wake-claim-shell-session";
+    let pid = 99997;
+    let _tx = registry::register_shell(
+        pid,
+        "build".into(),
+        PathBuf::from("/tmp/wakeclaim.txt"),
+        session.into(),
+    );
+    let handle = pid.to_string();
+    registry::mark_exited(&handle, JobStatus::Exited(0));
+
+    assert!(
+        !registry::claim_subagent_wake_for_session(session),
+        "a completed shell job must not be mistaken for an unconsumed subagent result"
+    );
+
+    registry::remove(&handle);
+}
+
+/// Tombstone resolution: after a finished job is reaped via `remove`, a later
+/// `resolve_status_with_tombstone` still reports its REAL terminal status and
+/// kind (precise "it finished") — distinct from a genuinely-unknown handle,
+/// which resolves to `None` (the agent mistyped it).
+#[test]
+fn test_tombstone_distinguishes_reaped_from_unknown() {
+    let session = "tombstone-session";
+    let handle = "agent-builtin:explore-tombstone".to_string();
+    let (_tx, _cancel) = registry::register_subagent(
+        handle.clone(),
+        "delegate".into(),
+        "Explore".into(),
+        session.into(),
+    );
+    registry::set_final_result(&handle, "done".into());
+    registry::mark_exited(&handle, JobStatus::Completed);
+
+    // Live job present → resolves directly.
+    let live = registry::resolve_status_with_tombstone(&handle);
+    assert!(matches!(
+        live,
+        Some((JobStatus::Completed, JobKind::Subagent { .. }))
+    ));
+
+    // Reap it. The tombstone must preserve the REAL terminal status + kind.
+    registry::remove(&handle);
+    assert!(
+        registry::get_status(&handle).is_none(),
+        "job should be gone from the live registry"
+    );
+    let tomb = registry::resolve_status_with_tombstone(&handle);
+    assert!(
+        matches!(tomb, Some((JobStatus::Completed, JobKind::Subagent { .. }))),
+        "reaped job must resolve to its real terminal status + kind, got {:?}",
+        tomb.map(|(s, _)| s)
+    );
+
+    // A handle that was never registered resolves to None → caller errors.
+    assert!(
+        registry::resolve_status_with_tombstone("agent-never-existed-xyz").is_none(),
+        "an unknown handle must not be mistaken for a finished job"
+    );
+}
+
+/// A reaped **shell** job's tombstone preserves the real exit code, not a
+/// synthesised `Completed` — so `await_output` reports `exit N` accurately even
+/// after the live job is gone.
+#[test]
+fn test_tombstone_preserves_shell_exit_code() {
+    let session = "tombstone-shell-session";
+    let pid = 99996;
+    let _tx = registry::register_shell(
+        pid,
+        "false".into(),
+        PathBuf::from("/tmp/tombstone-shell.txt"),
+        session.into(),
+    );
+    let handle = pid.to_string();
+    registry::mark_exited(&handle, JobStatus::Exited(1));
+    registry::remove(&handle);
+
+    let tomb = registry::resolve_status_with_tombstone(&handle);
+    assert!(
+        matches!(tomb, Some((JobStatus::Exited(1), JobKind::Shell { .. }))),
+        "tombstone must preserve the real exit code + shell kind, got {:?}",
+        tomb.map(|(s, _)| s)
+    );
+}

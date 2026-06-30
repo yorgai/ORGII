@@ -42,7 +42,7 @@ pub struct AgentEnvConfig {
 }
 
 /// Agent availability info — single source of truth for CLI agent metadata.
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AvailableAgent {
     pub name: String,

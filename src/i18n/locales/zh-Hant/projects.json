@@ -12,6 +12,9 @@
       "project": "按專案",
       "status": "按狀態",
       "priority": "按優先級",
+      "person": "按人員",
+      "assignedTo": "按指派對象",
+      "createdBy": "按建立者",
       "targetDate": "按目標日期"
     },
     "source": {
@@ -68,6 +71,52 @@
       "unprioritized": "未設優先級"
     },
     "viewProjects": "查看專案"
+  },
+  "githubIssuesImport": {
+    "title": "匯入 GitHub Issues",
+    "menuLabel": "匯入 GitHub Issues",
+    "createTarget": "GitHub Issues Project",
+    "heading": "從 GitHub Issues 建立 Project",
+    "description": "選擇一個 GitHub repo，建立 ORGII Project，並將 GitHub Issues 同步為 work items。",
+    "importButton": "匯入 GitHub Issues",
+    "projectDescription": "從 {{owner}}/{{repo}} 的 GitHub Issues 同步。",
+    "fields": {
+      "projectName": "Project 名稱",
+      "repo": "GitHub repo",
+      "connection": "GitHub 連線"
+    },
+    "placeholders": {
+      "projectName": "ORGII GitHub Issues",
+      "repo": "owner/repo 或 https://github.com/owner/repo",
+      "connection": "選擇 GitHub 連線"
+    },
+    "loadingConnections": "正在載入 GitHub 連線...",
+    "noConnectionTitle": "找不到 GitHub 連線",
+    "noConnectionDescription": "請先在 Integrations 中新增 GitHub 連線，然後回到此處匯入 GitHub Issues。",
+    "linkedRepoHint": "此 Project 也會連結到目前 Workspace repo：{{repoName}}。",
+    "createdTitle": "{{name}} 已就緒",
+    "createdDescription": "ORGII 正在從 {{owner}}/{{repo}} 匯入 GitHub Issues。同步繼續時你可以繼續工作。",
+    "createdDescriptionFallback": "ORGII 正在匯入 GitHub Issues。同步繼續時你可以繼續工作。",
+    "errors": {
+      "invalidRepo": "請使用 owner/repo 或 GitHub repo URL。"
+    },
+    "importStatus": {
+      "title": "匯入狀態",
+      "pendingDescription": "匯入 worker 已排入佇列，將很快開始。",
+      "runningDescription": "正在將 GitHub Issues 作為 work items 匯入此 Project。",
+      "completedDescription": "所有可用的 GitHub Issues 都已匯入。",
+      "failedDescription": "匯入 worker 回報錯誤。你可以從 Project 同步設定中重試。",
+      "cancelledDescription": "匯入在所有 GitHub Issues 完成前已取消。",
+      "progressWithTotal": "已匯入 {{count}} / {{total}} 個 GitHub Issues",
+      "progressNoTotal": "已匯入 {{count}} 個 GitHub Issues",
+      "state": {
+        "pending": "等待中",
+        "running": "執行中",
+        "completed": "已完成",
+        "failed": "失敗",
+        "cancelled": "已取消"
+      }
+    }
   },
   "orgs": {
     "yourOrgs": "你的組織",
@@ -226,7 +275,10 @@
       "inProgress": "進行中",
       "inReview": "審覈中",
       "done": "完成",
-      "cancelled": "已取消"
+      "cancelled": "已取消",
+      "duplicate": "重複",
+      "open": "開放",
+      "closed": "已關閉"
     },
     "statusLabels": {
       "backlog": "Backlog",
@@ -235,7 +287,9 @@
       "in_review": "審覈中",
       "completed": "完成",
       "cancelled": "已取消",
-      "duplicate": "重複"
+      "duplicate": "重複",
+      "open": "開放",
+      "closed": "已關閉"
     },
     "priorityLabels": {
       "none": "無優先級",

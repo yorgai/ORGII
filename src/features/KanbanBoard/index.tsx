@@ -431,7 +431,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
               minHeight: 0,
               minWidth: 0,
               overflowX: fitColumnsToContainer ? "hidden" : "auto",
-              overflowY: "hidden",
+              overflowY: "auto",
             }}
           >
             {columnOrder.map((column, index) => (
@@ -514,5 +514,9 @@ export type {
   TaskPriority,
   TaskStatus,
 } from "./types";
-export { DEFAULT_KANBAN_COLUMNS, getColumnConfig } from "./config";
+export {
+  DEFAULT_KANBAN_COLUMNS,
+  GITHUB_ISSUE_KANBAN_COLUMNS,
+  getColumnConfig,
+} from "./config";
 export { KanbanColumn, TaskCard } from "./components";

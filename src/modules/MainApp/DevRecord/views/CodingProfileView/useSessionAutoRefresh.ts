@@ -178,10 +178,33 @@ export function useSessionAutoRefresh<T>({
   }, [fetcher, countFromData, label, formatSuccess, formatError, cacheKey]);
 
   useEffect(() => {
-    intervalRef.current = setInterval(backgroundFetch, intervalMs);
+    const stopInterval = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = undefined;
+      }
+    };
+
+    const startInterval = () => {
+      if (document.visibilityState !== "visible" || intervalRef.current) return;
+      intervalRef.current = setInterval(backgroundFetch, intervalMs);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        backgroundFetch();
+        startInterval();
+      } else {
+        stopInterval();
+      }
+    };
+
+    startInterval();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      stopInterval();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [backgroundFetch, intervalMs]);
 

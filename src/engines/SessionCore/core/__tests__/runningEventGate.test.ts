@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  classifyLatestTurnActivity,
   hasLiveRuntimeResourceInLatestTurn,
+  hasRunningAwaitWaitForInLatestTurn,
   isLiveRuntimeResourceEvent,
   sessionHasComposerStopBlockingWork,
 } from "../runningEventGate";
@@ -123,10 +125,11 @@ function settledToolEvent(id: string): SessionEvent {
 }
 
 function awaitOutputEvent(
-  displayStatus: "running" | "completed"
+  displayStatus: "running" | "completed",
+  command: "wait_for" | "monitor" = "wait_for"
 ): SessionEvent {
   return {
-    id: `await-${displayStatus}`,
+    id: `await-${command}-${displayStatus}`,
     sessionId: "session-1",
     source: "assistant",
     createdAt: new Date().toISOString(),
@@ -135,7 +138,7 @@ function awaitOutputEvent(
     uiCanonical: "await_output",
     displayStatus,
     displayVariant: "tool_call",
-    args: { command: "wait_for", handles: ["pid-123"] },
+    args: { command, handles: ["pid-123"] },
   } as unknown as SessionEvent;
 }
 
@@ -181,9 +184,12 @@ describe("hasLiveRuntimeResourceInLatestTurn", () => {
     expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(true);
   });
 
-  it("exempts running await_output from suppressing the planning footer", () => {
+  it("treats a running await_output wait_for as live activity (watchdog must not kill it)", () => {
+    // Under the unified model a blocked wait IS genuine activity, so the
+    // watchdog input is true. The footer is hidden separately via the
+    // selfIndicating classification, not by pretending nothing is live.
     const events = [userEvent("u1"), awaitOutputEvent("running")];
-    expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(false);
+    expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(true);
   });
 
   it("still detects other running tools alongside a running await_output", () => {
@@ -193,5 +199,67 @@ describe("hasLiveRuntimeResourceInLatestTurn", () => {
       shellEvent("running"),
     ];
     expect(hasLiveRuntimeResourceInLatestTurn(events)).toBe(true);
+  });
+});
+
+describe("classifyLatestTurnActivity (single source of truth)", () => {
+  it("idle when the latest turn is fully settled", () => {
+    expect(
+      classifyLatestTurnActivity([userEvent("u1"), settledToolEvent("t1")])
+    ).toBe("idle");
+  });
+
+  it("selfIndicating for a running wait_for (its own countdown is the indicator)", () => {
+    expect(
+      classifyLatestTurnActivity([userEvent("u1"), awaitOutputEvent("running")])
+    ).toBe("selfIndicating");
+  });
+
+  it("liveSilent for a running shell (needs the footer to convey activity)", () => {
+    expect(
+      classifyLatestTurnActivity([userEvent("u1"), shellEvent("running")])
+    ).toBe("liveSilent");
+  });
+
+  it("liveSilent for a non-blocking monitor await (no countdown of its own)", () => {
+    expect(
+      classifyLatestTurnActivity([
+        userEvent("u1"),
+        awaitOutputEvent("running", "monitor"),
+      ])
+    ).toBe("liveSilent");
+  });
+
+  it("a running wait_for dominates a sibling silent resource", () => {
+    expect(
+      classifyLatestTurnActivity([
+        userEvent("u1"),
+        shellEvent("running"),
+        awaitOutputEvent("running"),
+      ])
+    ).toBe("selfIndicating");
+  });
+
+  // The invariant that the unification exists to guarantee: the two derived
+  // booleans agree by construction — `selfIndicating` ALWAYS implies the
+  // footer is suppressed AND the watchdog sees live activity, and they are
+  // never both reasoning about await_output in opposite directions.
+  it("derived booleans are consistent with the classification (no conflict)", () => {
+    const cases: SessionEvent[][] = [
+      [userEvent("u1"), settledToolEvent("t1")],
+      [userEvent("u1"), shellEvent("running")],
+      [userEvent("u1"), awaitOutputEvent("running")],
+      [userEvent("u1"), awaitOutputEvent("running", "monitor")],
+      [userEvent("u1"), shellEvent("running"), awaitOutputEvent("running")],
+    ];
+    for (const events of cases) {
+      const kind = classifyLatestTurnActivity(events);
+      const live = hasLiveRuntimeResourceInLatestTurn(events);
+      const selfIndicating = hasRunningAwaitWaitForInLatestTurn(events);
+      expect(live).toBe(kind !== "idle");
+      expect(selfIndicating).toBe(kind === "selfIndicating");
+      // selfIndicating ⇒ live (a self-indicating wait is, by definition, live).
+      if (selfIndicating) expect(live).toBe(true);
+    }
   });
 });

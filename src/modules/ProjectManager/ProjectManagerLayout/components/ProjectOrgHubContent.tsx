@@ -23,7 +23,7 @@ export interface ProjectOrgHubContentProps {
   orgScope: ProjectOrgScope;
   orgView: ProjectOrgSurfaceView;
   breadcrumbSegments?: readonly { label: string }[];
-  workStationTabId: string;
+  workStationTabId?: string;
   renderSurfaceControlsInline?: boolean;
   onOrgViewChange: (view: ProjectOrgSurfaceView) => void;
   onSelectProject: (
@@ -93,7 +93,9 @@ export const ProjectOrgHubContent: React.FC<ProjectOrgHubContentProps> = ({
     [orgView, onOrgViewChange]
   );
 
+  const shouldPublishWorkstationChrome = Boolean(workStationTabId);
   const publishesHubHeaderOnly =
+    shouldPublishWorkstationChrome &&
     !renderSurfaceControlsInline &&
     orgView === PROJECT_ORG_SURFACE_VIEW.SETTINGS;
   const contentOrgSurfaceControls = renderSurfaceControlsInline
@@ -111,7 +113,7 @@ export const ProjectOrgHubContent: React.FC<ProjectOrgHubContentProps> = ({
             onAddProject={onCreateProject}
             onOpenLinearProject={onOpenLinearProjects}
             allowExternalSources={false}
-            publishToWorkstationHeader
+            publishToWorkstationHeader={shouldPublishWorkstationChrome}
             workStationTabId={workStationTabId}
             orgSurfaceControls={contentOrgSurfaceControls}
           />
@@ -180,6 +182,7 @@ export const ProjectOrgHubContent: React.FC<ProjectOrgHubContentProps> = ({
     orgView,
     resolvedBreadcrumbSegments,
     scopedOrgId,
+    shouldPublishWorkstationChrome,
     workStationTabId,
   ]);
 

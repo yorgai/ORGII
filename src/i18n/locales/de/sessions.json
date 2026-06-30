@@ -2225,6 +2225,7 @@
     "insufficientBalance": "Unzureichendes Guthaben für den gehosteten ORGII-Dienst. Aufladen unter orgii.ai/wallet."
   },
   "planning": {
+    "agentTyping": "Agent tippt...",
     "nextStepVariants": [
       "Nächster Schritt wird geplant...",
       "Denke nach...",

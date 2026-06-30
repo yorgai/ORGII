@@ -107,13 +107,13 @@ export function ProjectManagerContentRouter({
 
   return (
     <div
-      className="flex min-w-0 flex-1 flex-col overflow-hidden"
+      className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       data-testid="project-manager-content-router"
       data-active-tab-id={activeTab?.id ?? ""}
       data-active-tab-type={activeTab?.type ?? ""}
     >
       {nonWorkItemsContent && (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           {nonWorkItemsContent}
         </div>
       )}
@@ -127,7 +127,7 @@ export function ProjectManagerContentRouter({
         return (
           <div
             key={tab.id}
-            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            className="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
             style={{ display: isActiveTab ? undefined : "none" }}
           >
             <Suspense fallback={STORY_MANAGER_SUSPENSE_LOADING_FALLBACK}>

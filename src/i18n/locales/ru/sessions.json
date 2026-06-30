@@ -2239,6 +2239,7 @@
     "insufficientBalance": "Недостаточно средств для использования хостингового сервиса ORGII. Пополните счёт на orgii.ai/wallet."
   },
   "planning": {
+    "agentTyping": "Agent печатает...",
     "nextStepVariants": [
       "Планируем следующий шаг...",
       "Обдумываем...",
