@@ -10,9 +10,12 @@
  * This hook only runs when the Source Control tab is first visited (lazy mounting).
  */
 import { useAtomValue } from "jotai";
-import React, { useCallback, useMemo } from "react";
+import { ChevronDown, Folder } from "lucide-react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import Dropdown from "@src/components/Dropdown";
+import type { DropdownOption } from "@src/components/Dropdown/types";
 import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
 import { useGitStatus } from "@src/contexts/git";
 import { useRepoGitInitialization } from "@src/hooks/git";
@@ -25,6 +28,7 @@ import type { GitFile } from "@src/types/git/types";
 import { ICON_CONFIG, PANEL_CONSTANTS } from "../config";
 import MultiRootSourceControlContent from "../content/MultiRootSourceControlContent";
 import type { MultiRootSourceControlContentHandle } from "../content/MultiRootSourceControlContent";
+import { WorktreeSourceControlSection } from "../content/WorktreeSourceControlSection";
 import { useGitWorktrees } from "../hooks/useGitWorktrees";
 import type { SourceControlContentHandle } from "./SourceControlTabPanels";
 import {
@@ -32,6 +36,106 @@ import {
   SourceControlTabContent,
   SourceControlWithWorktrees,
 } from "./SourceControlTabPanels";
+
+type SourceControlScope =
+  | { kind: "local" }
+  | { kind: "worktree"; path: string };
+
+function worktreeLabel(path: string): string {
+  return path.split("/").pop() || "worktree";
+}
+
+function SourceControlScopeTitle({
+  label,
+  repoPath,
+  worktrees,
+  scope,
+  onScopeChange,
+}: {
+  label: string;
+  repoPath: string;
+  worktrees: Array<{ path: string; branch: string }>;
+  scope: SourceControlScope;
+  onScopeChange: (scope: SourceControlScope) => void;
+}) {
+  const activeLabel =
+    scope.kind === "worktree" ? worktreeLabel(scope.path) : label;
+  const value = scope.kind === "worktree" ? scope.path : "__local__";
+  const options = useMemo<DropdownOption[]>(
+    () => [
+      {
+        value: "__local__",
+        label: (
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <Folder size={14} className="shrink-0 text-text-3" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate">{label}</span>
+              <span className="block truncate text-[11px] text-text-4">
+                {repoPath}
+              </span>
+            </span>
+          </span>
+        ),
+        triggerLabel: label,
+      },
+      ...worktrees.map((worktree) => ({
+        value: worktree.path,
+        label: (
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <Folder size={14} className="shrink-0 text-text-3" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate">
+                {worktreeLabel(worktree.path)}
+              </span>
+              <span className="block truncate text-[11px] text-text-4">
+                {worktree.path}
+              </span>
+            </span>
+            <span className="max-w-[96px] shrink-0 truncate text-[11px] text-text-4">
+              {worktree.branch}
+            </span>
+          </span>
+        ),
+        triggerLabel: worktreeLabel(worktree.path),
+      })),
+    ],
+    [label, repoPath, worktrees]
+  );
+
+  const handleSelectScope = useCallback(
+    (nextValue: string | number | (string | number)[]) => {
+      if (Array.isArray(nextValue)) return;
+      const selectedValue = String(nextValue);
+      onScopeChange(
+        selectedValue === "__local__"
+          ? { kind: "local" }
+          : { kind: "worktree", path: selectedValue }
+      );
+    },
+    [onScopeChange]
+  );
+
+  return (
+    <Dropdown
+      options={options}
+      value={value}
+      onSelect={handleSelectScope}
+      trigger="click"
+      position="bottom-start"
+      getPopupContainer={() => document.body}
+      avoidViewportOverflow
+      style={{ width: 360 }}
+    >
+      <button
+        type="button"
+        className="inline-flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left text-[12px] font-semibold uppercase tracking-wide text-text-2 hover:bg-fill-2"
+      >
+        <span className="truncate">{activeLabel}</span>
+        <ChevronDown size={12} className="shrink-0 text-text-4" />
+      </button>
+    </Dropdown>
+  );
+}
 
 // ============================================
 // Tab Config Hook
@@ -116,12 +220,29 @@ export function useSourceControlTabConfig({
     enabled: isGitInitialized === true,
   });
 
+  const [sourceControlScope, setSourceControlScope] =
+    useState<SourceControlScope>({ kind: "local" });
+
   // Git History view mode: graph (with icons) or list (plain)
   // Derive repo name from path for display when worktrees exist
   const repoName = useMemo(() => {
     const segments = repoPath.replace(/\/+$/, "").split("/");
     return segments[segments.length - 1] || "Repository";
   }, [repoPath]);
+
+  const selectedWorktree = useMemo(
+    () =>
+      sourceControlScope.kind === "worktree"
+        ? worktrees.find(
+            (worktree) => worktree.path === sourceControlScope.path
+          )
+        : undefined,
+    [sourceControlScope, worktrees]
+  );
+  const effectiveScope = useMemo<SourceControlScope>(
+    () => (selectedWorktree ? sourceControlScope : { kind: "local" }),
+    [selectedWorktree, sourceControlScope]
+  );
 
   const sourceControlContent = useMemo(() => {
     if (isGitInitialized === null) {
@@ -148,6 +269,21 @@ export function useSourceControlTabConfig({
 
     if (worktreesLoading) {
       return <div className="flex h-full min-h-0 flex-col" />;
+    }
+
+    if (selectedWorktree) {
+      return (
+        <WorktreeSourceControlSection
+          worktreePath={selectedWorktree.path}
+          worktreeId={`worktree:${selectedWorktree.path}`}
+          onGitFileSelect={onGitFileSelect}
+          onGitFilesChange={onGitFilesChange}
+          showFilter={showFilter}
+          viewMode={viewMode}
+          navigateWithoutSelecting={navigateWithoutSelecting}
+          sectionFilter={sectionFilter}
+        />
+      );
     }
 
     if (isMultiRoot && workspaceFolders.length > 1) {
@@ -212,6 +348,7 @@ export function useSourceControlTabConfig({
     worktreesLoading,
     isMultiRoot,
     workspaceFolders,
+    selectedWorktree,
     repoPath,
     repoId,
     repoName,
@@ -230,6 +367,22 @@ export function useSourceControlTabConfig({
     t,
   ]);
 
+  const defaultSourceControlTitle = useMemo(
+    () =>
+      worktrees.length > 0 ? (
+        <SourceControlScopeTitle
+          label={repoName}
+          repoPath={repoPath}
+          worktrees={worktrees}
+          scope={effectiveScope}
+          onScopeChange={setSourceControlScope}
+        />
+      ) : (
+        t("tabs.sourceControl")
+      ),
+    [effectiveScope, repoName, repoPath, t, worktrees]
+  );
+
   return useMemo(
     () => ({
       key: "source-control",
@@ -240,7 +393,7 @@ export function useSourceControlTabConfig({
           key: "source-control",
           title:
             isGitInitialized === true
-              ? (sourceControlTitleOverride ?? t("tabs.sourceControl"))
+              ? (sourceControlTitleOverride ?? defaultSourceControlTitle)
               : t("tabs.sourceControl"),
           content:
             isGitInitialized === true
@@ -255,6 +408,7 @@ export function useSourceControlTabConfig({
     }),
     [
       sourceControlContent,
+      defaultSourceControlTitle,
       sourceControlTitleOverride,
       sourceControlContentOverride,
       actions,

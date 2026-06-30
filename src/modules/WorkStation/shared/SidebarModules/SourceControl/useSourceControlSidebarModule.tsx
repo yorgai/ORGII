@@ -437,7 +437,8 @@ export function useSourceControlSidebarModule({
     showOnlyStashes: filterMode === "stashed",
     sectionFilter,
     navigateWithoutSelecting,
-    sourceControlTitleOverride: sectionTitle,
+    sourceControlTitleOverride:
+      isPrMode || isHistoryMode || isIssuesMode ? sectionTitle : undefined,
     sourceControlContentOverride: isPrMode
       ? prContent
       : isHistoryMode
