@@ -13,6 +13,7 @@ import { createLogger } from "@src/hooks/logger";
 // reaches SidebarModules/Terminal → engines/TerminalCore → this file.
 import type { TerminalThemeName } from "@src/store/ui/uiAtom";
 
+import { shouldLoadTerminalWebgl } from "./terminalRendererPolicy";
 import type { TerminalViewProps } from "./types";
 import { getXTermTheme } from "./utils";
 
@@ -100,6 +101,11 @@ export function loadTerminalWebgl(
   terminal: Terminal,
   webglAddonRef: MutableRefObject<WebglAddon | null>
 ) {
+  if (!shouldLoadTerminalWebgl()) {
+    log.info("[Terminal] WebGL renderer disabled on this platform");
+    return;
+  }
+
   try {
     const webglAddon = new WebglAddon();
     webglAddon.onContextLoss(() => {
