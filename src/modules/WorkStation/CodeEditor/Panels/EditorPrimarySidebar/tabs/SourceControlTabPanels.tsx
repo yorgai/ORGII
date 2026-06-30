@@ -38,7 +38,6 @@ import {
   WorktreeActionsMenu,
   WorktreeContextMenu,
 } from "../content/WorktreeActionsMenu";
-import { WorktreeDiffSummaryBadge } from "../content/WorktreeDiffSummaryBadge";
 import { WorktreeSourceControlSection } from "../content/WorktreeSourceControlSection";
 import { useSourceControlState } from "../hooks/useSourceControlState";
 
@@ -592,9 +591,6 @@ export const SourceControlWithWorktrees = forwardRef<
                 expanded={isExpanded}
                 onToggle={() => toggleWorktree(worktree.path)}
                 branchName={worktree.branch || undefined}
-                diffSummary={
-                  <WorktreeDiffSummaryBadge summary={worktree.diff_summary} />
-                }
                 onContextMenu={(event) => {
                   event.preventDefault();
                   setContextMenuState({

@@ -20,8 +20,6 @@ export interface FolderHeaderRowProps {
   onToggle: () => void;
   /** Git branch name (shown after name with branch icon) */
   branchName?: string;
-  /** Optional diff summary displayed after the branch name. */
-  diffSummary?: React.ReactNode;
   /** Optional trailing badge count */
   badgeCount?: number;
   /** Additional className on the outer row div */
@@ -38,7 +36,6 @@ export const FolderHeaderRow: React.FC<FolderHeaderRowProps> = memo(
     expanded,
     onToggle,
     branchName,
-    diffSummary,
     badgeCount,
     className,
     onContextMenu,
@@ -61,7 +58,6 @@ export const FolderHeaderRow: React.FC<FolderHeaderRowProps> = memo(
             <span className={FOLDER_HEADER.branch}>{branchName}</span>
           </>
         )}
-        {diffSummary}
         {badgeCount != null && badgeCount > 0 && (
           <span className="bg-accent-7 ml-1 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-medium text-white">
             {badgeCount}

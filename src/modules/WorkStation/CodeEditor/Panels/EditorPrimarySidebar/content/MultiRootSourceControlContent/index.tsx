@@ -41,7 +41,6 @@ import {
   WorktreeActionsMenu,
   WorktreeContextMenu,
 } from "../WorktreeActionsMenu";
-import { WorktreeDiffSummaryBadge } from "../WorktreeDiffSummaryBadge";
 import { WorktreeSourceControlSection } from "../WorktreeSourceControlSection";
 
 // ============================================
@@ -413,9 +412,6 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
         expanded={expanded}
         onToggle={toggle}
         branchName={worktree.branch || undefined}
-        diffSummary={
-          <WorktreeDiffSummaryBadge summary={worktree.diff_summary} />
-        }
         onContextMenu={(event) => {
           if (!repoId || !repoPath) return;
           event.preventDefault();
