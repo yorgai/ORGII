@@ -15,6 +15,7 @@
 //! Note: Cursor and Kiro runner-specific modules (credential capture, usage
 //! tracking, SSO) live in `agent_sessions::cli::platform_adapters::{cursor,kiro}`.
 
+pub mod cli_binary_resolver;
 pub mod commands;
 pub mod computer_use_lock;
 pub mod external_ide;
