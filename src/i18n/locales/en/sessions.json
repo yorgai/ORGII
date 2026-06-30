@@ -745,10 +745,10 @@
       "tabs": {
         "work": "Work",
         "explore": "Explore",
-        "heatmap": "Heat map"
+        "heatmap": "Trends"
       },
       "heatmap": {
-        "loading": "Loading activity heat map…",
+        "loading": "Loading activity trends…",
         "empty": "No session activity yet.",
         "sessions": "Sessions",
         "tokens": "Tokens",
@@ -776,6 +776,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "Manage issues"
       }
     },
     "defaultTitle": "Chat",
@@ -953,6 +956,18 @@
         "importReadFailed": "Failed to read the JSON file.",
         "importFailed": "Failed to import Session JSON."
       }
+    },
+    "manageIssues": {
+      "title": "Manage issues",
+      "myWork": "My work",
+      "allRepositories": "All repositories",
+      "newIssue": "New issue",
+      "tabs": {
+        "recent": "Recent",
+        "assigned": "Assigned",
+        "byMe": "By me",
+        "mentioned": "Mentioned"
+      }
     }
   },
   "chatStatus": {
@@ -981,6 +996,7 @@
     "complete": "Complete"
   },
   "planning": {
+    "agentTyping": "Agent is typing...",
     "nextStepVariants": [
       "Planning next step...",
       "Thinking it through...",

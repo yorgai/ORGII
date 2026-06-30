@@ -626,9 +626,7 @@ const EditorContent: React.FC<EditorContentProps> = memo(
       if (activeTab?.type !== "source-control") return null;
       const hasFocusPath = Boolean(activeTab.data.focusPath);
       const mode =
-        activeTab.data.mode === "all-changes" || !hasFocusPath
-          ? "all-changes"
-          : "focus";
+        activeTab.data.mode === "all-changes" ? "all-changes" : "focus";
       const historySelection = activeTab.data.historySelection as
         | SourceControlHistorySelection
         | null
@@ -637,9 +635,7 @@ const EditorContent: React.FC<EditorContentProps> = memo(
       const showModePill =
         showSourceControlModePill && !isIssuesMode && !historySelection;
       const sourceControlModeTabs = [
-        ...(hasFocusPath
-          ? [{ key: "focus", label: t("sourceControl.pill.focus") }]
-          : []),
+        { key: "focus", label: t("sourceControl.pill.focus") },
         {
           key: "all-changes",
           label: t("sourceControl.pill.allChanges"),

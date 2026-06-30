@@ -12,9 +12,28 @@ fn claude_fable_5_is_always_on() {
 
 #[test]
 fn claude_opus_4_is_optional() {
-    let caps = resolve("claude-opus-4-20250514", None);
-    assert_eq!(caps.thinking, ThinkingSupport::Optional);
-    assert_eq!(caps.context_window, 1_000_000);
+    // Known 4.6/4.7/4.8 releases upgraded to 1M; 4 / 4.1 / 4.5 stayed at 200K.
+    assert_eq!(
+        resolve("claude-opus-4-20250514", None).context_window,
+        200_000
+    );
+    assert_eq!(resolve("claude-opus-4.1", None).context_window, 200_000);
+    assert_eq!(resolve("claude-opus-4.5", None).context_window, 200_000);
+    assert_eq!(resolve("claude-opus-4.6", None).context_window, 1_000_000);
+    assert_eq!(resolve("claude-opus-4.7", None).context_window, 1_000_000);
+    assert_eq!(resolve("claude-opus-4.8", None).context_window, 1_000_000);
+    assert_eq!(
+        resolve("anthropic/claude-opus-4-8", None).context_window,
+        1_000_000
+    );
+    assert_eq!(
+        resolve("anthropic/claude-opus-4-8-fast", None).context_window,
+        1_000_000
+    );
+    assert_eq!(
+        resolve("claude-opus-4", None).thinking,
+        ThinkingSupport::Optional
+    );
 }
 
 #[test]
@@ -371,4 +390,71 @@ fn no_substring_capability_checks_outside_this_module() {
         stale.is_empty(),
         "Allowlist entries no longer contain a family substring check (remove them): {stale:?}"
     );
+}
+
+// ── KeyVault context-window override (Issue #121 step 2) ──
+//
+// A `ModelVariant.context_window` recorded during key validation (from the
+// provider's `/v1/models` `context_length`) overrides the static family
+// table. This is what makes a proxy capping a 1M model at 256K show the
+// real limit. These tests stay pure: they exercise the same override helper
+// without writing the global user credentials store.
+
+use key_vault::key_store::ModelVariant;
+
+fn variant_with_context(model: &str, ctx: Option<u64>) -> ModelVariant {
+    ModelVariant {
+        model: model.to_string(),
+        base_model: model.to_string(),
+        reasoning: None,
+        fast: false,
+        context_window: ctx,
+    }
+}
+
+#[test]
+fn keyvault_context_window_overrides_family_table() {
+    // opus-4.6 family rule = 1M; provider reports 256K → resolve must use 256K.
+    let variants = vec![variant_with_context("claude-opus-4.6", Some(256_000))];
+    let caps = super::resolve_with_keyvault_variants("claude-opus-4.6", &variants);
+    assert_eq!(caps.context_window, 256_000);
+}
+
+#[test]
+fn keyvault_none_context_window_falls_back_to_family() {
+    // Provider did not report context_length (official OpenAI/Anthropic) →
+    // family-table value (200K) stays.
+    let variants = vec![variant_with_context("claude-opus-4", None)];
+    let caps = super::resolve_with_keyvault_variants("claude-opus-4", &variants);
+    assert_eq!(caps.context_window, 200_000);
+}
+
+#[test]
+fn keyvault_empty_variant_list_falls_back_to_family() {
+    let caps = super::resolve_with_keyvault_variants("claude-opus-4.6", &[]);
+    assert_eq!(
+        caps.context_window, 1_000_000,
+        "no account variants must fall back to family table"
+    );
+}
+
+#[test]
+fn keyvault_override_only_matches_exact_model() {
+    // Variant for "claude-opus-4.6" must not override a query for "claude-opus-4".
+    let variants = vec![variant_with_context("claude-opus-4.6", Some(300_000))];
+    let caps = super::resolve_with_keyvault_variants("claude-opus-4", &variants);
+    assert_eq!(caps.context_window, 200_000);
+}
+
+#[test]
+fn keyvault_zero_context_window_falls_back_to_family() {
+    let variants = vec![variant_with_context("claude-opus-4.6", Some(0))];
+    let caps = super::resolve_with_keyvault_variants("claude-opus-4.6", &variants);
+    assert_eq!(caps.context_window, 1_000_000);
+}
+
+#[test]
+fn explicit_context_window_beats_keyvault_override() {
+    let window = super::resolve_effective_context_window("claude-opus-4.6", None, Some(64_000));
+    assert_eq!(window, 64_000);
 }

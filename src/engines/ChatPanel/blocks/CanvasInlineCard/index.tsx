@@ -1,7 +1,7 @@
 /**
  * CanvasInlineCard — Agent-generated interactive preview embedded in chat.
  *
- * Renders a card directly in the message stream. Three modes:
+ * Renders a card directly in the message stream. Four modes:
  *   html  — sanitized HTML rendered in Shadow DOM
  *   url   — external URL shown as an open action, not embedded
  *   a2ui  — incremental JSONL stream rendered as native React components
@@ -116,7 +116,7 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
       : mode === "a2ui"
         ? t("canvasCard.titleA2ui")
         : mode === "react"
-          ? t("canvasCard.titleReact", "React Artifact")
+          ? t("canvasCard.titleReact", "React Preview")
           : t("canvasCard.titleHtml"));
 
   const headerSubtitle = isStreaming

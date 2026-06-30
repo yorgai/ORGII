@@ -99,6 +99,11 @@ browser::browser_inline_capture,
 browser::browser_webview_send_to_back,
 browser::browser_webview_bring_to_front,
 browser::browser_webviews_set_layer_for_all,
+// Browser commands - Active internal browser target state
+browser::set_active_internal_browser_state,
+browser::clear_active_internal_browser_state,
+browser::get_active_internal_browser_state,
+browser::list_internal_browser_targets,
 // Browser commands - Internal browser automation (DOM automation for inline webviews)
 browser::internal_browser_get_state,
 browser::internal_browser_click,
@@ -1141,6 +1146,8 @@ agent_core::state::commands::debug_seed_pending_plan,
 // User presence — global snapshot for runtime enforcement (auto-resolve
 // deadlines, goal loop). Pushed by the FE on every mode switch.
 agent_core::state::commands::set_user_presence,
+// User profile — global snapshot for backend-only/background prompt builds.
+agent_core::state::commands::set_user_profile,
 // Secret capture commands (out-of-band, plaintext never reaches LLM).
 // Backs the `manage_secrets` tool + `SecretCaptureModal` round-trip.
 agent_core::state::commands::agent_secret_capture_submit,

@@ -12,6 +12,7 @@ import { STORY_ORG_SCOPE } from "@src/store/workstation/tabs";
 
 import {
   COLLAB_ADD_ORG_MENU_ITEM_ID,
+  PROJECTS_IMPORT_GITHUB_ISSUES_MENU_ITEM_ID,
   PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
   PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
 } from "../sidebarConnectorUtils";
@@ -103,6 +104,17 @@ export function useProjectsMenuItemClick<
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(PROJECTS_NEW_PROJECT_MENU_ITEM_ID);
         navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_PROJECT });
+        return;
+      }
+
+      if (item.id === PROJECTS_IMPORT_GITHUB_ISSUES_MENU_ITEM_ID) {
+        resetOpsControlStateForProjectsContent();
+        setProjectsSelectedMenuItemId(
+          PROJECTS_IMPORT_GITHUB_ISSUES_MENU_ITEM_ID
+        );
+        navigateChatPanel({
+          kind: CHAT_PANEL_SURFACE_KIND.NEW_GITHUB_ISSUES_PROJECT,
+        });
         return;
       }
 

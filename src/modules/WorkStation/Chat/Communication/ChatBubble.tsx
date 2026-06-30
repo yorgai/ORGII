@@ -35,6 +35,7 @@ import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/Us
 import { stripExpandedPillContent } from "@src/engines/ChatPanel/InputArea/utils/pillContentParser";
 import MessageReferenceCards from "@src/engines/ChatPanel/blocks/MessageReferenceCards";
 import { SESSION_UI_TOKENS } from "@src/engines/ChatPanel/blocks/primitives/config";
+import { streamingDeltaContentAtom } from "@src/engines/SessionCore/core/atoms";
 import { extractTodoData } from "@src/engines/SessionCore/rendering/props";
 import type { ExtractedTodoData } from "@src/engines/SessionCore/rendering/types/universalProps";
 import { normalizeActivity } from "@src/lib/activityData";
@@ -71,6 +72,14 @@ const TERMINAL_PREVIEW_MAX_HEIGHT = 160;
 const SKILL_PREVIEW_MAX_HEIGHT = 160;
 const AVATAR_ICON_SIZE = COMMUNICATION_AVATAR_ICON_SIZE;
 const PLAN_APPROVED_PREFIX = "[Plan approved";
+
+function isSyntheticLiveAssistantEvent(message: MessageEntry): boolean {
+  return (
+    message.sender === "agent" &&
+    message.event.args?.syntheticLive === true &&
+    message.event.displayStatus === "running"
+  );
+}
 
 const normalizeTodoStatus = (status: string): string =>
   (status || "").toLowerCase();
@@ -708,11 +717,18 @@ export const ChatBubble: React.FC<{
       orgMembers
     );
     const agentSenderName = rawAgentName;
+    const streamingMap = useAtomValue(streamingDeltaContentAtom);
+    const liveDelta = isSyntheticLiveAssistantEvent(message)
+      ? (streamingMap.get(message.event.sessionId) ?? null)
+      : null;
+    const liveContent =
+      liveDelta?.kind === "message" ? liveDelta.content : null;
+    const resolvedContent = liveContent ?? message.content;
 
     const rawContent =
-      typeof message.content === "string"
-        ? message.content
-        : String(message.content ?? "");
+      typeof resolvedContent === "string"
+        ? resolvedContent
+        : String(resolvedContent ?? "");
     const userImages = useMemo<string[] | undefined>(() => {
       if (!isUser) return undefined;
       const result = message.event.result as { images?: unknown } | undefined;
@@ -775,7 +791,7 @@ export const ChatBubble: React.FC<{
           >
             <ChatBubbleCopyButton content={rawContent} />
             <div className={`min-w-0 ${SESSION_UI_TOKENS.TEXT.BODY_BASE}`}>
-              <ReplayMarkdown content={message.content} />
+              <ReplayMarkdown content={rawContent} />
               <MessageReferenceCards
                 content={rawContent}
                 enabled={message.event.displayStatus !== "running"}

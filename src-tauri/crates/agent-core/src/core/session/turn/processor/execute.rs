@@ -47,6 +47,12 @@ impl UnifiedMessageProcessor {
 
         let turn_config = TurnConfig {
             model: self.runtime.model.clone(),
+            account_id: self.runtime.account_id.clone(),
+            context_window_override: self
+                .runtime
+                .resolved
+                .context_window_configured
+                .then_some(self.runtime.resolved.context_window),
             max_iterations: self.effective_max_iterations(),
             max_tokens: self.runtime.resolved.max_tokens as u32,
             temperature: self.runtime.resolved.temperature as f32,
@@ -189,7 +195,14 @@ impl UnifiedMessageProcessor {
                 session_id, attempt, MAX_REACTIVE_RETRIES,
             );
             let context_window =
-                crate::providers::model_hints::context_window_hint(&self.runtime.model);
+                crate::providers::model_capabilities::resolve_effective_context_window(
+                    &self.runtime.model,
+                    self.runtime.account_id.as_deref(),
+                    self.runtime
+                        .resolved
+                        .context_window_configured
+                        .then_some(self.runtime.resolved.context_window),
+                );
             let mut state = self.compaction_state.lock().await;
             let (compacted, reactive_outcome) = ContextCompactor::compact(
                 messages,

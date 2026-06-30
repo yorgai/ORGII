@@ -27,6 +27,10 @@ const CreateProjectView = React.lazy(
   () =>
     import("@src/modules/ProjectManager/Projects/components/CreateProjectView")
 );
+const GitHubIssuesImportWizard = React.lazy(
+  () =>
+    import("@src/modules/ProjectManager/Projects/components/GitHubIssuesImportWizard")
+);
 const CreateWorkItemView = React.lazy(
   () =>
     import("@src/modules/ProjectManager/WorkItems/components/CreateWorkItemView")
@@ -81,6 +85,7 @@ interface ChatPanelEmptyContentProps {
   handleRegionNoticeChange: (notice: ChatPanelRegionNotice | null) => void;
   handleStartPageAddApiKey: () => void;
   handleStartPageExploreRepos: () => void;
+  handleStartPageManageIssues: () => void;
   handleStartPageNewSession: () => void;
   handleStartPageNewWorkItem: () => void;
   handleStartPageSetupRepo: () => void;
@@ -111,6 +116,7 @@ export function ChatPanelEmptyContent({
   handleRegionNoticeChange,
   handleStartPageAddApiKey,
   handleStartPageExploreRepos,
+  handleStartPageManageIssues,
   handleStartPageNewSession,
   handleStartPageNewWorkItem,
   handleStartPageSetupRepo,
@@ -128,6 +134,7 @@ export function ChatPanelEmptyContent({
         className={creatorClassName}
         onAddApiKey={handleStartPageAddApiKey}
         onExploreRepos={handleStartPageExploreRepos}
+        onManageIssues={handleStartPageManageIssues}
         onNewSession={handleStartPageNewSession}
         onNewWorkItem={handleStartPageNewWorkItem}
         onSetupRepo={handleStartPageSetupRepo}
@@ -152,7 +159,9 @@ export function ChatPanelEmptyContent({
     return (
       <WorkspaceScopedContent>
         {({ workspaceName, workspacePath }) => (
-          <div className={`flex flex-col overflow-hidden ${creatorClassName}`}>
+          <div
+            className={`flex w-full min-w-0 flex-col overflow-hidden ${creatorClassName}`}
+          >
             <div className="shrink-0 overflow-hidden">
               <Suspense fallback={null}>
                 <CreateProjectView
@@ -177,6 +186,30 @@ export function ChatPanelEmptyContent({
                 {sessionCreatorContent}
               </div>
             ) : null}
+          </div>
+        )}
+      </WorkspaceScopedContent>
+    );
+  }
+
+  if (createTarget === CHAT_PANEL_CREATE_TARGET.GITHUB_ISSUES_PROJECT) {
+    return (
+      <WorkspaceScopedContent>
+        {({ workspaceName, workspacePath }) => (
+          <div
+            className={`flex w-full min-w-0 overflow-hidden ${creatorClassName}`}
+          >
+            <Suspense fallback={null}>
+              <GitHubIssuesImportWizard
+                repoPath={workspacePath}
+                repoName={workspaceName}
+                orgId={
+                  createProjectContext?.orgId ?? STORY_PERSONAL_ORG_FILTER_ID
+                }
+                onCancel={() => handleChatPanelProjectCreated()}
+                onProjectCreated={handleChatPanelProjectCreated}
+              />
+            </Suspense>
           </div>
         )}
       </WorkspaceScopedContent>
@@ -225,7 +258,7 @@ export function ChatPanelEmptyContent({
           if (sessionCreatorContent) {
             return (
               <div
-                className={`flex flex-col overflow-hidden ${creatorClassName}`}
+                className={`flex w-full min-w-0 flex-col overflow-hidden ${creatorClassName}`}
               >
                 <div className="shrink-0 overflow-hidden">
                   {workItemCreator}
@@ -238,7 +271,9 @@ export function ChatPanelEmptyContent({
           }
 
           return (
-            <div className={`flex overflow-hidden ${creatorClassName}`}>
+            <div
+              className={`flex w-full min-w-0 overflow-hidden ${creatorClassName}`}
+            >
               {workItemCreator}
             </div>
           );
@@ -249,7 +284,9 @@ export function ChatPanelEmptyContent({
 
   if (createTarget === CHAT_PANEL_CREATE_TARGET.COLLAB_ORG) {
     return (
-      <div className={`flex overflow-hidden ${creatorClassName}`}>
+      <div
+        className={`flex w-full min-w-0 overflow-hidden ${creatorClassName}`}
+      >
         <Suspense fallback={null}>
           <CreateCollabOrgView
             onCancel={handleCancelCollabOrgCreate}

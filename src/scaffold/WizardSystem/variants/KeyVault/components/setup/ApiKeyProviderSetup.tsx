@@ -144,6 +144,7 @@ const ApiKeyProviderSetup: React.FC<AgentSetupProps> = ({
                       : data.extracted_base_url,
                   validated: false,
                   available_models: [],
+                  model_context_lengths: {},
                   enabled_models: [],
                 });
               }}

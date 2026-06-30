@@ -29,6 +29,7 @@ import {
   getOrgtrackDiffReplayPreview,
 } from "@src/api/tauri/lineage";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { loadEvents } from "@src/engines/SessionCore/storage/cacheAdapter";
 import { createLogger } from "@src/hooks/logger";
 import { normalizePrStatus } from "@src/shared/pr/prStatus";
 import type { Repo } from "@src/store/repo/types";
@@ -43,6 +44,8 @@ import {
   type SubmissionRepoContext,
   collectSubmissionArtifacts,
 } from "./submissionsArtifacts";
+
+export type { SubmissionRepoContext } from "./submissionsArtifacts";
 
 const logger = createLogger("useSubmissionsData");
 
@@ -156,6 +159,9 @@ export function useSubmissionsData({
   const [orgtrackSubmissionCommits, setOrgtrackSubmissionCommits] = useState<
     SubmissionCommit[]
   >([]);
+  const [cachedSessionEvents, setCachedSessionEvents] = useState<
+    SessionEvent[]
+  >([]);
 
   useEffect(() => {
     if (!sessionId) {
@@ -172,10 +178,9 @@ export function useSubmissionsData({
       repoPath: fallbackRepoContext.repoPath,
     })
       .then((preview) => {
-        if (!cancelled) {
-          setOrgtrackFinalDiffs(preview.finalDiffs);
-          setOrgtrackSubmissionCommits(preview.submissionCommits);
-        }
+        if (cancelled) return;
+        setOrgtrackFinalDiffs(preview.finalDiffs);
+        setOrgtrackSubmissionCommits(preview.submissionCommits);
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -201,14 +206,44 @@ export function useSubmissionsData({
     fallbackRepoContext.repoPath,
   ]);
 
+  useEffect(() => {
+    if (!sessionId) {
+      setCachedSessionEvents([]);
+      return;
+    }
+
+    let cancelled = false;
+    void loadEvents(sessionId)
+      .then((events) => {
+        if (!cancelled) setCachedSessionEvents(events);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          logger.warn("failed to load full session events for submissions", {
+            err,
+            sessionId,
+          });
+          setCachedSessionEvents([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
+
   // ─────────────── derived: union of every commit submission ───────────────
-  const submissionsData = useMemo(
-    () =>
-      deriveSubmissionsData(
-        collectSubmissionArtifacts(simulatorEvents, fallbackRepoContext)
-      ),
-    [fallbackRepoContext, simulatorEvents]
-  );
+  const submissionsData = useMemo(() => {
+    const eventById = new Map<string, SessionEvent>();
+    for (const event of cachedSessionEvents) eventById.set(event.id, event);
+    for (const event of simulatorEvents) eventById.set(event.id, event);
+    return deriveSubmissionsData(
+      collectSubmissionArtifacts(
+        Array.from(eventById.values()),
+        fallbackRepoContext
+      )
+    );
+  }, [cachedSessionEvents, fallbackRepoContext, simulatorEvents]);
 
   const createdShellSubmissionCommits = useMemo<SubmissionCommit[]>(
     () => submissionsData.commits.filter((c) => c.origin === "created"),

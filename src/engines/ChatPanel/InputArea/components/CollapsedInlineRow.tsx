@@ -5,11 +5,11 @@
  * (queue, processes, file changes). Always visible when any section has data.
  * Clicking a pill expands that section's card above.
  *
- * Also renders the follow-agent action pill immediately after the section pills.
+ * Also renders contextual action pills immediately after the section pills.
  *
  * Each pill shows icon + numeric count only. gap-1 between pills.
  */
-import { Layout } from "lucide-react";
+import { Layout, Plus } from "lucide-react";
 import React, { memo, useState } from "react";
 
 import Button from "@src/components/Button";
@@ -68,10 +68,16 @@ function getButtonClassName(section: InlineSection) {
 const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
   ({ sections, scrollNav, canvasPreview }) => {
     const showFollowAgent = scrollNav?.showFollowAgent ?? false;
+    const showAddToConversation = scrollNav?.showAddToConversation ?? false;
     const showCanvasPreview = Boolean(canvasPreview);
     const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
 
-    if (sections.length === 0 && !showFollowAgent && !showCanvasPreview)
+    if (
+      sections.length === 0 &&
+      !showFollowAgent &&
+      !showAddToConversation &&
+      !showCanvasPreview
+    )
       return null;
 
     return (
@@ -160,6 +166,35 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
                 aria-label={scrollNav!.followAgentTooltipLabel}
               >
                 {scrollNav!.followAgentLabel}
+              </Button>
+            </span>
+          </Tooltip>
+        )}
+
+        {showAddToConversation && (
+          <Tooltip
+            content={
+              <KeyboardShortcutTooltipContent
+                label={scrollNav!.addToConversationTooltipLabel}
+              />
+            }
+            position="top"
+            mouseEnterDelay={250}
+            framedPanel
+          >
+            <span className="inline-flex">
+              <Button
+                variant="primary"
+                appearance="outline"
+                size="small"
+                shape="round"
+                icon={<Plus size={13} strokeWidth={2} />}
+                onClick={scrollNav!.onAddToConversation}
+                aria-label={scrollNav!.addToConversationTooltipLabel}
+                data-testid="browser-add-to-conversation-pill"
+                className="max-w-[190px]"
+              >
+                {scrollNav!.addToConversationLabel}
               </Button>
             </span>
           </Tooltip>

@@ -12,6 +12,7 @@ const baseInput = {
   idleAfterVersion: 10,
   version: 10,
   hasLiveSubagent: false,
+  hasRunningAwaitWaitFor: false,
 };
 
 describe("shouldShowPlanningIndicator", () => {
@@ -48,13 +49,13 @@ describe("shouldShowPlanningIndicator", () => {
     ).toBe(true);
   });
 
-  it("hides while a visible running row is painted", () => {
+  it("shows while a running tool row is idle long enough", () => {
     expect(
       shouldShowPlanningIndicator({
         ...baseInput,
         anyRunning: true,
       })
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("shows during the parent gap when a background subagent is still running", () => {
@@ -69,13 +70,35 @@ describe("shouldShowPlanningIndicator", () => {
     ).toBe(true);
   });
 
-  it("does not show on a live subagent if a visible running row is already painted", () => {
+  it("shows on a live subagent after a running row becomes idle", () => {
     expect(
       shouldShowPlanningIndicator({
         ...baseInput,
         runtimeStatus: "idle",
         hasLiveSubagent: true,
         anyRunning: true,
+      })
+    ).toBe(true);
+  });
+
+  it("hides while a running await_output wait_for shows its own countdown", () => {
+    // The wait_for block renders a live "Waiting {countdown} for …" title, so
+    // the planning footer would be a redundant second waiting indicator.
+    expect(
+      shouldShowPlanningIndicator({
+        ...baseInput,
+        hasRunningAwaitWaitFor: true,
+      })
+    ).toBe(false);
+  });
+
+  it("still hides the footer during a wait_for even if a subagent is live", () => {
+    expect(
+      shouldShowPlanningIndicator({
+        ...baseInput,
+        runtimeStatus: "idle",
+        hasLiveSubagent: true,
+        hasRunningAwaitWaitFor: true,
       })
     ).toBe(false);
   });

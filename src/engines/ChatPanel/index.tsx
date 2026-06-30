@@ -10,8 +10,10 @@ import {
 } from "@src/config/mainAppPaths";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
 import {
-  MAX_WIDTH as CHAT_MAX_WIDTH,
   MIN_WIDTH as CHAT_MIN_WIDTH,
+  CHAT_WIDTH_CSS_VAR,
+  clampChatWidth,
+  getChatMaxWidth,
 } from "@src/engines/ChatPanel/config";
 import {
   clearSessionAtom,
@@ -51,6 +53,7 @@ import {
   chatPanelCreateTargetAtom,
   chatPanelExploreAgentSearchEnabledAtom,
   chatPanelExploreOpenAtom,
+  chatPanelManageIssuesOpenAtom,
   chatPanelMaximizedAtom,
   chatPanelNavigateAtom,
   chatPanelSelectedCollabOrgAtom,
@@ -86,6 +89,7 @@ import { useChatPanelResize } from "./hooks/useChatPanelResize";
 import { useChatPanelSessionModals } from "./hooks/useChatPanelSessionModals";
 import { usePanelTitle } from "./hooks/usePanelTitle";
 import { useProjectWorkItemHandlers } from "./hooks/useProjectWorkItemHandlers";
+import { useViewportWidth } from "./hooks/useViewportWidth";
 import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
 
 const COLLAB_HEADER_STATUS_COLOR: Record<CollabConnectionStatus, string> = {
@@ -164,6 +168,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       chatPanelWorkspaceDashboardOpenAtom
     );
     const exploreOpen = useAtomValue(chatPanelExploreOpenAtom);
+    const manageIssuesOpen = useAtomValue(chatPanelManageIssuesOpenAtom);
     const createProjectContext = useAtomValue(
       chatPanelCreateProjectContextAtom
     );
@@ -172,16 +177,18 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const toggleChatFocus = useSetAtom(toggleChatPanelMaximizedAtom);
     const showChatFocusToggle = viewMode === "workStation";
     const rawChatWidth = useAtomValue(chatWidthAtom);
+    const viewportWidth = useViewportWidth();
+    const chatMaxWidth = getChatMaxWidth(viewportWidth);
     const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
     const chatPanelOpacityStyle = React.useMemo(
       () => getChatPanelBackgroundStyle(backgroundConfig.pageOpacity),
       [backgroundConfig.pageOpacity]
     );
-    const chatWidth =
-      rawChatWidth > 0 ? Math.min(rawChatWidth, CHAT_MAX_WIDTH) : rawChatWidth;
+    const chatWidth = clampChatWidth(rawChatWidth, viewportWidth);
+    const chatWidthStyleValue =
+      chatWidth > 0 ? `var(${CHAT_WIDTH_CSS_VAR})` : chatWidth;
     const { isDragging, panelRef, handleMouseDown } = useChatPanelResize({
       useExternalWidth,
-      embedded,
       position,
     });
 
@@ -424,6 +431,20 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       setWorkstationActiveSessionId,
     ]);
 
+    const handleStartPageManageIssues = useCallback(() => {
+      setStartPageOpen(false);
+      navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.MANAGE_ISSUES });
+      dispatchClearSession();
+      setWorkstationActiveSessionId(null);
+      setActiveSessionId(null);
+    }, [
+      dispatchClearSession,
+      navigateChatPanel,
+      setActiveSessionId,
+      setStartPageOpen,
+      setWorkstationActiveSessionId,
+    ]);
+
     const handleStartPageAddApiKey = useCallback(() => {
       const accountsPath = `${buildIntegrationsPath({ category: "models" })}?modelsTab=my-accounts`;
       navigate(buildWizardPath(accountsPath, WIZARD_IDS.KEY_ADD));
@@ -508,6 +529,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       createTarget,
       currentSessionId: currentSessionId ?? null,
       exploreOpen,
+      manageIssuesOpen,
       isChatFocus,
       panelTitle,
       collabOrgHeaderTitle: collabOrgHeader?.title,
@@ -592,7 +614,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       ? t("chat.showWorkstation")
       : t("chat.maximizeChatPanel");
     const useFullScreenCreator =
-      isChatFocus || useExternalWidth || chatWidth >= CHAT_MAX_WIDTH;
+      isChatFocus || useExternalWidth || chatWidth >= chatMaxWidth;
     const creatorVariant = useFullScreenCreator ? "fullScreen" : "default";
     const creatorClassName = "min-h-0 flex-1";
     const emptyChatContent = (
@@ -611,6 +633,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         handleRegionNoticeChange={handleRegionNoticeChange}
         handleStartPageAddApiKey={handleStartPageAddApiKey}
         handleStartPageExploreRepos={handleStartPageExploreRepos}
+        handleStartPageManageIssues={handleStartPageManageIssues}
         handleStartPageNewSession={handleNewSession}
         handleStartPageNewWorkItem={handleStartPageNewWorkItem}
         handleStartPageSetupRepo={handleStartPageSetupRepo}
@@ -628,6 +651,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const publishSurfaceHeader =
       contentState.showBenchmarkSessionGroupContent ||
       contentState.showExploreContent ||
+      contentState.showManageIssuesContent ||
       contentState.showWorkspaceDashboardContent ||
       contentState.showCollabOrgContent ||
       contentState.showWorkspaceOverviewContent;
@@ -741,6 +765,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           contentState.showEmptyChatFocusRestoreButton
         }
         showExploreContent={contentState.showExploreContent}
+        showManageIssuesContent={contentState.showManageIssuesContent}
         showPanelContent={contentState.showPanelContent}
         showProjectContent={contentState.showProjectContent}
         showProjectOrgContent={contentState.showProjectOrgContent}
@@ -764,7 +789,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           useExternalWidth ? "min-w-0 flex-1" : "flex-shrink-0"
         } ${borderClasses}`}
         style={{
-          ...(useExternalWidth ? { width: "100%" } : { width: chatWidth }),
+          ...(useExternalWidth
+            ? { width: "100%" }
+            : { width: chatWidthStyleValue }),
           minWidth:
             !useExternalWidth && chatWidth > 0 ? CHAT_MIN_WIDTH : undefined,
           borderRadius: embedded ? 0 : "var(--radius-page)",

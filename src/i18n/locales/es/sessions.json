@@ -714,10 +714,10 @@
       "tabs": {
         "work": "Trabajo",
         "explore": "Explorar",
-        "heatmap": "Heat map"
+        "heatmap": "Tendencias"
       },
       "heatmap": {
-        "loading": "Cargando Heat map de actividad…",
+        "loading": "Cargando tendencias de actividad…",
         "empty": "Aún no hay actividad de sesiones.",
         "sessions": "Sesiones",
         "tokens": "Tokens",
@@ -745,6 +745,9 @@
         },
         "previous": "Previous hint",
         "next": "Next hint"
+      },
+      "manageIssues": {
+        "title": "Gestionar issues"
       }
     },
     "defaultTitle": "Chat",
@@ -922,6 +925,18 @@
       "showLess": "Mostrar menos",
       "showMore_one": "Mostrar {{count}} más",
       "showMore_other": "Mostrar {{count}} más"
+    },
+    "manageIssues": {
+      "title": "Gestionar issues",
+      "myWork": "Mi trabajo",
+      "allRepositories": "Todos los repos",
+      "newIssue": "Nueva issue",
+      "tabs": {
+        "recent": "Recientes",
+        "assigned": "Asignadas",
+        "byMe": "Por mí",
+        "mentioned": "Mencionadas"
+      }
     }
   },
   "chatStatus": {
@@ -2203,6 +2218,7 @@
     "insufficientBalance": "Saldo insuficiente para el servicio alojado de ORGII. Recarga en orgii.ai/wallet."
   },
   "planning": {
+    "agentTyping": "Agent está escribiendo...",
     "nextStepVariants": [
       "Planificando el siguiente paso...",
       "Pensándolo bien...",

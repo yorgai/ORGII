@@ -104,6 +104,18 @@ function parseContextUsageSnapshot(
   }
 }
 
+export function getLatestContextUsageSnapshot(
+  records: readonly { contextUsageJson?: string | null }[]
+): ContextUsageSnapshot | undefined {
+  for (let index = records.length - 1; index >= 0; index -= 1) {
+    const contextUsage = parseContextUsageSnapshot(
+      records[index]?.contextUsageJson
+    );
+    if (contextUsage) return contextUsage;
+  }
+  return undefined;
+}
+
 function toTokenUsageInfo(usage: AgentTokenUsage): AgentTokenUsageInfo {
   return {
     promptTokens: usage.promptTokens,
@@ -224,7 +236,7 @@ export function createRustAgentAdapter(
           const fill =
             last.contextTokens > 0 ? last.contextTokens : last.inputTokens;
           if (fill > 0) result.contextTokens = fill;
-          const contextUsage = parseContextUsageSnapshot(last.contextUsageJson);
+          const contextUsage = getLatestContextUsageSnapshot(records);
           if (contextUsage) result.contextUsage = contextUsage;
         }
       } catch (err) {
@@ -280,6 +292,9 @@ export function createRustAgentAdapter(
         },
         onContextUsage: (contextUsage) => {
           callbacks.onContextUsage?.(contextUsage);
+        },
+        onTokenUpdate: (tokens) => {
+          callbacks.onTokenUpdate?.(tokens);
         },
         onStatusChange: (
           status: string,

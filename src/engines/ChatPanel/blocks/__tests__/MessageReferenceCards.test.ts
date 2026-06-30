@@ -135,6 +135,22 @@ staged file lint stats
     });
   });
 
+  it("strips trailing markdown emphasis markers from URL cards", () => {
+    const references = extractMessageReferences(
+      [
+        "Docs: **https://example.com/docs.**",
+        "Mirror: *https://mirror.example.com/path*",
+        "Old: ~~https://old.example.com/docs~~",
+      ].join("\n")
+    );
+
+    expect(references.map((item) => item.value)).toEqual([
+      "https://example.com/docs",
+      "https://mirror.example.com/path",
+      "https://old.example.com/docs",
+    ]);
+  });
+
   it("does not extract template placeholder hosts as URL cards", () => {
     const references = extractMessageReferences(
       "The server logs http://localhost:1998 and http://${host}/"
@@ -231,12 +247,39 @@ staged file lint stats
     expect(references.find((item) => item.kind === "session")).toBeUndefined();
   });
 
-  it("dedupes repeated session ids into one card", () => {
+  it("does not extract session cards from inline code examples", () => {
+    const references = extractMessageReferences(
+      "- `ChatHistory` 内容容器改成全宽\n- `审计-policy-啊permission-那些... [session:sdeagent-ee970f47-dfcb-4a78-97e5-fc56e3451821]`"
+    );
+
+    expect(references.find((item) => item.kind === "session")).toBeUndefined();
+  });
+
+  it("keeps serialized session pill labels instead of falling back to ids", () => {
     const id = "sdeagent-ee970f47-dfcb-4a78-97e5-fc56e3451821";
-    const references = extractMessageReferences(`first ${id}, again ${id}`);
+    const references = extractMessageReferences(
+      `please review 审计-policy-啊permission-那些... [session:${id}]`
+    );
+
+    expect(references).toHaveLength(1);
+    expect(references[0]).toMatchObject({
+      kind: "session",
+      value: id,
+      sessionId: id,
+      title: "审计-policy-啊permission-那些...",
+      subtitle: id,
+    });
+  });
+
+  it("dedupes serialized session pill ids against bare session ids", () => {
+    const id = "sdeagent-ee970f47-dfcb-4a78-97e5-fc56e3451821";
+    const references = extractMessageReferences(
+      `session-title [session:${id}] then bare ${id}`
+    );
 
     expect(references.filter((item) => item.kind === "session")).toHaveLength(
       1
     );
+    expect(references[0]?.title).toBe("session-title");
   });
 });

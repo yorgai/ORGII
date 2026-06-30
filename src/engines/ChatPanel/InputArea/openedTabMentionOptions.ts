@@ -2,6 +2,7 @@ import { hasNonEmptyTerminalBuffer } from "@src/components/TerminalInteractive/b
 import type { CustomMentionOption } from "@src/engines/ChatPanel/hooks/useInputArea/types";
 import type { MenuItemId } from "@src/scaffold/ContextMenu/config";
 import type { WorkStationTab } from "@src/store/workstation/tabs";
+import { getCompactPathLabel } from "@src/util/file/pathUtils";
 import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
 
 const getStringData = (
@@ -11,12 +12,6 @@ const getStringData = (
   const value = tab.data[key];
   return typeof value === "string" && value.trim() ? value : undefined;
 };
-
-function getCompactPathLabel(path: string): string {
-  const normalizedPath = path.replace(/\\/g, "/");
-  const parts = normalizedPath.split("/").filter(Boolean);
-  return parts.slice(-3).join("/") || normalizedPath;
-}
 
 const isCustomMentionOption = (
   option: CustomMentionOption | null

@@ -17,7 +17,11 @@ import { IconButton } from "@src/components/IconButton";
 import { ROUTES } from "@src/config/routes";
 import { getTerminalDisplayTitle } from "@src/engines/TerminalCore/types";
 import { useCloseTabWithGuard } from "@src/hooks/workStation/tabs/useCloseTabWithGuard";
-import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
+import {
+  CHAT_PANEL_SURFACE_KIND,
+  activeChatPanelSurfaceAtom,
+  chatPanelMaximizedAtom,
+} from "@src/store/ui/chatPanelAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import {
   type BottomPanelTab,
@@ -105,6 +109,13 @@ function persistRailCollapsed(collapsed: boolean): void {
 export function FocusedChatWorkstationRail() {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(getStoredRailCollapsed);
+
+  const chatPanelSurface = useAtomValue(activeChatPanelSurfaceAtom);
+  const shouldHideForProjectSurface =
+    chatPanelSurface.kind === CHAT_PANEL_SURFACE_KIND.PROJECT ||
+    chatPanelSurface.kind === CHAT_PANEL_SURFACE_KIND.PROJECT_ORG ||
+    chatPanelSurface.kind === CHAT_PANEL_SURFACE_KIND.WORK_ITEM ||
+    chatPanelSurface.kind === CHAT_PANEL_SURFACE_KIND.MANAGE_ISSUES;
 
   const activeWorkspaceRoot = useAtomValue(activeWorkspaceRootAtom);
   const tabEntries = useAtomValue(tabRegistryAtom);
@@ -283,18 +294,22 @@ export function FocusedChatWorkstationRail() {
     },
   ];
 
+  if (shouldHideForProjectSurface) {
+    return null;
+  }
+
   return (
-    <div className="pointer-events-none absolute right-3 top-12 z-20 hidden xl:flex">
+    <div className="pointer-events-none absolute right-1 top-12 z-20 hidden xl:flex">
       <div
         className={`pointer-events-auto flex bg-bg-2/90 transition-all ${
           collapsed
-            ? "flex-col items-center rounded-2xl border-[1px] border-border-1 p-1.5"
-            : "w-64 flex-col rounded-2xl border-[1px] border-border-1 p-1.5"
+            ? "flex-col items-center rounded-xl border-[1px] border-border-1 p-1"
+            : "w-64 flex-col rounded-xl border-[1px] border-border-1 p-1"
         }`}
       >
         <button
           type="button"
-          className="text-text-tertiary hover:text-text-primary mb-1 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-fill-2"
+          className="text-text-tertiary hover:text-text-primary mb-1 flex h-7 w-7 items-center justify-center self-end rounded-lg transition hover:bg-fill-2"
           onClick={() =>
             setCollapsed((value) => {
               const nextValue = !value;

@@ -297,14 +297,14 @@ const UsageHistory: React.FC<UsageHistoryProps> = ({
           {record.cacheWriteTokens > 0 && (
             <span className="tabular-nums text-text-2">
               {t("market:usageHistory.cacheWriteTokens", {
-                count: record.cacheWriteTokens.toLocaleString(),
+                count: record.cacheWriteTokens,
               })}
             </span>
           )}
           {record.cacheReadTokens > 0 && (
             <span className="tabular-nums text-text-2">
               {t("market:usageHistory.cacheReadTokens", {
-                count: record.cacheReadTokens.toLocaleString(),
+                count: record.cacheReadTokens,
               })}
             </span>
           )}

@@ -47,6 +47,7 @@ import { sessionByIdAtom } from "@src/store/session/sessionAtom/atoms";
 import { wpReadOnlyAtom } from "@src/store/ui/chatPanelAtom";
 import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
 import { activeWorkspaceRootPathAtom } from "@src/store/workspace";
+import { getCompactPathLabel } from "@src/util/file/pathUtils";
 import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
@@ -105,12 +106,6 @@ function getDraftRestoreSkipReason(draftText: string): string | null {
   }
 
   return null;
-}
-
-function getCompactPathLabel(path: string): string {
-  const normalizedPath = path.replace(/\\/g, "/");
-  const parts = normalizedPath.split("/").filter(Boolean);
-  return parts.slice(-3).join("/") || normalizedPath;
 }
 
 function getPlanMentionPath(event: SessionEvent): string | null {

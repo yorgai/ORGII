@@ -146,18 +146,20 @@ impl Tool for ProjectTool {
             // ── Member actions ──
             "list_members" => match optional_string(&params, "slug") {
                 Some(raw) if !raw.trim().is_empty() => {
-                    let slug = crate::tool_infra::resolve_slug(&raw).map_err(ToolError::ExecutionFailed)?;
+                    let slug = crate::tool_infra::resolve_slug(&raw)
+                        .map_err(ToolError::ExecutionFailed)?;
                     members::list_members(Some(&slug))
                 }
                 _ => members::list_members(None),
             },
             "list_contributors" => match optional_string(&params, "slug") {
                 Some(raw) if !raw.trim().is_empty() => {
-                    let slug = crate::tool_infra::resolve_slug(&raw).map_err(ToolError::ExecutionFailed)?;
+                    let slug = crate::tool_infra::resolve_slug(&raw)
+                        .map_err(ToolError::ExecutionFailed)?;
                     members::list_contributors(Some(&slug))
                 }
                 _ => members::list_contributors(None),
-            }
+            },
 
             _ => Err(ToolError::InvalidParams(format!(
                 "Unknown project action: '{}'. Valid: list, read, create, update, delete, \

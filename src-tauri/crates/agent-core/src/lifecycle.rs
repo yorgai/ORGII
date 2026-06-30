@@ -501,6 +501,23 @@ pub async fn finalize_session(
         persist_session_error_event(app_handle, session_id, message);
     }
 
+    // Turn-end wake re-check (one of the two triggers feeding the single
+    // subagent-wake coordinator). A background subagent that completed while
+    // THIS turn was still running had its completion-push wake released back
+    // (the parent wasn't idle yet). Now that the turn has ended and the
+    // session row is idle/terminal, re-invoke the coordinator so the result is
+    // delivered. The coordinator is the sole decision point: it atomically
+    // claims the result (exactly-once across both triggers), checks the parent
+    // is wakeable, and dispatches — so this call is an unconditional no-op
+    // when there is nothing new to deliver. No `response.is_ok()` /
+    // unread-precheck gating here anymore: the claim flag makes re-waking a
+    // failed/ignored result impossible, which is what previously required the
+    // ad-hoc retry-storm guard.
+    if !is_agent_org_member_session {
+        crate::tools::impls::orchestration::subagent_wake::current_subagent_completion_wake_hook()
+            .wake_parent(session_id);
+    }
+
     // NOTE: Error broadcasting is handled by the scheduler. Do NOT broadcast here
     // to avoid duplicate transient error notifications; this path only persists
     // the authoritative EventStore row for UI history/replay.

@@ -9,6 +9,7 @@ import {
   markTurnTerminal,
 } from "@src/engines/SessionCore/control/turnLifecycle";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import { getLatestContextUsageSnapshot } from "@src/engines/SessionCore/sync/adapters/createRustAgentAdapter";
 import {
   applyPostLoadResult,
   createSessionEventHandlerCallbacks,
@@ -43,10 +44,13 @@ vi.mock("@src/engines/SessionCore/control/turnLifecycle", () => ({
 }));
 
 function createActions(): SessionEventHandlerStateActions & {
-  streamingMap: Map<string, string>;
+  streamingMap: Map<string, { kind: "message" | "thinking"; content: string }>;
 } {
   const actions = {
-    streamingMap: new Map<string, string>(),
+    streamingMap: new Map<
+      string,
+      { kind: "message" | "thinking"; content: string }
+    >(),
     setSessionContextTokens: vi.fn(),
     setSessionContextUsage: vi.fn(),
     setSessionContextBreakdown: vi.fn(),
@@ -69,7 +73,10 @@ describe("session sync state callbacks", () => {
 
   it("clears live streaming content before completed status can leave Stop UI stuck", () => {
     const actions = createActions();
-    actions.streamingMap.set("session-1", "live answer");
+    actions.streamingMap.set("session-1", {
+      kind: "message",
+      content: "live answer",
+    });
     const callbacks = createSessionEventHandlerCallbacks(
       "session-1",
       actions,
@@ -81,7 +88,10 @@ describe("session sync state callbacks", () => {
       isThinking: false,
       content: "live answer",
     });
-    expect(actions.streamingMap.get("session-1")).toBe("live answer");
+    expect(actions.streamingMap.get("session-1")).toEqual({
+      kind: "message",
+      content: "live answer",
+    });
 
     callbacks.onStreamingDelta?.({
       isStreaming: false,
@@ -94,6 +104,30 @@ describe("session sync state callbacks", () => {
     expect(actions.setSessionRuntimeStatus).toHaveBeenCalledWith("completed");
     expect(actions.setPendingCancel).toHaveBeenCalledWith(false);
     expect(eventStoreProxy.unpinSession).toHaveBeenCalledWith("session-1");
+  });
+
+  it("stores thinking deltas separately from assistant message deltas", () => {
+    const actions = createActions();
+    actions.streamingMap.set("session-1", {
+      kind: "message",
+      content: "partial answer",
+    });
+    const callbacks = createSessionEventHandlerCallbacks(
+      "session-1",
+      actions,
+      vi.fn()
+    );
+
+    callbacks.onStreamingDelta?.({
+      isStreaming: true,
+      isThinking: true,
+      content: "reasoning token",
+    });
+
+    expect(actions.streamingMap.get("session-1")).toEqual({
+      kind: "thinking",
+      content: "reasoning token",
+    });
   });
 
   it("marks terminal status changes as FSM turn terminals", () => {
@@ -257,5 +291,33 @@ describe("applyPostLoadResult", () => {
 
     expect(actions.setSessionContextTokens).toHaveBeenCalledWith(1200);
     expect(actions.setSessionContextUsage).toHaveBeenCalledWith(contextUsage);
+  });
+});
+
+describe("getLatestContextUsageSnapshot", () => {
+  it("uses the latest persisted breakdown even when the newest token row has only totals", () => {
+    const contextUsage = {
+      usedTokens: 1200,
+      maxTokens: 8000,
+      percentUsed: 15,
+      updatedAt: "2026-06-25T00:00:00.000Z",
+      sections: [
+        {
+          category: "conversation" as const,
+          label: "Conversation",
+          estimatedTokens: 1200,
+          percent: 100,
+          items: [],
+        },
+      ],
+      warnings: [],
+    };
+
+    expect(
+      getLatestContextUsageSnapshot([
+        { contextUsageJson: JSON.stringify(contextUsage) },
+        { contextUsageJson: null },
+      ])
+    ).toEqual(contextUsage);
   });
 });

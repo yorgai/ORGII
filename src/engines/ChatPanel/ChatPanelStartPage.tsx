@@ -6,6 +6,7 @@ import {
   ChevronRight,
   FolderGit2,
   KeyRound,
+  ListTodo,
   MessageSquarePlus,
   Search,
 } from "lucide-react";
@@ -48,13 +49,14 @@ interface ChatPanelStartPageProps {
   className?: string;
   onAddApiKey: () => void;
   onExploreRepos: () => void;
+  onManageIssues: () => void;
   onNewSession: () => void;
   onNewWorkItem: () => void;
   onSetupRepo: () => void;
   t: TFunction<["sessions", "common", "projects", "navigation"]>;
 }
 
-const HEATMAP_DAY_COUNT = 8;
+const HEATMAP_DAY_COUNT = 7;
 const HEATMAP_HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 const START_PAGE_HINTS: StartPageHint[] = [
   {
@@ -92,7 +94,7 @@ function formatDateForHeatmap(date: Date): string {
 function getRollingHeatmapRange(): { startDate: string; endDate: string } {
   const end = new Date();
   const start = new Date(end);
-  start.setDate(end.getDate() - 7);
+  start.setDate(end.getDate() - (HEATMAP_DAY_COUNT - 1));
   return {
     startDate: formatDateForHeatmap(start),
     endDate: formatDateForHeatmap(end),
@@ -152,7 +154,8 @@ function StartPageHeatmap({
       xIndex: cell.hour,
       yIndex: cell.day,
       count: cell.count,
-      label: `${cell.label} ${cell.hour}:00 · ${cell.count.toLocaleString()} sessions`,
+      label: `${cell.label} ${cell.hour}:00`,
+      sessions: cell.sessions,
     }));
   }, [data]);
 
@@ -318,6 +321,7 @@ export function ChatPanelStartPage({
   className,
   onAddApiKey,
   onExploreRepos,
+  onManageIssues,
   onNewSession,
   onNewWorkItem,
   onSetupRepo,
@@ -347,6 +351,12 @@ export function ChatPanelStartPage({
       title: t("chat.startPage.newWorkItem.title"),
       icon: <BriefcaseBusiness size={13} strokeWidth={1.8} />,
       onClick: onNewWorkItem,
+    },
+    {
+      id: "manage-issues",
+      title: t("chat.startPage.manageIssues.title"),
+      icon: <ListTodo size={13} strokeWidth={1.8} />,
+      onClick: onManageIssues,
     },
     {
       id: "add-api-key",

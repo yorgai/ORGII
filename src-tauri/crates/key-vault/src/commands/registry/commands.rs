@@ -3,6 +3,9 @@
 //! Runtime queries that read from KEY_SERVICE, detect installed binaries,
 //! and merge static registry data with live state.
 
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
+
 use crate::key_store::KEY_SERVICE;
 use crate::provider_config::{
     get_all_provider_configs as get_all_configs_impl, get_provider_config as get_config_impl,
@@ -14,6 +17,48 @@ use super::data::{
     cli_uninstall_methods, infer_install_method,
 };
 use super::{AvailableAgent, AvailableApiProvider};
+
+const AVAILABLE_AGENTS_CACHE_TTL: Duration = Duration::from_secs(60);
+
+#[derive(Clone)]
+struct AvailableAgentsCacheEntry {
+    path: String,
+    key_signature: String,
+    captured_at: Instant,
+    agents: Vec<AvailableAgent>,
+}
+
+static AVAILABLE_AGENTS_CACHE: OnceLock<Mutex<Option<AvailableAgentsCacheEntry>>> = OnceLock::new();
+
+fn cached_available_agents(path: &str, key_signature: &str) -> Option<Vec<AvailableAgent>> {
+    let cache = AVAILABLE_AGENTS_CACHE.get_or_init(|| Mutex::new(None));
+    let Ok(cache) = cache.lock() else {
+        return None;
+    };
+    let Some(entry) = cache.as_ref() else {
+        return None;
+    };
+    if entry.path == path
+        && entry.key_signature == key_signature
+        && entry.captured_at.elapsed() < AVAILABLE_AGENTS_CACHE_TTL
+    {
+        return Some(entry.agents.clone());
+    }
+    None
+}
+
+fn store_available_agents_cache(path: String, key_signature: String, agents: Vec<AvailableAgent>) {
+    let cache = AVAILABLE_AGENTS_CACHE.get_or_init(|| Mutex::new(None));
+    let Ok(mut cache) = cache.lock() else {
+        return;
+    };
+    *cache = Some(AvailableAgentsCacheEntry {
+        path,
+        key_signature,
+        captured_at: Instant::now(),
+        agents,
+    });
+}
 
 /// Get available CLI agents with full metadata (install methods, env config, etc.).
 /// Single source of truth — frontend reads this instead of hardcoding.
@@ -28,6 +73,15 @@ pub async fn get_available_agents() -> Result<Vec<AvailableAgent>, String> {
     // (set by app_paths::augment_path_from_shell at startup) is visible even
     // if the async tokio runtime was initialised before the env was updated.
     let current_path = std::env::var("PATH").unwrap_or_default();
+    let mut key_signature_parts: Vec<String> = stored_keys
+        .iter()
+        .map(|key| format!("{}:{}", key.id, key.model_type.as_str()))
+        .collect();
+    key_signature_parts.sort();
+    let current_key_signature = key_signature_parts.join("|");
+    if let Some(agents) = cached_available_agents(&current_path, &current_key_signature) {
+        return Ok(agents);
+    }
     tracing::debug!("[get_available_agents] PATH={}", current_path);
 
     let mut results = Vec::new();
@@ -101,6 +155,7 @@ pub async fn get_available_agents() -> Result<Vec<AvailableAgent>, String> {
         });
     }
 
+    store_available_agents_cache(current_path, current_key_signature, results.clone());
     Ok(results)
 }
 

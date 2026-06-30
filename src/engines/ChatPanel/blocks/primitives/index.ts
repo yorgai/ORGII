@@ -70,6 +70,7 @@ export type { StackedBlockProps } from "./StackedBlock";
 
 // Planning indicator footer
 export { default as PlanningFooter } from "./PlanningFooter";
+export type { PlanningFooterMode } from "./PlanningFooter";
 
 // Stroke-draw animation hook for loading icons
 export { useStrokeDraw } from "./useStrokeDraw";

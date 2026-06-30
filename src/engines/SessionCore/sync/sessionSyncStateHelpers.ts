@@ -6,6 +6,7 @@ import {
   markTurnTerminal,
   toTurnTerminalStatus,
 } from "@src/engines/SessionCore/control/turnLifecycle";
+import type { StreamingDeltaContent } from "@src/engines/SessionCore/core/atoms/events";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type {
   SessionEvent,
@@ -65,7 +66,7 @@ export interface SessionEventHandlerStateActions {
   setPendingCancel: (value: boolean) => void;
   setSessionRolledBack: (value: boolean) => void;
   setStreamingDeltaContent: (
-    update: SetStateAction<Map<string, string>>
+    update: SetStateAction<Map<string, StreamingDeltaContent>>
   ) => void;
 }
 
@@ -147,8 +148,11 @@ export function updateStreamingDeltaContent(
 ): void {
   setStreamingDeltaContent((prev) => {
     const next = new Map(prev);
-    if (info.isStreaming && !info.isThinking) {
-      next.set(sessionId, info.content);
+    if (info.isStreaming) {
+      next.set(sessionId, {
+        kind: info.isThinking ? "thinking" : "message",
+        content: info.content,
+      });
     } else {
       next.delete(sessionId);
     }

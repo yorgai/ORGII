@@ -34,6 +34,8 @@ export interface SectionContainerProps {
   className?: string;
   /** Container color surface. */
   color?: SectionContainerColor;
+  /** Render only the section layout shell, with no painted surface or padding. */
+  bare?: boolean;
   /** Vertical padding variant (default: "none" — px-4 is always applied) */
   padding?: "none" | "default" | "compact";
 }
@@ -45,11 +47,14 @@ const SectionContainer: React.FC<SectionContainerProps> = memo(
     titleSlot,
     className = "",
     color = "default",
+    bare = false,
     padding = "none",
   }) => {
+    const surfaceClass = bare ? "" : SECTION_CONTAINER_COLOR_CLASSES[color];
+    const paddingClass = bare ? "" : SECTION_PADDING[padding];
     const card = (
       <div
-        className={`${SECTION_CONTAINER_BASE_CLASSES} ${SECTION_CONTAINER_COLOR_CLASSES[color]} ${SECTION_PADDING[padding]} ${className}`.trim()}
+        className={`${SECTION_CONTAINER_BASE_CLASSES} ${surfaceClass} ${paddingClass} ${className}`.trim()}
       >
         {children}
       </div>

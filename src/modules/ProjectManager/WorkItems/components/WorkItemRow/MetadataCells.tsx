@@ -25,17 +25,17 @@ export function MetadataCells({
   readonly = false,
   t,
 }: MetadataCellsProps) {
-  if (compact) return null;
-
   return (
     <>
-      <ProjectCell
-        project={workItem.project}
-        availableProjects={availableProjects}
-        onProjectSelect={onProjectSelect}
-        readonly={readonly}
-        t={t}
-      />
+      {!compact && (
+        <ProjectCell
+          project={workItem.project}
+          availableProjects={availableProjects}
+          onProjectSelect={onProjectSelect}
+          readonly={readonly}
+          t={t}
+        />
+      )}
 
       <div className="flex shrink flex-wrap items-center gap-1 overflow-hidden">
         {workItem.labels?.map((label) => (
@@ -45,20 +45,27 @@ export function MetadataCells({
         ))}
       </div>
 
-      <div className="shrink-0">
-        {workItem.linkedSessions && workItem.linkedSessions.length > 0 && (
-          <span className="flex items-center gap-1 text-xs text-text-3">
-            <Link2 size={12} />
-            {workItem.linkedSessions.length}
-          </span>
-        )}
-      </div>
+      {!compact && (
+        <div className="shrink-0">
+          {workItem.linkedSessions && workItem.linkedSessions.length > 0 && (
+            <span className="flex items-center gap-1 text-xs text-text-3">
+              <Link2 size={12} />
+              {workItem.linkedSessions.length}
+            </span>
+          )}
+        </div>
+      )}
 
-      <div className="shrink-0">
-        {workItem.subIssueCount !== undefined && workItem.subIssueCount > 0 && (
-          <span className="text-xs text-text-3">{workItem.subIssueCount}</span>
-        )}
-      </div>
+      {!compact && (
+        <div className="shrink-0">
+          {workItem.subIssueCount !== undefined &&
+            workItem.subIssueCount > 0 && (
+              <span className="text-xs text-text-3">
+                {workItem.subIssueCount}
+              </span>
+            )}
+        </div>
+      )}
     </>
   );
 }

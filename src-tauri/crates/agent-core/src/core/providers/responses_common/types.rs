@@ -39,6 +39,10 @@ pub struct ResponsesRequest {
     /// Temperature (public API only, not supported by Codex native backend).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f32>,
+    /// Reasoning config `{effort: "low"|"medium"|"high"}` for GPT-5+/o-series
+    /// (public API). Codex native backend never sets this.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning: Option<Value>,
     pub store: bool,
     pub stream: bool,
 }

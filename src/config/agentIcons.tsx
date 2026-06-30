@@ -22,6 +22,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Bot,
   Brain,
+  ChartColumn,
   ClipboardList,
   Code,
   DraftingCompass,
@@ -92,6 +93,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   monitor: Monitor,
   network: Network,
   brain: Brain,
+  "chart-column": ChartColumn,
   "clipboard-list": ClipboardList,
   "drafting-compass": DraftingCompass,
   users: Users,

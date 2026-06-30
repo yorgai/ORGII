@@ -81,6 +81,7 @@ export function applyKey(
       raw_key_input: "",
       quota_info: quotaInfo,
       available_models: modelsAvailable,
+      model_context_lengths: {},
       enabled_models: modelsEnabled,
       validated: true,
     });
@@ -94,6 +95,7 @@ export function applyKey(
       raw_key_input: "",
       quota_info: quotaInfo,
       available_models: modelsAvailable,
+      model_context_lengths: {},
       enabled_models: modelsEnabled,
       validated: true,
       auth_method: "oauth",
@@ -111,6 +113,7 @@ export function applyKey(
       raw_key_input: detectedApiKey,
       quota_info: quotaInfo,
       available_models: modelsAvailable,
+      model_context_lengths: {},
       enabled_models: modelsEnabled,
       validated: cred.validated ?? true,
       extracted_api_key: detectedApiKey,
@@ -162,6 +165,7 @@ export async function extractKeysFromInput(
         auth_method: undefined,
         quota_info: undefined,
         available_models: [],
+        model_context_lengths: {},
         enabled_models: [],
       });
       setInputMode("direct");

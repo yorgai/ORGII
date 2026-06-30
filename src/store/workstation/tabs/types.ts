@@ -112,6 +112,8 @@ export type WorkStationTabCategory =
   | "ops-control"
   | "launchpad";
 
+export const TAB_RETURN_TARGET_DATA_KEY = "returnTabId";
+
 export interface WorkStationTab {
   /** Unique identifier (e.g., "file:/path", "table:conn:name", "browser-session:123") */
   id: string;

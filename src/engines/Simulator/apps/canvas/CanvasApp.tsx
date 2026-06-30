@@ -88,6 +88,8 @@ function getDefaultTitle(
   if (payload.title) return payload.title;
   if (payload.mode === "url") return t("canvasCard.titleUrl", "Web Page");
   if (payload.mode === "a2ui") return t("canvasCard.titleA2ui", "Agent UI");
+  if (payload.mode === "react")
+    return t("canvasCard.titleReact", "React Preview");
   return t("canvasCard.titleHtml", "Agent Preview");
 }
 

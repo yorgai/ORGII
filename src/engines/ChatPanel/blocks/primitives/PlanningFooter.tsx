@@ -1,11 +1,11 @@
 /**
  * PlanningFooter
  *
- * Inline indicator while the agent is thinking: primary line + optional
- * slow hint. Picks one phrasing from a localized variant array using the
- * `variantIndex` supplied by usePlanningIndicator — that index is stable for
- * the whole visible span and re-rolls on every hidden → visible transition,
- * so the text varies between waits but never shuffles mid-wait.
+ * Inline indicator while the agent is thinking. Picks one phrasing from a
+ * localized variant array using the `variantIndex` supplied by
+ * usePlanningIndicator — that index is stable for the whole visible span and
+ * re-rolls on every hidden → visible transition, so the text varies between
+ * waits but never shuffles mid-wait.
  *
  * Visual treatment matches the Thinking block: Sparkle icon painted in
  * primary-6 with the repeating stroke-draw animation, and the label rendered
@@ -23,10 +23,12 @@ import { EventBlockHeaderIcon } from "./EventBlockHeaderIcon";
 import { EventBlockHeaderTitle } from "./EventBlockHeaderTextSlots";
 import { CHAT_ITEM_GAP, CHAT_ITEM_PADDING_X } from "./config";
 
+export type PlanningFooterMode = "planning" | "agentTyping";
+
 interface PlanningFooterProps {
   count: number;
-  showSlowHint?: boolean;
   variantIndex?: number;
+  mode?: PlanningFooterMode;
 }
 
 function pickVariant(
@@ -46,20 +48,19 @@ function pickVariant(
 
 const PlanningFooter: React.FC<PlanningFooterProps> = ({
   count,
-  showSlowHint = false,
   variantIndex = 0,
+  mode = "planning",
 }) => {
   const { t } = useTranslation("sessions");
   if (count <= 0) return null;
 
-  const key = showSlowHint
-    ? "planning.nextStepSlowVariants"
-    : "planning.nextStepVariants";
-  const variants = t(key, { returnObjects: true }) as unknown;
-  const fallback = showSlowHint
-    ? "Working on it, taking longer than usual..."
-    : "Planning next step...";
-  const label = pickVariant(variants, variantIndex, fallback);
+  const variants = t("planning.nextStepVariants", {
+    returnObjects: true,
+  }) as unknown;
+  const label =
+    mode === "agentTyping"
+      ? t("planning.agentTyping", "Agent is typing...")
+      : pickVariant(variants, variantIndex, "Planning next step...");
 
   return (
     <div

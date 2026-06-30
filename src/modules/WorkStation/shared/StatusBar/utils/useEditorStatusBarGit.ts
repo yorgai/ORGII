@@ -87,10 +87,8 @@ export function useEditorStatusBarGit({
   const selectedRepoPath = currentRepo?.path || currentRepo?.fs_uri;
   const currentGitStatus = useMemo(() => {
     if (!repoPath) return null;
-    return (
-      workspaceGitStatusMap.get(repoPath) ??
-      (scopedGitStatus?.repoPath === repoPath ? scopedGitStatus.status : null)
-    );
+    if (scopedGitStatus?.repoPath === repoPath) return scopedGitStatus.status;
+    return workspaceGitStatusMap.get(repoPath) ?? null;
   }, [repoPath, scopedGitStatus, workspaceGitStatusMap]);
   const operationRepoPath =
     selectedRepoPath === repoPath ? selectedRepoPath : undefined;

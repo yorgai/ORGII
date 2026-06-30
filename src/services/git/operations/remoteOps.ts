@@ -291,7 +291,7 @@ async function attemptPullWithAuth(
 async function retryPullWithAuth(params: {
   remote?: string;
   branch?: string;
-  strategy: string;
+  strategy: GitPullStrategy;
 }): Promise<GitOperationResult | null> {
   const githubAuth = await readGitHubConnectionCredential(params.remote);
   if (githubAuth) {

@@ -2,9 +2,10 @@
  * Types for the CanvasInlineCard chat block.
  *
  * Three rendering modes mirror the WorkStation Canvas app:
- *   html  — Agent-provided HTML sanitized and rendered in Shadow DOM
- *   url   — External URL shown as an open action, not embedded
- *   a2ui  — Agent-to-UI JSONL stream, rendered incrementally as native React
+ *   html   — Agent-provided HTML sanitized and rendered in Shadow DOM
+ *   url    — External URL shown as an open action, not embedded in chat
+ *   a2ui   — Agent-to-UI JSONL stream, rendered incrementally as native React
+ *   react  — Generated React App source rendered through react-live
  */
 
 export type CanvasInlineMode = "html" | "url" | "a2ui" | "react";
@@ -13,8 +14,8 @@ export interface CanvasInlineCardProps {
   /** Rendering mode — determines how `content` / `url` are used. */
   mode: CanvasInlineMode;
   /**
-   * Raw HTML string (mode="html") or JSONL content (mode="a2ui").
-   * Ignored when mode="url".
+   * Raw HTML string (mode="html"), JavaScript React component source
+   * (mode="react"), or JSONL content (mode="a2ui"). Ignored when mode="url".
    */
   content?: string;
   /** Target URL for mode="url". */

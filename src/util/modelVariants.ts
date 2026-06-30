@@ -309,6 +309,7 @@ export interface ResolvedModelVariantFields {
   base_model: string;
   reasoning?: string | null;
   fast: boolean;
+  context_window?: number | null;
 }
 
 /** Frontend parse wins over backend model_variants wire metadata. */
@@ -323,6 +324,7 @@ export function resolveModelVariantFields(
       base_model: parsed.baseModel,
       reasoning: parsed.reasoning ?? null,
       fast: parsed.fast,
+      context_window: fallback?.context_window,
     };
   }
   if (fallback) {

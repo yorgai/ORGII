@@ -512,13 +512,16 @@ pub fn run() {
             // Plan-approval lifecycle: process-wide AppHandle for terminal
             // transcript events pushed outside a live session manager, then
             // a one-shot GC pass that archives orphaned pending-plan rows
-            // (missing plan file / deleted session), then a repair scan that
-            // finalizes historically stranded awaiting_user create_plan
+            // (missing plan file / deleted session), a repair scan that
+            // restores half-committed create_plan submissions, then a scan
+            // that finalizes historically stranded awaiting_user create_plan
             // events (pre-backend-finalize archives whose FE patch never
             // landed).
             agent_core::interaction::plan_approval::install_app_handle(app.handle().clone());
             tauri::async_runtime::spawn(async {
                 agent_core::interaction::plan_approval::gc_orphaned_pending_plans().await;
+                agent_core::interaction::plan_approval::repair_orphaned_create_plan_submissions()
+                    .await;
                 tokio::task::spawn_blocking(
                     crate::agent_sessions::event_pipeline::agent_core_bridge::repair_stranded_plan_events,
                 );
@@ -549,6 +552,19 @@ pub fn run() {
                 ),
             );
             tracing::info!("[MemberIdle] Member idle hook installed");
+
+            // Install the production `SubagentCompletionWakeHook` so a
+            // background subagent that finishes while its parent is idle
+            // resumes the parent's turn loop (which then consumes the result
+            // via the Background Jobs reminder). Without this, an idle parent
+            // never learns the worker completed. Mirrors Claude Code's
+            // task-notification → idle-queue-processor wake.
+            agent_core::tools::impls::orchestration::subagent_wake::install_subagent_completion_wake_hook(
+                agent_core::tools::impls::orchestration::subagent_wake::AppHandleSubagentCompletionWakeHook::new(
+                    app.handle().clone(),
+                ),
+            );
+            tracing::info!("[SubagentWake] Subagent completion wake hook installed");
 
             app.manage(unified_state);
             tracing::info!("[UnifiedAgent] Unified agent state initialized");

@@ -51,5 +51,9 @@ pub async fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &H
         }
     }
 
-    register_if_enabled(registry, Box::new(InternalBrowserTool::new()), disabled);
+    register_if_enabled(
+        registry,
+        Box::new(InternalBrowserTool::new(deps.app_handle.clone())),
+        disabled,
+    );
 }

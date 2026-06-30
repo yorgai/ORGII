@@ -194,7 +194,10 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
     const hasLocalInlineSection =
       hasAnyInlineSection || fileChangeStats.count > 0;
     const showTopRowPills =
-      hasLocalInlineSection || scrollNav?.showFollowAgent || canvasPreview;
+      hasLocalInlineSection ||
+      scrollNav?.showFollowAgent ||
+      scrollNav?.showAddToConversation ||
+      canvasPreview;
     const trailingScrollButton = scrollNav?.showScrollToBottom ? (
       <Button
         variant="secondary"

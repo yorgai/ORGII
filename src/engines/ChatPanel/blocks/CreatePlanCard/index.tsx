@@ -8,7 +8,7 @@
  */
 import type { TFunction } from "i18next";
 import { useAtomValue, useSetAtom } from "jotai";
-import { CheckCircle2, Pencil, X, XCircle } from "lucide-react";
+import { X } from "lucide-react";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -189,6 +189,21 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
     const ready =
       surfaceState?.readyForReview ??
       (idMatch && !isStreaming && effectiveApprovalStatus === "pending");
+    const autoApproveAt = idMatch
+      ? (state.current?.autoApproveAt ?? null)
+      : null;
+    const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+    useEffect(() => {
+      if (!autoApproveAt || submitting) return;
+      const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+      return () => window.clearInterval(timer);
+    }, [autoApproveAt, submitting]);
+
+    const autoApproveRemaining =
+      autoApproveAt && !submitting && ready
+        ? Math.max(0, Math.ceil((autoApproveAt - nowMs) / 1000))
+        : null;
     const sessionIsWorking =
       sessionId === activeSessionId &&
       (runtimeStatus === "running" || runtimeStatus === "installing");
@@ -376,66 +391,63 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
           title={t("planDoc.collapse")}
         />
       ) : null;
-    const planActions =
-      ownsActions || collapseButton ? (
-        <div
-          className="flex items-center gap-1"
-          onClick={(event) => event.stopPropagation()}
-        >
-          {ownsActions && (
-            <>
-              {ready && !isEditing && (
-                <Button
-                  variant="tertiary"
-                  size="mini"
-                  data-testid="create-plan-skip"
-                  onClick={handleSkip}
-                  disabled={!interactive || submitting}
-                  icon={<XCircle size={12} />}
-                >
-                  {t("planDoc.skip")}
-                </Button>
-              )}
-              {ready && (
-                <Button
-                  variant="tertiary"
-                  size="mini"
-                  data-testid="create-plan-edit"
-                  onClick={handleEditToggle}
-                  disabled={actionsDisabled}
-                  icon={isEditing ? <X size={12} /> : <Pencil size={12} />}
-                >
-                  {isEditing ? t("planDoc.cancelEdit") : t("planDoc.edit")}
-                </Button>
-              )}
-              {isEditing ? (
-                <Button
-                  variant="primary"
-                  size="mini"
-                  data-testid="create-plan-save"
-                  onClick={() => void handleSave()}
-                  disabled={!interactive || submitting}
-                  icon={<CheckCircle2 size={12} />}
-                >
-                  {t("common:actions.save")}
-                </Button>
-              ) : (
-                <Button
-                  variant="primary"
-                  size="mini"
-                  data-testid="create-plan-build"
-                  onClick={handleBuild}
-                  disabled={!interactive || submitting}
-                  icon={<CheckCircle2 size={12} />}
-                >
-                  {t("planDoc.build")}
-                </Button>
-              )}
-            </>
-          )}
-          {collapseButton}
-        </div>
-      ) : null;
+    const planActions = ownsActions ? (
+      <div
+        className={`flex items-center justify-end gap-1 px-3 py-2 ${isCollapsed ? "" : "border-t border-border-2"}`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {autoApproveRemaining !== null && ready && !isEditing && (
+          <span className="chat-block-xs tabular-nums text-text-3">
+            {t("chat.autoExecuteCountdown", {
+              seconds: autoApproveRemaining,
+            })}
+          </span>
+        )}
+        {ready && !isEditing && (
+          <Button
+            variant="tertiary"
+            size="small"
+            data-testid="create-plan-skip"
+            onClick={handleSkip}
+            disabled={!interactive || submitting}
+          >
+            {t("planDoc.skip")}
+          </Button>
+        )}
+        {ready && (
+          <Button
+            variant="tertiary"
+            size="small"
+            data-testid="create-plan-edit"
+            onClick={handleEditToggle}
+            disabled={actionsDisabled}
+          >
+            {isEditing ? t("planDoc.cancelEdit") : t("planDoc.edit")}
+          </Button>
+        )}
+        {isEditing ? (
+          <Button
+            variant="primary"
+            size="small"
+            data-testid="create-plan-save"
+            onClick={() => void handleSave()}
+            disabled={!interactive || submitting}
+          >
+            {t("common:actions.save")}
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            size="small"
+            data-testid="create-plan-build"
+            onClick={handleBuild}
+            disabled={!interactive || submitting}
+          >
+            {t("planDoc.build")}
+          </Button>
+        )}
+      </div>
+    ) : null;
     const planIcon = getToolIcon("create_plan", { size: PLAN_ICON_SIZE });
 
     return (
@@ -456,7 +468,7 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
           onNavigate={handlePreviewNavigate}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
-          rightContent={planActions}
+          rightContent={collapseButton}
         >
           <EventBlockHeaderIcon
             icon={planIcon}
@@ -505,6 +517,7 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
               )}
             </div>
           ))}
+        {planActions}
       </div>
     );
   }

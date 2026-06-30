@@ -5,7 +5,10 @@
 //! - [`find_last_safe_boundary`] — picks the highest message index safe to mark
 //!   as the SM boundary (avoids splitting a tool_use → tool_result pair)
 
+use std::sync::Arc;
+
 use serde_json::Value;
+use tokio::sync::Mutex;
 use tracing::{info, warn};
 
 use super::config::SessionMemoryConfig;
@@ -94,19 +97,30 @@ pub fn should_extract(
 /// content, and recent messages. Returns the updated SM markdown.
 pub async fn extract_session_memory(
     messages: &[Value],
-    state: &mut SessionMemoryState,
+    sm_state: Arc<Mutex<SessionMemoryState>>,
     config: &SessionMemoryConfig,
     provider: &dyn LLMProvider,
     model: &str,
 ) -> Result<String, String> {
     use crate::core::model_context::summarization;
 
-    state.extraction_in_progress = true;
-
-    let start_idx = state
-        .last_summarized_msg_idx
-        .map(|idx| idx + 1)
-        .unwrap_or(0);
+    // ── Prepare: brief lock to snapshot the read-side state + flag the
+    // extraction as in-progress. The mutex is NOT held across the LLM call
+    // below — otherwise the next turn's brief `sm_state` reads (pre-turn
+    // compaction, the gate pre-check) would block for the whole extraction.
+    let (start_idx, existing_content, consumed_tool_calls) = {
+        let mut state = sm_state.lock().await;
+        state.extraction_in_progress = true;
+        let start_idx = state
+            .last_summarized_msg_idx
+            .map(|idx| idx + 1)
+            .unwrap_or(0);
+        (
+            start_idx,
+            state.content.clone(),
+            state.tool_calls_since_extraction,
+        )
+    };
 
     let new_messages = if start_idx < messages.len() {
         &messages[start_idx..]
@@ -116,7 +130,7 @@ pub async fn extract_session_memory(
 
     let mut user_content = String::new();
 
-    let section_reminders = if let Some(ref existing) = state.content {
+    let section_reminders = if let Some(ref existing) = existing_content {
         user_content.push_str("<current_session_memory>\n");
         user_content.push_str(existing);
         user_content.push_str("\n</current_session_memory>\n\n");
@@ -209,6 +223,11 @@ pub async fn extract_session_memory(
 
     let result = side_query::side_query(provider, &user_messages, &sq_config, model).await;
 
+    // ── Finalize: brief lock to merge the result back. Concurrent
+    // `record_tool_calls` increments that arrived while the LLM was running
+    // are preserved by subtracting only what we consumed at prepare time,
+    // rather than blindly resetting the counter to 0.
+    let mut state = sm_state.lock().await;
     state.extraction_in_progress = false;
 
     match result {
@@ -226,7 +245,9 @@ pub async fn extract_session_memory(
             };
             state.content = Some(sm_content.clone());
             state.tokens_at_last_extraction = tokenizer::count_messages_tokens(messages);
-            state.tool_calls_since_extraction = 0;
+            state.tool_calls_since_extraction = state
+                .tool_calls_since_extraction
+                .saturating_sub(consumed_tool_calls);
             state.initialized = true;
 
             if let Some(last_safe_idx) = find_last_safe_boundary(messages) {

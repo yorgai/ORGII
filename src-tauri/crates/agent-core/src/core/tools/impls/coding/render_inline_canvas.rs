@@ -57,7 +57,10 @@ impl Tool for RenderInlineCanvasTool {
            documentation pages that are safe to embed.\n\
          - \"a2ui\": Stream a sequence of typed UI elements as JSONL lines. Each line is\n\
            a JSON object with a \"type\" field. Supported types:\n\
-           heading | text | code | image | button | divider | list | table | chart | form\n\n\
+           heading | text | code | image | button | divider | list | table | chart | form\n\
+         - \"react\": Render a JavaScript React App component in an isolated iframe sandbox.\n\
+           This MVP expects precompiled JavaScript / React.createElement code; JSX is not transformed.\n\
+           Runtime errors are displayed inside the preview.\n\n\
          A2UI element reference:\n\
          - heading:  {\"type\":\"heading\",\"content\":\"Title\"}\n\
          - text:     {\"type\":\"text\",\"content\":\"Paragraph text\"}\n\
@@ -102,11 +105,11 @@ impl Tool for RenderInlineCanvasTool {
                 "mode": {
                     "type": "string",
                     "enum": ["html", "url", "a2ui", "react"],
-                    "description": "Rendering mode: \"html\" for inline HTML, \"url\" for URL embed, \"a2ui\" for streamed typed elements, \"react\" for a generated React App component."
+                    "description": "Rendering mode: \"html\" for inline HTML, \"url\" for URL embed, \"a2ui\" for streamed typed elements, \"react\" for a React App component sandbox."
                 },
                 "content": {
                     "type": "string",
-                    "description": "The HTML/SVG/CSS string for \"html\" mode, the JSONL payload for \"a2ui\" mode, or React App source for \"react\" mode. Not used in \"url\" mode."
+                    "description": "The HTML/SVG/CSS string for \"html\" mode, JavaScript React App component source for \"react\" mode, or the JSONL payload for \"a2ui\" mode. Not used in \"url\" mode."
                 },
                 "url": {
                     "type": "string",

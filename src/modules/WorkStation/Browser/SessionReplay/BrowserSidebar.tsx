@@ -6,6 +6,7 @@
  * owns category switching.
  */
 import {
+  CheckCircle2,
   Chrome,
   Compass,
   FileSymlink,
@@ -89,6 +90,12 @@ function getNativeActionIcon(
   const stroke = 1.75;
 
   switch (action) {
+    case "list":
+      return <ListTree size={size} strokeWidth={stroke} className={color} />;
+    case "is_ready":
+      return (
+        <CheckCircle2 size={size} strokeWidth={stroke} className={color} />
+      );
     case "get_state":
       return <ListTree size={size} strokeWidth={stroke} className={color} />;
     case "click":

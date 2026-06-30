@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import type { AgentOrgRunMemberView } from "@src/api/tauri/agent";
 import Button from "@src/components/Button";
+import { streamingDeltaContentAtom } from "@src/engines/SessionCore/core/atoms";
 import {
   derivePlanApprovalViewState,
   isPlanDisplayEvent,
@@ -164,6 +165,14 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   const canLoadMoreMessages = hiddenMessageCount > 0;
   const totalVisibleMessages = visibleMessages.length;
   const showNewMessageDivider = viewMode === "chat" && totalVisibleMessages > 0;
+  const streamingMap = useAtomValue(streamingDeltaContentAtom);
+  const latestVisibleMessage = visibleMessages[visibleMessages.length - 1];
+  const latestLiveDelta =
+    latestVisibleMessage?.event.args?.syntheticLive === true
+      ? streamingMap.get(latestVisibleMessage.event.sessionId)
+      : undefined;
+  const liveContentLength =
+    latestLiveDelta?.kind === "message" ? latestLiveDelta.content.length : 0;
 
   const handleLoadMoreMessages = useCallback(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -204,7 +213,13 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
     });
 
     return () => cancelAnimationFrame(frameId);
-  }, [currentEventId, lastMessageId, messages.length, viewMode]);
+  }, [
+    currentEventId,
+    lastMessageId,
+    liveContentLength,
+    messages.length,
+    viewMode,
+  ]);
 
   const latestPlanMessage = useMemo(() => {
     if (viewMode !== "preview") return null;

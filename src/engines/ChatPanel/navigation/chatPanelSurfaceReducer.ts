@@ -27,6 +27,7 @@ export interface ChatPanelSurfaceSnapshot {
   selectedCollabOrg: ChatPanelSelectedCollabOrg | null;
   workspaceDashboardOpen: boolean;
   exploreOpen: boolean;
+  manageIssuesOpen: boolean;
   workspaceOverviewTab: WorkspaceOverviewTab;
 }
 
@@ -41,6 +42,7 @@ export const EMPTY_CHAT_PANEL_SURFACE_SNAPSHOT: ChatPanelSurfaceSnapshot = {
   selectedCollabOrg: null,
   workspaceDashboardOpen: false,
   exploreOpen: false,
+  manageIssuesOpen: false,
   workspaceOverviewTab: WORKSPACE_OVERVIEW_TAB.OVERVIEW,
 };
 
@@ -68,6 +70,12 @@ export function reduceChatPanelSurfaceCommand(
       return {
         ...next,
         createTarget: CHAT_PANEL_CREATE_TARGET.PROJECT,
+        createProjectContext: command.createProjectContext ?? null,
+      };
+    case CHAT_PANEL_SURFACE_KIND.NEW_GITHUB_ISSUES_PROJECT:
+      return {
+        ...next,
+        createTarget: CHAT_PANEL_CREATE_TARGET.GITHUB_ISSUES_PROJECT,
         createProjectContext: command.createProjectContext ?? null,
       };
     case CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM:
@@ -105,6 +113,11 @@ export function reduceChatPanelSurfaceCommand(
       return {
         ...next,
         exploreOpen: true,
+      };
+    case CHAT_PANEL_SURFACE_KIND.MANAGE_ISSUES:
+      return {
+        ...next,
+        manageIssuesOpen: true,
       };
     case CHAT_PANEL_SURFACE_KIND.WORKSPACE_OVERVIEW:
       return {
