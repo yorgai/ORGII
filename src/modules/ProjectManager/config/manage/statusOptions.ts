@@ -17,6 +17,8 @@ import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import type { ProjectStatus } from "@src/types/core/project";
 import type { DropdownOption } from "@src/types/core/shared";
 import {
+  GITHUB_ISSUE_STATUS,
+  type GitHubIssueStatus,
   WORK_ITEM_STATUS,
   type WorkItemStatus,
 } from "@src/types/core/workItem";
@@ -26,6 +28,22 @@ import { STATUS_BG_COLORS, STATUS_COLORS } from "./colors";
 // ============================================
 // Work Item Status Options
 // ============================================
+
+export const GITHUB_ISSUE_STATUS_OPTIONS: DropdownOption<GitHubIssueStatus>[] =
+  [
+    {
+      value: GITHUB_ISSUE_STATUS.OPEN,
+      label: "Open",
+      icon: React.createElement(Circle, { size: DROPDOWN_ITEM.iconSize }),
+      color: STATUS_COLORS.in_progress,
+    },
+    {
+      value: GITHUB_ISSUE_STATUS.CLOSED,
+      label: "Closed",
+      icon: React.createElement(CheckCircle2, { size: DROPDOWN_ITEM.iconSize }),
+      color: STATUS_COLORS.completed,
+    },
+  ];
 
 export const WORK_ITEM_STATUS_OPTIONS: DropdownOption<WorkItemStatus>[] = [
   {
@@ -128,6 +146,7 @@ export const STORY_STATUS_OPTIONS: ProjectStatusOption[] = [
 
 export function getWorkItemStatusConfig(status: WorkItemStatus) {
   return (
+    GITHUB_ISSUE_STATUS_OPTIONS.find((opt) => opt.value === status) ||
     WORK_ITEM_STATUS_OPTIONS.find((opt) => opt.value === status) ||
     WORK_ITEM_STATUS_OPTIONS[0]
   );

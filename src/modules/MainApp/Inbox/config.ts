@@ -5,11 +5,19 @@
  */
 import { Diff, ListTodo, type LucideIcon, Store } from "lucide-react";
 
+import type { InboxCategory } from "@src/api/types/inbox";
+import {
+  formatLocalClock,
+  formatLocalMonthDay,
+  formatRelativeElapsedShort,
+  getLocalDateKey,
+  getLocalDayDiff,
+  isSameLocalDay,
+} from "@src/util/data/formatters/date";
+
 // ============================================
 // Channels
 // ============================================
-
-import type { InboxCategory } from "@src/api/types/inbox";
 
 export type { InboxCategory };
 
@@ -79,59 +87,28 @@ export interface InboxDateParts {
 export function formatInboxDate(iso: string): InboxDateParts {
   const date = new Date(iso);
   const now = new Date();
-
-  const clock = date.toLocaleString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-
-  const startOfToday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  );
-  const startOfDate = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate()
-  );
-  const dayDiff = Math.round(
-    (startOfToday.getTime() - startOfDate.getTime()) / 86_400_000
-  );
+  const clock = formatLocalClock(date);
+  const dayDiff = getLocalDayDiff(date, now);
 
   if (dayDiff === 0) {
-    const diffMs = now.getTime() - date.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHr = Math.floor(diffMin / 60);
-
-    let ago: string;
-    if (diffSec < 60) ago = "just now";
-    else if (diffMin < 60) ago = `${diffMin}m ago`;
-    else ago = `${diffHr}h ago`;
-
-    return { time: clock, suffix: `(${ago})` };
+    return {
+      time: clock,
+      suffix: `(${formatRelativeElapsedShort(date, now)})`,
+    };
   }
   if (dayDiff === 1) return { time: `Yesterday, ${clock}` };
   if (dayDiff >= 2 && dayDiff <= 6)
     return { time: `${DAY_NAMES[date.getDay()]}, ${clock}` };
 
-  const month = date.toLocaleString("en-US", { month: "short" });
-  const day = date.getDate();
-  if (date.getFullYear() === now.getFullYear())
-    return { time: `${month} ${day}, ${clock}` };
-  return { time: `${month} ${day}, ${date.getFullYear()}, ${clock}` };
+  const monthDay = formatLocalMonthDay(date, {
+    includeYear: date.getFullYear() !== now.getFullYear(),
+  });
+  return { time: `${monthDay}, ${clock}` };
 }
 
 /** Returns true if the ISO date is from today (needs live updates). */
 export function isToday(iso: string): boolean {
-  const date = new Date(iso);
-  const now = new Date();
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
+  return isSameLocalDay(new Date(iso), new Date());
 }
 
 /**
@@ -145,36 +122,15 @@ export function isToday(iso: string): boolean {
 export function formatInboxDateCompact(iso: string): string {
   const date = new Date(iso);
   const now = new Date();
+  const dayDiff = getLocalDayDiff(date, now);
 
-  const startOfToday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  );
-  const startOfDate = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate()
-  );
-  const dayDiff = Math.round(
-    (startOfToday.getTime() - startOfDate.getTime()) / 86_400_000
-  );
-
-  if (dayDiff === 0) {
-    const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffSec < 60) return "just now";
-    if (diffMin < 60) return `${diffMin}m ago`;
-    return `${diffHr}h ago`;
-  }
+  if (dayDiff === 0) return formatRelativeElapsedShort(date, now);
   if (dayDiff === 1) return "Yesterday";
   if (dayDiff >= 2 && dayDiff <= 6) return `${dayDiff}d ago`;
 
-  const month = date.toLocaleString("en-US", { month: "short" });
-  const day = date.getDate();
-  if (date.getFullYear() === now.getFullYear()) return `${month} ${day}`;
-  return `${month} ${day}, ${date.getFullYear()}`;
+  return formatLocalMonthDay(date, {
+    includeYear: date.getFullYear() !== now.getFullYear(),
+  });
 }
 
 /**
@@ -187,34 +143,18 @@ export function formatInboxDateCompact(iso: string): string {
 export function formatDateGroupLabel(iso: string): string {
   const date = new Date(iso);
   const now = new Date();
-
-  const startOfToday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  );
-  const startOfDate = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate()
-  );
-  const dayDiff = Math.round(
-    (startOfToday.getTime() - startOfDate.getTime()) / 86_400_000
-  );
+  const dayDiff = getLocalDayDiff(date, now);
 
   if (dayDiff === 0) return "Today";
   if (dayDiff === 1) return "Yesterday";
 
   const dayName = DAY_NAMES[date.getDay()];
-  const month = date.toLocaleString("en-US", { month: "short" });
-  const day = date.getDate();
-  if (date.getFullYear() === now.getFullYear())
-    return `${dayName}, ${month} ${day}`;
-  return `${dayName}, ${month} ${day}, ${date.getFullYear()}`;
+  return `${dayName}, ${formatLocalMonthDay(date, {
+    includeYear: date.getFullYear() !== now.getFullYear(),
+  })}`;
 }
 
 /** Returns a calendar-day key (YYYY-MM-DD) for grouping messages by date. */
 export function getDateKey(iso: string): string {
-  const date = new Date(iso);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return getLocalDateKey(new Date(iso));
 }

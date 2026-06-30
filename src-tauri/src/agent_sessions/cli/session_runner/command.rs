@@ -177,15 +177,21 @@ pub(super) fn build_command(
             cmd
         }
         ModelType::Copilot => {
-            let mut cmd = vec!["copilot".into(), "--acp".into(), "--stdio".into()];
+            // Copilot exposes ACP over stdio only (no `--stdio`/`--port` flag).
+            // `--allow-all-tools` + `--no-ask-user` keep the agent autonomous so
+            // it never blocks on a permission or ask_user prompt.
+            let mut cmd = vec!["copilot".into(), "--acp".into()];
             cmd.push("--allow-all-tools".to_string());
+            cmd.push("--no-ask-user".to_string());
             if let Some(rid) = resume_id {
                 cmd.push("--resume".into());
                 cmd.push(rid.into());
             }
+            // Copilot routes across vendors (gpt-*, claude-*, gemini-*); pass the
+            // model id through unchanged instead of Claude-specific normalization.
             if let Some(m) = model {
                 cmd.push("--model".into());
-                cmd.push(map_claude_model(m));
+                cmd.push(m.into());
             }
             cmd
         }
@@ -206,8 +212,8 @@ pub(super) fn build_command(
 ///
 /// Fallback mapping for when the proxy's resolved `model_name` is unavailable
 /// (e.g., fallback allocation path, pool sync failure, or local billing mode).
-/// The hosted service normalizes "claude-sonnet-4.5" → "sonnet-4.5", but CLIs
-/// (Claude Code, Copilot) expect full names like "claude-sonnet-4.5".
+/// The hosted service normalizes "claude-sonnet-4.5" → "sonnet-4.5", but the
+/// Claude Code CLI expects full names like "claude-sonnet-4.5".
 /// This re-adds the "claude-" prefix for Claude-family models.
 /// Non-Claude models (gpt-*, gemini-*, grok-*, raptor-*) pass through unchanged.
 ///

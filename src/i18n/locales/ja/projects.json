@@ -12,6 +12,9 @@
       "project": "プロジェクト別",
       "status": "ステータス別",
       "priority": "優先度別",
+      "person": "担当者別",
+      "assignedTo": "割り当て先別",
+      "createdBy": "作成者別",
       "targetDate": "目標日別"
     },
     "source": {
@@ -273,7 +276,9 @@
       "inReview": "レビュー中",
       "done": "完了",
       "cancelled": "キャンセル",
-      "duplicate": "重複"
+      "duplicate": "重複",
+      "open": "Open",
+      "closed": "Closed"
     },
     "statusLabels": {
       "backlog": "Backlog",
@@ -282,7 +287,9 @@
       "in_review": "レビュー中",
       "completed": "完了",
       "cancelled": "キャンセル",
-      "duplicate": "重複"
+      "duplicate": "重複",
+      "open": "Open",
+      "closed": "Closed"
     },
     "priorityLabels": {
       "none": "優先度なし",

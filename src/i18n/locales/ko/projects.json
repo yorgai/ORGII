@@ -12,6 +12,9 @@
       "project": "프로젝트별",
       "status": "상태별",
       "priority": "우선순위별",
+      "person": "사람별",
+      "assignedTo": "담당자별",
+      "createdBy": "작성자별",
       "targetDate": "목표 날짜별"
     },
     "source": {
@@ -273,7 +276,9 @@
       "inReview": "검토 중",
       "done": "완료",
       "cancelled": "취소됨",
-      "duplicate": "중복"
+      "duplicate": "중복",
+      "open": "Open",
+      "closed": "Closed"
     },
     "statusLabels": {
       "backlog": "Backlog",
@@ -282,7 +287,9 @@
       "in_review": "검토 중",
       "completed": "완료",
       "cancelled": "취소됨",
-      "duplicate": "중복"
+      "duplicate": "중복",
+      "open": "Open",
+      "closed": "Closed"
     },
     "priorityLabels": {
       "none": "우선순위 없음",

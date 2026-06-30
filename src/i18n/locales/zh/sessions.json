@@ -2245,6 +2245,7 @@
     "insufficientBalance": "ORGII 托管服务余额不足，请前往 orgii.ai/wallet 充值。"
   },
   "planning": {
+    "agentTyping": "Agent 正在输入...",
     "nextStepVariants": [
       "正在规划下一步...",
       "思考中...",
@@ -2602,6 +2603,8 @@
     "titleA2ui": "Agent 预览",
     "reload": "重新加载",
     "openExternal": "在浏览器中打开",
+    "openUrlTitle": "未内嵌预览",
+    "openUrlDescription": "外部 URL 不再嵌入聊天里，避免 iframe 占用大量内存。",
     "expand": "展开",
     "shrink": "收起",
     "close": "关闭",

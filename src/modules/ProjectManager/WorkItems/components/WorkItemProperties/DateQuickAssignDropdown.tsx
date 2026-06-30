@@ -14,6 +14,10 @@ import {
   SearchableDropdown,
 } from "@src/components/PropertyField/PropertyFieldEditable";
 import type { DropdownEnginePosition } from "@src/hooks/dropdown";
+import {
+  formatLocalMonthDay,
+  isSameLocalDay,
+} from "@src/util/data/formatters/date";
 
 import {
   type DateQuickAssignSuggestion,
@@ -30,21 +34,6 @@ interface DateQuickAssignDropdownProps {
   portal?: boolean;
   dropdownRef?: React.RefObject<HTMLDivElement | null>;
   dropdownPosition?: DropdownEnginePosition;
-}
-
-function isSameLocalDay(left: Date, right: Date): boolean {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
-}
-
-function formatSuggestionDate(date: Date): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-  }).format(date);
 }
 
 function formatSuggestionLabel(
@@ -67,7 +56,7 @@ function formatSuggestionLabel(
   if (suggestion.id === "next-week") {
     return translate("workItems.properties.nextWeek");
   }
-  return formatSuggestionDate(suggestion.date);
+  return formatLocalMonthDay(suggestion.date, { locale: undefined });
 }
 
 function renderOptions(params: {
@@ -90,7 +79,7 @@ function renderOptions(params: {
         <Option
           key={suggestion.id}
           icon={<CalendarDays size={DROPDOWN_ITEM.iconSize} />}
-          label={`${formatSuggestionLabel(suggestion, params.t)} · ${formatSuggestionDate(suggestion.date)}`}
+          label={`${formatSuggestionLabel(suggestion, params.t)} · ${formatLocalMonthDay(suggestion.date, { locale: undefined })}`}
           isSelected={
             params.value
               ? isSameLocalDay(new Date(params.value), suggestion.date)

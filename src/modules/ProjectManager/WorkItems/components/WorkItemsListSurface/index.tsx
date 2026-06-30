@@ -119,10 +119,14 @@ const WorkItemsListSurface: FC<WorkItemsListSurfaceProps> = ({
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
-      <div className="relative min-w-0 flex-1 overflow-hidden">
-        <div className={isDetail ? "hidden" : "h-full"}>{listContent}</div>
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+        <div className={isDetail ? "hidden" : "h-full min-h-0"}>
+          {listContent}
+        </div>
         {isDetail && detailContent && (
-          <div className="h-full">{detailContent}</div>
+          <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide">
+            {detailContent}
+          </div>
         )}
       </div>
       {!isDetail && !hidePropertiesPanel && propertiesPanel}

@@ -2219,6 +2219,7 @@
     "insufficientBalance": "ORGII 호스팅 서비스의 잔액이 부족합니다. orgii.ai/wallet에서 충전하세요."
   },
   "planning": {
+    "agentTyping": "Agent 입력 중...",
     "nextStepVariants": [
       "다음 단계 계획 중...",
       "생각 중...",

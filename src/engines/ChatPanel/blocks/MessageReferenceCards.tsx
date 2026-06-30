@@ -48,6 +48,10 @@ import {
 
 const COMMIT_METADATA_LOOKUP_LIMIT = 200;
 
+function stopReferenceCardClick(event: React.MouseEvent) {
+  event.stopPropagation();
+}
+
 function commitMatchesReference(
   commit: GitCommitInfo,
   item: MessageReferenceItem
@@ -173,7 +177,10 @@ const SessionReferenceCard: React.FC<{ item: MessageReferenceItem }> = ({
   const title = referencedSession?.name || item.title;
 
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-border-2 bg-bg-2 p-3">
+    <div
+      className="flex min-w-0 items-center gap-3 rounded-xl border border-border-2 bg-bg-2 p-3"
+      onClick={stopReferenceCardClick}
+    >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-1 text-primary-6">
         {sessionIcon}
       </div>
@@ -328,6 +335,7 @@ const MessageReferenceCard: React.FC<MessageReferenceCardProps> = ({
           ? "flex min-w-0 items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-fill-2"
           : "flex min-w-0 items-center gap-3 rounded-xl border border-border-2 bg-bg-2 p-3"
       }
+      onClick={stopReferenceCardClick}
     >
       <div
         className={
@@ -421,7 +429,10 @@ const UrlReferenceGroupCard: React.FC<{
   const { t } = useTranslation("sessions");
 
   return (
-    <div className="rounded-xl border border-border-2 bg-bg-2 p-2">
+    <div
+      className="rounded-xl border border-border-2 bg-bg-2 p-2"
+      onClick={stopReferenceCardClick}
+    >
       <div className="chat-block-content px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-text-3">
         {t("cards.url.groupTitle", {
           count: items.length,

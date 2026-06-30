@@ -2,7 +2,8 @@ import type { MetricsSnapshot } from "./types";
 
 export { CHILD_PROCESS_CATEGORY } from "./types";
 
-export const METRICS_POLL_INTERVAL_MS = 5000;
+export const CHEAP_METRICS_POLL_INTERVAL_MS = 15_000;
+export const EXPENSIVE_METRICS_POLL_INTERVAL_MS = 60_000;
 export const SUCCESS_FPS_THRESHOLD = 40;
 export const SUCCESS_RAM_THRESHOLD_MB = 1024;
 

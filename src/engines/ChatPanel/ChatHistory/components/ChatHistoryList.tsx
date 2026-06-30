@@ -18,7 +18,10 @@ import React, {
 } from "react";
 
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
-import { PlanningFooter } from "@src/engines/ChatPanel/blocks/primitives";
+import {
+  PlanningFooter,
+  type PlanningFooterMode,
+} from "@src/engines/ChatPanel/blocks/primitives";
 
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
 import {
@@ -254,12 +257,12 @@ function sameChatHistoryListProps(
       previous.planningIndicatorCount === next.planningIndicatorCount,
     ],
     [
-      "planningShowSlowHint",
-      previous.planningShowSlowHint === next.planningShowSlowHint,
-    ],
-    [
       "planningVariantIndex",
       previous.planningVariantIndex === next.planningVariantIndex,
+    ],
+    [
+      "planningFooterMode",
+      previous.planningFooterMode === next.planningFooterMode,
     ],
     ["virtualListRef", previous.virtualListRef === next.virtualListRef],
     [
@@ -325,8 +328,8 @@ interface ChatHistoryListProps {
   footerSpacerHeight: number;
   bottomInset: number;
   planningIndicatorCount: number;
-  planningShowSlowHint: boolean;
   planningVariantIndex: number;
+  planningFooterMode: PlanningFooterMode;
   virtualListRef: React.RefObject<ChatHistoryListHandle | null>;
   virtualListDataKey: string;
   /**
@@ -395,8 +398,8 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
     footerSpacerHeight,
     bottomInset,
     planningIndicatorCount,
-    planningShowSlowHint,
     planningVariantIndex,
+    planningFooterMode,
     virtualListRef,
     virtualListDataKey,
     getIsWpGeneWorking,
@@ -418,10 +421,10 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
     // renderGroupItem's useCallback (Root Cause 2 fix).
     const planningIndicatorCountRef = useRef(planningIndicatorCount);
     planningIndicatorCountRef.current = planningIndicatorCount;
-    const planningShowSlowHintRef = useRef(planningShowSlowHint);
-    planningShowSlowHintRef.current = planningShowSlowHint;
     const planningVariantIndexRef = useRef(planningVariantIndex);
     planningVariantIndexRef.current = planningVariantIndex;
+    const planningFooterModeRef = useRef(planningFooterMode);
+    planningFooterModeRef.current = planningFooterMode;
 
     // flatItems and previousChatItems in refs so renderGroupItem's useCallback
     // is not re-created on every token during streaming (Root Cause 1 fix).
@@ -615,8 +618,8 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
             <PlanningFooter
               key={`planning-footer-${flatIndex}`}
               count={planningIndicatorCountRef.current}
-              showSlowHint={planningShowSlowHintRef.current}
               variantIndex={planningVariantIndexRef.current}
+              mode={planningFooterModeRef.current}
             />
           );
         }
@@ -712,8 +715,8 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = memo(
                       <PlanningFooter
                         key={`planning-footer-${itemFlatIndex}`}
                         count={planningIndicatorCount}
-                        showSlowHint={planningShowSlowHint}
                         variantIndex={planningVariantIndex}
+                        mode={planningFooterMode}
                       />
                     );
                   }

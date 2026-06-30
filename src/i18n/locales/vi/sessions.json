@@ -2218,6 +2218,7 @@
     "insufficientBalance": "Số dư không đủ cho dịch vụ ORGII được lưu trữ. Nạp tiền tại orgii.ai/wallet."
   },
   "planning": {
+    "agentTyping": "Agent đang nhập...",
     "nextStepVariants": [
       "Đang lập kế hoạch bước tiếp theo...",
       "Đang suy nghĩ...",

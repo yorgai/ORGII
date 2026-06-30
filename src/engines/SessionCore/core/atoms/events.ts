@@ -42,23 +42,30 @@ const log = createLogger("eventsAtom");
 // ============================================
 
 /**
- * Per-session live assistant message content updated on every token delta.
+ * Per-session live stream content updated on every token delta.
  *
  * Provides a direct rendering path that bypasses the EventStore snapshot
  * pipeline (16ms TS throttle → IPC → 33ms Rust batch → serialization → IPC
  * back → React). Components that read this atom see each token immediately
  * as it arrives from the LLM, giving smooth streaming UX.
  *
- * Shape: Map<sessionId, content> so multiple sessions can stream concurrently
- * (e.g. Control Tower with multiple agent sessions visible side by side).
+ * Shape: Map<sessionId, { kind, content }> so message and thinking streams
+ * cannot be confused while multiple sessions stream concurrently.
  *
  * Set by the `onStreamingDelta` callback in useSessionSync (keyed by sessionId).
  * Cleared per-session on streaming_complete, session complete, and session switch.
  * Token-level live content must not be written to the durable EventStore.
  */
-export const streamingDeltaContentAtom = atom<Map<string, string>>(
-  new Map<string, string>()
-);
+export type StreamingDeltaKind = "message" | "thinking";
+
+export interface StreamingDeltaContent {
+  kind: StreamingDeltaKind;
+  content: string;
+}
+
+export const streamingDeltaContentAtom = atom<
+  Map<string, StreamingDeltaContent>
+>(new Map<string, StreamingDeltaContent>());
 streamingDeltaContentAtom.debugLabel = "session/streamingDeltaContent";
 
 // ============================================

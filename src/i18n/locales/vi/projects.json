@@ -12,6 +12,9 @@
       "project": "Theo dự án",
       "status": "Theo trạng thái",
       "priority": "Theo độ ưu tiên",
+      "person": "Theo người",
+      "assignedTo": "Theo người được giao",
+      "createdBy": "Theo người tạo",
       "targetDate": "Theo ngày mục tiêu"
     },
     "source": {
@@ -273,7 +276,9 @@
       "inReview": "Đang xem xét",
       "done": "Hoàn thành",
       "cancelled": "Đã hủy",
-      "duplicate": "Trùng lặp"
+      "duplicate": "Trùng lặp",
+      "open": "Mở",
+      "closed": "Đã đóng"
     },
     "statusLabels": {
       "backlog": "Backlog",
@@ -282,7 +287,9 @@
       "in_review": "Đang xem xét",
       "completed": "Hoàn thành",
       "cancelled": "Đã hủy",
-      "duplicate": "Trùng lặp"
+      "duplicate": "Trùng lặp",
+      "open": "Mở",
+      "closed": "Đã đóng"
     },
     "priorityLabels": {
       "none": "Không ưu tiên",

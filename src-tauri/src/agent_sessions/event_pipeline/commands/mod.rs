@@ -192,7 +192,7 @@ pub(crate) fn schedule_notify(app: &AppHandle, state: &EventStoreState, session_
 fn emit_snapshot(app: &AppHandle, state: &EventStoreState, session_id: &str) {
     use crate::agent_sessions::event_pipeline::derived::{
         build_simulator_preview_indexes, is_visible_in_chat, is_visible_in_messages,
-        is_visible_in_simulator, sort_if_unsorted, sort_simulator_events,
+        is_visible_in_simulator, latest_canvas_preview, sort_if_unsorted, sort_simulator_events,
     };
     use crate::agent_sessions::event_pipeline::types::EventDisplayStatus;
 
@@ -225,6 +225,7 @@ fn emit_snapshot(app: &AppHandle, state: &EventStoreState, session_id: &str) {
             .saturating_sub(STREAMING_SIMULATOR_UPSERT_LIMIT);
         let simulator_event_upserts = sorted_simulator_events[simulator_upsert_start..].to_vec();
         let preview_indexes = build_simulator_preview_indexes(&sorted_simulator_events);
+        let latest_canvas_preview = latest_canvas_preview(events);
 
         let snapshot = StreamingSnapshot {
             version: store.version(),
@@ -242,6 +243,7 @@ fn emit_snapshot(app: &AppHandle, state: &EventStoreState, session_id: &str) {
             last_event: store.last_event().map(compact_event_for_snapshot),
             streaming: true,
             has_running_event,
+            latest_canvas_preview,
         };
         let envelope = SnapshotEnvelope {
             session_id: session_id.to_string(),
@@ -300,6 +302,7 @@ fn emit_snapshot(app: &AppHandle, state: &EventStoreState, session_id: &str) {
     }
     sort_simulator_events(&mut simulator_preview_events);
     let preview_indexes = build_simulator_preview_indexes(&simulator_preview_events);
+    let latest_canvas_preview = latest_canvas_preview(events);
     let chat_event_count = chat_event_ids.len();
     let snapshot = SnapshotDelta {
         version,
@@ -320,6 +323,7 @@ fn emit_snapshot(app: &AppHandle, state: &EventStoreState, session_id: &str) {
         last_event_id: store.last_event().map(|event| event.id.clone()),
         chat_event_count,
         has_running_event,
+        latest_canvas_preview,
         snapshot_delta: true,
     };
     let envelope = SnapshotEnvelope {
