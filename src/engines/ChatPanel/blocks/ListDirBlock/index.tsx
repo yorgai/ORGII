@@ -10,7 +10,9 @@
 import React from "react";
 
 import { getToolIcon } from "@src/config/toolIcons";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
@@ -35,10 +37,11 @@ export interface ListDirBlockProps {
   title: string;
   /** Optional repo-relative target path label for multi-root workspaces. */
   targetPath?: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 const ListDirBlock: React.FC<ListDirBlockProps> = React.memo(
-  ({ dirPath, isLoading = false, eventId, title, targetPath }) => {
+  ({ dirPath, isLoading = false, eventId, title, targetPath, toolUsage }) => {
     const {
       isHeaderHovered,
       handleHeaderMouseEnter,
@@ -67,6 +70,9 @@ const ListDirBlock: React.FC<ListDirBlockProps> = React.memo(
           onNavigate={handleLocate}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
+          rightContent={
+            toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={getToolIcon("list_dir", {

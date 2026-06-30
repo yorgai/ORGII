@@ -38,6 +38,7 @@ use crate::tools::registry::ToolRegistry;
 
 use super::file_tracker::FileTimeTracker;
 use super::types::{PermissionProvider, TurnEventHandler};
+use super::usage_telemetry::ToolExecutionUsage;
 
 use parallel::{execute_parallel_group, ParallelResult};
 use single::{execute_single_tool, SingleResult};
@@ -178,9 +179,10 @@ pub(crate) async fn execute_tool_calls(
     workspace_path: Option<&std::path::Path>,
     policy_context_activator: Option<&SessionScopedContextActivator>,
     max_tool_use_concurrency: usize,
-) -> (usize, ToolBatchOutcome) {
+) -> (usize, Vec<ToolExecutionUsage>, ToolBatchOutcome) {
     let groups = partition_tool_calls(tool_calls, tools);
     let mut executed_count = 0;
+    let mut execution_usage = Vec::new();
 
     for group in groups {
         match group {
@@ -202,9 +204,13 @@ pub(crate) async fn execute_tool_calls(
                 )
                 .await;
                 match result {
-                    ParallelResult::Continue(count) => executed_count += count,
-                    ParallelResult::EarlyExit(count, outcome) => {
-                        return (executed_count + count, outcome);
+                    ParallelResult::Continue(count, mut usage) => {
+                        executed_count += count;
+                        execution_usage.append(&mut usage);
+                    }
+                    ParallelResult::EarlyExit(count, mut usage, outcome) => {
+                        execution_usage.append(&mut usage);
+                        return (executed_count + count, execution_usage, outcome);
                     }
                 }
             }
@@ -226,9 +232,12 @@ pub(crate) async fn execute_tool_calls(
                     )
                     .await;
                     match result {
-                        SingleResult::Continue => executed_count += 1,
+                        SingleResult::Continue(usage) => {
+                            executed_count += 1;
+                            execution_usage.push(usage);
+                        }
                         SingleResult::EarlyExit(outcome) => {
-                            return (executed_count + 1, outcome);
+                            return (executed_count + 1, execution_usage, outcome);
                         }
                     }
                 }
@@ -250,16 +259,19 @@ pub(crate) async fn execute_tool_calls(
                 )
                 .await;
                 match result {
-                    SingleResult::Continue => executed_count += 1,
+                    SingleResult::Continue(usage) => {
+                        executed_count += 1;
+                        execution_usage.push(usage);
+                    }
                     SingleResult::EarlyExit(outcome) => {
-                        return (executed_count + 1, outcome);
+                        return (executed_count + 1, execution_usage, outcome);
                     }
                 }
             }
         }
     }
 
-    (executed_count, ToolBatchOutcome::Continue)
+    (executed_count, execution_usage, ToolBatchOutcome::Continue)
 }
 
 #[cfg(test)]

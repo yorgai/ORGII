@@ -4,14 +4,15 @@ use tracing::{debug, info, warn};
 
 use super::{events, finalize_failure, finalize_success, io, now_ms};
 use crate::projects::io::{
-    allocate_short_id, apply_remote_merge, delete_work_item, find_by_external_ref, read_labels,
-    read_members, read_project, read_sync_metadata, read_work_item,
-    update_work_item_partial_with_revisions, write_labels, write_members, write_work_item,
-    FieldRevision, SyncMetadata,
+    FieldRevision, SyncMetadata, allocate_short_id, apply_remote_merge, delete_work_item,
+    find_by_external_ref, read_labels, read_members, read_project, read_sync_metadata,
+    read_work_item, update_work_item_partial_with_revisions, write_labels, write_members,
+    write_work_item,
 };
 use crate::projects::types::work_items::{default_priority, default_status};
 use crate::projects::types::{
     LabelEntry, LabelsFile, MemberEntry, MembersFile, WorkItemData, WorkItemFrontmatter,
+    WorkItemPartialUpdate,
 };
 use crate::sync::adapter::ExternalChange;
 use crate::sync::events::SyncEventTrigger;
@@ -241,7 +242,10 @@ async fn process_merge_entry_inner(entry: OutboxEntry, id: i64) -> Result<(), St
         return apply_remote_delete(id, &project_slug, &short_id, &change.external_id).await;
     }
 
-    if decision.adopted_fields.is_empty() {
+    let creator_backfill = build_creator_backfill_update(&local_view, &change.fields);
+    let has_creator_backfill = creator_backfill.created_by.is_some();
+
+    if decision.adopted_fields.is_empty() && !has_creator_backfill {
         debug!(
             "[sync::worker] merge id={}: no adopted fields ({} kept_local)",
             id,
@@ -276,7 +280,10 @@ async fn process_merge_entry_inner(entry: OutboxEntry, id: i64) -> Result<(), St
     // until commit, fields already written) is benign because
     // `external_refs` is consulted only by future pulls, not by the
     // resolver of this change.
-    let update = build_partial_update(&decision);
+    let mut update = build_partial_update(&decision);
+    if let Some(created_by) = creator_backfill.created_by {
+        update.created_by = Some(created_by);
+    }
     let mut decision = decision;
     let new_revisions = std::mem::take(&mut decision.new_revisions);
     let apply_slug = project_slug.clone();
@@ -439,6 +446,33 @@ async fn apply_remote_delete(
 /// (`status="backlog"`, `priority="none"`, empty labels) so the work
 /// item is queryable through the standard read path the moment the
 /// row commits.
+fn build_creator_backfill_update(
+    local_view: &WorkItemData,
+    fields: &serde_json::Value,
+) -> WorkItemPartialUpdate {
+    let mut update = WorkItemPartialUpdate::default();
+    if local_view
+        .frontmatter
+        .created_by
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .is_some()
+    {
+        return update;
+    }
+    let Some(created_by) = fields
+        .get("created_by")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return update;
+    };
+    update.created_by = Some(created_by.to_string());
+    update
+}
+
 fn build_inbound_create_frontmatter(
     short_id: &str,
     fields: &serde_json::Value,
@@ -475,7 +509,7 @@ fn build_inbound_create_frontmatter(
         parent: None,
         start_date: pick_string("start_date"),
         target_date: pick_string("target_date"),
-        created_by: None,
+        created_by: pick_string("created_by"),
         created_at: now_iso.clone(),
         updated_at: now_iso,
         deleted_at: None,
@@ -540,19 +574,26 @@ fn upsert_remote_labels(project_id: &str, fields: &serde_json::Value) -> Result<
 }
 
 fn upsert_remote_members(project_id: &str, fields: &serde_json::Value) -> Result<(), String> {
-    let Some(assignee_nodes) = fields
+    let mut member_nodes = Vec::new();
+    if let Some(assignee_nodes) = fields
         .get("assignee_details")
         .and_then(|value| value.as_array())
-    else {
+    {
+        member_nodes.extend(assignee_nodes.iter());
+    }
+    if let Some(creator_node) = fields.get("creator_details") {
+        member_nodes.push(creator_node);
+    }
+    if member_nodes.is_empty() {
         return Ok(());
-    };
+    }
 
     let mut members = read_members(project_id)?.members;
-    for assignee_node in assignee_nodes {
-        let Some(login) = assignee_node.get("login").and_then(|value| value.as_str()) else {
+    for member_node in member_nodes {
+        let Some(login) = member_node.get("login").and_then(|value| value.as_str()) else {
             continue;
         };
-        let avatar = assignee_node
+        let avatar = member_node
             .get("avatar_url")
             .and_then(|value| value.as_str())
             .map(str::to_string);

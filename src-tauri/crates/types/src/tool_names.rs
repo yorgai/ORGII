@@ -144,7 +144,7 @@ pub const SUGGEST_NEXT_STEPS: &str = "suggest_next_steps";
 pub const TOOL_SEARCH: &str = "tool_search";
 
 // ── UI Output ───────────────────────────────────────────────────────
-/// Renders interactive HTML, URL embeds, or A2UI JSONL streams directly
+/// Renders interactive HTML, URL embeds, A2UI JSONL streams, or React artifacts
 /// inside the chat panel as a sandboxed inline canvas card. Supported by
 /// both OS Agent and SDE Agent. Mode values: "html" | "url" | "a2ui" | "react".
 pub const RENDER_INLINE_CANVAS: &str = "render_inline_canvas";

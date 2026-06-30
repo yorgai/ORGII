@@ -200,6 +200,14 @@ export const chatHistoryDisplayModeAtom =
   );
 chatHistoryDisplayModeAtom.debugLabel = "chatHistoryDisplayModeAtom";
 
+export const chatTokenUsageVisibleAtom = atomWithStorage<boolean>(
+  "orgii:chatTokenUsageVisible",
+  false,
+  undefined,
+  { getOnInit: true }
+);
+chatTokenUsageVisibleAtom.debugLabel = "chatTokenUsageVisibleAtom";
+
 /** Presentation style for the chat panel model picker. */
 export type ModelPickerStyle = "spotlight" | "dropdown";
 

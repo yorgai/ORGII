@@ -8,7 +8,9 @@ import { ExternalLink } from "lucide-react";
 import React from "react";
 
 import { getToolIcon } from "@src/config/toolIcons";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   ComposerStackListRow,
   EVENT_LOADING_SHIMMER_TEXT_CLASSES,
@@ -38,6 +40,7 @@ export interface WebSearchBlockProps {
    * `useLifecycleLabels("web_search")`.
    */
   title: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 function extractDomain(url: string): string {
@@ -81,6 +84,7 @@ const WebSearchBlock: React.FC<WebSearchBlockProps> = React.memo(
     defaultCollapsed = true,
     eventId,
     title,
+    toolUsage,
   }) => {
     const {
       isCollapsed: isExpanded,
@@ -112,6 +116,9 @@ const WebSearchBlock: React.FC<WebSearchBlockProps> = React.memo(
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
           className={eventId ? "cursor-pointer" : undefined}
+          rightContent={
+            toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={toolIcon}

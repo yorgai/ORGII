@@ -45,6 +45,10 @@
       "publishError": "Failed to publish {{name}}"
     },
     "configure": "Configure {{provider}}",
+    "providerGroups": {
+      "cloud": "Cloud",
+      "local": "Local"
+    },
     "publishToMarketplace": "Publish {{provider}} to Marketplace",
     "status": {
       "readyToUse": "Ready to use",
@@ -218,27 +222,13 @@
     "localModel": {
       "title": "Local model cookbook",
       "description": "Pick a local runtime preset, confirm its OpenAI-compatible endpoint, add one or more model IDs, then save this account to use local models in Chat",
-      "runtimeLabel": "Runtime preset",
-      "runtimeDesc": "Choose the local server you are running. Presets fill the endpoint and starter model IDs for you.",
-      "baseUrlDesc": "OpenAI-compatible local endpoint. Start your runtime first, then validate or save.",
-      "apiKeyDesc": "Most local runtimes accept any non-empty value. Keep the placeholder unless your server enforces a key.",
+      "baseUrlDesc": "OpenAI-compatible local endpoint. Start your runtime first, then validate or save",
+      "apiKeyDesc": "Most local runtimes accept any non-empty value. Keep the placeholder unless your server enforces a key",
       "quickModelsLabel": "Cookbook models",
-      "quickModelsDesc": "Seed the model table with IDs commonly used by this runtime. You can edit or add more models below.",
+      "quickModelsDesc": "Seed the model table with IDs commonly used by this runtime. You can edit or add more models below",
       "quickModelsPlaceholder": "Choose a suggested model",
       "addSuggestedModel": "Add suggested",
-      "validateDesc": "Probe the endpoint if it is running, or save after adding models manually.",
-      "presets": {
-        "ollama": "Ollama",
-        "ollamaDesc": "Default local server on port 11434",
-        "lmStudio": "LM Studio",
-        "lmStudioDesc": "OpenAI-compatible server on port 1234",
-        "vllm": "vLLM",
-        "vllmDesc": "Self-hosted inference server on port 8000",
-        "llamaCpp": "llama.cpp",
-        "llamaCppDesc": "GGUF serving endpoint on port 8080",
-        "custom": "Custom",
-        "customDesc": "Any OpenAI-compatible local endpoint"
-      }
+      "validateDesc": "Probe the endpoint if it is running, or save after adding models manually"
     },
     "validate": "Validate",
     "validateDesc": "Validate keys before proceeding",

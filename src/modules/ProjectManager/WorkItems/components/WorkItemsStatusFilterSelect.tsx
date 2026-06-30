@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select";
-import { WORK_ITEM_STATUS_OPTIONS } from "@src/modules/ProjectManager/config/manage";
+import { getWorkItemStatusConfig } from "@src/modules/ProjectManager/config/manage";
 
 import { FILTER_TO_STATUS, STATUS_FILTER_KEYS } from "../types";
 import type { StatusFilterType } from "../types";
@@ -16,11 +16,12 @@ interface WorkItemsStatusFilterSelectProps {
   value: StatusFilterType;
   onChange: (value: StatusFilterType) => void;
   statusCounts: StatusCountMap;
+  filterKeys?: readonly StatusFilterType[];
 }
 
 const WorkItemsStatusFilterSelect: React.FC<
   WorkItemsStatusFilterSelectProps
-> = ({ value, onChange, statusCounts }) => {
+> = ({ value, onChange, statusCounts, filterKeys = STATUS_FILTER_KEYS }) => {
   const { t } = useTranslation("projects");
 
   const getStatusFilterIcon = useCallback((key: StatusFilterType) => {
@@ -29,9 +30,7 @@ const WorkItemsStatusFilterSelect: React.FC<
     }
 
     const status = FILTER_TO_STATUS[key];
-    const option = status
-      ? WORK_ITEM_STATUS_OPTIONS.find((item) => item.value === status)
-      : undefined;
+    const option = status ? getWorkItemStatusConfig(status) : undefined;
     if (!option?.icon) {
       return <List size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />;
     }
@@ -43,9 +42,11 @@ const WorkItemsStatusFilterSelect: React.FC<
     );
   }, []);
 
+  const effectiveValue = filterKeys.includes(value) ? value : "all";
+
   const statusFilterOptions = useMemo<SelectOption[]>(
     () =>
-      STATUS_FILTER_KEYS.map((key) => {
+      filterKeys.map((key) => {
         const count = statusCounts[key] ?? 0;
         const label = t(`workItems.statusFilters.${key}`);
         return {
@@ -62,12 +63,12 @@ const WorkItemsStatusFilterSelect: React.FC<
           triggerLabel: label,
         };
       }),
-    [getStatusFilterIcon, statusCounts, t]
+    [filterKeys, getStatusFilterIcon, statusCounts, t]
   );
 
   return (
     <Select
-      value={value}
+      value={effectiveValue}
       onChange={(nextValue) => {
         if (Array.isArray(nextValue)) return;
         onChange(nextValue.toString() as StatusFilterType);

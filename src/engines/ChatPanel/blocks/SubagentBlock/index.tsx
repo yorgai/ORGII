@@ -16,8 +16,10 @@ import { Infinity, Square } from "lucide-react";
 import React, { memo, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 import { createLogger } from "@src/hooks/logger";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EVENT_BLOCK_ICON_WRAPPER_CLASSES,
   EVENT_LOADING_SHIMMER_TEXT_CLASSES,
@@ -50,6 +52,7 @@ export interface SubagentBlockProps {
   /** Called when the user clicks the navigate icon — locates the subagent
    *  cell in the right-side monitor panel. */
   onNavigate?: () => void;
+  toolUsage?: ToolUsageMetadata;
 }
 
 // ============================================
@@ -67,6 +70,7 @@ const SubagentBlock: React.FC<SubagentBlockProps> = memo(
     success,
     errorMessage,
     onNavigate,
+    toolUsage,
   }) => {
     const { t } = useTranslation("sessions");
     const { t: tCommon } = useTranslation();
@@ -126,28 +130,29 @@ const SubagentBlock: React.FC<SubagentBlockProps> = memo(
     if (timingLabel && !isLoading) subtitleParts.push(timingLabel);
     const subtitle = subtitleParts.join(" · ");
 
-    // ── Header right: stop button ──
-    const headerRight = (
-      <div className="flex items-center gap-2 pl-2">
-        {canStop && (
-          <button
-            type="button"
-            data-testid="subagent-card-stop-button"
-            className="flex h-5 w-0 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-none bg-text-2 text-white transition-colors hover:bg-text-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 group-hover/chat-block-header:w-5"
-            onClick={handleStop}
-            disabled={effectiveIsStopping}
-            title={tCommon("common:actions.stop")}
-            aria-label={tCommon("common:actions.stop")}
-          >
-            {effectiveIsStopping ? (
-              <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            ) : (
-              <Square size={10} fill="currentColor" strokeWidth={0} />
-            )}
-          </button>
-        )}
-      </div>
-    );
+    const headerRight =
+      toolUsage || canStop ? (
+        <div className="flex items-center gap-2 pl-2">
+          {toolUsage && <ToolUsageBadge usage={toolUsage} />}
+          {canStop && (
+            <button
+              type="button"
+              data-testid="subagent-card-stop-button"
+              className="flex h-5 w-0 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-none bg-text-2 text-white transition-colors hover:bg-text-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 group-hover/chat-block-header:w-5"
+              onClick={handleStop}
+              disabled={effectiveIsStopping}
+              title={tCommon("common:actions.stop")}
+              aria-label={tCommon("common:actions.stop")}
+            >
+              {effectiveIsStopping ? (
+                <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <Square size={10} fill="currentColor" strokeWidth={0} />
+              )}
+            </button>
+          )}
+        </div>
+      ) : undefined;
 
     const displayTitle = t("tools.assignedTaskToSubagent");
     const hasBody =

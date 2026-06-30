@@ -3,6 +3,13 @@
  *
  * Constants and utility functions for the CalendarView component.
  */
+import {
+  addLocalDays,
+  addLocalMonths,
+  formatLocalMonthDay,
+  getStartOfLocalDay,
+  isSameLocalDay,
+} from "@src/util/data/formatters/date";
 import { parseApiDate } from "@src/util/data/formatters/dateCore";
 
 import type { CalendarViewMode } from "./types";
@@ -82,9 +89,7 @@ export function parseDate(date: Date | string): Date {
 
 /** Add days to a date */
 export function addDays(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
+  return addLocalDays(date, days);
 }
 
 /** Add weeks to a date */
@@ -94,9 +99,7 @@ export function addWeeks(date: Date, weeks: number): Date {
 
 /** Add months to a date */
 export function addMonths(date: Date, months: number): Date {
-  const result = new Date(date);
-  result.setMonth(result.getMonth() + months);
-  return result;
+  return addLocalMonths(date, months);
 }
 
 // ============================================
@@ -105,9 +108,7 @@ export function addMonths(date: Date, months: number): Date {
 
 /** Get start of day (00:00:00.000) */
 export function getStartOfDay(date: Date): Date {
-  const result = new Date(date);
-  result.setHours(0, 0, 0, 0);
-  return result;
+  return getStartOfLocalDay(date);
 }
 
 /** Get end of day (23:59:59.999) */
@@ -162,11 +163,7 @@ export function getDaysInMonth(date: Date): number {
 
 /** Check if two dates are the same day */
 export function isSameDay(date1: Date, date2: Date): boolean {
-  return (
-    date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate()
-  );
+  return isSameLocalDay(date1, date2);
 }
 
 /** Check if a date is today */
@@ -219,12 +216,7 @@ export function formatTime(hour: number, use24Hour: boolean = true): string {
 
 /** Format date for display (e.g., "Jan 5" or "Jan 5, 2026") */
 export function formatDate(date: Date, includeYear: boolean = false): string {
-  const month = MONTH_NAMES_SHORT[date.getMonth()];
-  const day = date.getDate();
-  if (includeYear) {
-    return `${month} ${day}, ${date.getFullYear()}`;
-  }
-  return `${month} ${day}`;
+  return formatLocalMonthDay(date, { includeYear });
 }
 
 // ============================================

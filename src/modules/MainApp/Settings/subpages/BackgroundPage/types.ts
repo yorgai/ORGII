@@ -51,7 +51,7 @@ export interface BackgroundConfig {
   pageOpacity?: number;
   /**
    * Sidebar surface opacity as an integer percent. Range is clamped to
-   * [MIN_SIDEBAR_OPACITY, 100]. Undefined or 100 = fully opaque.
+   * 0–100. Undefined or 100 = fully opaque.
    */
   sidebarOpacity?: number;
 }

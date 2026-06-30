@@ -53,7 +53,7 @@ const SyntaxHighlighter =
  * block. The agent writes ```canvas or ```preview with a JSON payload.
  *
  * Payload schema (JSON on a single line or pretty-printed):
- *   { "mode": "html"|"url"|"a2ui", "content"?: "...", "url"?: "...", "title"?: "..." }
+ *   { "mode": "html"|"url"|"a2ui"|"react", "content"?: "...", "url"?: "...", "title"?: "..." }
  */
 const CANVAS_FENCED_LANGUAGES = new Set([
   "canvas",
@@ -61,12 +61,15 @@ const CANVAS_FENCED_LANGUAGES = new Set([
   "canvas-html",
   "canvas-url",
   "canvas-a2ui",
+  "canvas-react",
 ]);
 
-type CanvasFencedMode = "html" | "url" | "a2ui";
+type CanvasFencedMode = "html" | "url" | "a2ui" | "react";
 
 function isCanvasFencedMode(value: unknown): value is CanvasFencedMode {
-  return value === "html" || value === "url" || value === "a2ui";
+  return (
+    value === "html" || value === "url" || value === "a2ui" || value === "react"
+  );
 }
 
 /**
@@ -458,9 +461,10 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
             let cardUrl: string | undefined;
             let cardTitle: string | undefined;
 
-            // Derive mode from language alias shortcuts (canvas-url, canvas-a2ui)
+            // Derive mode from language alias shortcuts (canvas-url, canvas-a2ui, canvas-react)
             if (language === "canvas-url") mode = "url";
             else if (language === "canvas-a2ui") mode = "a2ui";
+            else if (language === "canvas-react") mode = "react";
 
             // Try to parse the body as a JSON payload
             const trimmed = codeContent.trim();

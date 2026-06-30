@@ -31,6 +31,7 @@ import type { WorkItem as WorkItemExtended } from "@src/types/core/workItem";
 
 import { type OnAssignmentChanges, type StatusFilterType } from "../types";
 import {
+  countWorkItemsByStatus,
   getWorkItemNavigation,
   groupWorkItemsForStatusFilter,
 } from "../workItemsViewModel";
@@ -440,9 +441,12 @@ export function useWorkItemsData({
         done: 0,
         cancelled: 0,
         duplicate: 0,
+        open: 0,
+        closed: 0,
       };
     }
     const counts = viewData.counts;
+    const issueCounts = countWorkItemsByStatus(workItems);
     return {
       all: counts.all,
       backlog: counts.backlog,
@@ -452,8 +456,10 @@ export function useWorkItemsData({
       done: counts.completed,
       cancelled: counts.cancelled,
       duplicate: counts.duplicate,
+      open: issueCounts.open,
+      closed: issueCounts.closed,
     };
-  }, [viewData, workItems.length]);
+  }, [viewData, workItems]);
 
   const overviewStats = useMemo(() => {
     const total = statusCounts.all;

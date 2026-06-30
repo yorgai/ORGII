@@ -1,8 +1,12 @@
 import React, { memo, useMemo } from "react";
 
 import { getToolIcon } from "@src/config/toolIcons";
-import type { PayloadRef } from "@src/engines/SessionCore/core/types";
+import type {
+  PayloadRef,
+  ToolUsageMetadata,
+} from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   BlockOutput,
   BlockSection,
@@ -27,6 +31,7 @@ interface ManageCodeMapBlockProps {
   eventId?: string;
   sessionId?: string;
   payloadRefs?: PayloadRef[];
+  toolUsage?: ToolUsageMetadata;
 }
 
 interface InfoRow {
@@ -100,6 +105,7 @@ const ManageCodeMapBlock: React.FC<ManageCodeMapBlockProps> = memo(
     eventId,
     sessionId,
     payloadRefs,
+    toolUsage,
   }) => {
     const rows = useMemo(
       () => buildRows(action, args, result),
@@ -146,6 +152,9 @@ const ManageCodeMapBlock: React.FC<ManageCodeMapBlockProps> = memo(
           onNavigate={handleLocate}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
+          rightContent={
+            toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={icon}

@@ -53,10 +53,21 @@ export interface MemoryBreakdown {
   file_cache_mb: number;
 }
 
+export const CHILD_MEMORY_METRIC_KIND = {
+  PSS: "pss",
+  RSS: "rss",
+} as const;
+
+export type ChildMemoryMetricKind =
+  (typeof CHILD_MEMORY_METRIC_KIND)[keyof typeof CHILD_MEMORY_METRIC_KIND];
+
 export interface ChildProcessInfo {
   pid: number;
   name: string;
   memory_mb: number;
+  rss_mb: number;
+  virtual_memory_mb: number;
+  memory_metric_kind: ChildMemoryMetricKind;
   category: string;
 }
 
@@ -82,7 +93,8 @@ export function formatMemory(megabytes: number): string {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const METRICS_POLL_INTERVAL_MS = 5000;
+const CHEAP_METRICS_POLL_INTERVAL_MS = 15_000;
+const EXPENSIVE_METRICS_POLL_INTERVAL_MS = 60_000;
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
@@ -117,46 +129,96 @@ export function useMonitorMetrics(activeTab: string): UseMonitorMetricsReturn {
   const { stats: ramHistory, recordSample: recordRamSample } = useRamHistory();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cheapIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const expensiveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
+  const lastExpensiveFetchAtRef = useRef(0);
+  const processMetricsRef = useRef<ProcessMetrics | null>(null);
+  const childProcessesRef = useRef<ChildProcessInfo[]>([]);
   const isVisibleRef = useRef(false);
 
   useEffect(() => {
     setMonitorActiveTab(activeTab);
   }, [activeTab, setMonitorActiveTab]);
 
-  const fetchMetrics = useCallback(async () => {
-    try {
-      const [process, system, breakdown, children, sysInfo] = await Promise.all(
-        [
-          invoke<ProcessMetrics>("get_process_metrics"),
-          invoke<SystemMemoryMetrics>("get_system_memory"),
-          invoke<MemoryBreakdown>("get_memory_breakdown").catch(() => null),
-          invoke<ChildProcessInfo[]>("get_child_processes_memory").catch(
-            () => []
-          ),
-          invoke<SystemInfo>("get_system_info").catch(() => null),
-        ]
-      );
-      setProcessMetrics(process);
-      setSystemMemory(system);
-      setMemoryBreakdown(breakdown);
-      setChildProcesses(children);
-      if (sysInfo) setSystemInfo(sysInfo);
+  const recordRamHistorySample = useCallback(
+    (process: ProcessMetrics | null, children: ChildProcessInfo[]) => {
+      if (!process) return;
 
       const appRamTotal =
         (process.memory_rss_mb ?? 0) +
         children.reduce((sum, child) => sum + child.memory_mb, 0);
       recordRamSample(appRamTotal);
+    },
+    [recordRamSample]
+  );
+
+  const fetchExpensiveMetrics = useCallback(
+    async (force = false) => {
+      if (document.visibilityState !== "visible" || !isVisibleRef.current)
+        return;
+
+      const now = Date.now();
+      if (
+        !force &&
+        now - lastExpensiveFetchAtRef.current <
+          EXPENSIVE_METRICS_POLL_INTERVAL_MS
+      ) {
+        return;
+      }
+      lastExpensiveFetchAtRef.current = now;
+
+      try {
+        const children = await invoke<ChildProcessInfo[]>(
+          "get_child_processes_memory"
+        ).catch(() => []);
+        childProcessesRef.current = children;
+        setChildProcesses(children);
+        recordRamHistorySample(processMetricsRef.current, children);
+      } catch (error) {
+        log.error("failed to fetch expensive monitor metrics:", error);
+      }
+    },
+    [recordRamHistorySample]
+  );
+
+  const fetchCheapMetrics = useCallback(async () => {
+    if (document.visibilityState !== "visible" || !isVisibleRef.current) return;
+
+    try {
+      const [process, system, breakdown, sysInfo] = await Promise.all([
+        invoke<ProcessMetrics>("get_process_metrics"),
+        invoke<SystemMemoryMetrics>("get_system_memory"),
+        invoke<MemoryBreakdown>("get_memory_breakdown").catch(() => null),
+        invoke<SystemInfo>("get_system_info").catch(() => null),
+      ]);
+      processMetricsRef.current = process;
+      setProcessMetrics(process);
+      setSystemMemory(system);
+      setMemoryBreakdown(breakdown);
+      if (sysInfo) setSystemInfo(sysInfo);
+      recordRamHistorySample(process, childProcessesRef.current);
     } catch (error) {
-      log.error("[Monitor] Failed to fetch metrics:", error);
+      log.error("failed to fetch monitor metrics:", error);
     }
-  }, [recordRamSample]);
+  }, [recordRamHistorySample]);
+
+  const fetchMetrics = useCallback(
+    async (forceExpensive = false) => {
+      await Promise.all([
+        fetchCheapMetrics(),
+        fetchExpensiveMetrics(forceExpensive),
+      ]);
+    },
+    [fetchCheapMetrics, fetchExpensiveMetrics]
+  );
 
   const handleRefresh = useCallback(
     async (onSuccess?: () => void) => {
       setScanning(true);
       try {
-        await fetchMetrics();
+        await fetchMetrics(true);
         onSuccess?.();
       } finally {
         setScanning(false);
@@ -183,21 +245,35 @@ export function useMonitorMetrics(activeTab: string): UseMonitorMetricsReturn {
   ]);
 
   const startPolling = useCallback(() => {
-    if (intervalRef.current) return;
-    intervalRef.current = setInterval(fetchMetrics, METRICS_POLL_INTERVAL_MS);
-  }, [fetchMetrics]);
+    if (!cheapIntervalRef.current) {
+      cheapIntervalRef.current = setInterval(
+        fetchCheapMetrics,
+        CHEAP_METRICS_POLL_INTERVAL_MS
+      );
+    }
+    if (!expensiveIntervalRef.current) {
+      expensiveIntervalRef.current = setInterval(
+        () => void fetchExpensiveMetrics(true),
+        EXPENSIVE_METRICS_POLL_INTERVAL_MS
+      );
+    }
+  }, [fetchCheapMetrics, fetchExpensiveMetrics]);
 
   const stopPolling = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (cheapIntervalRef.current) {
+      clearInterval(cheapIntervalRef.current);
+      cheapIntervalRef.current = null;
+    }
+    if (expensiveIntervalRef.current) {
+      clearInterval(expensiveIntervalRef.current);
+      expensiveIntervalRef.current = null;
     }
   }, []);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && isVisibleRef.current) {
-        void fetchMetrics();
+        void fetchMetrics(true);
         startPolling();
       } else {
         stopPolling();
@@ -216,7 +292,7 @@ export function useMonitorMetrics(activeTab: string): UseMonitorMetricsReturn {
       ([entry]) => {
         isVisibleRef.current = entry.isIntersecting;
         if (entry.isIntersecting && document.visibilityState === "visible") {
-          void fetchMetrics();
+          void fetchMetrics(true);
           startPolling();
         } else {
           stopPolling();

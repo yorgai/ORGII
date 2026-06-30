@@ -12,6 +12,9 @@
       "project": "По проекту",
       "status": "По статусу",
       "priority": "По приоритету",
+      "person": "По человеку",
+      "assignedTo": "Назначено",
+      "createdBy": "Создано",
       "targetDate": "По целевой дате"
     },
     "source": {
@@ -273,7 +276,9 @@
       "inReview": "На проверке",
       "done": "Готово",
       "cancelled": "Отменено",
-      "duplicate": "Дубликат"
+      "duplicate": "Дубликат",
+      "open": "Открыто",
+      "closed": "Закрыто"
     },
     "statusLabels": {
       "backlog": "Backlog",

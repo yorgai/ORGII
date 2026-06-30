@@ -108,7 +108,7 @@ export interface WizardData {
     named_message?: string;
   };
 
-  /** Setup method chosen for complex CLI agents (e.g. "guided", "autodetect", "enter_token", "signin") */
+  /** Setup method chosen for complex CLI agents, or local runtime preset for local providers. */
   setup_method?: string;
 }
 

@@ -42,6 +42,10 @@
       "publishError": "{{name}} 發佈失敗"
     },
     "configure": "配置 {{provider}}",
+    "providerGroups": {
+      "cloud": "Cloud",
+      "local": "Local"
+    },
     "publishToMarketplace": "發佈 {{provider}} 到市場",
     "status": {
       "readyToUse": "可以使用",
@@ -215,27 +219,13 @@
     "localModel": {
       "title": "本地模型 Cookbook",
       "description": "選擇本地執行環境預設，確認 OpenAI 相容端點，加入一個或多個模型 ID，然後儲存此帳戶以在 Chat 中使用本地模型",
-      "runtimeLabel": "執行環境預設",
-      "runtimeDesc": "選擇正在執行的本地服務。預設會自動填入端點和初始模型 ID。",
-      "baseUrlDesc": "OpenAI 相容的本地端點。請先啟動執行環境，然後驗證或儲存。",
-      "apiKeyDesc": "多數本地執行環境接受任意非空值。除非伺服器強制要求密鑰，否則保留佔位值即可。",
+      "baseUrlDesc": "OpenAI 相容的本地端點。請先啟動執行環境，然後驗證或儲存",
+      "apiKeyDesc": "多數本地執行環境接受任意非空值。除非伺服器強制要求密鑰，否則保留佔位值即可",
       "quickModelsLabel": "Cookbook 模型",
-      "quickModelsDesc": "用此執行環境常用的模型 ID 初始化模型表。你可以在下方編輯或加入更多模型。",
+      "quickModelsDesc": "用此執行環境常用的模型 ID 初始化模型表。你可以在下方編輯或加入更多模型",
       "quickModelsPlaceholder": "選擇建議模型",
       "addSuggestedModel": "加入建議項",
-      "validateDesc": "如果端點正在執行，可進行探測；也可以手動加入模型後直接儲存。",
-      "presets": {
-        "ollama": "Ollama",
-        "ollamaDesc": "預設本地服務端口 11434",
-        "lmStudio": "LM Studio",
-        "lmStudioDesc": "端口 1234 上的 OpenAI 相容服務",
-        "vllm": "vLLM",
-        "vllmDesc": "端口 8000 上的自託管推理服務",
-        "llamaCpp": "llama.cpp",
-        "llamaCppDesc": "端口 8080 上的 GGUF 服務端點",
-        "custom": "自定義",
-        "customDesc": "任意 OpenAI 相容的本地端點"
-      }
+      "validateDesc": "如果端點正在執行，可進行探測；也可以手動加入模型後直接儲存"
     },
     "validate": "驗證",
     "validateDesc": "在繼續之前驗證密鑰",

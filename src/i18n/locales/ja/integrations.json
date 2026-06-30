@@ -42,6 +42,10 @@
       "publishError": "{{name}} の公開に失敗しました"
     },
     "configure": "{{provider}} を設定",
+    "providerGroups": {
+      "cloud": "Cloud",
+      "local": "Local"
+    },
     "publishToMarketplace": "{{provider}} をマーケットプレイスに公開",
     "status": {
       "readyToUse": "使用可能",
@@ -218,27 +222,13 @@
     "localModel": {
       "title": "ローカルモデル Cookbook",
       "description": "ローカルランタイムのプリセットを選び、OpenAI 互換エンドポイントを確認し、1 つ以上のモデル ID を追加して保存すると、Chat でローカルモデルを使えます",
-      "runtimeLabel": "ランタイムプリセット",
-      "runtimeDesc": "実行中のローカルサーバーを選択します。プリセットはエンドポイントと初期モデル ID を入力します。",
-      "baseUrlDesc": "OpenAI 互換のローカルエンドポイント。先にランタイムを起動してから検証または保存してください。",
-      "apiKeyDesc": "ほとんどのローカルランタイムは任意の非空値を受け付けます。サーバーがキーを要求しない限り、プレースホルダーのままで構いません。",
+      "baseUrlDesc": "OpenAI 互換のローカルエンドポイント。先にランタイムを起動してから検証または保存してください",
+      "apiKeyDesc": "ほとんどのローカルランタイムは任意の非空値を受け付けます。サーバーがキーを要求しない限り、プレースホルダーのままで構いません",
       "quickModelsLabel": "Cookbook モデル",
-      "quickModelsDesc": "このランタイムでよく使うモデル ID をモデル表に追加します。下で編集や追加ができます。",
+      "quickModelsDesc": "このランタイムでよく使うモデル ID をモデル表に追加します。下で編集や追加ができます",
       "quickModelsPlaceholder": "候補モデルを選択",
       "addSuggestedModel": "候補を追加",
-      "validateDesc": "エンドポイントが起動中ならプローブし、または手動でモデルを追加して保存します。",
-      "presets": {
-        "ollama": "Ollama",
-        "ollamaDesc": "ポート 11434 の既定ローカルサーバー",
-        "lmStudio": "LM Studio",
-        "lmStudioDesc": "ポート 1234 の OpenAI 互換サーバー",
-        "vllm": "vLLM",
-        "vllmDesc": "ポート 8000 のセルフホスト推論サーバー",
-        "llamaCpp": "llama.cpp",
-        "llamaCppDesc": "ポート 8080 の GGUF サービングエンドポイント",
-        "custom": "カスタム",
-        "customDesc": "任意の OpenAI 互換ローカルエンドポイント"
-      }
+      "validateDesc": "エンドポイントが起動中ならプローブし、または手動でモデルを追加して保存します"
     },
     "validate": "検証",
     "validateDesc": "続行前に認証情報を検証します",

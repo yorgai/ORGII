@@ -1,4 +1,5 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import type { CalendarEvent } from "@src/features/CalendarView";
 import type { GanttTask } from "@src/features/GanttChart";
@@ -17,7 +18,13 @@ import type {
   WorkItemStatus,
 } from "@src/types/core/workItem";
 
-import type { WorkItemGroup } from "../../workItemsViewModel";
+import {
+  WORK_ITEMS_KANBAN_GROUP,
+  type WorkItemGroup,
+  type WorkItemsKanbanGroup,
+  getWorkItemsKanbanColumns,
+  workItemsToKanbanTasks,
+} from "../../workItemsViewModel";
 import WorkItemsListSurface from "../WorkItemsListSurface";
 import type { WorkItemsViewTab } from "../WorkItemsPageHeader";
 
@@ -93,6 +100,8 @@ interface WorkItemsTabContentProps {
     updates: { startDate?: Date; endDate?: Date }
   ) => void;
   onCalendarEventClick: (event: CalendarEvent) => void;
+  kanbanGroupBy?: WorkItemsKanbanGroup;
+  pinnedKanbanColumnIds?: readonly string[];
   kanbanTasks: KanbanTask[];
   ganttTasks: GanttTask[];
   calendarEvents: CalendarEvent[];
@@ -142,6 +151,8 @@ const WorkItemsTabContent: React.FC<WorkItemsTabContentProps> = ({
   onGanttTaskClick,
   onGanttTaskUpdate,
   onCalendarEventClick,
+  kanbanGroupBy = WORK_ITEMS_KANBAN_GROUP.STATUS,
+  pinnedKanbanColumnIds = [],
   kanbanTasks,
   ganttTasks,
   calendarEvents,
@@ -154,6 +165,8 @@ const WorkItemsTabContent: React.FC<WorkItemsTabContentProps> = ({
   collapseAllSignal = 0,
   workItemPrefix,
 }) => {
+  const { t } = useTranslation("projects");
+
   /**
    * Renders the list/board content full-pane. When a work item is selected, the
    * content is hidden via `display: none` (NOT unmounted) so that scroll
@@ -161,6 +174,24 @@ const WorkItemsTabContent: React.FC<WorkItemsTabContentProps> = ({
    * dismisses the detail and returns to the board. The detail takes over the
    * full content area and provides its own breadcrumb back-navigation.
    */
+  const effectiveKanbanTasks = useMemo(
+    () =>
+      kanbanGroupBy === WORK_ITEMS_KANBAN_GROUP.STATUS
+        ? kanbanTasks
+        : workItemsToKanbanTasks(filteredWorkItems, kanbanGroupBy),
+    [filteredWorkItems, kanbanGroupBy, kanbanTasks]
+  );
+  const kanbanColumns = useMemo(
+    () =>
+      getWorkItemsKanbanColumns(
+        filteredWorkItems,
+        kanbanGroupBy,
+        t("workItems.properties.noAssignee"),
+        pinnedKanbanColumnIds
+      ),
+    [filteredWorkItems, kanbanGroupBy, pinnedKanbanColumnIds, t]
+  );
+
   const renderWithOptionalDetail = (content: React.ReactNode) => {
     const isDetail = !!selectedWorkItem;
     return (
@@ -214,11 +245,14 @@ const WorkItemsTabContent: React.FC<WorkItemsTabContentProps> = ({
         <div className="h-full min-h-0">
           <Suspense fallback={<Placeholder variant="loading" />}>
             <KanbanBoard
-              tasks={kanbanTasks}
+              tasks={effectiveKanbanTasks}
+              columnOrder={kanbanColumns}
+              allowColumnReorder={false}
+              allowTaskDrag={kanbanGroupBy === WORK_ITEMS_KANBAN_GROUP.STATUS}
               onTaskMove={onKanbanTaskMove}
               onTaskClick={onKanbanTaskClick}
               onAddTask={onAddKanbanTask}
-              showAddButton={true}
+              showAddButton={kanbanGroupBy === WORK_ITEMS_KANBAN_GROUP.STATUS}
               className="kanban-board--linear"
             />
           </Suspense>

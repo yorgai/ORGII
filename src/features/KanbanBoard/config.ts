@@ -12,6 +12,11 @@ import {
   XCircle,
 } from "lucide-react";
 
+import {
+  GITHUB_ISSUE_STATUS,
+  WORK_ITEM_STATUS,
+} from "@src/types/core/workItem";
+
 import type { KanbanColumnConfig, TaskStatus } from "./types";
 
 // ============================================
@@ -23,7 +28,7 @@ import type { KanbanColumnConfig, TaskStatus } from "./types";
 // user's locale.
 export const DEFAULT_KANBAN_COLUMNS: KanbanColumnConfig[] = [
   {
-    id: "backlog",
+    id: WORK_ITEM_STATUS.BACKLOG,
     title: "projects:workItems.statusLabels.backlog",
     icon: CircleDashed,
     color: "var(--color-neutral-6)",
@@ -32,7 +37,7 @@ export const DEFAULT_KANBAN_COLUMNS: KanbanColumnConfig[] = [
     headerBgColor: "color-mix(in srgb, var(--color-neutral-6) 8%, transparent)",
   },
   {
-    id: "planned",
+    id: WORK_ITEM_STATUS.PLANNED,
     title: "projects:workItems.statusLabels.planned",
     icon: Circle,
     color: "var(--color-neutral-6)",
@@ -41,7 +46,7 @@ export const DEFAULT_KANBAN_COLUMNS: KanbanColumnConfig[] = [
     headerBgColor: "color-mix(in srgb, var(--color-neutral-6) 8%, transparent)",
   },
   {
-    id: "in_progress",
+    id: WORK_ITEM_STATUS.IN_PROGRESS,
     title: "projects:workItems.statusLabels.in_progress",
     icon: Clock,
     color: "var(--color-primary-6)",
@@ -50,7 +55,7 @@ export const DEFAULT_KANBAN_COLUMNS: KanbanColumnConfig[] = [
     headerBgColor: "color-mix(in srgb, var(--color-primary-6) 8%, transparent)",
   },
   {
-    id: "in_review",
+    id: WORK_ITEM_STATUS.IN_REVIEW,
     title: "projects:workItems.statusLabels.in_review",
     icon: Layers,
     color: "var(--color-warning-6)",
@@ -59,7 +64,7 @@ export const DEFAULT_KANBAN_COLUMNS: KanbanColumnConfig[] = [
     headerBgColor: "color-mix(in srgb, var(--color-warning-6) 8%, transparent)",
   },
   {
-    id: "completed",
+    id: WORK_ITEM_STATUS.COMPLETED,
     title: "projects:workItems.statusLabels.completed",
     icon: CheckCircle2,
     color: "var(--color-success-6)",
@@ -68,7 +73,7 @@ export const DEFAULT_KANBAN_COLUMNS: KanbanColumnConfig[] = [
     headerBgColor: "color-mix(in srgb, var(--color-success-6) 8%, transparent)",
   },
   {
-    id: "cancelled",
+    id: WORK_ITEM_STATUS.CANCELLED,
     title: "projects:workItems.statusLabels.cancelled",
     icon: XCircle,
     color: "var(--color-danger-6)",
@@ -77,9 +82,30 @@ export const DEFAULT_KANBAN_COLUMNS: KanbanColumnConfig[] = [
     headerBgColor: "color-mix(in srgb, var(--color-danger-6) 8%, transparent)",
   },
   {
-    id: "duplicate",
+    id: WORK_ITEM_STATUS.DUPLICATE,
     title: "projects:workItems.statusLabels.duplicate",
     icon: XCircle,
+    color: "var(--color-text-3)",
+    bgColor: "color-mix(in srgb, var(--color-text-3) 10%, transparent)",
+    dotColor: "var(--color-text-3)",
+    headerBgColor: "color-mix(in srgb, var(--color-text-3) 8%, transparent)",
+  },
+];
+
+export const GITHUB_ISSUE_KANBAN_COLUMNS: KanbanColumnConfig[] = [
+  {
+    id: GITHUB_ISSUE_STATUS.OPEN,
+    title: "projects:workItems.statusLabels.open",
+    icon: Circle,
+    color: "var(--color-success-6)",
+    bgColor: "color-mix(in srgb, var(--color-success-6) 10%, transparent)",
+    dotColor: "var(--color-success-6)",
+    headerBgColor: "color-mix(in srgb, var(--color-success-6) 8%, transparent)",
+  },
+  {
+    id: GITHUB_ISSUE_STATUS.CLOSED,
+    title: "projects:workItems.statusLabels.closed",
+    icon: CheckCircle2,
     color: "var(--color-text-3)",
     bgColor: "color-mix(in srgb, var(--color-text-3) 10%, transparent)",
     dotColor: "var(--color-text-3)",

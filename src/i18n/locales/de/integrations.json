@@ -42,6 +42,10 @@
       "publishError": "{{name}} konnte nicht veröffentlicht werden"
     },
     "configure": "{{provider}} konfigurieren",
+    "providerGroups": {
+      "cloud": "Cloud",
+      "local": "Local"
+    },
     "publishToMarketplace": "{{provider}} auf Marktplatz veröffentlichen",
     "status": {
       "readyToUse": "Einsatzbereit",
@@ -218,27 +222,13 @@
     "localModel": {
       "title": "Lokales Modell-Cookbook",
       "description": "Wählen Sie ein lokales Runtime-Preset, bestätigen Sie den OpenAI-kompatiblen Endpoint, fügen Sie ein oder mehrere Modell-IDs hinzu und speichern Sie dieses Konto, um lokale Modelle in Chat zu verwenden",
-      "runtimeLabel": "Runtime-Preset",
-      "runtimeDesc": "Wählen Sie den lokalen Server aus, der läuft. Presets füllen Endpoint und Startmodelle aus.",
-      "baseUrlDesc": "OpenAI-kompatibler lokaler Endpoint. Starten Sie die Runtime, bevor Sie validieren oder speichern.",
-      "apiKeyDesc": "Die meisten lokalen Runtimes akzeptieren jeden nicht leeren Wert. Behalten Sie den Platzhalter, sofern Ihr Server keinen Schlüssel erzwingt.",
+      "baseUrlDesc": "OpenAI-kompatibler lokaler Endpoint. Starten Sie die Runtime, bevor Sie validieren oder speichern",
+      "apiKeyDesc": "Die meisten lokalen Runtimes akzeptieren jeden nicht leeren Wert. Behalten Sie den Platzhalter, sofern Ihr Server keinen Schlüssel erzwingt",
       "quickModelsLabel": "Cookbook-Modelle",
-      "quickModelsDesc": "Füllt die Modelltabelle mit für diese Runtime üblichen IDs. Sie können unten weitere Modelle bearbeiten oder hinzufügen.",
+      "quickModelsDesc": "Füllt die Modelltabelle mit für diese Runtime üblichen IDs. Sie können unten weitere Modelle bearbeiten oder hinzufügen",
       "quickModelsPlaceholder": "Vorgeschlagenes Modell wählen",
       "addSuggestedModel": "Vorschlag hinzufügen",
-      "validateDesc": "Prüfen Sie den Endpoint, wenn er läuft, oder speichern Sie nach dem manuellen Hinzufügen von Modellen.",
-      "presets": {
-        "ollama": "Ollama",
-        "ollamaDesc": "Standardmäßiger lokaler Server auf Port 11434",
-        "lmStudio": "LM Studio",
-        "lmStudioDesc": "OpenAI-kompatibler Server auf Port 1234",
-        "vllm": "vLLM",
-        "vllmDesc": "Selbst gehosteter Inferenzserver auf Port 8000",
-        "llamaCpp": "llama.cpp",
-        "llamaCppDesc": "GGUF-Serving-Endpoint auf Port 8080",
-        "custom": "Benutzerdefiniert",
-        "customDesc": "Beliebiger OpenAI-kompatibler lokaler Endpoint"
-      }
+      "validateDesc": "Prüfen Sie den Endpoint, wenn er läuft, oder speichern Sie nach dem manuellen Hinzufügen von Modellen"
     },
     "validate": "Validieren",
     "validateDesc": "Anmeldedaten vor dem Fortfahren überprüfen",

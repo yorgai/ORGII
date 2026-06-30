@@ -86,6 +86,7 @@ interface ChatPanelHeaderProps {
   handleProjectTitleChange: (title: string) => void;
   handleReloadFromMenu: () => void;
   handleToggleAllBlocksCollapsed: () => void;
+  handleTokenUsageVisibleToggle: (checked: boolean) => void;
   handleWorkItemAgentCreatorToggle: (enabled: boolean) => void;
   handleWorkItemTitleChange: (title: string) => void;
   headerActionsDropdownRef: React.RefObject<HTMLDivElement | null>;
@@ -99,6 +100,7 @@ interface ChatPanelHeaderProps {
   isHeaderActionsPositioned: boolean;
   isProjectTarget: boolean;
   paginationEnabled: boolean;
+  tokenUsageVisible: boolean;
   showStartPageBackButton: boolean;
   selectedProjectVisible: boolean;
   selectedWorkItemVisible: boolean;
@@ -147,6 +149,7 @@ export function ChatPanelHeader({
   handleProjectTitleChange,
   handleReloadFromMenu,
   handleToggleAllBlocksCollapsed,
+  handleTokenUsageVisibleToggle,
   handleWorkItemAgentCreatorToggle,
   handleWorkItemTitleChange,
   headerActionsDropdownRef,
@@ -160,6 +163,7 @@ export function ChatPanelHeader({
   isHeaderActionsPositioned,
   isProjectTarget,
   paginationEnabled,
+  tokenUsageVisible,
   showStartPageBackButton,
   selectedProjectVisible,
   selectedWorkItemVisible,
@@ -420,6 +424,18 @@ export function ChatPanelHeader({
               </span>
             </button>
             <div className="my-1 border-t border-solid border-border-2" />
+            <div
+              className={`${DROPDOWN_CLASSES.item} w-full justify-between text-left`}
+            >
+              <span className="flex-1 truncate">
+                {t("chat.showTokenUsage")}
+              </span>
+              <Switch
+                checked={tokenUsageVisible}
+                onChange={handleTokenUsageVisibleToggle}
+                size="small"
+              />
+            </div>
             <div
               className={`${DROPDOWN_CLASSES.item} w-full justify-between text-left`}
             >

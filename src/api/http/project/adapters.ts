@@ -236,6 +236,7 @@ export function workItemDataToUI(
 ): UIWorkItem {
   const { frontmatter } = itemData;
   const assignee = resolveMemberId(frontmatter.assignee, context.memberMap);
+  const createdBy = resolveMemberId(frontmatter.created_by, context.memberMap);
   const labels = resolveLabelIds(frontmatter.labels, context.labelMap);
   const projectName =
     frontmatter.project && context.projectNameMap
@@ -268,6 +269,7 @@ export function workItemDataToUI(
     ),
     assignee,
     assigneeType: frontmatter.assignee_type,
+    createdBy,
     labels,
     project: frontmatter.project
       ? { id: frontmatter.project, name: projectName }
@@ -409,6 +411,7 @@ export function enrichedWorkItemToUI(item: EnrichedWorkItem): UIWorkItem {
     ),
     assignee: item.assignee,
     assigneeType: item.assigneeType,
+    createdBy: item.createdByPerson,
     labels: item.labels,
     project: item.project,
     milestone: item.milestone,

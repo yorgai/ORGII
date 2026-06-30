@@ -1,4 +1,4 @@
-import { Check, MessageSquare, Server, Sparkles } from "lucide-react";
+import { Check } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -12,10 +12,6 @@ import {
   SectionContainer,
   SectionRow,
 } from "@src/modules/shared/layouts/SectionLayout";
-import {
-  SelectionGrid,
-  type SelectionGridOption,
-} from "@src/scaffold/WizardSystem/primitives";
 
 import type { AgentSetupProps } from "./types";
 
@@ -71,6 +67,10 @@ function mergeUniqueModels(existingModels: string[], presetModels: string[]) {
   return merged;
 }
 
+function isLocalRuntime(value: string | undefined): value is LocalRuntime {
+  return !!value && value in LOCAL_PRESETS;
+}
+
 const LocalModelSetup: React.FC<AgentSetupProps> = ({
   data,
   onChange,
@@ -79,61 +79,29 @@ const LocalModelSetup: React.FC<AgentSetupProps> = ({
   validateKey,
 }) => {
   const { t } = useTranslation("integrations");
+  const [cookbookDismissed, setCookbookDismissed] = useState(false);
 
-  const runtimeOptions = useMemo<SelectionGridOption<LocalRuntime>[]>(
-    () => [
-      {
-        key: "ollama",
-        label: t("keyVault.localModel.presets.ollama"),
-        description: t("keyVault.localModel.presets.ollamaDesc"),
-        icon: Sparkles,
-      },
-      {
-        key: "lm_studio",
-        label: t("keyVault.localModel.presets.lmStudio"),
-        description: t("keyVault.localModel.presets.lmStudioDesc"),
-        icon: MessageSquare,
-      },
-      {
-        key: "vllm",
-        label: t("keyVault.localModel.presets.vllm"),
-        description: t("keyVault.localModel.presets.vllmDesc"),
-        icon: Server,
-      },
-      {
-        key: "llamacpp",
-        label: t("keyVault.localModel.presets.llamaCpp"),
-        description: t("keyVault.localModel.presets.llamaCppDesc"),
-        icon: Server,
-      },
-      {
-        key: "custom",
-        label: t("keyVault.localModel.presets.custom"),
-        description: t("keyVault.localModel.presets.customDesc"),
-        icon: Server,
-      },
-    ],
-    [t]
-  );
-
-  const [selectedRuntime, setSelectedRuntime] = useState<LocalRuntime>(() => {
+  const selectedRuntime = useMemo<LocalRuntime>(() => {
+    if (isLocalRuntime(data.setup_method)) return data.setup_method;
     const currentUrl = data.extracted_base_url;
     const match = Object.values(LOCAL_PRESETS).find(
       (preset) => preset.baseUrl === currentUrl
     );
     return match?.runtime ?? "ollama";
-  });
+  }, [data.extracted_base_url, data.setup_method]);
+  const selectedPreset = LOCAL_PRESETS[selectedRuntime];
+  const effectiveBaseUrl = data.extracted_base_url || selectedPreset.baseUrl;
 
   useEffect(() => {
     if (data.name.trim() || data.agent_type !== LOCAL_MODEL_PROVIDER) return;
     onChange({ name: DEFAULT_LOCAL_ACCOUNT_NAME });
   }, [data.agent_type, data.name, onChange]);
 
-  const applyPreset = (runtime: LocalRuntime) => {
-    const preset = LOCAL_PRESETS[runtime];
-    setSelectedRuntime(runtime);
+  useEffect(() => {
+    if (!isLocalRuntime(data.setup_method)) return;
+    if (data.extracted_base_url) return;
+    const preset = LOCAL_PRESETS[data.setup_method];
     onChange({
-      raw_key_input: data.raw_key_input.trim() || preset.apiKey,
       extracted_base_url: preset.baseUrl,
       custom_models: mergeUniqueModels(data.custom_models ?? [], preset.models),
       enabled_models: mergeUniqueModels(
@@ -142,15 +110,21 @@ const LocalModelSetup: React.FC<AgentSetupProps> = ({
       ),
       validated: false,
     });
-  };
+  }, [
+    data.custom_models,
+    data.enabled_models,
+    data.extracted_base_url,
+    data.setup_method,
+    onChange,
+  ]);
 
   const modelQuickAddOptions = useMemo(
     () =>
-      LOCAL_PRESETS[selectedRuntime].models.map((model) => ({
+      selectedPreset.models.map((model) => ({
         value: model,
         label: model,
       })),
-    [selectedRuntime]
+    [selectedPreset.models]
   );
 
   const addModel = (model: string) => {
@@ -168,25 +142,17 @@ const LocalModelSetup: React.FC<AgentSetupProps> = ({
 
   return (
     <div className={SECTION_GAP_CLASSES}>
-      <InlineAlert type="info" title={t("keyVault.localModel.title")}>
-        {t("keyVault.localModel.description")}
-      </InlineAlert>
+      {!cookbookDismissed && (
+        <InlineAlert
+          type="info"
+          title={t("keyVault.localModel.title")}
+          onClose={() => setCookbookDismissed(true)}
+        >
+          {t("keyVault.localModel.description")}
+        </InlineAlert>
+      )}
 
       <SectionContainer>
-        <SectionRow
-          label={t("keyVault.localModel.runtimeLabel")}
-          description={t("keyVault.localModel.runtimeDesc")}
-          layout="vertical"
-          required
-        >
-          <SelectionGrid
-            options={runtimeOptions}
-            selected={selectedRuntime}
-            cardVariant="subtle"
-            onSelect={applyPreset}
-          />
-        </SectionRow>
-
         <SectionRow
           label={t("keyVault.baseUrlLabel")}
           description={t("keyVault.localModel.baseUrlDesc")}
@@ -194,13 +160,11 @@ const LocalModelSetup: React.FC<AgentSetupProps> = ({
           required
         >
           <Input
-            value={
-              data.extracted_base_url || LOCAL_PRESETS[selectedRuntime].baseUrl
-            }
+            value={effectiveBaseUrl}
             onChange={(value) =>
               onChange({ extracted_base_url: value, validated: false })
             }
-            placeholder={LOCAL_PRESETS[selectedRuntime].baseUrl}
+            placeholder={selectedPreset.baseUrl}
             size="default"
             className="w-full"
           />
@@ -210,14 +174,13 @@ const LocalModelSetup: React.FC<AgentSetupProps> = ({
           label={t("keyVault.apiKeyLabel")}
           description={t("keyVault.localModel.apiKeyDesc")}
           layout="vertical"
-          required
         >
           <Input
             value={data.raw_key_input}
             onChange={(value) =>
               onChange({ raw_key_input: value, validated: false })
             }
-            placeholder={LOCAL_PRESETS[selectedRuntime].apiKey}
+            placeholder={selectedPreset.apiKey}
             size="default"
             className="w-full"
           />
@@ -244,7 +207,7 @@ const LocalModelSetup: React.FC<AgentSetupProps> = ({
               appearance="outline"
               size="default"
               icon={<Check size={14} />}
-              onClick={() => addModel(LOCAL_PRESETS[selectedRuntime].models[0])}
+              onClick={() => addModel(selectedPreset.models[0])}
             >
               {t("keyVault.localModel.addSuggestedModel")}
             </Button>
@@ -261,9 +224,7 @@ const LocalModelSetup: React.FC<AgentSetupProps> = ({
             appearance={keyValidated ? "outline" : undefined}
             size="default"
             loading={validatingKey}
-            disabled={
-              validatingKey || !data.raw_key_input || !data.extracted_base_url
-            }
+            disabled={validatingKey || !effectiveBaseUrl}
             onClick={validateKey}
             className="h-8 min-h-8"
           >

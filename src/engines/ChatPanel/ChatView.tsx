@@ -45,6 +45,7 @@ import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/use
 import { AgentOrgGroupChatLiveSessions } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatLiveSessions";
 import { replayModeAtom } from "@src/engines/SessionCore";
 import { derivedSnapshotAtom } from "@src/engines/SessionCore/core/atoms/events";
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { useFileReviewSync } from "@src/hooks/fileReview";
@@ -119,7 +120,7 @@ import { useFollowAgent } from "./hooks/useFollowAgent";
 const logger = createLogger("ChatView");
 
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
-const EMPTY_CHAT_EVENTS = [];
+const EMPTY_CHAT_EVENTS: SessionEvent[] = [];
 
 function impactFileChanges(input: {
   filesChanged?: number;

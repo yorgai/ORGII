@@ -8,7 +8,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::sync::adapter::ExternalChange;
 use crate::sync::types::{EntityType, OutboxEntry, OutboxOp};
@@ -86,6 +86,19 @@ pub fn parse_github_issue(node: &Value) -> Result<ExternalChange, String> {
     }
     if let Some(state) = node.get("state").and_then(Value::as_str) {
         fields.insert("status".to_string(), json!(state));
+    }
+    if let Some(user) = node.get("user") {
+        if let Some(login) = user.get("login").and_then(Value::as_str) {
+            let avatar_url = user.get("avatar_url").and_then(Value::as_str);
+            fields.insert("created_by".to_string(), json!(login));
+            fields.insert(
+                "creator_details".to_string(),
+                json!({
+                    "login": login,
+                    "avatar_url": avatar_url,
+                }),
+            );
+        }
     }
     if let Some(assignees) = node.get("assignees").and_then(Value::as_array) {
         // Multiple assignees collapse to the first for the local work item,

@@ -9,7 +9,9 @@ import React from "react";
 
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import { getToolIcon } from "@src/config/toolIcons";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
@@ -31,10 +33,11 @@ export interface GlobBlockProps {
    * `useLifecycleLabels("code_search", "find_files")` (or `"glob_file_search"`).
    */
   title: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 const GlobBlock: React.FC<GlobBlockProps> = React.memo(
-  ({ pattern, isLoading = false, eventId, title }) => {
+  ({ pattern, isLoading = false, eventId, title, toolUsage }) => {
     const {
       isHeaderHovered,
       handleHeaderMouseEnter,
@@ -55,6 +58,9 @@ const GlobBlock: React.FC<GlobBlockProps> = React.memo(
           onNavigate={handleLocate}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
+          rightContent={
+            toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={getToolIcon("glob_file_search", {

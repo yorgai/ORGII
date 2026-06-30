@@ -5,7 +5,7 @@
  *   html   — Agent-provided HTML sanitized and rendered in Shadow DOM
  *   url    — External URL shown as an open action, not embedded in chat
  *   a2ui   — Agent-to-UI JSONL stream, rendered incrementally as native React
- *   react  — JavaScript source is not executed inside chat
+ *   react  — Generated React App source rendered through react-live
  */
 
 export type CanvasInlineMode = "html" | "url" | "a2ui" | "react";

@@ -62,6 +62,11 @@ fn partial_update_from_iter<'a>(
             "target_date" => {
                 update.target_date = Some(value.as_str().map(str::to_string));
             }
+            "created_by" => {
+                if let Some(s) = value.as_str() {
+                    update.created_by = Some(s.to_string());
+                }
+            }
             "labels" => {
                 if let Some(arr) = value.as_array() {
                     let labels: Vec<String> = arr
@@ -103,7 +108,7 @@ pub(super) fn local_values_for_field_map(
     item: &WorkItemData,
     field_map: &FieldMap,
 ) -> serde_json::Map<String, serde_json::Value> {
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     let fm = &item.frontmatter;
     let mut out = serde_json::Map::new();
     for mapping in field_map.mappings.iter() {

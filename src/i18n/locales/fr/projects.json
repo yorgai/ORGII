@@ -12,6 +12,9 @@
       "project": "Par projet",
       "status": "Par statut",
       "priority": "Par priorité",
+      "person": "Par personne",
+      "assignedTo": "Assigné à",
+      "createdBy": "Créé par",
       "targetDate": "Par date cible"
     },
     "source": {
@@ -273,7 +276,9 @@
       "inReview": "En révision",
       "done": "Terminé",
       "cancelled": "Annulé",
-      "duplicate": "Doublon"
+      "duplicate": "Doublon",
+      "open": "Ouvert",
+      "closed": "Fermé"
     },
     "statusLabels": {
       "backlog": "Backlog",

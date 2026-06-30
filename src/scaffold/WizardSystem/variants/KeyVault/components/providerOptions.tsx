@@ -5,7 +5,7 @@
  * They do NOT fetch data themselves — the caller must provide the data.
  */
 import type { TFunction } from "i18next";
-import { Calendar, KeyRound } from "lucide-react";
+import { Calendar, Cog, KeyRound } from "lucide-react";
 import React from "react";
 
 import ModelIcon from "@src/components/ModelIcon";
@@ -14,7 +14,11 @@ import type { SelectOption } from "@src/components/Select";
 import type { KeyVaultAccount } from "@src/hooks/keyVault";
 import type { SelectionGridOption } from "@src/scaffold/WizardSystem/primitives";
 
-import type { UnifiedProvider, UnifiedProviderVariant } from "../config";
+import type {
+  ProviderGroup,
+  UnifiedProvider,
+  UnifiedProviderVariant,
+} from "../config";
 
 /** Custom filter for JSX-labelled options — searches against extra.searchText */
 export function filterOptionBySearchText(
@@ -49,16 +53,38 @@ function variantIconNode(
   return <Calendar size={size} className="shrink-0 text-text-3" />;
 }
 
-export function buildProviderGridOptions(
-  providers: UnifiedProvider[]
-): SelectionGridOption[] {
-  return providers.map((provider) => ({
+export interface ProviderGridOptionGroup {
+  group: ProviderGroup;
+  options: SelectionGridOption[];
+}
+
+function buildProviderGridOption(
+  provider: UnifiedProvider
+): SelectionGridOption {
+  return {
     key: provider.key,
     label: provider.label,
-    iconElement: (
-      <ModelIcon provider={provider.iconProvider as IconProvider} size={18} />
-    ),
-  }));
+    iconElement:
+      provider.iconElement === "cog" ? (
+        <Cog size={18} className="shrink-0 text-text-3" />
+      ) : (
+        <ModelIcon provider={provider.iconProvider as IconProvider} size={18} />
+      ),
+    iconPreserveColor: provider.iconElement !== "cog",
+  };
+}
+
+export function buildProviderGridOptionGroups(
+  providers: UnifiedProvider[]
+): ProviderGridOptionGroup[] {
+  const groups: ProviderGridOptionGroup[] = [];
+  for (const group of ["cloud", "local"] as ProviderGroup[]) {
+    const options = providers
+      .filter((provider) => provider.group === group)
+      .map(buildProviderGridOption);
+    if (options.length > 0) groups.push({ group, options });
+  }
+  return groups;
 }
 
 export function buildProviderSelectOptions(
