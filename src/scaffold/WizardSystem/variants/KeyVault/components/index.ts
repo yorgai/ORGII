@@ -14,7 +14,6 @@ export { default as ValidationResults } from "./ValidationResults";
 export {
   accountMatchesBrandFilter,
   buildBrandProviderFilterOptions,
-  buildProviderGridOptions,
   buildProviderSelectOptions,
   buildVariantGridOptions,
   buildVariantSelectOptions,

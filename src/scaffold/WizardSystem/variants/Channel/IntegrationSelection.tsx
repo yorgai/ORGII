@@ -239,6 +239,8 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
       footerLeft={footerLeft}
       actions={actions}
       onCancel={onCancel}
+      hideStepIndicator
+      contentWidthFooter
     >
       <div className={SECTION_GAP_CLASSES}>
         <SectionContainer>

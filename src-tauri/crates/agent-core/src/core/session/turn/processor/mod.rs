@@ -321,11 +321,15 @@ impl UnifiedMessageProcessor {
             .clone()
             .or_else(|| {
                 (result.context_tokens > 0).then(|| {
-                    let context_window = crate::core::providers::model_capabilities::resolve(
+                    let context_window =
+                        crate::core::providers::model_capabilities::resolve_effective_context_window(
                         &self.runtime.model,
-                        None,
-                    )
-                    .context_window as i64;
+                        self.runtime.account_id.as_deref(),
+                        self.runtime
+                            .resolved
+                            .context_window_configured
+                            .then_some(self.runtime.resolved.context_window),
+                    ) as i64;
                     ContextUsageSnapshot::from_payload(
                         &result.messages,
                         &[],
@@ -358,6 +362,79 @@ impl UnifiedMessageProcessor {
                 context_usage_json,
             }) {
                 warn!("[unified_processor] Failed to record token usage: {}", err);
+            }
+        });
+    }
+
+    fn record_usage_telemetry(&self, session_id: &str, turn_id: &str, result: &TurnResult) {
+        if result.usage_telemetry.llm_spans.is_empty()
+            && result.usage_telemetry.tool_attributions.is_empty()
+        {
+            return;
+        }
+
+        let related_tool_call_ids_json = result
+            .usage_telemetry
+            .llm_spans
+            .iter()
+            .map(|span| serde_json::to_string(&span.related_tool_call_ids).ok())
+            .collect::<Vec<_>>();
+
+        tokio::task::block_in_place(|| {
+            use crate::foundation::session_bridge::{
+                record_usage_telemetry_batch, LlmUsageSpanRow, ToolUsageAttributionRow,
+                UsageTelemetryBatch,
+            };
+
+            let llm_spans = result
+                .usage_telemetry
+                .llm_spans
+                .iter()
+                .zip(related_tool_call_ids_json.iter())
+                .map(|(span, related_ids_json)| LlmUsageSpanRow {
+                    session_id,
+                    turn_id,
+                    iteration_index: span.iteration_index,
+                    model: Some(&self.runtime.model),
+                    account_id: self.runtime.account_id.as_deref(),
+                    prompt_tokens: span.prompt_tokens,
+                    completion_tokens: span.completion_tokens,
+                    cache_read_tokens: span.cache_read_tokens,
+                    cache_write_tokens: span.cache_write_tokens,
+                    total_tokens: span.total_tokens,
+                    context_tokens: span.context_tokens,
+                    related_tool_call_ids_json: related_ids_json.clone(),
+                    context_usage_json: span.context_usage_json.clone(),
+                })
+                .collect::<Vec<_>>();
+            let tool_attributions = result
+                .usage_telemetry
+                .tool_attributions
+                .iter()
+                .map(|attribution| ToolUsageAttributionRow {
+                    session_id,
+                    turn_id,
+                    event_id: &attribution.event_id,
+                    tool_call_id: &attribution.tool_call_id,
+                    tool_name: &attribution.tool_name,
+                    iteration_index: attribution.iteration_index,
+                    decision_completion_tokens: attribution.decision_completion_tokens,
+                    result_context_tokens: attribution.result_context_tokens,
+                    followup_completion_tokens: attribution.followup_completion_tokens,
+                    input_bytes: attribution.input_bytes,
+                    output_bytes: attribution.output_bytes,
+                    attribution_method: attribution.attribution_method.as_str(),
+                })
+                .collect::<Vec<_>>();
+
+            if let Err(err) = record_usage_telemetry_batch(UsageTelemetryBatch {
+                llm_spans,
+                tool_attributions,
+            }) {
+                warn!(
+                    "[unified_processor] Failed to record usage telemetry batch: {}",
+                    err
+                );
             }
         });
     }
@@ -634,6 +711,24 @@ impl UnifiedMessageProcessor {
         if let Some(guard) = inbox_guard.take() {
             guard.commit();
         }
+
+        // 4d. Subagent-wake prefill safety net.
+        //
+        // A background-subagent completion resumes the parent with empty
+        // content (no persisted user row → same round, no new bubble). But a
+        // plain SDE session has no inbox_drain to append a trailing user
+        // message, so the conversation can still end on the parent's last
+        // assistant turn ("已在后台启动。"). Providers (Anthropic, OpenAI)
+        // reject that with HTTP 400 "conversation must end with a user
+        // message". When a resume leaves an assistant-tailed message list,
+        // append a single TRANSIENT user nudge — in-memory only, never
+        // persisted, so it neither creates a round nor a visible bubble.
+        // Mirrors inbox_drain's transient injection, generalized to the SDE
+        // path.
+        if context.is_resume {
+            Self::inject_subagent_wake_nudge_if_needed(&mut messages, session_id);
+        }
+
         // 5/5b/6. Pre-turn message-list compaction (microcompact +
         // aggregate budget + LLM context compaction + compact-fork).
         if let CompactionPhaseOutcome::ForkRedirect(redirect) = self
@@ -685,6 +780,7 @@ impl UnifiedMessageProcessor {
 
         // 8. Record token usage
         self.record_token_usage(session_id, &result);
+        self.record_usage_telemetry(session_id, &turn_id, &result);
 
         let final_turn_state = if self
             .session
@@ -752,6 +848,47 @@ impl UnifiedMessageProcessor {
             turn_summary: None,
             fork_redirect: None,
         })
+    }
+
+    /// Append a transient, in-memory-only trailing user message when a resumed
+    /// turn's assembled message list still ends on an assistant turn.
+    ///
+    /// Background-subagent wakes resume the parent with empty content (so no
+    /// user row is persisted and no new round is created), but a plain SDE
+    /// session has no inbox_drain to supply the trailing user message that
+    /// providers require ("conversation must end with a user message"). This
+    /// closes that gap without persisting anything: the nudge lives only in
+    /// the provider request, never in the DB or the UI, so the parent
+    /// continues in the SAME round with no synthetic bubble.
+    ///
+    /// No-op unless the last non-system message is an assistant message —
+    /// normal resumes (e.g. mode-switch) that already end on a user or tool
+    /// message are left untouched.
+    fn inject_subagent_wake_nudge_if_needed(messages: &mut Vec<Value>, session_id: &str) {
+        let last_non_system_role = messages
+            .iter()
+            .rev()
+            .find_map(|m| m.get("role").and_then(|v| v.as_str()))
+            .filter(|role| *role != "system");
+
+        if last_non_system_role != Some("assistant") {
+            return;
+        }
+
+        const WAKE_NUDGE: &str = "<system-reminder>A background subagent you launched has \
+            finished. Its result is now available in the Background Jobs list above. Read the \
+            completed worker's output and continue the task you were doing — do not re-launch \
+            it.</system-reminder>";
+
+        messages.push(serde_json::json!({
+            "role": "user",
+            "content": WAKE_NUDGE,
+        }));
+
+        info!(
+            "[unified_processor] Injected transient subagent-wake nudge to satisfy prefill (session={})",
+            session_id
+        );
     }
 }
 

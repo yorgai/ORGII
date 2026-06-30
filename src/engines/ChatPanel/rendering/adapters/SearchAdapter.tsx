@@ -39,6 +39,7 @@ export const SearchAdapter: React.FC<UniversalEventProps> = (props) => {
         eventId={props.eventId}
         action={searchAction}
         title={title}
+        toolUsage={props.toolUsage}
       />
     </div>
   );

@@ -4,8 +4,10 @@
  * Manages a single webview for a browser session.
  * Keeps the webview mounted but hidden when not active.
  */
+import { invoke } from "@tauri-apps/api/core";
+import { type UnlistenFn, listen } from "@tauri-apps/api/event";
 import { useAtomValue } from "jotai";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { createLogger } from "@src/hooks/logger";
 import { useInlineWebview } from "@src/hooks/platform/useInlineWebview";
@@ -21,10 +23,56 @@ import { BrowserSession } from "@src/types/ui/tabs";
 const log = createLogger("BrowserSessionWebview");
 
 const ABOUT_BLANK_URL = "about:blank";
+const BROWSER_SESSION_LABEL_PREFIX = "browser-session-";
 
 function isBlankBrowserUrl(url?: string): boolean {
   const normalizedUrl = url?.trim().toLowerCase();
   return !normalizedUrl || normalizedUrl.startsWith(ABOUT_BLANK_URL);
+}
+
+function getBrowserSessionWebviewLabel(sessionId: string): string {
+  return `${BROWSER_SESSION_LABEL_PREFIX}${sessionId}`;
+}
+
+interface ActiveInternalBrowserSync {
+  browserSessionId: string;
+  label: string;
+  updatedAt: number;
+}
+
+interface InternalBrowserUrlChangedPayload {
+  browserSessionId?: string;
+  label?: string;
+  url: string;
+  title?: string;
+}
+
+function isInternalBrowserUrlChangedPayload(
+  payload: unknown
+): payload is InternalBrowserUrlChangedPayload {
+  return (
+    !!payload &&
+    typeof payload === "object" &&
+    typeof (payload as InternalBrowserUrlChangedPayload).url === "string"
+  );
+}
+
+function clearActiveInternalBrowserState(
+  sync: ActiveInternalBrowserSync | null,
+  reason: string
+): void {
+  if (!sync) {
+    return;
+  }
+
+  void invoke("clear_active_internal_browser_state", {
+    label: sync.label,
+    browserSessionId: sync.browserSessionId,
+    reason,
+    updatedAt: sync.updatedAt,
+  }).catch((error) => {
+    log.warn("[BrowserSessionWebview] Failed to clear active state:", error);
+  });
 }
 
 interface BrowserSessionWebviewProps {
@@ -63,9 +111,51 @@ const BrowserSessionWebview: React.FC<BrowserSessionWebviewProps> = ({
   // Track previous isLoading to detect reload requests
   const prevIsLoadingRef = useRef(session.isLoading);
   const isReloadingRef = useRef(false);
+  const activeInternalBrowserSyncRef = useRef<ActiveInternalBrowserSync | null>(
+    null
+  );
+  const webviewLabel = useMemo(
+    () => getBrowserSessionWebviewLabel(session.id),
+    [session.id]
+  );
+  const hasNavigableUrl = !isBlankBrowserUrl(session.url);
+
+  const handleSessionNavigation = useCallback(
+    (url: string, titleOverride?: string) => {
+      if (!isBlankBrowserUrl(url) && url !== session.url) {
+        const title = titleOverride?.trim() || getTitleFromUrl(url);
+        const newHistory = [
+          ...session.history.slice(0, session.historyIndex + 1),
+          url,
+        ];
+
+        onSessionUpdate(session.id, {
+          url,
+          title,
+          history: newHistory,
+          historyIndex: newHistory.length - 1,
+          historyEntries: [
+            ...(session.historyEntries ?? []),
+            { url, title, visitedAt: Date.now() },
+          ],
+          isLoading: false,
+        });
+      } else {
+        // URL didn't change (same page reload or navigation complete).
+        onSessionUpdate(session.id, { isLoading: false });
+      }
+    },
+    [
+      onSessionUpdate,
+      session.history,
+      session.historyEntries,
+      session.historyIndex,
+      session.id,
+      session.url,
+    ]
+  );
 
   const webviewConfig = useMemo(() => {
-    const hasNavigableUrl = !isBlankBrowserUrl(session.url);
     const shouldActivateWebview = hasNavigableUrl && isActive && isTabActive;
 
     return {
@@ -76,7 +166,7 @@ const BrowserSessionWebview: React.FC<BrowserSessionWebviewProps> = ({
       isActive: shouldActivateWebview,
       isVisible: shouldActivateWebview,
       // Use exact label (no UUID) so we can predict it for console log polling
-      labelPrefix: `browser-session-${session.id}`,
+      labelPrefix: webviewLabel,
       useExactLabel: true,
       incognito: session.incognito ?? false,
       debug: false,
@@ -90,33 +180,25 @@ const BrowserSessionWebview: React.FC<BrowserSessionWebviewProps> = ({
       },
       onError: (error: string | Error) => {
         log.error("[BrowserSessionWebview] WebView error:", error);
+        clearActiveInternalBrowserState(
+          activeInternalBrowserSyncRef.current,
+          "browser-session-webview-error"
+        );
+        activeInternalBrowserSyncRef.current = null;
         onSessionUpdate(session.id, {
           error: typeof error === "string" ? error : error.message,
           isLoading: false,
         });
       },
+      onDestroyed: () => {
+        clearActiveInternalBrowserState(
+          activeInternalBrowserSyncRef.current,
+          "browser-session-webview-destroyed"
+        );
+        activeInternalBrowserSyncRef.current = null;
+      },
       onNavigate: (url: string) => {
-        if (!isBlankBrowserUrl(url) && url !== session.url) {
-          const newHistory = [
-            ...session.history.slice(0, session.historyIndex + 1),
-            url,
-          ];
-
-          onSessionUpdate(session.id, {
-            url,
-            title: getTitleFromUrl(url),
-            history: newHistory,
-            historyIndex: newHistory.length - 1,
-            historyEntries: [
-              ...(session.historyEntries ?? []),
-              { url, title: getTitleFromUrl(url), visitedAt: Date.now() },
-            ],
-            isLoading: false,
-          });
-        } else {
-          // URL didn't change (same page reload or navigation complete)
-          onSessionUpdate(session.id, { isLoading: false });
-        }
+        handleSessionNavigation(url);
       },
       onNewWindow: (url: string) => {
         if (onNewTab) {
@@ -126,20 +208,130 @@ const BrowserSessionWebview: React.FC<BrowserSessionWebviewProps> = ({
     };
   }, [
     containerRef,
+    hasNavigableUrl,
+    handleSessionNavigation,
     session.id,
     session.url,
-    session.history,
-    session.historyIndex,
-    session.historyEntries,
     session.incognito,
     isActive,
     isTabActive,
+    webviewLabel,
     onSessionUpdate,
     onNewTab,
   ]);
 
-  const { pollNow, updatePosition, reload, isWebviewCreated } =
-    useInlineWebview(webviewConfig);
+  const {
+    pollNow,
+    updatePosition,
+    reload,
+    isWebviewAvailable,
+    isWebviewCreated,
+  } = useInlineWebview(webviewConfig);
+
+  useEffect(() => {
+    if (!isWebviewAvailable) return;
+
+    let cancelled = false;
+    let unlisten: UnlistenFn | null = null;
+
+    void listen<InternalBrowserUrlChangedPayload>(
+      "internal-browser:url-changed",
+      (event) => {
+        const payload = event.payload;
+        if (!isInternalBrowserUrlChangedPayload(payload)) return;
+        if (
+          payload.browserSessionId !== session.id &&
+          payload.label !== webviewLabel
+        ) {
+          return;
+        }
+
+        handleSessionNavigation(
+          payload.url,
+          typeof payload.title === "string" ? payload.title : undefined
+        );
+      }
+    )
+      .then((listener) => {
+        if (cancelled) {
+          listener();
+          return;
+        }
+        unlisten = listener;
+      })
+      .catch((error) => {
+        log.warn(
+          "[BrowserSessionWebview] Failed to listen for internal browser URL changes:",
+          error
+        );
+      });
+
+    return () => {
+      cancelled = true;
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [handleSessionNavigation, isWebviewAvailable, session.id, webviewLabel]);
+
+  useEffect(() => {
+    if (!isWebviewAvailable) {
+      clearActiveInternalBrowserState(
+        activeInternalBrowserSyncRef.current,
+        "browser-session-webview-unavailable"
+      );
+      activeInternalBrowserSyncRef.current = null;
+      return;
+    }
+
+    const sync: ActiveInternalBrowserSync = {
+      browserSessionId: session.id,
+      label: webviewLabel,
+      updatedAt: Date.now(),
+    };
+    const shouldSyncActiveState =
+      hasNavigableUrl && isActive && isTabActive && isWebviewCreated;
+
+    if (shouldSyncActiveState) {
+      activeInternalBrowserSyncRef.current = sync;
+      void invoke("set_active_internal_browser_state", {
+        state: {
+          browserSessionId: session.id,
+          label: webviewLabel,
+          url: session.url,
+          visible: true,
+          updatedAt: sync.updatedAt,
+        },
+      }).catch((error) => {
+        log.warn("[BrowserSessionWebview] Failed to set active state:", error);
+      });
+
+      return () => {
+        clearActiveInternalBrowserState(
+          sync,
+          "browser-session-webview-cleanup"
+        );
+      };
+    }
+
+    const previousSync = activeInternalBrowserSyncRef.current;
+    activeInternalBrowserSyncRef.current = null;
+    clearActiveInternalBrowserState(
+      previousSync ?? sync,
+      hasNavigableUrl
+        ? "browser-session-webview-inactive"
+        : "browser-session-webview-blank"
+    );
+  }, [
+    hasNavigableUrl,
+    isActive,
+    isTabActive,
+    isWebviewAvailable,
+    isWebviewCreated,
+    session.id,
+    session.url,
+    webviewLabel,
+  ]);
 
   // Handle reload requests: when isLoading goes from false to true
   // and webview already exists, trigger actual reload
@@ -227,7 +419,7 @@ const BrowserSessionWebview: React.FC<BrowserSessionWebviewProps> = ({
   }, [pollNow]);
 
   // Only create webview for sessions with navigable URLs.
-  if (isBlankBrowserUrl(session.url)) {
+  if (!hasNavigableUrl) {
     return null;
   }
 

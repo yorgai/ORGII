@@ -53,6 +53,11 @@ import {
   noteSessionStreamingTurn,
   resetAllStreamingState,
 } from "./rustAgent/eventHandlers/streamHelpers";
+import {
+  applyLlmUsageToEvents,
+  applyToolUsageToEvents,
+  loadUsageTelemetry,
+} from "./rustAgent/toolUsageCache";
 import type {
   AgentTokenUsage,
   AgentWSEvent,
@@ -129,6 +134,26 @@ function toTokenUsageInfo(usage: AgentTokenUsage): AgentTokenUsageInfo {
   };
 }
 
+async function refreshUsageForLatestEvents(sessionId: string): Promise<void> {
+  const { toolUsageByCallId, llmUsageByTurnId } =
+    await loadUsageTelemetry(sessionId);
+  if (toolUsageByCallId.size === 0 && llmUsageByTurnId.size === 0) return;
+
+  const snapshot = eventStoreProxy.getLatestSessionSnapshot(sessionId);
+  const events = snapshot?.chatEvents ?? [];
+  const hydratedEvents = applyLlmUsageToEvents(
+    applyToolUsageToEvents(events, toolUsageByCallId),
+    llmUsageByTurnId
+  );
+  const updates = hydratedEvents.flatMap((event, index) => {
+    if (event.args === events[index]?.args) return [];
+    return [
+      eventStoreProxy.updateById(event.id, { args: event.args }, sessionId),
+    ];
+  });
+  await Promise.all(updates);
+}
+
 // ============================================================================
 // Factory
 // ============================================================================
@@ -170,8 +195,16 @@ export function createRustAgentAdapter(
       const merged = await mergeToolResults(events);
       if (signal.aborted) return merged;
 
-      await backfillSubagentLinks(sessionId, merged);
-      return merged;
+      const { toolUsageByCallId, llmUsageByTurnId } =
+        await loadUsageTelemetry(sessionId);
+      if (signal.aborted) return merged;
+      const usageHydrated = applyLlmUsageToEvents(
+        applyToolUsageToEvents(merged, toolUsageByCallId),
+        llmUsageByTurnId
+      );
+
+      await backfillSubagentLinks(sessionId, usageHydrated);
+      return usageHydrated;
     },
 
     async postLoad(
@@ -484,6 +517,12 @@ export function createRustAgentAdapter(
               if (isTerminal) {
                 _runningSignaled = false;
                 _turnCompleted = true;
+                void refreshUsageForLatestEvents(sessionId).catch((err) => {
+                  logger.warn(
+                    `[${category}] terminal tool usage refresh failed:`,
+                    err
+                  );
+                });
               }
             })
             .catch((err) => {

@@ -10,7 +10,9 @@ import { useTranslation } from "react-i18next";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import { getToolIcon } from "@src/config/toolIcons";
 import ChatCodeBlock from "@src/engines/ChatPanel/blocks/CodeBlock";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   ComposerStackListRow,
   EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES,
@@ -75,6 +77,7 @@ export interface ExploreBlockProps {
   toolName?: string;
   /** Action-level hint for icon selection (e.g. `"ls"` vs `"tree"`). */
   action?: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 const TreeConnector: React.FC<{ isLast: boolean }> = ({ isLast }) => (
@@ -145,6 +148,7 @@ const ExploreBlock: React.FC<ExploreBlockProps> = React.memo(
     toolName = "list_dir",
     action,
     hideEntryIcons = false,
+    toolUsage,
   }) => {
     void isFailed;
     const { t } = useTranslation("sessions");
@@ -374,6 +378,9 @@ const ExploreBlock: React.FC<ExploreBlockProps> = React.memo(
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
           className={eventId ? "cursor-pointer" : undefined}
+          rightContent={
+            toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={toolIcon}

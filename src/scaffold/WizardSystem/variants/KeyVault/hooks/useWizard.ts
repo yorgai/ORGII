@@ -12,7 +12,7 @@ import {
   CLI_AGENT,
   type SaveKeyRequest,
 } from "@src/api/tauri/rpc/schemas/validation";
-import type { ModelType } from "@src/api/types/keys";
+import { LOCAL_MODEL_PROVIDER, type ModelType } from "@src/api/types/keys";
 import { isPlaceholderModelName } from "@src/components/ModelTable/unifiedCustomFlatExtras";
 import { useUndoableState } from "@src/hooks/ui";
 import { parseModelVariants } from "@src/util/modelVariants";
@@ -136,9 +136,9 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
       Boolean(oauthRefreshToken || oauthIdToken || oauthAccessTokenFromEnv);
 
     const isCursorCli = data.agent_type === CLI_AGENT.CURSOR;
-    const rawApiKeyForRequest = cleanInput(
-      data.extracted_api_key || data.raw_key_input
-    );
+    const rawApiKeyForRequest =
+      cleanInput(data.extracted_api_key || data.raw_key_input) ??
+      (data.agent_type === LOCAL_MODEL_PROVIDER ? "local-model" : undefined);
     const apiKeyForRequest =
       (isCursorCli || !isOAuth) && rawApiKeyForRequest
         ? rawApiKeyForRequest
@@ -221,6 +221,18 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
     })();
 
     const variantMetadata = parseModelVariants(allAvailableModels);
+    const variantMetadataByModel = new Map(
+      variantMetadata.map((variant) => [variant.model, variant])
+    );
+    const contextModels = new Set(
+      Object.keys(data.model_context_lengths ?? {}).filter((model) =>
+        allAvailableModels.includes(model)
+      )
+    );
+    const modelVariantIds = new Set([
+      ...variantMetadata.map((variant) => variant.model),
+      ...contextModels,
+    ]);
 
     const request: SaveKeyRequest = {
       name: resolvedName,
@@ -249,13 +261,17 @@ export function useWizard(options: UseWizardOptions): UseWizardReturn {
               }))
           : undefined,
       model_variants:
-        variantMetadata.length > 0
-          ? variantMetadata.map((variant) => ({
-              model: variant.model,
-              base_model: variant.baseModel,
-              reasoning: variant.reasoning,
-              fast: variant.fast,
-            }))
+        modelVariantIds.size > 0
+          ? [...modelVariantIds].map((model) => {
+              const variant = variantMetadataByModel.get(model);
+              return {
+                model,
+                base_model: variant?.baseModel ?? model,
+                reasoning: variant?.reasoning,
+                fast: variant?.fast ?? false,
+                context_window: data.model_context_lengths?.[model],
+              };
+            })
           : undefined,
       default_variants:
         data.default_variants.length > 0 ? data.default_variants : undefined,

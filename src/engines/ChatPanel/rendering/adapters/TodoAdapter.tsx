@@ -32,6 +32,7 @@ export const TodoAdapter: React.FC<UniversalEventProps> = (props) => {
           props.status === "running" && props.showActiveEventPainting === true
         }
         title={labels[state]}
+        toolUsage={props.toolUsage}
       />
     </div>
   );

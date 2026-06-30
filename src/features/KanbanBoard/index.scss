@@ -126,6 +126,10 @@
     &--at-bottom {
       --kanban-scroll-fade-bottom: 0px;
     }
+
+    &--empty {
+      padding-bottom: 0;
+    }
   }
 
   .kanban-column__count {

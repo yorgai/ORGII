@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token bağlam",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token karar",
+    "tooltip": "Tahmini araç atfı. Yöntem: {{method}}. Girdi: {{inputBytes}} bytes. Çıktı: {{outputBytes}} bytes. Karar: {{decisionTokens}} Token. Bağlam: {{contextTokens}} Token. Follow-up: {{followupTokens}} Token. İlgili LLM cache read: {{cacheReadTokens}} Token. İlgili LLM cache write: {{cacheWriteTokens}} Token."
+  },
   "history": {
     "untitledSession": "Adsız Session",
     "prStatus": {
@@ -752,6 +758,7 @@
     },
     "defaultTitle": "Sohbet",
     "hideChatPanel": "Sohbet panelini gizle",
+    "showTokenUsage": "Token göster",
     "compactDisplayMode": "Kompakt mod",
     "replay": {
       "follow": "Takip et"
@@ -2219,6 +2226,7 @@
     "insufficientBalance": "Barındırılan ORGII hizmeti için yetersiz bakiye. orgii.ai/wallet adresinden yükleyin."
   },
   "planning": {
+    "agentTyping": "Agent yazıyor...",
     "nextStepVariants": [
       "Sonraki adım planlanıyor...",
       "Düşünülüyor...",

@@ -17,6 +17,7 @@ pub(crate) mod tool_execution;
 pub(crate) mod tool_result_storage;
 mod types;
 mod usage_accumulator;
+mod usage_telemetry;
 
 // Items kept at the `turn_executor::` surface — checked one by one
 // against real call sites. The accessor / structured-key set
@@ -33,6 +34,7 @@ pub use types::{
     PermissionProvider, PermissionVerdict, ToolHookIntervention, TurnConfig, TurnEventHandler,
     TurnIterationHook, TurnResult,
 };
+pub use usage_telemetry::{AttributionMethod, LlmUsageSpan, ToolUsageAttribution, UsageTelemetry};
 
 // `MAX_TOOL_OUTPUT_CHARS` is consumed by `helpers::*` and a couple of test
 // modules via `use crate::core::turn_executor::MAX_TOOL_OUTPUT_CHARS`.
@@ -64,6 +66,7 @@ use screenshot::resolve_screenshot_markers;
 use stream_error_recovery::{handle_stream_error, RetryBudgets, StreamErrorOutcome};
 use tool_execution::{execute_tool_calls, ToolBatchOutcome};
 use usage_accumulator::UsageTotals;
+use usage_telemetry::UsageTelemetryCollector;
 
 #[cfg(test)]
 #[path = "../../tests/processor_tests.rs"]
@@ -108,6 +111,7 @@ pub async fn execute_turn(
     let mut final_is_stream_error = false;
 
     let mut usage = UsageTotals::default();
+    let mut usage_telemetry = UsageTelemetryCollector::default();
     let mut context_usage_snapshot: Option<ContextUsageSnapshot> = None;
 
     let mut last_tool_signature: Option<String> = None;
@@ -309,7 +313,12 @@ pub async fn execute_turn(
                 if stats.chars_saved == 0 && stats.images_cleared == 0 {
                     // Nothing left to clear — hard-truncate the history while
                     // keeping the head (system prompt + task statement).
-                    let window = crate::providers::model_hints::context_window_hint(&config.model);
+                    let window =
+                        crate::providers::model_capabilities::resolve_effective_context_window(
+                            &config.model,
+                            config.account_id.as_deref(),
+                            config.context_window_override,
+                        );
                     let budget = window.saturating_mul(3) / 4;
                     let truncated =
                         crate::model_context::compaction::ContextCompactor::simple_truncate(
@@ -345,14 +354,17 @@ pub async fn execute_turn(
 
         if !response.usage.is_empty() {
             usage.accumulate(&response.usage, session_id);
-            // Authoritative context window: the FAMILY_RULES resolver knows the
-            // model's real window (e.g. opus-4.x = 1M), so the frontend gauge no
-            // longer divides by a stale 200K and falsely shows "red / full".
-            // account_id is irrelevant here — KeyVault only upgrades thinking
-            // support, never the context window.
+            // Authoritative context window: FAMILY_RULES gives the model's
+            // nominal capability, optionally overridden by the provider's
+            // `/v1/models` context_length for this account (stored in
+            // KeyVault). This keeps the frontend gauge honest when a proxy
+            // caps a 1M model at 256K.
             let context_window =
-                crate::core::providers::model_capabilities::resolve(&config.model, None)
-                    .context_window as i64;
+                crate::core::providers::model_capabilities::resolve_effective_context_window(
+                    &config.model,
+                    config.account_id.as_deref(),
+                    config.context_window_override,
+                ) as i64;
             let snapshot = ContextUsageSnapshot::from_payload(
                 &llm_messages,
                 &tool_defs,
@@ -362,6 +374,13 @@ pub async fn execute_turn(
                 Some(context_window),
             );
             handler.on_context_usage(session_id, &snapshot);
+            usage_telemetry.record_llm_span(
+                iteration as i64,
+                &response.usage,
+                usage.last_prompt,
+                &response.tool_calls,
+                Some(&snapshot),
+            );
             context_usage_snapshot = Some(snapshot);
         }
 
@@ -498,7 +517,7 @@ pub async fn execute_turn(
                 &config.model,
             );
 
-            let (_count, outcome) = execute_tool_calls(
+            let (_count, tool_execution_usage, outcome) = execute_tool_calls(
                 messages,
                 &response.tool_calls,
                 tools,
@@ -514,6 +533,7 @@ pub async fn execute_turn(
                 config.max_tool_use_concurrency,
             )
             .await;
+            usage_telemetry.record_tool_results(iteration as i64, tool_execution_usage);
 
             // Backfill dummy results for any tool calls that don't have a
             // result yet after EarlyExit.
@@ -679,5 +699,6 @@ pub async fn execute_turn(
         context_usage_snapshot,
         cache_read_tokens: usage.cache_read,
         cache_write_tokens: usage.cache_write,
+        usage_telemetry: usage_telemetry.finish(),
     })
 }

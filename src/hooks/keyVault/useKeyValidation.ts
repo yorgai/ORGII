@@ -79,6 +79,9 @@ export interface UseKeyValidationOptions {
   /** Callback when validation succeeds. */
   onValidationSuccess?: (data: {
     models: string[];
+    modelContextLengths: NonNullable<
+      ValidateKeyResponse["model_context_lengths"]
+    >;
     envVars: EnvVar[];
     extractedConfig: ExtractedConfig | null;
   }) => void;
@@ -89,6 +92,9 @@ export interface UseKeyValidationReturn {
   validatingKey: boolean;
   validationError: string | null;
   fetchedModels: string[] | null;
+  fetchedModelContextLengths: NonNullable<
+    ValidateKeyResponse["model_context_lengths"]
+  >;
   extractedConfig: ExtractedConfig | null;
   /** Validate the API key. Pass overrideTestModel to use a specific model for auth check. */
   validateKey: (overrideTestModel?: unknown) => Promise<void>;
@@ -139,6 +145,7 @@ async function validateKeyDirect(request: {
       valid: result.valid,
       message: result.message,
       available_models: result.models_available,
+      model_context_lengths: result.model_context_lengths,
       extracted_api_key_preview: apiKeyPreview,
       extracted_api_key: request.api_key,
       extracted_base_url: request.base_url,
@@ -154,6 +161,7 @@ async function validateKeyDirect(request: {
             ? err.message
             : "Validation failed",
       available_models: [],
+      model_context_lengths: {},
     };
   }
 }
@@ -176,6 +184,9 @@ export function useKeyValidation(
   const [validatingKey, setValidatingKey] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [fetchedModels, setFetchedModels] = useState<string[] | null>(null);
+  const [fetchedModelContextLengths, setFetchedModelContextLengths] = useState<
+    NonNullable<ValidateKeyResponse["model_context_lengths"]>
+  >({});
   const [extractedConfig, setExtractedConfig] =
     useState<ExtractedConfig | null>(null);
 
@@ -184,16 +195,21 @@ export function useKeyValidation(
   const resetValidation = useCallback(() => {
     setKeyValidated(false);
     setFetchedModels(null);
+    setFetchedModelContextLengths({});
     setExtractedConfig(null);
     setValidationError(null);
   }, []);
 
   useEffect(() => {
     if (lastValidatedKeyRef.current === null && !keyValidated) return;
-    if (keyValidated && rawKeyInput.trim() !== lastValidatedKeyRef.current) {
+    const cleanBaseUrl = cleanInput(baseUrl);
+    const currentValidationKey =
+      rawKeyInput.trim() ||
+      (agentType === LOCAL_MODEL_PROVIDER && cleanBaseUrl ? "local-model" : "");
+    if (keyValidated && currentValidationKey !== lastValidatedKeyRef.current) {
       resetValidation();
     }
-  }, [rawKeyInput, keyValidated, resetValidation]);
+  }, [agentType, baseUrl, rawKeyInput, keyValidated, resetValidation]);
 
   const validateKeyCb = useCallback(
     async (overrideTestModel?: unknown) => {
@@ -206,18 +222,16 @@ export function useKeyValidation(
       const effectiveTestModel =
         typeof overrideTestModel === "string" ? overrideTestModel : undefined;
 
-      const cleanRawKeyInput = rawKeyInput.trim();
       const cleanBaseUrl = cleanInput(baseUrl);
+      const cleanRawKeyInput =
+        rawKeyInput.trim() ||
+        (agentType === LOCAL_MODEL_PROVIDER && cleanBaseUrl
+          ? "local-model"
+          : "");
       const cleanCursorSessionToken = cleanInput(cursorSessionToken);
 
       if (!cleanRawKeyInput) {
-        if (agentType === LOCAL_MODEL_PROVIDER && cleanBaseUrl) {
-          setValidationError(
-            "Please enter a local API key placeholder for this endpoint."
-          );
-        } else {
-          setValidationError(VALIDATE_KEY_FIRST_MESSAGE);
-        }
+        setValidationError(VALIDATE_KEY_FIRST_MESSAGE);
         return;
       }
 
@@ -267,6 +281,7 @@ export function useKeyValidation(
           // Cursor-specific: native discovery to fill in the model list when
           // the Rust validator only verified the key but didn't enumerate.
           let finalModels = result.available_models;
+          const finalModelContextLengths = result.model_context_lengths ?? {};
           if (
             agentType === CLI_AGENT.CURSOR &&
             cursorSessionToken &&
@@ -310,10 +325,12 @@ export function useKeyValidation(
 
           setExtractedConfig(config);
           setFetchedModels(finalModels);
+          setFetchedModelContextLengths(finalModelContextLengths);
           setKeyValidated(true);
 
           onValidationSuccess?.({
             models: finalModels,
+            modelContextLengths: finalModelContextLengths,
             envVars,
             extractedConfig: config,
           });
@@ -346,6 +363,7 @@ export function useKeyValidation(
     validatingKey,
     validationError,
     fetchedModels,
+    fetchedModelContextLengths,
     extractedConfig,
     validateKey: validateKeyCb,
     resetValidation,

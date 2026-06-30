@@ -2,10 +2,10 @@
  * Types for the CanvasInlineCard chat block.
  *
  * Three rendering modes mirror the WorkStation Canvas app:
- *   html   — Agent-provided HTML string rendered in a sandboxed iframe
- *   url    — External URL loaded in a sandboxed iframe (no allow-same-origin)
+ *   html   — Agent-provided HTML sanitized and rendered in Shadow DOM
+ *   url    — External URL shown as an open action, not embedded in chat
  *   a2ui   — Agent-to-UI JSONL stream, rendered incrementally as native React
- *   react  — React App component rendered in an isolated iframe sandbox
+ *   react  — Generated React App source rendered through react-live
  */
 
 export type CanvasInlineMode = "html" | "url" | "a2ui" | "react";
@@ -29,6 +29,8 @@ export interface CanvasInlineCardProps {
   initialHeight?: number;
   /** Whether the agent is still streaming content into this card. */
   isStreaming?: boolean;
+  /** Event id used by the header jump-to-simulator action. */
+  eventId?: string;
   /**
    * Session ID for the canvas preview. When provided together with the
    * card's content, the toolbar shows a "View in Simulator" button that

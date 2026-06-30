@@ -57,7 +57,7 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
     selectedProviderKey,
     selectedProvider,
     hasMultipleVariants,
-    providerGridOptions,
+    providerGridOptionGroups,
     providerSelectOptions,
     variantGridOptions,
     variantSelectOptions,
@@ -203,7 +203,10 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
 
   const handleTestModel = useCallback(
     async (model: string) => {
-      const apiKey = data.extracted_api_key || data.raw_key_input;
+      const apiKey =
+        data.extracted_api_key ||
+        data.raw_key_input ||
+        (isLocalModelProvider ? "local-model" : "");
       const baseUrl = data.extracted_base_url;
       if (!apiKey || !baseUrl) {
         return { available: true, message: "No base URL — skipping test" };
@@ -215,6 +218,7 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
       data.raw_key_input,
       data.extracted_base_url,
       data.agent_type,
+      isLocalModelProvider,
     ]
   );
 
@@ -275,12 +279,23 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
                         {errors.agent_type}
                       </InlineAlert>
                     )}
-                    <SelectionGrid
-                      options={providerGridOptions}
-                      selected={null}
-                      cardVariant="subtle"
-                      onSelect={handleProviderSelect}
-                    />
+                    <div className="space-y-4">
+                      {providerGridOptionGroups.map((group) => (
+                        <div key={group.group} className="space-y-2">
+                          <div className="text-[12px] font-medium text-text-2">
+                            {group.group === "cloud"
+                              ? t("keyVault.providerGroups.cloud", "Cloud")
+                              : t("keyVault.providerGroups.local", "Local")}
+                          </div>
+                          <SelectionGrid
+                            options={group.options}
+                            selected={null}
+                            cardVariant="subtle"
+                            onSelect={handleProviderSelect}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </SectionRow>
                 )}
 

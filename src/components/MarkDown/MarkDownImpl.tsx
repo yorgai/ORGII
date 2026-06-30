@@ -36,6 +36,7 @@ import MermaidBlock from "./MermaidBlock";
 import "./index.scss";
 import {
   detectCodeType,
+  normalizeCopyableMarkdownDocumentFence,
   openFileInEditor,
   openUrlInBrowserApp,
   preprocessTextContent,
@@ -52,7 +53,7 @@ const SyntaxHighlighter =
  * block. The agent writes ```canvas or ```preview with a JSON payload.
  *
  * Payload schema (JSON on a single line or pretty-printed):
- *   { "mode": "html"|"url"|"a2ui", "content"?: "...", "url"?: "...", "title"?: "..." }
+ *   { "mode": "html"|"url"|"a2ui"|"react", "content"?: "...", "url"?: "...", "title"?: "..." }
  */
 const CANVAS_FENCED_LANGUAGES = new Set([
   "canvas",
@@ -60,12 +61,15 @@ const CANVAS_FENCED_LANGUAGES = new Set([
   "canvas-html",
   "canvas-url",
   "canvas-a2ui",
+  "canvas-react",
 ]);
 
-type CanvasFencedMode = "html" | "url" | "a2ui";
+type CanvasFencedMode = "html" | "url" | "a2ui" | "react";
 
 function isCanvasFencedMode(value: unknown): value is CanvasFencedMode {
-  return value === "html" || value === "url" || value === "a2ui";
+  return (
+    value === "html" || value === "url" || value === "a2ui" || value === "react"
+  );
 }
 
 /**
@@ -140,6 +144,7 @@ export interface MarkdownProps {
    * streaming path).
    */
   skipPreprocess?: boolean;
+  disableCanvasInline?: boolean;
 }
 
 // ============================================
@@ -169,23 +174,26 @@ function splitIntoStableMarkdownBlocks(content: string): string[] {
 
   const blocks: string[] = [];
   let blockStart = 0;
-  let inFence = false;
+  let fenceLength = 0;
   let index = 0;
 
   while (index < content.length) {
-    if (
-      content[index] === "`" &&
-      index + 2 < content.length &&
-      content[index + 1] === "`" &&
-      content[index + 2] === "`"
-    ) {
-      inFence = !inFence;
-      index += 3;
-      continue;
+    if (content[index] === "`") {
+      const fenceMatch = /^`{3,}/.exec(content.slice(index));
+      if (fenceMatch) {
+        const currentFenceLength = fenceMatch[0].length;
+        if (fenceLength === 0) {
+          fenceLength = currentFenceLength;
+        } else if (currentFenceLength >= fenceLength) {
+          fenceLength = 0;
+        }
+        index += currentFenceLength;
+        continue;
+      }
     }
 
     if (
-      !inFence &&
+      fenceLength === 0 &&
       content[index] === "\n" &&
       index + 1 < content.length &&
       content[index + 1] === "\n"
@@ -386,6 +394,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
   enableFileNavigation = false,
   streaming = false,
   skipPreprocess = false,
+  disableCanvasInline = false,
 }) => {
   const themes = useAtomValue(themesAtom);
   const activeWorkspaceRoot = useAtomValue(activeWorkspaceRootAtom);
@@ -443,15 +452,19 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
           }
 
           // Canvas / preview fenced blocks — render as CanvasInlineCard
-          if (CANVAS_FENCED_LANGUAGES.has(language.toLowerCase())) {
+          if (
+            !disableCanvasInline &&
+            CANVAS_FENCED_LANGUAGES.has(language.toLowerCase())
+          ) {
             let mode: CanvasFencedMode = "html";
             let cardContent: string | undefined;
             let cardUrl: string | undefined;
             let cardTitle: string | undefined;
 
-            // Derive mode from language alias shortcuts (canvas-url, canvas-a2ui)
+            // Derive mode from language alias shortcuts (canvas-url, canvas-a2ui, canvas-react)
             if (language === "canvas-url") mode = "url";
             else if (language === "canvas-a2ui") mode = "a2ui";
+            else if (language === "canvas-react") mode = "react";
 
             // Try to parse the body as a JSON payload
             const trimmed = codeContent.trim();
@@ -643,6 +656,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
     enableFileNavigation,
     handleLinkClick,
     activeWorkspaceRootPath,
+    disableCanvasInline,
   ]);
 
   // Memoize plugins array to prevent recreation
@@ -651,10 +665,12 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
   // Preprocess text content to auto-detect and format code.
   // Skip the expensive regex pass when the caller guarantees the content is
   // already well-formed markdown (e.g., post-stream agent messages).
-  const processedContent = useMemo(
-    () => (skipPreprocess ? textContent : preprocessTextContent(textContent)),
-    [textContent, skipPreprocess]
-  );
+  const processedContent = useMemo(() => {
+    const content = skipPreprocess
+      ? textContent
+      : preprocessTextContent(textContent);
+    return normalizeCopyableMarkdownDocumentFence(content);
+  }, [textContent, skipPreprocess]);
 
   const streamingBlocks = useMemo(
     () => (streaming ? splitIntoStableMarkdownBlocks(processedContent) : null),
@@ -703,6 +719,7 @@ const arePropsEqual = (prev: MarkdownProps, next: MarkdownProps): boolean => {
   if (prev.enableFileNavigation !== next.enableFileNavigation) return false;
   if (prev.streaming !== next.streaming) return false;
   if (prev.skipPreprocess !== next.skipPreprocess) return false;
+  if (prev.disableCanvasInline !== next.disableCanvasInline) return false;
   return true;
 };
 

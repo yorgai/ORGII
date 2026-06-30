@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token コンテキスト",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token 判断",
+    "tooltip": "推定ツール属性。方法: {{method}}。入力: {{inputBytes}} bytes。出力: {{outputBytes}} bytes。判断: {{decisionTokens}} Token。コンテキスト: {{contextTokens}} Token。Follow-up: {{followupTokens}} Token。関連 LLM cache read: {{cacheReadTokens}} Token。関連 LLM cache write: {{cacheWriteTokens}} Token。"
+  },
   "history": {
     "untitledSession": "無題のSession",
     "prStatus": {
@@ -752,6 +758,7 @@
     },
     "defaultTitle": "チャット",
     "hideChatPanel": "チャットパネルを非表示",
+    "showTokenUsage": "Token を表示",
     "compactDisplayMode": "コンパクトモード",
     "replay": {
       "follow": "フォロー"
@@ -2218,6 +2225,7 @@
     "insufficientBalance": "ホスト型 ORGII サービスの残高が不足しています。orgii.ai/wallet でチャージしてください。"
   },
   "planning": {
+    "agentTyping": "Agent が入力中...",
     "nextStepVariants": [
       "次のステップを計画中...",
       "考え中...",

@@ -21,6 +21,7 @@ use super::super::helpers::{
     check_permission, truncate_output,
 };
 use super::super::types::{PermissionProvider, TurnEventHandler};
+use super::super::usage_telemetry::{serialized_value_bytes, string_bytes, ToolExecutionUsage};
 
 use super::detect_stream_parse_error;
 use super::diff_feedback::compute_diff_feedback;
@@ -29,7 +30,7 @@ use super::is_error_text;
 use super::ToolBatchOutcome;
 
 pub(super) enum SingleResult {
-    Continue,
+    Continue(ToolExecutionUsage),
     EarlyExit(ToolBatchOutcome),
 }
 
@@ -49,6 +50,7 @@ pub(super) async fn execute_single_tool(
     workspace_path: Option<&std::path::Path>,
     policy_context_activator: Option<&SessionScopedContextActivator>,
 ) -> SingleResult {
+    let input_bytes = serialized_value_bytes(&tool_call.arguments);
     let args_preview: String =
         crate::utils::safe_truncate_chars_to_string(&tool_call.arguments.to_string(), 200);
     info!(
@@ -145,7 +147,12 @@ pub(super) async fn execute_single_tool(
             );
             add_tool_result(messages, &tool_call.id, &tool_call.name, &err_msg, true);
             *consecutive_errors += 1;
-            return SingleResult::Continue;
+            return SingleResult::Continue(ToolExecutionUsage {
+                tool_call_id: tool_call.id.clone(),
+                tool_name: tool_call.name.clone(),
+                input_bytes,
+                output_bytes: string_bytes(&err_msg),
+            });
         }
 
         if let Some(denied_msg) = check_permission(
@@ -170,7 +177,12 @@ pub(super) async fn execute_single_tool(
                 &denied_msg,
             );
             add_tool_result(messages, &tool_call.id, &tool_call.name, &denied_msg, true);
-            return SingleResult::Continue;
+            return SingleResult::Continue(ToolExecutionUsage {
+                tool_call_id: tool_call.id.clone(),
+                tool_name: tool_call.name.clone(),
+                input_bytes,
+                output_bytes: string_bytes(&denied_msg),
+            });
         }
 
         let file_time_error = if is_file_write_tool(&tool_call.name) {
@@ -428,7 +440,12 @@ pub(super) async fn execute_single_tool(
         *consecutive_errors = 0;
     }
 
-    SingleResult::Continue
+    SingleResult::Continue(ToolExecutionUsage {
+        tool_call_id: tool_call.id.clone(),
+        tool_name: tool_call.name.clone(),
+        input_bytes,
+        output_bytes: string_bytes(&result),
+    })
 }
 
 #[cfg(test)]
@@ -472,7 +489,7 @@ mod tests {
         )
         .await;
 
-        assert!(matches!(result, SingleResult::Continue));
+        assert!(matches!(result, SingleResult::Continue(_)));
         let tool_calls = handler.tool_calls.lock().unwrap().clone();
         assert_eq!(tool_calls[0].2["file_path"], "original.txt");
 

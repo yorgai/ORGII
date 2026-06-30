@@ -42,6 +42,10 @@
       "publishError": "Không thể đăng {{name}}"
     },
     "configure": "Cấu hình {{provider}}",
+    "providerGroups": {
+      "cloud": "Cloud",
+      "local": "Local"
+    },
     "publishToMarketplace": "Xuất bản {{provider}} lên Marketplace",
     "status": {
       "readyToUse": "Sẵn sàng sử dụng",
@@ -218,27 +222,13 @@
     "localModel": {
       "title": "Cookbook mô hình cục bộ",
       "description": "Chọn preset runtime cục bộ, xác nhận endpoint tương thích OpenAI, thêm một hoặc nhiều ID mô hình rồi lưu tài khoản này để dùng mô hình cục bộ trong Chat",
-      "runtimeLabel": "Preset runtime",
-      "runtimeDesc": "Chọn máy chủ cục bộ đang chạy. Preset sẽ điền endpoint và ID mô hình khởi đầu.",
-      "baseUrlDesc": "Endpoint cục bộ tương thích OpenAI. Hãy khởi động runtime trước khi xác thực hoặc lưu.",
-      "apiKeyDesc": "Hầu hết runtime cục bộ chấp nhận mọi giá trị không rỗng. Giữ placeholder trừ khi máy chủ yêu cầu key.",
+      "baseUrlDesc": "Endpoint cục bộ tương thích OpenAI. Hãy khởi động runtime trước khi xác thực hoặc lưu",
+      "apiKeyDesc": "Hầu hết runtime cục bộ chấp nhận mọi giá trị không rỗng. Giữ placeholder trừ khi máy chủ yêu cầu key",
       "quickModelsLabel": "Mô hình Cookbook",
-      "quickModelsDesc": "Khởi tạo bảng bằng các ID phổ biến cho runtime này. Bạn có thể chỉnh sửa hoặc thêm mô hình bên dưới.",
+      "quickModelsDesc": "Khởi tạo bảng bằng các ID phổ biến cho runtime này. Bạn có thể chỉnh sửa hoặc thêm mô hình bên dưới",
       "quickModelsPlaceholder": "Chọn mô hình gợi ý",
       "addSuggestedModel": "Thêm gợi ý",
-      "validateDesc": "Probe endpoint nếu đang chạy, hoặc lưu sau khi thêm mô hình thủ công.",
-      "presets": {
-        "ollama": "Ollama",
-        "ollamaDesc": "Máy chủ cục bộ mặc định trên cổng 11434",
-        "lmStudio": "LM Studio",
-        "lmStudioDesc": "Máy chủ tương thích OpenAI trên cổng 1234",
-        "vllm": "vLLM",
-        "vllmDesc": "Máy chủ suy luận tự host trên cổng 8000",
-        "llamaCpp": "llama.cpp",
-        "llamaCppDesc": "Endpoint phục vụ GGUF trên cổng 8080",
-        "custom": "Tùy chỉnh",
-        "customDesc": "Bất kỳ endpoint cục bộ nào tương thích OpenAI"
-      }
+      "validateDesc": "Probe endpoint nếu đang chạy, hoặc lưu sau khi thêm mô hình thủ công"
     },
     "validate": "Xác thực",
     "validateDesc": "Xác thực thông tin đăng nhập trước khi tiếp tục",

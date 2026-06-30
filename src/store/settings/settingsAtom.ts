@@ -12,7 +12,8 @@
  */
 import { type Atom, atom } from "jotai";
 
-import { rpc } from "@src/api/tauri/rpc";
+import { rpcCall } from "@src/api/tauri/rpc/invoke";
+import { settings as settingsProcedures } from "@src/api/tauri/rpc/procedures/settings";
 import {
   type SettingValue,
   type SettingsKey,
@@ -25,6 +26,17 @@ import { generateSettingsJsonSchema } from "@src/config/settingsSchema/generateJ
 import { createLogger } from "@src/hooks/logger";
 
 const log = createLogger("Settings");
+
+const settingsRpc = {
+  read: () => rpcCall(settingsProcedures.read),
+  write: (input: { content: string }) =>
+    rpcCall(settingsProcedures.write, input),
+  writePartial: (input: { partial: Record<string, unknown> }) =>
+    rpcCall(settingsProcedures.writePartial, input),
+  reset: () => rpcCall(settingsProcedures.reset),
+  writeSchema: (input: { schemaContent: string }) =>
+    rpcCall(settingsProcedures.writeSchema, input),
+};
 
 // ============================================
 // Core Atom
@@ -61,7 +73,7 @@ function enqueueSettingsPartialWrite(
 ): Promise<void> {
   const writePromise = settingsWriteQueue
     .catch(() => undefined)
-    .then(() => rpc.settings.writePartial({ partial }));
+    .then(() => settingsRpc.writePartial({ partial }));
   settingsWriteQueue = writePromise.then(
     () => undefined,
     () => undefined
@@ -157,10 +169,10 @@ export const resetAllSettingsAtom = atom(null, async (_get, set) => {
   set(settingsAtom, defaults);
 
   try {
-    await rpc.settings.reset();
+    await settingsRpc.reset();
     // Recreate with defaults + comments
     const jsonc = generateJsoncContent(defaults);
-    await rpc.settings.write({ content: jsonc });
+    await settingsRpc.write({ content: jsonc });
   } catch (err) {
     log.error("[Settings] Failed to reset settings:", err);
   }
@@ -177,7 +189,7 @@ resetAllSettingsAtom.debugLabel = "resetAllSettingsAtom";
  */
 export const initSettingsAtom = atom(null, async (_get, set) => {
   try {
-    const rawSettings = await rpc.settings.read();
+    const rawSettings = await settingsRpc.read();
 
     // Validate and merge with defaults
     const validated = validateSettings(rawSettings);
@@ -211,7 +223,7 @@ export const initSettingsAtom = atom(null, async (_get, set) => {
     const scheduleSchemaWrite = () => {
       try {
         const schema = generateSettingsJsonSchema();
-        rpc.settings.writeSchema({ schemaContent: schema }).catch(() => {});
+        settingsRpc.writeSchema({ schemaContent: schema }).catch(() => {});
       } catch {
         // Non-critical
       }
@@ -254,7 +266,7 @@ export const handleFileDeletedAtom = atom(null, async (_get, set) => {
   // Recreate with defaults
   try {
     const jsonc = generateJsoncContent(defaults);
-    await rpc.settings.write({ content: jsonc });
+    await settingsRpc.write({ content: jsonc });
   } catch (err) {
     log.error("[Settings] Failed to recreate settings file:", err);
   }

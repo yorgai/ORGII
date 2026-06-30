@@ -27,6 +27,7 @@ core_types = { path = "../types" }
 app_paths = { path = "../app-paths" }
 app_platform = { path = "../app-platform" }
 app_utils = { path = "../app-utils" }
+browser = { path = "../browser" }
 
 # Runtime infrastructure agent_core composes against (no back-edges from
 # any of these crates into agent_core — IoC slots inside agent_core

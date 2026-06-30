@@ -1,6 +1,6 @@
 use chrono::{Duration as ChronoDuration, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -304,6 +304,7 @@ impl KeyService {
                     base_model: model.to_string(),
                     reasoning: Some(reasoning.to_string()),
                     fast: false,
+                    context_window: None,
                 });
             }
             entry.updated_at = chrono::Utc::now();
@@ -1270,6 +1271,7 @@ impl KeyService {
         available_models: Option<Vec<String>>,
         enabled_models: Option<Vec<String>>,
         quota_info: Option<serde_json::Value>,
+        model_context_lengths: Option<&HashMap<String, u64>>,
     ) -> Result<Option<ModelKey>, String> {
         self.update_store(|store| {
             if let Some(entry) = store.keys.get_mut(key_id) {
@@ -1277,8 +1279,50 @@ impl KeyService {
                 entry.last_validation_error = error_message;
                 entry.last_validated_at = Some(Utc::now());
 
+                let refreshed_models: Option<HashSet<String>> = available_models
+                    .as_ref()
+                    .map(|models| models.iter().cloned().collect());
                 if let Some(models) = available_models {
                     entry.available_models = models;
+                }
+                if let Some(contexts) = model_context_lengths {
+                    // Treat the validation/refresh result as authoritative for
+                    // the refreshed model list only: absent context_length
+                    // means "fall back to FAMILY_RULES", not "keep a stale
+                    // proxy cap". Health-only updates may pass an empty map
+                    // without refreshing models, so they must not clear
+                    // existing provider overrides.
+                    if let Some(model_scope) = refreshed_models.as_ref() {
+                        for variant in &mut entry.model_variants {
+                            if model_scope.contains(&variant.model)
+                                && !contexts.contains_key(&variant.model)
+                            {
+                                variant.context_window = None;
+                            }
+                        }
+                    }
+
+                    // find-or-push: provider-reported context windows override
+                    // the static FAMILY_RULES default at runtime. Mirrors the
+                    // reasoning writeback above.
+                    for (model, ctx) in contexts {
+                        if *ctx == 0 {
+                            continue;
+                        }
+                        if let Some(variant) =
+                            entry.model_variants.iter_mut().find(|v| &v.model == model)
+                        {
+                            variant.context_window = Some(*ctx);
+                        } else {
+                            entry.model_variants.push(crate::key_store::ModelVariant {
+                                model: model.clone(),
+                                base_model: model.clone(),
+                                reasoning: None,
+                                fast: false,
+                                context_window: Some(*ctx),
+                            });
+                        }
+                    }
                 }
                 if let Some(enabled) = enabled_models {
                     entry.enabled_models = enabled;

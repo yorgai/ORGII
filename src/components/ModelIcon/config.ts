@@ -35,18 +35,25 @@ import {
 import AzureIcon from "@src/assets/modelIcons/azure.svg";
 import BaichuanIcon from "@src/assets/modelIcons/baichuan.svg";
 import ByteDanceIcon from "@src/assets/modelIcons/bytedance.svg";
+import CohereIcon from "@src/assets/modelIcons/cohere.svg";
 import DeepSeekIcon from "@src/assets/modelIcons/deepseek.svg";
 import DoubaoIcon from "@src/assets/modelIcons/doubao.svg";
 import GrokIcon from "@src/assets/modelIcons/grok.svg";
 import GroqIcon from "@src/assets/modelIcons/groq.svg";
+import HunyuanIcon from "@src/assets/modelIcons/hunyuan.svg";
+import LlamaCppIcon from "@src/assets/modelIcons/llama-cpp.svg";
+import LmStudioIcon from "@src/assets/modelIcons/lmstudio.svg";
 import MetaIcon from "@src/assets/modelIcons/meta.svg";
 import MinimaxIcon from "@src/assets/modelIcons/minimax.svg";
 import MistralIcon from "@src/assets/modelIcons/mistral.svg";
+import NvidiaIcon from "@src/assets/modelIcons/nvidia.svg";
+import OllamaIcon from "@src/assets/modelIcons/ollama.svg";
 import OpenRouterIcon from "@src/assets/modelIcons/openrouter.svg";
 import PerplexityIcon from "@src/assets/modelIcons/perplexity.svg";
 import QwenIcon from "@src/assets/modelIcons/qwen.svg";
 import VllmIcon from "@src/assets/modelIcons/vllm.svg";
 import VolcengineIcon from "@src/assets/modelIcons/volcengine.svg";
+import XiaomiIcon from "@src/assets/modelIcons/xiaomi.svg";
 import YiIcon from "@src/assets/modelIcons/yi.svg";
 import ZenMuxIcon from "@src/assets/modelIcons/zenmux.svg";
 import ZhipuIcon from "@src/assets/modelIcons/zhipu.svg";
@@ -73,15 +80,22 @@ export type IconProvider =
   | "gemini"
   | "grok"
   | "groq"
+  | "cohere"
   | "deepseek"
   | "mistral"
   | "qwen"
   | "meta"
+  | "nvidia"
   | "perplexity"
   | "kiro"
   | "kimi"
+  | "hunyuan"
+  | "ollama"
+  | "lm_studio"
+  | "llamacpp"
   | "bytedance"
   | "volcengine"
+  | "xiaomi"
   | "yi"
   | "zhipu"
   | "baichuan"
@@ -123,16 +137,23 @@ export const ICON_MAP: Record<
   // API providers
   aws: AWSIcon,
   azure: AzureIcon,
+  cohere: CohereIcon,
   deepseek: DeepSeekIcon,
   grok: GrokIcon,
   groq: GroqIcon,
   mistral: MistralIcon,
   qwen: QwenIcon,
   meta: MetaIcon,
+  nvidia: NvidiaIcon,
   perplexity: PerplexityIcon,
   kimi: KimiIcon,
+  hunyuan: HunyuanIcon,
+  ollama: OllamaIcon,
+  lm_studio: LmStudioIcon,
+  llamacpp: LlamaCppIcon,
   bytedance: ByteDanceIcon,
   volcengine: VolcengineIcon,
+  xiaomi: XiaomiIcon,
   yi: YiIcon,
   zhipu: ZhipuIcon,
   baichuan: BaichuanIcon,
@@ -164,15 +185,22 @@ export const SELECTABLE_ICON_PROVIDERS: IconProvider[] = [
   "codex",
   "grok",
   "groq",
+  "cohere",
   "mistral",
   "qwen",
   "meta",
+  "nvidia",
   "perplexity",
   "kimi",
+  "hunyuan",
+  "ollama",
+  "lm_studio",
+  "llamacpp",
   "aws",
   "azure",
   "bytedance",
   "volcengine",
+  "xiaomi",
   "yi",
   "zhipu",
   "baichuan",
@@ -283,8 +311,14 @@ export function getIconProviderFromModelName(
     return "copilot";
   }
 
-  // OpenAI models (GPT series + O-series: o1, o3, o4, etc.)
-  if (lower.includes("gpt") || /^o\d/.test(lower)) {
+  // OpenAI models (provider-prefixed OpenRouter IDs, GPT series, O-series,
+  // Codex variants, etc.)
+  if (
+    lower.startsWith("openai/") ||
+    lower.includes("gpt") ||
+    lower.includes("codex") ||
+    /^o\d/.test(lower)
+  ) {
     return "openai";
   }
 
@@ -294,6 +328,7 @@ export function getIconProviderFromModelName(
   // OpenAI's `^o\d` rule above for o-series models like "o5.5-high").
   if (
     lower.includes("claude") ||
+    lower.includes("fable") ||
     lower.includes("haiku") ||
     lower.includes("opus") ||
     lower.includes("sonnet") ||
@@ -302,8 +337,12 @@ export function getIconProviderFromModelName(
     return "claude";
   }
 
-  // Google/Gemini models
-  if (lower.includes("gemini")) {
+  // Google/Gemini/Gemma models
+  if (
+    lower.startsWith("google/") ||
+    lower.includes("gemini") ||
+    lower.includes("gemma")
+  ) {
     return "gemini";
   }
 
@@ -317,6 +356,11 @@ export function getIconProviderFromModelName(
     return "deepseek";
   }
 
+  // Cohere models
+  if (lower.startsWith("cohere/") || lower.includes("command-r")) {
+    return "cohere";
+  }
+
   // Mistral models
   if (lower.includes("mistral") || lower.includes("mixtral")) {
     return "mistral";
@@ -325,6 +369,15 @@ export function getIconProviderFromModelName(
   // Alibaba/Qwen models
   if (lower.includes("qwen")) {
     return "qwen";
+  }
+
+  // NVIDIA/Nemotron models
+  if (
+    lower.includes("nvidia") ||
+    lower.includes("nvdia") ||
+    lower.includes("nemotron")
+  ) {
+    return "nvidia";
   }
 
   // Meta/Llama models
@@ -347,6 +400,22 @@ export function getIconProviderFromModelName(
     return "kimi";
   }
 
+  // Tencent Hunyuan models
+  if (lower.includes("hunyuan") || /^hy(?:\d|[-_])/.test(lower)) {
+    return "hunyuan";
+  }
+
+  // Local runtimes
+  if (lower.includes("ollama")) {
+    return "ollama";
+  }
+  if (lower.includes("lmstudio") || lower.includes("lm-studio")) {
+    return "lm_studio";
+  }
+  if (lower.includes("llama.cpp") || lower.includes("llama-cpp")) {
+    return "llamacpp";
+  }
+
   // ByteDance/Doubao models
   if (lower.includes("bytedance")) {
     return "bytedance";
@@ -360,6 +429,11 @@ export function getIconProviderFromModelName(
   // Volcengine models
   if (lower.includes("volcengine") || lower.includes("volc")) {
     return "volcengine";
+  }
+
+  // Xiaomi/MiMo models
+  if (lower.startsWith("xiaomi/") || lower.includes("mimo")) {
+    return "xiaomi";
   }
 
   // 01.AI/Yi models

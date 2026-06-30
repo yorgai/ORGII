@@ -21,6 +21,7 @@ import { AgentMessageBlock } from "@src/engines/ChatPanel/blocks";
 import CanvasInlineCard from "@src/engines/ChatPanel/blocks/CanvasInlineCard";
 import { useCanvasPreviewForSession } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/useCanvasPreviewForSession";
 import MessageReferenceCards from "@src/engines/ChatPanel/blocks/MessageReferenceCards";
+import LlmUsageBadge from "@src/engines/ChatPanel/blocks/ToolCallBlock/LlmUsageBadge";
 import {
   SessionLinkCard,
   type SessionLinkCardData,
@@ -39,7 +40,10 @@ import {
   type RawEventInput,
   useNormalizedEventProps,
 } from "@src/engines/SessionCore/rendering/props";
-import type { EventVariant } from "@src/engines/SessionCore/rendering/types/universalProps";
+import type {
+  EventVariant,
+  UniversalEventProps,
+} from "@src/engines/SessionCore/rendering/types/universalProps";
 import {
   extractThinkContent,
   stripThinkTags,
@@ -152,6 +156,7 @@ interface ChatVariantProps {
   isStreaming?: boolean;
   sessionId?: string | null;
   canvasUrls?: ReadonlySet<string>;
+  llmUsage?: UniversalEventProps["llmUsage"];
   /** Event id used by AgentMessageBlock's locate-in-simulator arrow. */
   eventId?: string;
 }
@@ -163,6 +168,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
   isStreaming = false,
   sessionId,
   canvasUrls,
+  llmUsage,
   eventId,
 }) => {
   const { payload: canvasPayload, dismiss: _dismissCanvas } =
@@ -182,7 +188,13 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
     <>
       {thinkingContent && <InlineThinkingBlock content={thinkingContent} />}
       {hasVisibleContent && (
-        <AgentMessageBlock eventId={eventId}>
+        <AgentMessageBlock
+          eventId={eventId}
+          isStreaming={isStreaming}
+          rightContent={
+            llmUsage ? <LlmUsageBadge usage={llmUsage} /> : undefined
+          }
+        >
           <AgentChatItemDefault
             itemIndex={itemIndex}
             expand={true}
@@ -217,6 +229,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
             url={canvasPayload.url}
             title={canvasPayload.title}
             isStreaming={canvasPayload.streaming ?? isStreaming}
+            eventId={eventId}
           />
         </div>
       )}
@@ -332,9 +345,9 @@ export const AgentMessageEvent: React.FC<AgentMessageEventProps> = (props) => {
   const normalizedProps = useNormalizedEventProps(props, "agent_message");
   const sessionId = useAtomValue(sessionIdAtom);
   const streamingMap = useAtomValue(streamingDeltaContentAtom);
-  const directStreamContent = sessionId
-    ? (streamingMap.get(sessionId) ?? null)
-    : null;
+  const liveDelta = sessionId ? (streamingMap.get(sessionId) ?? null) : null;
+  const directStreamContent =
+    liveDelta?.kind === "message" ? liveDelta.content : null;
 
   const isSyntheticLiveEvent =
     props.event?.args?.syntheticLive === true ||
@@ -388,6 +401,7 @@ export const AgentMessageEvent: React.FC<AgentMessageEventProps> = (props) => {
         isStreaming={props.isStreaming}
         sessionId={sessionId}
         canvasUrls={canvasUrls}
+        llmUsage={normalizedProps?.llmUsage}
         eventId={normalizedProps?.eventId}
       />
     );

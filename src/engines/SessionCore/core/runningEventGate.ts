@@ -54,37 +54,66 @@ export function isLiveRuntimeResourceEvent(event: SessionEvent): boolean {
 }
 
 /**
- * Planning-footer variant of the live-resource scan: only the LATEST turn
- * (events after the last user-source message) counts.
+ * The latest turn's live-activity classification — the SINGLE source of truth
+ * for "is the agent visibly working, and does that work already show its own
+ * indicator?". Both `hasLiveRuntimeResourceInLatestTurn` (watchdog input) and
+ * `hasRunningAwaitWaitForInLatestTurn` (footer suppression) are derived from
+ * this one scan, so they can never disagree about how `await_output` is
+ * treated — the previous two-independent-scans design reasoned about
+ * await_output in OPPOSITE directions (one excluded it "so the footer shows",
+ * the other matched it "so the footer hides"), which only happened to compose
+ * correctly. Modelling it once removes that latent conflict.
  *
- * Why not the whole session: zombie running events — tool calls whose
- * terminal status merge was dropped, or shell events whose
- * `shellProcessStatus` froze at "running" after the process exited — are
- * permanent once persisted. Scanning the full history lets one zombie from
- * an old turn suppress the "Planning next step…" footer for every later
- * turn in the session. Old-turn background shells (dev servers) are also
- * deliberately excluded: a pinned background process is not a reason to
- * hide "the agent is thinking".
+ * - `idle` — no live runtime resource in the latest turn.
+ * - `selfIndicating` — a running `await_output wait_for`: it renders its own
+ *   live "Waiting {countdown} for …" title, which IS the activity indicator,
+ *   so the planning footer would be a redundant second one.
+ * - `liveSilent` — a running resource (shell, etc.) with no self-evident
+ *   indicator of its own; the planning footer is the thing that conveys "still
+ *   alive", so it should stay.
  *
- * Within the current turn this only answers whether a live row exists; the
- * planning footer may still show after the row has been idle long enough, but
- * the watchdog must not force-complete the session while this returns true.
+ * Scoped to the latest turn (events after the last user-source message) to
+ * avoid zombie running rows from older turns — tool calls whose terminal
+ * status merge was dropped, or shells whose `shellProcessStatus` froze at
+ * "running" after exit. Old-turn background shells (dev servers) are likewise
+ * excluded: a pinned background process is not a reason to change the footer.
+ */
+export type LatestTurnActivity = "idle" | "selfIndicating" | "liveSilent";
+
+export function classifyLatestTurnActivity(
+  events: readonly SessionEvent[]
+): LatestTurnActivity {
+  let sawLiveSilent = false;
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event.source === "user") break;
+    if (!isLiveRuntimeResourceEvent(event)) continue;
+    if (isAwaitOutputEvent(event) && isAwaitWaitForCommand(event.args)) {
+      // A running wait_for dominates: it self-indicates regardless of any
+      // sibling silent resource, so we can stop scanning.
+      return "selfIndicating";
+    }
+    // A running resource without its own indicator (incl. a non-wait_for
+    // await_output like `monitor`, which is a quick snapshot, or a shell).
+    sawLiveSilent = true;
+  }
+  return sawLiveSilent ? "liveSilent" : "idle";
+}
+
+/**
+ * True when the latest turn has any live runtime resource — used by the
+ * planning-indicator watchdog so it does not force-complete a session that is
+ * genuinely still working (a long `wait_for`, a running shell, …).
  *
- * `await_output` is exempt: it polls/blocks waiting for OTHER jobs (shell
- * processes, subagents) and renders as a subtle TitleOnlyBlock whose
- * shimmer is too faint to convey activity. The planning footer is a
- * better signal that the agent is still alive during a long wait_for.
+ * Unlike the pre-unification version, this now INCLUDES a running `wait_for`:
+ * a blocked wait is genuine activity, so the watchdog should not kill it. The
+ * footer is suppressed during a wait_for via `hasRunningAwaitWaitForInLatestTurn`
+ * (the `selfIndicating` case), not by pretending no resource is live.
  */
 export function hasLiveRuntimeResourceInLatestTurn(
   events: readonly SessionEvent[]
 ): boolean {
-  for (let i = events.length - 1; i >= 0; i--) {
-    const event = events[i];
-    if (event.source === "user") return false;
-    if (isLiveRuntimeResourceEvent(event) && !isAwaitOutputEvent(event))
-      return true;
-  }
-  return false;
+  return classifyLatestTurnActivity(events) !== "idle";
 }
 
 function isAwaitOutputEvent(event: SessionEvent): boolean {
@@ -92,6 +121,47 @@ function isAwaitOutputEvent(event: SessionEvent): boolean {
     event.functionName === "await_output" ||
     event.uiCanonical === "await_output"
   );
+}
+
+/**
+ * True when the latest turn's activity is self-indicating — i.e. a still-running
+ * `await_output wait_for` whose own "Waiting {countdown} for …" title already
+ * conveys "the agent is alive and blocked on a job". Callers suppress the
+ * planning footer in this window so the user does not see two stacked waiting
+ * indicators for the same wait. `monitor`/`list` are non-blocking snapshots and
+ * never self-indicate, so the footer still shows for them.
+ */
+export function hasRunningAwaitWaitForInLatestTurn(
+  events: readonly SessionEvent[]
+): boolean {
+  return classifyLatestTurnActivity(events) === "selfIndicating";
+}
+
+/**
+ * Resolve whether an `await_output` event is a blocking `wait_for` call.
+ * Mirrors the adapter's `resolveAwaitCommand` inference: explicit `command`
+ * wins; otherwise a present `pattern`/`wait_mode` implies `wait_for`.
+ */
+function isAwaitWaitForCommand(args: unknown): boolean {
+  const parsed: Record<string, unknown> | undefined =
+    typeof args === "string"
+      ? (() => {
+          try {
+            return JSON.parse(args) as Record<string, unknown>;
+          } catch {
+            return undefined;
+          }
+        })()
+      : (args as Record<string, unknown> | undefined);
+  if (!parsed) return false;
+  const command = parsed.command;
+  if (typeof command === "string" && command.length > 0) {
+    return command === "wait_for";
+  }
+  const hasPattern = parsed.pattern !== undefined && parsed.pattern !== null;
+  const hasWaitMode =
+    parsed.wait_mode !== undefined && parsed.wait_mode !== null;
+  return hasPattern || hasWaitMode;
 }
 
 export function isTurnBlockingRuntimeEvent(event: SessionEvent): boolean {

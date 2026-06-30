@@ -30,11 +30,7 @@ import DiffStatsBadge from "@src/components/DiffStatsBadge";
 import IconButton from "@src/components/IconButton";
 import TabPill from "@src/components/TabPill";
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
-import A2UIRenderer from "@src/engines/ChatPanel/blocks/CanvasInlineCard/A2UIRenderer";
-import {
-  buildHtmlDocument,
-  buildReactDocument,
-} from "@src/engines/ChatPanel/blocks/CanvasInlineCard/canvasBuilder";
+import CanvasPreviewSurface from "@src/engines/ChatPanel/blocks/CanvasInlineCard/CanvasPreviewSurface";
 import type { CanvasInlineMode } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/types";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { usePublishWorkstationTabHeader } from "@src/hooks/workStation";
@@ -404,71 +400,22 @@ const CanvasIframe: React.FC<CanvasIframeProps> = ({
 }) => {
   const { t } = useTranslation("sessions");
 
-  const a2uiLines = useMemo(() => {
-    if (payload.mode !== "a2ui" || !payload.content) return [];
-    return payload.content.split("\n").filter(Boolean);
-  }, [payload.mode, payload.content]);
-
-  const htmlSrcDoc = useMemo(() => {
-    if (payload.mode === "html" && payload.content)
-      return buildHtmlDocument(payload.content);
-    return undefined;
-  }, [payload.mode, payload.content]);
-
-  const reactSrcDoc = useMemo(() => {
-    if (payload.mode === "react" && payload.content)
-      return buildReactDocument(payload.content);
-    return undefined;
-  }, [payload.mode, payload.content]);
-
-  if (payload.mode === "url" && payload.url) {
-    return (
-      <iframe
-        key={`url-${reloadKey}`}
-        src={payload.url}
-        className="h-full w-full border-0"
-        sandbox="allow-scripts allow-same-origin allow-forms"
-        title={title}
-      />
-    );
-  }
-
-  if (payload.mode === "a2ui" && a2uiLines.length > 0) {
-    return <A2UIRenderer lines={a2uiLines} className="h-full" />;
-  }
-
-  if (reactSrcDoc) {
-    return (
-      <iframe
-        key={`react-${reloadKey}`}
-        srcDoc={reactSrcDoc}
-        className="h-full w-full border-0"
-        sandbox="allow-scripts"
-        title={title}
-      />
-    );
-  }
-
-  if (htmlSrcDoc) {
-    return (
-      <iframe
-        key={`doc-${reloadKey}`}
-        srcDoc={htmlSrcDoc}
-        className="h-full w-full border-0"
-        sandbox="allow-scripts"
-        title={title}
-      />
-    );
-  }
-
   return (
-    <div className="flex h-full items-center justify-center">
-      <span className="text-xs text-text-4">
-        {payload.streaming
-          ? t("canvasCard.waiting", "Waiting for content…")
-          : t("canvasCard.empty", "No content")}
-      </span>
-    </div>
+    <CanvasPreviewSurface
+      payload={payload}
+      variant="simulator"
+      title={title}
+      reloadKey={reloadKey}
+      emptyFallback={
+        <div className="flex h-full items-center justify-center">
+          <span className="text-xs text-text-4">
+            {payload.streaming
+              ? t("canvasCard.waiting", "Waiting for content…")
+              : t("canvasCard.empty", "No content")}
+          </span>
+        </div>
+      }
+    />
   );
 };
 
@@ -586,19 +533,13 @@ const CanvasApp: React.FC<SimulatorAppProps> = () => {
 
   // Jump to matching event when canvasPreviewAtom changes (chat card click)
   useEffect(() => {
-    if (!canvasPreviewEntry) return;
-    const preview = canvasPreviewEntry.payload;
-    const match = appEvents.find((ev) => {
-      const args = ev.args as Record<string, unknown> | undefined;
-      if (!args) return false;
-      return (
-        args.mode === preview.mode &&
-        (preview.title ? args.title === preview.title : true)
-      );
-    });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (match) setSelectedEventId(match.id);
-  }, [canvasPreviewEntry, appEvents]);
+    const eventId = canvasPreviewEntry?.payload.eventId;
+    if (!eventId) return;
+    if (appEvents.some((event) => event.id === eventId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedEventId(eventId);
+    }
+  }, [canvasPreviewEntry?.payload.eventId, appEvents]);
 
   const handleCompareToggle = useCallback((id: string) => {
     setCompareEventIds((prev) => {

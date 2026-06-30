@@ -435,7 +435,7 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
   const windowsHost = isWindows();
 
   return (
-    <div className="relative z-10 flex h-full min-w-0 flex-1 flex-col bg-bg-2">
+    <div className="relative z-10 flex h-full min-w-0 flex-1 flex-col">
       {windowsHost && <WindowsTopBar />}
       <div className="flex min-h-0 min-w-0 flex-1">
         <HoverSidebar.Trigger />

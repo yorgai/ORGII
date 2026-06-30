@@ -7,6 +7,7 @@
 //! `ExtractMemoriesState` once the fork returns.
 
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing::{info, warn};
 
 use crate::definitions::builtin::MEMORY_EXTRACTOR_ID;
@@ -29,31 +30,44 @@ const MAX_EXTRACTION_TURNS: u32 = 5;
 /// 3. Has a restricted tool set (read-only + edit within memory dir)
 /// 4. Runs for at most MAX_EXTRACTION_TURNS iterations
 pub async fn run_extraction(
-    state: &mut ExtractMemoriesState,
+    em_state: Arc<Mutex<ExtractMemoriesState>>,
     params: super::super::super::MemoryAgentParams<'_>,
 ) -> Result<(), String> {
-    state.in_progress = true;
-    state.turns_since_extraction = 0;
+    // ── Prepare: brief lock to flag in-progress + read the cursor. The mutex
+    // is NOT held across the fork/LLM call below — otherwise the next turn's
+    // brief `em_state` reads (the gate pre-check that decides whether to
+    // stash) would block for the whole extraction. The `in_progress` flag
+    // (kept true until finalize) is what preserves the "at most one extractor"
+    // invariant during the lock-free window.
+    let last_processed_idx = {
+        let mut state = em_state.lock().await;
+        state.in_progress = true;
+        state.turns_since_extraction = 0;
+        state.last_processed_idx
+    };
 
     let workspace = params.workspace;
     let mem_dir = super::super::memory_dir(workspace);
 
     if let Err(err) = std::fs::create_dir_all(&mem_dir) {
-        state.in_progress = false;
+        em_state.lock().await.in_progress = false;
         return Err(format!("Failed to create memory dir: {}", err));
     }
 
     let agent_def =
-        resolve_definition_by_id(MEMORY_EXTRACTOR_ID, params.definitions_store.as_deref())
-            .map_err(|err| {
-                format!(
+        match resolve_definition_by_id(MEMORY_EXTRACTOR_ID, params.definitions_store.as_deref()) {
+            Ok(def) => def,
+            Err(err) => {
+                em_state.lock().await.in_progress = false;
+                return Err(format!(
                     "Agent definition not found: {}: {}",
                     MEMORY_EXTRACTOR_ID, err
-                )
-            })?;
+                ));
+            }
+        };
 
     let messages = params.messages;
-    let new_count = count_new_messages(messages, state.last_processed_idx);
+    let new_count = count_new_messages(messages, last_processed_idx);
     let existing_memories =
         super::super::format_memory_manifest(&super::super::scan_memory_files(&mem_dir));
     let user_prompt = build_extraction_prompt(new_count, &existing_memories, &mem_dir);
@@ -90,6 +104,8 @@ pub async fn run_extraction(
 
     let turn_config = TurnConfig {
         model: params.model.to_string(),
+        account_id: None,
+        context_window_override: None,
         max_iterations: Some(MAX_EXTRACTION_TURNS),
         max_tokens: agent_def.max_tokens.unwrap_or(4096) as u32,
         temperature: agent_def.temperature.unwrap_or(0.0) as f32,
@@ -129,6 +145,9 @@ pub async fn run_extraction(
     )
     .await;
 
+    // ── Finalize: brief lock to clear the in-progress flag + advance the
+    // cursor on success.
+    let mut state = em_state.lock().await;
     state.in_progress = false;
 
     match result {

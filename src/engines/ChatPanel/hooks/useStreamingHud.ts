@@ -42,7 +42,8 @@ export function useStreamingHud(
   const engineActive = useAtomValue(isSessionEngineActiveAtom);
   const deltaMap = useAtomValue(streamingDeltaContentAtom);
 
-  const deltaContent = sessionId ? (deltaMap.get(sessionId) ?? "") : "";
+  const liveDelta = sessionId ? deltaMap.get(sessionId) : undefined;
+  const deltaContent = liveDelta?.content ?? "";
   const producing = engineActive && !!sessionId;
 
   // A single state holding the open timing window: `{ startedAt, now }`.

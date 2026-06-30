@@ -21,6 +21,8 @@ use super::work_items::{
 pub struct ResolvedPerson {
     pub id: String,
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar: Option<String>,
     pub color: String,
 }
 
@@ -86,6 +88,8 @@ pub struct EnrichedWorkItem {
     pub deleted_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_by: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_by_person: Option<ResolvedPerson>,
 
     // Sub-items
     pub todos: Vec<TodoEntry>,

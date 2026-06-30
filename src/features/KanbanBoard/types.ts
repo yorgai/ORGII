@@ -7,6 +7,7 @@ import type { LucideIcon } from "lucide-react";
 
 import type { CliAgentType } from "@src/api/types/keys";
 import type { Label } from "@src/types/core/shared";
+import type { WorkItemStatus } from "@src/types/core/workItem";
 
 // ============================================
 // Task Types
@@ -14,14 +15,7 @@ import type { Label } from "@src/types/core/shared";
 
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 
-export type TaskStatus =
-  | "backlog"
-  | "planned"
-  | "in_progress"
-  | "in_review"
-  | "completed"
-  | "cancelled"
-  | "duplicate";
+export type TaskStatus = WorkItemStatus | `person:${string}`;
 
 export const KANBAN_RESULT_STATUS = {
   Failed: "failed",

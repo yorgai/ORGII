@@ -160,9 +160,10 @@ export function createInspectChatStateHelper(store: E2EStore) {
             .get(sessionsAtom)
             .find((session) => session.session_id === activeSessionId) ?? null)
         : null;
-      const streamingDeltaText = activeSessionId
-        ? (store.get(streamingDeltaContentAtom).get(activeSessionId) ?? "")
-        : "";
+      const streamingDelta = activeSessionId
+        ? store.get(streamingDeltaContentAtom).get(activeSessionId)
+        : undefined;
+      const streamingDeltaText = streamingDelta?.content ?? "";
       let snapshotCount: number | null = null;
       let fileChangesCount: number | null = null;
       let fileChangePaths: string[] | null = null;

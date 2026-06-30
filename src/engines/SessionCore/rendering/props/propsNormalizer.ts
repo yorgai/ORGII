@@ -17,7 +17,13 @@
  */
 import { useMemo } from "react";
 
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import {
+  LLM_USAGE_ARGS_KEY,
+  type LlmUsageMetadata,
+  type SessionEvent,
+  TOOL_USAGE_ARGS_KEY,
+  type ToolUsageMetadata,
+} from "@src/engines/SessionCore/core/types";
 import type {
   AnimationConfig,
   EventStatus,
@@ -28,6 +34,26 @@ import type {
 import { normalizeActivity } from "@src/lib/activityData";
 
 const ACTIVE_EVENT_PAINTING_TTL_MS = 30 * 60 * 1000;
+
+function readToolUsageMetadata(
+  args: Record<string, unknown>,
+  eventToolUsage?: ToolUsageMetadata
+): ToolUsageMetadata | undefined {
+  if (eventToolUsage) return eventToolUsage;
+  const raw = args[TOOL_USAGE_ARGS_KEY];
+  if (!raw || typeof raw !== "object") return undefined;
+  return raw as ToolUsageMetadata;
+}
+
+function readLlmUsageMetadata(
+  args: Record<string, unknown>,
+  eventLlmUsage?: LlmUsageMetadata
+): LlmUsageMetadata | undefined {
+  if (eventLlmUsage) return eventLlmUsage;
+  const raw = args[LLM_USAGE_ARGS_KEY];
+  if (!raw || typeof raw !== "object") return undefined;
+  return raw as LlmUsageMetadata;
+}
 
 function shouldShowActiveEventPainting(
   status: EventStatus,
@@ -201,11 +227,15 @@ export function normalizeEventProps(
     const status = mapStatus(
       sessionEvent.displayStatus || inferStatusFromResult(result)
     );
+    const toolUsage = readToolUsageMetadata(args, sessionEvent.toolUsage);
+    const llmUsage = readLlmUsageMetadata(args, sessionEvent.llmUsage);
     return {
       eventId: sessionEvent.id,
       eventType,
       functionName: sessionEvent.functionName,
       callId: sessionEvent.callId,
+      toolUsage,
+      llmUsage,
       filePath: sessionEvent.filePath,
       repoPath: sessionEvent.repoPath,
       sessionId: sessionEvent.sessionId,
@@ -269,6 +299,7 @@ export function normalizeEventProps(
       (input as { repoPath?: string; repo_path?: string }).repo_path,
     args: normalized.args,
     result: normalized.result,
+    llmUsage: readLlmUsageMetadata(normalized.args),
     status,
     timestamp: normalized.createdAt,
     showActiveEventPainting: shouldShowActiveEventPainting(

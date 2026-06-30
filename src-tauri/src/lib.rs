@@ -58,6 +58,42 @@ fn dev_startup_debug_enabled() -> bool {
     std::env::var("ORGII_DEV_STARTUP_DEBUG").as_deref() == Ok("true")
 }
 
+/// Linux-only env guards that cap WebKitGTK CPU during streaming/output (issue
+/// #227): disable GPU compositing mode and bound llvmpipe (software GL) to two
+/// threads. Gated to Linux because the symbols are unused on other platforms —
+/// without `#[cfg(target_os = "linux")]`, macOS `cargo clippy -- -D warnings`
+/// (CI runs on macos-latest) would reject them as dead code.
+#[cfg(target_os = "linux")]
+const LINUX_WEBKIT_CPU_GUARD_ENV: &[(&str, &str)] = &[
+    ("WEBKIT_DISABLE_COMPOSITING_MODE", "1"),
+    ("LP_NUM_THREADS", "2"),
+];
+
+#[cfg(target_os = "linux")]
+fn linux_webkit_cpu_guard_value(key: &str, current_value: Option<&str>) -> Option<&'static str> {
+    if current_value.is_some() {
+        return None;
+    }
+    LINUX_WEBKIT_CPU_GUARD_ENV
+        .iter()
+        .find_map(|(guard_key, guard_value)| (*guard_key == key).then_some(*guard_value))
+}
+
+#[cfg(target_os = "linux")]
+fn apply_linux_webkit_cpu_guards() {
+    for (key, _) in LINUX_WEBKIT_CPU_GUARD_ENV {
+        if let Some(value) = linux_webkit_cpu_guard_value(
+            key,
+            std::env::var_os(key).as_deref().and_then(|v| v.to_str()),
+        ) {
+            std::env::set_var(key, value);
+        }
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn apply_linux_webkit_cpu_guards() {}
+
 // ============================================
 // Module Declarations
 // ============================================
@@ -115,6 +151,8 @@ use infrastructure::index_manager::IndexManager;
 /// app_lib::run();
 /// ```
 pub fn run() {
+    apply_linux_webkit_cpu_guards();
+
     // Augment $PATH from the user's login shell so binary probes (`which npm`,
     // `which claude`, etc.) work correctly when the app is launched from the
     // Dock/Finder, where macOS only provides the minimal system PATH.
@@ -553,6 +591,19 @@ pub fn run() {
             );
             tracing::info!("[MemberIdle] Member idle hook installed");
 
+            // Install the production `SubagentCompletionWakeHook` so a
+            // background subagent that finishes while its parent is idle
+            // resumes the parent's turn loop (which then consumes the result
+            // via the Background Jobs reminder). Without this, an idle parent
+            // never learns the worker completed. Mirrors Claude Code's
+            // task-notification → idle-queue-processor wake.
+            agent_core::tools::impls::orchestration::subagent_wake::install_subagent_completion_wake_hook(
+                agent_core::tools::impls::orchestration::subagent_wake::AppHandleSubagentCompletionWakeHook::new(
+                    app.handle().clone(),
+                ),
+            );
+            tracing::info!("[SubagentWake] Subagent completion wake hook installed");
+
             app.manage(unified_state);
             tracing::info!("[UnifiedAgent] Unified agent state initialized");
 
@@ -897,4 +948,34 @@ pub fn run() {
                 _ => {}
             }
         });
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::linux_webkit_cpu_guard_value;
+
+    #[test]
+    fn linux_webkit_cpu_guard_sets_missing_known_keys() {
+        assert_eq!(
+            linux_webkit_cpu_guard_value("WEBKIT_DISABLE_COMPOSITING_MODE", None),
+            Some("1")
+        );
+        assert_eq!(
+            linux_webkit_cpu_guard_value("LP_NUM_THREADS", None),
+            Some("2")
+        );
+    }
+
+    #[test]
+    fn linux_webkit_cpu_guard_preserves_explicit_values() {
+        assert_eq!(
+            linux_webkit_cpu_guard_value("LP_NUM_THREADS", Some("4")),
+            None
+        );
+    }
+
+    #[test]
+    fn linux_webkit_cpu_guard_ignores_unknown_keys() {
+        assert_eq!(linux_webkit_cpu_guard_value("OTHER_ENV", None), None);
+    }
 }

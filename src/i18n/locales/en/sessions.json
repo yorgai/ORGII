@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token context",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token decision",
+    "tooltip": "Estimated tool attribution. Method: {{method}}. Input: {{inputBytes}} bytes. Output: {{outputBytes}} bytes. Decision: {{decisionTokens}} Token. Context: {{contextTokens}} Token. Follow-up: {{followupTokens}} Token. Related LLM cache read: {{cacheReadTokens}} Token. Related LLM cache write: {{cacheWriteTokens}} Token."
+  },
   "history": {
     "untitledSession": "Untitled Session",
     "prStatus": {
@@ -783,6 +789,7 @@
     },
     "defaultTitle": "Chat",
     "hideChatPanel": "Hide chat panel",
+    "showTokenUsage": "Show token",
     "compactDisplayMode": "Compact mode",
     "replay": {
       "follow": "Follow"
@@ -996,6 +1003,7 @@
     "complete": "Complete"
   },
   "planning": {
+    "agentTyping": "Agent is typing...",
     "nextStepVariants": [
       "Planning next step...",
       "Thinking it through...",

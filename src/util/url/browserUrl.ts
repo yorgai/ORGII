@@ -1,3 +1,5 @@
+import { normalizeHttpUrlCandidate } from "./validation";
+
 const SEARCH_URL_PREFIX = "https://www.google.com/search?q=";
 
 const HTTP_PROTOCOL = "http:";
@@ -10,8 +12,11 @@ function toSearchUrl(query: string): string {
 }
 
 function parseHttpUrl(candidate: string): URL | null {
+  const normalized = normalizeHttpUrlCandidate(candidate);
+  if (!normalized) return null;
+
   try {
-    const parsedUrl = new URL(candidate);
+    const parsedUrl = new URL(normalized);
     if (
       (parsedUrl.protocol === HTTP_PROTOCOL ||
         parsedUrl.protocol === HTTPS_PROTOCOL) &&

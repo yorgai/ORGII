@@ -35,6 +35,7 @@ import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/Us
 import { stripExpandedPillContent } from "@src/engines/ChatPanel/InputArea/utils/pillContentParser";
 import MessageReferenceCards from "@src/engines/ChatPanel/blocks/MessageReferenceCards";
 import { SESSION_UI_TOKENS } from "@src/engines/ChatPanel/blocks/primitives/config";
+import { streamingDeltaContentAtom } from "@src/engines/SessionCore/core/atoms";
 import { extractTodoData } from "@src/engines/SessionCore/rendering/props";
 import type { ExtractedTodoData } from "@src/engines/SessionCore/rendering/types/universalProps";
 import { normalizeActivity } from "@src/lib/activityData";
@@ -71,6 +72,14 @@ const TERMINAL_PREVIEW_MAX_HEIGHT = 160;
 const SKILL_PREVIEW_MAX_HEIGHT = 160;
 const AVATAR_ICON_SIZE = COMMUNICATION_AVATAR_ICON_SIZE;
 const PLAN_APPROVED_PREFIX = "[Plan approved";
+
+function isSyntheticLiveAssistantEvent(message: MessageEntry): boolean {
+  return (
+    message.sender === "agent" &&
+    message.event.args?.syntheticLive === true &&
+    message.event.displayStatus === "running"
+  );
+}
 
 const normalizeTodoStatus = (status: string): string =>
   (status || "").toLowerCase();
@@ -120,6 +129,7 @@ const ReplayMarkdown: React.FC<{ content: string }> = memo(({ content }) => (
     useChatCodeBlock={true}
     enableFileNavigation={true}
     skipPreprocess={false}
+    disableCanvasInline={true}
   />
 ));
 ReplayMarkdown.displayName = "ReplayMarkdown";
@@ -411,6 +421,7 @@ const SkillContextCard: React.FC<{
                 useChatCodeBlock={false}
                 enableFileNavigation={false}
                 skipPreprocess={false}
+                disableCanvasInline={true}
               />
             </div>
           )}
@@ -461,7 +472,7 @@ const UserBubbleContent: React.FC<{
     return (
       <div className="flex flex-col items-start gap-1.5 text-left">
         <div
-          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3 pr-10`}
+          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3`}
         >
           <ChatBubbleCopyButton content={content} />
           <div className="flex items-center gap-2">
@@ -492,7 +503,7 @@ const UserBubbleContent: React.FC<{
     <div className="flex flex-col items-start gap-1.5 text-left">
       {showBubble && (
         <div
-          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3 ${hasContent ? "pr-10" : ""}`}
+          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3`}
         >
           <ChatBubbleCopyButton content={strippedContent} />
           {hasImages && images && (
@@ -706,11 +717,18 @@ export const ChatBubble: React.FC<{
       orgMembers
     );
     const agentSenderName = rawAgentName;
+    const streamingMap = useAtomValue(streamingDeltaContentAtom);
+    const liveDelta = isSyntheticLiveAssistantEvent(message)
+      ? (streamingMap.get(message.event.sessionId) ?? null)
+      : null;
+    const liveContent =
+      liveDelta?.kind === "message" ? liveDelta.content : null;
+    const resolvedContent = liveContent ?? message.content;
 
     const rawContent =
-      typeof message.content === "string"
-        ? message.content
-        : String(message.content ?? "");
+      typeof resolvedContent === "string"
+        ? resolvedContent
+        : String(resolvedContent ?? "");
     const userImages = useMemo<string[] | undefined>(() => {
       if (!isUser) return undefined;
       const result = message.event.result as { images?: unknown } | undefined;
@@ -767,13 +785,13 @@ export const ChatBubble: React.FC<{
           <UserBubbleContent content={rawContent} images={userImages} />
         ) : (
           <div
-            className={`${CHAT_BUBBLE_WIDTH_TOKENS.body} group/replay-msg relative rounded-lg p-3 pr-10 text-left text-text-1 ${
+            className={`${CHAT_BUBBLE_WIDTH_TOKENS.body} group/replay-msg relative rounded-lg p-3 text-left text-text-1 ${
               isLatest ? "bg-fill-2" : "bg-fill-1"
             }`}
           >
             <ChatBubbleCopyButton content={rawContent} />
             <div className={`min-w-0 ${SESSION_UI_TOKENS.TEXT.BODY_BASE}`}>
-              <ReplayMarkdown content={message.content} />
+              <ReplayMarkdown content={rawContent} />
               <MessageReferenceCards
                 content={rawContent}
                 enabled={message.event.displayStatus !== "running"}

@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token 上下文",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token 決策",
+    "tooltip": "估算的工具歸因。方法：{{method}}。輸入：{{inputBytes}} bytes。輸出：{{outputBytes}} bytes。決策：{{decisionTokens}} Token。上下文：{{contextTokens}} Token。Follow-up：{{followupTokens}} Token。相關 LLM cache read：{{cacheReadTokens}} Token。相關 LLM cache write：{{cacheWriteTokens}} Token。"
+  },
   "history": {
     "untitledSession": "未命名 Session",
     "prStatus": {
@@ -756,6 +762,7 @@
     },
     "defaultTitle": "Session",
     "hideChatPanel": "隱藏聊天面板",
+    "showTokenUsage": "顯示 Token",
     "compactDisplayMode": "精簡模式",
     "replay": {
       "follow": "跟隨"
@@ -2222,6 +2229,7 @@
     "insufficientBalance": "ORGII 托管服務餘額不足，請前往 orgii.ai/wallet 儲值。"
   },
   "planning": {
+    "agentTyping": "Agent 正在輸入...",
     "nextStepVariants": [
       "正在規劃下一步...",
       "思考中...",

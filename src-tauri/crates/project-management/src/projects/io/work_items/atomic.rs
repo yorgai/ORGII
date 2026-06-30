@@ -15,11 +15,11 @@
 
 use std::collections::HashMap;
 
-use rusqlite::{params, OptionalExtension, TransactionBehavior};
+use rusqlite::{OptionalExtension, TransactionBehavior, params};
 
 use super::super::helpers::{conn, from_iso8601, map_db, now_ms, to_iso8601};
 use super::extras::{ExtrasPayload, FieldRevision, REVISION_SOURCE_LOCAL};
-use super::history::{append_mutation_event, WorkItemHistorySnapshot};
+use super::history::{WorkItemHistorySnapshot, append_mutation_event};
 use crate::projects::types::{WorkItemData, WorkItemFrontmatter, WorkItemPartialUpdate};
 
 /// Sync-relevant fields whose mutations are tracked in
@@ -500,6 +500,9 @@ pub fn update_work_item_partial_with_revisions(
             }
             if let Some(target_date) = updates.target_date.as_ref() {
                 fm.target_date = target_date.clone();
+            }
+            if let Some(created_by) = updates.created_by.as_ref() {
+                fm.created_by = Some(created_by.clone());
             }
             if let Some(todos) = updates.todos.as_ref() {
                 fm.todos = todos.clone();

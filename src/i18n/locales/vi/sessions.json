@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token ngữ cảnh",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token quyết định",
+    "tooltip": "Phân bổ công cụ ước tính. Phương pháp: {{method}}. Đầu vào: {{inputBytes}} bytes. Đầu ra: {{outputBytes}} bytes. Quyết định: {{decisionTokens}} Token. Ngữ cảnh: {{contextTokens}} Token. Follow-up: {{followupTokens}} Token. LLM cache read liên quan: {{cacheReadTokens}} Token. LLM cache write liên quan: {{cacheWriteTokens}} Token."
+  },
   "history": {
     "untitledSession": "Session chưa đặt tên",
     "prStatus": {
@@ -752,6 +758,7 @@
     },
     "defaultTitle": "Chat",
     "hideChatPanel": "Ẩn bảng trò chuyện",
+    "showTokenUsage": "Hiển thị Token",
     "compactDisplayMode": "Chế độ gọn",
     "replay": {
       "follow": "Theo dõi"
@@ -2218,6 +2225,7 @@
     "insufficientBalance": "Số dư không đủ cho dịch vụ ORGII được lưu trữ. Nạp tiền tại orgii.ai/wallet."
   },
   "planning": {
+    "agentTyping": "Agent đang nhập...",
     "nextStepVariants": [
       "Đang lập kế hoạch bước tiếp theo...",
       "Đang suy nghĩ...",

@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use serde_json::Value;
 
 use crate::core::turn_executor::context_accounting::ContextUsageSnapshot;
+use crate::core::turn_executor::usage_telemetry::UsageTelemetry;
 use crate::tools::traits::ToolUIMetadata;
 use shared_state::ScreenshotStore;
 
@@ -71,6 +72,15 @@ pub trait TurnIterationHook: Send + Sync {
 pub struct TurnConfig {
     /// Model identifier (provider-specific).
     pub model: String,
+    /// KeyVault account id backing this turn. Threaded through so
+    /// `model_capabilities::resolve` can apply the provider-specific context
+    /// window override (from `/v1/models`). `None` for contexts without a
+    /// resolved key (tests, memory consolidation) — resolve then falls back
+    /// to the static family table.
+    pub account_id: Option<String>,
+    /// User/agent-configured context window. `None` means auto-detect from the
+    /// model family plus any account-specific provider override.
+    pub context_window_override: Option<u64>,
     /// Maximum tool call iterations per turn.
     /// `None` means unlimited — the loop runs until the model stops calling tools
     /// (guarded by repeat detection, error loop detection, and cancellation).
@@ -128,6 +138,8 @@ pub struct TurnResult {
     pub cache_read_tokens: i64,
     /// Accumulated cache-write tokens (Anthropic prompt caching).
     pub cache_write_tokens: i64,
+    /// Per-LLM-call spans and per-tool-call attribution for diagnostics.
+    pub usage_telemetry: UsageTelemetry,
 }
 
 // ============================================
@@ -341,6 +353,7 @@ mod tests {
             context_usage_snapshot: None,
             cache_read_tokens: 0,
             cache_write_tokens: 0,
+            usage_telemetry: UsageTelemetry::default(),
             messages: vec![],
         };
         assert_eq!(result.cache_read_tokens, 0);
@@ -359,6 +372,7 @@ mod tests {
             context_usage_snapshot: None,
             cache_read_tokens: 500,
             cache_write_tokens: 300,
+            usage_telemetry: UsageTelemetry::default(),
             messages: vec![],
         };
         assert_eq!(result.cache_read_tokens, 500);
@@ -370,6 +384,8 @@ mod tests {
     fn turn_config_unlimited_iterations() {
         let config = TurnConfig {
             model: "test".to_string(),
+            account_id: None,
+            context_window_override: None,
             max_iterations: None,
             max_tokens: 4096,
             temperature: 0.5,
@@ -385,6 +401,8 @@ mod tests {
     fn turn_config_limited_iterations() {
         let config = TurnConfig {
             model: "test".to_string(),
+            account_id: None,
+            context_window_override: None,
             max_iterations: Some(15),
             max_tokens: 4096,
             temperature: 0.5,

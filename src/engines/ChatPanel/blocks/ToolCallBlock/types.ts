@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 
-import type { PayloadRef } from "@src/engines/SessionCore/core/types";
+import type {
+  PayloadRef,
+  ToolUsageMetadata,
+} from "@src/engines/SessionCore/core/types";
 
 export interface ToolCallBlockProps {
   /** Tool/function name (e.g. "git", "web_fetch", "session") */
@@ -34,6 +37,7 @@ export interface ToolCallBlockProps {
    * progress lookup; without both, `McpProgressRow` is skipped.
    */
   sessionId?: string;
+  toolUsage?: ToolUsageMetadata;
   payloadRefs?: PayloadRef[];
 }
 

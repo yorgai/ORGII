@@ -52,6 +52,7 @@ interface WorkItemsListContentProps {
   /** Render project cells read-only (cross-project Work Items page). */
   disableProjectEdit?: boolean;
   compactRows?: boolean;
+  scrollMode?: "internal" | "page";
 }
 
 const EMPTY_CHECKED_WORK_ITEM_IDS = new Set<string>();
@@ -83,6 +84,7 @@ const WorkItemsListContent: FC<WorkItemsListContentProps> = ({
   collapseAllSignal = 0,
   disableProjectEdit = false,
   compactRows = false,
+  scrollMode = "internal",
 }) => {
   const { t } = useTranslation("projects");
 
@@ -92,9 +94,18 @@ const WorkItemsListContent: FC<WorkItemsListContentProps> = ({
     [checkedWorkItemIds, hasControlledCheckboxes]
   );
 
+  const rootClassName =
+    scrollMode === "page"
+      ? "flex flex-col"
+      : "flex h-full min-h-0 flex-col overflow-hidden";
+  const bodyClassName =
+    scrollMode === "page"
+      ? "overflow-visible"
+      : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide";
+
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
+    <div className={rootClassName}>
+      <div className={bodyClassName}>
         {filteredWorkItems.length === 0 ? (
           workItems.length === 0 ? (
             (emptyListPlaceholder ?? (

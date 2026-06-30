@@ -9,6 +9,9 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import TabPill from "@src/components/TabPill";
+import type { TabPillItem } from "@src/components/TabPill";
+import { useCurrentUserMemberIds } from "@src/hooks/project/useCurrentUserMemberId";
 import type { WorkstationTabHeaderHost } from "@src/hooks/workStation";
 import type { LinkedRepoOption } from "@src/modules/ProjectManager/shared";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
@@ -42,10 +45,17 @@ import {
   useWorkItemsTabBarState,
 } from "./hooks/useWorkItemsTabBarState";
 import { WORK_ITEMS_DEFAULT_STATUS, type WorkItemsViewTab } from "./types";
+import {
+  WORK_ITEMS_KANBAN_GROUP,
+  type WorkItemsKanbanGroup,
+  getStatusFilterKeysForWorkItems,
+} from "./workItemsViewModel";
 
 const WorkItemsSettings = React.lazy(
   () => import("./components/WorkItemsSettings")
 );
+
+const WORK_ITEMS_VIEW_TABS: readonly WorkItemsViewTab[] = ["List", "Kanban"];
 
 // ============================================
 // Types
@@ -169,6 +179,23 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
     isActive,
   });
   const { handleTabChange } = handlers;
+  const { memberIds: currentUserMemberIds } = useCurrentUserMemberIds(
+    projectData.rawMembers
+  );
+  const pinnedKanbanColumnIds = useMemo(
+    () => [...currentUserMemberIds].map((memberId) => `person:${memberId}`),
+    [currentUserMemberIds]
+  );
+  const statusFilterKeys = useMemo(
+    () => getStatusFilterKeysForWorkItems(data.workItems),
+    [data.workItems]
+  );
+  const { statusFilter, setStatusFilter } = state;
+  useEffect(() => {
+    if (!statusFilterKeys.includes(statusFilter)) {
+      setStatusFilter("all");
+    }
+  }, [setStatusFilter, statusFilter, statusFilterKeys]);
 
   // Persist resolved slug to tab data for faster loading on next app launch
   const resolvedSlug = projectData.project?.slug;
@@ -181,6 +208,9 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
   }, [resolvedSlug, onProjectSlugResolved]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [collapseAllSignal, setCollapseAllSignal] = useState(0);
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<WorkItemsKanbanGroup>(
+    WORK_ITEMS_KANBAN_GROUP.STATUS
+  );
 
   // Pending Settings section forwarded to `WorkItemsSettings` once the
   // user clicks the status-bar sync widget. Cleared on consumption so
@@ -379,14 +409,81 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
     [handleTabChange, onProjectViewChange]
   );
 
+  const workItemsViewTabs = useMemo<TabPillItem[]>(
+    () =>
+      WORK_ITEMS_VIEW_TABS.map((tab) => ({
+        key: tab,
+        label: t(`workItems.tabs.${tab === "List" ? "list" : "kanban"}`),
+      })),
+    [t]
+  );
+  const kanbanGroupTabs = useMemo<TabPillItem[]>(
+    () => [
+      {
+        key: WORK_ITEMS_KANBAN_GROUP.STATUS,
+        label: t("projects.groupBy.status"),
+      },
+      {
+        key: WORK_ITEMS_KANBAN_GROUP.ASSIGNED_TO,
+        label: t("projects.groupBy.assignedTo"),
+      },
+      {
+        key: WORK_ITEMS_KANBAN_GROUP.CREATED_BY,
+        label: t("projects.groupBy.createdBy"),
+      },
+    ],
+    [t]
+  );
+
   const projectSurfaceControls = useMemo(
     () => (
-      <ProjectDetailSurfacePillSwitch
-        projectView={activeProjectView}
-        onProjectViewChange={handleProjectViewChange}
-      />
+      <div className="flex min-w-0 items-center gap-1.5">
+        <ProjectDetailSurfacePillSwitch
+          projectView={activeProjectView}
+          onProjectViewChange={handleProjectViewChange}
+        />
+        {isWorkItemsSurface && (
+          <>
+            <span className="text-xs text-text-4">/</span>
+            <TabPill
+              tabs={workItemsViewTabs}
+              activeTab={state.activeTab}
+              onChange={(key) => handleHeaderTabChange(key as WorkItemsViewTab)}
+              variant="pill"
+              color="fill"
+              fillWidth={false}
+              size="small"
+            />
+            {state.activeTab === "Kanban" && (
+              <>
+                <span className="text-xs text-text-4">/</span>
+                <TabPill
+                  tabs={kanbanGroupTabs}
+                  activeTab={kanbanGroupBy}
+                  onChange={(key) =>
+                    setKanbanGroupBy(key as WorkItemsKanbanGroup)
+                  }
+                  variant="pill"
+                  color="fill"
+                  fillWidth={false}
+                  size="small"
+                />
+              </>
+            )}
+          </>
+        )}
+      </div>
     ),
-    [activeProjectView, handleProjectViewChange]
+    [
+      activeProjectView,
+      handleHeaderTabChange,
+      handleProjectViewChange,
+      isWorkItemsSurface,
+      kanbanGroupBy,
+      kanbanGroupTabs,
+      state.activeTab,
+      workItemsViewTabs,
+    ]
   );
 
   const settingsContent = (
@@ -418,7 +515,7 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
   // `Project > Item` breadcrumb) replaces the page header. Otherwise the
   // page header with view tabs / status filter is shown.
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {!isDetailOpen && (
         <WorkItemsPageHeader
           projectName={headerTitle}
@@ -435,6 +532,7 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
               : undefined
           }
           statusCounts={data.statusCounts}
+          statusFilterKeys={statusFilterKeys}
           onCollapseAll={isWorkItemsSurface ? handleCollapseAll : undefined}
           showProperties={
             propertiesActionAvailable ? state.showProperties : undefined
@@ -521,6 +619,8 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
           onGanttTaskClick={handlers.handleGanttTaskClick}
           onGanttTaskUpdate={handlers.handleGanttTaskUpdate}
           onCalendarEventClick={handlers.handleCalendarEventClick}
+          kanbanGroupBy={kanbanGroupBy}
+          pinnedKanbanColumnIds={pinnedKanbanColumnIds}
           kanbanTasks={data.kanbanTasks}
           ganttTasks={data.ganttTasks}
           calendarEvents={data.calendarEvents}

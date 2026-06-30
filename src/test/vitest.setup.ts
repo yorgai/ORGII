@@ -76,6 +76,7 @@ const BUILTIN_SIMULATOR_APP_FIXTURE: Map<string, AppType> = new Map([
   ["control_browser_with_agent_browser", AppType.BROWSER],
   ["control_browser_with_playwright", AppType.BROWSER],
   ["control_external_browser", AppType.BROWSER],
+  ["control_internal_browser", AppType.BROWSER],
   ["control_desktop_with_peekaboo", AppType.BROWSER],
 
   // Agent/Channels tools → CHANNELS
@@ -131,6 +132,7 @@ const BUILTIN_SUBTOOL_FIXTURE: Map<string, AppSubtool> = new Map([
   ["control_browser_with_agent_browser", "browser"],
   ["control_browser_with_playwright", "browser"],
   ["control_external_browser", "browser"],
+  ["control_internal_browser", "internal_browser"],
   ["control_desktop_with_peekaboo", "browser"],
 
   // Agent/Channels tools
@@ -188,6 +190,8 @@ function actionInfo(
 }
 
 const INTERNAL_BROWSER_ACTION_NAMES = [
+  "list",
+  "is_ready",
   "get_state",
   "click",
   "input",
@@ -202,6 +206,8 @@ const INTERNAL_BROWSER_ACTION_LABEL_KEYS: Record<
   (typeof INTERNAL_BROWSER_ACTION_NAMES)[number],
   LabelKeySet
 > = {
+  list: labelKeys("internalBrowser"),
+  is_ready: labelKeys("internalBrowser"),
   get_state: labelKeys("internalBrowserGetState"),
   click: labelKeys("internalBrowserClick"),
   input: labelKeys("internalBrowserInput"),

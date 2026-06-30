@@ -148,6 +148,7 @@ const GenericSetup: FC<AgentSetupProps> = ({
       auth_method: undefined,
       quota_info: undefined,
       available_models: [],
+      model_context_lengths: {},
       enabled_models: [],
       model_aliases: [],
     });
@@ -279,6 +280,7 @@ const GenericSetup: FC<AgentSetupProps> = ({
                         : data.extracted_base_url,
                     validated: false,
                     available_models: [],
+                    model_context_lengths: {},
                     enabled_models: [],
                   });
                 }}

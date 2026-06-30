@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import Markdown from "@src/components/MarkDown";
 import { getEventIcon } from "@src/config/toolIcons";
 import { hasThinkingEventType } from "@src/engines/ChatPanel/ChatHistory/chatItemPipeline/filters";
+import LlmUsageBadge from "@src/engines/ChatPanel/blocks/ToolCallBlock/LlmUsageBadge";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
@@ -37,7 +38,11 @@ import {
   extractThinkingData,
   useNormalizedEventProps,
 } from "@src/engines/SessionCore/rendering/props";
-import type { EventVariant } from "@src/engines/SessionCore/rendering/types/universalProps";
+import type {
+  EventVariant,
+  UniversalEventProps,
+} from "@src/engines/SessionCore/rendering/types/universalProps";
+import { formatDuration } from "@src/util/time/formatDuration";
 
 const LazySimulatorMessages = lazy(
   () => import("@src/modules/WorkStation/Chat/Communication")
@@ -56,18 +61,67 @@ export interface ThinkingEventProps extends RawEventInput {
 // Chat Variant (uses ThinkingBlock styling)
 // ============================================
 
+const THOUGHT_PREVIEW_MAX_LENGTH = 96;
+
+function getThoughtPreview(content?: string): string | null {
+  const normalized = content?.replace(/\s+/g, " ").trim();
+  if (!normalized) return null;
+  if (normalized.length <= THOUGHT_PREVIEW_MAX_LENGTH) return normalized;
+  return `${normalized.slice(0, THOUGHT_PREVIEW_MAX_LENGTH).trimEnd()}...`;
+}
+
+interface ThoughtSubtitleProps {
+  content?: string;
+  duration?: number;
+  isLoading: boolean;
+}
+
+const ThoughtSubtitle: React.FC<ThoughtSubtitleProps> = ({
+  content,
+  duration,
+  isLoading,
+}) => {
+  const preview = getThoughtPreview(content);
+  const durationLabel = duration ? formatDuration(duration) : null;
+
+  if (!preview && !durationLabel) return null;
+
+  return (
+    <span
+      className={`inline-flex min-w-0 flex-initial items-center gap-1 overflow-hidden leading-tight ${
+        isLoading ? "font-medium text-text-2" : "text-text-3"
+      }`}
+      title={[durationLabel, preview].filter(Boolean).join(" · ")}
+    >
+      {durationLabel && (
+        <span className="shrink-0 whitespace-nowrap tabular-nums">
+          {durationLabel}
+        </span>
+      )}
+      {durationLabel && preview && (
+        <span className="shrink-0 text-text-4">·</span>
+      )}
+      {preview && <span className="min-w-0 truncate">{preview}</span>}
+    </span>
+  );
+};
+
 interface ChatVariantProps {
   content?: string;
+  duration?: number;
   isLoading: boolean;
   isStreaming?: boolean;
   eventId?: string;
+  llmUsage?: UniversalEventProps["llmUsage"];
 }
 
 const ChatVariant: React.FC<ChatVariantProps> = ({
   content,
+  duration,
   isLoading,
   isStreaming = false,
   eventId,
+  llmUsage,
 }) => {
   const { t } = useTranslation("sessions");
   const {
@@ -100,6 +154,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
         onNavigate={eventId ? handleLocate : undefined}
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
+        rightContent={llmUsage ? <LlmUsageBadge usage={llmUsage} /> : undefined}
       >
         <EventBlockHeaderIcon
           icon={getEventIcon("thinking")}
@@ -112,6 +167,11 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
         <EventBlockHeaderTitle isLoading={isLoading}>
           {title}
         </EventBlockHeaderTitle>
+        <ThoughtSubtitle
+          content={content}
+          duration={duration}
+          isLoading={isLoading}
+        />
       </EventBlockHeader>
 
       {!isCollapsed && (
@@ -151,7 +211,7 @@ export const ThinkingEvent: React.FC<ThinkingEventProps> = (props) => {
 
   if (!normalizedProps) return null;
 
-  const { content } = extractThinkingData(normalizedProps);
+  const { content, duration } = extractThinkingData(normalizedProps);
   const displayContent = props.streamingContent || content;
   const hasContent = Boolean(displayContent?.trim());
   const isThinkingEvent = props.event
@@ -165,9 +225,11 @@ export const ThinkingEvent: React.FC<ThinkingEventProps> = (props) => {
     return (
       <ChatVariant
         content={displayContent}
+        duration={duration}
         isLoading={isLoading}
         isStreaming={props.isStreaming}
         eventId={normalizedProps.eventId}
+        llmUsage={normalizedProps.llmUsage}
       />
     );
   }

@@ -24,6 +24,7 @@
  * "invalid" so the row reflects that the user needs to re-add the account.
  */
 import {
+  type ModelContextLengths,
   getClaudeCodeOAuthModels,
   getCodexOAuthModels,
   getCursorNativeModels,
@@ -65,9 +66,14 @@ function isOAuthAccount(account: KeyVaultAccount): boolean {
   return account.authMethod === "oauth";
 }
 
+interface FetchedAccountModels {
+  models: string[];
+  modelContextLengths: ModelContextLengths;
+}
+
 async function fetchModelsForAccount(
   account: KeyVaultAccount
-): Promise<string[]> {
+): Promise<FetchedAccountModels> {
   const fullKey = await getFullKey(account.modelType, account.id);
   if (!fullKey) {
     throw new RefreshModelsError(
@@ -85,7 +91,10 @@ async function fetchModelsForAccount(
           "unsupported"
         );
       }
-      return getCursorNativeModels(token);
+      return {
+        models: await getCursorNativeModels(token),
+        modelContextLengths: {},
+      };
     }
     case CLI_AGENT.CLAUDE_CODE: {
       if (!isOAuthAccount(account)) {
@@ -99,7 +108,10 @@ async function fetchModelsForAccount(
           "auth_expired"
         );
       }
-      return getClaudeCodeOAuthModels(token);
+      return {
+        models: await getClaudeCodeOAuthModels(token),
+        modelContextLengths: {},
+      };
     }
     case CLI_AGENT.CODEX: {
       if (!isOAuthAccount(account)) {
@@ -113,7 +125,10 @@ async function fetchModelsForAccount(
         );
       }
       const idToken = fullKey.env_vars?.CODEX_ID_TOKEN;
-      return getCodexOAuthModels(token, idToken);
+      return {
+        models: await getCodexOAuthModels(token, idToken),
+        modelContextLengths: {},
+      };
     }
     case CLI_AGENT.GEMINI: {
       if (!isOAuthAccount(account)) {
@@ -133,7 +148,10 @@ async function fetchModelsForAccount(
       const projectId =
         fullKey.env_vars?.GOOGLE_CLOUD_PROJECT ??
         fullKey.env_vars?.GOOGLE_CLOUD_PROJECT_ID;
-      return getGeminiOAuthModels(token, projectId);
+      return {
+        models: await getGeminiOAuthModels(token, projectId),
+        modelContextLengths: {},
+      };
     }
   }
 
@@ -158,7 +176,10 @@ async function fetchModelsForAccount(
       "auth_expired"
     );
   }
-  return result.models_available ?? [];
+  return {
+    models: result.models_available ?? [],
+    modelContextLengths: result.model_context_lengths,
+  };
 }
 
 export interface RefreshAccountModelsResult {
@@ -169,10 +190,10 @@ export async function refreshAccountModels(
   account: KeyVaultAccount
 ): Promise<RefreshAccountModelsResult> {
   const previousHealth = account.healthStatus ?? "valid";
-  let models: string[];
+  let fetched: FetchedAccountModels;
 
   try {
-    models = await fetchModelsForAccount(account);
+    fetched = await fetchModelsForAccount(account);
   } catch (firstErr) {
     // Narrow-path 401 retry: only for OAuth accounts, only once. Uses the
     // same per-provider refresh helpers that the agent runtime calls on 401
@@ -195,7 +216,7 @@ export async function refreshAccountModels(
         );
       }
       try {
-        models = await fetchModelsForAccount(account);
+        fetched = await fetchModelsForAccount(account);
       } catch (retryErr) {
         await updateKeyHealth(
           account.id,
@@ -219,7 +240,7 @@ export async function refreshAccountModels(
     }
   }
 
-  if (models.length === 0) {
+  if (fetched.models.length === 0) {
     throw new RefreshModelsError(
       "Provider returned an empty model list",
       "transient"
@@ -230,7 +251,15 @@ export async function refreshAccountModels(
   // selection and any newly discovered models end up in the "addable" bucket
   // by default (this is the no-silent-enable invariant memorialised in
   // .orgii/workspace-memory/feedback_new_resources_default_addable.md).
-  await updateKeyHealth(account.id, previousHealth, undefined, models);
+  await updateKeyHealth(
+    account.id,
+    previousHealth,
+    undefined,
+    fetched.models,
+    undefined,
+    undefined,
+    fetched.modelContextLengths
+  );
 
-  return { models };
+  return { models: fetched.models };
 }

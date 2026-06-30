@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token контекста",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token решения",
+    "tooltip": "Оценочная атрибуция инструмента. Метод: {{method}}. Ввод: {{inputBytes}} bytes. Вывод: {{outputBytes}} bytes. Решение: {{decisionTokens}} Token. Контекст: {{contextTokens}} Token. Follow-up: {{followupTokens}} Token. Связанный LLM cache read: {{cacheReadTokens}} Token. Связанный LLM cache write: {{cacheWriteTokens}} Token."
+  },
   "history": {
     "untitledSession": "Session без названия",
     "prStatus": {
@@ -754,6 +760,7 @@
     },
     "defaultTitle": "Чат",
     "hideChatPanel": "Скрыть панель чата",
+    "showTokenUsage": "Показывать Token",
     "compactDisplayMode": "Компактный режим",
     "replay": {
       "follow": "Следовать"
@@ -2232,6 +2239,7 @@
     "insufficientBalance": "Недостаточно средств для использования хостингового сервиса ORGII. Пополните счёт на orgii.ai/wallet."
   },
   "planning": {
+    "agentTyping": "Agent печатает...",
     "nextStepVariants": [
       "Планируем следующий шаг...",
       "Обдумываем...",

@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token context",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token decision",
+    "tooltip": "Estimated tool attribution. Method: {{method}}. Input: {{inputBytes}} bytes. Output: {{outputBytes}} bytes. Decision: {{decisionTokens}} Token. Context: {{contextTokens}} Token. Follow-up: {{followupTokens}} Token. 관련 LLM cache read: {{cacheReadTokens}} Token. 관련 LLM cache write: {{cacheWriteTokens}} Token."
+  },
   "history": {
     "untitledSession": "제목 없는 Session",
     "prStatus": {
@@ -752,6 +758,7 @@
     },
     "defaultTitle": "채팅",
     "hideChatPanel": "채팅 패널 숨기기",
+    "showTokenUsage": "Token 표시",
     "compactDisplayMode": "컴팩트 모드",
     "replay": {
       "follow": "팔로우"
@@ -2219,6 +2226,7 @@
     "insufficientBalance": "ORGII 호스팅 서비스의 잔액이 부족합니다. orgii.ai/wallet에서 충전하세요."
   },
   "planning": {
+    "agentTyping": "Agent 입력 중...",
     "nextStepVariants": [
       "다음 단계 계획 중...",
       "생각 중...",
