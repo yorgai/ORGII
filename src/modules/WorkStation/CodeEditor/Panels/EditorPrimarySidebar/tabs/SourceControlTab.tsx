@@ -21,6 +21,7 @@ import { useGitStatus } from "@src/contexts/git";
 import { useRepoGitInitialization } from "@src/hooks/git";
 import type { PrimarySidebarTab } from "@src/modules/WorkStation/shared/PrimarySidebarLayout";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { workspaceGitStatusMapAtom } from "@src/store/git";
 import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
 import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
 import type { GitFile } from "@src/types/git/types";
@@ -45,20 +46,23 @@ function worktreeLabel(path: string): string {
 }
 
 function SourceControlScopePicker({
-  label,
+  branchLabel,
   repoPath,
   worktrees,
   scope,
   onScopeChange,
 }: {
-  label: string;
+  branchLabel: string;
   repoPath: string;
   worktrees: Array<{ path: string; branch: string }>;
   scope: SourceControlScope;
   onScopeChange: (scope: SourceControlScope) => void;
 }) {
-  const activeLabel =
-    scope.kind === "worktree" ? worktreeLabel(scope.path) : label;
+  const selectedWorktree =
+    scope.kind === "worktree"
+      ? worktrees.find((worktree) => worktree.path === scope.path)
+      : undefined;
+  const activeLabel = selectedWorktree?.branch || branchLabel;
   const value = scope.kind === "worktree" ? scope.path : "__local__";
   const options = useMemo<DropdownOption[]>(
     () => [
@@ -68,14 +72,14 @@ function SourceControlScopePicker({
           <span className="inline-flex min-w-0 items-center gap-2">
             <Folder size={14} className="shrink-0 text-text-3" />
             <span className="min-w-0 flex-1">
-              <span className="block truncate">{label}</span>
+              <span className="block truncate">{branchLabel}</span>
               <span className="block truncate text-[11px] text-text-4">
                 {repoPath}
               </span>
             </span>
           </span>
         ),
-        triggerLabel: label,
+        triggerLabel: branchLabel,
       },
       ...worktrees.map((worktree) => ({
         value: worktree.path,
@@ -98,7 +102,7 @@ function SourceControlScopePicker({
         triggerLabel: worktreeLabel(worktree.path),
       })),
     ],
-    [label, repoPath, worktrees]
+    [branchLabel, repoPath, worktrees]
   );
 
   const handleSelectScope = useCallback(
@@ -197,6 +201,8 @@ export function useSourceControlTabConfig({
   const { t } = useTranslation();
   const SourceControlIcon = ICON_CONFIG.sourceControl;
   const workspaceFolders = useAtomValue(workspaceFoldersAtom);
+  const gitStatusMap = useAtomValue(workspaceGitStatusMapAtom);
+  const mainBranch = gitStatusMap.get(repoPath)?.current_branch;
 
   const { isGitInitialized, refreshGitInitialization } =
     useRepoGitInitialization(repoPath);
@@ -304,7 +310,7 @@ export function useSourceControlTabConfig({
           }
           scopePicker={
             <SourceControlScopePicker
-              label={repoName}
+              branchLabel={mainBranch || repoName}
               repoPath={repoPath}
               worktrees={worktrees}
               scope={effectiveScope}
@@ -345,6 +351,7 @@ export function useSourceControlTabConfig({
     isMultiRoot,
     workspaceFolders,
     effectiveScope,
+    mainBranch,
     repoPath,
     repoId,
     repoName,
