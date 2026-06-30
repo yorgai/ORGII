@@ -2,20 +2,16 @@
 //!
 //! Load/save events from SQLite cache with SessionEvent <-> CachedEvent conversion.
 
-use core_types::activity::ActivityChunk;
-use orgtrack_core::sources::cursor_ide::history::CURSORIDE_SESSION_PREFIX;
-use orgtrack_core::sources::opencode::history as opencode_history;
 use serde::{Deserialize, Serialize};
 
 use crate::agent_sessions::event_pipeline::ingestion::prompt_backfill;
+use crate::agent_sessions::event_pipeline::session_providers;
 use tauri::{AppHandle, State};
 
 use crate::agent_sessions::event_pipeline::payload_compaction::{
     load_event_payload_body, EventPayloadBody,
 };
-use crate::agent_sessions::event_pipeline::types::{
-    ActivityStatus, EventDisplayStatus, EventDisplayVariant, EventSource, SessionEvent,
-};
+use crate::agent_sessions::event_pipeline::types::SessionEvent;
 use session_persistence as sqlite_cache;
 
 use super::{
@@ -26,67 +22,23 @@ use super::{
     save_events_retry, schedule_notify, EventStoreState, BULK_WRITE_MAX_RETRIES,
 };
 
-fn is_cursor_ide_session_id(session_id: &str) -> bool {
-    session_id.starts_with(CURSORIDE_SESSION_PREFIX)
+fn try_load_provider_history_events(session_id: &str) -> Result<Vec<SessionEvent>, String> {
+    session_providers::load_history_events(session_id)
 }
 
-fn is_opencode_app_session_id(session_id: &str) -> bool {
-    session_id.starts_with("opencodeapp-")
-}
-
-fn activity_chunk_to_session_event(chunk: &ActivityChunk) -> SessionEvent {
-    let function_name = if chunk.function.is_empty() {
-        chunk.action_type.clone()
-    } else {
-        chunk.function.clone()
-    };
-    SessionEvent {
-        id: if chunk.chunk_id.is_empty() {
-            uuid::Uuid::new_v4().to_string()
-        } else {
-            chunk.chunk_id.clone()
-        },
-        chunk_id: if chunk.chunk_id.is_empty() {
-            None
-        } else {
-            Some(chunk.chunk_id.clone())
-        },
-        session_id: chunk.session_id.clone(),
-        created_at: chunk.created_at.clone(),
-        function_name: function_name.clone(),
-        ui_canonical: function_name,
-        action_type: chunk.action_type.clone(),
-        args: chunk.args.clone(),
-        result: chunk.result.clone(),
-        source: EventSource::Assistant,
-        display_text: format!("{}: {}", chunk.action_type, chunk.function),
-        display_status: EventDisplayStatus::Completed,
-        display_variant: EventDisplayVariant::ToolCall,
-        activity_status: ActivityStatus::Processed,
-        thread_id: chunk.thread_id.clone(),
-        process_id: chunk.process_id.clone(),
-        call_id: None,
-        file_path: None,
-        command: None,
-        is_delta: None,
-        repo_id: None,
-        repo_path: None,
-        extracted: None,
-        payload_refs: Vec::new(),
-        last_extract_at: None,
-    }
-}
-
-fn try_load_opencode_history_events(session_id: &str) -> Result<Vec<SessionEvent>, String> {
-    let chunks = opencode_history::load_opencode_history_for_session(session_id)?;
-    Ok(chunks.iter().map(activity_chunk_to_session_event).collect())
-}
-
-fn backfill_opencode_subagent_prompts(_session_id: &str, events: &mut [SessionEvent]) {
-    prompt_backfill::backfill_opencode_subagent_prompts_with_resolver(
+fn backfill_provider_subagent_prompts(_session_id: &str, events: &mut [SessionEvent]) {
+    prompt_backfill::backfill_subagent_prompts_with_resolver(
         events,
-        prompt_backfill::opencode_subagent_prompt,
+        session_providers::subagent_prompt,
     );
+}
+
+fn prepare_loaded_events(session_id: &str, events: Vec<SessionEvent>) -> Vec<SessionEvent> {
+    let mut events = dedup_by_call_id(events);
+    backfill_tool_inputs_from_messages(session_id, &mut events);
+    backfill_subagent_links(session_id, &mut events);
+    backfill_provider_subagent_prompts(session_id, &mut events);
+    events
 }
 
 // ============================================================================
@@ -122,20 +74,17 @@ pub async fn es_load_from_cache(
         .map(|ce| cached_event_to_session_event(&ce))
         .collect();
 
-    if events.is_empty() && is_opencode_app_session_id(&session_id) {
-        match try_load_opencode_history_events(&session_id) {
+    if events.is_empty() {
+        match try_load_provider_history_events(&session_id) {
             Ok(loaded) if !loaded.is_empty() => events = loaded,
             Ok(_) => {}
             Err(err) => tracing::warn!(
-                "[cache_bridge] failed to load OpenCode history for {session_id}: {err}"
+                "[cache_bridge] failed to load provider history for {session_id}: {err}"
             ),
         }
     }
 
-    let mut events = dedup_by_call_id(events);
-    backfill_tool_inputs_from_messages(&session_id, &mut events);
-    backfill_subagent_links(&session_id, &mut events);
-    backfill_opencode_subagent_prompts(&session_id, &mut events);
+    let events = prepare_loaded_events(&session_id, events);
     let count = events.len();
     if count > 0 {
         state.with_store_mut(&session_id, |store| {
@@ -166,7 +115,7 @@ pub async fn es_save_to_cache(
     state: State<'_, EventStoreState>,
     session_id: String,
 ) -> Result<usize, String> {
-    if is_cursor_ide_session_id(&session_id) {
+    if session_providers::skips_event_cache_save(&session_id) {
         return Ok(0);
     }
 
@@ -224,7 +173,7 @@ pub async fn cache_save_session_events(
     session_id: String,
     events: Vec<SessionEvent>,
 ) -> Result<usize, String> {
-    if is_cursor_ide_session_id(&session_id) {
+    if session_providers::skips_event_cache_save(&session_id) {
         return Ok(0);
     }
 
@@ -251,20 +200,16 @@ pub async fn cache_load_session_events(session_id: String) -> Result<Vec<Session
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())?;
     let mut events: Vec<SessionEvent> = cached.iter().map(cached_event_to_session_event).collect();
-    if events.is_empty() && is_opencode_app_session_id(&session_id) {
-        match try_load_opencode_history_events(&session_id) {
+    if events.is_empty() {
+        match try_load_provider_history_events(&session_id) {
             Ok(loaded) if !loaded.is_empty() => events = loaded,
             Ok(_) => {}
             Err(err) => tracing::warn!(
-                "[cache_bridge] failed to load OpenCode history for {session_id}: {err}"
+                "[cache_bridge] failed to load provider history for {session_id}: {err}"
             ),
         }
     }
-    let mut events = dedup_by_call_id(events);
-    backfill_tool_inputs_from_messages(&session_id, &mut events);
-    backfill_subagent_links(&session_id, &mut events);
-    backfill_opencode_subagent_prompts(&session_id, &mut events);
-    Ok(events)
+    Ok(prepare_loaded_events(&session_id, events))
 }
 
 /// Search events via FTS5, returning SessionEvents directly.
@@ -372,7 +317,7 @@ pub struct FullSessionPayload {
 /// when the caller also has specs/timeRange to persist.
 #[tauri::command]
 pub async fn cache_save_full_session(payload: FullSessionPayload) -> Result<(), String> {
-    if is_cursor_ide_session_id(&payload.session_id) {
+    if session_providers::skips_event_cache_save(&payload.session_id) {
         return Ok(());
     }
 
@@ -412,10 +357,7 @@ pub async fn cache_load_full_session(
     Ok(result.map(|s| {
         let events: Vec<SessionEvent> =
             s.events.iter().map(cached_event_to_session_event).collect();
-        let mut events = dedup_by_call_id(events);
-        backfill_tool_inputs_from_messages(&s.session_id, &mut events);
-        backfill_subagent_links(&s.session_id, &mut events);
-        backfill_opencode_subagent_prompts(&s.session_id, &mut events);
+        let events = prepare_loaded_events(&s.session_id, events);
         FullSessionPayload {
             session_id: s.session_id,
             events,
@@ -602,7 +544,7 @@ mod tests {
     }
 
     #[test]
-    fn backfill_opencode_subagent_prompts_uses_child_assignment_for_real_prompt() {
+    fn backfill_provider_subagent_prompts_uses_child_assignment_for_real_prompt() {
         let mut event = make_tool_call(
             "opencode-subagent-real-user-prompt-fixture",
             Some("call-opencode-real-user-prompt-fixture"),
@@ -620,13 +562,10 @@ mod tests {
         event.ui_canonical = "subagent".to_string();
 
         let mut events = vec![event];
-        prompt_backfill::backfill_opencode_subagent_prompts_with_resolver(
-            &mut events,
-            |child_session_id| {
-                assert_eq!(child_session_id, "opencodeapp-child-real-assignment");
-                Some(OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT.to_string())
-            },
-        );
+        prompt_backfill::backfill_subagent_prompts_with_resolver(&mut events, |child_session_id| {
+            assert_eq!(child_session_id, "opencodeapp-child-real-assignment");
+            Some(OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT.to_string())
+        });
 
         assert_eq!(
             events[0].args["prompt"],
@@ -706,7 +645,7 @@ mod tests {
             .iter()
             .map(cached_event_to_session_event)
             .collect::<Vec<_>>();
-        prompt_backfill::backfill_opencode_subagent_prompts_with_resolver(&mut reloaded, |_| {
+        prompt_backfill::backfill_subagent_prompts_with_resolver(&mut reloaded, |_| {
             Some(OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT.to_string())
         });
 
@@ -731,7 +670,7 @@ mod tests {
     }
 
     #[test]
-    fn backfill_opencode_subagent_prompts_preserves_existing_real_prompt() {
+    fn backfill_provider_subagent_prompts_preserves_existing_real_prompt() {
         let mut event = make_tool_call(
             "opencode-subagent-real-prompt",
             Some("call-opencode-real-prompt"),
@@ -746,7 +685,7 @@ mod tests {
         event.ui_canonical = "subagent".to_string();
 
         let mut events = vec![event];
-        super::backfill_opencode_subagent_prompts("opencodeapp-parent", &mut events);
+        super::backfill_provider_subagent_prompts("opencodeapp-parent", &mut events);
 
         assert_eq!(
             events[0].args["prompt"],
@@ -756,7 +695,7 @@ mod tests {
     }
 
     #[test]
-    fn backfill_opencode_subagent_prompts_does_not_invent_parent_prompt() {
+    fn backfill_provider_subagent_prompts_does_not_invent_parent_prompt() {
         let parent_prompt = "启动一个子任务（subagent），让它分析项目并生成报告";
         let mut event = make_tool_call(
             "opencode-subagent-no-child-prompt",
@@ -772,14 +711,14 @@ mod tests {
         event.ui_canonical = "subagent".to_string();
 
         let mut events = vec![event];
-        super::backfill_opencode_subagent_prompts(parent_prompt, &mut events);
+        super::backfill_provider_subagent_prompts(parent_prompt, &mut events);
 
         assert_eq!(events[0].args["prompt"], "Task");
         assert_eq!(events[0].args["description"], "Task");
     }
 
     #[test]
-    fn prompt_from_opencode_history_chunks_prefers_child_user_assignment() {
+    fn prompt_from_history_chunks_prefers_child_user_assignment() {
         let mut user = ActivityChunk::new("opencodeapp-child", "raw", "user_message");
         user.result = serde_json::json!({
             "message": {
@@ -793,18 +732,18 @@ mod tests {
         });
 
         assert_eq!(
-            prompt_backfill::prompt_from_opencode_history_chunks(&[user, assistant]),
+            prompt_backfill::prompt_from_history_chunks(&[user, assistant]),
             Some("请分析当前工作目录下所有 .rs 文件，并生成结构化报告".to_string())
         );
     }
 
     #[test]
     fn opencode_prompt_quality_rejects_result_like_report() {
-        assert!(!prompt_backfill::is_good_opencode_subagent_prompt(
+        assert!(!prompt_backfill::is_good_subagent_prompt(
             "Now I have all the data. Here is the comprehensive report."
         ));
         assert_eq!(
-            prompt_backfill::non_generic_opencode_prompt(
+            prompt_backfill::non_generic_subagent_prompt(
                 "Now I have all the data. Here is the comprehensive report.".to_string()
             ),
             None
@@ -813,11 +752,11 @@ mod tests {
 
     #[test]
     fn opencode_prompt_quality_rejects_paste_placeholder() {
-        assert!(!prompt_backfill::is_good_opencode_subagent_prompt(
+        assert!(!prompt_backfill::is_good_subagent_prompt(
             "pasted.txt [paste:paste://1782778711175-d8dsv8]"
         ));
         assert_eq!(
-            prompt_backfill::non_generic_opencode_prompt(
+            prompt_backfill::non_generic_subagent_prompt(
                 "pasted.txt [paste:paste://1782778711175-d8dsv8]".to_string()
             ),
             None
@@ -826,11 +765,11 @@ mod tests {
 
     #[test]
     fn opencode_prompt_quality_accepts_assignment_title() {
-        assert!(prompt_backfill::is_good_opencode_subagent_prompt(
+        assert!(prompt_backfill::is_good_subagent_prompt(
             "Analyze .rs files in project (@explore subagent)"
         ));
         assert_eq!(
-            prompt_backfill::non_generic_opencode_prompt(
+            prompt_backfill::non_generic_subagent_prompt(
                 "Analyze .rs files in project (@explore subagent)".to_string()
             ),
             Some("Analyze .rs files in project (@explore subagent)".to_string())

@@ -1,14 +1,8 @@
-use database::db::get_connection;
-use orgtrack_core::sources::opencode::history as opencode_history;
 use serde_json::Value;
 
 use crate::agent_sessions::event_pipeline::types::SessionEvent;
 
-fn is_opencode_app_session_id(session_id: &str) -> bool {
-    session_id.starts_with("opencodeapp-")
-}
-
-fn is_generic_opencode_task_label(value: &str) -> bool {
+fn is_generic_task_label(value: &str) -> bool {
     matches!(
         value.trim().to_ascii_lowercase().as_str(),
         "task" | "todo" | "assigned task to subagent"
@@ -28,7 +22,7 @@ fn is_result_like_report(value: &str) -> bool {
         || value.starts_with("# comprehensive .rs")
 }
 
-fn strip_known_opencode_prompt_prelude(value: &str) -> &str {
+fn strip_known_prompt_prelude(value: &str) -> &str {
     let mut rest = value.trim();
     loop {
         let tag = if rest.starts_with("<skills>") {
@@ -54,21 +48,21 @@ fn is_parent_delegation_request(value: &str) -> bool {
         && (value.contains("让它") || value.contains("必须要用subagent"))
 }
 
-pub fn is_good_opencode_subagent_prompt(value: &str) -> bool {
-    let value = strip_known_opencode_prompt_prelude(value);
+pub fn is_good_subagent_prompt(value: &str) -> bool {
+    let value = strip_known_prompt_prelude(value);
     !value.is_empty()
-        && !is_generic_opencode_task_label(value)
+        && !is_generic_task_label(value)
         && !is_paste_placeholder(value)
         && !is_result_like_report(value)
         && !is_parent_delegation_request(value)
 }
 
-pub(crate) fn non_generic_opencode_prompt(value: String) -> Option<String> {
-    let value = strip_known_opencode_prompt_prelude(&value).to_string();
-    is_good_opencode_subagent_prompt(&value).then_some(value)
+pub(crate) fn non_generic_subagent_prompt(value: String) -> Option<String> {
+    let value = strip_known_prompt_prelude(&value).to_string();
+    is_good_subagent_prompt(&value).then_some(value)
 }
 
-pub(crate) fn prompt_from_opencode_history_chunks(
+pub(crate) fn prompt_from_history_chunks(
     chunks: &[core_types::activity::ActivityChunk],
 ) -> Option<String> {
     chunks.iter().find_map(|chunk| {
@@ -87,42 +81,11 @@ pub(crate) fn prompt_from_opencode_history_chunks(
                     .get("observation")
                     .and_then(|value| value.as_str())
             })?;
-        non_generic_opencode_prompt(prompt.to_string())
+        non_generic_subagent_prompt(prompt.to_string())
     })
 }
 
-pub fn opencode_subagent_prompt(child_session_id: &str) -> Option<String> {
-    if !is_opencode_app_session_id(child_session_id) {
-        return None;
-    }
-    if let Ok(chunks) = opencode_history::load_opencode_history_for_session(child_session_id) {
-        if let Some(prompt) = prompt_from_opencode_history_chunks(&chunks) {
-            return Some(prompt);
-        }
-    }
-    let conn = get_connection().ok()?;
-    if let Ok(prompt) = conn.query_row(
-        "SELECT user_input FROM code_sessions WHERE session_id = ?1 AND cli_agent_type = 'opencode'",
-        [child_session_id],
-        |row| row.get::<_, String>(0),
-    ) {
-        if let Some(prompt) = non_generic_opencode_prompt(prompt) {
-            return Some(prompt);
-        }
-    }
-    if let Ok(name) = conn.query_row(
-        "SELECT name FROM imported_history_session_cache WHERE session_id = ?1 AND source = 'opencode'",
-        [child_session_id],
-        |row| row.get::<_, String>(0),
-    ) {
-        if let Some(name) = non_generic_opencode_prompt(name) {
-            return Some(name);
-        }
-    }
-    None
-}
-
-pub fn backfill_opencode_subagent_prompts_with_resolver(
+pub fn backfill_subagent_prompts_with_resolver(
     events: &mut [SessionEvent],
     mut prompt_for_child: impl FnMut(&str) -> Option<String>,
 ) {
@@ -136,7 +99,7 @@ pub fn backfill_opencode_subagent_prompts_with_resolver(
         let has_prompt = args
             .get("prompt")
             .and_then(|value| value.as_str())
-            .map(is_good_opencode_subagent_prompt)
+            .map(is_good_subagent_prompt)
             .unwrap_or(false);
         if has_prompt {
             continue;
@@ -156,7 +119,7 @@ pub fn backfill_opencode_subagent_prompts_with_resolver(
         let should_replace_description = args
             .get("description")
             .and_then(|value| value.as_str())
-            .map(|description| !is_good_opencode_subagent_prompt(description))
+            .map(|description| !is_good_subagent_prompt(description))
             .unwrap_or(true);
         if should_replace_description {
             args.insert("description".to_string(), Value::String(prompt));

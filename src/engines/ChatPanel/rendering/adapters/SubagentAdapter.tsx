@@ -118,6 +118,9 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
     [childEvents]
   );
   const prompt = data.prompt ?? childPrompt;
+  const hasPrompt = Boolean(prompt && prompt.trim().length > 0);
+  const isAwaitingPrompt =
+    Boolean(data.subagentSessionId) && !hasPrompt && childEvents.length === 0;
 
   const setFocusedCell = useSetAtom(focusedSubagentCellAtom);
   const setPanelReveal = useSetAtom(subagentPanelRevealRequestAtom);
@@ -156,7 +159,8 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
         resultContent={data.resultContent}
         resultSummary={data.resultSummary}
         isLoading={
-          props.status === "running" && props.showActiveEventPainting === true
+          isAwaitingPrompt ||
+          (props.status === "running" && props.showActiveEventPainting === true)
         }
         defaultCollapsed={true}
         elapsedMs={data.elapsedMs}

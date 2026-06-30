@@ -6,6 +6,7 @@
 use crate::agent_sessions::event_pipeline::history::{
     self, HistoryQuery, HistoryResult, SessionGroup, SessionRecord,
 };
+use crate::agent_sessions::event_pipeline::session_providers;
 use crate::agent_sessions::event_pipeline::statistics::{self, SessionStatistics};
 use agent_core::session::persistence::{session_type, UnifiedSessionRecord};
 use agent_core::session::SessionStatus;
@@ -99,8 +100,10 @@ pub async fn es_get_child_sessions(
         .map_err(|e| format!("Failed to get child sessions: {}", e))?;
     records.extend(cli_child_session_records(&parent_session_id)?);
     records.extend(imported_child_session_records(&parent_session_id)?);
-    if let Some(opencode_parent_session_id) = opencode_app_parent_session_id(&parent_session_id)? {
-        records.extend(imported_child_session_records(&opencode_parent_session_id)?);
+    for imported_parent_session_id in
+        session_providers::imported_parent_session_ids(&parent_session_id)?
+    {
+        records.extend(imported_child_session_records(&imported_parent_session_id)?);
     }
 
     let mut seen = std::collections::HashSet::new();
@@ -122,26 +125,6 @@ pub async fn es_get_child_sessions(
             }
         })
         .collect())
-}
-
-fn opencode_app_parent_session_id(parent_session_id: &str) -> Result<Option<String>, String> {
-    if parent_session_id.starts_with("opencodeapp-") {
-        return Ok(None);
-    }
-    let conn = get_connection().map_err(|err| format!("Failed to open CLI session DB: {err}"))?;
-    match conn.query_row(
-        "SELECT cli_session_id FROM code_sessions WHERE session_id = ?1 AND cli_agent_type = 'opencode'",
-        [parent_session_id],
-        |row| row.get::<_, Option<String>>(0),
-    ) {
-        Ok(Some(cli_session_id)) if !cli_session_id.trim().is_empty() => {
-            Ok(Some(format!("opencodeapp-{}", cli_session_id.trim())))
-        }
-        Ok(_) | Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(err) => Err(format!(
-            "Failed to query OpenCode CLI session id for {parent_session_id}: {err}"
-        )),
-    }
 }
 
 fn cli_child_session_records(parent_session_id: &str) -> Result<Vec<UnifiedSessionRecord>, String> {

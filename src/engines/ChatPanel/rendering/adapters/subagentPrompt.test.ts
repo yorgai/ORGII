@@ -5,30 +5,26 @@ import {
   firstSubagentAssignmentPrompt,
 } from "./subagentPrompt";
 
-const USER_PROMPT =
-  "启动一个（subagent），让它帮我分析当前项目里有多少个 .rs 文件，并生成一份报告。必须要用subagent，然后要让我看到过程";
 const ASSIGNMENT_PROMPT =
   "在当前工作目录下分析 Rust 源文件数量：统计所有 **/*.rs 文件，排除 target/ 目录；生成一份报告，包含总文件数、按目录分布、最大文件 Top 5，并在过程中持续汇报进展。";
-const FINAL_REPORT =
-  "Now I have all the data. Here is the comprehensive report.";
 
 describe("subagent prompt helpers", () => {
-  it("rejects generic labels, paste placeholders, parent prompt, and final reports as assignment fallback", () => {
-    expect(firstSubagentAssignmentPrompt("Task", FINAL_REPORT)).toBeUndefined();
+  it("returns the first non-empty prompt without content guessing", () => {
+    expect(firstSubagentAssignmentPrompt("", "  ", "Task")).toBe("Task");
     expect(
       firstSubagentAssignmentPrompt(
+        undefined,
         "pasted.txt [paste:paste://1782778711175-d8dsv8]"
       )
-    ).toBeUndefined();
-    expect(firstSubagentAssignmentPrompt(USER_PROMPT)).toBeUndefined();
+    ).toBe("pasted.txt [paste:paste://1782778711175-d8dsv8]");
   });
 
-  it("extracts the child assignment prompt instead of the subagent final report", () => {
+  it("extracts the first user prompt from child events", () => {
     const prompt = extractSubagentPromptFromChildEvents([
       {
         source: "assistant",
-        result: { content: FINAL_REPORT },
-        displayText: FINAL_REPORT,
+        result: { content: "Now I have all the data." },
+        displayText: "Now I have all the data.",
       },
       {
         source: "user",
@@ -39,7 +35,5 @@ describe("subagent prompt helpers", () => {
 
     expect(prompt).toContain("分析 Rust 源文件数量");
     expect(prompt).toContain("生成一份报告");
-    expect(prompt).not.toBe(FINAL_REPORT);
-    expect(prompt).not.toBe("Task");
   });
 });

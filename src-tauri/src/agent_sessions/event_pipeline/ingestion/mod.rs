@@ -28,16 +28,13 @@ pub mod prompt_backfill;
 pub mod tool_call_merger;
 pub mod types;
 
+use crate::agent_sessions::event_pipeline::session_providers;
 use crate::agent_sessions::event_pipeline::types::SessionEvent;
 use types::{IngestionResult, RawActivityChunk};
 
 /// Run the full ingestion pipeline: consolidate → normalize → merge tool calls.
 pub fn ingest_raw_chunks(chunks: &[RawActivityChunk], session_id: &str) -> IngestionResult {
-    ingest_raw_chunks_with_prompt_resolver(
-        chunks,
-        session_id,
-        prompt_backfill::opencode_subagent_prompt,
-    )
+    ingest_raw_chunks_with_prompt_resolver(chunks, session_id, session_providers::subagent_prompt)
 }
 
 pub fn ingest_raw_chunks_with_prompt_resolver(
@@ -56,10 +53,7 @@ pub fn ingest_raw_chunks_with_prompt_resolver(
 
     // Stage 3: Merge tool call start/end pairs
     let mut merged = tool_call_merger::merge_tool_call_pairs(events);
-    prompt_backfill::backfill_opencode_subagent_prompts_with_resolver(
-        &mut merged,
-        prompt_for_child,
-    );
+    prompt_backfill::backfill_subagent_prompts_with_resolver(&mut merged, prompt_for_child);
 
     IngestionResult {
         processed_count: merged.len(),
