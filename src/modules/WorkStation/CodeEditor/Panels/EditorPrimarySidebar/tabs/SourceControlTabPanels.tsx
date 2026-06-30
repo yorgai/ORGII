@@ -38,6 +38,7 @@ import {
   WorktreeActionsMenu,
   WorktreeContextMenu,
 } from "../content/WorktreeActionsMenu";
+import { WorktreeDiffSummaryBadge } from "../content/WorktreeDiffSummaryBadge";
 import { WorktreeSourceControlSection } from "../content/WorktreeSourceControlSection";
 import { useSourceControlState } from "../hooks/useSourceControlState";
 
@@ -494,12 +495,6 @@ export const SourceControlWithWorktrees = forwardRef<
     },
     ref
   ) => {
-    const handleWorktreeFilesChange = useCallback(
-      (files: GitFile[], worktreePath: string) => {
-        onGitFilesChange?.(files, worktreePath);
-      },
-      [onGitFilesChange]
-    );
     const [mainExpanded, setMainExpanded] = useState(true);
     const [worktreeExpanded, setWorktreeExpanded] = useState<
       Record<string, boolean>
@@ -509,6 +504,13 @@ export const SourceControlWithWorktrees = forwardRef<
       x: number;
       y: number;
     } | null>(null);
+
+    const handleWorktreeFilesChange = useCallback(
+      (files: GitFile[], worktreePath: string) => {
+        onGitFilesChange?.(files, worktreePath);
+      },
+      [onGitFilesChange]
+    );
 
     const { t } = useTranslation();
     const gitStatusMap = useAtomValue(workspaceGitStatusMapAtom);
@@ -590,6 +592,9 @@ export const SourceControlWithWorktrees = forwardRef<
                 expanded={isExpanded}
                 onToggle={() => toggleWorktree(worktree.path)}
                 branchName={worktree.branch || undefined}
+                diffSummary={
+                  <WorktreeDiffSummaryBadge summary={worktree.diff_summary} />
+                }
                 onContextMenu={(event) => {
                   event.preventDefault();
                   setContextMenuState({

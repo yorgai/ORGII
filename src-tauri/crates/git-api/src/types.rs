@@ -366,11 +366,27 @@ pub struct AheadBehindResponse {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct WorktreeDiffSummary {
+    pub total_files: u32,
+    pub total_additions: u32,
+    pub total_deletions: u32,
+    pub committed_files: u32,
+    pub committed_additions: u32,
+    pub committed_deletions: u32,
+    pub uncommitted_files: u32,
+    pub uncommitted_additions: u32,
+    pub uncommitted_deletions: u32,
+    pub base_ref: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct WorktreeEntry {
     pub path: String,
     pub branch: String,
     pub head_sha: String,
     pub is_main: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diff_summary: Option<WorktreeDiffSummary>,
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]

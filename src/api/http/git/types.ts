@@ -448,11 +448,25 @@ export interface StashApplyRequest {
 // Worktree Types
 // ============================================================================
 
+export interface GitWorktreeDiffSummary {
+  total_files: number;
+  total_additions: number;
+  total_deletions: number;
+  committed_files: number;
+  committed_additions: number;
+  committed_deletions: number;
+  uncommitted_files: number;
+  uncommitted_additions: number;
+  uncommitted_deletions: number;
+  base_ref?: string | null;
+}
+
 export interface GitWorktreeEntry {
   path: string;
   branch: string;
   head_sha: string;
   is_main: boolean;
+  diff_summary?: GitWorktreeDiffSummary | null;
 }
 
 // ============================================================================
