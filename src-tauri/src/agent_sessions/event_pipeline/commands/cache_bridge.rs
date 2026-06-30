@@ -3,14 +3,15 @@
 //! Load/save events from SQLite cache with SessionEvent <-> CachedEvent conversion.
 
 use core_types::activity::ActivityChunk;
-use database::db::get_connection;
 use orgtrack_core::sources::cursor_ide::history::CURSORIDE_SESSION_PREFIX;
 use orgtrack_core::sources::opencode::history as opencode_history;
 use serde::{Deserialize, Serialize};
+
+use crate::agent_sessions::event_pipeline::ingestion::prompt_backfill;
 use tauri::{AppHandle, State};
 
 use crate::agent_sessions::event_pipeline::payload_compaction::{
-    EventPayloadBody, load_event_payload_body,
+    load_event_payload_body, EventPayloadBody,
 };
 use crate::agent_sessions::event_pipeline::types::{
     ActivityStatus, EventDisplayStatus, EventDisplayVariant, EventSource, SessionEvent,
@@ -18,12 +19,11 @@ use crate::agent_sessions::event_pipeline::types::{
 use session_persistence as sqlite_cache;
 
 use super::{
-    BULK_WRITE_MAX_RETRIES, EventStoreState,
     event_conversion::{
         backfill_subagent_links, backfill_tool_inputs_from_messages, cached_event_to_session_event,
         dedup_by_call_id, is_synthetic_persistence_artifact, session_event_to_cached_event,
     },
-    save_events_retry, schedule_notify,
+    save_events_retry, schedule_notify, EventStoreState, BULK_WRITE_MAX_RETRIES,
 };
 
 fn is_cursor_ide_session_id(session_id: &str) -> bool {
@@ -82,111 +82,11 @@ fn try_load_opencode_history_events(session_id: &str) -> Result<Vec<SessionEvent
     Ok(chunks.iter().map(activity_chunk_to_session_event).collect())
 }
 
-fn is_generic_opencode_task_label(value: &str) -> bool {
-    matches!(value.trim().to_ascii_lowercase().as_str(), "task" | "todo")
-}
-
-fn strip_known_opencode_prompt_prelude(value: &str) -> &str {
-    let mut rest = value.trim();
-    loop {
-        let tag = if rest.starts_with("<skills>") {
-            "skills"
-        } else if rest.starts_with("<orgii_cli_exec_mode_bridge>") {
-            "orgii_cli_exec_mode_bridge"
-        } else {
-            break;
-        };
-        let close_tag = format!("</{tag}>");
-        let Some(close_idx) = rest.find(&close_tag) else {
-            break;
-        };
-        rest = rest[close_idx + close_tag.len()..].trim_start();
-    }
-    rest.trim()
-}
-
-fn is_good_opencode_subagent_prompt(value: &str) -> bool {
-    let value = strip_known_opencode_prompt_prelude(value);
-    !value.is_empty() && !is_generic_opencode_task_label(value)
-}
-
-fn non_generic_opencode_prompt(value: String) -> Option<String> {
-    let value = strip_known_opencode_prompt_prelude(&value).to_string();
-    (!value.is_empty() && !is_generic_opencode_task_label(&value)).then_some(value)
-}
-
-fn opencode_subagent_prompt(parent_session_id: &str, child_session_id: &str) -> Option<String> {
-    if !is_opencode_app_session_id(child_session_id) {
-        return None;
-    }
-    let conn = get_connection().ok()?;
-    if let Ok(prompt) = conn.query_row(
-        "SELECT user_input FROM code_sessions WHERE session_id = ?1 AND cli_agent_type = 'opencode'",
-        [child_session_id],
-        |row| row.get::<_, String>(0),
-    ) {
-        if let Some(prompt) = non_generic_opencode_prompt(prompt) {
-            return Some(prompt);
-        }
-    }
-    if let Ok(name) = conn.query_row(
-        "SELECT name FROM imported_history_session_cache WHERE session_id = ?1 AND source = 'opencode'",
-        [child_session_id],
-        |row| row.get::<_, String>(0),
-    ) {
-        if let Some(name) = non_generic_opencode_prompt(name) {
-            return Some(name);
-        }
-    }
-    conn.query_row(
-        "SELECT user_input FROM code_sessions WHERE session_id = ?1 AND cli_agent_type = 'opencode'",
-        [parent_session_id],
-        |row| row.get::<_, String>(0),
-    )
-    .ok()
-    .and_then(non_generic_opencode_prompt)
-}
-
-fn backfill_opencode_subagent_prompts(session_id: &str, events: &mut [SessionEvent]) {
-    for event in events {
-        if event.function_name != "subagent" && event.ui_canonical != "subagent" {
-            continue;
-        }
-        let Some(args) = event.args.as_object_mut() else {
-            continue;
-        };
-        let has_prompt = args
-            .get("prompt")
-            .and_then(|value| value.as_str())
-            .map(is_good_opencode_subagent_prompt)
-            .unwrap_or(false);
-        if has_prompt {
-            continue;
-        }
-        let Some(child_session_id) = args
-            .get("subagentSessionId")
-            .and_then(|value| value.as_str())
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-        else {
-            continue;
-        };
-        let Some(prompt) = opencode_subagent_prompt(session_id, child_session_id) else {
-            continue;
-        };
-        args.insert(
-            "prompt".to_string(),
-            serde_json::Value::String(prompt.clone()),
-        );
-        let should_replace_description = args
-            .get("description")
-            .and_then(|value| value.as_str())
-            .map(|description| !is_good_opencode_subagent_prompt(description))
-            .unwrap_or(true);
-        if should_replace_description {
-            args.insert("description".to_string(), serde_json::Value::String(prompt));
-        }
-    }
+fn backfill_opencode_subagent_prompts(_session_id: &str, events: &mut [SessionEvent]) {
+    prompt_backfill::backfill_opencode_subagent_prompts_with_resolver(
+        events,
+        prompt_backfill::opencode_subagent_prompt,
+    );
 }
 
 // ============================================================================
@@ -530,12 +430,21 @@ pub async fn cache_load_full_session(
 mod tests {
     use super::{
         cached_event_to_session_event, dedup_by_call_id, is_synthetic_persistence_artifact,
+        session_event_to_cached_event,
     };
     use crate::agent_sessions::event_pipeline::commands::event_conversion::is_ts_placeholder_id;
+    use crate::agent_sessions::event_pipeline::ingestion::prompt_backfill;
     use crate::agent_sessions::event_pipeline::types::{
         ActivityStatus, EventDisplayStatus, EventDisplayVariant, EventSource, PayloadRef,
         SessionEvent,
     };
+    use core_types::activity::ActivityChunk;
+
+    const OPENCODE_SUBAGENT_USER_PROMPT: &str = "启动一个（subagent），让它帮我分析当前项目里有多少个 .rs 文件，并生成一份报告。必须要用subagent，然后要让我看到过程";
+    const OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT: &str = "在当前工作目录下分析 Rust 源文件数量：统计所有 **/*.rs 文件，排除 target/ 目录；生成一份报告，包含总文件数、按目录分布、最大文件 Top 5，并在过程中持续汇报进展。";
+    const FINAL_REPORT_CONTENT: &str = "Now I have all the data. Here is the comprehensive report.";
+    const FINAL_ASSISTANT_ANSWER: &str =
+        "Subagent 已完成分析：当前项目共有 260 个 .rs 文件，并已生成报告。";
 
     #[test]
     fn ts_placeholder_msg_and_think_ids_match() {
@@ -690,6 +599,242 @@ mod tests {
         });
 
         assert!(is_synthetic_persistence_artifact(&compacted));
+    }
+
+    #[test]
+    fn backfill_opencode_subagent_prompts_uses_child_assignment_for_real_prompt() {
+        let mut event = make_tool_call(
+            "opencode-subagent-real-user-prompt-fixture",
+            Some("call-opencode-real-user-prompt-fixture"),
+            "subagent",
+            serde_json::json!({
+                "description": "Task",
+                "prompt": "Task",
+                "subagentSessionId": "opencodeapp-child-real-assignment"
+            }),
+            serde_json::json!({
+                "content": "Now I have all the data. Here is the comprehensive report.",
+                "summary": "Subagent 已完成分析，结果如下"
+            }),
+        );
+        event.ui_canonical = "subagent".to_string();
+
+        let mut events = vec![event];
+        prompt_backfill::backfill_opencode_subagent_prompts_with_resolver(
+            &mut events,
+            |child_session_id| {
+                assert_eq!(child_session_id, "opencodeapp-child-real-assignment");
+                Some(OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT.to_string())
+            },
+        );
+
+        assert_eq!(
+            events[0].args["prompt"],
+            OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT
+        );
+        assert_eq!(
+            events[0].args["description"],
+            OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT
+        );
+        assert_ne!(events[0].args["prompt"], OPENCODE_SUBAGENT_USER_PROMPT);
+        assert_ne!(events[0].args["prompt"], "Task");
+        assert_ne!(
+            events[0].args["prompt"],
+            "Now I have all the data. Here is the comprehensive report."
+        );
+    }
+
+    #[test]
+    fn cache_roundtrip_preserves_opencode_answer_and_subagent_prompt() {
+        let mut user = make_tool_call(
+            "opencode-user-prompt-real-fixture",
+            None,
+            "user_message",
+            serde_json::json!({}),
+            serde_json::json!({
+                "content": OPENCODE_SUBAGENT_USER_PROMPT,
+                "message": {
+                    "content": OPENCODE_SUBAGENT_USER_PROMPT,
+                    "role": "user"
+                }
+            }),
+        );
+        user.source = EventSource::User;
+        user.display_variant = EventDisplayVariant::Message;
+        user.display_text = OPENCODE_SUBAGENT_USER_PROMPT.to_string();
+
+        let mut subagent = make_tool_call(
+            "opencode-subagent-roundtrip",
+            Some("call-opencode-roundtrip"),
+            "subagent",
+            serde_json::json!({
+                "description": OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT,
+                "prompt": OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT,
+                "subagentSessionId": "opencodeapp-child-roundtrip"
+            }),
+            serde_json::json!({
+                "content": FINAL_REPORT_CONTENT,
+                "summary": "Subagent 已完成分析，结果如下",
+                "success": true
+            }),
+        );
+        subagent.ui_canonical = "subagent".to_string();
+
+        let mut assistant = make_tool_call(
+            "opencode-assistant-answer-roundtrip",
+            None,
+            "assistant",
+            serde_json::json!({}),
+            serde_json::json!({
+                "content": FINAL_ASSISTANT_ANSWER,
+                "observation": FINAL_ASSISTANT_ANSWER,
+                "is_delta": false,
+                "is_full_content": true
+            }),
+        );
+        assistant.source = EventSource::Assistant;
+        assistant.display_variant = EventDisplayVariant::Message;
+        assistant.display_text = FINAL_ASSISTANT_ANSWER.to_string();
+        assistant.is_delta = Some(false);
+
+        let cached = vec![user, subagent, assistant]
+            .iter()
+            .filter(|event| !is_synthetic_persistence_artifact(event))
+            .map(session_event_to_cached_event)
+            .collect::<Vec<_>>();
+        let mut reloaded = cached
+            .iter()
+            .map(cached_event_to_session_event)
+            .collect::<Vec<_>>();
+        prompt_backfill::backfill_opencode_subagent_prompts_with_resolver(&mut reloaded, |_| {
+            Some(OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT.to_string())
+        });
+
+        let assistant = reloaded
+            .iter()
+            .find(|event| event.id == "opencode-assistant-answer-roundtrip")
+            .expect("assistant answer should survive reload");
+        assert_eq!(assistant.result["content"], FINAL_ASSISTANT_ANSWER);
+        assert_eq!(assistant.result["observation"], FINAL_ASSISTANT_ANSWER);
+        assert_eq!(assistant.is_delta, Some(false));
+
+        let subagent = reloaded
+            .iter()
+            .find(|event| event.id == "opencode-subagent-roundtrip")
+            .expect("subagent event should survive reload");
+        assert_eq!(subagent.args["prompt"], OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT);
+        assert_eq!(
+            subagent.args["description"],
+            OPENCODE_SUBAGENT_ASSIGNMENT_PROMPT
+        );
+        assert_ne!(subagent.result["content"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn backfill_opencode_subagent_prompts_preserves_existing_real_prompt() {
+        let mut event = make_tool_call(
+            "opencode-subagent-real-prompt",
+            Some("call-opencode-real-prompt"),
+            "subagent",
+            serde_json::json!({
+                "description": "Task",
+                "prompt": "Inspect the OpenCode child session and summarize markdown findings.",
+                "subagentSessionId": "opencodeapp-child-real-prompt"
+            }),
+            serde_json::json!({}),
+        );
+        event.ui_canonical = "subagent".to_string();
+
+        let mut events = vec![event];
+        super::backfill_opencode_subagent_prompts("opencodeapp-parent", &mut events);
+
+        assert_eq!(
+            events[0].args["prompt"],
+            "Inspect the OpenCode child session and summarize markdown findings."
+        );
+        assert_eq!(events[0].args["description"], "Task");
+    }
+
+    #[test]
+    fn backfill_opencode_subagent_prompts_does_not_invent_parent_prompt() {
+        let parent_prompt = "启动一个子任务（subagent），让它分析项目并生成报告";
+        let mut event = make_tool_call(
+            "opencode-subagent-no-child-prompt",
+            Some("call-opencode-no-child-prompt"),
+            "subagent",
+            serde_json::json!({
+                "description": "Task",
+                "prompt": "Task",
+                "subagentSessionId": "opencodeapp-child-without-cache-row"
+            }),
+            serde_json::json!({}),
+        );
+        event.ui_canonical = "subagent".to_string();
+
+        let mut events = vec![event];
+        super::backfill_opencode_subagent_prompts(parent_prompt, &mut events);
+
+        assert_eq!(events[0].args["prompt"], "Task");
+        assert_eq!(events[0].args["description"], "Task");
+    }
+
+    #[test]
+    fn prompt_from_opencode_history_chunks_prefers_child_user_assignment() {
+        let mut user = ActivityChunk::new("opencodeapp-child", "raw", "user_message");
+        user.result = serde_json::json!({
+            "message": {
+                "content": "请分析当前工作目录下所有 .rs 文件，并生成结构化报告",
+                "role": "user"
+            }
+        });
+        let mut assistant = ActivityChunk::new("opencodeapp-child", "assistant", "assistant");
+        assistant.result = serde_json::json!({
+            "content": "Now I have all the data. Here is the comprehensive report."
+        });
+
+        assert_eq!(
+            prompt_backfill::prompt_from_opencode_history_chunks(&[user, assistant]),
+            Some("请分析当前工作目录下所有 .rs 文件，并生成结构化报告".to_string())
+        );
+    }
+
+    #[test]
+    fn opencode_prompt_quality_rejects_result_like_report() {
+        assert!(!prompt_backfill::is_good_opencode_subagent_prompt(
+            "Now I have all the data. Here is the comprehensive report."
+        ));
+        assert_eq!(
+            prompt_backfill::non_generic_opencode_prompt(
+                "Now I have all the data. Here is the comprehensive report.".to_string()
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn opencode_prompt_quality_rejects_paste_placeholder() {
+        assert!(!prompt_backfill::is_good_opencode_subagent_prompt(
+            "pasted.txt [paste:paste://1782778711175-d8dsv8]"
+        ));
+        assert_eq!(
+            prompt_backfill::non_generic_opencode_prompt(
+                "pasted.txt [paste:paste://1782778711175-d8dsv8]".to_string()
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn opencode_prompt_quality_accepts_assignment_title() {
+        assert!(prompt_backfill::is_good_opencode_subagent_prompt(
+            "Analyze .rs files in project (@explore subagent)"
+        ));
+        assert_eq!(
+            prompt_backfill::non_generic_opencode_prompt(
+                "Analyze .rs files in project (@explore subagent)".to_string()
+            ),
+            Some("Analyze .rs files in project (@explore subagent)".to_string())
+        );
     }
 
     // --- dedup_by_call_id ---

@@ -7,6 +7,9 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use super::super::persistence;
+use crate::agent_sessions::event_pipeline::commands::{
+    save_events_retry, session_event_to_cached_event,
+};
 use crate::agent_sessions::event_pipeline::streaming::CLI_STREAMING_BUFFER;
 use crate::api::websocket_handler;
 use agent_core::bus::broadcast_event;
@@ -124,10 +127,20 @@ pub(super) fn emit_chunk(
         // broadcast the Rust-accumulated SessionEvent.
         if is_message_type {
             if let Some(event) = CLI_STREAMING_BUFFER.complete_message(session_id) {
-                broadcast_streaming_complete(session_id, "message", &event);
+                persist_and_broadcast_streaming_complete(
+                    session_id,
+                    "message",
+                    &event,
+                    Some(sequence),
+                );
             }
         } else if let Some(event) = CLI_STREAMING_BUFFER.complete_thinking(session_id) {
-            broadcast_streaming_complete(session_id, "thinking", &event);
+            persist_and_broadcast_streaming_complete(
+                session_id,
+                "thinking",
+                &event,
+                Some(sequence),
+            );
         }
     } else {
         // Non-streaming chunk (tool_call, user_message, etc.): flush any
@@ -173,16 +186,75 @@ fn broadcast_streaming_complete(
     );
 }
 
+fn persist_and_broadcast_streaming_complete(
+    session_id: &str,
+    stream_type: &str,
+    event: &crate::agent_sessions::event_pipeline::types::SessionEvent,
+    sequence: Option<&mut i64>,
+) {
+    let cached = session_event_to_cached_event(event);
+    let _ = save_events_retry("cli-stream-flush", session_id, &[cached], 5);
+    if let Some(sequence) = sequence {
+        persist_streaming_complete_chunk(session_id, stream_type, event, sequence);
+    }
+    broadcast_streaming_complete(session_id, stream_type, event);
+}
+
+fn next_chunk_sequence(session_id: &str) -> i64 {
+    persistence::max_chunk_sequence(session_id)
+        .map(|sequence| sequence + 1)
+        .unwrap_or(0)
+}
+
+fn persist_streaming_complete_chunk(
+    session_id: &str,
+    stream_type: &str,
+    event: &crate::agent_sessions::event_pipeline::types::SessionEvent,
+    sequence: &mut i64,
+) {
+    let (action_type, function) = if stream_type == "thinking" {
+        ("llm_thinking", "thinking")
+    } else {
+        ("assistant", "assistant")
+    };
+    let mut chunk = core_types::activity::ActivityChunk::new(session_id, action_type, function);
+    chunk.chunk_id = format!("{}-chunk", event.id);
+    chunk.created_at = event.created_at.clone();
+    chunk.args = event.args.clone();
+    chunk.result = event.result.clone();
+    chunk.thread_id = event.thread_id.clone();
+    chunk.process_id = event.process_id.clone();
+    if let Err(err) = persistence::insert_chunk(&chunk, *sequence) {
+        tracing::warn!(
+            "[CodeSession] Failed to persist streaming complete chunk seq={}: {}",
+            *sequence,
+            err
+        );
+        return;
+    }
+    *sequence += 1;
+}
+
 /// Flush all pending CLI streams and broadcast completion events.
 pub(super) fn flush_and_broadcast(session_id: &str) {
+    let mut sequence = next_chunk_sequence(session_id);
     for event in crate::agent_sessions::event_pipeline::streaming::cli_flush_session(session_id) {
         let stream_type = if event.action_type == "assistant" {
             "message"
         } else {
             "thinking"
         };
-        broadcast_streaming_complete(session_id, stream_type, &event);
+        persist_and_broadcast_streaming_complete(
+            session_id,
+            stream_type,
+            &event,
+            Some(&mut sequence),
+        );
     }
+}
+
+pub fn flush_cli_streams_for_session(session_id: &str) {
+    flush_and_broadcast(session_id);
 }
 
 fn is_cli_file_edit_function(function_name: &str) -> bool {

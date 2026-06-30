@@ -17,6 +17,7 @@ import { isVisibleInChat } from "@src/engines/SessionCore/ingestion/visibilityFi
 import {
   loadEvents,
   loadInitialTurnWindow,
+  saveEvents,
 } from "@src/engines/SessionCore/storage/cacheAdapter";
 import { cliAdapter } from "@src/engines/SessionCore/sync/adapters";
 import { getAdapterForSession } from "@src/engines/SessionCore/sync/types";
@@ -604,6 +605,46 @@ export function createSessionHelpers(store: E2EStore) {
     }
   };
 
+  const seedPersistedCachedSession = async (input: {
+    sessionId: string;
+    events: Json[];
+    name?: string;
+    userInput?: string;
+    category?: "cli_agent" | "rust_agent";
+    status?: string;
+  }): Promise<Result<{ sessionId: string; eventCount: number }>> => {
+    try {
+      if (!input.sessionId) {
+        return {
+          ok: false,
+          error: "seedPersistedCachedSession: `sessionId` is required",
+        };
+      }
+      const now = new Date().toISOString();
+      const session = toStoreSession({
+        sessionId: input.sessionId,
+        status: input.status ?? "completed",
+        createdAt: now,
+        updatedAt: now,
+        userInput: input.userInput ?? input.name ?? input.sessionId,
+        name: input.name ?? input.userInput ?? input.sessionId,
+        category: input.category ?? "cli_agent",
+      });
+      upsertSession(session);
+      await saveEvents(
+        input.sessionId,
+        input.events as unknown as SessionEvent[]
+      );
+      return {
+        ok: true,
+        sessionId: input.sessionId,
+        eventCount: input.events.length,
+      };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   return {
     promptDump: promptDumpHelper,
     getActiveSessionId,
@@ -615,6 +656,7 @@ export function createSessionHelpers(store: E2EStore) {
     getSessionAggregateRow,
     getSessionAggregateRowFromList,
     seedSessionContextUsage,
+    seedPersistedCachedSession,
     seedChatEvents: seeders.seedChatEvents,
     seedSidebarSession: seeders.seedSidebarSession,
     seedModeSwitchSession: seeders.seedModeSwitchSession,

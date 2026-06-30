@@ -535,6 +535,14 @@ export interface E2EHelpers {
       selectedApp?: "CODE_EDITOR" | "CHANNELS";
     }
   ) => Promise<Result<{ eventCount: number; chatEventCount: number }>>;
+  seedPersistedCachedSession: (input: {
+    sessionId: string;
+    events: Json[];
+    name?: string;
+    userInput?: string;
+    category?: "cli_agent" | "rust_agent";
+    status?: string;
+  }) => Promise<Result<{ sessionId: string; eventCount: number }>>;
   seedSessionContextUsage: (
     usage: Json
   ) => Promise<Result<{ usedTokens: number }>>;

@@ -26,7 +26,7 @@ mod proxy_release;
 mod session;
 mod token_sync;
 
-pub use helpers::RUNNING_SESSIONS;
+pub use helpers::{flush_cli_streams_for_session, RUNNING_SESSIONS};
 pub use lifecycle::{
     cancel_session, cleanup_cursor_config_dir, kill_running_agent, terminate_process_tree,
 };

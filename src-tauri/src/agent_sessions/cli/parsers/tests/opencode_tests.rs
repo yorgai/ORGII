@@ -593,6 +593,109 @@ fn parse_update_completed_think_task_raw_input_preserves_prompt() {
 }
 
 #[test]
+fn parse_update_completed_think_task_ignores_result_like_raw_text() {
+    let mut parser = make_parser();
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-result-like-raw",
+            "kind": "think",
+            "title": "Analyze .rs files in project (@explore subagent)",
+            "rawInput": {
+                "text": "Now I have all the data. Here is the comprehensive report."
+            }
+        }),
+    ));
+
+    let chunks = parser.parse_update(&session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-result-like-raw",
+            "status": "completed",
+            "content": "<task id=\"ses_result_like_raw\" state=\"completed\"><task_result>Now I have all the data. Here is the comprehensive report.</task_result></task>"
+        }),
+    ));
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert_eq!(
+        chunks[0].args["prompt"],
+        "Analyze .rs files in project (@explore subagent)"
+    );
+    assert_eq!(
+        chunks[0].result["content"],
+        "Now I have all the data. Here is the comprehensive report."
+    );
+}
+
+#[test]
+fn parse_update_completed_think_task_ignores_paste_placeholder_raw_text() {
+    let mut parser = make_parser();
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-paste-placeholder",
+            "kind": "think",
+            "title": "Analyze .rs files in project (@explore subagent)",
+            "rawInput": {
+                "text": "pasted.txt [paste:paste://1782778711175-d8dsv8]"
+            }
+        }),
+    ));
+
+    let chunks = parser.parse_update(&session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-paste-placeholder",
+            "status": "completed",
+            "content": "<task id=\"ses_paste_placeholder\" state=\"completed\"><task_result>Done.</task_result></task>"
+        }),
+    ));
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert_eq!(
+        chunks[0].args["prompt"],
+        "Analyze .rs files in project (@explore subagent)"
+    );
+}
+
+#[test]
+fn parse_update_completed_think_task_result_body_never_becomes_prompt() {
+    let mut parser = make_parser();
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-result-body",
+            "kind": "think",
+            "title": "Task",
+            "rawInput": {}
+        }),
+    ));
+
+    let chunks = parser.parse_update(&session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-result-body",
+            "status": "completed",
+            "content": "<task id=\"ses_result_body\" state=\"completed\"><task_result>Now I have all the data. Here is the comprehensive report.</task_result></task>"
+        }),
+    ));
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert!(chunks[0].args["prompt"].is_null());
+    assert_eq!(chunks[0].args["description"], "Assigned task to subagent");
+    assert_eq!(
+        chunks[0].result["content"],
+        "Now I have all the data. Here is the comprehensive report."
+    );
+}
+
+#[test]
 fn parse_update_completed_think_task_title_preserves_prompt() {
     let mut parser = make_parser();
 
@@ -622,7 +725,7 @@ fn parse_update_completed_think_task_title_preserves_prompt() {
 }
 
 #[test]
-fn parse_update_completed_think_task_generic_title_falls_back_to_parent_prompt() {
+fn parse_update_completed_think_task_generic_title_does_not_use_parent_prompt() {
     let mut parser = make_parser_with_task(
         "启动一个子任务（subagent），让它帮我分析当前项目里有多少个 .tsx 文件，并生成一份报告",
     );
@@ -648,14 +751,8 @@ fn parse_update_completed_think_task_generic_title_falls_back_to_parent_prompt()
 
     assert_eq!(chunks.len(), 1);
     assert_eq!(chunks[0].function, "subagent");
-    assert_eq!(
-        chunks[0].args["prompt"],
-        "启动一个子任务（subagent），让它帮我分析当前项目里有多少个 .tsx 文件，并生成一份报告"
-    );
-    assert_eq!(
-        chunks[0].args["description"],
-        "启动一个子任务（subagent），让它帮我分析当前项目里有多少个 .tsx 文件，并生成一份报告"
-    );
+    assert!(chunks[0].args["prompt"].is_null());
+    assert_eq!(chunks[0].args["description"], "Assigned task to subagent");
 }
 
 #[test]

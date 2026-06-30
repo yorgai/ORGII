@@ -24,6 +24,7 @@
 pub mod consolidator;
 pub mod function_map;
 pub mod normalizer;
+pub mod prompt_backfill;
 pub mod tool_call_merger;
 pub mod types;
 
@@ -32,6 +33,18 @@ use types::{IngestionResult, RawActivityChunk};
 
 /// Run the full ingestion pipeline: consolidate → normalize → merge tool calls.
 pub fn ingest_raw_chunks(chunks: &[RawActivityChunk], session_id: &str) -> IngestionResult {
+    ingest_raw_chunks_with_prompt_resolver(
+        chunks,
+        session_id,
+        prompt_backfill::opencode_subagent_prompt,
+    )
+}
+
+pub fn ingest_raw_chunks_with_prompt_resolver(
+    chunks: &[RawActivityChunk],
+    session_id: &str,
+    prompt_for_child: impl FnMut(&str) -> Option<String>,
+) -> IngestionResult {
     let raw_count = chunks.len();
 
     // Stage 1: Consolidate (merge deltas, filter empty, dedup)
@@ -42,7 +55,11 @@ pub fn ingest_raw_chunks(chunks: &[RawActivityChunk], session_id: &str) -> Inges
     let events = normalizer::normalize_chunks(&consolidated, session_id);
 
     // Stage 3: Merge tool call start/end pairs
-    let merged = tool_call_merger::merge_tool_call_pairs(events);
+    let mut merged = tool_call_merger::merge_tool_call_pairs(events);
+    prompt_backfill::backfill_opencode_subagent_prompts_with_resolver(
+        &mut merged,
+        prompt_for_child,
+    );
 
     IngestionResult {
         processed_count: merged.len(),

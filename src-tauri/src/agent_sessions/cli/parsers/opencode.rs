@@ -39,6 +39,19 @@ fn is_generic_task_label(value: &str) -> bool {
     matches!(value.trim().to_ascii_lowercase().as_str(), "task" | "todo")
 }
 
+fn is_paste_placeholder(value: &str) -> bool {
+    let value = value.trim().to_ascii_lowercase();
+    value.contains("paste://") || value.contains("[paste:") || value.starts_with("pasted.txt")
+}
+
+fn is_result_like_report(value: &str) -> bool {
+    let value = value.trim().to_ascii_lowercase();
+    value.starts_with("now i have all the data")
+        || value.starts_with("here is the comprehensive report")
+        || value.starts_with("# comprehensive `")
+        || value.starts_with("# comprehensive .rs")
+}
+
 fn strip_known_prompt_prelude(value: &str) -> &str {
     let mut rest = value.trim();
     loop {
@@ -60,7 +73,11 @@ fn strip_known_prompt_prelude(value: &str) -> &str {
 
 fn non_generic_string(value: &str) -> Option<String> {
     let value = strip_known_prompt_prelude(value);
-    (!value.is_empty() && !is_generic_task_label(value)).then(|| value.to_string())
+    (!value.is_empty()
+        && !is_generic_task_label(value)
+        && !is_paste_placeholder(value)
+        && !is_result_like_report(value))
+    .then(|| value.to_string())
 }
 
 fn first_raw_input_string(raw_input: Option<&Value>, keys: &[&str]) -> Option<String> {
@@ -80,7 +97,6 @@ fn extract_task_prompt(
     result_text: &str,
     raw_input: Option<&Value>,
     title: Option<&str>,
-    parent_task: Option<&str>,
 ) -> Option<String> {
     if let Some(prompt) = first_raw_input_string(
         raw_input,
@@ -88,11 +104,8 @@ fn extract_task_prompt(
             "prompt",
             "description",
             "task",
-            "input",
             "instructions",
-            "text",
-            "message",
-            "query",
+            "instruction",
         ],
     ) {
         return Some(prompt);
@@ -129,7 +142,7 @@ fn extract_task_prompt(
             return Some(prompt);
         }
     }
-    parent_task.and_then(non_generic_string)
+    None
 }
 
 fn opencode_app_session_id(raw: &str) -> String {
@@ -202,7 +215,7 @@ impl AcpAgentAdapter for OpenCodeAdapter {
         detailed_text: &str,
         raw_input: Option<&Value>,
         title: Option<&str>,
-        parent_task: Option<&str>,
+        _parent_task: Option<&str>,
         is_error: bool,
     ) -> Option<ActivityChunk> {
         if is_error || cursor_name != "think" {
@@ -214,7 +227,7 @@ impl AcpAgentAdapter for OpenCodeAdapter {
         }
 
         let task_result = extract_task_result(result_text)?;
-        let prompt = extract_task_prompt(detailed_text, result_text, raw_input, title, parent_task);
+        let prompt = extract_task_prompt(detailed_text, result_text, raw_input, title);
         let description = prompt
             .as_deref()
             .unwrap_or("Assigned task to subagent")

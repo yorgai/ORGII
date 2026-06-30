@@ -367,6 +367,39 @@ fn test_compute_derived_chat_events_sorted() {
 }
 
 #[test]
+fn test_compute_derived_keeps_assistant_answer_and_opencode_subagent_block() {
+    let mut answer = make_event("assistant-answer", EventDisplayVariant::Message);
+    answer.function_name = "assistant_message".to_string();
+    answer.ui_canonical = "assistant_message".to_string();
+    answer.action_type = "assistant".to_string();
+    answer.source = EventSource::Assistant;
+    answer.display_text = "Here is the answer before the subagent result.".to_string();
+    answer.created_at = "2026-01-01T00:00:01Z".to_string();
+
+    let mut subagent = make_event("opencode-subagent", EventDisplayVariant::ToolCall);
+    subagent.function_name = "subagent".to_string();
+    subagent.ui_canonical = "subagent".to_string();
+    subagent.action_type = "tool_call".to_string();
+    subagent.args = serde_json::json!({
+        "action": "delegate",
+        "description": "Inspect OpenCode fields",
+        "prompt": "Inspect OpenCode fields",
+        "subagent_type": "opencode",
+        "subagentSessionId": "opencodeapp-child-1"
+    });
+    subagent.created_at = "2026-01-01T00:00:02Z".to_string();
+
+    let snapshot = compute_derived(&[answer, subagent], 1);
+    let ids = snapshot
+        .chat_events
+        .iter()
+        .map(|event| event.id.as_str())
+        .collect::<Vec<_>>();
+
+    assert_eq!(ids, vec!["assistant-answer", "opencode-subagent"]);
+}
+
+#[test]
 fn test_compute_derived_orders_turn_summary_after_same_timestamp_thought() {
     let mut user = make_user_message("user-1");
     user.created_at = "2026-01-01T00:00:00.000Z".to_string();
