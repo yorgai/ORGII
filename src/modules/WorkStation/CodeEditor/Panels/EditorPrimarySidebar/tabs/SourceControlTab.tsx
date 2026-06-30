@@ -45,12 +45,14 @@ function worktreeLabel(path: string): string {
 }
 
 function SourceControlScopePicker({
+  repoName,
   branchLabel,
   repoPath,
   worktrees,
   scope,
   onScopeChange,
 }: {
+  repoName: string;
   branchLabel: string;
   repoPath: string;
   worktrees: Array<{ path: string; branch: string }>;
@@ -71,10 +73,13 @@ function SourceControlScopePicker({
           <span className="inline-flex min-w-0 items-center gap-2">
             <Folder size={14} className="shrink-0 text-text-3" />
             <span className="min-w-0 flex-1">
-              <span className="block truncate">{branchLabel}</span>
+              <span className="block truncate">{repoName}</span>
               <span className="block truncate text-[11px] text-text-4">
                 {repoPath}
               </span>
+            </span>
+            <span className="max-w-[96px] shrink-0 truncate text-[11px] text-text-4">
+              {branchLabel}
             </span>
           </span>
         ),
@@ -101,7 +106,7 @@ function SourceControlScopePicker({
         triggerLabel: worktreeLabel(worktree.path),
       })),
     ],
-    [branchLabel, repoPath, worktrees]
+    [branchLabel, repoName, repoPath, worktrees]
   );
 
   const handleSelectScope = useCallback(
@@ -123,17 +128,18 @@ function SourceControlScopePicker({
       value={value}
       onSelect={handleSelectScope}
       trigger="click"
-      position="bottom-start"
+      position="bottom-end"
       getPopupContainer={() => document.body}
       avoidViewportOverflow
       style={{ width: 360 }}
     >
       <button
         type="button"
-        className="inline-flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left text-[12px] font-semibold uppercase tracking-wide text-text-2 hover:bg-fill-2"
+        className="inline-flex h-5 w-5 items-center justify-center rounded text-text-3 hover:bg-fill-2 hover:text-text-1"
+        title={activeLabel}
+        aria-label={activeLabel}
       >
-        <span className="truncate">{activeLabel}</span>
-        <ChevronDown size={12} className="shrink-0 text-text-4" />
+        <ChevronDown size={13} />
       </button>
     </Dropdown>
   );
@@ -216,7 +222,6 @@ export function useSourceControlTabConfig({
   const {
     worktrees,
     hasWorktrees,
-    loading: worktreesLoading,
     refresh: refreshWorktrees,
   } = useGitWorktrees({
     repoId,
@@ -271,10 +276,6 @@ export function useSourceControlTabConfig({
       );
     }
 
-    if (worktreesLoading) {
-      return <div className="flex h-full min-h-0 flex-col" />;
-    }
-
     if (isMultiRoot && workspaceFolders.length > 1) {
       return (
         <MultiRootSourceControlContent
@@ -309,6 +310,7 @@ export function useSourceControlTabConfig({
           }
           scopePicker={
             <SourceControlScopePicker
+              repoName={repoName}
               branchLabel={branchName || repoName}
               repoPath={repoPath}
               worktrees={worktrees}
@@ -346,7 +348,6 @@ export function useSourceControlTabConfig({
   }, [
     isGitInitialized,
     handleGitInitialized,
-    worktreesLoading,
     isMultiRoot,
     workspaceFolders,
     effectiveScope,

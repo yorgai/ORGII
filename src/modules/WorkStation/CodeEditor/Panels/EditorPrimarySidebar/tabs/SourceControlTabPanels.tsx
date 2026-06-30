@@ -521,6 +521,10 @@ export const SourceControlWithWorktrees = forwardRef<
     const selectedWorktree = selectedWorktreePath
       ? worktrees.find((worktree) => worktree.path === selectedWorktreePath)
       : undefined;
+    const currentScopeName = selectedWorktree
+      ? selectedWorktree.path.split("/").pop() || "worktree"
+      : repoName;
+    const currentScopeBranch = selectedWorktree?.branch || mainBranch;
 
     const mainRef = useRef<SourceControlContentHandle>(null);
 
@@ -563,10 +567,10 @@ export const SourceControlWithWorktrees = forwardRef<
           }`}
         >
           <FolderHeaderRow
-            name={repoName}
+            name={currentScopeName}
             expanded={mainExpanded}
             onToggle={toggleMain}
-            branchName={mainBranch}
+            branchName={currentScopeBranch}
             actions={scopePicker}
           />
           {mainExpanded && (
