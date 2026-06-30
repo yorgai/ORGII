@@ -41,10 +41,13 @@ import DoubaoIcon from "@src/assets/modelIcons/doubao.svg";
 import GrokIcon from "@src/assets/modelIcons/grok.svg";
 import GroqIcon from "@src/assets/modelIcons/groq.svg";
 import HunyuanIcon from "@src/assets/modelIcons/hunyuan.svg";
+import LlamaCppIcon from "@src/assets/modelIcons/llama-cpp.svg";
+import LmStudioIcon from "@src/assets/modelIcons/lmstudio.svg";
 import MetaIcon from "@src/assets/modelIcons/meta.svg";
 import MinimaxIcon from "@src/assets/modelIcons/minimax.svg";
 import MistralIcon from "@src/assets/modelIcons/mistral.svg";
 import NvidiaIcon from "@src/assets/modelIcons/nvidia.svg";
+import OllamaIcon from "@src/assets/modelIcons/ollama.svg";
 import OpenRouterIcon from "@src/assets/modelIcons/openrouter.svg";
 import PerplexityIcon from "@src/assets/modelIcons/perplexity.svg";
 import QwenIcon from "@src/assets/modelIcons/qwen.svg";
@@ -87,6 +90,9 @@ export type IconProvider =
   | "kiro"
   | "kimi"
   | "hunyuan"
+  | "ollama"
+  | "lm_studio"
+  | "llamacpp"
   | "bytedance"
   | "volcengine"
   | "xiaomi"
@@ -142,6 +148,9 @@ export const ICON_MAP: Record<
   perplexity: PerplexityIcon,
   kimi: KimiIcon,
   hunyuan: HunyuanIcon,
+  ollama: OllamaIcon,
+  lm_studio: LmStudioIcon,
+  llamacpp: LlamaCppIcon,
   bytedance: ByteDanceIcon,
   volcengine: VolcengineIcon,
   xiaomi: XiaomiIcon,
@@ -184,6 +193,9 @@ export const SELECTABLE_ICON_PROVIDERS: IconProvider[] = [
   "perplexity",
   "kimi",
   "hunyuan",
+  "ollama",
+  "lm_studio",
+  "llamacpp",
   "aws",
   "azure",
   "bytedance",
@@ -391,6 +403,17 @@ export function getIconProviderFromModelName(
   // Tencent Hunyuan models
   if (lower.includes("hunyuan") || /^hy(?:\d|[-_])/.test(lower)) {
     return "hunyuan";
+  }
+
+  // Local runtimes
+  if (lower.includes("ollama")) {
+    return "ollama";
+  }
+  if (lower.includes("lmstudio") || lower.includes("lm-studio")) {
+    return "lm_studio";
+  }
+  if (lower.includes("llama.cpp") || lower.includes("llama-cpp")) {
+    return "llamacpp";
   }
 
   // ByteDance/Doubao models

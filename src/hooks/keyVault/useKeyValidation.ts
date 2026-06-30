@@ -202,10 +202,14 @@ export function useKeyValidation(
 
   useEffect(() => {
     if (lastValidatedKeyRef.current === null && !keyValidated) return;
-    if (keyValidated && rawKeyInput.trim() !== lastValidatedKeyRef.current) {
+    const cleanBaseUrl = cleanInput(baseUrl);
+    const currentValidationKey =
+      rawKeyInput.trim() ||
+      (agentType === LOCAL_MODEL_PROVIDER && cleanBaseUrl ? "local-model" : "");
+    if (keyValidated && currentValidationKey !== lastValidatedKeyRef.current) {
       resetValidation();
     }
-  }, [rawKeyInput, keyValidated, resetValidation]);
+  }, [agentType, baseUrl, rawKeyInput, keyValidated, resetValidation]);
 
   const validateKeyCb = useCallback(
     async (overrideTestModel?: unknown) => {
@@ -218,18 +222,16 @@ export function useKeyValidation(
       const effectiveTestModel =
         typeof overrideTestModel === "string" ? overrideTestModel : undefined;
 
-      const cleanRawKeyInput = rawKeyInput.trim();
       const cleanBaseUrl = cleanInput(baseUrl);
+      const cleanRawKeyInput =
+        rawKeyInput.trim() ||
+        (agentType === LOCAL_MODEL_PROVIDER && cleanBaseUrl
+          ? "local-model"
+          : "");
       const cleanCursorSessionToken = cleanInput(cursorSessionToken);
 
       if (!cleanRawKeyInput) {
-        if (agentType === LOCAL_MODEL_PROVIDER && cleanBaseUrl) {
-          setValidationError(
-            "Please enter a local API key placeholder for this endpoint."
-          );
-        } else {
-          setValidationError(VALIDATE_KEY_FIRST_MESSAGE);
-        }
+        setValidationError(VALIDATE_KEY_FIRST_MESSAGE);
         return;
       }
 
