@@ -28,7 +28,6 @@ import type { GitFile } from "@src/types/git/types";
 import { ICON_CONFIG, PANEL_CONSTANTS } from "../config";
 import MultiRootSourceControlContent from "../content/MultiRootSourceControlContent";
 import type { MultiRootSourceControlContentHandle } from "../content/MultiRootSourceControlContent";
-import { WorktreeSourceControlSection } from "../content/WorktreeSourceControlSection";
 import { useGitWorktrees } from "../hooks/useGitWorktrees";
 import type { SourceControlContentHandle } from "./SourceControlTabPanels";
 import {
@@ -45,7 +44,7 @@ function worktreeLabel(path: string): string {
   return path.split("/").pop() || "worktree";
 }
 
-function SourceControlScopeTitle({
+function SourceControlScopePicker({
   label,
   repoPath,
   worktrees,
@@ -271,21 +270,6 @@ export function useSourceControlTabConfig({
       return <div className="flex h-full min-h-0 flex-col" />;
     }
 
-    if (selectedWorktree) {
-      return (
-        <WorktreeSourceControlSection
-          worktreePath={selectedWorktree.path}
-          worktreeId={`worktree:${selectedWorktree.path}`}
-          onGitFileSelect={onGitFileSelect}
-          onGitFilesChange={onGitFilesChange}
-          showFilter={showFilter}
-          viewMode={viewMode}
-          navigateWithoutSelecting={navigateWithoutSelecting}
-          sectionFilter={sectionFilter}
-        />
-      );
-    }
-
     if (isMultiRoot && workspaceFolders.length > 1) {
       return (
         <MultiRootSourceControlContent
@@ -315,6 +299,18 @@ export function useSourceControlTabConfig({
           repoId={repoId}
           repoName={repoName}
           worktrees={worktrees}
+          selectedWorktreePath={
+            effectiveScope.kind === "worktree" ? effectiveScope.path : undefined
+          }
+          scopePicker={
+            <SourceControlScopePicker
+              label={repoName}
+              repoPath={repoPath}
+              worktrees={worktrees}
+              scope={effectiveScope}
+              onScopeChange={setSourceControlScope}
+            />
+          }
           onWorktreesRefresh={refreshWorktrees}
           onGitFileSelect={onGitFileSelect}
           onGitFilesChange={onGitFilesChange}
@@ -348,7 +344,7 @@ export function useSourceControlTabConfig({
     worktreesLoading,
     isMultiRoot,
     workspaceFolders,
-    selectedWorktree,
+    effectiveScope,
     repoPath,
     repoId,
     repoName,
@@ -367,22 +363,6 @@ export function useSourceControlTabConfig({
     t,
   ]);
 
-  const defaultSourceControlTitle = useMemo(
-    () =>
-      worktrees.length > 0 ? (
-        <SourceControlScopeTitle
-          label={repoName}
-          repoPath={repoPath}
-          worktrees={worktrees}
-          scope={effectiveScope}
-          onScopeChange={setSourceControlScope}
-        />
-      ) : (
-        t("tabs.sourceControl")
-      ),
-    [effectiveScope, repoName, repoPath, t, worktrees]
-  );
-
   return useMemo(
     () => ({
       key: "source-control",
@@ -393,7 +373,7 @@ export function useSourceControlTabConfig({
           key: "source-control",
           title:
             isGitInitialized === true
-              ? (sourceControlTitleOverride ?? defaultSourceControlTitle)
+              ? (sourceControlTitleOverride ?? t("tabs.sourceControl"))
               : t("tabs.sourceControl"),
           content:
             isGitInitialized === true
@@ -408,7 +388,6 @@ export function useSourceControlTabConfig({
     }),
     [
       sourceControlContent,
-      defaultSourceControlTitle,
       sourceControlTitleOverride,
       sourceControlContentOverride,
       actions,
