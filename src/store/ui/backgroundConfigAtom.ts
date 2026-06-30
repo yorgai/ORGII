@@ -74,8 +74,8 @@ export const DEFAULT_PAGE_OPACITY = 100;
 export const MIN_PAGE_OPACITY = 40;
 export const MAX_PAGE_OPACITY = 100;
 
-export const DEFAULT_SIDEBAR_OPACITY = 100;
-export const MIN_SIDEBAR_OPACITY = 40;
+export const DEFAULT_SIDEBAR_OPACITY = 85;
+export const MIN_SIDEBAR_OPACITY = 0;
 export const MAX_SIDEBAR_OPACITY = 100;
 
 function clampOpacity(
