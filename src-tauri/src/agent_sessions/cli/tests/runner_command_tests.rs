@@ -218,8 +218,30 @@ fn build_copilot_basic() {
     );
     assert_eq!(cmd[0], "copilot");
     assert!(cmd.contains(&"--acp".to_string()));
-    assert!(cmd.contains(&"--stdio".to_string()));
     assert!(cmd.contains(&"--allow-all-tools".to_string()));
+    assert!(cmd.contains(&"--no-ask-user".to_string()));
+    // Copilot serves ACP over stdio only; there is no `--stdio` flag.
+    assert!(!cmd.contains(&"--stdio".to_string()));
+}
+
+#[test]
+fn build_copilot_resume_and_model_passthrough() {
+    let cmd = build_command(
+        &ModelType::Copilot,
+        Some("gpt-5.4"),
+        "task",
+        Some("resume-123"),
+        None,
+        None,
+        None,
+        None,
+        &[],
+    );
+    assert!(cmd.contains(&"--resume".to_string()));
+    assert!(cmd.contains(&"resume-123".to_string()));
+    assert!(cmd.contains(&"--model".to_string()));
+    // Model id is passed through unchanged (Copilot is multi-vendor).
+    assert!(cmd.contains(&"gpt-5.4".to_string()));
 }
 
 // ============================================
