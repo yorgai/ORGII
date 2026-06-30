@@ -146,6 +146,7 @@ export const OrgTaskAdapter: React.FC<UniversalEventProps> = (props) => {
         timestamp={props.timestamp}
         hideHeader={isSimulator}
         groupSenderName={groupSenderName}
+        toolUsage={props.toolUsage}
       />
     </div>
   );

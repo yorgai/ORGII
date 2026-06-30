@@ -188,6 +188,63 @@ pub fn record_token_usage(row: TokenUsageRow<'_>) -> rusqlite::Result<i64> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct LlmUsageSpanRow<'a> {
+    pub session_id: &'a str,
+    pub turn_id: &'a str,
+    pub iteration_index: i64,
+    pub model: Option<&'a str>,
+    pub account_id: Option<&'a str>,
+    pub prompt_tokens: i64,
+    pub completion_tokens: i64,
+    pub cache_read_tokens: i64,
+    pub cache_write_tokens: i64,
+    pub total_tokens: i64,
+    pub context_tokens: i64,
+    pub related_tool_call_ids_json: Option<String>,
+    pub context_usage_json: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ToolUsageAttributionRow<'a> {
+    pub session_id: &'a str,
+    pub turn_id: &'a str,
+    pub event_id: &'a str,
+    pub tool_call_id: &'a str,
+    pub tool_name: &'a str,
+    pub iteration_index: i64,
+    pub decision_completion_tokens: i64,
+    pub result_context_tokens: i64,
+    pub followup_completion_tokens: i64,
+    pub input_bytes: i64,
+    pub output_bytes: i64,
+    pub attribution_method: &'a str,
+}
+
+#[derive(Debug, Clone)]
+pub struct UsageTelemetryBatch<'a> {
+    pub llm_spans: Vec<LlmUsageSpanRow<'a>>,
+    pub tool_attributions: Vec<ToolUsageAttributionRow<'a>>,
+}
+
+pub type RecordUsageTelemetryBatchFn = fn(UsageTelemetryBatch<'_>) -> rusqlite::Result<()>;
+
+static RECORD_USAGE_TELEMETRY_BATCH: OnceLock<RecordUsageTelemetryBatchFn> = OnceLock::new();
+
+pub fn register_record_usage_telemetry_batch(implementation: RecordUsageTelemetryBatchFn) {
+    let _ = RECORD_USAGE_TELEMETRY_BATCH.set(implementation);
+}
+
+pub fn record_usage_telemetry_batch(batch: UsageTelemetryBatch<'_>) -> rusqlite::Result<()> {
+    match RECORD_USAGE_TELEMETRY_BATCH.get() {
+        Some(implementation) => implementation(batch),
+        None => {
+            tracing::warn!("[session-bridge] record_usage_telemetry_batch called before register");
+            Ok(())
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // 3. CLI effective tool snapshot
 // ---------------------------------------------------------------------------

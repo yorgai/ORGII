@@ -64,6 +64,7 @@ export const WebSearchAdapter: React.FC<UniversalEventProps> = (props) => {
         defaultCollapsed={true}
         eventId={props.eventId}
         title={title}
+        toolUsage={props.toolUsage}
       />
     </div>
   );

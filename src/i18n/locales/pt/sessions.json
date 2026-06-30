@@ -1,4 +1,10 @@
 {
+  "toolUsage": {
+    "estimatedContext": "{{tokenCount}} Token de contexto",
+    "followup": "{{tokenCount}} Token follow-up",
+    "decision": "{{tokenCount}} Token de decisão",
+    "tooltip": "Atribuição estimada da ferramenta. Método: {{method}}. Entrada: {{inputBytes}} bytes. Saída: {{outputBytes}} bytes. Decisão: {{decisionTokens}} Token. Contexto: {{contextTokens}} Token. Follow-up: {{followupTokens}} Token. Leitura de cache LLM relacionada: {{cacheReadTokens}} Token. Escrita de cache LLM relacionada: {{cacheWriteTokens}} Token."
+  },
   "history": {
     "untitledSession": "Sessão sem título",
     "prStatus": {
@@ -758,6 +764,7 @@
     },
     "defaultTitle": "Chat",
     "hideChatPanel": "Ocultar painel de chat",
+    "showTokenUsage": "Mostrar Token",
     "compactDisplayMode": "Modo compacto",
     "replay": {
       "follow": "Acompanhar"

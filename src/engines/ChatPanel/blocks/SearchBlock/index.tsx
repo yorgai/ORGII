@@ -8,7 +8,9 @@
 import React from "react";
 
 import { getToolIcon } from "@src/config/toolIcons";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EventBlockHeader,
   EventBlockHeaderIcon,
@@ -32,10 +34,11 @@ export interface SearchBlockProps {
    * `useLifecycleLabels("code_search", action)` and picks running/done/failed.
    */
   title: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 const SearchBlock: React.FC<SearchBlockProps> = React.memo(
-  ({ pattern, isLoading = false, eventId, action, title }) => {
+  ({ pattern, isLoading = false, eventId, action, title, toolUsage }) => {
     const {
       isHeaderHovered,
       handleHeaderMouseEnter,
@@ -63,6 +66,9 @@ const SearchBlock: React.FC<SearchBlockProps> = React.memo(
           onNavigate={handleLocate}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
+          rightContent={
+            toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={toolIcon}

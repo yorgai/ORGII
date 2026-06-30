@@ -13,7 +13,9 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { getToolIcon } from "@src/config/toolIcons";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EVENT_BLOCK_BADGE_BG_CLASSES,
   EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES,
@@ -54,6 +56,7 @@ export interface ManageAgentDefBlockProps {
   eventId?: string;
   /** Lifecycle-aware title resolved by FallbackAdapter via useLifecycleLabels */
   title: string;
+  toolUsage?: ToolUsageMetadata;
 }
 
 // ============================================
@@ -144,6 +147,7 @@ const ManageAgentDefBlock: React.FC<ManageAgentDefBlockProps> = ({
   isLoading = false,
   eventId,
   title,
+  toolUsage,
 }) => {
   const hasBody = Boolean(agentName || resultText);
 
@@ -171,6 +175,9 @@ const ManageAgentDefBlock: React.FC<ManageAgentDefBlockProps> = ({
         onNavigate={handleLocate}
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
+        rightContent={
+          toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+        }
       >
         <EventBlockHeaderIcon
           icon={icon}

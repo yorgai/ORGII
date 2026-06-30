@@ -183,6 +183,7 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
         errorMessage={data.errorMessage}
         eventId={props.eventId}
         onNavigate={data.subagentSessionId ? handleNavigate : undefined}
+        toolUsage={props.toolUsage}
       />
     </div>
   );

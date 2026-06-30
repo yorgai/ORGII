@@ -21,6 +21,7 @@ import { getFileName } from "@src/util/file/pathUtils";
 import { extractSkillNameFromPath } from "@src/util/skills/skillPath";
 
 import EventFileHoverPreview from "../EventFileHoverPreview";
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EVENT_LOADING_SHIMMER_TEXT_CLASSES,
   EventBlockHeader,
@@ -101,6 +102,11 @@ export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
         onNavigate={handleLocate}
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
+        rightContent={
+          props.toolUsage ? (
+            <ToolUsageBadge usage={props.toolUsage} />
+          ) : undefined
+        }
       >
         <EventBlockHeaderIcon
           icon={toolIcon}

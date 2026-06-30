@@ -9,7 +9,13 @@ import React, { Suspense, memo, useMemo } from "react";
 
 import { AgentMessageBlock } from "@src/engines/ChatPanel/blocks";
 import MessageReferenceCards from "@src/engines/ChatPanel/blocks/MessageReferenceCards";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import LlmUsageBadge from "@src/engines/ChatPanel/blocks/ToolCallBlock/LlmUsageBadge";
+import {
+  LLM_USAGE_ARGS_KEY,
+  type LlmUsageMetadata,
+  type SessionEvent,
+  TOOL_USAGE_ARGS_KEY,
+} from "@src/engines/SessionCore/core/types";
 import {
   chatRequiresItemIndex,
   chatShowsStatusLine,
@@ -123,6 +129,12 @@ function arePropsEqual(
   if (prevArgs?.command !== nextArgs?.command) return false;
   if (prevArgs?.action !== nextArgs?.action) return false;
   if (prevArgs?.subagentSessionId !== nextArgs?.subagentSessionId) return false;
+  if (prevArgs?.[TOOL_USAGE_ARGS_KEY] !== nextArgs?.[TOOL_USAGE_ARGS_KEY]) {
+    return false;
+  }
+  if (prevArgs?.[LLM_USAGE_ARGS_KEY] !== nextArgs?.[LLM_USAGE_ARGS_KEY]) {
+    return false;
+  }
 
   return true;
 }
@@ -145,6 +157,13 @@ const ActivityLoadingFallback: React.FC = () => (
  * registered card component.
  */
 const DEDICATED_NON_MESSAGE_CANONICALS = new Set(["rate_limit_hint"]);
+
+function readLlmUsage(event: SessionEvent): LlmUsageMetadata | undefined {
+  if (event.llmUsage) return event.llmUsage;
+  const raw = event.args?.[LLM_USAGE_ARGS_KEY];
+  if (!raw || typeof raw !== "object") return undefined;
+  return raw as LlmUsageMetadata;
+}
 
 function isSyntheticLiveAssistantEvent(event: SessionEvent): boolean {
   return event.args?.syntheticLive === true;
@@ -259,8 +278,13 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
       ) {
         const assistantContent = extractAssistantMessageContent(event);
         if (assistantContent) {
+          const llmUsage = readLlmUsage(event);
           return (
-            <AgentMessageBlock>
+            <AgentMessageBlock
+              rightContent={
+                llmUsage ? <LlmUsageBadge usage={llmUsage} /> : undefined
+              }
+            >
               <AgentChatItemDefault
                 itemIndex={itemIndex}
                 expand={true}

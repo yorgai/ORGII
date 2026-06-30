@@ -2,7 +2,9 @@ import { ExternalLink, FolderCog, KeyRound, Terminal } from "lucide-react";
 import React, { memo } from "react";
 
 import { getToolIcon } from "@src/config/toolIcons";
+import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
 
+import ToolUsageBadge from "../ToolCallBlock/ToolUsageBadge";
 import {
   EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES,
   EventBlockHeader,
@@ -38,6 +40,7 @@ export interface SetupRepoBlockProps {
   lifecycleLabel?: string;
   isRunning?: boolean;
   isFailed?: boolean;
+  toolUsage?: ToolUsageMetadata;
 }
 
 // ============================================
@@ -81,6 +84,7 @@ const SetupRepoBlock: React.FC<SetupRepoBlockProps> = memo(
     lifecycleLabel,
     isRunning = false,
     isFailed = false,
+    toolUsage,
   }) => {
     const hasContent =
       !!message ||
@@ -124,6 +128,9 @@ const SetupRepoBlock: React.FC<SetupRepoBlockProps> = memo(
           onClick={hasContent ? handleHeaderClick : undefined}
           onMouseEnter={handleHeaderMouseEnter}
           onMouseLeave={handleHeaderMouseLeave}
+          rightContent={
+            toolUsage ? <ToolUsageBadge usage={toolUsage} /> : undefined
+          }
         >
           <EventBlockHeaderIcon
             icon={toolIcon}

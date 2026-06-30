@@ -265,6 +265,7 @@ export const TitleOnlyAdapter: React.FC<UniversalEventProps> = (props) => {
         }
         isFailed={state === "failed"}
         eventId={props.eventId}
+        toolUsage={props.toolUsage}
       />
     </div>
   );
