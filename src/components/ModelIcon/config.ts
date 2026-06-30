@@ -299,8 +299,14 @@ export function getIconProviderFromModelName(
     return "copilot";
   }
 
-  // OpenAI models (GPT series + O-series: o1, o3, o4, Codex variants, etc.)
-  if (lower.includes("gpt") || lower.includes("codex") || /^o\d/.test(lower)) {
+  // OpenAI models (provider-prefixed OpenRouter IDs, GPT series, O-series,
+  // Codex variants, etc.)
+  if (
+    lower.startsWith("openai/") ||
+    lower.includes("gpt") ||
+    lower.includes("codex") ||
+    /^o\d/.test(lower)
+  ) {
     return "openai";
   }
 
@@ -319,8 +325,12 @@ export function getIconProviderFromModelName(
     return "claude";
   }
 
-  // Google/Gemini models
-  if (lower.includes("gemini")) {
+  // Google/Gemini/Gemma models
+  if (
+    lower.startsWith("google/") ||
+    lower.includes("gemini") ||
+    lower.includes("gemma")
+  ) {
     return "gemini";
   }
 
@@ -335,7 +345,7 @@ export function getIconProviderFromModelName(
   }
 
   // Cohere models
-  if (lower.includes("cohere") || lower.includes("command-r")) {
+  if (lower.startsWith("cohere/") || lower.includes("command-r")) {
     return "cohere";
   }
 
@@ -399,7 +409,7 @@ export function getIconProviderFromModelName(
   }
 
   // Xiaomi/MiMo models
-  if (lower.includes("xiaomi") || lower.includes("mimo")) {
+  if (lower.startsWith("xiaomi/") || lower.includes("mimo")) {
     return "xiaomi";
   }
 
