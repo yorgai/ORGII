@@ -12,6 +12,9 @@
       "project": "프로젝트별",
       "status": "상태별",
       "priority": "우선순위별",
+      "person": "사람별",
+      "assignedTo": "담당자별",
+      "createdBy": "작성자별",
       "targetDate": "목표 날짜별"
     },
     "source": {
@@ -68,6 +71,52 @@
       "unprioritized": "우선순위 미지정"
     },
     "viewProjects": "Project 보기"
+  },
+  "githubIssuesImport": {
+    "title": "GitHub Issues 가져오기",
+    "menuLabel": "GitHub Issues 가져오기",
+    "createTarget": "GitHub Issues Project",
+    "heading": "GitHub Issues에서 Project 만들기",
+    "description": "GitHub 리포지토리를 선택하고 ORGII Project를 만든 뒤 GitHub Issues를 work items로 동기화합니다.",
+    "importButton": "GitHub Issues 가져오기",
+    "projectDescription": "{{owner}}/{{repo}}의 GitHub Issues에서 동기화됨.",
+    "fields": {
+      "projectName": "Project 이름",
+      "repo": "GitHub 리포지토리",
+      "connection": "GitHub 연결"
+    },
+    "placeholders": {
+      "projectName": "ORGII GitHub Issues",
+      "repo": "owner/repo 또는 https://github.com/owner/repo",
+      "connection": "GitHub 연결 선택"
+    },
+    "loadingConnections": "GitHub 연결을 불러오는 중...",
+    "noConnectionTitle": "GitHub 연결을 찾을 수 없음",
+    "noConnectionDescription": "먼저 Integrations에서 GitHub 연결을 추가한 다음 여기로 돌아와 GitHub Issues를 가져오세요.",
+    "linkedRepoHint": "이 Project는 현재 Workspace repo에도 연결됩니다: {{repoName}}.",
+    "createdTitle": "{{name}} 준비 완료",
+    "createdDescription": "ORGII가 {{owner}}/{{repo}}에서 GitHub Issues를 가져오는 중입니다. 동기화가 계속되는 동안 작업을 계속할 수 있습니다.",
+    "createdDescriptionFallback": "ORGII가 GitHub Issues를 가져오는 중입니다. 동기화가 계속되는 동안 작업을 계속할 수 있습니다.",
+    "errors": {
+      "invalidRepo": "owner/repo 또는 GitHub 리포지토리 URL을 사용하세요."
+    },
+    "importStatus": {
+      "title": "가져오기 상태",
+      "pendingDescription": "가져오기 worker가 대기열에 있으며 곧 시작됩니다.",
+      "runningDescription": "GitHub Issues를 이 Project에 work items로 가져오는 중입니다.",
+      "completedDescription": "사용 가능한 모든 GitHub Issues를 가져왔습니다.",
+      "failedDescription": "가져오기 worker가 오류를 보고했습니다. Project 동기화 설정에서 다시 시도할 수 있습니다.",
+      "cancelledDescription": "모든 GitHub Issues를 가져오기 전에 가져오기가 취소되었습니다.",
+      "progressWithTotal": "{{count}} / {{total}} GitHub Issues 가져옴",
+      "progressNoTotal": "{{count}} GitHub Issues 가져옴",
+      "state": {
+        "pending": "대기 중",
+        "running": "실행 중",
+        "completed": "완료",
+        "failed": "실패",
+        "cancelled": "취소됨"
+      }
+    }
   },
   "orgs": {
     "yourOrgs": "내 조직",
@@ -226,7 +275,10 @@
       "inProgress": "진행 중",
       "inReview": "검토 중",
       "done": "완료",
-      "cancelled": "취소됨"
+      "cancelled": "취소됨",
+      "duplicate": "중복",
+      "open": "Open",
+      "closed": "Closed"
     },
     "statusLabels": {
       "backlog": "Backlog",
@@ -235,7 +287,9 @@
       "in_review": "검토 중",
       "completed": "완료",
       "cancelled": "취소됨",
-      "duplicate": "중복"
+      "duplicate": "중복",
+      "open": "Open",
+      "closed": "Closed"
     },
     "priorityLabels": {
       "none": "우선순위 없음",

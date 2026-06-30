@@ -18,6 +18,7 @@ export {
 
 // Status options
 export {
+  GITHUB_ISSUE_STATUS_OPTIONS,
   WORK_ITEM_STATUS_OPTIONS,
   STORY_STATUS_OPTIONS,
   getWorkItemStatusConfig,

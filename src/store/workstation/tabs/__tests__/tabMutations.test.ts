@@ -10,6 +10,7 @@ import {
   switchTab,
   updateTabData,
 } from "../tabMutations";
+import { TAB_RETURN_TARGET_DATA_KEY } from "../types";
 import type { PanelState, WorkStationTab } from "../types";
 
 function tab(
@@ -69,6 +70,28 @@ describe("closeTab", () => {
     const next = closeTab(state, "file:b.ts");
     expect(next.tabs.map((t) => t.id)).toEqual(["file:a.ts", "file:c.ts"]);
     expect(next.activeTabId).toBe("file:c.ts");
+  });
+
+  it("returns to the source tab when the closed active tab has a return target", () => {
+    const state: PanelState = {
+      tabs: [
+        tab({ id: "project-dashboard:main" }),
+        tab({ id: "project-work-items:org:personal-org" }),
+        tab({
+          id: "workItem-detail:wi-1",
+          data: {
+            [TAB_RETURN_TARGET_DATA_KEY]: "project-work-items:org:personal-org",
+          },
+        }),
+      ],
+      activeTabId: "workItem-detail:wi-1",
+    };
+    const next = closeTab(state, "workItem-detail:wi-1");
+    expect(next.tabs.map((item) => item.id)).toEqual([
+      "project-dashboard:main",
+      "project-work-items:org:personal-org",
+    ]);
+    expect(next.activeTabId).toBe("project-work-items:org:personal-org");
   });
 
   it("returns empty panel when the last tab closes", () => {

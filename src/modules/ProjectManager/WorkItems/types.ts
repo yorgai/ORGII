@@ -55,7 +55,9 @@ export type StatusFilterType =
   | "inReview"
   | "done"
   | "cancelled"
-  | "duplicate";
+  | "duplicate"
+  | "open"
+  | "closed";
 
 // ============================================
 // Filter Mapping
@@ -71,6 +73,8 @@ export const FILTER_TO_STATUS: Record<StatusFilterType, WorkItemStatus | null> =
     done: "completed",
     cancelled: "cancelled",
     duplicate: "duplicate",
+    open: WORK_ITEM_STATUS.GITHUB_OPEN,
+    closed: WORK_ITEM_STATUS.GITHUB_CLOSED,
   };
 
 export const WORK_ITEMS_DEFAULT_STATUS: WorkItemStatus =
@@ -85,6 +89,12 @@ export const STATUS_FILTER_KEYS: StatusFilterType[] = [
   "backlog",
   "cancelled",
   "duplicate",
+];
+
+export const GITHUB_ISSUE_STATUS_FILTER_KEYS: StatusFilterType[] = [
+  "all",
+  "open",
+  "closed",
 ];
 
 // ============================================

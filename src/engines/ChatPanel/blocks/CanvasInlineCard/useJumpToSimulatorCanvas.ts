@@ -31,7 +31,7 @@ export function useJumpToSimulatorCanvas(
 
   const jump = useCallback(() => {
     if (!sessionId || !payload) return;
-    openInSimulatorCanvas(sessionId, payload);
+    openInSimulatorCanvas(sessionId, payload, { openedInSimulator: true });
     setStationMode(STATION_MODE.AGENT_STATION);
     setSelectedApp(AppType.CANVAS);
     setReplayMode("replay");

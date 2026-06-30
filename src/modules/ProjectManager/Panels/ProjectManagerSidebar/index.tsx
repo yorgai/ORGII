@@ -23,6 +23,7 @@ export interface ProjectManagerSidebarProps {
   ) => void;
   onCreateProject: () => void;
   onCreateWorkItem: () => void;
+  onImportGithubIssuesProject: () => void;
   onCreateOrg: () => void;
   onImportOrgs: () => void;
   onOpenProjects: () => void;
@@ -55,6 +56,7 @@ export const ProjectManagerSidebar: React.FC<ProjectManagerSidebarProps> = memo(
   ({
     onCreateProject,
     onCreateWorkItem,
+    onImportGithubIssuesProject,
     onCreateOrg,
     onImportOrgs,
     onOpenProjects,
@@ -77,6 +79,7 @@ export const ProjectManagerSidebar: React.FC<ProjectManagerSidebarProps> = memo(
       loading: entry.loading,
       onCreateProject,
       onCreateWorkItem,
+      onImportGithubIssuesProject,
       onCreateOrg,
       onImportOrgs,
       onOpenProjects,

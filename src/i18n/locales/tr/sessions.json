@@ -2219,6 +2219,7 @@
     "insufficientBalance": "Barındırılan ORGII hizmeti için yetersiz bakiye. orgii.ai/wallet adresinden yükleyin."
   },
   "planning": {
+    "agentTyping": "Agent yazıyor...",
     "nextStepVariants": [
       "Sonraki adım planlanıyor...",
       "Düşünülüyor...",

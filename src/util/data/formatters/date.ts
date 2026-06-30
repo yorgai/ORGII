@@ -131,6 +131,82 @@ function ymdAddDays(
   return `${yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
 }
 
+export function getStartOfLocalDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function addLocalDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+export function addLocalMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
+export function isSameLocalDay(left: Date, right: Date): boolean {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+export function getLocalDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function getLocalDayDiff(date: Date, now: Date = new Date()): number {
+  return Math.round(
+    (getStartOfLocalDay(now).getTime() - getStartOfLocalDay(date).getTime()) /
+      86_400_000
+  );
+}
+
+export function formatLocalClock(
+  date: Date,
+  locale: string | undefined = "en-US"
+): string {
+  return date.toLocaleString(locale, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function formatLocalMonthDay(
+  date: Date,
+  options?: {
+    includeYear?: boolean;
+    locale?: string | undefined;
+    monthStyle?: "short" | "long";
+  }
+): string {
+  const locale = options && "locale" in options ? options.locale : "en-US";
+  const month = date.toLocaleString(locale, {
+    month: options?.monthStyle ?? "short",
+  });
+  const day = date.getDate();
+  if (options?.includeYear) {
+    return `${month} ${day}, ${date.getFullYear()}`;
+  }
+  return `${month} ${day}`;
+}
+
+export function formatRelativeElapsedShort(
+  date: Date,
+  now: Date = new Date()
+): string {
+  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffSec < 60) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  return `${diffHr}h ago`;
+}
+
 export interface FormatSmartDateTimeOptions {
   /** Label for the previous calendar day (from i18n). Default: "Yesterday" */
   yesterdayLabel?: string;

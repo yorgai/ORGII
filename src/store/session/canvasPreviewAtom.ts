@@ -18,6 +18,7 @@ export interface CanvasPreviewEntry {
   sessionId: string;
   payload: CanvasInlinePayload;
   cardDismissed?: boolean;
+  openedInSimulator?: boolean;
 }
 
 export const canvasPreviewAtom = atom<CanvasPreviewEntry | null>(null);

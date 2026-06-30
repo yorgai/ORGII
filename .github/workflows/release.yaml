@@ -1,4 +1,4 @@
-# Build, sign, notarize, and release ORGII for macOS (Apple Silicon) and Windows (x64).
+# Build, sign, notarize, and release ORGII for macOS (Apple Silicon), Windows (x64), and Linux (x64).
 #
 # Trigger: push a tag matching v* (e.g. v1.1.0, v1.1.1).
 # Release tags must be valid three-part SemVer because Tauri app/updater
@@ -168,14 +168,15 @@ jobs:
 
           UPDATER_TAR=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz" ! -name "*.sig" | head -1)
           UPDATER_SIG=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz.sig" | head -1)
-          echo "updater_tar=$UPDATER_TAR" >> "$GITHUB_OUTPUT"
+          LATEST_UPDATER_TAR="ORG2-updater-mac-apple-silicon.app.tar.gz"
+          cp "$UPDATER_TAR" "$LATEST_UPDATER_TAR"
+          echo "updater_tar=$LATEST_UPDATER_TAR" >> "$GITHUB_OUTPUT"
           echo "updater_sig=$UPDATER_SIG" >> "$GITHUB_OUTPUT"
-          echo "updater_tar_name=$(basename "$UPDATER_TAR")" >> "$GITHUB_OUTPUT"
-          echo "updater_sig_name=$(basename "$UPDATER_SIG")" >> "$GITHUB_OUTPUT"
+          echo "updater_tar_name=$LATEST_UPDATER_TAR" >> "$GITHUB_OUTPUT"
 
           echo "=== Release artifacts ==="
           echo "DMG:         $DMG"
-          echo "Updater tar: $UPDATER_TAR"
+          echo "Updater tar: $LATEST_UPDATER_TAR"
           echo "Updater sig: $UPDATER_SIG"
 
       # ── Generate updater manifest (latest.json) ───────────────
@@ -212,10 +213,8 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-nightly') }}
           generate_release_notes: true
           files: |
-            ${{ steps.artifacts.outputs.dmg }}
             ${{ steps.artifacts.outputs.latest_dmg }}
             ${{ steps.artifacts.outputs.updater_tar }}
-            ${{ steps.artifacts.outputs.updater_sig }}
             latest.json
 
       # ── Cleanup keychain ────────────────────────────────────────
@@ -385,7 +384,7 @@ jobs:
           gh release download "$TAG" --pattern latest.json --output latest.json
 
           SIGNATURE=$(cat "${{ steps.artifacts.outputs.nsis_sig }}")
-          NSIS_NAME=$(basename "${{ steps.artifacts.outputs.nsis }}")
+          NSIS_NAME="${{ steps.artifacts.outputs.latest_nsis }}"
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${NSIS_NAME}"
 
           jq \
@@ -407,10 +406,145 @@ jobs:
           overwrite_files: true
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-nightly') }}
           files: |
-            ${{ steps.artifacts.outputs.msi }}
             ${{ steps.artifacts.outputs.latest_msi }}
-            ${{ steps.artifacts.outputs.msi_sig }}
-            ${{ steps.artifacts.outputs.nsis }}
             ${{ steps.artifacts.outputs.latest_nsis }}
-            ${{ steps.artifacts.outputs.nsis_sig }}
+            latest.json
+
+  # ── Linux x64 build ───────────────────────────────────────────────────
+  build-linux:
+    name: Build & Release (Linux x64)
+    runs-on: ubuntu-22.04
+    needs: build-windows
+    steps:
+      # ── Checkout ────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # ── Stamp version from git tag ───────────────────────────────
+      - name: Set version from tag
+        run: |
+          FULL_VERSION="${GITHUB_REF_NAME#v}"
+          if ! [[ "$FULL_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag must be valid three-part SemVer: $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          SEMVER="$FULL_VERSION"
+          echo "VERSION=$FULL_VERSION" >> "$GITHUB_ENV"
+          echo "SEMVER=$SEMVER" >> "$GITHUB_ENV"
+          sed -i "s/\"version\": \".*\"/\"version\": \"$SEMVER\"/" src-tauri/tauri.conf.json
+          sed -i "s/\"version\": \".*\"/\"version\": \"$FULL_VERSION\"/" package.json
+
+      # ── System dependencies ──────────────────────────────────────
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      # ── Node.js + pnpm ──────────────────────────────────────────
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── Rust ────────────────────────────────────────────────────
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+          shared-key: "release-linux-x64"
+
+      # ── Build Tauri app ──────────────────────────────────────────
+      - name: Build ORGII
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          ORGII_DIAGNOSTICS_TOKEN: ${{ secrets.ORGII_DIAGNOSTICS_TOKEN }}
+          ORGII_APP_VERSION: ${{ env.SEMVER }}
+        run: pnpm tauri build --target x86_64-unknown-linux-gnu --bundles deb,appimage
+
+      # ── Gather artifacts ─────────────────────────────────────────
+      - name: Gather release artifacts
+        id: artifacts
+        run: |
+          BUNDLE_DIR="src-tauri/target/x86_64-unknown-linux-gnu/release/bundle"
+
+          DEB=$(find "$BUNDLE_DIR/deb" -name "*.deb" | head -1)
+          APPIMAGE=$(find "$BUNDLE_DIR/appimage" -name "*.AppImage" | head -1)
+          APPIMAGE_SIG=$(find "$BUNDLE_DIR/appimage" -name "*.AppImage.sig" | head -1)
+
+          for artifact in "$DEB" "$APPIMAGE" "$APPIMAGE_SIG"; do
+            if [ ! -f "$artifact" ]; then
+              echo "Missing Linux release artifact: $artifact" >&2
+              find "$BUNDLE_DIR" -maxdepth 3 -type f -print >&2
+              exit 1
+            fi
+          done
+
+          LATEST_DEB="ORG2-latest-linux-x64.deb"
+          LATEST_APPIMAGE="ORG2-latest-linux-x64.AppImage"
+          cp "$DEB" "$LATEST_DEB"
+          cp "$APPIMAGE" "$LATEST_APPIMAGE"
+
+          echo "appimage_sig=$APPIMAGE_SIG" >> "$GITHUB_OUTPUT"
+          echo "latest_deb=$LATEST_DEB" >> "$GITHUB_OUTPUT"
+          echo "latest_appimage=$LATEST_APPIMAGE" >> "$GITHUB_OUTPUT"
+          echo "latest_appimage_name=$LATEST_APPIMAGE" >> "$GITHUB_OUTPUT"
+
+          echo "=== Linux artifacts ==="
+          echo "DEB:          $DEB"
+          echo "AppImage:     $APPIMAGE"
+          echo "AppImage sig: $APPIMAGE_SIG"
+
+      # ── Merge Linux updater entry into latest.json ───────────────
+      - name: Generate latest.json for Linux updater
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$TAG" --pattern latest.json --output latest.json
+
+          SIGNATURE=$(cat "${{ steps.artifacts.outputs.appimage_sig }}")
+          APPIMAGE_NAME="${{ steps.artifacts.outputs.latest_appimage_name }}"
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${APPIMAGE_NAME}"
+
+          jq \
+            --arg signature "$SIGNATURE" \
+            --arg url "$DOWNLOAD_URL" \
+            '.platforms["linux-x86_64"] = { signature: $signature, url: $url }' \
+            latest.json > latest-with-linux.json
+
+          mv latest-with-linux.json latest.json
+
+          echo "=== latest.json with Linux updater ==="
+          cat latest.json
+
+      # ── Upload to existing GitHub Release ───────────────────────
+      - name: Upload Linux artifacts to release
+        uses: softprops/action-gh-release@v3
+        with:
+          draft: false
+          overwrite_files: true
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-nightly') }}
+          files: |
+            ${{ steps.artifacts.outputs.latest_deb }}
+            ${{ steps.artifacts.outputs.latest_appimage }}
             latest.json

@@ -29,6 +29,7 @@ interface UseProjectManagerSidebarConfigOptions {
   onSelectProject: SelectProjectHandler;
   onCreateProject: () => void;
   onCreateWorkItem: () => void;
+  onImportGithubIssuesProject: () => void;
   onCreateOrg: () => void;
   onImportOrgs: () => void;
   onOpenProjects: () => void;
@@ -56,6 +57,7 @@ export function useProjectManagerSidebarConfig({
   onSelectProject,
   onCreateProject,
   onCreateWorkItem,
+  onImportGithubIssuesProject,
   onCreateOrg,
   onImportOrgs,
   onOpenProjects,
@@ -99,6 +101,7 @@ export function useProjectManagerSidebarConfig({
             onSelectProject={onSelectProject}
             onCreateProject={onCreateProject}
             onCreateWorkItem={onCreateWorkItem}
+            onImportGithubIssuesProject={onImportGithubIssuesProject}
             onCreateOrg={onCreateOrg}
             onImportOrgs={onImportOrgs}
             onOpenProjects={onOpenProjects}
@@ -130,6 +133,7 @@ export function useProjectManagerSidebarConfig({
       onSelectProject,
       onCreateProject,
       onCreateWorkItem,
+      onImportGithubIssuesProject,
       onCreateOrg,
       onImportOrgs,
       onOpenProjects,

@@ -53,7 +53,7 @@ const SyntaxHighlighter =
  * block. The agent writes ```canvas or ```preview with a JSON payload.
  *
  * Payload schema (JSON on a single line or pretty-printed):
- *   { "mode": "html"|"url"|"a2ui", "content"?: "...", "url"?: "...", "title"?: "..." }
+ *   { "mode": "html"|"url"|"a2ui"|"react", "content"?: "...", "url"?: "...", "title"?: "..." }
  */
 const CANVAS_FENCED_LANGUAGES = new Set([
   "canvas",
@@ -61,12 +61,15 @@ const CANVAS_FENCED_LANGUAGES = new Set([
   "canvas-html",
   "canvas-url",
   "canvas-a2ui",
+  "canvas-react",
 ]);
 
-type CanvasFencedMode = "html" | "url" | "a2ui";
+type CanvasFencedMode = "html" | "url" | "a2ui" | "react";
 
 function isCanvasFencedMode(value: unknown): value is CanvasFencedMode {
-  return value === "html" || value === "url" || value === "a2ui";
+  return (
+    value === "html" || value === "url" || value === "a2ui" || value === "react"
+  );
 }
 
 /**
@@ -141,6 +144,7 @@ export interface MarkdownProps {
    * streaming path).
    */
   skipPreprocess?: boolean;
+  disableCanvasInline?: boolean;
 }
 
 // ============================================
@@ -390,6 +394,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
   enableFileNavigation = false,
   streaming = false,
   skipPreprocess = false,
+  disableCanvasInline = false,
 }) => {
   const themes = useAtomValue(themesAtom);
   const activeWorkspaceRoot = useAtomValue(activeWorkspaceRootAtom);
@@ -447,15 +452,19 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
           }
 
           // Canvas / preview fenced blocks — render as CanvasInlineCard
-          if (CANVAS_FENCED_LANGUAGES.has(language.toLowerCase())) {
+          if (
+            !disableCanvasInline &&
+            CANVAS_FENCED_LANGUAGES.has(language.toLowerCase())
+          ) {
             let mode: CanvasFencedMode = "html";
             let cardContent: string | undefined;
             let cardUrl: string | undefined;
             let cardTitle: string | undefined;
 
-            // Derive mode from language alias shortcuts (canvas-url, canvas-a2ui)
+            // Derive mode from language alias shortcuts (canvas-url, canvas-a2ui, canvas-react)
             if (language === "canvas-url") mode = "url";
             else if (language === "canvas-a2ui") mode = "a2ui";
+            else if (language === "canvas-react") mode = "react";
 
             // Try to parse the body as a JSON payload
             const trimmed = codeContent.trim();
@@ -647,6 +656,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
     enableFileNavigation,
     handleLinkClick,
     activeWorkspaceRootPath,
+    disableCanvasInline,
   ]);
 
   // Memoize plugins array to prevent recreation
@@ -709,6 +719,7 @@ const arePropsEqual = (prev: MarkdownProps, next: MarkdownProps): boolean => {
   if (prev.enableFileNavigation !== next.enableFileNavigation) return false;
   if (prev.streaming !== next.streaming) return false;
   if (prev.skipPreprocess !== next.skipPreprocess) return false;
+  if (prev.disableCanvasInline !== next.disableCanvasInline) return false;
   return true;
 };
 

@@ -16,8 +16,8 @@ use std::{cmp::Ordering, collections::HashMap};
 
 use crate::agent_sessions::event_pipeline::payload_compaction::compact_event_for_snapshot;
 use crate::agent_sessions::event_pipeline::types::{
-    DerivedSnapshot, EventDisplayStatus, EventDisplayVariant, EventSource, SessionEvent,
-    SimulatorEventPreview,
+    DerivedSnapshot, EventDisplayStatus, EventDisplayVariant, EventSource, LatestCanvasPreview,
+    SessionEvent, SimulatorEventPreview,
 };
 
 /// Background-shell process states stamped onto tool_call args as
@@ -194,6 +194,32 @@ fn display_variant_wire(variant: &EventDisplayVariant) -> &'static str {
     }
 }
 
+pub fn latest_canvas_preview(events: &[SessionEvent]) -> Option<LatestCanvasPreview> {
+    events.iter().rev().find_map(|event| {
+        if event.ui_canonical != "canvas_inline" && event.function_name != "render_inline_canvas" {
+            return None;
+        }
+        let args = event.args.as_object()?;
+        Some(LatestCanvasPreview {
+            event_id: event.id.clone(),
+            mode: args
+                .get("mode")
+                .and_then(|value| value.as_str())
+                .unwrap_or("html")
+                .to_string(),
+            url: args
+                .get("url")
+                .and_then(|value| value.as_str())
+                .map(str::to_string),
+            title: args
+                .get("title")
+                .and_then(|value| value.as_str())
+                .map(str::to_string),
+            streaming: args.get("streaming").and_then(|value| value.as_bool()),
+        })
+    })
+}
+
 pub fn build_simulator_preview_indexes(
     sorted_simulator_events: &[SessionEvent],
 ) -> SimulatorPreviewIndexes {
@@ -302,6 +328,7 @@ pub fn compute_derived(events: &[SessionEvent], version: u64) -> DerivedSnapshot
     let chat_event_count = chat_events.len();
     let last_event = compacted_events.last().cloned();
     let preview_indexes = build_simulator_preview_indexes(&sorted_simulator_events);
+    let latest_canvas_preview = latest_canvas_preview(events);
 
     DerivedSnapshot {
         version,
@@ -321,6 +348,7 @@ pub fn compute_derived(events: &[SessionEvent], version: u64) -> DerivedSnapshot
         event_index,
         chat_event_count,
         has_running_event,
+        latest_canvas_preview,
     }
 }
 

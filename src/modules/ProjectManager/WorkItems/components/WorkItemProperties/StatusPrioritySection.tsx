@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import type { FieldRowVariant } from "@src/components/PropertyField/PropertyFieldEditable";
 import {
+  GITHUB_ISSUE_STATUS_OPTIONS,
   WORK_ITEM_PRIORITY_OPTIONS,
   WORK_ITEM_STATUS_OPTIONS,
 } from "@src/modules/ProjectManager/config/manage";
@@ -46,7 +47,13 @@ export function StatusPrioritySection({
     !!externalStatusConfig?.loading ||
     savingExternalStatus;
 
-  const currentStatus = WORK_ITEM_STATUS_OPTIONS.find(
+  const isGitHubIssueStatus = GITHUB_ISSUE_STATUS_OPTIONS.some(
+    (option) => option.value === workItem.workItemStatus
+  );
+  const statusOptions = isGitHubIssueStatus
+    ? GITHUB_ISSUE_STATUS_OPTIONS
+    : WORK_ITEM_STATUS_OPTIONS;
+  const currentStatus = statusOptions.find(
     (option) => option.value === (workItem.workItemStatus || "planned")
   );
   const currentPriority = WORK_ITEM_PRIORITY_OPTIONS.find(
@@ -111,7 +118,7 @@ export function StatusPrioritySection({
           />
         ) : (
           <EnumPropertyField
-            options={WORK_ITEM_STATUS_OPTIONS}
+            options={statusOptions}
             currentOption={currentStatus}
             currentValue={workItem.workItemStatus}
             displayValue={

@@ -144,15 +144,15 @@ impl ToolRegistry {
                     continue;
                 }
             }
-            tracing::info!("[tools] Checking prompt visibility for '{}'", name);
+            tracing::debug!("[tools] Checking prompt visibility for '{}'", name);
             if tool.is_ready() {
-                tracing::info!("[tools] Building prompt schema for '{}'", name);
+                tracing::debug!("[tools] Building prompt schema for '{}'", name);
                 defs.push(tool.to_schema());
-                tracing::info!("[tools] Built prompt schema for '{}'", name);
+                tracing::debug!("[tools] Built prompt schema for '{}'", name);
             } else if let Some(reason) = tool.not_ready_reason() {
-                tracing::info!("[tools] Hiding '{}' from prompt: {}", name, reason);
+                tracing::debug!("[tools] Hiding '{}' from prompt: {}", name, reason);
             } else {
-                tracing::info!("[tools] Hiding '{}' from prompt: not ready", name);
+                tracing::debug!("[tools] Hiding '{}' from prompt: not ready", name);
             }
         }
         if let Some(ref fb) = self.fallback {

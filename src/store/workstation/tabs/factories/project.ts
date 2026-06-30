@@ -446,6 +446,7 @@ export interface WorkItemDetailTabData {
   workItemId: string;
   workItemName: string;
   pendingUpdates?: Record<string, unknown>;
+  returnTabId?: string;
 }
 
 function getWorkItemDetailTabTitle(workItemName?: string) {
@@ -485,7 +486,8 @@ export function createWorkItemDetailTab(
   workItemId: string,
   workItemName: string,
   projectSlug?: string,
-  pendingUpdates?: Record<string, unknown>
+  pendingUpdates?: Record<string, unknown>,
+  returnTabId?: string
 ): WorkStationTab {
   return workItemDetailTabFactory({
     projectId,
@@ -495,5 +497,6 @@ export function createWorkItemDetailTab(
     workItemName,
     ...(pendingUpdates &&
       Object.keys(pendingUpdates).length > 0 && { pendingUpdates }),
+    ...(returnTabId && { returnTabId }),
   });
 }

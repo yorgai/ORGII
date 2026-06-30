@@ -9,7 +9,7 @@
  *
  * Each pill shows icon + numeric count only. gap-1 between pills.
  */
-import { Plus } from "lucide-react";
+import { Layout, Plus } from "lucide-react";
 import React, { memo, useState } from "react";
 
 import Button from "@src/components/Button";
@@ -46,6 +46,10 @@ export interface InlineSection {
 export interface CollapsedInlineRowProps {
   sections: InlineSection[];
   scrollNav?: ScrollNavState | null;
+  canvasPreview?: {
+    label: string;
+    onOpen: () => void;
+  } | null;
 }
 
 function renderSectionContent(section: InlineSection) {
@@ -62,12 +66,18 @@ function getButtonClassName(section: InlineSection) {
 }
 
 const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
-  ({ sections, scrollNav }) => {
+  ({ sections, scrollNav, canvasPreview }) => {
     const showFollowAgent = scrollNav?.showFollowAgent ?? false;
     const showAddToConversation = scrollNav?.showAddToConversation ?? false;
+    const showCanvasPreview = Boolean(canvasPreview);
     const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
 
-    if (sections.length === 0 && !showFollowAgent && !showAddToConversation)
+    if (
+      sections.length === 0 &&
+      !showFollowAgent &&
+      !showAddToConversation &&
+      !showCanvasPreview
+    )
       return null;
 
     return (
@@ -119,6 +129,20 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
             </Dropdown>
           );
         })}
+
+        {canvasPreview && (
+          <Button
+            variant="secondary"
+            appearance="outline"
+            size="small"
+            shape="round"
+            icon={<Layout size={13} strokeWidth={2} />}
+            onClick={canvasPreview.onOpen}
+            aria-label={canvasPreview.label}
+          >
+            {canvasPreview.label}
+          </Button>
+        )}
 
         {showFollowAgent && (
           <Tooltip

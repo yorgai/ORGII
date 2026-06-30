@@ -131,7 +131,6 @@ export const ProjectOrgPanelView: React.FC<ProjectOrgPanelViewProps> = ({
       orgScope={selectedProjectOrg.orgScope}
       orgView={orgView}
       breadcrumbSegments={[{ label: selectedProjectOrg.orgName }]}
-      workStationTabId={`chat-panel-project-org:${selectedProjectOrg.orgId}`}
       renderSurfaceControlsInline
       onOrgViewChange={setOrgView}
       onSelectProject={handleSelectProject}
