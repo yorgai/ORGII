@@ -83,9 +83,6 @@ export function scopePickerRowLabel(
   name: string,
   branch: string
 ): string {
-  if (kind === "main") {
-    return branch ? `${name} · ${branch}` : name;
-  }
   return branch || name;
 }
 

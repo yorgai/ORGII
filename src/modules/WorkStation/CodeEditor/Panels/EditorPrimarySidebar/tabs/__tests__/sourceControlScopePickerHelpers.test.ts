@@ -290,10 +290,14 @@ describe("resolveScopeBreadcrumbSegments", () => {
 });
 
 describe("scopePickerRowLabel", () => {
-  it("joins repo and branch on one line for main checkout", () => {
+  it("shows branch only for main checkout (repo context is implicit)", () => {
     expect(scopePickerRowLabel("main", "ORGII", "fix/issue-10")).toBe(
-      "ORGII · fix/issue-10"
+      "fix/issue-10"
     );
+  });
+
+  it("falls back to repo name when main checkout has no branch", () => {
+    expect(scopePickerRowLabel("main", "ORGII", "")).toBe("ORGII");
   });
 
   it("prefers branch name for worktree rows", () => {
@@ -308,6 +312,17 @@ describe("scopePickerRowLabel", () => {
 });
 
 describe("scopePickerRowTitle", () => {
+  it("shows repo path for main checkout tooltip", () => {
+    expect(
+      scopePickerRowTitle(
+        "main",
+        "ORGII",
+        "fix/issue-10",
+        "/Users/junyu/github/ORGII"
+      )
+    ).toContain("ORGII");
+  });
+
   it("includes path details in the tooltip title", () => {
     expect(
       scopePickerRowTitle(
