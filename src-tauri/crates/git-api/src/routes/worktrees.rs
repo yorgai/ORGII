@@ -2,10 +2,7 @@
 //!
 //! Lists git worktrees registered for a repository.
 
-use std::{
-    collections::HashSet,
-    path::{Path as FsPath, PathBuf},
-};
+use std::path::{Path as FsPath, PathBuf};
 
 use axum::{
     extract::{Path, Query},
@@ -113,90 +110,65 @@ pub async fn remove_worktree(
 }
 
 fn summarize_worktree_diff(
-    main_repo_path: &FsPath,
+    _main_repo_path: &FsPath,
     worktree_path: &str,
-    worktree_branch: &str,
+    _worktree_branch: &str,
 ) -> Option<WorktreeDiffSummary> {
     let worktree_path = PathBuf::from(worktree_path);
-    let uncommitted = crate::commands::diff::get_diff_numstat_combined(&worktree_path, "HEAD").ok();
-    let base_ref = crate::commands::utils::get_current_branch(main_repo_path).ok();
-    let committed = base_ref.as_deref().and_then(|base| {
-        if base == worktree_branch || worktree_branch.is_empty() {
-            return None;
-        }
-        let merge_base = resolve_merge_base_sha(&worktree_path, base, "HEAD")?;
-        crate::commands::diff::get_diff_numstat(&worktree_path, &merge_base, Some("HEAD"), false)
-            .ok()
-    });
+    let uncommitted =
+        crate::commands::diff::get_diff_numstat_combined(&worktree_path, "HEAD").ok()?;
 
-    let uncommitted_files = uncommitted
-        .as_ref()
-        .map_or(0, |summary| summary.files_changed);
-    let uncommitted_additions = uncommitted
-        .as_ref()
-        .map_or(0, |summary| summary.total_insertions);
-    let uncommitted_deletions = uncommitted
-        .as_ref()
-        .map_or(0, |summary| summary.total_deletions);
-    let committed_files = committed
-        .as_ref()
-        .map_or(0, |summary| summary.files_changed);
-    let committed_additions = committed
-        .as_ref()
-        .map_or(0, |summary| summary.total_insertions);
-    let committed_deletions = committed
-        .as_ref()
-        .map_or(0, |summary| summary.total_deletions);
+    let uncommitted_files = uncommitted.files_changed;
+    let uncommitted_additions = uncommitted.total_insertions;
+    let uncommitted_deletions = uncommitted.total_deletions;
 
-    let mut changed_paths = HashSet::new();
-    if let Some(summary) = uncommitted.as_ref() {
-        changed_paths.extend(summary.files.iter().map(|file| file.path.clone()));
-    }
-    if let Some(summary) = committed.as_ref() {
-        changed_paths.extend(summary.files.iter().map(|file| file.path.clone()));
+    if is_pathological_worktree_checkout(
+        uncommitted_files,
+        uncommitted_additions,
+        uncommitted_deletions,
+    ) {
+        return None;
     }
 
-    let total_files = changed_paths.len() as u32;
-    let total_additions = uncommitted_additions + committed_additions;
-    let total_deletions = uncommitted_deletions + committed_deletions;
-
-    if total_files == 0 && total_additions == 0 && total_deletions == 0 {
+    if uncommitted_files == 0 && uncommitted_additions == 0 && uncommitted_deletions == 0 {
         return None;
     }
 
     Some(WorktreeDiffSummary {
-        total_files,
-        total_additions,
-        total_deletions,
-        committed_files,
-        committed_additions,
-        committed_deletions,
+        total_files: uncommitted_files,
+        total_additions: uncommitted_additions,
+        total_deletions: uncommitted_deletions,
+        committed_files: 0,
+        committed_additions: 0,
+        committed_deletions: 0,
         uncommitted_files,
         uncommitted_additions,
         uncommitted_deletions,
-        base_ref,
+        base_ref: None,
     })
 }
 
-/// Merge-base between two refs in the shared object database opened at `repo_path`.
-fn resolve_merge_base_sha(repo_path: &FsPath, left_ref: &str, right_ref: &str) -> Option<String> {
-    use git2::Repository;
+/// Detect stale/broken worktrees where the checkout deleted most tracked files on disk.
+/// These produce million-line deletion stats that are technically `git diff HEAD` but not
+/// meaningful scope-picker signal (common on abandoned agent worktrees).
+fn is_pathological_worktree_checkout(files: u32, additions: u32, deletions: u32) -> bool {
+    files > 100 && deletions > 100_000 && additions < deletions / 100
+}
 
-    let repo = Repository::open(repo_path).ok()?;
-    let left_oid = repo
-        .revparse_single(left_ref)
-        .ok()?
-        .peel_to_commit()
-        .ok()?
-        .id();
-    let right_oid = repo
-        .revparse_single(right_ref)
-        .ok()?
-        .peel_to_commit()
-        .ok()?
-        .id();
-    let base = repo.merge_base(left_oid, right_oid).ok()?;
-    Some(base.to_string())
+#[cfg(test)]
+mod tests {
+    use super::is_pathological_worktree_checkout;
+
+    #[test]
+    fn detects_mass_deletion_checkout_drift() {
+        assert!(is_pathological_worktree_checkout(8072, 0, 1_446_726));
+    }
+
+    #[test]
+    fn accepts_normal_uncommitted_changes() {
+        assert!(!is_pathological_worktree_checkout(2, 10, 3));
+        assert!(!is_pathological_worktree_checkout(50, 500, 120));
+    }
 }
 
 fn resolve_repo_path(repo_id: &str, query_path: Option<&str>) -> GitApiResult<std::path::PathBuf> {

@@ -43,12 +43,7 @@ export function diffActivityScore(
   summary?: GitWorktreeDiffSummary | null
 ): number {
   if (!summary) return 0;
-  return (
-    summary.uncommitted_additions +
-    summary.uncommitted_deletions +
-    summary.committed_additions +
-    summary.committed_deletions
-  );
+  return summary.uncommitted_additions + summary.uncommitted_deletions;
 }
 
 export function formatScopePickerPath(path: string): string {
@@ -73,19 +68,13 @@ export function resolveScopeRepoRoot(
 export function formatScopeDiffStatsTooltip(
   summary: GitWorktreeDiffSummary
 ): string {
-  const parts: string[] = [];
   if (summary.uncommitted_additions > 0 || summary.uncommitted_deletions > 0) {
-    parts.push(
-      `Working tree +${summary.uncommitted_additions} -${summary.uncommitted_deletions}`
-    );
+    return `Working tree +${summary.uncommitted_additions} -${summary.uncommitted_deletions}`;
   }
-  if (summary.committed_additions > 0 || summary.committed_deletions > 0) {
-    const base = summary.base_ref ? `since ${summary.base_ref}` : "committed";
-    parts.push(
-      `${base} +${summary.committed_additions} -${summary.committed_deletions}`
-    );
+  if (summary.uncommitted_files > 0) {
+    return `${summary.uncommitted_files} changed files`;
   }
-  return parts.join(" · ");
+  return "";
 }
 
 /** Single-line label for a scope picker row (avoids stacked title + subtitle). */
