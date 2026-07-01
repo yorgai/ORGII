@@ -17,6 +17,7 @@
 //   truncate orgii_orgs cascade;
 
 import { createHash, randomBytes } from "node:crypto";
+import { gunzipSync, gzipSync } from "node:zlib";
 
 const SUPABASE_URL = process.env.ORGII_TEST_SUPABASE_URL?.replace(/\/+$/, "");
 const ANON_KEY = process.env.ORGII_TEST_ANON_KEY;
@@ -252,13 +253,92 @@ async function main() {
   const storedSession = (sessList.json?.sessions ?? []).find((s) => s.sourceSessionId === sourceSessionId);
   record("session owner forced to authenticated caller", storedSession?.ownerMemberId === bId, `got ${storedSession?.ownerMemberId}`);
 
+  // ---- event segments (M3): owner scoping, OCC, atomic rewrite, read ----
+  const sessionRowId = `${orgId}:${bId}:${sourceSessionId}`;
+  const gzB64 = (value) => gzipSync(Buffer.from(JSON.stringify(value))).toString("base64");
+  const segmentWire = (seq, events) => ({
+    seq, payloadGz: gzB64(events), eventCount: events.length, segmentHash: sha256(JSON.stringify(events)),
+  });
+  const tailWire = (events) => ({
+    payloadGz: gzB64(events), eventCount: events.length, segmentHash: sha256(JSON.stringify(events)),
+  });
+  const frozen1 = [{ id: `e1-${run}`, sessionId: sourceSessionId, displayStatus: "completed" }];
+  const tail1 = [{ id: `e2-${run}`, sessionId: sourceSessionId, displayStatus: "running" }];
+
   assertError(
-    "A cannot repoint B's events blob",
-    await rpc("orgii_upsert_session_events", {
-      p_org_id: orgId, ...memberAuthA, source_session_id: sourceSessionId,
-      blob_path: "orgs/evil.json", content_hash: sha256("evil"),
+    "A cannot rewrite B's event segments",
+    await rpc("orgii_rewrite_session_events", {
+      p_org_id: orgId, ...memberAuthA, session_row_id: sessionRowId,
+      new_epoch: 1, frozen_segments: [segmentWire(1, frozen1)], tail: tailWire(tail1), total_count: 2,
     }),
     "ORGII_UNAUTHORIZED"
+  );
+  assertOk(
+    "B anchors epoch 1 via atomic rewrite",
+    await rpc("orgii_rewrite_session_events", {
+      p_org_id: orgId, ...memberAuthB, session_row_id: sessionRowId,
+      new_epoch: 1, frozen_segments: [segmentWire(1, frozen1)], tail: tailWire(tail1), total_count: 2,
+    }),
+    () => true
+  );
+  assertError(
+    "stale epoch rewrite rejected (epochs only move forward)",
+    await rpc("orgii_rewrite_session_events", {
+      p_org_id: orgId, ...memberAuthB, session_row_id: sessionRowId,
+      new_epoch: 1, frozen_segments: [], tail: tailWire(tail1), total_count: 1,
+    }),
+    "ORGII_CONFLICT"
+  );
+  assertError(
+    "append with stale OCC anchors rejected",
+    await rpc("orgii_append_session_events", {
+      p_org_id: orgId, ...memberAuthB, session_row_id: sessionRowId,
+      expected_epoch: 1, expected_frozen_seq: 0, frozen_segments: [], tail: tailWire(tail1), total_count: 2,
+    }),
+    "ORGII_CONFLICT"
+  );
+  assertError(
+    "A cannot append to B's session",
+    await rpc("orgii_append_session_events", {
+      p_org_id: orgId, ...memberAuthA, session_row_id: sessionRowId,
+      expected_epoch: 1, expected_frozen_seq: 1, frozen_segments: [], tail: tailWire(tail1), total_count: 2,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+  const frozen2 = [{ id: `e2-${run}`, sessionId: sourceSessionId, displayStatus: "completed" }];
+  const tail2 = [{ id: `e3-${run}`, sessionId: sourceSessionId, displayStatus: "running" }];
+  assertOk(
+    "B appends a frozen segment and replaces the tail",
+    await rpc("orgii_append_session_events", {
+      p_org_id: orgId, ...memberAuthB, session_row_id: sessionRowId,
+      expected_epoch: 1, expected_frozen_seq: 1,
+      frozen_segments: [segmentWire(2, frozen2)], tail: tailWire(tail2), total_count: 3,
+    }),
+    () => true
+  );
+  const segRead = await rpc("orgii_get_session_event_segments", {
+    p_org_id: orgId, ...memberAuthA, session_row_id: sessionRowId, after_seq: 0,
+  });
+  assertOk(
+    "member A reads B's segments snapshot",
+    segRead,
+    (j) =>
+      j?.epoch === 1 && j?.frozenSeq === 2 && j?.count === 3 &&
+      (j?.segments ?? []).filter((s) => !s.isTail).length === 2 &&
+      (j?.segments ?? []).filter((s) => s.isTail).length === 1
+  );
+  const firstSegment = (segRead.json?.segments ?? []).find((s) => s.seq === 1);
+  record(
+    "segment payload gunzips back to the pushed events",
+    Boolean(firstSegment) &&
+      gunzipSync(Buffer.from(firstSegment.payloadGz, "base64")).toString() === JSON.stringify(frozen1)
+  );
+  const summaryList = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthA });
+  const summarySession = (summaryList.json?.sessions ?? []).find((s) => s.sourceSessionId === sourceSessionId);
+  record(
+    "list_org_state carries the segments summary",
+    summarySession?.eventsEpoch === 1 && summarySession?.eventsFrozenSeq === 2 && summarySession?.eventsCount === 3,
+    `got ${JSON.stringify({ e: summarySession?.eventsEpoch, f: summarySession?.eventsFrozenSeq, c: summarySession?.eventsCount })}`
   );
 
   assertOk(
@@ -272,6 +352,13 @@ async function main() {
   const tombstone = (afterDelete.json?.sessions ?? []).find((s) => s.sourceSessionId === sourceSessionId);
   record("tombstone visible in delta with deletedAt", Boolean(tombstone?.deletedAt));
   record("tombstone payload stripped (no title)", tombstone && tombstone.title === undefined);
+  assertError(
+    "segments unreadable once the session is tombstoned",
+    await rpc("orgii_get_session_event_segments", {
+      p_org_id: orgId, ...memberAuthA, session_row_id: sessionRowId, after_seq: 0,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
 
   // ---- chat: author forced ----
   await rpc("orgii_post_chat_message", {

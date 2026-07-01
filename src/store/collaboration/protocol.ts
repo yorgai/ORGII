@@ -152,15 +152,19 @@ export const RemoteTeammateSessionMetadataSchema = z.object({
   branch: z.string().optional(),
   lastActivityAt: z.string().optional(),
   accessMode: CollabSessionAccessModeSchema.optional(),
-  eventsBlobPath: z
-    .string()
+  eventsEpoch: z
+    .number()
     .nullish()
     .transform((value) => value ?? undefined),
-  eventsContentHash: z
-    .string()
+  eventsFrozenSeq: z
+    .number()
     .nullish()
     .transform((value) => value ?? undefined),
-  eventsUpdatedAt: z
+  eventsCount: z
+    .number()
+    .nullish()
+    .transform((value) => value ?? undefined),
+  eventsTailHash: z
     .string()
     .nullish()
     .transform((value) => value ?? undefined),

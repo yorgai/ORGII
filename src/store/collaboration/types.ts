@@ -185,8 +185,11 @@ export interface RemoteTeammateSessionMetadata {
   branch?: string;
   lastActivityAt?: string;
   accessMode?: CollabSessionAccessMode;
-  eventsBlobPath: string | undefined;
-  eventsContentHash: string | undefined;
-  eventsUpdatedAt: string | undefined;
+  // Segments summary (design §7.3): mirrors the orgii_sessions summary
+  // columns. All undefined ⇒ the owner has not published event segments.
+  eventsEpoch: number | undefined;
+  eventsFrozenSeq: number | undefined;
+  eventsCount: number | undefined;
+  eventsTailHash: string | undefined;
   deletedAt?: string;
 }

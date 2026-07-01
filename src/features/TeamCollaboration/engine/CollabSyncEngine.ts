@@ -21,6 +21,7 @@
  * passed to `start()` (vanilla store; collab atoms use `getOnInit: true`).
  */
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import {
   collabChatMessagesAtom,
   collabConnectionStatesAtom,
@@ -32,12 +33,15 @@ import {
   collabProjectsAtom,
   collabRepoJoinRequestsAtom,
   collabSessionAccessSettingsAtom,
+  collabSessionPushCursorsAtom,
   collabSessionSnapshotRequestsAtom,
   collabWorkItemsAtom,
   remoteTeammateSessionsAtom,
 } from "@src/store/collaboration/collabOrgsAtom";
+import type { CollabSessionPushCursor } from "@src/store/collaboration/collabOrgsAtom";
 import {
   COLLAB_CONNECTION_STATUS,
+  COLLAB_ROLE,
   COLLAB_SESSION_ACCESS_MODE,
 } from "@src/store/collaboration/types";
 import type {
@@ -52,6 +56,7 @@ import type {
 import { sessionsAtom } from "@src/store/session/sessionAtom/atoms";
 import { upsertSession } from "@src/store/session/sessionAtom/mutations";
 import { persistSessions } from "@src/store/session/sessionAtom/persistence";
+import type { Session } from "@src/store/session/sessionAtom/types";
 import type { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
 import type { SupabaseSyncProfile } from "../collabSyncUtils";
@@ -62,20 +67,24 @@ import {
   isRemoteSessionInOrgScope,
   isSessionPushAllowed,
   sha256Hex,
+  stableStringify,
   toRemoteMetadata,
 } from "../collabSyncUtils";
 import type { CollabOrgState } from "../sync/CollabSyncBackend";
+import { computeSegmentHash } from "../sync/collabGzip";
 import { supabaseSyncClient } from "../sync/supabaseSyncClient";
 import {
   addMemberIfUnknown,
+  computeFrozenEventCount,
   computeSessionMetadataHash,
   createImportedSnapshotSessionId,
-  findImportedSession,
+  importRemoteSession,
+  isCollabConflictError,
   memberFromChatMessage,
   memberFromRemoteSession,
-  parseImportedSessionMetadata,
   removeRemoteSessionsByIds,
   rewriteEventsForImportedSnapshot,
+  splitFrozenIntoSegments,
   upsertChatMessage,
   upsertCollabMember,
   upsertCollabMetadataRecord,
@@ -97,6 +106,11 @@ const PULL_STAGGER_MS = 250;
 const PUSH_DEBOUNCE_MS = 3_000;
 /** Delta cursor safety overlap; every consumer must stay idempotent (§9.4). */
 const CURSOR_OVERLAP_MS = 2_000;
+/**
+ * after_seq probe that excludes every frozen segment (int4 max) — used to
+ * read just the server summary when re-anchoring after an OCC rejection.
+ */
+const REANCHOR_PROBE_AFTER_SEQ = 2_147_483_647;
 
 const SETUP_MISSING_MESSAGE =
   "Supabase setup is missing or outdated. Copy the setup SQL, run it in the Supabase SQL Editor, then retry.";
@@ -130,6 +144,8 @@ export class CollabSyncEngine {
   // --- PullLoop state -------------------------------------------------------
   private readonly pullStates = new Map<string, OrgPullState>();
   private readonly verifiedOrgIds = new Set<string>();
+  /** Segments retention sweep fired once per admin org per engine start (§7.5). */
+  private readonly gcTriggeredOrgIds = new Set<string>();
   private atomUnsubscribers: Array<() => void> = [];
 
   // --- PushQueue state ------------------------------------------------------
@@ -141,8 +157,6 @@ export class CollabSyncEngine {
   >();
   private readonly inFlightPushSessionIds = new Set<string>();
   private readonly dirtyPushSessionIds = new Set<string>();
-  /** `${orgId}:${sessionId}` → sha256 of the last pushed events blob. */
-  private readonly lastPushedEventsHashes = new Map<string, string>();
   /** `${orgId}:${sessionId}` → metadata hash of the last pushed metadata. */
   private readonly lastPushedMetadataHashes = new Map<string, string>();
   /** `${orgId}:${sessionId}` keys already tombstoned — exactly one remove. */
@@ -193,9 +207,9 @@ export class CollabSyncEngine {
     }
     this.pullStates.clear();
     this.verifiedOrgIds.clear();
+    this.gcTriggeredOrgIds.clear();
     this.inFlightPushSessionIds.clear();
     this.dirtyPushSessionIds.clear();
-    this.lastPushedEventsHashes.clear();
     this.lastPushedMetadataHashes.clear();
     this.knownRemovedSessionKeys.clear();
     this.importedLocalSessionIds.clear();
@@ -426,6 +440,20 @@ export class CollabSyncEngine {
       this.verifiedOrgIds.add(org.id);
     }
 
+    // Segments retention sweep (§7.5, server default 90 days): fired by any
+    // admin client, once per org per engine start; failures are non-fatal.
+    if (
+      !this.gcTriggeredOrgIds.has(org.id) &&
+      connection.member.role === COLLAB_ROLE.ADMIN
+    ) {
+      this.gcTriggeredOrgIds.add(org.id);
+      supabaseSyncClient
+        .gcSessionEventSegments({ ...profile, orgId: org.id })
+        .catch(() => {
+          // Best-effort: retried on the next engine start.
+        });
+    }
+
     const sinceTimestamp = store.get(collabLastSyncTimestampsAtom)[org.id];
     const state = await supabaseSyncClient.listOrgState({
       ...profile,
@@ -531,75 +559,34 @@ export class CollabSyncEngine {
     }));
   }
 
-  /** Auto-import teammate events blobs referenced by pulled metadata. */
+  /**
+   * Auto-import teammate event segments referenced by pulled metadata
+   * (design §7.4). All diffing (cursor vs summary, incremental vs full
+   * refetch, persistence) lives in the shared `importRemoteSession` — the
+   * same function backs the panel's direct-replay action.
+   */
   private async importRemoteSessionEvents(
     connection: ActiveCollabConnection,
     inScopeSessions: RemoteTeammateSessionMetadata[],
     generation: number
   ): Promise<void> {
     const { org, member, profile } = connection;
-    const store = this.store;
-    if (!store) return;
+    if (!this.store) return;
     for (const remoteSession of inScopeSessions) {
       if (remoteSession.ownerMemberId === member.id) continue;
-      if (!remoteSession.eventsContentHash || !remoteSession.eventsBlobPath) {
-        continue;
-      }
-      const sessions = store.get(sessionsAtom);
-      const existingImported = findImportedSession(
-        sessions,
-        org.id,
-        remoteSession.sourceSessionId
-      );
-      const existingMeta = existingImported
-        ? parseImportedSessionMetadata(existingImported)
-        : null;
-      if (existingMeta?.contentHash === remoteSession.eventsContentHash) {
-        continue;
-      }
+      if (remoteSession.eventsEpoch === undefined) continue;
       try {
-        const events = await supabaseSyncClient.downloadSessionEventsBlob({
-          ...profile,
-          blobPath: remoteSession.eventsBlobPath,
+        await importRemoteSession({
+          client: supabaseSyncClient,
+          profile,
+          orgId: org.id,
+          remoteSession,
+          // Self-import guard: the import's eventStoreProxy.set re-enters
+          // the PushQueue subscription — these ids must never round-trip
+          // back out.
+          onBeforeWrite: (localSessionId) =>
+            this.importedLocalSessionIds.add(localSessionId),
         });
-        if (this.generation !== generation) return;
-        const localSessionId =
-          existingImported?.session_id ?? createImportedSnapshotSessionId();
-        // Self-import guard: the eventStoreProxy.set below re-enters the
-        // PushQueue subscription — these ids must never round-trip back out.
-        this.importedLocalSessionIds.add(localSessionId);
-        const localEvents = rewriteEventsForImportedSnapshot(
-          events,
-          localSessionId
-        );
-        const now = new Date().toISOString();
-        upsertSession({
-          session_id: localSessionId,
-          status: "completed",
-          created_at: existingImported?.created_at ?? now,
-          updated_at: now,
-          completed_at: now,
-          name: remoteSession.title,
-          repoPath: remoteSession.repoPath,
-          category: "external_history",
-          model: "Collaboration Snapshot",
-          agentIconId: "archive",
-          agentDisplayName: "Collaboration Snapshot",
-          pinned: existingImported?.pinned ?? false,
-          error_message: JSON.stringify({
-            originalSessionId: remoteSession.sourceSessionId,
-            originalCategory: "rust_agent",
-            exportedAt: now,
-            eventCount: localEvents.length,
-            orgId: org.id,
-            ownerMemberId: remoteSession.ownerMemberId,
-            contentHash: remoteSession.eventsContentHash,
-            ownerDisplayName: remoteSession.ownerDisplayName,
-          }),
-        });
-        persistSessions(store.get(sessionsAtom));
-        await eventStoreProxy.set(localEvents, localSessionId);
-        await eventStoreProxy.saveToCache(localSessionId);
         if (this.generation !== generation) return;
       } catch (error) {
         if (this.generation !== generation) return;
@@ -728,16 +715,20 @@ export class CollabSyncEngine {
           agentIconId: "archive",
           agentDisplayName: "Collaboration Snapshot",
           pinned: false,
-          error_message: JSON.stringify({
-            originalSessionId: request.sourceSessionId,
-            originalCategory: "rust_agent",
-            exportedAt: now,
-            eventCount: localEvents.length,
+          // epoch 0 marks a legacy snapshot import (no segments cursor):
+          // if the owner later publishes segments, the epoch mismatch
+          // forces a clean full refetch.
+          importedFrom: {
             orgId: request.orgId,
+            sourceSessionId: request.sourceSessionId,
             ownerMemberId: request.session.ownerMemberId,
-            snapshotRequestId: request.requestId,
             ownerDisplayName: request.session.ownerDisplayName,
-          }),
+            epoch: 0,
+            seq: 0,
+            count: localEvents.length,
+            frozenCount: 0,
+            importedAt: now,
+          },
         });
         persistSessions(store.get(sessionsAtom));
         await eventStoreProxy.set(localEvents, localSessionId);
@@ -799,37 +790,20 @@ export class CollabSyncEngine {
       if (!session) return;
 
       const pushedOrgIds: string[] = [];
-      for (const {
-        org,
-        member,
-        settings,
-        profile,
-      } of this.getActiveConnections()) {
+      for (const connection of this.getActiveConnections()) {
+        const { org, settings } = connection;
         if (!isSessionPushAllowed(session, org, settings)) continue;
         if (settings.accessMode !== COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY) {
           continue;
         }
-        const cacheKey = `${org.id}:${sessionId}`;
         try {
-          const events = await eventStoreProxy.getEvents(sessionId);
-          const serialized = JSON.stringify({ events });
-          const hash = await sha256Hex(serialized);
+          const pushed = await this.pushSessionEventSegments(
+            connection,
+            session,
+            generation
+          );
           if (this.generation !== generation) return;
-          if (this.lastPushedEventsHashes.get(cacheKey) === hash) continue;
-
-          await supabaseSyncClient.upsertSessionMetadata({
-            ...profile,
-            session: toRemoteMetadata(session, org, member, settings),
-          });
-          await supabaseSyncClient.upsertSessionEvents({
-            ...profile,
-            orgId: org.id,
-            sourceSessionId: sessionId,
-            events,
-          });
-          if (this.generation !== generation) return;
-          this.lastPushedEventsHashes.set(cacheKey, hash);
-          pushedOrgIds.push(org.id);
+          if (pushed) pushedOrgIds.push(org.id);
         } catch (error) {
           if (this.generation !== generation) return;
           this.setConnectionStatus(
@@ -851,6 +825,292 @@ export class CollabSyncEngine {
         void this.pushSessionEvents(sessionId);
       }
     }
+  }
+
+  // --- Segments push protocol (design §7.3) ---------------------------------
+
+  private getPushCursor(
+    orgId: string,
+    sessionId: string
+  ): CollabSessionPushCursor | undefined {
+    return this.store?.get(collabSessionPushCursorsAtom)[
+      `${orgId}:${sessionId}`
+    ];
+  }
+
+  private setPushCursor(cursor: CollabSessionPushCursor): void {
+    this.store?.set(collabSessionPushCursorsAtom, (current) => ({
+      ...current,
+      [`${cursor.orgId}:${cursor.sessionId}`]: cursor,
+    }));
+  }
+
+  private deletePushCursor(orgId: string, sessionId: string): void {
+    const key = `${orgId}:${sessionId}`;
+    this.store?.set(collabSessionPushCursorsAtom, (current) => {
+      if (!(key in current)) return current;
+      const { [key]: _removed, ...rest } = current;
+      return rest;
+    });
+  }
+
+  private async computeFrozenChainHash(
+    perEventHashes: string[],
+    frozenEventCount: number
+  ): Promise<string> {
+    return sha256Hex(perEventHashes.slice(0, frozenEventCount).join("\n"));
+  }
+
+  /**
+   * One session × one org segments push. Returns true when the server was
+   * written.
+   *
+   * Source of truth is the PERSISTED event history (never the windowed
+   * in-memory view). Steady state replaces only the tail; a frozen-line
+   * advance appends new frozen segments; a mutated frozen region (per-event
+   * hash chain mismatch) or an OCC rejection re-anchors via an epoch-bumped
+   * full rewrite.
+   */
+  private async pushSessionEventSegments(
+    connection: ActiveCollabConnection,
+    session: Session,
+    generation: number
+  ): Promise<boolean> {
+    const { org } = connection;
+    const sessionId = session.session_id;
+
+    const events = await eventStoreProxy.getPersistedEvents(sessionId);
+    if (this.generation !== generation) return false;
+    const cursor = this.getPushCursor(org.id, sessionId);
+    if (!cursor && events.length === 0) return false;
+    if (cursor && events.length < cursor.pushedCount) {
+      // Truncated-read guard (§7.3 step 1): a view shorter than what we
+      // already pushed means an incomplete cache read, not a shorter
+      // session — never rewrite (that would destroy the remote copy).
+      console.warn(
+        `[CollabSyncEngine] persisted read for ${sessionId} returned ` +
+          `${events.length} events but the push cursor covers ` +
+          `${cursor.pushedCount}; aborting push`
+      );
+      return false;
+    }
+
+    const perEventHashes = await Promise.all(
+      events.map((event) => sha256Hex(stableStringify(event)))
+    );
+    const frozenEventCount = computeFrozenEventCount(events);
+    const tailEvents = events.slice(frozenEventCount);
+    const tailHash =
+      tailEvents.length > 0 ? await computeSegmentHash(tailEvents) : null;
+    const frozenChainHash = await this.computeFrozenChainHash(
+      perEventHashes,
+      frozenEventCount
+    );
+    if (this.generation !== generation) return false;
+
+    if (cursor) {
+      let frozenIntact = frozenEventCount >= cursor.frozenEventCount;
+      if (frozenIntact && cursor.frozenEventCount > 0) {
+        const chainAtCursor =
+          cursor.frozenEventCount === frozenEventCount
+            ? frozenChainHash
+            : await this.computeFrozenChainHash(
+                perEventHashes,
+                cursor.frozenEventCount
+              );
+        frozenIntact = chainAtCursor === cursor.frozenChainHash;
+      }
+
+      if (frozenIntact) {
+        const newFrozenEvents = events.slice(
+          cursor.frozenEventCount,
+          frozenEventCount
+        );
+        if (
+          newFrozenEvents.length === 0 &&
+          tailHash === cursor.tailHash &&
+          events.length === cursor.pushedCount
+        ) {
+          return false; // Nothing changed since the last push.
+        }
+        await this.upsertSessionMetadataFor(connection, session);
+        if (this.generation !== generation) return false;
+        const frozenSegments = splitFrozenIntoSegments(
+          newFrozenEvents,
+          cursor.frozenSeq + 1
+        );
+        try {
+          await supabaseSyncClient.appendSessionEvents({
+            ...connection.profile,
+            orgId: org.id,
+            sessionRowId: this.sessionRowId(connection, sessionId),
+            expectedEpoch: cursor.epoch,
+            expectedFrozenSeq: cursor.frozenSeq,
+            frozenSegments,
+            tail: tailEvents.length > 0 ? tailEvents : null,
+            totalCount: events.length,
+          });
+          if (this.generation !== generation) return false;
+          this.setPushCursor({
+            orgId: org.id,
+            sessionId,
+            epoch: cursor.epoch,
+            frozenSeq: cursor.frozenSeq + frozenSegments.length,
+            pushedCount: events.length,
+            frozenEventCount,
+            frozenChainHash,
+            tailHash,
+          });
+          return true;
+        } catch (error) {
+          if (this.generation !== generation) return false;
+          if (!isCollabConflictError(error)) throw error;
+          // OCC rejection (concurrent device / lost server state): fall
+          // through to the re-anchoring rewrite below.
+          return this.rewriteSessionSegments(connection, session, {
+            events,
+            frozenEventCount,
+            frozenChainHash,
+            tailEvents,
+            tailHash,
+            newEpoch: null,
+            generation,
+          });
+        }
+      }
+
+      // Frozen region mutated in place (rare: patchByIds on old events) →
+      // epoch+1 full rewrite (§7.3 step 3c).
+      return this.rewriteSessionSegments(connection, session, {
+        events,
+        frozenEventCount,
+        frozenChainHash,
+        tailEvents,
+        tailHash,
+        newEpoch: cursor.epoch + 1,
+        generation,
+      });
+    }
+
+    // No cursor (first push / reinstall): optimistic epoch-1 anchor; if the
+    // server already holds state the OCC check bounces us into re-anchor.
+    return this.rewriteSessionSegments(connection, session, {
+      events,
+      frozenEventCount,
+      frozenChainHash,
+      tailEvents,
+      tailHash,
+      newEpoch: 1,
+      generation,
+    });
+  }
+
+  /**
+   * Epoch-bumped full rewrite. `newEpoch: null` (and any ORGII_CONFLICT on
+   * a concrete epoch) re-anchors on the server summary — epoch = server + 1
+   * — exactly once; a second conflict surfaces as an error and retries on
+   * the next flush.
+   */
+  private async rewriteSessionSegments(
+    connection: ActiveCollabConnection,
+    session: Session,
+    plan: {
+      events: SessionEvent[];
+      frozenEventCount: number;
+      frozenChainHash: string;
+      tailEvents: SessionEvent[];
+      tailHash: string | null;
+      newEpoch: number | null;
+      generation: number;
+    }
+  ): Promise<boolean> {
+    const { org, profile } = connection;
+    const sessionId = session.session_id;
+    const sessionRowId = this.sessionRowId(connection, sessionId);
+
+    let epoch = plan.newEpoch;
+    let reanchored = epoch === null;
+    if (epoch === null) {
+      epoch = (await this.readServerEpoch(connection, sessionRowId)) + 1;
+      if (this.generation !== plan.generation) return false;
+    }
+
+    await this.upsertSessionMetadataFor(connection, session);
+    if (this.generation !== plan.generation) return false;
+
+    const frozenSegments = splitFrozenIntoSegments(
+      plan.events.slice(0, plan.frozenEventCount),
+      1
+    );
+
+    for (;;) {
+      try {
+        await supabaseSyncClient.rewriteSessionEvents({
+          ...profile,
+          orgId: org.id,
+          sessionRowId,
+          newEpoch: epoch,
+          frozenSegments,
+          tail: plan.tailEvents.length > 0 ? plan.tailEvents : null,
+          totalCount: plan.events.length,
+        });
+        if (this.generation !== plan.generation) return false;
+        this.setPushCursor({
+          orgId: org.id,
+          sessionId,
+          epoch,
+          frozenSeq: frozenSegments.length,
+          pushedCount: plan.events.length,
+          frozenEventCount: plan.frozenEventCount,
+          frozenChainHash: plan.frozenChainHash,
+          tailHash: plan.tailHash,
+        });
+        return true;
+      } catch (error) {
+        if (this.generation !== plan.generation) return false;
+        if (!isCollabConflictError(error) || reanchored) throw error;
+        reanchored = true;
+        epoch = (await this.readServerEpoch(connection, sessionRowId)) + 1;
+        if (this.generation !== plan.generation) return false;
+      }
+    }
+  }
+
+  private async readServerEpoch(
+    connection: ActiveCollabConnection,
+    sessionRowId: string
+  ): Promise<number> {
+    const summary = await supabaseSyncClient.getSessionEventSegments({
+      ...connection.profile,
+      orgId: connection.org.id,
+      sessionRowId,
+      afterSeq: REANCHOR_PROBE_AFTER_SEQ,
+    });
+    return summary.epoch ?? 0;
+  }
+
+  private sessionRowId(
+    connection: ActiveCollabConnection,
+    sessionId: string
+  ): string {
+    return `${connection.org.id}:${connection.member.id}:${sessionId}`;
+  }
+
+  private async upsertSessionMetadataFor(
+    connection: ActiveCollabConnection,
+    session: Session
+  ): Promise<void> {
+    // The sessions row must exist (owner-scoped) before any segments RPC;
+    // this also refreshes updated_at so consumers see the delta.
+    await supabaseSyncClient.upsertSessionMetadata({
+      ...connection.profile,
+      session: toRemoteMetadata(
+        session,
+        connection.org,
+        connection.member,
+        connection.settings
+      ),
+    });
   }
 
   // ===========================================================================
@@ -917,6 +1177,9 @@ export class CollabSyncEngine {
               });
               this.knownRemovedSessionKeys.add(cacheKey);
               this.lastPushedMetadataHashes.delete(cacheKey);
+              // The tombstone purged the server segments; a stale cursor
+              // would only bounce off OCC when the session re-enters scope.
+              this.deletePushCursor(org.id, session.session_id);
               pushedAnything = true;
             }
           }

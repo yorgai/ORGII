@@ -428,6 +428,23 @@ class EventStoreProxyImpl {
     }) as Promise<SessionEvent[]>;
   }
 
+  /**
+   * Read the FULL persisted event history from the SQLite cache, bypassing
+   * the (possibly turn-windowed / LRU-evicted) in-memory store entirely.
+   *
+   * The in-memory store is a windowed view: `getEvents` on a non-resident
+   * session returns `[]`, and a session hydrated via `loadInitialTurnWindow`
+   * holds placeholders instead of full turn bodies. Consumers that need the
+   * durable truth (e.g. the collaboration segments push, design §7.3 step 1)
+   * must read here. Rust persists events on ingestion, so this lags a live
+   * stream by at most one write batch.
+   */
+  async getPersistedEvents(sessionId: string): Promise<SessionEvent[]> {
+    return rpc.sessionCore.cache.loadEvents({
+      sessionId,
+    }) as Promise<SessionEvent[]>;
+  }
+
   // =========================================================================
   // SQLite Bridge
   // =========================================================================

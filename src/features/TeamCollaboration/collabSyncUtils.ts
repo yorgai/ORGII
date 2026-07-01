@@ -55,6 +55,7 @@ export function isSessionPushAllowed(
   // Imported teammate sessions must never be pushed back, or every
   // consumer re-uploads them under its own member id (org-wide echo loop).
   if (session.category === "external_history") return false;
+  if (session.importedFrom) return false;
   if (settings.accessMode === COLLAB_SESSION_ACCESS_MODE.OFF) return false;
   return isLocalSessionInOrgScope(session, org);
 }
@@ -118,9 +119,12 @@ export function toRemoteMetadata(
     branch: session.branch || session.worktreeBranch,
     lastActivityAt: session.updated_at || session.updated_time,
     accessMode: settings.accessMode,
-    eventsBlobPath: undefined,
-    eventsContentHash: undefined,
-    eventsUpdatedAt: undefined,
+    // Segments summary is server-owned (append/rewrite RPCs maintain it);
+    // metadata pushes never carry it.
+    eventsEpoch: undefined,
+    eventsFrozenSeq: undefined,
+    eventsCount: undefined,
+    eventsTailHash: undefined,
   };
 }
 
@@ -132,4 +136,25 @@ export async function sha256Hex(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, "0")
   ).join("");
+}
+
+/**
+ * Deterministic JSON with recursively sorted object keys. Used for the
+ * per-event hash vector of the segments push protocol (design §7.3 step 2):
+ * event objects are rebuilt by serde on every read, so hashing must not
+ * depend on incidental key order.
+ */
+export function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value) ?? "null";
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  const record = value as Record<string, unknown>;
+  const parts = Object.keys(record)
+    .sort()
+    .filter((key) => record[key] !== undefined)
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`);
+  return `{${parts.join(",")}}`;
 }

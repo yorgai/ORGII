@@ -242,6 +242,58 @@ export const collabLastSyncTimestampsAtom = atomWithStorage<
 collabLastSyncTimestampsAtom.debugLabel = "collabLastSyncTimestampsAtom";
 
 /**
+ * Owner-side segments push cursor, per (orgId, sessionId) — design §7.3.
+ * The per-event hash vector itself is NOT persisted: `frozenChainHash` is a
+ * sha256 chain over the frozen region's per-event hashes, which detects
+ * frozen-region mutation with O(1) storage. Losing a cursor (reinstall,
+ * cleared storage) is safe — the next push re-anchors through the server
+ * OCC check (rewrite at server epoch + 1).
+ */
+export interface CollabSessionPushCursor {
+  orgId: string;
+  sessionId: string;
+  /** Segments epoch last acknowledged by the server. */
+  epoch: number;
+  /** Highest frozen segment seq pushed in this epoch. */
+  frozenSeq: number;
+  /** Total events (frozen + tail) covered by the last push. */
+  pushedCount: number;
+  /** Events covered by the frozen region (local frozen-line position). */
+  frozenEventCount: number;
+  /** sha256 over the concatenated per-event hashes of the frozen region. */
+  frozenChainHash: string;
+  /** segment_hash of the last pushed tail (null = tail was empty). */
+  tailHash: string | null;
+}
+
+const CollabSessionPushCursorSchema = z.object({
+  orgId: z.string(),
+  sessionId: z.string(),
+  epoch: z.number(),
+  frozenSeq: z.number(),
+  pushedCount: z.number(),
+  frozenEventCount: z.number(),
+  frozenChainHash: z.string(),
+  tailHash: z.string().nullable(),
+}) satisfies z.ZodType<CollabSessionPushCursor>;
+
+const CollabSessionPushCursorsSchema = z.record(
+  z.string(),
+  CollabSessionPushCursorSchema
+);
+
+/** Keyed by `${orgId}:${sessionId}`. */
+export const collabSessionPushCursorsAtom = atomWithStorage<
+  Record<string, CollabSessionPushCursor>
+>(
+  collabStorageKey("collabSessionPushCursors"),
+  {},
+  createZodJsonStorage(CollabSessionPushCursorsSchema),
+  { getOnInit: true }
+);
+collabSessionPushCursorsAtom.debugLabel = "collabSessionPushCursorsAtom";
+
+/**
  * One-shot bridge from CollabSyncEngine (plain TS, cannot call React hooks)
  * to the UI: when the engine finishes importing a snapshot that should be
  * opened, it parks the target here; `useCollabSyncEngine` consumes it

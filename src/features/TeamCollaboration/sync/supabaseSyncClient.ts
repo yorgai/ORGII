@@ -15,7 +15,6 @@ import {
   COLLAB_REPO_JOIN_STATUS,
   COLLAB_ROLE,
   COLLAB_SYNC_BACKEND,
-  SUPABASE_SESSION_SNAPSHOT_BUCKET,
   SUPABASE_SYNC_SCHEMA_VERSION,
 } from "@src/store/collaboration/types";
 import type {
@@ -28,14 +27,15 @@ import type {
 
 import type {
   AcceptInviteInput,
+  AppendSessionEventsInput,
   CollabOrgState,
   CollabSyncBackendClient,
   CollabSyncProfile,
   CreateInviteInput,
   CreateOrgInput,
   DenySessionSnapshotInput,
-  DownloadSessionEventsBlobInput,
-  GetSessionEventsInput,
+  GcSessionEventSegmentsInput,
+  GetSessionEventSegmentsInput,
   ListChatMessagesInput,
   ListOrgStateInput,
   PostChatMessageInput,
@@ -46,16 +46,22 @@ import type {
   RequestSessionSnapshotInput,
   ReviewRepoJoinInput,
   RevokeInviteInput,
-  SessionEventsRef,
+  RewriteSessionEventsInput,
+  SessionEventSegmentsSnapshot,
+  SessionEventsSegmentInput,
   UpdateMemberRoleInput,
   UpdateOrgRepoScopesInput,
   UpsertProjectMetadataInput,
-  UpsertSessionEventsInput,
   UpsertSessionMetadataInput,
   UpsertWorkItemInput,
   VerifySetupInput,
   VerifySetupResult,
 } from "./CollabSyncBackend";
+import {
+  computeSegmentHash,
+  gunzipBase64ToJson,
+  gzipJsonToBase64,
+} from "./collabGzip";
 
 const JsonRecordSchema = z.record(z.string(), z.unknown());
 
@@ -91,14 +97,20 @@ const RepoJoinRequestSchema = z.object({
     .transform((value) => value ?? undefined),
 });
 
-const SessionEventsRefSchema = z.object({
-  blobPath: z.string().nullable(),
-  contentHash: z.string().nullable(),
-  updatedAt: z.string().nullable(),
+const SegmentWireSchema = z.object({
+  seq: z.number(),
+  isTail: z.boolean(),
+  payloadGz: z.string(),
+  eventCount: z.number(),
+  segmentHash: z.string(),
 });
 
-const SessionEventsBlobSchema = z.object({
-  events: z.array(z.custom<SessionEvent>()),
+const SegmentsSnapshotWireSchema = z.object({
+  epoch: z.number().nullish().default(null),
+  frozenSeq: z.number().nullish().default(null),
+  tailHash: z.string().nullish().default(null),
+  count: z.number().nullish().default(null),
+  segments: z.array(SegmentWireSchema).default([]),
 });
 
 // Tombstoned session rows carry a stripped payload ({id, orgId,
@@ -337,49 +349,40 @@ function normalizeInviteRecord(
   };
 }
 
-async function uploadSnapshotBlob(
-  profile: CollabSyncProfile,
-  blobPath: string,
-  body: unknown
-): Promise<void> {
-  const response = await fetch(
-    `${normalizeSupabaseProjectUrl(profile.supabaseUrl)}/storage/v1/object/${SUPABASE_SESSION_SNAPSHOT_BUCKET}/${blobPath}`,
-    {
-      method: "POST",
-      headers: {
-        ...supabaseHeaders(profile.anonKey, false),
-        "content-type": "application/json",
-        "x-upsert": "true",
-      },
-      body: JSON.stringify(body),
-    }
-  );
-  await parseJsonResponse(response);
+/** Wire shape of one segment inside the append/rewrite RPC body. */
+interface SegmentWirePayload {
+  seq?: number;
+  payloadGz: string;
+  eventCount: number;
+  segmentHash: string;
 }
 
-async function downloadSnapshotBlob(
-  profile: CollabSyncProfile,
-  blobPath: string
-): Promise<z.infer<typeof SnapshotBlobSchema>> {
-  const response = await fetch(
-    `${normalizeSupabaseProjectUrl(profile.supabaseUrl)}/storage/v1/object/${SUPABASE_SESSION_SNAPSHOT_BUCKET}/${blobPath}`,
-    { headers: supabaseHeaders(profile.anonKey, false) }
-  );
-  return SnapshotBlobSchema.parse(await parseJsonResponse(response));
+async function toFrozenSegmentWire(
+  segment: SessionEventsSegmentInput
+): Promise<SegmentWirePayload> {
+  return {
+    seq: segment.seq,
+    payloadGz: await gzipJsonToBase64(segment.events),
+    eventCount: segment.events.length,
+    segmentHash: await computeSegmentHash(segment.events),
+  };
 }
 
-async function downloadSessionEventsBlob(
-  profile: CollabSyncProfile,
-  blobPath: string
-): Promise<SessionEvent[]> {
-  const response = await fetch(
-    `${normalizeSupabaseProjectUrl(profile.supabaseUrl)}/storage/v1/object/${SUPABASE_SESSION_SNAPSHOT_BUCKET}/${blobPath}`,
-    { headers: supabaseHeaders(profile.anonKey, false) }
-  );
-  const parsed = SessionEventsBlobSchema.parse(
-    await parseJsonResponse(response)
-  );
-  return parsed.events;
+async function toTailWire(
+  tail: SessionEvent[] | null
+): Promise<Omit<SegmentWirePayload, "seq"> | null> {
+  if (!tail || tail.length === 0) return null;
+  return {
+    payloadGz: await gzipJsonToBase64(tail),
+    eventCount: tail.length,
+    segmentHash: await computeSegmentHash(tail),
+  };
+}
+
+async function decodeSegmentEvents(payloadGz: string): Promise<SessionEvent[]> {
+  return z
+    .array(z.custom<SessionEvent>())
+    .parse(await gunzipBase64ToJson(payloadGz));
 }
 
 export const supabaseSyncClient: CollabSyncBackendClient = {
@@ -633,48 +636,93 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
     });
   },
 
-  async upsertSessionEvents(input: UpsertSessionEventsInput): Promise<void> {
-    const body = { events: input.events };
-    const serialized = JSON.stringify(body);
-    const contentHash = await sha256Hex(serialized);
-    const blobPath = `orgs/${input.orgId}/sessions/${input.sourceSessionId}/latest-${contentHash}.json`;
-    await uploadSnapshotBlob(input, blobPath, body);
-    await callRpcVoid(input, "orgii_upsert_session_events", {
+  async appendSessionEvents(input: AppendSessionEventsInput): Promise<void> {
+    // Member-only RPC: owner identity is enforced server-side against the
+    // sessions row, and the summary OCC anchors reject stale cursors.
+    await callRpcVoid(input, "orgii_append_session_events", {
       p_org_id: input.orgId,
       ...memberAuthParams(input),
-      source_session_id: input.sourceSessionId,
-      blob_path: blobPath,
-      content_hash: contentHash,
+      session_row_id: input.sessionRowId,
+      expected_epoch: input.expectedEpoch,
+      expected_frozen_seq: input.expectedFrozenSeq,
+      frozen_segments: await Promise.all(
+        input.frozenSegments.map(toFrozenSegmentWire)
+      ),
+      tail: await toTailWire(input.tail),
+      total_count: input.totalCount,
     });
   },
 
-  async getSessionEvents(
-    input: GetSessionEventsInput
-  ): Promise<SessionEventsRef | null> {
+  async rewriteSessionEvents(input: RewriteSessionEventsInput): Promise<void> {
+    await callRpcVoid(input, "orgii_rewrite_session_events", {
+      p_org_id: input.orgId,
+      ...memberAuthParams(input),
+      session_row_id: input.sessionRowId,
+      new_epoch: input.newEpoch,
+      frozen_segments: await Promise.all(
+        input.frozenSegments.map(toFrozenSegmentWire)
+      ),
+      tail: await toTailWire(input.tail),
+      total_count: input.totalCount,
+    });
+  },
+
+  async getSessionEventSegments(
+    input: GetSessionEventSegmentsInput
+  ): Promise<SessionEventSegmentsSnapshot> {
     const raw = await callRpc(
       input,
-      "orgii_get_session_events",
+      "orgii_get_session_event_segments",
       {
         p_org_id: input.orgId,
         ...flexAuthParams(input),
-        source_session_id: input.sourceSessionId,
+        session_row_id: input.sessionRowId,
+        after_seq: input.afterSeq ?? 0,
       },
-      SessionEventsRefSchema.nullable()
+      SegmentsSnapshotWireSchema.nullable()
     );
-    if (!raw || !raw.blobPath || !raw.contentHash || !raw.updatedAt) {
-      return null;
+    if (!raw) {
+      return {
+        epoch: null,
+        frozenSeq: null,
+        tailHash: null,
+        count: null,
+        segments: [],
+      };
     }
     return {
-      blobPath: raw.blobPath,
-      contentHash: raw.contentHash,
-      updatedAt: raw.updatedAt,
+      epoch: raw.epoch,
+      frozenSeq: raw.frozenSeq,
+      tailHash: raw.tailHash,
+      count: raw.count,
+      segments: await Promise.all(
+        raw.segments.map(async (segment) => ({
+          seq: segment.seq,
+          isTail: segment.isTail,
+          events: await decodeSegmentEvents(segment.payloadGz),
+          eventCount: segment.eventCount,
+          segmentHash: segment.segmentHash,
+        }))
+      ),
     };
   },
 
-  async downloadSessionEventsBlob(
-    input: DownloadSessionEventsBlobInput
-  ): Promise<SessionEvent[]> {
-    return downloadSessionEventsBlob(input, input.blobPath);
+  async gcSessionEventSegments(
+    input: GcSessionEventSegmentsInput
+  ): Promise<number> {
+    return callRpc(
+      input,
+      "orgii_gc_session_event_segments",
+      {
+        p_org_id: input.orgId,
+        ...flexAuthParams(input),
+        retention_days: input.retentionDays ?? 90,
+      },
+      z
+        .number()
+        .nullable()
+        .transform((value) => value ?? 0)
+    );
   },
 
   async updateOrgRepoScopes(input: UpdateOrgRepoScopesInput): Promise<void> {
@@ -737,19 +785,18 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
   async publishSessionSnapshot(
     input: PublishSessionSnapshotInput
   ): Promise<void> {
-    const body = { session: input.session, events: input.events };
-    const serialized = JSON.stringify(body);
-    const contentHash = await sha256Hex(serialized);
-    const blobPath = `orgs/${input.orgId}/sessions/${input.sourceSessionId}/${input.requestId}-${contentHash}.json`;
-    await uploadSnapshotBlob(input, blobPath, body);
+    // Legacy snapshot fallback, now Storage-free: the payload travels as
+    // gzipped bytea inside orgii_session_snapshots (bucket retired).
     await callRpcVoid(input, "orgii_create_session_snapshot", {
       p_org_id: input.orgId,
       ...memberAuthParams(input),
       request_id: input.requestId,
       source_session_id: input.sourceSessionId,
       metadata: input.session,
-      blob_path: blobPath,
-      content_hash: contentHash,
+      payload_gz: await gzipJsonToBase64({
+        session: input.session,
+        events: input.events,
+      }),
     });
   },
 
@@ -777,10 +824,12 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
     );
     const snapshotRequests = await Promise.all(
       parsed.snapshotRequests.map(async (request) => {
-        const blobPath =
-          typeof request.blobPath === "string" ? request.blobPath : undefined;
-        if (!blobPath) return request;
-        const snapshot = await downloadSnapshotBlob(input, blobPath);
+        const payloadGz =
+          typeof request.payloadGz === "string" ? request.payloadGz : undefined;
+        if (!payloadGz) return request;
+        const snapshot = SnapshotBlobSchema.parse(
+          await gunzipBase64ToJson(payloadGz)
+        );
         return {
           ...request,
           session: snapshot.session,

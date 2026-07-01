@@ -2,12 +2,11 @@ import type { TFunction } from "i18next";
 import { useSetAtom } from "jotai";
 import { useCallback, useState } from "react";
 
-import { eventStoreProxy } from "@src/engines/SessionCore/core/store";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import {
   type SupabaseSyncProfile,
   getSyncProfile,
 } from "@src/features/TeamCollaboration/collabSyncUtils";
+import { importRemoteSession } from "@src/features/TeamCollaboration/engine/collabSyncEngineHelpers";
 import { supabaseSyncClient } from "@src/features/TeamCollaboration/sync/supabaseSyncClient";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
 import type { SessionTableItem } from "@src/modules/shared/layouts/blocks";
@@ -18,11 +17,7 @@ import type {
   CollabOrgRecord,
   RemoteTeammateSessionMetadata,
 } from "@src/store/collaboration/types";
-import { upsertSession } from "@src/store/session";
-import { sessionsAtom } from "@src/store/session";
-import { persistSessions } from "@src/store/session/sessionAtom/persistence";
 import type { Session } from "@src/store/session/sessionAtom/types";
-import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
 import { COLLAB_SNAPSHOT_REQUEST_STATUS } from "./constants";
 
@@ -32,41 +27,6 @@ interface UseSessionActionsParams {
   sessions: Session[];
   currentMember: CollabMemberRecord | undefined;
   t: TFunction<"navigation">;
-}
-
-function createImportedSnapshotSessionId(): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return `imported-session-${Array.from(bytes, (byte) =>
-    byte.toString(16).padStart(2, "0")
-  ).join("")}`;
-}
-
-function rewriteEventsForImportedSnapshot(
-  events: SessionEvent[],
-  localSessionId: string
-): SessionEvent[] {
-  return events.map((event) => ({ ...event, sessionId: localSessionId }));
-}
-
-function findImportedSession(
-  sessions: Session[],
-  orgId: string,
-  sourceSessionId: string
-): Session | undefined {
-  return sessions.find((session) => {
-    if (session.category !== "external_history") return false;
-    if (!session.error_message) return false;
-    try {
-      const meta = JSON.parse(session.error_message) as {
-        orgId?: string;
-        originalSessionId?: string;
-      };
-      return meta.orgId === orgId && meta.originalSessionId === sourceSessionId;
-    } catch {
-      return false;
-    }
-  });
 }
 
 export function useSessionActions({
@@ -104,68 +64,31 @@ export function useSessionActions({
         return;
       }
 
-      if (
-        remoteSession.eventsBlobPath &&
-        remoteSession.eventsContentHash &&
-        org
-      ) {
+      // Direct replay through the shared segments importer (design §7.4 /
+      // M5 dedup): the same function the engine's PullLoop uses, so this
+      // path gets cursor diffing + incremental fetch + persistence for free.
+      if (org && remoteSession.eventsEpoch !== undefined) {
         const profile = getSyncProfile(org) as SupabaseSyncProfile | null;
         if (profile) {
           setImportingSessionId(remoteSession.id);
           try {
-            const events = await supabaseSyncClient.downloadSessionEventsBlob({
-              ...profile,
-              blobPath: remoteSession.eventsBlobPath,
+            const result = await importRemoteSession({
+              client: supabaseSyncClient,
+              profile,
+              orgId: org.id,
+              remoteSession,
             });
-            const localSessionId =
-              findImportedSession(
-                sessions,
-                org.id,
-                remoteSession.sourceSessionId
-              )?.session_id ?? createImportedSnapshotSessionId();
-            const localEvents = rewriteEventsForImportedSnapshot(
-              events,
-              localSessionId
-            );
-            const now = new Date().toISOString();
-            upsertSession({
-              session_id: localSessionId,
-              status: "completed",
-              created_at: now,
-              updated_at: now,
-              completed_at: now,
-              name: remoteSession.title,
-              repoPath: remoteSession.repoPath,
-              category: "external_history",
-              model: "Collaboration Snapshot",
-              agentIconId: "archive",
-              agentDisplayName: "Collaboration Snapshot",
-              pinned: false,
-              error_message: JSON.stringify({
-                originalSessionId: remoteSession.sourceSessionId,
-                originalCategory: "rust_agent",
-                exportedAt: now,
-                eventCount: localEvents.length,
-                orgId: org.id,
-                ownerMemberId: remoteSession.ownerMemberId,
-                contentHash: remoteSession.eventsContentHash,
-                ownerDisplayName: remoteSession.ownerDisplayName,
-              }),
-            });
-            persistSessions(
-              getInstrumentedStore().get(sessionsAtom) as Session[]
-            );
-            await eventStoreProxy.set(localEvents, localSessionId);
-            await eventStoreProxy.saveToCache(localSessionId);
-            openSession(
-              localSessionId,
-              remoteSession.title,
-              remoteSession.repoPath
-            );
+            if (result) {
+              openSession(
+                result.localSessionId,
+                remoteSession.title,
+                remoteSession.repoPath
+              );
+              return;
+            }
           } finally {
             setImportingSessionId(null);
           }
-          return;
         }
       }
 

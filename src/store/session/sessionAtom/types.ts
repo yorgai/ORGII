@@ -24,6 +24,39 @@ import type {
 // Re-export canonical types
 export type { SessionStatus, PendingQuestion };
 
+/**
+ * Provenance + consumer-side sync cursor for sessions imported from a
+ * collaboration org (design §7.4 / §16.7). Lives on the Session record as a
+ * first-class field — it replaces the legacy collab idiom of JSON-encoding
+ * this metadata into `error_message` (the file-import path in
+ * sessionImportExport.ts still uses that idiom and is out of scope here).
+ *
+ * `Session.orgId` and `importedFrom.orgId` coexist deliberately: `orgId` is
+ * ownership (guest imports have none), `importedFrom.orgId` is origin.
+ */
+export interface SessionImportedFrom {
+  orgId: string;
+  sourceSessionId: string;
+  ownerMemberId: string;
+  /** Segments epoch last applied locally. 0 = legacy snapshot import. */
+  epoch: number;
+  /** Frozen segment seq last applied locally. */
+  seq: number;
+  /** Total event count last applied locally. */
+  count: number;
+  /**
+   * Events covered by the frozen region — the local frozen/tail boundary,
+   * needed to replace only the tail region on incremental pulls. Optional:
+   * absent (legacy cursor) forces a full refetch.
+   */
+  frozenCount?: number;
+  /** segment_hash of the last applied tail segment (tail-change detection). */
+  tailHash?: string;
+  /** Display convenience carried over from the remote metadata. */
+  ownerDisplayName?: string;
+  importedAt?: string;
+}
+
 export interface Session {
   session_id: string;
   status: SessionStatus | string;
@@ -123,6 +156,12 @@ export interface Session {
   replyTargetEventId?: string;
   /** Whether this session is pinned to the top of the sidebar. */
   pinned?: boolean;
+  /**
+   * Set on sessions imported from a collaboration org (auto-import or
+   * direct replay). Doubles as the consumer-side segments cursor.
+   * Sessions carrying this field are never eligible for collab push.
+   */
+  importedFrom?: SessionImportedFrom;
   created_time?: string;
   updated_time?: string;
   /** Source-cache impact stat for external and Rust-native sessions. */

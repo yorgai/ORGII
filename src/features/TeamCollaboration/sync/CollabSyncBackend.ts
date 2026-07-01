@@ -124,25 +124,71 @@ export interface ListOrgStateInput extends CollabSyncProfile {
   sinceTimestamp?: string;
 }
 
-export interface UpsertSessionEventsInput extends CollabSyncProfile {
-  orgId: string;
-  sourceSessionId: string;
+// ---------------------------------------------------------------------------
+// Segments data plane (design §7). Events are stored as an immutable frozen
+// prefix (append-only numbered segments) plus one mutable tail segment.
+// The client layer owns gzip + segment hashing; callers pass plain events.
+// ---------------------------------------------------------------------------
+
+/** One frozen segment to write: `seq` is server-side ordering (1-based). */
+export interface SessionEventsSegmentInput {
+  seq: number;
   events: SessionEvent[];
 }
 
-export interface GetSessionEventsInput extends CollabSyncProfile {
+export interface AppendSessionEventsInput extends CollabSyncProfile {
   orgId: string;
-  sourceSessionId: string;
+  /** orgii_sessions.id (`${orgId}:${memberId}:${sourceSessionId}`). */
+  sessionRowId: string;
+  /** OCC anchor: must equal the server summary or the RPC raises ORGII_CONFLICT. */
+  expectedEpoch: number;
+  expectedFrozenSeq: number;
+  /** New frozen segments (may be empty for a tail-only replace). */
+  frozenSegments: SessionEventsSegmentInput[];
+  /** Replacement tail events; null deletes the tail (fully frozen stream). */
+  tail: SessionEvent[] | null;
+  totalCount: number;
 }
 
-export interface DownloadSessionEventsBlobInput extends CollabSyncProfile {
-  blobPath: string;
+export interface RewriteSessionEventsInput extends CollabSyncProfile {
+  orgId: string;
+  sessionRowId: string;
+  /** Must be greater than the server's current epoch. */
+  newEpoch: number;
+  frozenSegments: SessionEventsSegmentInput[];
+  tail: SessionEvent[] | null;
+  totalCount: number;
 }
 
-export interface SessionEventsRef {
-  blobPath: string;
-  contentHash: string;
-  updatedAt: string;
+export interface GetSessionEventSegmentsInput extends CollabSyncProfile {
+  orgId: string;
+  sessionRowId: string;
+  /** Return frozen segments with seq strictly greater; tail always included. */
+  afterSeq?: number;
+}
+
+export interface SessionEventSegmentRecord {
+  seq: number;
+  isTail: boolean;
+  events: SessionEvent[];
+  eventCount: number;
+  segmentHash: string;
+}
+
+/** Single-statement snapshot of the summary + requested segments. */
+export interface SessionEventSegmentsSnapshot {
+  /** null ⇒ the owner has never pushed segments for this session. */
+  epoch: number | null;
+  frozenSeq: number | null;
+  tailHash: string | null;
+  count: number | null;
+  segments: SessionEventSegmentRecord[];
+}
+
+export interface GcSessionEventSegmentsInput extends CollabSyncProfile {
+  orgId: string;
+  /** Defaults to the server-side 90-day retention (design §7.5). */
+  retentionDays?: number;
 }
 
 export interface UpdateOrgRepoScopesInput extends CollabSyncProfile {
@@ -218,13 +264,13 @@ export interface CollabSyncBackendClient {
   upsertWorkItem(input: UpsertWorkItemInput): Promise<void>;
   upsertSessionMetadata(input: UpsertSessionMetadataInput): Promise<void>;
   removeSessionMetadata(input: RemoveSessionMetadataInput): Promise<void>;
-  upsertSessionEvents(input: UpsertSessionEventsInput): Promise<void>;
-  getSessionEvents(
-    input: GetSessionEventsInput
-  ): Promise<SessionEventsRef | null>;
-  downloadSessionEventsBlob(
-    input: DownloadSessionEventsBlobInput
-  ): Promise<SessionEvent[]>;
+  appendSessionEvents(input: AppendSessionEventsInput): Promise<void>;
+  rewriteSessionEvents(input: RewriteSessionEventsInput): Promise<void>;
+  getSessionEventSegments(
+    input: GetSessionEventSegmentsInput
+  ): Promise<SessionEventSegmentsSnapshot>;
+  /** Returns the number of segment rows removed by the retention sweep. */
+  gcSessionEventSegments(input: GcSessionEventSegmentsInput): Promise<number>;
   updateOrgRepoScopes(input: UpdateOrgRepoScopesInput): Promise<void>;
   requestRepoJoin(input: RequestRepoJoinInput): Promise<void>;
   reviewRepoJoin(input: ReviewRepoJoinInput): Promise<void>;

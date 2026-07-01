@@ -117,14 +117,45 @@ create table if not exists public.orgii_sessions (
   source_session_id text not null,
   access_mode text,
   payload jsonb not null,
-  events_blob_path text,
-  events_content_hash text,
+  -- Segments summary (design §7.3): the OCC anchors + change signal for the
+  -- frozen/tail event data plane. All null until the owner pushes segments.
+  events_epoch integer,
+  events_frozen_seq integer,
+  events_count integer,
+  events_tail_hash text,
   events_updated_at timestamptz,
   updated_at timestamptz not null default now()
 );
 
 alter table public.orgii_sessions
-  add column if not exists deleted_at timestamptz;
+  add column if not exists deleted_at timestamptz,
+  add column if not exists events_epoch integer,
+  add column if not exists events_frozen_seq integer,
+  add column if not exists events_count integer,
+  add column if not exists events_tail_hash text;
+
+-- Legacy Storage-blob pointers, replaced by the segments plane.
+alter table public.orgii_sessions
+  drop column if exists events_blob_path,
+  drop column if exists events_content_hash;
+
+-- Event segments (design §7.3): immutable frozen prefix as numbered
+-- append-only segments plus a single mutable tail row (seq = 1e9, replaced
+-- in place). payload_gz is client-gzipped JSON of the segment's event array;
+-- PostgREST transports it base64-encoded. Rows die with the sessions row
+-- (cascade) or via explicit deletes in tombstone / rewrite / GC paths.
+create table if not exists public.orgii_session_event_segments (
+  org_id text not null,
+  session_row_id text not null references public.orgii_sessions(id) on delete cascade,
+  epoch integer not null,
+  seq integer not null,
+  is_tail boolean not null default false,
+  payload_gz bytea not null,
+  event_count integer not null,
+  segment_hash text not null,
+  created_at timestamptz not null default now(),
+  primary key (org_id, session_row_id, epoch, seq)
+);
 
 create table if not exists public.orgii_chat_messages (
   id text primary key,
@@ -151,11 +182,19 @@ create table if not exists public.orgii_session_snapshots (
   request_id text primary key references public.orgii_session_snapshot_requests(request_id) on delete cascade,
   org_id text not null references public.orgii_orgs(id) on delete cascade,
   source_session_id text not null,
-  blob_path text not null,
-  content_hash text not null,
+  -- Snapshot payload ({session, events}) as client-gzipped JSON. Replaces
+  -- the retired Storage-bucket blob (blob_path / content_hash).
+  payload_gz bytea,
   metadata jsonb not null,
   created_at timestamptz not null default now()
 );
+
+alter table public.orgii_session_snapshots
+  add column if not exists payload_gz bytea;
+
+alter table public.orgii_session_snapshots
+  drop column if exists blob_path,
+  drop column if exists content_hash;
 
 create table if not exists public.orgii_repo_join_requests (
   request_id text primary key,
@@ -177,14 +216,17 @@ alter table public.orgii_invites enable row level security;
 alter table public.orgii_projects enable row level security;
 alter table public.orgii_work_items enable row level security;
 alter table public.orgii_sessions enable row level security;
+alter table public.orgii_session_event_segments enable row level security;
 alter table public.orgii_chat_messages enable row level security;
 alter table public.orgii_session_snapshot_requests enable row level security;
 alter table public.orgii_session_snapshots enable row level security;
 alter table public.orgii_repo_join_requests enable row level security;
 
--- Legacy snapshot blob path; retired (policies dropped) when the segments
--- data plane lands. Until then anon read/write on this bucket is a known,
--- documented residual.
+-- Storage bucket RETIRED (design §7.1 / S5): every events/snapshot payload
+-- now travels through member-authenticated RPCs into Postgres bytea. The
+-- bucket row is kept (harmless, and dropping user data buckets is not ours
+-- to do) but all anon policies are dropped and never recreated — with no
+-- policy, anon can neither list nor read objects.
 do $$
 begin
   if not exists (select 1 from storage.buckets where id = '${SUPABASE_SESSION_SNAPSHOT_BUCKET}') then
@@ -196,19 +238,6 @@ end $$;
 drop policy if exists orgii_snapshots_anon_read on storage.objects;
 drop policy if exists orgii_snapshots_anon_insert on storage.objects;
 drop policy if exists orgii_snapshots_anon_update on storage.objects;
-
-create policy orgii_snapshots_anon_read
-on storage.objects for select to anon
-using (bucket_id = '${SUPABASE_SESSION_SNAPSHOT_BUCKET}');
-
-create policy orgii_snapshots_anon_insert
-on storage.objects for insert to anon
-with check (bucket_id = '${SUPABASE_SESSION_SNAPSHOT_BUCKET}');
-
-create policy orgii_snapshots_anon_update
-on storage.objects for update to anon
-using (bucket_id = '${SUPABASE_SESSION_SNAPSHOT_BUCKET}')
-with check (bucket_id = '${SUPABASE_SESSION_SNAPSHOT_BUCKET}');
 
 -- ============================================================ drop v1 functions
 -- v1 signatures are dropped explicitly: create-or-replace with different
@@ -257,6 +286,12 @@ drop function if exists public.orgii_update_org_repo_scopes(text, text, text, te
 drop function if exists public.orgii_request_repo_join(text, text, text, text, jsonb);
 drop function if exists public.orgii_review_repo_join(text, text, text, text, text, boolean, text);
 drop function if exists public.orgii_list_org_state(text, text, text, text, timestamptz);
+
+-- M3 (segments data plane): the blob-era events RPCs are removed for good —
+-- their drop statements above stay so re-runs purge them from live DBs —
+-- and the snapshot publish RPC changes signature (payload_gz replaces
+-- blob_path + content_hash).
+drop function if exists public.orgii_create_session_snapshot(text, text, text, jsonb, text, text, text, text);
 
 -- ============================================================ auth
 
@@ -643,8 +678,12 @@ begin
     payload = excluded.payload,
     updated_at = now(),
     deleted_at = null,
-    events_blob_path = case when excluded.access_mode = 'full_replay' then orgii_sessions.events_blob_path else null end,
-    events_content_hash = case when excluded.access_mode = 'full_replay' then orgii_sessions.events_content_hash else null end,
+    -- Downgrading below full_replay drops the segments summary (and the
+    -- segment rows below) so consumers stop importing immediately.
+    events_epoch = case when excluded.access_mode = 'full_replay' then orgii_sessions.events_epoch else null end,
+    events_frozen_seq = case when excluded.access_mode = 'full_replay' then orgii_sessions.events_frozen_seq else null end,
+    events_count = case when excluded.access_mode = 'full_replay' then orgii_sessions.events_count else null end,
+    events_tail_hash = case when excluded.access_mode = 'full_replay' then orgii_sessions.events_tail_hash else null end,
     events_updated_at = case when excluded.access_mode = 'full_replay' then orgii_sessions.events_updated_at else null end
   where orgii_sessions.owner_member_id = excluded.owner_member_id
     and orgii_sessions.org_id = excluded.org_id;
@@ -652,6 +691,12 @@ begin
   get diagnostics v_rows = row_count;
   if v_rows = 0 then
     raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+
+  if v_access_mode is distinct from 'full_replay' then
+    delete from public.orgii_session_event_segments g
+    where g.org_id = p_org_id
+      and g.session_row_id = v_payload->>'id';
   end if;
 end;
 $$;
@@ -684,8 +729,10 @@ begin
   update public.orgii_sessions s
      set deleted_at = now(),
          updated_at = now(),
-         events_blob_path = null,
-         events_content_hash = null,
+         events_epoch = null,
+         events_frozen_seq = null,
+         events_count = null,
+         events_tail_hash = null,
          events_updated_at = null,
          payload = jsonb_build_object(
            'id', s.payload->>'id',
@@ -698,16 +745,36 @@ begin
      and s.owner_member_id = orgii_remove_session_metadata.owner_member_id
      and s.source_session_id = orgii_remove_session_metadata.source_session_id
      and s.deleted_at is null;
+
+  -- The row itself is a tombstone (not deleted), so the FK cascade never
+  -- fires: purge the segment payloads explicitly.
+  delete from public.orgii_session_event_segments g
+  using public.orgii_sessions s
+  where s.id = g.session_row_id
+    and s.org_id = p_org_id
+    and g.org_id = p_org_id
+    and s.owner_member_id = orgii_remove_session_metadata.owner_member_id
+    and s.source_session_id = orgii_remove_session_metadata.source_session_id
+    and s.deleted_at is not null;
 end;
 $$;
 
--- Interim (until the segments data plane replaces blob events): kept from v1
--- but now member-authenticated and owner-scoped.
-create or replace function public.orgii_upsert_session_events(
+-- ============================================================ event segments (design §7)
+
+-- Owner-only append: extend the frozen prefix and/or replace the tail in one
+-- transaction. OCC: (expected_epoch, expected_frozen_seq) must match the
+-- summary row exactly — one check covers concurrent devices, lost cursors
+-- and out-of-order flushes; rejected writers re-anchor via a rewrite.
+-- Idempotency: a retried frozen segment whose (epoch, seq) already exists
+-- with the SAME segment_hash is a no-op; a different hash is a conflict.
+create or replace function public.orgii_append_session_events(
   p_org_id text,
-  source_session_id text,
-  blob_path text,
-  content_hash text,
+  session_row_id text,
+  expected_epoch integer,
+  expected_frozen_seq integer,
+  frozen_segments jsonb,
+  tail jsonb,
+  total_count integer,
   p_member_id text default null,
   p_member_token text default null
 )
@@ -718,29 +785,208 @@ set search_path = public, extensions
 as $$
 declare
   v_ctx record;
+  v_session record;
+  v_seg jsonb;
+  v_seq integer;
+  v_existing_hash text;
+  v_new_frozen_seq integer;
+  v_has_tail boolean := tail is not null and jsonb_typeof(tail) = 'object';
+begin
+  -- Member credential only: segment writes always carry an owner identity.
+  select * into v_ctx
+  from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, null);
+
+  select s.* into v_session
+  from public.orgii_sessions s
+  where s.id = orgii_append_session_events.session_row_id
+    and s.org_id = p_org_id;
+
+  if v_session.id is null
+     or v_session.owner_member_id is distinct from v_ctx.member_id
+     or v_session.deleted_at is not null then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+
+  if expected_epoch < 1
+     or coalesce(v_session.events_epoch, 0) <> expected_epoch
+     or coalesce(v_session.events_frozen_seq, 0) <> expected_frozen_seq then
+    raise exception 'ORGII_CONFLICT';
+  end if;
+
+  v_new_frozen_seq := expected_frozen_seq;
+  for v_seg in select * from jsonb_array_elements(coalesce(frozen_segments, '[]'::jsonb)) loop
+    v_seq := (v_seg->>'seq')::integer;
+    if v_seq is null or v_seq <= expected_frozen_seq then
+      raise exception 'ORGII_CONFLICT';
+    end if;
+    v_new_frozen_seq := greatest(v_new_frozen_seq, v_seq);
+
+    select g.segment_hash into v_existing_hash
+    from public.orgii_session_event_segments g
+    where g.org_id = p_org_id
+      and g.session_row_id = orgii_append_session_events.session_row_id
+      and g.epoch = expected_epoch
+      and g.seq = v_seq;
+
+    if found then
+      if v_existing_hash is distinct from v_seg->>'segmentHash' then
+        raise exception 'ORGII_CONFLICT';
+      end if;
+      -- Identical retry: skip (network-retry safe).
+    else
+      insert into public.orgii_session_event_segments
+        (org_id, session_row_id, epoch, seq, is_tail, payload_gz, event_count, segment_hash)
+      values (
+        p_org_id,
+        orgii_append_session_events.session_row_id,
+        expected_epoch,
+        v_seq,
+        false,
+        decode(v_seg->>'payloadGz', 'base64'),
+        (v_seg->>'eventCount')::integer,
+        v_seg->>'segmentHash'
+      );
+    end if;
+  end loop;
+
+  -- Single mutable tail row: delete + reinsert (seq 1e9 keeps it far above
+  -- any realistic frozen seq inside the same PK space).
+  delete from public.orgii_session_event_segments g
+  where g.org_id = p_org_id
+    and g.session_row_id = orgii_append_session_events.session_row_id
+    and g.is_tail;
+
+  if v_has_tail then
+    insert into public.orgii_session_event_segments
+      (org_id, session_row_id, epoch, seq, is_tail, payload_gz, event_count, segment_hash)
+    values (
+      p_org_id,
+      orgii_append_session_events.session_row_id,
+      expected_epoch,
+      1000000000,
+      true,
+      decode(tail->>'payloadGz', 'base64'),
+      (tail->>'eventCount')::integer,
+      tail->>'segmentHash'
+    );
+  end if;
+
+  update public.orgii_sessions s
+     set events_epoch = expected_epoch,
+         events_frozen_seq = v_new_frozen_seq,
+         events_count = total_count,
+         events_tail_hash = case when v_has_tail then tail->>'segmentHash' else null end,
+         events_updated_at = now(),
+         updated_at = now()
+   where s.id = orgii_append_session_events.session_row_id;
+end;
+$$;
+
+-- Owner-only atomic rewrite (epoch bump): delete the old generation and
+-- write the new one in a single transaction so pullers never observe a
+-- partially rewritten stream (design §7.3 step 6).
+-- TODO(design §7.3): the staged-commit variant for total payloads > 4MB
+-- (pending-marked segments + final commit flip) is out of scope for M3.
+create or replace function public.orgii_rewrite_session_events(
+  p_org_id text,
+  session_row_id text,
+  new_epoch integer,
+  frozen_segments jsonb,
+  tail jsonb,
+  total_count integer,
+  p_member_id text default null,
+  p_member_token text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_ctx record;
+  v_session record;
+  v_seg jsonb;
+  v_seq integer;
+  v_new_frozen_seq integer := 0;
+  v_has_tail boolean := tail is not null and jsonb_typeof(tail) = 'object';
 begin
   select * into v_ctx
   from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, null);
 
-  update public.orgii_sessions s
-     set events_blob_path = orgii_upsert_session_events.blob_path,
-         events_content_hash = orgii_upsert_session_events.content_hash,
-         events_updated_at = now(),
-         updated_at = now()
-   where s.org_id = p_org_id
-     and s.source_session_id = orgii_upsert_session_events.source_session_id
-     and s.owner_member_id = v_ctx.member_id
-     and s.deleted_at is null;
+  select s.* into v_session
+  from public.orgii_sessions s
+  where s.id = orgii_rewrite_session_events.session_row_id
+    and s.org_id = p_org_id;
 
-  if not found then
+  if v_session.id is null
+     or v_session.owner_member_id is distinct from v_ctx.member_id
+     or v_session.deleted_at is not null then
     raise exception 'ORGII_UNAUTHORIZED';
   end if;
+
+  -- Epochs only move forward; a stale or duplicate rewrite must re-anchor.
+  if new_epoch is null or new_epoch <= coalesce(v_session.events_epoch, 0) then
+    raise exception 'ORGII_CONFLICT';
+  end if;
+
+  delete from public.orgii_session_event_segments g
+  where g.org_id = p_org_id
+    and g.session_row_id = orgii_rewrite_session_events.session_row_id;
+
+  for v_seg in select * from jsonb_array_elements(coalesce(frozen_segments, '[]'::jsonb)) loop
+    v_seq := (v_seg->>'seq')::integer;
+    if v_seq is null or v_seq < 1 then
+      raise exception 'ORGII_CONFLICT';
+    end if;
+    v_new_frozen_seq := greatest(v_new_frozen_seq, v_seq);
+    insert into public.orgii_session_event_segments
+      (org_id, session_row_id, epoch, seq, is_tail, payload_gz, event_count, segment_hash)
+    values (
+      p_org_id,
+      orgii_rewrite_session_events.session_row_id,
+      new_epoch,
+      v_seq,
+      false,
+      decode(v_seg->>'payloadGz', 'base64'),
+      (v_seg->>'eventCount')::integer,
+      v_seg->>'segmentHash'
+    );
+  end loop;
+
+  if v_has_tail then
+    insert into public.orgii_session_event_segments
+      (org_id, session_row_id, epoch, seq, is_tail, payload_gz, event_count, segment_hash)
+    values (
+      p_org_id,
+      orgii_rewrite_session_events.session_row_id,
+      new_epoch,
+      1000000000,
+      true,
+      decode(tail->>'payloadGz', 'base64'),
+      (tail->>'eventCount')::integer,
+      tail->>'segmentHash'
+    );
+  end if;
+
+  update public.orgii_sessions s
+     set events_epoch = new_epoch,
+         events_frozen_seq = v_new_frozen_seq,
+         events_count = total_count,
+         events_tail_hash = case when v_has_tail then tail->>'segmentHash' else null end,
+         events_updated_at = now(),
+         updated_at = now()
+   where s.id = orgii_rewrite_session_events.session_row_id;
 end;
 $$;
 
-create or replace function public.orgii_get_session_events(
+-- Any authenticated member (or root) may read; per-session visibility
+-- filtering arrives with shares (M4). The whole result is built by ONE
+-- SELECT, so summary + segments are a consistent statement-level snapshot —
+-- a concurrent rewrite can never tear the response.
+create or replace function public.orgii_get_session_event_segments(
   p_org_id text,
-  source_session_id text,
+  session_row_id text,
+  after_seq integer default 0,
   p_member_id text default null,
   p_member_token text default null,
   p_org_secret text default null
@@ -751,23 +997,83 @@ security definer
 set search_path = public, extensions
 as $$
 declare
-  result jsonb;
+  v_result jsonb;
 begin
   perform public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
 
   select jsonb_build_object(
-    'blobPath', s.events_blob_path,
-    'contentHash', s.events_content_hash,
-    'updatedAt', s.events_updated_at
-  ) into result
+    'epoch', s.events_epoch,
+    'frozenSeq', s.events_frozen_seq,
+    'tailHash', s.events_tail_hash,
+    'count', s.events_count,
+    'segments', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'seq', g.seq,
+        'isTail', g.is_tail,
+        -- encode(..., 'base64') wraps lines per RFC 2045; strip the LFs.
+        'payloadGz', replace(encode(g.payload_gz, 'base64'), chr(10), ''),
+        'eventCount', g.event_count,
+        'segmentHash', g.segment_hash
+      ) order by g.seq)
+      from public.orgii_session_event_segments g
+      where g.org_id = s.org_id
+        and g.session_row_id = s.id
+        and g.epoch = s.events_epoch
+        and (g.is_tail or g.seq > coalesce(after_seq, 0))
+    ), '[]'::jsonb)
+  ) into v_result
   from public.orgii_sessions s
-  where s.org_id = p_org_id
-    and s.source_session_id = orgii_get_session_events.source_session_id
-    and s.deleted_at is null
-    and s.events_blob_path is not null
-    and s.events_content_hash is not null;
+  where s.id = orgii_get_session_event_segments.session_row_id
+    and s.org_id = p_org_id
+    and s.deleted_at is null;
 
-  return coalesce(result, null::jsonb);
+  if v_result is null then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+  return v_result;
+end;
+$$;
+
+-- Retention sweep (design §7.5, default 90 days): admin clients trigger this
+-- periodically; segments of sessions with no recent events activity are
+-- dropped and their summaries cleared (consumers keep local copies).
+create or replace function public.orgii_gc_session_event_segments(
+  p_org_id text,
+  retention_days integer default 90,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_cutoff timestamptz := now() - make_interval(days => greatest(coalesce(retention_days, 90), 1));
+  v_deleted integer;
+begin
+  perform public.orgii_authenticate_admin(p_org_id, p_member_id, p_member_token, p_org_secret);
+
+  delete from public.orgii_session_event_segments g
+  using public.orgii_sessions s
+  where s.id = g.session_row_id
+    and g.org_id = p_org_id
+    and s.org_id = p_org_id
+    and coalesce(s.events_updated_at, s.updated_at) < v_cutoff;
+
+  get diagnostics v_deleted = row_count;
+
+  update public.orgii_sessions s
+     set events_epoch = null,
+         events_frozen_seq = null,
+         events_count = null,
+         events_tail_hash = null
+   where s.org_id = p_org_id
+     and s.events_epoch is not null
+     and coalesce(s.events_updated_at, s.updated_at) < v_cutoff;
+
+  return v_deleted;
 end;
 $$;
 
@@ -1018,8 +1324,7 @@ create or replace function public.orgii_create_session_snapshot(
   request_id text,
   source_session_id text,
   metadata jsonb,
-  blob_path text,
-  content_hash text,
+  payload_gz text,
   p_member_id text default null,
   p_member_token text default null
 )
@@ -1043,11 +1348,12 @@ begin
     raise exception 'ORGII_UNAUTHORIZED';
   end if;
 
-  insert into public.orgii_session_snapshots (request_id, org_id, source_session_id, blob_path, content_hash, metadata)
-  values (request_id, p_org_id, source_session_id, blob_path, content_hash, metadata)
+  -- payload_gz: base64 of the client-gzipped {session, events} JSON — the
+  -- Storage-free replacement for the retired snapshot bucket blob.
+  insert into public.orgii_session_snapshots (request_id, org_id, source_session_id, payload_gz, metadata)
+  values (request_id, p_org_id, source_session_id, decode(payload_gz, 'base64'), metadata)
   on conflict (request_id) do update set
-    blob_path = excluded.blob_path,
-    content_hash = excluded.content_hash,
+    payload_gz = excluded.payload_gz,
     metadata = excluded.metadata;
 
   update public.orgii_session_snapshot_requests
@@ -1276,9 +1582,10 @@ begin
     'sessions', coalesce((
       select jsonb_agg(
         s.payload || jsonb_build_object(
-          'eventsBlobPath', s.events_blob_path,
-          'eventsContentHash', s.events_content_hash,
-          'eventsUpdatedAt', s.events_updated_at,
+          'eventsEpoch', s.events_epoch,
+          'eventsFrozenSeq', s.events_frozen_seq,
+          'eventsCount', s.events_count,
+          'eventsTailHash', s.events_tail_hash,
           'deletedAt', s.deleted_at
         )
       )
@@ -1290,8 +1597,11 @@ begin
       select jsonb_agg(
         r.payload || jsonb_build_object(
           'error', r.error,
-          'blobPath', sn.blob_path,
-          'contentHash', sn.content_hash,
+          -- Inline gzipped payload (base64): rows fall out of the delta
+          -- window right after completion, so the cost matches the old
+          -- blob download without touching Storage.
+          'payloadGz', case when sn.payload_gz is null then null
+            else replace(encode(sn.payload_gz, 'base64'), chr(10), '') end,
           'session', sn.metadata
         )
       )
@@ -1331,15 +1641,17 @@ grant execute on function public.orgii_remove_member(text, text, text, text, tex
 grant execute on function public.orgii_update_member_role(text, text, text, text, text, text) to anon;
 grant execute on function public.orgii_upsert_session_metadata(text, jsonb, text, text) to anon;
 grant execute on function public.orgii_remove_session_metadata(text, text, text, text, text, text) to anon;
-grant execute on function public.orgii_upsert_session_events(text, text, text, text, text, text) to anon;
-grant execute on function public.orgii_get_session_events(text, text, text, text, text) to anon;
+grant execute on function public.orgii_append_session_events(text, text, integer, integer, jsonb, jsonb, integer, text, text) to anon;
+grant execute on function public.orgii_rewrite_session_events(text, text, integer, jsonb, jsonb, integer, text, text) to anon;
+grant execute on function public.orgii_get_session_event_segments(text, text, integer, text, text, text) to anon;
+grant execute on function public.orgii_gc_session_event_segments(text, integer, text, text, text) to anon;
 grant execute on function public.orgii_post_chat_message(text, jsonb, text, text) to anon;
 grant execute on function public.orgii_upsert_project(text, jsonb, integer, text, text, text) to anon;
 grant execute on function public.orgii_delete_project(text, text, text, text, text) to anon;
 grant execute on function public.orgii_upsert_work_item(text, jsonb, integer, text, text, text) to anon;
 grant execute on function public.orgii_delete_work_item(text, text, text, text, text) to anon;
 grant execute on function public.orgii_request_session_snapshot(text, jsonb, text, text) to anon;
-grant execute on function public.orgii_create_session_snapshot(text, text, text, jsonb, text, text, text, text) to anon;
+grant execute on function public.orgii_create_session_snapshot(text, text, text, jsonb, text, text, text) to anon;
 grant execute on function public.orgii_deny_session_snapshot(text, text, text, text, text) to anon;
 grant execute on function public.orgii_update_org_repo_scopes(text, text[], text, text, text) to anon;
 grant execute on function public.orgii_request_repo_join(text, text, jsonb, text, text) to anon;

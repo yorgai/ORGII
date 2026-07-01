@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { COLLAB_IDENTITY_KIND } from "@src/store/collaboration/types";
 import type { RemoteTeammateSessionMetadata } from "@src/store/collaboration/types";
 
+import {
+  computeSegmentHash,
+  gunzipBase64ToJson,
+  gzipJsonToBase64,
+} from "./collabGzip";
 import { ORGII_SUPABASE_SETUP_SQL } from "./supabaseSetupSql";
 import { supabaseSyncClient } from "./supabaseSyncClient";
 
@@ -33,10 +39,15 @@ const REMOTE_SESSION: RemoteTeammateSessionMetadata = {
   ownerIdentityKind: COLLAB_IDENTITY_KIND.HUMAN,
   sourceSessionId: "session-1",
   title: "Session",
-  eventsBlobPath: undefined,
-  eventsContentHash: undefined,
-  eventsUpdatedAt: undefined,
+  eventsEpoch: undefined,
+  eventsFrozenSeq: undefined,
+  eventsCount: undefined,
+  eventsTailHash: undefined,
 };
+
+function makeEvent(id: string): SessionEvent {
+  return { id, sessionId: "session-1", chunk_id: null } as SessionEvent;
+}
 
 const SERVER_MEMBER = {
   id: "member-1",
@@ -83,15 +94,51 @@ describe("Supabase sync setup SQL", () => {
     expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii-session-snapshots");
   });
 
-  it("declares session events and repo scope RPCs and tables", () => {
-    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_upsert_session_events");
-    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_get_session_events");
+  it("declares the segments data plane RPCs and table", () => {
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_session_event_segments");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_append_session_events");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_rewrite_session_events");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "orgii_get_session_event_segments"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "orgii_gc_session_event_segments"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("payload_gz");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("events_epoch");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("events_frozen_seq");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("events_tail_hash");
+  });
+
+  it("retires the blob-era events RPCs and the Storage policies", () => {
+    // Drops stay (re-runs purge live DBs), creates and grants are gone.
+    expect(ORGII_SUPABASE_SETUP_SQL).not.toContain(
+      "create or replace function public.orgii_upsert_session_events"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).not.toContain(
+      "create or replace function public.orgii_get_session_events("
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "drop function if exists public.orgii_upsert_session_events"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "drop column if exists events_blob_path"
+    );
+    // Anon bucket policies are dropped and never recreated (bucket retired).
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "drop policy if exists orgii_snapshots_anon_read"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).not.toContain(
+      "create policy orgii_snapshots_anon_read"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).not.toContain("/storage/v1/");
+  });
+
+  it("declares repo scope RPCs and tables", () => {
     expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_update_org_repo_scopes");
     expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_request_repo_join");
     expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_review_repo_join");
     expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_repo_join_requests");
-    expect(ORGII_SUPABASE_SETUP_SQL).toContain("events_blob_path");
-    expect(ORGII_SUPABASE_SETUP_SQL).toContain("events_content_hash");
     expect(ORGII_SUPABASE_SETUP_SQL).toContain("repoJoinRequests");
   });
 
@@ -318,93 +365,221 @@ describe("supabaseSyncClient", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("upsertSessionEvents uploads blob and calls the member-only RPC", async () => {
+  it("appendSessionEvents sends gzipped base64 segments through the member-only RPC", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async () => mockJsonResponse(null));
 
-    const events = [
-      { id: "evt-1", sessionId: "session-1", chunk_id: null },
-    ] as unknown as import("@src/engines/SessionCore/core/types").SessionEvent[];
+    const frozenEvents = [makeEvent("evt-1"), makeEvent("evt-2")];
+    const tailEvents = [makeEvent("evt-3")];
 
-    await supabaseSyncClient.upsertSessionEvents({
+    await supabaseSyncClient.appendSessionEvents({
       ...MEMBER_PROFILE,
       orgId: "org-1",
+      sessionRowId: "org-1:member-1:session-1",
+      expectedEpoch: 3,
+      expectedFrozenSeq: 7,
+      frozenSegments: [{ seq: 8, events: frozenEvents }],
+      tail: tailEvents,
+      totalCount: 3,
+    });
+
+    // Everything travels through the RPC — the Storage bucket is retired.
+    expect(
+      fetchMock.mock.calls.some(
+        ([url]) => typeof url === "string" && url.includes("/storage/")
+      )
+    ).toBe(false);
+
+    const body = getRpcBody(fetchMock, "orgii_append_session_events");
+    expect(body.p_org_id).toBe("org-1");
+    expect(body.p_member_id).toBe("member-1");
+    expect(body.p_member_token).toBe("member-token-1");
+    expect(body).not.toHaveProperty("p_org_secret");
+    expect(body.session_row_id).toBe("org-1:member-1:session-1");
+    expect(body.expected_epoch).toBe(3);
+    expect(body.expected_frozen_seq).toBe(7);
+    expect(body.total_count).toBe(3);
+
+    const segments = body.frozen_segments as Array<Record<string, unknown>>;
+    expect(segments).toHaveLength(1);
+    expect(segments[0].seq).toBe(8);
+    expect(segments[0].eventCount).toBe(2);
+    expect(segments[0].segmentHash).toBe(
+      await computeSegmentHash(frozenEvents)
+    );
+    // payloadGz round-trips through gzip+base64 back to the events.
+    await expect(
+      gunzipBase64ToJson(String(segments[0].payloadGz))
+    ).resolves.toEqual(frozenEvents);
+
+    const tail = body.tail as Record<string, unknown>;
+    expect(tail.eventCount).toBe(1);
+    expect(tail.segmentHash).toBe(await computeSegmentHash(tailEvents));
+    await expect(gunzipBase64ToJson(String(tail.payloadGz))).resolves.toEqual(
+      tailEvents
+    );
+  });
+
+  it("appendSessionEvents sends a null tail for fully frozen streams", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => mockJsonResponse(null));
+
+    await supabaseSyncClient.appendSessionEvents({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      sessionRowId: "org-1:member-1:session-1",
+      expectedEpoch: 1,
+      expectedFrozenSeq: 0,
+      frozenSegments: [{ seq: 1, events: [makeEvent("evt-1")] }],
+      tail: null,
+      totalCount: 1,
+    });
+
+    const body = getRpcBody(fetchMock, "orgii_append_session_events");
+    expect(body.tail).toBeNull();
+  });
+
+  it("rewriteSessionEvents carries the new epoch and full segment set", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => mockJsonResponse(null));
+
+    const frozenEvents = [makeEvent("evt-1")];
+    await supabaseSyncClient.rewriteSessionEvents({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      sessionRowId: "org-1:member-1:session-1",
+      newEpoch: 4,
+      frozenSegments: [{ seq: 1, events: frozenEvents }],
+      tail: [makeEvent("evt-2")],
+      totalCount: 2,
+    });
+
+    const body = getRpcBody(fetchMock, "orgii_rewrite_session_events");
+    expect(body.new_epoch).toBe(4);
+    expect(body.total_count).toBe(2);
+    const segments = body.frozen_segments as Array<Record<string, unknown>>;
+    expect(segments[0].seq).toBe(1);
+    await expect(
+      gunzipBase64ToJson(String(segments[0].payloadGz))
+    ).resolves.toEqual(frozenEvents);
+  });
+
+  it("getSessionEventSegments decodes base64 gzip payloads and passes after_seq", async () => {
+    const frozenEvents = [makeEvent("evt-4")];
+    const tailEvents = [makeEvent("evt-5")];
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      mockJsonResponse({
+        epoch: 2,
+        frozenSeq: 4,
+        tailHash: "tail-hash",
+        count: 9,
+        segments: [
+          {
+            seq: 4,
+            isTail: false,
+            payloadGz: await gzipJsonToBase64(frozenEvents),
+            eventCount: 1,
+            segmentHash: "hash-4",
+          },
+          {
+            seq: 1000000000,
+            isTail: true,
+            payloadGz: await gzipJsonToBase64(tailEvents),
+            eventCount: 1,
+            segmentHash: "tail-hash",
+          },
+        ],
+      })
+    );
+
+    const snapshot = await supabaseSyncClient.getSessionEventSegments({
+      ...ROOT_PROFILE,
+      orgId: "org-1",
+      sessionRowId: "org-1:member-1:session-1",
+      afterSeq: 3,
+    });
+
+    const body = getRpcBody(fetchMock, "orgii_get_session_event_segments");
+    expect(body.p_org_id).toBe("org-1");
+    expect(body.p_org_secret).toBe("secret-1");
+    expect(body.session_row_id).toBe("org-1:member-1:session-1");
+    expect(body.after_seq).toBe(3);
+
+    expect(snapshot.epoch).toBe(2);
+    expect(snapshot.frozenSeq).toBe(4);
+    expect(snapshot.tailHash).toBe("tail-hash");
+    expect(snapshot.count).toBe(9);
+    expect(snapshot.segments).toHaveLength(2);
+    expect(snapshot.segments[0].events).toEqual(frozenEvents);
+    expect(snapshot.segments[1].isTail).toBe(true);
+    expect(snapshot.segments[1].events).toEqual(tailEvents);
+  });
+
+  it("getSessionEventSegments maps a summary-less session to null fields", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      mockJsonResponse({
+        epoch: null,
+        frozenSeq: null,
+        tailHash: null,
+        count: null,
+        segments: [],
+      })
+    );
+
+    await expect(
+      supabaseSyncClient.getSessionEventSegments({
+        ...MEMBER_PROFILE,
+        orgId: "org-1",
+        sessionRowId: "org-1:member-1:session-1",
+      })
+    ).resolves.toEqual({
+      epoch: null,
+      frozenSeq: null,
+      tailHash: null,
+      count: null,
+      segments: [],
+    });
+  });
+
+  it("removed blob-era client methods are gone", () => {
+    const client = supabaseSyncClient as unknown as Record<string, unknown>;
+    expect(client.upsertSessionEvents).toBeUndefined();
+    expect(client.getSessionEvents).toBeUndefined();
+    expect(client.downloadSessionEventsBlob).toBeUndefined();
+  });
+
+  it("publishSessionSnapshot inlines the gzipped payload into the RPC", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => mockJsonResponse(null));
+
+    const events = [makeEvent("evt-1")];
+    await supabaseSyncClient.publishSessionSnapshot({
+      ...MEMBER_PROFILE,
+      requestId: "req-1",
+      orgId: "org-1",
       sourceSessionId: "session-1",
+      session: REMOTE_SESSION,
       events,
     });
 
-    const storageCall = fetchMock.mock.calls.find(
-      ([url]) => typeof url === "string" && url.includes("/storage/v1/object/")
-    );
-    expect(storageCall).toBeDefined();
-    const storageUrl = String(storageCall?.[0]);
-    expect(storageUrl).toContain(
-      `${SUPABASE_URL}/storage/v1/object/orgii-session-snapshots/orgs/org-1/sessions/session-1/latest-`
-    );
-    expect(storageUrl).toMatch(/latest-[a-f0-9]{64}\.json$/);
-
-    const rpcBody = getRpcBody(fetchMock, "orgii_upsert_session_events");
-    expect(rpcBody.p_org_id).toBe("org-1");
-    expect(rpcBody.p_member_id).toBe("member-1");
-    expect(rpcBody.p_member_token).toBe("member-token-1");
-    expect(rpcBody).not.toHaveProperty("p_org_secret");
-    expect(rpcBody.source_session_id).toBe("session-1");
-    expect(typeof rpcBody.blob_path).toBe("string");
-    expect(typeof rpcBody.content_hash).toBe("string");
-  });
-
-  it("getSessionEvents returns ref when RPC reports blob path", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      mockJsonResponse({
-        blobPath: "orgs/org-1/sessions/session-1/latest-abc.json",
-        contentHash: "abc",
-        updatedAt: "2026-07-01T00:00:00.000Z",
-      })
-    );
-
-    await expect(
-      supabaseSyncClient.getSessionEvents({
-        ...ROOT_PROFILE,
-        orgId: "org-1",
-        sourceSessionId: "session-1",
-      })
-    ).resolves.toEqual({
-      blobPath: "orgs/org-1/sessions/session-1/latest-abc.json",
-      contentHash: "abc",
-      updatedAt: "2026-07-01T00:00:00.000Z",
-    });
-
-    const body = getRpcBody(fetchMock, "orgii_get_session_events");
-    expect(body.p_org_id).toBe("org-1");
-    expect(body.p_org_secret).toBe("secret-1");
-    expect(body.source_session_id).toBe("session-1");
-  });
-
-  it("getSessionEvents returns null when RPC reports null blob", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(mockJsonResponse(null));
-
-    await expect(
-      supabaseSyncClient.getSessionEvents({
-        ...MEMBER_PROFILE,
-        orgId: "org-1",
-        sourceSessionId: "session-1",
-      })
-    ).resolves.toBeNull();
-  });
-
-  it("downloadSessionEventsBlob fetches events from storage", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      mockJsonResponse({ events: [{ id: "evt-1", sessionId: "session-1" }] })
-    );
-
-    const result = await supabaseSyncClient.downloadSessionEventsBlob({
-      supabaseUrl: SUPABASE_URL,
-      anonKey: ANON_KEY,
-      blobPath: "orgs/org-1/sessions/session-1/latest-abc.json",
-    });
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ id: "evt-1", sessionId: "session-1" });
+    expect(
+      fetchMock.mock.calls.some(
+        ([url]) => typeof url === "string" && url.includes("/storage/")
+      )
+    ).toBe(false);
+    const body = getRpcBody(fetchMock, "orgii_create_session_snapshot");
+    expect(body.request_id).toBe("req-1");
+    expect(body).not.toHaveProperty("blob_path");
+    expect(body).not.toHaveProperty("content_hash");
+    const decoded = (await gunzipBase64ToJson(String(body.payload_gz))) as {
+      session: unknown;
+      events: unknown;
+    };
+    expect(decoded.events).toEqual(events);
   });
 
   it("updateOrgRepoScopes falls back to the org secret credential", async () => {
@@ -471,7 +646,7 @@ describe("supabaseSyncClient", () => {
     expect(body).not.toHaveProperty("reviewer_member_id");
   });
 
-  it("listOrgState passes since_timestamp and surfaces serverTime and tombstones", async () => {
+  it("listOrgState passes since_timestamp and surfaces serverTime, segment summaries and tombstones", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       mockJsonResponse({
         serverTime: "2026-07-01T12:00:00.000Z",
@@ -486,10 +661,22 @@ describe("supabaseSyncClient", () => {
             orgId: "org-1",
             ownerMemberId: "member-1",
             sourceSessionId: "session-1",
-            eventsBlobPath: null,
-            eventsContentHash: null,
-            eventsUpdatedAt: null,
+            eventsEpoch: null,
+            eventsFrozenSeq: null,
+            eventsCount: null,
+            eventsTailHash: null,
             deletedAt: "2026-07-01T11:00:00.000Z",
+          },
+          {
+            ...REMOTE_SESSION,
+            id: "org-1:member-2:session-2",
+            ownerMemberId: "member-2",
+            ownerUserId: "member-2",
+            sourceSessionId: "session-2",
+            eventsEpoch: 2,
+            eventsFrozenSeq: 5,
+            eventsCount: 42,
+            eventsTailHash: "tail-hash",
           },
         ],
         chatMessages: [],
@@ -521,9 +708,82 @@ describe("supabaseSyncClient", () => {
     expect(body.since_timestamp).toBe("2026-06-01T00:00:00.000Z");
 
     expect(result.serverTime).toBe("2026-07-01T12:00:00.000Z");
-    expect(result.sessions).toHaveLength(1);
+    expect(result.sessions).toHaveLength(2);
     expect(result.sessions[0]?.deletedAt).toBe("2026-07-01T11:00:00.000Z");
+    expect(result.sessions[1]).toMatchObject({
+      eventsEpoch: 2,
+      eventsFrozenSeq: 5,
+      eventsCount: 42,
+      eventsTailHash: "tail-hash",
+    });
     expect(result.repoJoinRequests).toHaveLength(1);
     expect(result.repoJoinRequests[0]?.repoPath).toBe("/repos/foo");
+  });
+
+  it("listOrgState gunzips inline snapshot payloads", async () => {
+    const events = [makeEvent("evt-1")];
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      mockJsonResponse({
+        serverTime: "2026-07-01T12:00:00.000Z",
+        orgs: [],
+        members: [],
+        invites: [],
+        projects: [],
+        workItems: [],
+        sessions: [],
+        chatMessages: [],
+        repoJoinRequests: [],
+        snapshotRequests: [
+          {
+            requestId: "req-1",
+            orgId: "org-1",
+            requesterMemberId: "member-1",
+            ownerMemberId: "member-2",
+            sourceSessionId: "session-2",
+            status: "completed",
+            createdAt: "2026-07-01T00:00:00.000Z",
+            payloadGz: await gzipJsonToBase64({
+              session: {
+                ...REMOTE_SESSION,
+                id: "org-1:member-2:session-2",
+                ownerMemberId: "member-2",
+                ownerUserId: "member-2",
+                sourceSessionId: "session-2",
+              },
+              events,
+            }),
+          },
+        ],
+      })
+    );
+
+    const result = await supabaseSyncClient.listOrgState({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+    });
+
+    expect(result.snapshotRequests).toHaveLength(1);
+    expect(result.snapshotRequests[0]?.status).toBe("completed");
+    expect(result.snapshotRequests[0]?.session?.sourceSessionId).toBe(
+      "session-2"
+    );
+    expect(result.snapshotRequests[0]?.events).toEqual(events);
+  });
+
+  it("gcSessionEventSegments calls the retention RPC with a default of 90 days", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(mockJsonResponse(7));
+
+    await expect(
+      supabaseSyncClient.gcSessionEventSegments({
+        ...ROOT_PROFILE,
+        orgId: "org-1",
+      })
+    ).resolves.toBe(7);
+
+    const body = getRpcBody(fetchMock, "orgii_gc_session_event_segments");
+    expect(body.p_org_id).toBe("org-1");
+    expect(body.retention_days).toBe(90);
   });
 });

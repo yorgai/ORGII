@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import type {
+  EventDisplayStatus,
+  SessionEvent,
+} from "@src/engines/SessionCore/core/types";
 import {
   collabChatMessagesAtom,
   collabConnectionStatesAtom,
@@ -13,6 +16,7 @@ import {
   collabProjectsAtom,
   collabRepoJoinRequestsAtom,
   collabSessionAccessSettingsAtom,
+  collabSessionPushCursorsAtom,
   collabSessionSnapshotRequestsAtom,
   collabWorkItemsAtom,
   remoteTeammateSessionsAtom,
@@ -45,8 +49,10 @@ vi.mock("../sync/supabaseSyncClient", () => ({
     listOrgState: vi.fn(),
     upsertSessionMetadata: vi.fn(),
     removeSessionMetadata: vi.fn(),
-    upsertSessionEvents: vi.fn(),
-    downloadSessionEventsBlob: vi.fn(),
+    appendSessionEvents: vi.fn(),
+    rewriteSessionEvents: vi.fn(),
+    getSessionEventSegments: vi.fn(),
+    gcSessionEventSegments: vi.fn(),
     requestSessionSnapshot: vi.fn(),
     publishSessionSnapshot: vi.fn(),
     denySessionSnapshot: vi.fn(),
@@ -57,6 +63,7 @@ vi.mock("@src/engines/SessionCore/core/store/EventStoreProxy", () => ({
   eventStoreProxy: {
     subscribe: vi.fn(),
     getEvents: vi.fn(),
+    getPersistedEvents: vi.fn(),
     set: vi.fn(),
     saveToCache: vi.fn(),
   },
@@ -141,15 +148,25 @@ function remoteSession(
     title: "Remote session",
     repoPath: REPO_PATH,
     lastActivityAt: "2026-07-01T00:00:00.000Z",
-    eventsBlobPath: undefined,
-    eventsContentHash: undefined,
-    eventsUpdatedAt: undefined,
+    eventsEpoch: undefined,
+    eventsFrozenSeq: undefined,
+    eventsCount: undefined,
+    eventsTailHash: undefined,
     ...overrides,
   };
 }
 
-function makeEvent(id: string): SessionEvent {
-  return { id, sessionId: "session-1" } as unknown as SessionEvent;
+function makeEvent(
+  id: string,
+  displayStatus: EventDisplayStatus = "completed",
+  extra: Record<string, unknown> = {}
+): SessionEvent {
+  return {
+    id,
+    sessionId: "session-1",
+    displayStatus,
+    ...extra,
+  } as unknown as SessionEvent;
 }
 
 /**
@@ -190,6 +207,7 @@ describe("CollabSyncEngine", () => {
     store.set(collabRepoJoinRequestsAtom, []);
     store.set(remoteTeammateSessionsAtom, []);
     store.set(collabLastSyncTimestampsAtom, {});
+    store.set(collabSessionPushCursorsAtom, {});
     store.set(collabPendingOpenSessionAtom, null);
     store.set(sessionsAtom, []);
   }
@@ -217,13 +235,22 @@ describe("CollabSyncEngine", () => {
     syncMock.listOrgState.mockImplementation(async () => emptyOrgState());
     syncMock.upsertSessionMetadata.mockResolvedValue(undefined);
     syncMock.removeSessionMetadata.mockResolvedValue(undefined);
-    syncMock.upsertSessionEvents.mockResolvedValue(undefined);
-    syncMock.downloadSessionEventsBlob.mockResolvedValue([]);
+    syncMock.appendSessionEvents.mockResolvedValue(undefined);
+    syncMock.rewriteSessionEvents.mockResolvedValue(undefined);
+    syncMock.getSessionEventSegments.mockResolvedValue({
+      epoch: null,
+      frozenSeq: null,
+      tailHash: null,
+      count: null,
+      segments: [],
+    });
+    syncMock.gcSessionEventSegments.mockResolvedValue(0);
     syncMock.requestSessionSnapshot.mockResolvedValue(undefined);
     syncMock.publishSessionSnapshot.mockResolvedValue(undefined);
     syncMock.denySessionSnapshot.mockResolvedValue(undefined);
     eventStoreMock.subscribe.mockImplementation(() => () => {});
     eventStoreMock.getEvents.mockResolvedValue([]);
+    eventStoreMock.getPersistedEvents.mockResolvedValue([]);
     eventStoreMock.set.mockResolvedValue(undefined);
     eventStoreMock.saveToCache.mockResolvedValue(0);
 
@@ -360,11 +387,14 @@ describe("CollabSyncEngine", () => {
   it("re-runs a push that arrives while one is in flight instead of dropping it", async () => {
     seedConnection();
     store.set(sessionsAtom, [LOCAL_SESSION]);
-    eventStoreMock.getEvents
-      .mockResolvedValueOnce([makeEvent("e1")])
-      .mockResolvedValueOnce([makeEvent("e1"), makeEvent("e2")]);
+    eventStoreMock.getPersistedEvents
+      .mockResolvedValueOnce([makeEvent("e1", "running")])
+      .mockResolvedValueOnce([
+        makeEvent("e1", "running"),
+        makeEvent("e2", "running"),
+      ]);
     let resolveFirstEventsPush!: () => void;
-    syncMock.upsertSessionEvents.mockImplementationOnce(
+    syncMock.rewriteSessionEvents.mockImplementationOnce(
       () =>
         new Promise<void>((resolve) => {
           resolveFirstEventsPush = resolve;
@@ -377,23 +407,226 @@ describe("CollabSyncEngine", () => {
     fireEventStoreChange("session-1");
     await vi.advanceTimersByTimeAsync(3_000);
     await settle(30);
-    expect(syncMock.upsertSessionEvents).toHaveBeenCalledTimes(1);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
 
     // A flush during the in-flight push must not be dropped.
     fireEventStoreChange("session-1");
     await vi.advanceTimersByTimeAsync(3_000);
     await settle();
-    expect(syncMock.upsertSessionEvents).toHaveBeenCalledTimes(1);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
+    expect(syncMock.appendSessionEvents).not.toHaveBeenCalled();
 
     resolveFirstEventsPush();
     await settle(30);
-    expect(syncMock.upsertSessionEvents).toHaveBeenCalledTimes(2);
-    expect(syncMock.upsertSessionEvents.mock.calls[0][0].events).toHaveLength(
-      1
+    // The re-run sees the grown tail and lands as a cursor-anchored append.
+    expect(syncMock.appendSessionEvents).toHaveBeenCalledTimes(1);
+    expect(syncMock.rewriteSessionEvents.mock.calls[0][0].tail).toHaveLength(1);
+    expect(syncMock.appendSessionEvents.mock.calls[0][0].tail).toHaveLength(2);
+  });
+
+  it("splits pushes into frozen/tail: anchor rewrite, tail-only replace, frozen append, no-op", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    const e1 = makeEvent("e1");
+    const e2 = makeEvent("e2");
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      e1,
+      e2,
+      makeEvent("e3", "running"),
+    ]);
+
+    engine.start(store);
+    await settle();
+
+    // 1) First push, no cursor: optimistic epoch-1 anchor rewrite; the
+    // terminal prefix is frozen, the running turn is the tail.
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
+    const anchor = syncMock.rewriteSessionEvents.mock.calls[0][0];
+    expect(anchor.newEpoch).toBe(1);
+    expect(anchor.sessionRowId).toBe("org-1:m1:session-1");
+    expect(anchor.frozenSegments).toHaveLength(1);
+    expect(anchor.frozenSegments[0].seq).toBe(1);
+    expect(anchor.frozenSegments[0].events.map((event) => event.id)).toEqual([
+      "e1",
+      "e2",
+    ]);
+    expect(anchor.tail?.map((event) => event.id)).toEqual(["e3"]);
+    expect(anchor.totalCount).toBe(3);
+
+    // 2) The tail event mutates in place (streaming) → tail-only replace.
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      e1,
+      e2,
+      makeEvent("e3", "running", { streamOutput: "chunk" }),
+    ]);
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.appendSessionEvents).toHaveBeenCalledTimes(1);
+    const tailReplace = syncMock.appendSessionEvents.mock.calls[0][0];
+    expect(tailReplace.expectedEpoch).toBe(1);
+    expect(tailReplace.expectedFrozenSeq).toBe(1);
+    expect(tailReplace.frozenSegments).toHaveLength(0);
+    expect(tailReplace.tail?.map((event) => event.id)).toEqual(["e3"]);
+    expect(tailReplace.totalCount).toBe(3);
+
+    // 3) The turn completes and a new one starts → frozen line advances:
+    // append a new frozen segment plus the new tail.
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      e1,
+      e2,
+      makeEvent("e3"),
+      makeEvent("e4", "running"),
+    ]);
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.appendSessionEvents).toHaveBeenCalledTimes(2);
+    const frozenAdvance = syncMock.appendSessionEvents.mock.calls[1][0];
+    expect(frozenAdvance.expectedEpoch).toBe(1);
+    expect(frozenAdvance.expectedFrozenSeq).toBe(1);
+    expect(frozenAdvance.frozenSegments).toHaveLength(1);
+    expect(frozenAdvance.frozenSegments[0].seq).toBe(2);
+    expect(
+      frozenAdvance.frozenSegments[0].events.map((event) => event.id)
+    ).toEqual(["e3"]);
+    expect(frozenAdvance.tail?.map((event) => event.id)).toEqual(["e4"]);
+    expect(frozenAdvance.totalCount).toBe(4);
+
+    // 4) Nothing changed → no RPC at all.
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.appendSessionEvents).toHaveBeenCalledTimes(2);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
+
+    // The cursor is persisted per (org, session).
+    const cursor = store.get(collabSessionPushCursorsAtom)["org-1:session-1"];
+    expect(cursor).toMatchObject({
+      epoch: 1,
+      frozenSeq: 2,
+      pushedCount: 4,
+      frozenEventCount: 3,
+    });
+  });
+
+  it("rewrites at epoch+1 when a frozen event mutates in place", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1"),
+      makeEvent("e2", "running"),
+    ]);
+
+    engine.start(store);
+    await settle();
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
+    expect(syncMock.rewriteSessionEvents.mock.calls[0][0].newEpoch).toBe(1);
+
+    // A patch lands on the frozen event (patchByIds on old events) → the
+    // per-event hash chain mismatches → epoch 2 full rewrite, no append.
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1", "completed", { patched: true }),
+      makeEvent("e2", "running"),
+    ]);
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.appendSessionEvents).not.toHaveBeenCalled();
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(2);
+    const rewrite = syncMock.rewriteSessionEvents.mock.calls[1][0];
+    expect(rewrite.newEpoch).toBe(2);
+    expect(rewrite.frozenSegments[0].events.map((event) => event.id)).toEqual([
+      "e1",
+    ]);
+  });
+
+  it("re-anchors at server epoch + 1 after an OCC rejection", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1", "running"),
+    ]);
+    // Another device already pushed epoch 5 while our cursor was lost: the
+    // optimistic epoch-1 anchor bounces off OCC.
+    syncMock.rewriteSessionEvents
+      .mockRejectedValueOnce(new Error("ORGII_CONFLICT"))
+      .mockResolvedValue(undefined);
+    syncMock.getSessionEventSegments.mockResolvedValue({
+      epoch: 5,
+      frozenSeq: 9,
+      tailHash: "t",
+      count: 12,
+      segments: [],
+    });
+
+    engine.start(store);
+    await settle();
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(2);
+    expect(syncMock.rewriteSessionEvents.mock.calls[0][0].newEpoch).toBe(1);
+    expect(syncMock.rewriteSessionEvents.mock.calls[1][0].newEpoch).toBe(6);
+    expect(
+      store.get(collabSessionPushCursorsAtom)["org-1:session-1"]
+    ).toMatchObject({ epoch: 6, frozenSeq: 0, pushedCount: 1 });
+
+    // A conflicted APPEND re-anchors the same way.
+    syncMock.appendSessionEvents.mockRejectedValueOnce(
+      new Error("ORGII_CONFLICT")
     );
-    expect(syncMock.upsertSessionEvents.mock.calls[1][0].events).toHaveLength(
-      2
-    );
+    syncMock.getSessionEventSegments.mockResolvedValue({
+      epoch: 7,
+      frozenSeq: 2,
+      tailHash: "t2",
+      count: 5,
+      segments: [],
+    });
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1", "running", { streamOutput: "more" }),
+    ]);
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.appendSessionEvents).toHaveBeenCalledTimes(1);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(3);
+    expect(syncMock.rewriteSessionEvents.mock.calls[2][0].newEpoch).toBe(8);
+  });
+
+  it("aborts the push instead of rewriting when the persisted read is truncated", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1"),
+      makeEvent("e2"),
+    ]);
+
+    engine.start(store);
+    await settle();
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
+
+    // The cache read comes back shorter than what the cursor covers — a
+    // truncated view, not a shorter session. Never epoch-bump on it.
+    eventStoreMock.getPersistedEvents.mockResolvedValue([makeEvent("e1")]);
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
+    expect(syncMock.appendSessionEvents).not.toHaveBeenCalled();
+    expect(
+      store.get(collabSessionPushCursorsAtom)["org-1:session-1"]
+    ).toMatchObject({ pushedCount: 2 });
   });
 
   it("never lets member inference overwrite an existing member record", async () => {
@@ -454,11 +687,13 @@ describe("CollabSyncEngine", () => {
     expect(store.get(remoteTeammateSessionsAtom)).toHaveLength(0);
   });
 
-  it("never pushes sessions the engine itself imported", async () => {
+  it("imports teammate segments, records the importedFrom cursor, and never pushes them back", async () => {
     seedConnection();
     const remote = remoteSession({
-      eventsBlobPath: "blobs/remote-1",
-      eventsContentHash: "hash-1",
+      eventsEpoch: 1,
+      eventsFrozenSeq: 1,
+      eventsCount: 2,
+      eventsTailHash: "tail-hash",
     });
     syncMock.listOrgState
       .mockImplementationOnce(async () => ({
@@ -466,25 +701,166 @@ describe("CollabSyncEngine", () => {
         sessions: [remote],
       }))
       .mockImplementation(async () => emptyOrgState());
-    syncMock.downloadSessionEventsBlob.mockResolvedValue([makeEvent("e1")]);
+    syncMock.getSessionEventSegments.mockResolvedValue({
+      epoch: 1,
+      frozenSeq: 1,
+      tailHash: "tail-hash",
+      count: 2,
+      segments: [
+        {
+          seq: 1,
+          isTail: false,
+          events: [makeEvent("e1")],
+          eventCount: 1,
+          segmentHash: "h1",
+        },
+        {
+          seq: 1_000_000_000,
+          isTail: true,
+          events: [makeEvent("e2", "running")],
+          eventCount: 1,
+          segmentHash: "tail-hash",
+        },
+      ],
+    });
 
     engine.start(store);
     await vi.advanceTimersByTimeAsync(0);
     await settle(20);
 
+    expect(syncMock.getSessionEventSegments).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionRowId: "org-1:m2:remote-1",
+        afterSeq: 0,
+      })
+    );
     expect(eventStoreMock.set).toHaveBeenCalledTimes(1);
+    const importedEvents = eventStoreMock.set.mock
+      .calls[0][0] as SessionEvent[];
     const localSessionId = eventStoreMock.set.mock.calls[0][1] as string;
     expect(localSessionId).toMatch(/^imported-session-/);
+    expect(importedEvents.map((event) => event.id)).toEqual(["e1", "e2"]);
+    expect(importedEvents[0]?.sessionId).toBe(localSessionId);
+    // Imports must survive restart (fix P7).
+    expect(eventStoreMock.saveToCache).toHaveBeenCalledWith(localSessionId);
     const imported = store
       .get(sessionsAtom)
       .find((session) => session.session_id === localSessionId);
     expect(imported?.category).toBe("external_history");
+    // The consumer cursor lives on the first-class importedFrom field —
+    // no error_message JSON anymore.
+    expect(imported?.importedFrom).toMatchObject({
+      orgId: "org-1",
+      sourceSessionId: "remote-1",
+      ownerMemberId: "m2",
+      epoch: 1,
+      seq: 1,
+      count: 2,
+      frozenCount: 1,
+      tailHash: "tail-hash",
+    });
+    expect(imported?.error_message).toBeUndefined();
 
     // The import's own eventStore write re-enters the push subscription —
     // the imported id must never round-trip back out.
     fireEventStoreChange(localSessionId);
     await vi.advanceTimersByTimeAsync(3_000);
     await settle(20);
-    expect(syncMock.upsertSessionEvents).not.toHaveBeenCalled();
+    expect(syncMock.appendSessionEvents).not.toHaveBeenCalled();
+    expect(syncMock.rewriteSessionEvents).not.toHaveBeenCalled();
+  });
+
+  it("applies incremental segment pulls onto the existing imported session", async () => {
+    seedConnection();
+    const localSessionId = "imported-session-existing";
+    const existingImported: Session = {
+      session_id: localSessionId,
+      status: "completed",
+      created_at: "2026-06-30T00:00:00.000Z",
+      updated_at: "2026-06-30T00:00:00.000Z",
+      name: "Remote session",
+      repoPath: REPO_PATH,
+      category: "external_history",
+      importedFrom: {
+        orgId: "org-1",
+        sourceSessionId: "remote-1",
+        ownerMemberId: "m2",
+        epoch: 1,
+        seq: 1,
+        count: 2,
+        frozenCount: 1,
+        tailHash: "tail-1",
+      },
+    };
+    store.set(sessionsAtom, [existingImported]);
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      { ...makeEvent("e1"), sessionId: localSessionId } as SessionEvent,
+      {
+        ...makeEvent("e2", "running"),
+        sessionId: localSessionId,
+      } as SessionEvent,
+    ]);
+    const remote = remoteSession({
+      eventsEpoch: 1,
+      eventsFrozenSeq: 2,
+      eventsCount: 3,
+      eventsTailHash: "tail-2",
+    });
+    syncMock.listOrgState
+      .mockImplementationOnce(async () => ({
+        ...emptyOrgState(),
+        sessions: [remote],
+      }))
+      .mockImplementation(async () => emptyOrgState());
+    syncMock.getSessionEventSegments.mockResolvedValue({
+      epoch: 1,
+      frozenSeq: 2,
+      tailHash: "tail-2",
+      count: 3,
+      segments: [
+        {
+          seq: 2,
+          isTail: false,
+          events: [makeEvent("e2")],
+          eventCount: 1,
+          segmentHash: "h2",
+        },
+        {
+          seq: 1_000_000_000,
+          isTail: true,
+          events: [makeEvent("e3", "running")],
+          eventCount: 1,
+          segmentHash: "tail-2",
+        },
+      ],
+    });
+
+    engine.start(store);
+    await vi.advanceTimersByTimeAsync(0);
+    await settle(20);
+
+    // Only the delta was fetched (afterSeq = local cursor's frozen seq)…
+    expect(syncMock.getSessionEventSegments).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionRowId: "org-1:m2:remote-1",
+        afterSeq: 1,
+      })
+    );
+    // …and spliced onto the local frozen prefix: old tail replaced by the
+    // newly frozen e2 + the new tail e3.
+    expect(eventStoreMock.set).toHaveBeenCalledTimes(1);
+    const written = eventStoreMock.set.mock.calls[0][0] as SessionEvent[];
+    expect(written.map((event) => event.id)).toEqual(["e1", "e2", "e3"]);
+    expect(eventStoreMock.set.mock.calls[0][1]).toBe(localSessionId);
+    const updated = store
+      .get(sessionsAtom)
+      .find((session) => session.session_id === localSessionId);
+    expect(updated?.importedFrom).toMatchObject({
+      epoch: 1,
+      seq: 2,
+      count: 3,
+      frozenCount: 2,
+      tailHash: "tail-2",
+    });
   });
 });
