@@ -451,10 +451,7 @@ pub fn run() {
             }
 
             git::watch::RepoWatchManager::initialize(app.handle().clone());
-            tracing::info!("[RepoWatch] Event-driven repository watch manager initialized");
-
-            git::repos::hydrate_repos_into_watcher();
-            tracing::info!("[RepoWatch] Persisted repos loaded from DB");
+            tracing::info!("[RepoWatch] Repository watch manager initialized for on-demand active workspaces");
 
             // Start L3 offline consolidation tick (60s interval, fires on
             // idle/forced triggers). Non-blocking, runs on its own thread +

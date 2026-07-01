@@ -286,8 +286,7 @@ where
 /// Resolution order:
 /// 1. Watcher state store — fast in-memory lookup for registered repos.
 /// 2. DB fallback — covers repos that exist on disk but haven't been registered
-///    with the watcher yet (e.g. agent-created repos mid-session). On a hit we
-///    opportunistically register the repo so subsequent calls hit path 1.
+///    with the watcher yet.
 pub fn lookup_repo_path(repo_id: &str) -> GitApiResult<PathBuf> {
     use git::repos::repo_db;
     use git::watch::REPO_WATCH_MANAGER;
@@ -307,11 +306,6 @@ pub fn lookup_repo_path(repo_id: &str) -> GitApiResult<PathBuf> {
     if let Ok(Some(record)) = repo_db::get_repo(repo_id) {
         let path = PathBuf::from(&record.path);
         if path.exists() {
-            git::repos::register_workspace_with_watcher(
-                &record.repo_id,
-                &record.path,
-                &record.name,
-            );
             return validate_path(&record.path);
         }
     }

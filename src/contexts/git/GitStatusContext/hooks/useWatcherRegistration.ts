@@ -1,10 +1,10 @@
 /**
- * useWatcherRegistration - Manages Rust file watcher registration for repos
+ * useWatcherRegistration - Manages Rust file watcher registration for active repos
  *
  * Handles:
- * - Registering repos with Rust file watcher via invoke("watch_repos")
- * - Delayed registration (2 seconds) to avoid churn during rapid repo switching
- * - Tracking which repos have been registered to avoid duplicates
+ * - Registering the current repo with Rust file watcher via invoke("watch_repos")
+ * - Delayed registration to avoid churn during rapid repo switching
+ * - Unregistering repos that are no longer active
  */
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect } from "react";
@@ -22,12 +22,32 @@ interface UseWatcherRegistrationReturn {
     repoPath: string,
     repoName?: string
   ) => void;
+  unwatchRegisteredReposExcept: (activeRepoIds: Set<string>) => void;
 }
 
 export function useWatcherRegistration({
   refs,
 }: UseWatcherRegistrationOptions): UseWatcherRegistrationReturn {
   const { registeredReposRef, pendingWatcherTimeoutRef } = refs;
+
+  const unwatchRegisteredReposExcept = useCallback(
+    (activeRepoIds: Set<string>) => {
+      if (pendingWatcherTimeoutRef.current) {
+        clearTimeout(pendingWatcherTimeoutRef.current);
+        pendingWatcherTimeoutRef.current = null;
+      }
+
+      for (const repoId of [...registeredReposRef.current]) {
+        if (activeRepoIds.has(repoId)) continue;
+
+        registeredReposRef.current.delete(repoId);
+        invoke("unwatch_repo", { repoId }).catch(() => {
+          // Unwatch is idempotent from the UI perspective.
+        });
+      }
+    },
+    [pendingWatcherTimeoutRef, registeredReposRef]
+  );
 
   const registerRepoWithWatcher = useCallback(
     async (repoId: string, repoPath: string, repoName?: string) => {
@@ -43,43 +63,44 @@ export function useWatcherRegistration({
         });
 
         registeredReposRef.current.add(repoId);
+        unwatchRegisteredReposExcept(new Set([repoId]));
       } catch (_error: unknown) {
         // Watcher registration failed - will retry on next repo switch
       }
     },
-    [registeredReposRef]
+    [registeredReposRef, unwatchRegisteredReposExcept]
   );
 
   const scheduleWatcherRegistration = useCallback(
     (repoId: string, repoPath: string, repoName?: string) => {
-      // Cancel any pending registration (user switched repos again)
       if (pendingWatcherTimeoutRef.current) {
         clearTimeout(pendingWatcherTimeoutRef.current);
         pendingWatcherTimeoutRef.current = null;
       }
 
-      // Skip if already registered
       if (registeredReposRef.current.has(repoId)) {
+        unwatchRegisteredReposExcept(new Set([repoId]));
         return;
       }
 
       pendingWatcherTimeoutRef.current = setTimeout(() => {
         pendingWatcherTimeoutRef.current = null;
-        // Double-check the repo is still selected before registering
         registerRepoWithWatcher(repoId, repoPath, repoName);
       }, WATCHER_REGISTRATION_DELAY_MS);
     },
-    [registeredReposRef, pendingWatcherTimeoutRef, registerRepoWithWatcher]
+    [
+      pendingWatcherTimeoutRef,
+      registeredReposRef,
+      registerRepoWithWatcher,
+      unwatchRegisteredReposExcept,
+    ]
   );
 
-  // Cleanup pending timeout on unmount
   useEffect(() => {
     return () => {
-      if (pendingWatcherTimeoutRef.current) {
-        clearTimeout(pendingWatcherTimeoutRef.current);
-      }
+      unwatchRegisteredReposExcept(new Set());
     };
-  }, [pendingWatcherTimeoutRef]);
+  }, [unwatchRegisteredReposExcept]);
 
-  return { scheduleWatcherRegistration };
+  return { scheduleWatcherRegistration, unwatchRegisteredReposExcept };
 }

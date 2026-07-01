@@ -8,11 +8,11 @@
 //! Each function:
 //! - Returns `Result<T, String>` for a plain, serializable error.
 //! - Handles DB persistence via `repo_db::*`.
-//! - Registers / unregisters the git watcher where appropriate.
+//! - Stops watcher resources when a tracked workspace is removed.
 //! - Runs blocking work inside `spawn_blocking` so callers can `.await` safely.
 
 use super::repo_db::{self, RepoKind, RepoRecord};
-use super::{register_workspace_with_watcher, unregister_workspace_from_watcher};
+use super::unregister_workspace_from_watcher;
 use crate::util::tokio_git_command;
 
 // ============================================
@@ -102,8 +102,7 @@ pub async fn get(repo_id: String) -> Result<Option<RepoRecord>, String> {
 /// Import an existing local directory as a git workspace.
 ///
 /// If the directory does not already contain a `.git` folder, `git init` is
-/// run so the workspace is immediately usable by git-based tools. Registers
-/// with the git watcher.
+/// run so the workspace is immediately usable by git-based tools.
 pub async fn import_repo(path: String, name: Option<String>) -> Result<RepoRecord, String> {
     let workspace_path = ensure_existing_dir(&path)?;
     let canonical = canonical_string(&workspace_path)?;
@@ -158,7 +157,6 @@ pub async fn import_repo(path: String, name: Option<String>) -> Result<RepoRecor
         run_blocking(move || repo_db::ensure_repo(&id, &n, &p, RepoKind::Git)).await?
     };
 
-    register_workspace_with_watcher(&persisted.repo_id, &persisted.path, &persisted.name);
     Ok(persisted)
 }
 
@@ -201,7 +199,7 @@ pub async fn import_auto(path: String, name: Option<String>) -> Result<RepoRecor
 // Clone (from remote URL)
 // ============================================
 
-/// Clone a remote git repository into `target_dir/<name>` and register it.
+/// Clone a remote git repository into `target_dir/<name>` and persist it.
 pub async fn clone_github(
     url: String,
     target_dir: String,
@@ -250,7 +248,6 @@ pub async fn clone_github(
         run_blocking(move || repo_db::ensure_repo(&id, &n, &p, RepoKind::Git)).await?
     };
 
-    register_workspace_with_watcher(&persisted.repo_id, &persisted.path, &persisted.name);
     Ok(persisted)
 }
 
@@ -317,7 +314,6 @@ pub async fn create_empty_repo(path: String, name: Option<String>) -> Result<Rep
         run_blocking(move || repo_db::ensure_repo(&id, &n, &p, RepoKind::Git)).await?
     };
 
-    register_workspace_with_watcher(&persisted.repo_id, &persisted.path, &persisted.name);
     Ok(persisted)
 }
 
