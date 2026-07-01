@@ -10,6 +10,8 @@ use orgtrack_core::sources::opencode::history as opencode_history;
 use orgtrack_core::sources::windsurf::history as windsurf_history;
 use orgtrack_core::sources::workbuddy as workbuddy_history;
 
+use super::external_cli_detection::{self, ExternalCliSourceProbe};
+
 fn open_cache_conn() -> Result<rusqlite::Connection, String> {
     get_connection().map_err(|err| format!("Failed to open orgtrack source cache DB: {err}"))
 }
@@ -167,6 +169,22 @@ pub async fn codex_app_recent_paths(
     })
     .await
     .map_err(|err| format!("Task join error: {err}"))?
+}
+
+#[tauri::command]
+pub async fn external_cli_sources_detect() -> Result<Vec<ExternalCliSourceProbe>, String> {
+    tokio::task::spawn_blocking(external_cli_detection::detect_sources)
+        .await
+        .map_err(|err| format!("Task join error: {err}"))
+}
+
+#[tauri::command]
+pub async fn external_cli_source_probe(
+    source_id: String,
+) -> Result<Option<ExternalCliSourceProbe>, String> {
+    tokio::task::spawn_blocking(move || external_cli_detection::probe_source_id(&source_id))
+        .await
+        .map_err(|err| format!("Task join error: {err}"))
 }
 
 #[tauri::command]

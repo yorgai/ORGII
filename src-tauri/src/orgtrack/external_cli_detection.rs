@@ -1,0 +1,699 @@
+use std::collections::BTreeSet;
+use std::env;
+use std::path::{Path, PathBuf};
+
+use serde::Serialize;
+
+#[derive(Debug, Clone, Copy)]
+pub struct ExternalCliSourceSpec {
+    pub source_id: &'static str,
+    pub display_name: &'static str,
+    pub icon_id: &'static str,
+    pub detect_cmd: &'static str,
+    pub detect_aliases: &'static [&'static str],
+    pub launch_cmd: &'static str,
+    pub expected_process: &'static str,
+    pub history_import: bool,
+    pub history_dirs: &'static [&'static str],
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalCliCapabilities {
+    pub installed_detection: bool,
+    pub running_detection: bool,
+    pub history_detection: bool,
+    pub history_import: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalCliSourceProbe {
+    pub source_id: String,
+    pub display_name: String,
+    pub icon_id: String,
+    pub detect_commands: Vec<String>,
+    pub launch_command: String,
+    pub expected_process: String,
+    pub capabilities: ExternalCliCapabilities,
+    pub installed: bool,
+    pub executable_path: Option<String>,
+    pub running: Option<bool>,
+    pub history_found: bool,
+    pub history_paths: Vec<String>,
+    pub status: String,
+    pub importable: bool,
+}
+
+const IMPORTABLE_HISTORY_SOURCE_IDS: &[&str] = &[
+    "codex_app",
+    "claude_code",
+    "opencode",
+    "windsurf",
+    "workbuddy",
+];
+
+pub const EXTERNAL_CLI_SOURCES: &[ExternalCliSourceSpec] = &[
+    source(
+        "claude_code",
+        "Claude Code",
+        "claude_code",
+        "claude",
+        &[],
+        "claude",
+        "claude",
+        true,
+        &[".claude", ".claude/projects"],
+    ),
+    source(
+        "openclaude",
+        "OpenClaude",
+        "claude_code",
+        "openclaude",
+        &[],
+        "openclaude",
+        "openclaude",
+        false,
+        &[],
+    ),
+    source(
+        "codex_app",
+        "Codex",
+        "codex",
+        "codex",
+        &[],
+        "codex",
+        "codex",
+        true,
+        &[".codex", ".codex/sessions"],
+    ),
+    source(
+        "autohand",
+        "AutoHand",
+        "terminal",
+        "autohand",
+        &[],
+        "autohand",
+        "autohand",
+        false,
+        &[],
+    ),
+    source(
+        "ante",
+        "Ante",
+        "terminal",
+        "ante",
+        &[],
+        "ante",
+        "ante",
+        false,
+        &[],
+    ),
+    source(
+        "opencode",
+        "OpenCode",
+        "opencode",
+        "opencode",
+        &[],
+        "opencode",
+        "opencode",
+        true,
+        &[".config/opencode", ".local/share/opencode"],
+    ),
+    source(
+        "mimo_code",
+        "Mimo Code",
+        "opencode",
+        "mimo",
+        &[],
+        "mimo",
+        "mimo",
+        false,
+        &[".config/mimo", ".local/share/mimo"],
+    ),
+    source("pi", "Pi", "terminal", "pi", &[], "pi", "pi", false, &[]),
+    source(
+        "omp",
+        "OMP",
+        "terminal",
+        "omp",
+        &[],
+        "omp",
+        "omp",
+        false,
+        &[],
+    ),
+    source(
+        "gemini",
+        "Gemini",
+        "gemini",
+        "gemini",
+        &[],
+        "gemini",
+        "gemini",
+        false,
+        &[".gemini"],
+    ),
+    source(
+        "antigravity",
+        "Antigravity",
+        "terminal",
+        "agy",
+        &[],
+        "agy",
+        "agy",
+        false,
+        &[],
+    ),
+    source(
+        "aider",
+        "Aider",
+        "terminal",
+        "aider",
+        &[],
+        "aider",
+        "aider",
+        false,
+        &[".aider"],
+    ),
+    source(
+        "goose",
+        "Goose",
+        "terminal",
+        "goose",
+        &[],
+        "goose",
+        "goose",
+        false,
+        &[".config/goose"],
+    ),
+    source(
+        "amp",
+        "Amp",
+        "terminal",
+        "amp",
+        &[],
+        "amp",
+        "amp",
+        false,
+        &[".config/amp"],
+    ),
+    source(
+        "kilo",
+        "Kilo",
+        "terminal",
+        "kilo",
+        &[],
+        "kilo",
+        "kilo",
+        false,
+        &[],
+    ),
+    source(
+        "kiro",
+        "Kiro",
+        "kiro",
+        "kiro-cli",
+        &[],
+        "kiro-cli chat --tui",
+        "kiro-cli",
+        false,
+        &[".kiro"],
+    ),
+    source(
+        "crush",
+        "Crush",
+        "terminal",
+        "crush",
+        &[],
+        "crush",
+        "crush",
+        false,
+        &[".config/crush"],
+    ),
+    source(
+        "aug",
+        "Auggie",
+        "terminal",
+        "auggie",
+        &[],
+        "auggie",
+        "auggie",
+        false,
+        &[],
+    ),
+    source(
+        "cline",
+        "Cline",
+        "terminal",
+        "cline",
+        &[],
+        "cline",
+        "cline",
+        false,
+        &[],
+    ),
+    source(
+        "codebuff",
+        "Codebuff",
+        "terminal",
+        "codebuff",
+        &[],
+        "codebuff",
+        "codebuff",
+        false,
+        &[".codebuff"],
+    ),
+    source(
+        "command_code",
+        "Command Code",
+        "terminal",
+        "command-code",
+        &[],
+        "command-code --trust",
+        "command-code",
+        false,
+        &[".command-code"],
+    ),
+    source(
+        "continue",
+        "Continue",
+        "terminal",
+        "cn",
+        &[],
+        "cn",
+        "cn",
+        false,
+        &[".continue"],
+    ),
+    source(
+        "cursor",
+        "Cursor Agent",
+        "cursor",
+        "cursor-agent",
+        &[],
+        "cursor-agent",
+        "cursor-agent",
+        false,
+        &[".cursor"],
+    ),
+    source(
+        "droid",
+        "Droid",
+        "terminal",
+        "droid",
+        &[],
+        "droid",
+        "droid",
+        false,
+        &[],
+    ),
+    source(
+        "kimi",
+        "Kimi",
+        "kimi",
+        "kimi",
+        &[],
+        "kimi",
+        "kimi",
+        false,
+        &[".kimi"],
+    ),
+    source(
+        "mistral_vibe",
+        "Mistral Vibe",
+        "terminal",
+        "vibe",
+        &["mistral-vibe"],
+        "vibe",
+        "vibe",
+        false,
+        &[".vibe"],
+    ),
+    source(
+        "qwen_code",
+        "Qwen Code",
+        "terminal",
+        "qwen",
+        &[],
+        "qwen",
+        "qwen",
+        false,
+        &[".qwen"],
+    ),
+    source(
+        "rovo",
+        "Rovo",
+        "terminal",
+        "rovo",
+        &[],
+        "rovo",
+        "rovo",
+        false,
+        &[".rovo"],
+    ),
+    source(
+        "hermes",
+        "Hermes",
+        "terminal",
+        "hermes",
+        &[],
+        "hermes --tui",
+        "hermes",
+        false,
+        &[".hermes"],
+    ),
+    source(
+        "openclaw",
+        "OpenClaw",
+        "terminal",
+        "openclaw",
+        &[],
+        "openclaw",
+        "openclaw",
+        false,
+        &[".openclaw"],
+    ),
+    source(
+        "copilot",
+        "GitHub Copilot",
+        "copilot",
+        "copilot",
+        &[],
+        "copilot",
+        "copilot",
+        false,
+        &[".copilot"],
+    ),
+    source(
+        "grok",
+        "Grok",
+        "grok",
+        "grok",
+        &[],
+        "grok",
+        "grok",
+        false,
+        &[".grok"],
+    ),
+    source(
+        "devin",
+        "Devin",
+        "terminal",
+        "devin",
+        &[],
+        "devin",
+        "devin",
+        false,
+        &[".devin"],
+    ),
+    source(
+        "windsurf",
+        "Windsurf",
+        "windsurf",
+        "windsurf",
+        &[],
+        "windsurf",
+        "windsurf",
+        true,
+        &[],
+    ),
+    source(
+        "workbuddy",
+        "WorkBuddy",
+        "workbuddy",
+        "workbuddy",
+        &[],
+        "workbuddy",
+        "workbuddy",
+        true,
+        &[],
+    ),
+];
+
+const fn source(
+    source_id: &'static str,
+    display_name: &'static str,
+    icon_id: &'static str,
+    detect_cmd: &'static str,
+    detect_aliases: &'static [&'static str],
+    launch_cmd: &'static str,
+    expected_process: &'static str,
+    history_import: bool,
+    history_dirs: &'static [&'static str],
+) -> ExternalCliSourceSpec {
+    ExternalCliSourceSpec {
+        source_id,
+        display_name,
+        icon_id,
+        detect_cmd,
+        detect_aliases,
+        launch_cmd,
+        expected_process,
+        history_import,
+        history_dirs,
+    }
+}
+
+pub fn detect_sources() -> Vec<ExternalCliSourceProbe> {
+    EXTERNAL_CLI_SOURCES.iter().map(probe_source).collect()
+}
+
+pub fn probe_source_id(source_id: &str) -> Option<ExternalCliSourceProbe> {
+    EXTERNAL_CLI_SOURCES
+        .iter()
+        .find(|source| source.source_id == source_id)
+        .map(probe_source)
+}
+
+fn probe_source(source: &ExternalCliSourceSpec) -> ExternalCliSourceProbe {
+    let detect_commands = detect_commands(source);
+    let executable_path = detect_commands.iter().find_map(|cmd| find_command(cmd));
+    let history_paths = existing_history_paths(source);
+    let history_found = !history_paths.is_empty();
+    let importable = source.history_import;
+    let status = status_for(executable_path.is_some(), history_found, importable);
+
+    ExternalCliSourceProbe {
+        source_id: source.source_id.to_string(),
+        display_name: source.display_name.to_string(),
+        icon_id: source.icon_id.to_string(),
+        detect_commands,
+        launch_command: source.launch_cmd.to_string(),
+        expected_process: source.expected_process.to_string(),
+        capabilities: ExternalCliCapabilities {
+            installed_detection: true,
+            running_detection: false,
+            history_detection: !source.history_dirs.is_empty() || source.history_import,
+            history_import: importable,
+        },
+        installed: executable_path.is_some(),
+        executable_path: executable_path.map(|path| path.to_string_lossy().to_string()),
+        running: None,
+        history_found,
+        history_paths: history_paths
+            .into_iter()
+            .map(|path| path.to_string_lossy().to_string())
+            .collect(),
+        status,
+        importable,
+    }
+}
+
+fn detect_commands(source: &ExternalCliSourceSpec) -> Vec<String> {
+    let mut commands = Vec::with_capacity(1 + source.detect_aliases.len());
+    commands.push(source.detect_cmd.to_string());
+    commands.extend(source.detect_aliases.iter().map(|cmd| (*cmd).to_string()));
+    commands
+}
+
+fn status_for(installed: bool, history_found: bool, importable: bool) -> String {
+    match (installed, history_found, importable) {
+        (_, true, true) => "importable_history_found",
+        (_, false, true) => "importable_no_history_found",
+        (true, true, false) => "detected_history_not_importable",
+        (true, false, false) => "detected_no_importer",
+        (false, true, false) => "history_found_not_importable",
+        (false, false, false) => "not_detected",
+    }
+    .to_string()
+}
+
+fn existing_history_paths(source: &ExternalCliSourceSpec) -> Vec<PathBuf> {
+    let mut paths = BTreeSet::new();
+    if source.history_import && IMPORTABLE_HISTORY_SOURCE_IDS.contains(&source.source_id) {
+        paths.extend(importable_history_candidates(source.source_id));
+    }
+    paths.extend(
+        source
+            .history_dirs
+            .iter()
+            .filter_map(|relative| expand_home_relative(relative)),
+    );
+    paths
+        .into_iter()
+        .filter(|path| path.exists())
+        .collect::<Vec<_>>()
+}
+
+fn importable_history_candidates(source_id: &str) -> Vec<PathBuf> {
+    match source_id {
+        "claude_code" => home_candidates(&[".claude", ".claude/projects"]),
+        "codex_app" => home_candidates(&[".codex", ".codex/sessions"]),
+        "opencode" => home_candidates(&[".config/opencode", ".local/share/opencode"]),
+        "windsurf" => platform_data_candidates(&[
+            "Windsurf/User/globalStorage",
+            "Windsurf/User/workspaceStorage",
+            "Codeium/Windsurf",
+        ]),
+        "workbuddy" => platform_data_candidates(&["WorkBuddy", "workbuddy"]),
+        _ => Vec::new(),
+    }
+}
+
+fn home_candidates(relative_paths: &[&str]) -> Vec<PathBuf> {
+    relative_paths
+        .iter()
+        .filter_map(|relative| expand_home_relative(relative))
+        .collect()
+}
+
+fn platform_data_candidates(relative_paths: &[&str]) -> Vec<PathBuf> {
+    data_roots()
+        .into_iter()
+        .flat_map(|root| {
+            relative_paths
+                .iter()
+                .map(move |relative| root.join(relative))
+        })
+        .collect()
+}
+
+fn expand_home_relative(relative: &str) -> Option<PathBuf> {
+    let home = dirs::home_dir()?;
+    Some(home.join(relative))
+}
+
+fn data_roots() -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    if let Some(data) = dirs::data_dir() {
+        roots.push(data);
+    }
+    if let Some(data_local) = dirs::data_local_dir() {
+        roots.push(data_local);
+    }
+    if let Some(config) = dirs::config_dir() {
+        roots.push(config);
+    }
+    roots.sort();
+    roots.dedup();
+    roots
+}
+
+fn find_command(command: &str) -> Option<PathBuf> {
+    if command.contains(std::path::MAIN_SEPARATOR) || Path::new(command).is_absolute() {
+        let path = PathBuf::from(command);
+        return is_executable_candidate(&path).then_some(path);
+    }
+
+    command_search_dirs()
+        .into_iter()
+        .flat_map(|dir| executable_candidates(&dir, command))
+        .find(|path| is_executable_candidate(path))
+}
+
+fn command_search_dirs() -> Vec<PathBuf> {
+    let mut dirs = BTreeSet::new();
+    if let Some(path_env) = env::var_os("PATH") {
+        dirs.extend(env::split_paths(&path_env));
+    }
+    if let Some(home) = dirs::home_dir() {
+        dirs.insert(home.join(".local/bin"));
+        dirs.insert(home.join(".cargo/bin"));
+        dirs.insert(home.join(".npm-global/bin"));
+        #[cfg(windows)]
+        {
+            dirs.insert(home.join("AppData/Roaming/npm"));
+            dirs.insert(home.join("AppData/Local/Programs"));
+        }
+    }
+    #[cfg(unix)]
+    {
+        dirs.insert(PathBuf::from("/opt/homebrew/bin"));
+        dirs.insert(PathBuf::from("/usr/local/bin"));
+        dirs.insert(PathBuf::from("/usr/bin"));
+        dirs.insert(PathBuf::from("/bin"));
+    }
+    dirs.into_iter().collect()
+}
+
+fn executable_candidates(dir: &Path, command: &str) -> Vec<PathBuf> {
+    #[cfg(windows)]
+    {
+        let has_extension = Path::new(command).extension().is_some();
+        if has_extension {
+            return vec![dir.join(command)];
+        }
+        let extensions = env::var("PATHEXT").unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".to_string());
+        return extensions
+            .split(';')
+            .filter(|extension| !extension.is_empty())
+            .map(|extension| dir.join(format!("{}{}", command, extension.to_ascii_lowercase())))
+            .chain(
+                extensions
+                    .split(';')
+                    .filter(|extension| !extension.is_empty())
+                    .map(|extension| {
+                        dir.join(format!("{}{}", command, extension.to_ascii_uppercase()))
+                    }),
+            )
+            .chain(std::iter::once(dir.join(command)))
+            .collect();
+    }
+    #[cfg(not(windows))]
+    {
+        vec![dir.join(command)]
+    }
+}
+
+fn is_executable_candidate(path: &Path) -> bool {
+    path.is_file()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn catalog_contains_existing_importable_sources() {
+        for source_id in IMPORTABLE_HISTORY_SOURCE_IDS {
+            let source = EXTERNAL_CLI_SOURCES
+                .iter()
+                .find(|source| source.source_id == *source_id)
+                .expect("source exists");
+            assert!(source.history_import, "{source_id} should be importable");
+        }
+    }
+
+    #[test]
+    fn catalog_source_ids_are_unique() {
+        let mut seen = BTreeSet::new();
+        for source in EXTERNAL_CLI_SOURCES {
+            assert!(seen.insert(source.source_id), "duplicate source id");
+        }
+    }
+
+    #[test]
+    fn command_code_uses_full_binary_name() {
+        let source = EXTERNAL_CLI_SOURCES
+            .iter()
+            .find(|source| source.source_id == "command_code")
+            .expect("command-code source exists");
+        assert_eq!(source.detect_cmd, "command-code");
+    }
+
+    #[test]
+    fn probe_unknown_source_returns_none() {
+        assert!(probe_source_id("missing-agent").is_none());
+    }
+}

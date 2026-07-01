@@ -1,5 +1,6 @@
 pub mod analysis_backfill;
 pub mod exporter;
+pub mod external_cli_detection;
 pub mod extraction_scheduler;
 pub mod history_commands;
 pub mod impact_indexer;

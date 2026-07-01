@@ -2,6 +2,12 @@ import { invoke } from "@tauri-apps/api/core";
 
 import type { RepoKind } from "@src/api/tauri/repo";
 
+export type {
+  ExternalCliCapabilities,
+  ExternalCliSourceProbe,
+} from "./detection";
+export { externalCliSourceProbe, externalCliSourcesDetect } from "./detection";
+
 export interface ExternalHistoryImportedRepo {
   repoId: string;
   name: string;
