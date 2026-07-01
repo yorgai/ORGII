@@ -13,6 +13,8 @@ import {
   resolveScopeBranchLabel,
   resolveScopeBreadcrumbSegments,
   resolveScopeRepoRoot,
+  scopePickerRowLabel,
+  scopePickerRowTitle,
   shouldShowScopePickerSearch,
   sortWorktreesByDiffActivity,
   sourceControlScopeStorageKey,
@@ -249,6 +251,37 @@ describe("resolveScopeBreadcrumbSegments", () => {
       { label: "ORGII", tone: "primary" },
       { label: "main", tone: "secondary" },
     ]);
+  });
+});
+
+describe("scopePickerRowLabel", () => {
+  it("joins repo and branch on one line for main checkout", () => {
+    expect(scopePickerRowLabel("main", "ORGII", "fix/issue-10")).toBe(
+      "ORGII · fix/issue-10"
+    );
+  });
+
+  it("prefers branch name for worktree rows", () => {
+    expect(
+      scopePickerRowLabel(
+        "worktree",
+        "orgii-issue-161",
+        "agent/issue-161-ds-agent"
+      )
+    ).toBe("agent/issue-161-ds-agent");
+  });
+});
+
+describe("scopePickerRowTitle", () => {
+  it("includes path details in the tooltip title", () => {
+    expect(
+      scopePickerRowTitle(
+        "worktree",
+        "wt-folder",
+        "feat/x",
+        "/tmp/orgii/wt-folder"
+      )
+    ).toContain("wt-folder");
   });
 });
 

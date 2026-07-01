@@ -88,6 +88,34 @@ export function formatScopeDiffStatsTooltip(
   return parts.join(" · ");
 }
 
+/** Single-line label for a scope picker row (avoids stacked title + subtitle). */
+export function scopePickerRowLabel(
+  kind: "main" | "worktree",
+  name: string,
+  branch: string
+): string {
+  if (kind === "main") {
+    return branch ? `${name} · ${branch}` : name;
+  }
+  return branch || name;
+}
+
+export function scopePickerRowTitle(
+  kind: "main" | "worktree",
+  name: string,
+  branch: string,
+  path: string
+): string {
+  const displayPath = formatScopePickerPath(path);
+  if (kind === "main") {
+    return displayPath;
+  }
+  if (branch && branch !== name) {
+    return `${name} · ${branch} · ${displayPath}`;
+  }
+  return `${name} · ${displayPath}`;
+}
+
 export function readSourceControlScope(
   scopeMap: SourceControlScopeMap,
   repoPath: string

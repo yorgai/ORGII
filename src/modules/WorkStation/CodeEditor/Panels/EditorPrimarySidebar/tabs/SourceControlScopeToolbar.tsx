@@ -1,10 +1,4 @@
-import {
-  ChevronDown,
-  ChevronRight,
-  Folder,
-  Search,
-  Trash2,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, Search, Trash2 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -33,6 +27,8 @@ import {
   mainScopeMatchesQuery,
   resolveScopeBranchLabel,
   resolveScopeBreadcrumbSegments,
+  scopePickerRowLabel,
+  scopePickerRowTitle,
   shouldShowScopePickerSearch,
   sortWorktreesByDiffActivity,
   worktreeFolderName,
@@ -46,9 +42,12 @@ const BREADCRUMB_TONE_CLASS = {
   secondary: "text-[11px] text-text-2",
 } as const;
 
+const SCOPE_SECTION_LABEL =
+  "px-1.5 pb-0.5 pt-2 text-[11px] font-medium text-text-4 first:pt-1";
+
 const SCOPE_PICKER_ROW = [
-  "group/scope-row flex w-full items-center gap-1",
-  "min-h-9 rounded-md px-1.5 py-1",
+  "group/scope-row flex w-full items-center gap-0.5",
+  "h-8 rounded-md pl-1.5 pr-1",
   DROPDOWN_ITEM.transitionClass,
   DROPDOWN_ITEM.hoverBgClass,
 ].join(" ");
@@ -83,12 +82,13 @@ function ScopePickerDiffStats({
 }
 
 function ScopePickerSectionLabel({ label }: { label: string }) {
-  return <div className={DROPDOWN_CLASSES.sectionLabel}>{label}</div>;
+  return <div className={SCOPE_SECTION_LABEL}>{label}</div>;
 }
 
 function ScopePickerItem({
+  kind,
   name,
-  subtitle,
+  branch,
   path,
   summary,
   selected,
@@ -96,8 +96,9 @@ function ScopePickerItem({
   onRemove,
   removeLabel,
 }: {
+  kind: "main" | "worktree";
   name: string;
-  subtitle: string;
+  branch: string;
   path: string;
   summary?: GitWorktreeDiffSummary | null;
   selected: boolean;
@@ -105,33 +106,25 @@ function ScopePickerItem({
   onRemove?: () => void;
   removeLabel: string;
 }) {
+  const label = scopePickerRowLabel(kind, name, branch);
+  const title = [
+    scopePickerRowTitle(kind, name, branch, path),
+    summary ? formatScopeDiffStatsTooltip(summary) : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   return (
     <div className={SCOPE_PICKER_ROW}>
       <button
         type="button"
-        className={`flex min-w-0 flex-1 items-center gap-2 text-left ${selected ? DROPDOWN_CLASSES.itemSelected : "text-text-1"}`}
+        className={`flex h-8 min-w-0 flex-1 items-center gap-2 truncate text-left text-[13px] ${selected ? DROPDOWN_CLASSES.itemSelected : "text-text-1"}`}
         onClick={onSelect}
         aria-current={selected ? "true" : undefined}
-        title={`${formatScopePickerPath(path)} · ${subtitle}`}
+        title={title}
       >
-        <Folder
-          size={DROPDOWN_ITEM.iconSize}
-          className="shrink-0 text-text-3"
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] leading-tight">
-            {name}
-          </span>
-          {subtitle ? (
-            <span className="block truncate text-[11px] leading-tight text-text-3">
-              {subtitle}
-            </span>
-          ) : null}
-        </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          <ScopePickerDiffStats summary={summary} />
-          {selected ? <DropdownSelectedCheck /> : null}
-        </span>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {selected ? <DropdownSelectedCheck /> : null}
       </button>
       {onRemove ? (
         <IconButton
@@ -237,7 +230,7 @@ export function SourceControlScopeToolbar({
 
   const droplist = (
     <div
-      className={`${DROPDOWN_CLASSES.panel} ${DROPDOWN_WIDTHS.fileTreeClass} max-w-[400px] overflow-hidden`}
+      className={`${DROPDOWN_CLASSES.panel} ${DROPDOWN_WIDTHS.fileTreeClass} max-w-[320px] overflow-hidden`}
     >
       {showSearch ? (
         <div className={DROPDOWN_CLASSES.searchContainer}>
@@ -260,8 +253,9 @@ export function SourceControlScopeToolbar({
           <>
             <ScopePickerSectionLabel label={t("sourceControl.scope.main")} />
             <ScopePickerItem
+              kind="main"
               name={repoName}
-              subtitle={branchLabel}
+              branch={branchLabel}
               path={repoPath}
               summary={localDiffSummary}
               selected={scope.kind === "local"}
@@ -272,14 +266,17 @@ export function SourceControlScopeToolbar({
         ) : null}
         {filteredWorktrees.length > 0 ? (
           <>
-            <ScopePickerSectionLabel
-              label={t("sourceControl.scope.worktrees")}
-            />
+            {showMainScope ? (
+              <ScopePickerSectionLabel
+                label={t("sourceControl.scope.worktrees")}
+              />
+            ) : null}
             {filteredWorktrees.map((worktree) => (
               <ScopePickerItem
                 key={worktree.path}
+                kind="worktree"
                 name={worktreeFolderName(worktree.path)}
-                subtitle={worktree.branch}
+                branch={worktree.branch}
                 path={worktree.path}
                 summary={worktree.diff_summary}
                 selected={
