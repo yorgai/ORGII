@@ -1,0 +1,225 @@
+import { describe, expect, it } from "vitest";
+
+import type { GitWorktreeDiffSummary } from "@src/api/http/git/types";
+
+import {
+  diffStatsFromSummary,
+  extractMainWorktreeDiffSummary,
+  formatScopePickerPath,
+  readSourceControlScope,
+  reconcileSourceControlScope,
+  resolveScopeBranchLabel,
+  resolveScopeBreadcrumbSegments,
+  sortWorktreesByDiffActivity,
+  sourceControlScopeStorageKey,
+  worktreeFolderName,
+} from "../sourceControlScopePickerHelpers";
+
+function createSummary(
+  overrides: Partial<GitWorktreeDiffSummary> = {}
+): GitWorktreeDiffSummary {
+  return {
+    total_files: 3,
+    total_additions: 10,
+    total_deletions: 4,
+    committed_files: 1,
+    committed_additions: 2,
+    committed_deletions: 1,
+    uncommitted_files: 2,
+    uncommitted_additions: 8,
+    uncommitted_deletions: 3,
+    base_ref: "main",
+    ...overrides,
+  };
+}
+
+describe("diffStatsFromSummary", () => {
+  it("returns additions and deletions when summary has changes", () => {
+    expect(diffStatsFromSummary(createSummary())).toEqual({
+      additions: 10,
+      deletions: 4,
+    });
+  });
+
+  it("returns null for missing summary", () => {
+    expect(diffStatsFromSummary(null)).toBeNull();
+    expect(diffStatsFromSummary(undefined)).toBeNull();
+  });
+
+  it("returns null when summary has no net changes", () => {
+    expect(
+      diffStatsFromSummary(
+        createSummary({
+          total_files: 0,
+          total_additions: 0,
+          total_deletions: 0,
+        })
+      )
+    ).toBeNull();
+  });
+});
+
+describe("extractMainWorktreeDiffSummary", () => {
+  it("returns diff summary from the main worktree entry", () => {
+    const mainSummary = createSummary({
+      total_additions: 387,
+      total_deletions: 45,
+    });
+    expect(
+      extractMainWorktreeDiffSummary([
+        { is_main: false, diff_summary: createSummary({ total_additions: 1 }) },
+        { is_main: true, diff_summary: mainSummary },
+      ])
+    ).toBe(mainSummary);
+  });
+
+  it("returns null when no main entry exists", () => {
+    expect(
+      extractMainWorktreeDiffSummary([
+        { is_main: false, diff_summary: createSummary() },
+      ])
+    ).toBeNull();
+  });
+});
+
+describe("formatScopePickerPath", () => {
+  it("abbreviates paths under the home directory with tilde", () => {
+    const home = process.env.HOME;
+    if (!home) return;
+
+    expect(formatScopePickerPath(`${home}/github/ORGII`)).toBe(
+      "~/github/ORGII"
+    );
+  });
+});
+
+describe("sortWorktreesByDiffActivity", () => {
+  it("orders worktrees by total diff activity descending", () => {
+    const sorted = sortWorktreesByDiffActivity([
+      {
+        path: "/tmp/low",
+        branch: "low",
+        diff_summary: createSummary({ total_additions: 1, total_deletions: 0 }),
+      },
+      {
+        path: "/tmp/high",
+        branch: "high",
+        diff_summary: createSummary({
+          total_additions: 100,
+          total_deletions: 20,
+        }),
+      },
+    ]);
+
+    expect(sorted.map((entry) => entry.path)).toEqual([
+      "/tmp/high",
+      "/tmp/low",
+    ]);
+  });
+});
+
+describe("resolveScopeBranchLabel", () => {
+  it("prefers the selected worktree branch over the host branch", () => {
+    expect(
+      resolveScopeBranchLabel("main", {
+        branch: "fix/issue-109-worktree-diff-summary",
+      })
+    ).toBe("fix/issue-109-worktree-diff-summary");
+  });
+
+  it("falls back to the host branch when no worktree is selected", () => {
+    expect(resolveScopeBranchLabel("main")).toBe("main");
+  });
+});
+
+describe("sourceControlScopeStorageKey", () => {
+  it("normalizes trailing slashes", () => {
+    expect(sourceControlScopeStorageKey("/tmp/repo/")).toBe("/tmp/repo");
+  });
+});
+
+describe("reconcileSourceControlScope", () => {
+  it("keeps a worktree scope while the worktree list is still loading", () => {
+    expect(
+      reconcileSourceControlScope({ kind: "worktree", path: "/tmp/wt" }, [], {
+        worktreesReady: false,
+      })
+    ).toEqual({ kind: "worktree", path: "/tmp/wt" });
+  });
+
+  it("falls back to local when the worktree no longer exists", () => {
+    expect(
+      reconcileSourceControlScope(
+        { kind: "worktree", path: "/tmp/missing" },
+        [{ path: "/tmp/other", branch: "other" }],
+        { worktreesReady: true }
+      )
+    ).toEqual({ kind: "local" });
+  });
+});
+
+describe("readSourceControlScope", () => {
+  it("reads scope by normalized repo path", () => {
+    const map = {
+      "/tmp/repo": { kind: "worktree" as const, path: "/tmp/wt" },
+    };
+    expect(readSourceControlScope(map, "/tmp/repo/")).toEqual({
+      kind: "worktree",
+      path: "/tmp/wt",
+    });
+  });
+});
+
+describe("worktreeFolderName", () => {
+  it("returns the last path segment", () => {
+    expect(worktreeFolderName("/tmp/orgii/agent-abc")).toBe("agent-abc");
+  });
+
+  it("falls back when path is empty", () => {
+    expect(worktreeFolderName("")).toBe("worktree");
+  });
+});
+
+describe("resolveScopeBreadcrumbSegments", () => {
+  it("omits a worktree prefix for the main checkout", () => {
+    expect(
+      resolveScopeBreadcrumbSegments({
+        repoName: "ORGII",
+        branchLabel: "fix/issue-10",
+        scope: { kind: "local" },
+      })
+    ).toEqual([
+      { label: "ORGII", tone: "primary" },
+      { label: "fix/issue-10", tone: "secondary" },
+    ]);
+  });
+
+  it("prepends the worktree folder when scoped to a worktree", () => {
+    expect(
+      resolveScopeBreadcrumbSegments({
+        repoName: "ORGII",
+        branchLabel: "feat/agent-task",
+        scope: { kind: "worktree", path: "/tmp/orgii/agent-abc" },
+        selectedWorktreePath: "/tmp/orgii/agent-abc",
+      })
+    ).toEqual([
+      { label: "agent-abc", tone: "muted" },
+      { label: "ORGII", tone: "primary" },
+      { label: "feat/agent-task", tone: "secondary" },
+    ]);
+  });
+
+  it("ignores a worktree prefix when scope is local", () => {
+    expect(
+      resolveScopeBreadcrumbSegments({
+        repoName: "ORGII",
+        branchLabel: "main",
+        scope: { kind: "local" },
+        selectedWorktreePath: "/tmp/orgii/agent-abc",
+      })
+    ).toEqual([
+      { label: "ORGII", tone: "primary" },
+      { label: "main", tone: "secondary" },
+    ]);
+  });
+});

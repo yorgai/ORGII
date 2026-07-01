@@ -221,6 +221,12 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
       isStreaming,
       ready
     );
+    const countdownLabel =
+      autoApproveRemaining !== null && ready && !isEditing
+        ? t("chat.autoExecuteCountdown", {
+            seconds: autoApproveRemaining,
+          })
+        : null;
     const handlePreviewNavigate =
       onOpenPreview ?? (eventId ? handleLocate : undefined);
 
@@ -396,11 +402,9 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
         className={`flex items-center justify-end gap-1 px-3 py-2 ${isCollapsed ? "" : "border-t border-border-2"}`}
         onClick={(event) => event.stopPropagation()}
       >
-        {autoApproveRemaining !== null && ready && !isEditing && (
+        {countdownLabel && (
           <span className="chat-block-xs tabular-nums text-text-3">
-            {t("chat.autoExecuteCountdown", {
-              seconds: autoApproveRemaining,
-            })}
+            {countdownLabel}
           </span>
         )}
         {ready && !isEditing && (
@@ -485,9 +489,15 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
           </EventBlockHeaderTitle>
           <EventBlockHeaderSubtitle
             isLoading={isStreaming}
-            title={displayTitle}
+            title={
+              countdownLabel
+                ? `${displayTitle} · ${countdownLabel}`
+                : displayTitle
+            }
           >
-            {displayTitle}
+            {countdownLabel
+              ? `${displayTitle} · ${countdownLabel}`
+              : displayTitle}
           </EventBlockHeaderSubtitle>
         </EventBlockHeader>
 

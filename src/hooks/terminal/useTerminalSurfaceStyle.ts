@@ -16,6 +16,7 @@ import {
 import { TERMINAL_THEMES } from "@src/util/ui/terminal/themes";
 
 export interface TerminalSurfaceStyle {
+  background: string;
   foreground: string;
   mutedForeground: string;
   errorForeground: string;
@@ -39,6 +40,7 @@ export function useTerminalSurfaceStyle(): TerminalSurfaceStyle {
     };
 
     return {
+      background: palette.background,
       foreground: palette.foreground,
       mutedForeground: palette.brightBlack,
       errorForeground: palette.red,

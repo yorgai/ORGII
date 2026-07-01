@@ -137,6 +137,8 @@ impl UserPresence {
 #[serde(rename_all = "camelCase")]
 pub struct UserProfile {
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tech_savvy: Option<String>,
     #[serde(default)]
     pub job_roles: Vec<String>,

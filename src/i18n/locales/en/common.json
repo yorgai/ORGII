@@ -2007,6 +2007,10 @@
     },
     "sessionFilter": {
       "allSessions": "All sessions"
+    },
+    "scope": {
+      "local": "Local",
+      "switchScope": "Switch source control scope"
     }
   },
   "contextInfo": {

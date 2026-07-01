@@ -34,6 +34,7 @@ import { useBlockHeader } from "../useBlockLocate";
 import A2UIRenderer, { type A2UIRendererHandle } from "./A2UIRenderer";
 import { CanvasErrorBoundary } from "./CanvasErrorBoundary";
 import type { CanvasInlineCardProps } from "./types";
+import { useJumpToSimulatorCanvas } from "./useJumpToSimulatorCanvas";
 
 // ─── height steps ─────────────────────────────────────────────────────────────
 
@@ -225,6 +226,11 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
   });
 
   const currentHeight = HEIGHT_STEPS[heightStep % HEIGHT_STEPS.length];
+  const simulatorPayload = useMemo(
+    () => ({ mode, content, url, title, streaming: isStreaming, eventId }),
+    [content, eventId, isStreaming, mode, title, url]
+  );
+  const jumpToSimulator = useJumpToSimulatorCanvas(sessionId, simulatorPayload);
 
   // Split A2UI content into individual JSONL elements — React state update on
   // each streaming chunk causes A2UIRenderer to diff only new elements.
@@ -287,8 +293,20 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
         title={t("canvasCard.reactDisabledTitle", "React preview disabled")}
         description={t(
           "canvasCard.reactDisabledDescription",
-          "Agent JavaScript is not executed inside chat. Use A2UI for native interactive previews."
+          "Agent JavaScript is not executed inside chat. Open it in Simulator to run the sandboxed React preview."
         )}
+        action={
+          jumpToSimulator ? (
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={jumpToSimulator}
+              icon={<Monitor size={14} />}
+            >
+              {t("canvasCard.viewInSimulator", "View in Simulator")}
+            </Button>
+          ) : undefined
+        }
       />
     );
   } else if (mode === "a2ui" && isStreaming && a2uiLines.length === 0) {

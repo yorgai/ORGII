@@ -3,6 +3,8 @@ import { Circle, HatGlasses, Moon } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import Button from "@src/components/Button";
+import Input from "@src/components/Input";
 import NumberInput from "@src/components/NumberInput";
 import Select, { type SelectOption } from "@src/components/Select";
 import TagsInput from "@src/components/TagsInput";
@@ -48,6 +50,25 @@ interface MyRolesSectionProps {
 }
 
 const CUSTOM_ROLE_COLOR_CLASS = "text-primary-6";
+const DEFAULT_PROFILE_ID = "default";
+
+interface UserProfilePreset {
+  id: string;
+  name: string;
+  techSavvy: UserTechSavvySelection;
+  jobRoles: string[];
+  familiarTechStacks: FamiliarLanguageTechStack[];
+  description: string;
+}
+
+const emptyProfilePreset = (name: string): UserProfilePreset => ({
+  id: `profile-${Date.now()}`,
+  name,
+  techSavvy: "",
+  jobRoles: [],
+  familiarTechStacks: [],
+  description: "",
+});
 
 const BUILT_IN_STATUS_OPTIONS = [
   {
@@ -273,14 +294,31 @@ const MyRolesSection: React.FC<MyRolesSectionProps> = ({
     ]
   );
 
-  const techSavvy = settings[
-    "general.profileTechSavvy"
-  ] as UserTechSavvySelection;
-  const jobRoles = settings["general.profileJobRoles"] as string[];
-  const familiarTechStacks = settings[
-    "general.profileFamiliarTechStacks"
-  ] as FamiliarLanguageTechStack[];
-  const profileDescription = settings["general.profileDescription"] as string;
+  const activeProfileId =
+    (settings["general.activeProfileId"] as string | undefined) ??
+    DEFAULT_PROFILE_ID;
+  const profilePresets = useMemo(
+    () => (settings["general.profilePresets"] ?? []) as UserProfilePreset[],
+    [settings]
+  );
+  const activeProfilePreset = profilePresets.find(
+    (profile) => profile.id === activeProfileId
+  );
+  const editingDefaultProfile = activeProfileId === DEFAULT_PROFILE_ID;
+  const techSavvy = editingDefaultProfile
+    ? (settings["general.profileTechSavvy"] as UserTechSavvySelection)
+    : (activeProfilePreset?.techSavvy ?? "");
+  const jobRoles = editingDefaultProfile
+    ? (settings["general.profileJobRoles"] as string[])
+    : (activeProfilePreset?.jobRoles ?? []);
+  const familiarTechStacks = editingDefaultProfile
+    ? (settings[
+        "general.profileFamiliarTechStacks"
+      ] as FamiliarLanguageTechStack[])
+    : (activeProfilePreset?.familiarTechStacks ?? []);
+  const profileDescription = editingDefaultProfile
+    ? (settings["general.profileDescription"] as string)
+    : (activeProfilePreset?.description ?? "");
 
   const techSavvyOptions = useMemo<SelectOption[]>(
     () =>
@@ -300,40 +338,140 @@ const MyRolesSection: React.FC<MyRolesSectionProps> = ({
     []
   );
 
-  const handleTechSavvyChange = useCallback(
+  const updateProfilePreset = useCallback(
+    (id: string, patch: Partial<UserProfilePreset>) => {
+      updateSetting({
+        key: "general.profilePresets",
+        value: profilePresets.map((profile) =>
+          profile.id === id ? { ...profile, ...patch } : profile
+        ),
+      });
+    },
+    [profilePresets, updateSetting]
+  );
+
+  const updateActiveProfile = useCallback(
+    (patch: Partial<UserProfilePreset>) => {
+      if (editingDefaultProfile) {
+        if (patch.techSavvy !== undefined) {
+          updateSetting({
+            key: "general.profileTechSavvy",
+            value: patch.techSavvy,
+          });
+        }
+        if (patch.jobRoles !== undefined) {
+          updateSetting({
+            key: "general.profileJobRoles",
+            value: patch.jobRoles,
+          });
+        }
+        if (patch.familiarTechStacks !== undefined) {
+          updateSetting({
+            key: "general.profileFamiliarTechStacks",
+            value: patch.familiarTechStacks,
+          });
+        }
+        if (patch.description !== undefined) {
+          updateSetting({
+            key: "general.profileDescription",
+            value: patch.description,
+          });
+        }
+        return;
+      }
+      updateProfilePreset(activeProfileId, patch);
+    },
+    [activeProfileId, editingDefaultProfile, updateProfilePreset, updateSetting]
+  );
+
+  const profileOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: DEFAULT_PROFILE_ID,
+        label: t("myRoles.profile.defaultProfile", {
+          defaultValue: "Default profile",
+        }),
+      },
+      ...profilePresets.map((profile) => ({
+        value: profile.id,
+        label: profile.name,
+      })),
+    ],
+    [profilePresets, t]
+  );
+
+  const handleActiveProfileChange = useCallback(
     (value: string | number | (string | number)[]) => {
       if (Array.isArray(value)) return;
-      updateSetting({
-        key: "general.profileTechSavvy",
-        value: String(value) as UserTechSavvySelection,
-      });
+      updateSetting({ key: "general.activeProfileId", value: String(value) });
     },
     [updateSetting]
   );
 
+  const handleAddProfile = useCallback(() => {
+    const name = t("myRoles.profile.newProfileName", {
+      defaultValue: "New profile",
+    });
+    const profile = emptyProfilePreset(name);
+    updateSetting({
+      key: "general.profilePresets",
+      value: [...profilePresets, profile],
+    });
+    updateSetting({ key: "general.activeProfileId", value: profile.id });
+  }, [profilePresets, t, updateSetting]);
+
+  const handleDeleteProfile = useCallback(() => {
+    if (editingDefaultProfile) return;
+    updateSetting({
+      key: "general.profilePresets",
+      value: profilePresets.filter((profile) => profile.id !== activeProfileId),
+    });
+    updateSetting({
+      key: "general.activeProfileId",
+      value: DEFAULT_PROFILE_ID,
+    });
+  }, [activeProfileId, editingDefaultProfile, profilePresets, updateSetting]);
+
+  const handleProfileNameChange = useCallback(
+    (value: string) => {
+      if (editingDefaultProfile) return;
+      updateProfilePreset(activeProfileId, { name: value });
+    },
+    [activeProfileId, editingDefaultProfile, updateProfilePreset]
+  );
+
+  const handleTechSavvyChange = useCallback(
+    (value: string | number | (string | number)[]) => {
+      if (Array.isArray(value)) return;
+      updateActiveProfile({
+        techSavvy: String(value) as UserTechSavvySelection,
+      });
+    },
+    [updateActiveProfile]
+  );
+
   const handleJobRolesChange = useCallback(
     (next: string[]) => {
-      updateSetting({ key: "general.profileJobRoles", value: next });
+      updateActiveProfile({ jobRoles: next });
     },
-    [updateSetting]
+    [updateActiveProfile]
   );
 
   const handleFamiliarTechStacksChange = useCallback(
     (value: string | number | (string | number)[]) => {
       if (!Array.isArray(value)) return;
-      updateSetting({
-        key: "general.profileFamiliarTechStacks",
-        value: value.map(String) as FamiliarLanguageTechStack[],
+      updateActiveProfile({
+        familiarTechStacks: value.map(String) as FamiliarLanguageTechStack[],
       });
     },
-    [updateSetting]
+    [updateActiveProfile]
   );
 
   const handleProfileDescriptionChange = useCallback(
     (value: string) => {
-      updateSetting({ key: "general.profileDescription", value });
+      updateActiveProfile({ description: value });
     },
-    [updateSetting]
+    [updateActiveProfile]
   );
 
   const removeJobRoleAriaLabel = useCallback(
@@ -345,6 +483,55 @@ const MyRolesSection: React.FC<MyRolesSectionProps> = ({
     return (
       <div className="flex flex-col gap-3">
         <SectionContainer>
+          <SectionRow
+            label={t("myRoles.profile.activeProfile", {
+              defaultValue: "Active profile",
+            })}
+            description={t("myRoles.profile.activeProfileDescription", {
+              defaultValue:
+                "Choose which profile is sent to agents. Switching is manual and under your control.",
+            })}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={activeProfileId}
+                onChange={handleActiveProfileChange}
+                options={profileOptions}
+                style={SECTION_CONTROL_STYLE}
+              />
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={handleAddProfile}
+              >
+                {t("myRoles.profile.addProfile", {
+                  defaultValue: "Add profile",
+                })}
+              </Button>
+              {!editingDefaultProfile && (
+                <Button
+                  variant="tertiary"
+                  size="small"
+                  onClick={handleDeleteProfile}
+                >
+                  {t("common:actions.delete", { defaultValue: "Delete" })}
+                </Button>
+              )}
+            </div>
+          </SectionRow>
+          {!editingDefaultProfile && (
+            <SectionRow
+              label={t("myRoles.profile.profileName", {
+                defaultValue: "Profile name",
+              })}
+            >
+              <Input
+                value={activeProfilePreset?.name ?? ""}
+                onChange={handleProfileNameChange}
+                style={SECTION_CONTROL_STYLE}
+              />
+            </SectionRow>
+          )}
           <SectionRow
             label={t("myRoles.profile.techSavvy")}
             description={t("myRoles.profile.techSavvyDescription")}

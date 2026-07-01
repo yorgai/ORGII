@@ -4,12 +4,11 @@
  * Internal panel components for the Source Control tab:
  * - SourceControlTabContent: wraps SourceControlContent with useSourceControlState
  * - MainRepoSectionContent: main repository content for multi-worktree layout
- * - SourceControlWithWorktrees: collapsible worktree sections
+ * - SourceControlWithWorktrees: scoped host/worktree source control pane
  *
  * Extracted from SourceControlTab.tsx to keep it under 600 lines.
  * PERFORMANCE (Jan 2026): useSourceControlState only runs on first mount.
  */
-import { useAtomValue } from "jotai";
 import {
   forwardRef,
   useCallback,
@@ -20,26 +19,17 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { removeGitWorktree } from "@src/api/http/git";
 import type { GitWorktreeEntry } from "@src/api/http/git/types";
 import { repoApi } from "@src/api/tauri/repo";
 import Message from "@src/components/Message";
-import { FolderHeaderRow } from "@src/modules/WorkStation/shared/FolderHeaderRow";
-import { FOLDER_HEADER } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { workspaceGitStatusMapAtom } from "@src/store/git";
 import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
 import type { GitFile } from "@src/types/git/types";
-import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
-import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
 
 import SourceControlContent from "../content/SourceControlContent";
-import {
-  WorktreeActionsMenu,
-  WorktreeContextMenu,
-} from "../content/WorktreeActionsMenu";
 import { WorktreeSourceControlSection } from "../content/WorktreeSourceControlSection";
 import { useSourceControlState } from "../hooks/useSourceControlState";
+import type { SourceControlScope } from "./sourceControlScopePickerHelpers";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -405,56 +395,13 @@ export const MainRepoSectionContent = forwardRef<
 
 MainRepoSectionContent.displayName = "MainRepoSectionContent";
 
-async function confirmAndRemoveWorktree({
-  repoId,
-  repoPath,
-  worktree,
-  folderName,
-  onRemoved,
-  t,
-}: {
-  repoId: string;
-  repoPath: string;
-  worktree: GitWorktreeEntry;
-  folderName: string;
-  onRemoved?: () => Promise<void>;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}) {
-  const confirmed = await confirmDestructiveAction({
-    title: t("sourceControl.removeWorktreeTitle", { name: folderName }),
-    message: t("sourceControl.removeWorktreeMessage"),
-    okLabel: t("sourceControl.removeWorktree"),
-  });
-  if (!confirmed) return;
-
-  try {
-    await removeGitWorktree({
-      repo_id: repoId,
-      repo_path: repoPath,
-      worktree_path: worktree.path,
-      force: true,
-    });
-    await onRemoved?.();
-    showGitActionDialogSafely(t("sourceControl.removeWorktreeSuccess"), "info");
-  } catch (error) {
-    showGitActionDialogSafely(
-      error instanceof Error
-        ? error.message
-        : t("sourceControl.removeWorktreeFailed"),
-      "error"
-    );
-  }
-}
-
 // ── SourceControlWithWorktrees ────────────────────────────────────────────────
 
 interface SourceControlWithWorktreesProps {
   repoPath: string;
   repoId: string;
-  repoName: string;
   worktrees: GitWorktreeEntry[];
-  selectedWorktreePath?: string;
-  onWorktreesRefresh?: () => Promise<void>;
+  scope: SourceControlScope;
   onGitFileSelect?: (file: GitFile) => void;
   /**
    * Notified whenever the file list of any pane (host or worktree) changes.
@@ -471,7 +418,6 @@ interface SourceControlWithWorktreesProps {
   navigateWithoutSelecting?: boolean;
   /** Working-tree section filter forwarded to every (sub)pane. */
   sectionFilter?: "uncommitted" | "staged" | "unstaged";
-  scopePicker?: React.ReactNode;
 }
 
 export const SourceControlWithWorktrees = forwardRef<
@@ -482,10 +428,8 @@ export const SourceControlWithWorktrees = forwardRef<
     {
       repoPath,
       repoId,
-      repoName,
       worktrees,
-      selectedWorktreePath,
-      onWorktreesRefresh,
+      scope,
       onGitFileSelect,
       onGitFilesChange,
       onGitHistorySelectionChange,
@@ -494,20 +438,9 @@ export const SourceControlWithWorktrees = forwardRef<
       showOnlyStashes,
       navigateWithoutSelecting,
       sectionFilter,
-      scopePicker,
     },
     ref
   ) => {
-    const [mainExpanded, setMainExpanded] = useState(true);
-    const [worktreeExpanded, setWorktreeExpanded] = useState<
-      Record<string, boolean>
-    >({});
-    const [contextMenuState, setContextMenuState] = useState<{
-      worktree: GitWorktreeEntry;
-      x: number;
-      y: number;
-    } | null>(null);
-
     const handleWorktreeFilesChange = useCallback(
       (files: GitFile[], worktreePath: string) => {
         onGitFilesChange?.(files, worktreePath);
@@ -515,16 +448,10 @@ export const SourceControlWithWorktrees = forwardRef<
       [onGitFilesChange]
     );
 
-    const { t } = useTranslation();
-    const gitStatusMap = useAtomValue(workspaceGitStatusMapAtom);
-    const mainBranch = gitStatusMap.get(repoPath)?.current_branch;
-    const selectedWorktree = selectedWorktreePath
-      ? worktrees.find((worktree) => worktree.path === selectedWorktreePath)
-      : undefined;
-    const currentScopeName = selectedWorktree
-      ? selectedWorktree.path.split("/").pop() || "worktree"
-      : repoName;
-    const currentScopeBranch = selectedWorktree?.branch || mainBranch;
+    const selectedWorktree =
+      scope.kind === "worktree"
+        ? worktrees.find((worktree) => worktree.path === scope.path)
+        : undefined;
 
     const mainRef = useRef<SourceControlContentHandle>(null);
 
@@ -538,126 +465,32 @@ export const SourceControlWithWorktrees = forwardRef<
       []
     );
 
-    const toggleMain = useCallback(() => setMainExpanded((prev) => !prev), []);
-
-    const toggleWorktree = useCallback((path: string) => {
-      setWorktreeExpanded((prev) => ({ ...prev, [path]: !prev[path] }));
-    }, []);
-
-    const removeWorktree = useCallback(
-      async (worktree: GitWorktreeEntry) => {
-        const folderName = worktree.path.split("/").pop() || "worktree";
-        await confirmAndRemoveWorktree({
-          repoId,
-          repoPath,
-          worktree,
-          folderName,
-          onRemoved: onWorktreesRefresh,
-          t,
-        });
-      },
-      [onWorktreesRefresh, repoId, repoPath, t]
-    );
-
     return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div
-          className={`${FOLDER_HEADER.section} flex flex-col ${
-            mainExpanded ? "min-h-0 flex-1 overflow-hidden" : "flex-shrink-0"
-          }`}
-        >
-          <FolderHeaderRow
-            name={currentScopeName}
-            expanded={mainExpanded}
-            onToggle={toggleMain}
-            branchName={currentScopeBranch}
-            actions={scopePicker}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {selectedWorktree ? (
+          <WorktreeSourceControlSection
+            worktreePath={selectedWorktree.path}
+            worktreeId={`worktree:${selectedWorktree.path}`}
+            onGitFileSelect={onGitFileSelect}
+            onGitFilesChange={handleWorktreeFilesChange}
+            showFilter={showFilter}
+            viewMode={viewMode}
+            navigateWithoutSelecting={navigateWithoutSelecting}
+            sectionFilter={sectionFilter}
           />
-          {mainExpanded && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              {selectedWorktree ? (
-                <WorktreeSourceControlSection
-                  worktreePath={selectedWorktree.path}
-                  worktreeId={`worktree:${selectedWorktree.path}`}
-                  onGitFileSelect={onGitFileSelect}
-                  onGitFilesChange={handleWorktreeFilesChange}
-                  showFilter={showFilter}
-                  viewMode={viewMode}
-                  navigateWithoutSelecting={navigateWithoutSelecting}
-                  sectionFilter={sectionFilter}
-                />
-              ) : (
-                <MainRepoSectionContent
-                  ref={mainRef}
-                  repoPath={repoPath}
-                  repoId={repoId}
-                  onGitFileSelect={onGitFileSelect}
-                  onGitFilesChange={onGitFilesChange}
-                  onGitHistorySelectionChange={onGitHistorySelectionChange}
-                  showFilter={showFilter}
-                  viewMode={viewMode}
-                  showOnlyStashes={showOnlyStashes}
-                  navigateWithoutSelecting={navigateWithoutSelecting}
-                  sectionFilter={sectionFilter}
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        {!selectedWorktree &&
-          worktrees.map((worktree) => {
-            const isExpanded = worktreeExpanded[worktree.path] ?? false;
-            const folderName = worktree.path.split("/").pop() || "worktree";
-            return (
-              <div key={worktree.path} className={FOLDER_HEADER.section}>
-                <div className="mx-2 h-px bg-border-1" aria-hidden />
-                <FolderHeaderRow
-                  name={folderName}
-                  expanded={isExpanded}
-                  onToggle={() => toggleWorktree(worktree.path)}
-                  branchName={worktree.branch || undefined}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    setContextMenuState({
-                      worktree,
-                      x: event.clientX,
-                      y: event.clientY,
-                    });
-                  }}
-                  actions={
-                    <WorktreeActionsMenu
-                      onRemove={() => {
-                        void removeWorktree(worktree);
-                      }}
-                    />
-                  }
-                />
-                {isExpanded && (
-                  <div className="flex min-h-[280px] flex-col overflow-hidden">
-                    <WorktreeSourceControlSection
-                      worktreePath={worktree.path}
-                      worktreeId={`worktree:${worktree.path}`}
-                      onGitFileSelect={onGitFileSelect}
-                      onGitFilesChange={handleWorktreeFilesChange}
-                      showFilter={showFilter}
-                      viewMode={viewMode}
-                      navigateWithoutSelecting={navigateWithoutSelecting}
-                      sectionFilter={sectionFilter}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        {contextMenuState && (
-          <WorktreeContextMenu
-            x={contextMenuState.x}
-            y={contextMenuState.y}
-            onRemove={() => {
-              void removeWorktree(contextMenuState.worktree);
-            }}
-            onClose={() => setContextMenuState(null)}
+        ) : (
+          <MainRepoSectionContent
+            ref={mainRef}
+            repoPath={repoPath}
+            repoId={repoId}
+            onGitFileSelect={onGitFileSelect}
+            onGitFilesChange={onGitFilesChange}
+            onGitHistorySelectionChange={onGitHistorySelectionChange}
+            showFilter={showFilter}
+            viewMode={viewMode}
+            showOnlyStashes={showOnlyStashes}
+            navigateWithoutSelecting={navigateWithoutSelecting}
+            sectionFilter={sectionFilter}
           />
         )}
       </div>

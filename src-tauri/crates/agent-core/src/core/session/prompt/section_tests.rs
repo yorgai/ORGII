@@ -18,6 +18,7 @@ fn prompt_task_sandbox() -> test_env::SandboxGuard {
 #[test]
 fn format_user_profile_renders_non_empty_fields() {
     let profile = crate::session::UserProfile {
+        name: Some("Frontend".to_string()),
         tech_savvy: Some("advanced".to_string()),
         job_roles: vec!["Frontend Engineer".to_string(), "Designer".to_string()],
         familiar_tech_stacks: vec!["TypeScript".to_string(), "React".to_string()],
@@ -27,6 +28,7 @@ fn format_user_profile_renders_non_empty_fields() {
     let rendered = format_user_profile(&profile);
 
     assert!(rendered.contains("# User Profile"));
+    assert!(rendered.contains("Active profile: Frontend"));
     assert!(rendered.contains("Technical familiarity: advanced"));
     assert!(rendered.contains("Job roles: Frontend Engineer, Designer"));
     assert!(rendered.contains("Familiar languages / tech stacks: TypeScript, React"));

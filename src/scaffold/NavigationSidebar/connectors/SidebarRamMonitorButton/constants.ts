@@ -1,6 +1,6 @@
 import type { MetricsSnapshot } from "./types";
 
-export { CHILD_MEMORY_METRIC_KIND, CHILD_PROCESS_CATEGORY } from "./types";
+export { CHILD_PROCESS_CATEGORY } from "./types";
 
 export const CHEAP_METRICS_POLL_INTERVAL_MS = 15_000;
 export const EXPENSIVE_METRICS_POLL_INTERVAL_MS = 60_000;

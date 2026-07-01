@@ -26,7 +26,9 @@ const CANVAS_THEME_VARIABLES = [
 ] as const;
 
 function buildThemeVariables(): string {
-  if (typeof window === "undefined") return "";
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return "";
+  }
 
   const styles = window.getComputedStyle(document.documentElement);
   return CANVAS_THEME_VARIABLES.map((name) => {

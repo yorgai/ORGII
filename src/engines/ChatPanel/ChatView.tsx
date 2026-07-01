@@ -45,6 +45,7 @@ import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/use
 import { AgentOrgGroupChatLiveSessions } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatLiveSessions";
 import { replayModeAtom } from "@src/engines/SessionCore";
 import { derivedSnapshotAtom } from "@src/engines/SessionCore/core/atoms/events";
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { useFileReviewSync } from "@src/hooks/fileReview";
@@ -119,7 +120,16 @@ import { useFollowAgent } from "./hooks/useFollowAgent";
 const logger = createLogger("ChatView");
 
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
-const EMPTY_CHAT_EVENTS = [];
+const EMPTY_CHAT_EVENTS: SessionEvent[] = [];
+
+function formatPlanPillLabel(
+  autoApproveAt: number | null | undefined,
+  nowMs = Date.now()
+): string {
+  if (!autoApproveAt) return "Plan";
+  const seconds = Math.max(0, Math.ceil((autoApproveAt - nowMs) / 1000));
+  return `Plan · ${seconds}s`;
+}
 
 function impactFileChanges(input: {
   filesChanged?: number;
@@ -620,6 +630,24 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const hasPlan = Boolean(
       currentPlanApproval && shouldShowCurrentPlanSurface
     );
+    const [planPillNowMs, setPlanPillNowMs] = useState(() => Date.now());
+    const currentPlanAutoApproveAt = currentPlanApproval?.autoApproveAt ?? null;
+    useEffect(() => {
+      if (!hasPlan || !currentPlanAutoApproveAt) return;
+      const timer = window.setInterval(
+        () => setPlanPillNowMs(Date.now()),
+        1000
+      );
+      return () => window.clearInterval(timer);
+    }, [currentPlanAutoApproveAt, hasPlan]);
+    const planPillLabel = useMemo(
+      () =>
+        formatPlanPillLabel(
+          hasPlan ? currentPlanAutoApproveAt : null,
+          planPillNowMs
+        ),
+      [currentPlanAutoApproveAt, hasPlan, planPillNowMs]
+    );
     const setStationMode = useSetAtom(stationModeAtom);
     const setSelectedSimulatorApp = useSetAtom(simulatorSelectedAppAtom);
     const setReplayMode = useSetAtom(replayModeAtom);
@@ -711,6 +739,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
       hasPermission,
       hasModeSwitch,
       hasPlan,
+      planPillLabel,
       gitArtifactStats,
       onFilesExpand: openAgentStationDiff,
       filesMenu,

@@ -807,11 +807,17 @@ pub(super) fn build_runtime_line(model: &str, channel: Option<&str>) -> String {
 
 pub(super) fn user_profile_is_empty(profile: &crate::session::UserProfile) -> bool {
     profile
-        .tech_savvy
+        .name
         .as_deref()
         .map(str::trim)
         .unwrap_or_default()
         .is_empty()
+        && profile
+            .tech_savvy
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or_default()
+            .is_empty()
         && profile.job_roles.is_empty()
         && profile.familiar_tech_stacks.is_empty()
         && profile
@@ -830,6 +836,13 @@ pub(super) fn format_user_profile(profile: &crate::session::UserProfile) -> Stri
         "Use this profile to calibrate explanation depth, examples, assumptions, and terminology."
             .to_string(),
     );
+
+    if let Some(ref name) = profile.name {
+        let trimmed = name.trim();
+        if !trimmed.is_empty() {
+            lines.push(format!("- Active profile: {}", trimmed));
+        }
+    }
 
     if let Some(ref tech_savvy) = profile.tech_savvy {
         let trimmed = tech_savvy.trim();

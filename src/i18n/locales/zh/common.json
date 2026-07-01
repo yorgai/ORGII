@@ -1956,6 +1956,10 @@
     },
     "sessionFilter": {
       "allSessions": "所有会话"
+    },
+    "scope": {
+      "local": "本地",
+      "switchScope": "切换源代码管理范围"
     }
   },
   "contextInfo": {

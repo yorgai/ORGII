@@ -21,6 +21,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { GitWorktreeEntry } from "@src/api/http/git/types";
 import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
 import { useGitStatus } from "@src/contexts/git";
 import { sessionIdAtom } from "@src/engines/SessionCore";
@@ -76,6 +77,11 @@ export interface UseSourceControlSidebarModuleOptions {
   filterMode?: SourceControlFilterMode;
   /** Notify parent on row click without updating sidebar selection. */
   navigateWithoutSelecting?: boolean;
+  /** Optional worktree list supplied by the host to avoid duplicate fetches. */
+  worktrees?: GitWorktreeEntry[];
+  hasWorktrees?: boolean;
+  worktreesLoading?: boolean;
+  refreshWorktrees?: () => Promise<void>;
 }
 
 export interface UseSourceControlSidebarModuleResult {
@@ -95,6 +101,10 @@ export function useSourceControlSidebarModule({
   isMultiRoot = false,
   filterMode: controlledFilterMode,
   navigateWithoutSelecting = false,
+  worktrees: hostWorktrees,
+  hasWorktrees: hostHasWorktrees,
+  worktreesLoading: hostWorktreesLoading,
+  refreshWorktrees: hostRefreshWorktrees,
 }: UseSourceControlSidebarModuleOptions): UseSourceControlSidebarModuleResult {
   const { t } = useTranslation();
   const sourceControlRef = useRef<SourceControlTabHandle>(null);
@@ -438,6 +448,10 @@ export function useSourceControlSidebarModule({
     showOnlyStashes: filterMode === "stashed",
     sectionFilter,
     navigateWithoutSelecting,
+    worktrees: hostWorktrees,
+    hasWorktrees: hostHasWorktrees,
+    worktreesLoading: hostWorktreesLoading,
+    refreshWorktrees: hostRefreshWorktrees,
     sourceControlTitleOverride:
       isPrMode || isHistoryMode || isIssuesMode ? sectionTitle : undefined,
     sourceControlContentOverride: isPrMode

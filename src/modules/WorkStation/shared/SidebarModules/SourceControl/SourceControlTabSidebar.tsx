@@ -13,6 +13,7 @@
  */
 import { useCallback, useState } from "react";
 
+import type { GitWorktreeEntry } from "@src/api/http/git/types";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { sourceControlTabFactory } from "@src/store/workstation/tabs";
 
@@ -28,6 +29,10 @@ import { useSourceControlSidebarModule } from "./useSourceControlSidebarModule";
 interface SourceControlSidebarContext {
   filterMode?: SourceControlFilterMode;
   navigateWithoutSelecting?: boolean;
+  worktrees?: GitWorktreeEntry[];
+  hasWorktrees?: boolean;
+  worktreesLoading?: boolean;
+  refreshWorktrees?: () => Promise<void>;
 }
 
 function getSourceControlSidebarContext(
@@ -55,6 +60,10 @@ const SourceControlTabSidebar: TabSidebarComponent = ({
     filterMode: sourceControlContext?.filterMode,
     navigateWithoutSelecting:
       sourceControlContext?.navigateWithoutSelecting ?? false,
+    worktrees: sourceControlContext?.worktrees,
+    hasWorktrees: sourceControlContext?.hasWorktrees,
+    worktreesLoading: sourceControlContext?.worktreesLoading,
+    refreshWorktrees: sourceControlContext?.refreshWorktrees,
   });
 
   const [activeTab] = useState(tab.key);

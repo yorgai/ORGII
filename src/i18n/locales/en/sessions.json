@@ -2608,6 +2608,8 @@
     "summarize": "Summarize with Agent",
     "waiting": "Waiting for content…",
     "empty": "No content",
+    "reactDisabledTitle": "React preview runs in Simulator",
+    "reactDisabledDescription": "Agent JavaScript is not executed inside chat. Open it in Simulator to run the sandboxed React preview.",
     "viewInSimulator": "View in Simulator"
   },
   "canvasApp": {

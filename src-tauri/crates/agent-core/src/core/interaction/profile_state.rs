@@ -42,6 +42,7 @@ mod tests {
     #[test]
     fn set_get_and_clear_profile_round_trip() {
         set_global_profile(Some(UserProfile {
+            name: Some("Frontend".to_string()),
             tech_savvy: Some("advanced".to_string()),
             job_roles: vec!["Frontend Engineer".to_string()],
             familiar_tech_stacks: vec!["React".to_string()],

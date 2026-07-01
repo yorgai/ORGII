@@ -19,7 +19,10 @@ import { useTranslation } from "react-i18next";
 import A2UIRenderer, {
   type A2UIRendererHandle,
 } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/A2UIRenderer";
-import { buildHtmlDocument } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/canvasBuilder";
+import {
+  buildHtmlDocument,
+  buildReactDocument,
+} from "@src/engines/ChatPanel/blocks/CanvasInlineCard/canvasBuilder";
 import type { SimulatorAppProps } from "@src/engines/Simulator/apps/core/types";
 import {
   NoTabsPlaceholder,
@@ -35,7 +38,7 @@ import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
 interface CanvasState {
   visible: boolean;
-  mode: "html" | "url" | "a2ui" | "empty";
+  mode: "html" | "url" | "a2ui" | "react" | "empty";
   url: string | null;
   html: string | null;
   a2uiLines: string[];
@@ -84,7 +87,13 @@ function CanvasApp(props: SimulatorAppProps) {
           setState((prev) => ({
             ...prev,
             visible: true,
-            mode: data.html ? "html" : data.url ? "url" : prev.mode,
+            mode: data.html
+              ? (data.mode as CanvasState["mode"] | undefined) === "react"
+                ? "react"
+                : "html"
+              : data.url
+                ? "url"
+                : prev.mode,
             url: (data.url as string) || prev.url,
             html: (data.html as string) || prev.html,
             width: (data.width as number) || prev.width,
@@ -180,7 +189,9 @@ function CanvasApp(props: SimulatorAppProps) {
   const htmlSrcDoc =
     state.mode === "html" && state.html
       ? buildHtmlDocument(state.html)
-      : undefined;
+      : state.mode === "react" && state.html
+        ? buildReactDocument(state.html)
+        : undefined;
 
   return (
     <div
