@@ -50,6 +50,15 @@ export const COLLAB_WORKSPACE_SCOPE = {
 export type CollabWorkspaceScope =
   (typeof COLLAB_WORKSPACE_SCOPE)[keyof typeof COLLAB_WORKSPACE_SCOPE];
 
+export const COLLAB_REPO_JOIN_STATUS = {
+  PENDING: "pending",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+} as const;
+
+export type CollabRepoJoinStatus =
+  (typeof COLLAB_REPO_JOIN_STATUS)[keyof typeof COLLAB_REPO_JOIN_STATUS];
+
 export interface CollabAvatarIdentity {
   initials: string;
   variant: string;
@@ -74,6 +83,7 @@ export interface CollabOrgRecord {
   groupId?: string;
   adminMemberId?: string;
   localMemberId?: string;
+  repoScopes?: string[];
   createdAt: string;
 }
 
@@ -143,6 +153,18 @@ export interface CollabSessionSnapshotRequestRecord {
   error?: string;
 }
 
+export interface CollabRepoJoinRequestRecord {
+  requestId: string;
+  orgId: string;
+  requesterMemberId: string;
+  repoPath: string;
+  status: CollabRepoJoinStatus;
+  reviewerMemberId?: string;
+  reviewNote?: string;
+  createdAt: string;
+  reviewedAt?: string;
+}
+
 export interface RemoteTeammateSessionMetadata {
   id: string;
   orgId: string;
@@ -157,4 +179,7 @@ export interface RemoteTeammateSessionMetadata {
   branch?: string;
   lastActivityAt?: string;
   accessMode?: CollabSessionAccessMode;
+  eventsBlobPath: string | undefined;
+  eventsContentHash: string | undefined;
+  eventsUpdatedAt: string | undefined;
 }

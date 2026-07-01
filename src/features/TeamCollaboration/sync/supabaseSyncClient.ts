@@ -11,6 +11,7 @@ import {
   normalizeSupabaseProjectUrl,
 } from "@src/store/collaboration/protocol";
 import {
+  COLLAB_REPO_JOIN_STATUS,
   COLLAB_ROLE,
   COLLAB_SYNC_BACKEND,
   SUPABASE_SESSION_SNAPSHOT_BUCKET,
@@ -31,14 +32,21 @@ import type {
   CreateInviteInput,
   CreateOrgInput,
   DenySessionSnapshotInput,
+  DownloadSessionEventsBlobInput,
+  GetSessionEventsInput,
   ListChatMessagesInput,
   ListOrgStateInput,
   PostChatMessageInput,
   PublishSessionSnapshotInput,
   RemoveMemberInput,
   RemoveSessionMetadataInput,
+  RequestRepoJoinInput,
   RequestSessionSnapshotInput,
+  ReviewRepoJoinInput,
+  SessionEventsRef,
+  UpdateOrgRepoScopesInput,
   UpsertProjectMetadataInput,
+  UpsertSessionEventsInput,
   UpsertSessionMetadataInput,
   UpsertWorkItemInput,
   VerifySetupInput,
@@ -54,6 +62,32 @@ const CreateOrgResponseSchema = z.object({
 
 const AcceptInviteResponseSchema = CreateOrgResponseSchema;
 
+const RepoJoinRequestSchema = z.object({
+  requestId: z.string(),
+  orgId: z.string(),
+  requesterMemberId: z.string(),
+  repoPath: z.string(),
+  status: z.enum([
+    COLLAB_REPO_JOIN_STATUS.PENDING,
+    COLLAB_REPO_JOIN_STATUS.APPROVED,
+    COLLAB_REPO_JOIN_STATUS.REJECTED,
+  ]),
+  reviewerMemberId: z.string().optional(),
+  reviewNote: z.string().optional(),
+  createdAt: z.string(),
+  reviewedAt: z.string().optional(),
+});
+
+const SessionEventsRefSchema = z.object({
+  blobPath: z.string().nullable(),
+  contentHash: z.string().nullable(),
+  updatedAt: z.string().nullable(),
+});
+
+const SessionEventsBlobSchema = z.object({
+  events: z.array(z.custom<SessionEvent>()),
+});
+
 const OrgStateSchema = z.object({
   orgs: z.array(CollabOrgRecordSchema).default([]),
   members: z.array(CollabMemberRecordSchema).default([]),
@@ -62,6 +96,7 @@ const OrgStateSchema = z.object({
   workItems: z.array(JsonRecordSchema).default([]),
   sessions: z.array(RemoteTeammateSessionMetadataSchema).default([]),
   chatMessages: z.array(CollabChatMessageRecordSchema).default([]),
+  repoJoinRequests: z.array(RepoJoinRequestSchema).default([]),
   snapshotRequests: z.array(JsonRecordSchema).default([]),
 });
 
@@ -231,16 +266,16 @@ function normalizeInviteRecord(
 }
 
 async function uploadSnapshotBlob(
-  input: PublishSessionSnapshotInput,
+  profile: CollabSyncProfile,
   blobPath: string,
   body: unknown
 ): Promise<void> {
   const response = await fetch(
-    `${normalizeSupabaseProjectUrl(input.supabaseUrl)}/storage/v1/object/${SUPABASE_SESSION_SNAPSHOT_BUCKET}/${blobPath}`,
+    `${normalizeSupabaseProjectUrl(profile.supabaseUrl)}/storage/v1/object/${SUPABASE_SESSION_SNAPSHOT_BUCKET}/${blobPath}`,
     {
       method: "POST",
       headers: {
-        ...supabaseHeaders(input.anonKey, false),
+        ...supabaseHeaders(profile.anonKey, false),
         "content-type": "application/json",
         "x-upsert": "true",
       },
@@ -259,6 +294,20 @@ async function downloadSnapshotBlob(
     { headers: supabaseHeaders(profile.anonKey, false) }
   );
   return SnapshotBlobSchema.parse(await parseJsonResponse(response));
+}
+
+async function downloadSessionEventsBlob(
+  profile: CollabSyncProfile,
+  blobPath: string
+): Promise<SessionEvent[]> {
+  const response = await fetch(
+    `${normalizeSupabaseProjectUrl(profile.supabaseUrl)}/storage/v1/object/${SUPABASE_SESSION_SNAPSHOT_BUCKET}/${blobPath}`,
+    { headers: supabaseHeaders(profile.anonKey, false) }
+  );
+  const parsed = SessionEventsBlobSchema.parse(
+    await parseJsonResponse(response)
+  );
+  return parsed.events;
 }
 
 export const supabaseSyncClient: CollabSyncBackendClient = {
@@ -439,6 +488,86 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
     });
   },
 
+  async upsertSessionEvents(input: UpsertSessionEventsInput): Promise<void> {
+    const body = { events: input.events };
+    const serialized = JSON.stringify(body);
+    const contentHash = await sha256Hex(serialized);
+    const blobPath = `orgs/${input.orgId}/sessions/${input.sourceSessionId}/latest-${contentHash}.json`;
+    await uploadSnapshotBlob(input, blobPath, body);
+    await callRpcVoid(input, "orgii_upsert_session_events", {
+      org_secret: requireOrgSecret(input),
+      org_id: input.orgId,
+      source_session_id: input.sourceSessionId,
+      blob_path: blobPath,
+      content_hash: contentHash,
+    });
+  },
+
+  async getSessionEvents(
+    input: GetSessionEventsInput
+  ): Promise<SessionEventsRef | null> {
+    const raw = await callRpc(
+      input,
+      "orgii_get_session_events",
+      {
+        org_secret: requireOrgSecret(input),
+        org_id: input.orgId,
+        source_session_id: input.sourceSessionId,
+      },
+      SessionEventsRefSchema.nullable()
+    );
+    if (!raw || !raw.blobPath || !raw.contentHash || !raw.updatedAt) {
+      return null;
+    }
+    return {
+      blobPath: raw.blobPath,
+      contentHash: raw.contentHash,
+      updatedAt: raw.updatedAt,
+    };
+  },
+
+  async downloadSessionEventsBlob(
+    input: DownloadSessionEventsBlobInput
+  ): Promise<SessionEvent[]> {
+    return downloadSessionEventsBlob(input, input.blobPath);
+  },
+
+  async updateOrgRepoScopes(input: UpdateOrgRepoScopesInput): Promise<void> {
+    await callRpcVoid(input, "orgii_update_org_repo_scopes", {
+      org_secret: requireOrgSecret(input),
+      org_id: input.orgId,
+      repo_scopes: input.repoScopes,
+    });
+  },
+
+  async requestRepoJoin(input: RequestRepoJoinInput): Promise<void> {
+    const requestId = createId("repo-join");
+    await callRpcVoid(input, "orgii_request_repo_join", {
+      org_secret: requireOrgSecret(input),
+      org_id: input.orgId,
+      repo_path: input.repoPath,
+      requester_member_id: input.requesterMemberId,
+      payload: {
+        requestId,
+        orgId: input.orgId,
+        requesterMemberId: input.requesterMemberId,
+        repoPath: input.repoPath,
+        status: COLLAB_REPO_JOIN_STATUS.PENDING,
+        createdAt: new Date().toISOString(),
+      },
+    });
+  },
+
+  async reviewRepoJoin(input: ReviewRepoJoinInput): Promise<void> {
+    await callRpcVoid(input, "orgii_review_repo_join", {
+      org_secret: requireOrgSecret(input),
+      request_id: input.requestId,
+      approve: input.approve,
+      reviewer_member_id: input.reviewerMemberId,
+      review_note: input.reviewNote ?? null,
+    });
+  },
+
   async requestSessionSnapshot(
     input: RequestSessionSnapshotInput
   ): Promise<void> {
@@ -517,6 +646,7 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
       workItems: parsed.workItems,
       sessions: parsed.sessions,
       chatMessages: parsed.chatMessages,
+      repoJoinRequests: parsed.repoJoinRequests,
       snapshotRequests: snapshotRequests.map((request) => ({
         requestId: String(request.requestId),
         orgId: String(request.orgId),

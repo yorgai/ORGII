@@ -1,5 +1,5 @@
 import { useAtomValue, useSetAtom } from "jotai";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
@@ -8,9 +8,11 @@ import {
   collabChatMessagesAtom,
   collabConnectionStatesAtom,
   collabInvitesAtom,
+  collabLastSyncTimestampsAtom,
   collabMembersAtom,
   collabOrgsAtom,
   collabProjectsAtom,
+  collabRepoJoinRequestsAtom,
   collabSessionAccessSettingsAtom,
   collabSessionSnapshotRequestsAtom,
   collabWorkItemsAtom,
@@ -20,9 +22,6 @@ import { createCollabAvatarIdentity } from "@src/store/collaboration/protocol";
 import {
   COLLAB_CONNECTION_STATUS,
   COLLAB_ROLE,
-  COLLAB_SESSION_ACCESS_MODE,
-  COLLAB_SYNC_BACKEND,
-  COLLAB_WORKSPACE_SCOPE,
 } from "@src/store/collaboration/types";
 import type {
   CollabChatMessageRecord,
@@ -30,6 +29,7 @@ import type {
   CollabOrgConnectionState,
   CollabOrgRecord,
   CollabProjectMetadataRecord,
+  CollabRepoJoinRequestRecord,
   CollabSessionAccessSettings,
   CollabSessionSnapshotRequestRecord,
   CollabWorkItemMetadataRecord,
@@ -40,56 +40,22 @@ import { persistSessions } from "@src/store/session/sessionAtom/persistence";
 import type { Session } from "@src/store/session/sessionAtom/types";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
+import {
+  createDefaultAccessSettings,
+  getSyncProfile,
+  isRemoteSessionEventsPublishAllowed,
+  isRemoteSessionInOrgScope,
+  isSessionPushAllowed,
+  toRemoteMetadata,
+} from "./collabSyncUtils";
 import { supabaseSyncClient } from "./sync/supabaseSyncClient";
 
-const SYNC_INTERVAL_MS = 10_000;
+const SYNC_INTERVAL_MS = 5_000;
 
 interface ActiveCollabConnection {
   org: CollabOrgRecord;
   member: CollabMemberRecord;
   settings: CollabSessionAccessSettings;
-}
-
-function normalizeWorkspacePath(path: string | undefined): string | null {
-  const trimmed = path?.trim();
-  if (!trimmed) return null;
-  return trimmed.replace(/\/+$/, "");
-}
-
-function createDefaultAccessSettings(
-  orgId: string,
-  memberId: string
-): CollabSessionAccessSettings {
-  return {
-    orgId,
-    memberId,
-    accessMode: COLLAB_SESSION_ACCESS_MODE.OFF,
-    workspaceScope: COLLAB_WORKSPACE_SCOPE.SELECTED_WORKSPACES,
-    workspacePaths: [],
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function isSessionAllowedByAccessSettings(
-  session: Session,
-  settings: CollabSessionAccessSettings
-): boolean {
-  if (settings.accessMode === COLLAB_SESSION_ACCESS_MODE.OFF) return false;
-  const repoPath = normalizeWorkspacePath(session.repoPath);
-  if (!repoPath) return false;
-  return settings.workspacePaths.map(normalizeWorkspacePath).includes(repoPath);
-}
-
-function isRemoteSessionAllowedByAccessSettings(
-  session: RemoteTeammateSessionMetadata,
-  settings: CollabSessionAccessSettings
-): boolean {
-  if (settings.accessMode !== COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY) {
-    return false;
-  }
-  const repoPath = normalizeWorkspacePath(session.repoPath);
-  if (!repoPath) return false;
-  return settings.workspacePaths.map(normalizeWorkspacePath).includes(repoPath);
 }
 
 function createImportedSnapshotSessionId(): string {
@@ -105,29 +71,6 @@ function rewriteEventsForImportedSnapshot(
   localSessionId: string
 ): SessionEvent[] {
   return events.map((event) => ({ ...event, sessionId: localSessionId }));
-}
-
-function toRemoteMetadata(
-  session: Session,
-  org: CollabOrgRecord,
-  member: CollabMemberRecord,
-  settings: CollabSessionAccessSettings
-): RemoteTeammateSessionMetadata {
-  return {
-    id: `${org.id}:${member.id}:${session.session_id}`,
-    orgId: org.id,
-    ownerMemberId: member.id,
-    ownerUserId: member.id,
-    ownerDisplayName: member.displayName,
-    ownerIdentityKind: member.identityKind,
-    sourceSessionId: session.session_id,
-    title: session.name || session.user_input || session.session_id,
-    status: String(session.status),
-    repoPath: session.repoPath,
-    branch: session.branch || session.worktreeBranch,
-    lastActivityAt: session.updated_at || session.updated_time,
-    accessMode: settings.accessMode,
-  };
 }
 
 function upsertConnectionState(
@@ -222,6 +165,50 @@ function upsertSnapshotRequest(
   return next;
 }
 
+function upsertRepoJoinRequest(
+  current: CollabRepoJoinRequestRecord[],
+  incoming: CollabRepoJoinRequestRecord
+): CollabRepoJoinRequestRecord[] {
+  const existingIndex = current.findIndex(
+    (request) => request.requestId === incoming.requestId
+  );
+  if (existingIndex < 0) return [incoming, ...current];
+  const next = [...current];
+  next[existingIndex] = { ...current[existingIndex], ...incoming };
+  return next;
+}
+
+interface ImportedSessionMetadata {
+  originalSessionId?: string;
+  orgId?: string;
+  ownerMemberId?: string;
+  contentHash?: string;
+}
+
+function parseImportedSessionMetadata(
+  session: Session
+): ImportedSessionMetadata | null {
+  if (session.category !== "external_history") return null;
+  if (!session.error_message) return null;
+  try {
+    const parsed = JSON.parse(session.error_message) as ImportedSessionMetadata;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function findImportedSession(
+  sessions: Session[],
+  orgId: string,
+  sourceSessionId: string
+): Session | undefined {
+  return sessions.find((session) => {
+    const meta = parseImportedSessionMetadata(session);
+    return meta?.orgId === orgId && meta?.originalSessionId === sourceSessionId;
+  });
+}
+
 function memberFromRemoteSession(
   session: RemoteTeammateSessionMetadata
 ): CollabMemberRecord {
@@ -251,20 +238,6 @@ function memberFromChatMessage(
   };
 }
 
-function getSyncProfile(org: CollabOrgRecord): {
-  supabaseUrl: string;
-  anonKey: string;
-  orgSecret: string;
-} | null {
-  if (org.syncBackend !== COLLAB_SYNC_BACKEND.SUPABASE) return null;
-  if (!org.supabaseUrl || !org.supabaseAnonKey || !org.orgSecret) return null;
-  return {
-    supabaseUrl: org.supabaseUrl,
-    anonKey: org.supabaseAnonKey,
-    orgSecret: org.orgSecret,
-  };
-}
-
 export function useCollaborationMetadataSync(): void {
   const orgs = useAtomValue(collabOrgsAtom);
   const members = useAtomValue(collabMembersAtom);
@@ -273,6 +246,11 @@ export function useCollaborationMetadataSync(): void {
   const sessions = useAtomValue(sessionsAtom);
   const accessSettingsList = useAtomValue(collabSessionAccessSettingsAtom);
   const snapshotRequests = useAtomValue(collabSessionSnapshotRequestsAtom);
+  const lastSyncTimestamps = useAtomValue(collabLastSyncTimestampsAtom);
+  const lastSyncTimestampsRef = useRef(lastSyncTimestamps);
+  useEffect(() => {
+    lastSyncTimestampsRef.current = lastSyncTimestamps;
+  }, [lastSyncTimestamps]);
   const { openSession } = useSessionView();
   const setRemoteSessions = useSetAtom(remoteTeammateSessionsAtom);
   const setConnectionStates = useSetAtom(collabConnectionStatesAtom);
@@ -282,6 +260,8 @@ export function useCollaborationMetadataSync(): void {
   const setProjects = useSetAtom(collabProjectsAtom);
   const setWorkItems = useSetAtom(collabWorkItemsAtom);
   const setSnapshotRequests = useSetAtom(collabSessionSnapshotRequestsAtom);
+  const setRepoJoinRequests = useSetAtom(collabRepoJoinRequestsAtom);
+  const setLastSyncTimestamps = useSetAtom(collabLastSyncTimestampsAtom);
 
   const activeConnections = useMemo<ActiveCollabConnection[]>(
     () =>
@@ -352,7 +332,7 @@ export function useCollaborationMetadataSync(): void {
       await supabaseSyncClient.verifySetup(profile);
 
       for (const session of sessions) {
-        if (!isSessionAllowedByAccessSettings(session, settings)) {
+        if (!isSessionPushAllowed(session, org, settings)) {
           await supabaseSyncClient.removeSessionMetadata({
             ...profile,
             orgId: org.id,
@@ -391,9 +371,11 @@ export function useCollaborationMetadataSync(): void {
         }
       }
 
+      const sinceTimestamp = lastSyncTimestampsRef.current[org.id];
       const state = await supabaseSyncClient.listOrgState({
         ...profile,
         orgId: org.id,
+        sinceTimestamp,
       });
       if (cancelled) return;
 
@@ -423,8 +405,12 @@ export function useCollaborationMetadataSync(): void {
           )
           .reduce(upsertCollabMetadataRecord, current)
       );
+
+      const inScopeSessions = state.sessions.filter((session) =>
+        isRemoteSessionInOrgScope(session, org)
+      );
       setRemoteSessions((current) =>
-        state.sessions.reduce(upsertRemoteSession, current)
+        inScopeSessions.reduce(upsertRemoteSession, current)
       );
       setChatMessages((current) =>
         state.chatMessages.reduce(upsertChatMessage, current)
@@ -445,6 +431,75 @@ export function useCollaborationMetadataSync(): void {
           current
         )
       );
+      setRepoJoinRequests((current) =>
+        state.repoJoinRequests.reduce(upsertRepoJoinRequest, current)
+      );
+
+      for (const remoteSession of inScopeSessions) {
+        if (remoteSession.ownerMemberId === member.id) continue;
+        if (!remoteSession.eventsContentHash || !remoteSession.eventsBlobPath) {
+          continue;
+        }
+        const existingImported = findImportedSession(
+          sessions,
+          org.id,
+          remoteSession.sourceSessionId
+        );
+        const existingMeta = existingImported
+          ? parseImportedSessionMetadata(existingImported)
+          : null;
+        if (existingMeta?.contentHash === remoteSession.eventsContentHash) {
+          continue;
+        }
+        try {
+          const events = await supabaseSyncClient.downloadSessionEventsBlob({
+            ...profile,
+            blobPath: remoteSession.eventsBlobPath,
+          });
+          if (cancelled) return;
+          const localSessionId =
+            existingImported?.session_id ?? createImportedSnapshotSessionId();
+          const localEvents = rewriteEventsForImportedSnapshot(
+            events,
+            localSessionId
+          );
+          const now = new Date().toISOString();
+          upsertSession({
+            session_id: localSessionId,
+            status: "completed",
+            created_at: existingImported?.created_at ?? now,
+            updated_at: now,
+            completed_at: now,
+            name: remoteSession.title,
+            repoPath: remoteSession.repoPath,
+            category: "external_history",
+            model: "Collaboration Snapshot",
+            agentIconId: "archive",
+            agentDisplayName: "Collaboration Snapshot",
+            pinned: existingImported?.pinned ?? false,
+            error_message: JSON.stringify({
+              originalSessionId: remoteSession.sourceSessionId,
+              originalCategory: "rust_agent",
+              exportedAt: now,
+              eventCount: localEvents.length,
+              orgId: org.id,
+              ownerMemberId: remoteSession.ownerMemberId,
+              contentHash: remoteSession.eventsContentHash,
+              ownerDisplayName: remoteSession.ownerDisplayName,
+            }),
+          });
+          persistSessions(getInstrumentedStore().get(sessionsAtom));
+          await eventStoreProxy.set(localEvents, localSessionId);
+        } catch (error) {
+          setStatus(
+            org.id,
+            COLLAB_CONNECTION_STATUS.ERROR,
+            `Failed to import session ${remoteSession.sourceSessionId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      }
 
       for (const request of state.snapshotRequests) {
         if (
@@ -468,7 +523,7 @@ export function useCollaborationMetadataSync(): void {
             member,
             settings
           );
-          if (!isRemoteSessionAllowedByAccessSettings(metadata, settings)) {
+          if (!isRemoteSessionEventsPublishAllowed(metadata, org, settings)) {
             await supabaseSyncClient.denySessionSnapshot({
               ...profile,
               requestId: request.requestId,
@@ -545,6 +600,11 @@ export function useCollaborationMetadataSync(): void {
       }
 
       setStatus(org.id, COLLAB_CONNECTION_STATUS.CONNECTED);
+      const syncCompletedAt = new Date().toISOString();
+      setLastSyncTimestamps((current) => ({
+        ...current,
+        [org.id]: syncCompletedAt,
+      }));
     };
 
     const runSync = () => {
@@ -573,9 +633,11 @@ export function useCollaborationMetadataSync(): void {
     setChatMessages,
     setConnectionStates,
     setInvites,
+    setLastSyncTimestamps,
     setMembers,
     setProjects,
     setRemoteSessions,
+    setRepoJoinRequests,
     setSnapshotRequests,
     setWorkItems,
     snapshotRequests,

@@ -4,6 +4,7 @@ import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 
 import {
   COLLAB_IDENTITY_KIND,
+  COLLAB_REPO_JOIN_STATUS,
   COLLAB_ROLE,
   COLLAB_SESSION_ACCESS_MODE,
   COLLAB_SYNC_BACKEND,
@@ -13,6 +14,8 @@ import {
   type CollabIdentityKind,
   type CollabMemberRecord,
   type CollabOrgRecord,
+  type CollabRepoJoinRequestRecord,
+  type CollabRepoJoinStatus,
   type CollabRole,
   type CollabSessionAccessMode,
   type CollabSessionAccessSettings,
@@ -71,6 +74,26 @@ export const CollabSessionAccessSettingsSchema = z.object({
   updatedAt: z.string(),
 }) satisfies z.ZodType<CollabSessionAccessSettings>;
 
+export const CollabRepoJoinRequestRecordSchema = z.object({
+  requestId: z.string(),
+  orgId: z.string(),
+  requesterMemberId: z.string(),
+  repoPath: z.string(),
+  status: z.enum([
+    COLLAB_REPO_JOIN_STATUS.PENDING,
+    COLLAB_REPO_JOIN_STATUS.APPROVED,
+    COLLAB_REPO_JOIN_STATUS.REJECTED,
+  ] satisfies [
+    CollabRepoJoinStatus,
+    CollabRepoJoinStatus,
+    CollabRepoJoinStatus,
+  ]),
+  reviewerMemberId: z.string().optional(),
+  reviewNote: z.string().optional(),
+  createdAt: z.string(),
+  reviewedAt: z.string().optional(),
+}) satisfies z.ZodType<CollabRepoJoinRequestRecord>;
+
 export const CollabSyncBackendSchema = z.enum([
   COLLAB_SYNC_BACKEND.SUPABASE,
 ] satisfies [CollabSyncBackend]);
@@ -99,6 +122,7 @@ export const CollabOrgRecordSchema = z.object({
   groupId: z.string().optional(),
   adminMemberId: z.string().optional(),
   localMemberId: z.string().optional(),
+  repoScopes: z.array(z.string()).optional(),
   createdAt: z.string(),
 }) satisfies z.ZodType<CollabOrgRecord>;
 
@@ -127,6 +151,18 @@ export const RemoteTeammateSessionMetadataSchema = z.object({
   branch: z.string().optional(),
   lastActivityAt: z.string().optional(),
   accessMode: CollabSessionAccessModeSchema.optional(),
+  eventsBlobPath: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
+  eventsContentHash: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
+  eventsUpdatedAt: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
 }) satisfies z.ZodType<RemoteTeammateSessionMetadata>;
 
 export const CollabChatMessageRecordSchema = z.object({

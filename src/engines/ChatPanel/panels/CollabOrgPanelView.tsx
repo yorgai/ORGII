@@ -15,11 +15,13 @@ import {
   ProjectsSection,
   WorkItemsSection,
 } from "./CollabOrgPanelView/MetadataSections";
+import { RepoScopeSection } from "./CollabOrgPanelView/RepoScopeSection";
 import { SessionsSection } from "./CollabOrgPanelView/SessionsSection";
 import { SettingsSection } from "./CollabOrgPanelView/SettingsSection";
 import { COLLAB_ORG_TAB } from "./CollabOrgPanelView/constants";
 import type { CollabOrgTab } from "./CollabOrgPanelView/constants";
 import { useCollabOrgPanelModel } from "./CollabOrgPanelView/useCollabOrgPanelModel";
+import { useRepoScopeActions } from "./CollabOrgPanelView/useRepoScopeActions";
 
 interface CollabOrgPanelViewProps {
   selectedCollabOrg: ChatPanelSelectedCollabOrg;
@@ -30,6 +32,7 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
 }) => {
   const model = useCollabOrgPanelModel(selectedCollabOrg);
   const { t, org } = model;
+  const repoScopeActions = useRepoScopeActions({ org });
 
   if (!org) {
     return (
@@ -86,6 +89,7 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
             t={t}
             sessionItems={model.sessionItems}
             latestSnapshotRequest={model.latestSnapshotRequest}
+            importingSessionId={model.importingSessionId ?? null}
             onSelectSession={model.handleSelectSession}
           />
         ) : null}
@@ -113,13 +117,35 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
         ) : null}
 
         {model.activeTab === COLLAB_ORG_TAB.SETTINGS ? (
-          <SettingsSection
-            t={t}
-            currentAccessSettings={model.currentAccessSettings}
-            workspaceOptions={model.workspaceOptions}
-            onSelectAccessMode={model.handleSelectAccessMode}
-            onToggleWorkspace={model.handleToggleWorkspace}
-          />
+          <>
+            <RepoScopeSection
+              t={t}
+              org={org}
+              currentMember={model.currentMember}
+              isAdmin={repoScopeActions.isAdmin}
+              orgJoinRequests={repoScopeActions.orgJoinRequests}
+              pendingJoinRequests={repoScopeActions.pendingJoinRequests}
+              memberNameById={repoScopeActions.memberNameById}
+              submittingJoin={repoScopeActions.submittingJoin}
+              joinError={repoScopeActions.joinError}
+              joinSubmitted={repoScopeActions.joinSubmitted}
+              reviewingRequestId={repoScopeActions.reviewingRequestId}
+              reviewError={repoScopeActions.reviewError}
+              savingScopes={repoScopeActions.savingScopes}
+              scopesError={repoScopeActions.scopesError}
+              scopesSaved={repoScopeActions.scopesSaved}
+              onRequestRepoJoin={repoScopeActions.handleRequestRepoJoin}
+              onReviewRepoJoin={repoScopeActions.handleReviewRepoJoin}
+              onSaveRepoScopes={repoScopeActions.handleSaveRepoScopes}
+            />
+            <SettingsSection
+              t={t}
+              currentAccessSettings={model.currentAccessSettings}
+              workspaceOptions={model.workspaceOptions}
+              onSelectAccessMode={model.handleSelectAccessMode}
+              onToggleWorkspace={model.handleToggleWorkspace}
+            />
+          </>
         ) : null}
 
         {model.activeTab === COLLAB_ORG_TAB.CHAT ? (

@@ -67,6 +67,9 @@ create table if not exists public.orgii_sessions (
   source_session_id text not null,
   access_mode text,
   payload jsonb not null,
+  events_blob_path text,
+  events_content_hash text,
+  events_updated_at timestamptz,
   updated_at timestamptz not null default now()
 );
 
@@ -101,6 +104,19 @@ create table if not exists public.orgii_session_snapshots (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.orgii_repo_join_requests (
+  request_id text primary key,
+  org_id text not null references public.orgii_orgs(id) on delete cascade,
+  requester_member_id text not null,
+  repo_path text not null,
+  status text not null default 'pending',
+  reviewer_member_id text,
+  review_note text,
+  payload jsonb not null,
+  created_at timestamptz not null default now(),
+  reviewed_at timestamptz
+);
+
 alter table public.orgii_sync_meta enable row level security;
 alter table public.orgii_orgs enable row level security;
 alter table public.orgii_members enable row level security;
@@ -111,6 +127,7 @@ alter table public.orgii_sessions enable row level security;
 alter table public.orgii_chat_messages enable row level security;
 alter table public.orgii_session_snapshot_requests enable row level security;
 alter table public.orgii_session_snapshots enable row level security;
+alter table public.orgii_repo_join_requests enable row level security;
 
 do $$
 begin
@@ -370,17 +387,22 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_access_mode text := payload->>'accessMode';
 begin
   if not public.orgii_validate_org_secret(payload->>'orgId', org_secret) then
     raise exception 'Invalid ORG secret';
   end if;
 
   insert into public.orgii_sessions (id, org_id, owner_member_id, source_session_id, access_mode, payload)
-  values (payload->>'id', payload->>'orgId', payload->>'ownerMemberId', payload->>'sourceSessionId', payload->>'accessMode', payload)
+  values (payload->>'id', payload->>'orgId', payload->>'ownerMemberId', payload->>'sourceSessionId', v_access_mode, payload)
   on conflict (id) do update set
     access_mode = excluded.access_mode,
     payload = excluded.payload,
-    updated_at = now();
+    updated_at = now(),
+    events_blob_path = case when excluded.access_mode = 'full_replay' then orgii_sessions.events_blob_path else null end,
+    events_content_hash = case when excluded.access_mode = 'full_replay' then orgii_sessions.events_content_hash else null end,
+    events_updated_at = case when excluded.access_mode = 'full_replay' then orgii_sessions.events_updated_at else null end;
 end;
 $$;
 
@@ -499,8 +521,14 @@ begin
 end;
 $$;
 
-create or replace function public.orgii_list_org_state(org_secret text, org_id text, since_timestamp timestamptz default null)
-returns jsonb
+create or replace function public.orgii_upsert_session_events(
+  org_secret text,
+  org_id text,
+  source_session_id text,
+  blob_path text,
+  content_hash text
+)
+returns void
 language plpgsql
 security definer
 set search_path = public
@@ -510,14 +538,208 @@ begin
     raise exception 'Invalid ORG secret';
   end if;
 
+  update public.orgii_sessions
+  set events_blob_path = orgii_upsert_session_events.blob_path,
+      events_content_hash = orgii_upsert_session_events.content_hash,
+      events_updated_at = now(),
+      updated_at = now()
+  where orgii_sessions.org_id = orgii_upsert_session_events.org_id
+    and orgii_sessions.source_session_id = orgii_upsert_session_events.source_session_id;
+end;
+$$;
+
+create or replace function public.orgii_get_session_events(
+  org_secret text,
+  org_id text,
+  source_session_id text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result jsonb;
+begin
+  if not public.orgii_validate_org_secret(org_id, org_secret) then
+    raise exception 'Invalid ORG secret';
+  end if;
+
+  select jsonb_build_object(
+    'blobPath', events_blob_path,
+    'contentHash', events_content_hash,
+    'updatedAt', events_updated_at
+  ) into result
+  from public.orgii_sessions
+  where orgii_sessions.org_id = orgii_get_session_events.org_id
+    and orgii_sessions.source_session_id = orgii_get_session_events.source_session_id
+    and events_blob_path is not null
+    and events_content_hash is not null;
+
+  return coalesce(result, null::jsonb);
+end;
+$$;
+
+create or replace function public.orgii_update_org_repo_scopes(
+  org_secret text,
+  org_id text,
+  repo_scopes text[]
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org record;
+begin
+  select * into v_org from public.orgii_orgs where id = org_id;
+  if v_org.id is null or v_org.secret_hash <> encode(digest(org_secret, 'sha256'), 'hex') then
+    raise exception 'Invalid ORG secret';
+  end if;
+
+  update public.orgii_orgs
+  set payload = jsonb_set(payload, '{repoScopes}', to_jsonb(repo_scopes), true),
+      created_at = created_at
+  where id = org_id;
+end;
+$$;
+
+create or replace function public.orgii_request_repo_join(
+  org_secret text,
+  org_id text,
+  repo_path text,
+  requester_member_id text,
+  payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  next_request_id text := coalesce(payload->>'requestId', gen_random_uuid()::text);
+  existing_request record;
+begin
+  if not public.orgii_validate_org_secret(org_id, org_secret) then
+    raise exception 'Invalid ORG secret';
+  end if;
+
+  select * into existing_request
+  from public.orgii_repo_join_requests
+  where org_id = orgii_request_repo_join.org_id
+    and requester_member_id = orgii_request_repo_join.requester_member_id
+    and repo_path = orgii_request_repo_join.repo_path
+    and status = 'pending'
+  limit 1;
+
+  if existing_request.request_id is not null then
+    return (select payload from public.orgii_repo_join_requests where request_id = existing_request.request_id);
+  end if;
+
+  insert into public.orgii_repo_join_requests (request_id, org_id, requester_member_id, repo_path, status, payload)
+  values (next_request_id, org_id, requester_member_id, repo_path, 'pending',
+    jsonb_set(payload, '{requestId}', to_jsonb(next_request_id), true));
+
+  return (select payload from public.orgii_repo_join_requests where request_id = next_request_id);
+end;
+$$;
+
+create or replace function public.orgii_review_repo_join(
+  org_secret text,
+  request_id text,
+  approve boolean,
+  reviewer_member_id text,
+  review_note text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_request record;
+  new_status text;
+begin
+  select * into target_request
+  from public.orgii_repo_join_requests
+  where request_id = orgii_review_repo_join.request_id;
+
+  if target_request.request_id is null then
+    raise exception 'Repo join request not found';
+  end if;
+
+  if not public.orgii_validate_org_secret(target_request.org_id, org_secret) then
+    raise exception 'Invalid ORG secret';
+  end if;
+
+  new_status := case when approve then 'approved' else 'rejected' end;
+
+  update public.orgii_repo_join_requests
+  set status = new_status,
+      reviewer_member_id = orgii_review_repo_join.reviewer_member_id,
+      review_note = orgii_review_repo_join.review_note,
+      reviewed_at = now(),
+      payload = jsonb_set(jsonb_set(jsonb_set(
+        payload,
+        '{status}', to_jsonb(new_status), true),
+        '{reviewerMemberId}', to_jsonb(reviewer_member_id), true),
+        '{reviewedAt}', to_jsonb(now()::text), true)
+  where request_id = orgii_review_repo_join.request_id;
+
+  if approve then
+    update public.orgii_orgs
+    set payload = jsonb_set(
+      payload,
+      '{repoScopes}',
+      coalesce(
+        (select jsonb_agg(elem) from (
+          select jsonb_array_elements_text(coalesce(payload->'repoScopes', '[]'::jsonb)) as elem
+          union select target_request.repo_path
+        ) s),
+        to_jsonb(ARRAY[target_request.repo_path])
+      ),
+      true
+    )
+    where id = target_request.org_id;
+  end if;
+
+  return (select payload from public.orgii_repo_join_requests where request_id = orgii_review_repo_join.request_id);
+end;
+$$;
+
+create or replace function public.orgii_list_org_state(org_secret text, org_id text, since_timestamp timestamptz default null)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_since timestamptz := coalesce(since_timestamp, '1970-01-01'::timestamptz);
+begin
+  if not public.orgii_validate_org_secret(org_id, org_secret) then
+    raise exception 'Invalid ORG secret';
+  end if;
+
   return jsonb_build_object(
     'orgs', coalesce((select jsonb_agg(payload) from public.orgii_orgs where id = org_id), '[]'::jsonb),
     'members', coalesce((select jsonb_agg(payload) from public.orgii_members where orgii_members.org_id = orgii_list_org_state.org_id and removed_at is null), '[]'::jsonb),
     'invites', coalesce((select jsonb_agg(payload) from public.orgii_invites where orgii_invites.org_id = orgii_list_org_state.org_id and revoked_at is null), '[]'::jsonb),
-    'projects', coalesce((select jsonb_agg(payload) from public.orgii_projects where orgii_projects.org_id = orgii_list_org_state.org_id), '[]'::jsonb),
-    'workItems', coalesce((select jsonb_agg(payload) from public.orgii_work_items where orgii_work_items.org_id = orgii_list_org_state.org_id), '[]'::jsonb),
-    'sessions', coalesce((select jsonb_agg(payload) from public.orgii_sessions where orgii_sessions.org_id = orgii_list_org_state.org_id), '[]'::jsonb),
-    'chatMessages', coalesce((select jsonb_agg(payload) from public.orgii_chat_messages where orgii_chat_messages.org_id = orgii_list_org_state.org_id), '[]'::jsonb),
+    'projects', coalesce((select jsonb_agg(payload) from public.orgii_projects where orgii_projects.org_id = orgii_list_org_state.org_id and orgii_projects.updated_at >= v_since), '[]'::jsonb),
+    'workItems', coalesce((select jsonb_agg(payload) from public.orgii_work_items where orgii_work_items.org_id = orgii_list_org_state.org_id and orgii_work_items.updated_at >= v_since), '[]'::jsonb),
+    'sessions', coalesce((
+      select jsonb_agg(
+        orgii_sessions.payload || jsonb_build_object(
+          'eventsBlobPath', orgii_sessions.events_blob_path,
+          'eventsContentHash', orgii_sessions.events_content_hash,
+          'eventsUpdatedAt', orgii_sessions.events_updated_at
+        )
+      )
+      from public.orgii_sessions
+      where orgii_sessions.org_id = orgii_list_org_state.org_id
+        and orgii_sessions.updated_at >= v_since
+    ), '[]'::jsonb),
+    'chatMessages', coalesce((select jsonb_agg(payload) from public.orgii_chat_messages where orgii_chat_messages.org_id = orgii_list_org_state.org_id and orgii_chat_messages.created_at >= v_since), '[]'::jsonb),
     'snapshotRequests', coalesce((
       select jsonb_agg(
         orgii_session_snapshot_requests.payload || jsonb_build_object(
@@ -530,6 +752,20 @@ begin
       from public.orgii_session_snapshot_requests
       left join public.orgii_session_snapshots using (request_id)
       where orgii_session_snapshot_requests.org_id = orgii_list_org_state.org_id
+        and orgii_session_snapshot_requests.updated_at >= v_since
+    ), '[]'::jsonb),
+    'repoJoinRequests', coalesce((
+      select jsonb_agg(
+        orgii_repo_join_requests.payload || jsonb_build_object(
+          'status', orgii_repo_join_requests.status,
+          'reviewerMemberId', orgii_repo_join_requests.reviewer_member_id,
+          'reviewNote', orgii_repo_join_requests.review_note,
+          'reviewedAt', orgii_repo_join_requests.reviewed_at
+        )
+      )
+      from public.orgii_repo_join_requests
+      where orgii_repo_join_requests.org_id = orgii_list_org_state.org_id
+        and orgii_repo_join_requests.created_at >= v_since
     ), '[]'::jsonb)
   );
 end;
@@ -549,4 +785,9 @@ grant execute on function public.orgii_post_chat_message(text, jsonb) to anon;
 grant execute on function public.orgii_request_session_snapshot(text, jsonb) to anon;
 grant execute on function public.orgii_create_session_snapshot(text, text, text, text, jsonb, text, text) to anon;
 grant execute on function public.orgii_deny_session_snapshot(text, text, text) to anon;
+grant execute on function public.orgii_upsert_session_events(text, text, text, text, text) to anon;
+grant execute on function public.orgii_get_session_events(text, text, text) to anon;
+grant execute on function public.orgii_update_org_repo_scopes(text, text, text[]) to anon;
+grant execute on function public.orgii_request_repo_join(text, text, text, text, jsonb) to anon;
+grant execute on function public.orgii_review_repo_join(text, text, boolean, text, text) to anon;
 grant execute on function public.orgii_list_org_state(text, text, timestamptz) to anon;`;

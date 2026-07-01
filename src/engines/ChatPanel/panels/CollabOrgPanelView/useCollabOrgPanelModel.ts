@@ -118,7 +118,8 @@ export function useCollabOrgPanelModel(
     [visibleSessions, t]
   );
 
-  const { handleSelectSession } = useSessionActions({
+  const { handleSelectSession, importingSessionId } = useSessionActions({
+    org,
     orgSessions,
     sessions,
     currentMember,
@@ -226,6 +227,7 @@ export function useCollabOrgPanelModel(
     orgProjects,
     orgWorkItems,
     latestSnapshotRequest,
+    importingSessionId,
     tabs,
     handleSendMessage: chatModel.handleSendMessage,
     handleSelectAccessMode: accessSettingsModel.handleSelectAccessMode,

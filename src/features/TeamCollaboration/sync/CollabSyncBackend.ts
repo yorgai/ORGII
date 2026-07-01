@@ -6,6 +6,7 @@ import type {
   CollabMemberRecord,
   CollabOrgRecord,
   CollabProjectMetadataRecord,
+  CollabRepoJoinRequestRecord,
   CollabWorkItemMetadataRecord,
   RemoteTeammateSessionMetadata,
 } from "@src/store/collaboration/types";
@@ -99,6 +100,45 @@ export interface ListOrgStateInput extends CollabSyncProfile {
   sinceTimestamp?: string;
 }
 
+export interface UpsertSessionEventsInput extends CollabSyncProfile {
+  orgId: string;
+  sourceSessionId: string;
+  events: SessionEvent[];
+}
+
+export interface GetSessionEventsInput extends CollabSyncProfile {
+  orgId: string;
+  sourceSessionId: string;
+}
+
+export interface DownloadSessionEventsBlobInput extends CollabSyncProfile {
+  blobPath: string;
+}
+
+export interface SessionEventsRef {
+  blobPath: string;
+  contentHash: string;
+  updatedAt: string;
+}
+
+export interface UpdateOrgRepoScopesInput extends CollabSyncProfile {
+  orgId: string;
+  repoScopes: string[];
+}
+
+export interface RequestRepoJoinInput extends CollabSyncProfile {
+  orgId: string;
+  repoPath: string;
+  requesterMemberId: string;
+}
+
+export interface ReviewRepoJoinInput extends CollabSyncProfile {
+  requestId: string;
+  approve: boolean;
+  reviewerMemberId: string;
+  reviewNote?: string;
+}
+
 export interface CollabOrgState {
   orgs: CollabOrgRecord[];
   members: CollabMemberRecord[];
@@ -107,6 +147,7 @@ export interface CollabOrgState {
   workItems: CollabWorkItemMetadataRecord[];
   sessions: RemoteTeammateSessionMetadata[];
   chatMessages: CollabChatMessageRecord[];
+  repoJoinRequests: CollabRepoJoinRequestRecord[];
   snapshotRequests: Array<{
     requestId: string;
     orgId: string;
@@ -150,6 +191,16 @@ export interface CollabSyncBackendClient {
   upsertWorkItem(input: UpsertWorkItemInput): Promise<void>;
   upsertSessionMetadata(input: UpsertSessionMetadataInput): Promise<void>;
   removeSessionMetadata(input: RemoveSessionMetadataInput): Promise<void>;
+  upsertSessionEvents(input: UpsertSessionEventsInput): Promise<void>;
+  getSessionEvents(
+    input: GetSessionEventsInput
+  ): Promise<SessionEventsRef | null>;
+  downloadSessionEventsBlob(
+    input: DownloadSessionEventsBlobInput
+  ): Promise<SessionEvent[]>;
+  updateOrgRepoScopes(input: UpdateOrgRepoScopesInput): Promise<void>;
+  requestRepoJoin(input: RequestRepoJoinInput): Promise<void>;
+  reviewRepoJoin(input: ReviewRepoJoinInput): Promise<void>;
   requestSessionSnapshot(input: RequestSessionSnapshotInput): Promise<void>;
   publishSessionSnapshot(input: PublishSessionSnapshotInput): Promise<void>;
   denySessionSnapshot(input: DenySessionSnapshotInput): Promise<void>;

@@ -7,6 +7,7 @@ import {
   CollabChatMessageRecordSchema,
   CollabMemberRecordSchema,
   CollabOrgRecordSchema,
+  CollabRepoJoinRequestRecordSchema,
   CollabSessionAccessSettingsSchema,
   RemoteTeammateSessionMetadataSchema,
 } from "./protocol";
@@ -19,6 +20,7 @@ import type {
   CollabOrgConnectionState,
   CollabOrgRecord,
   CollabProjectMetadataRecord,
+  CollabRepoJoinRequestRecord,
   CollabSessionAccessSettings,
   CollabSessionSnapshotRequestRecord,
   CollabWorkItemMetadataRecord,
@@ -113,9 +115,11 @@ const CollabSessionAccessSettingsListSchema = z.array(
 const CollabSessionSnapshotRequestsSchema = z.array(
   CollabSessionSnapshotRequestRecordSchema
 );
+const CollabRepoJoinRequestsSchema = z.array(CollabRepoJoinRequestRecordSchema);
 const RemoteTeammateSessionsSchema = z.array(
   RemoteTeammateSessionMetadataSchema
 );
+const CollabLastSyncTimestampsSchema = z.record(z.string(), z.string());
 
 export const collabOrgsAtom = atomWithStorage<CollabOrgRecord[]>(
   collabStorageKey("collabOrgs"),
@@ -211,3 +215,23 @@ export const remoteTeammateSessionsAtom = atomWithStorage<
   { getOnInit: true }
 );
 remoteTeammateSessionsAtom.debugLabel = "remoteTeammateSessionsAtom";
+
+export const collabRepoJoinRequestsAtom = atomWithStorage<
+  CollabRepoJoinRequestRecord[]
+>(
+  collabStorageKey("collabRepoJoinRequests"),
+  [],
+  createZodJsonStorage(CollabRepoJoinRequestsSchema),
+  { getOnInit: true }
+);
+collabRepoJoinRequestsAtom.debugLabel = "collabRepoJoinRequestsAtom";
+
+export const collabLastSyncTimestampsAtom = atomWithStorage<
+  Record<string, string>
+>(
+  collabStorageKey("collabLastSyncTimestamps"),
+  {},
+  createZodJsonStorage(CollabLastSyncTimestampsSchema),
+  { getOnInit: true }
+);
+collabLastSyncTimestampsAtom.debugLabel = "collabLastSyncTimestampsAtom";

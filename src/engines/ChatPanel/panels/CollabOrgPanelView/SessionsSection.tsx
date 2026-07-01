@@ -11,6 +11,7 @@ interface SessionsSectionProps {
   t: TFunction<"navigation">;
   sessionItems: SessionTableItem[];
   latestSnapshotRequest: CollabSessionSnapshotRequestRecord | undefined;
+  importingSessionId: string | null;
   onSelectSession: (item: SessionTableItem) => void;
 }
 
@@ -18,6 +19,7 @@ export function SessionsSection({
   t,
   sessionItems,
   latestSnapshotRequest,
+  importingSessionId,
   onSelectSession,
 }: SessionsSectionProps) {
   const showPendingMessage =
@@ -35,6 +37,11 @@ export function SessionsSection({
         pageSize={10}
         pageSizeOptions={[10, 25, 50]}
       />
+      {importingSessionId ? (
+        <div className="rounded-lg bg-fill-1 px-3 py-2 text-[12px] text-text-3">
+          {t("collaboration.importingSession")}
+        </div>
+      ) : null}
       {showPendingMessage ? (
         <div className="rounded-lg bg-fill-1 px-3 py-2 text-[12px] text-text-3">
           {t("collaboration.access.requestPending")}

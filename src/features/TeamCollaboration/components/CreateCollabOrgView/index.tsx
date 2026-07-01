@@ -154,6 +154,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
     COLLAB_IDENTITY_KIND.HUMAN
   );
   const [latestInviteLink, setLatestInviteLink] = useState("");
+  const [repoScopesText, setRepoScopesText] = useState("");
   const [verificationStatus, setVerificationStatus] =
     useState<SetupVerificationStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -329,7 +330,34 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
           displayName,
           identityKind: COLLAB_IDENTITY_KIND.HUMAN,
         });
-        await handleCreated(result.org, result.member);
+        const repoScopes = repoScopesText
+          .split("\n")
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0);
+        if (repoScopes.length > 0) {
+          try {
+            await supabaseSyncClient.updateOrgRepoScopes({
+              supabaseUrl: effectiveSupabaseUrl,
+              anonKey: effectiveAnonKey,
+              orgSecret: result.org.orgSecret,
+              orgId: result.org.id,
+              repoScopes,
+            });
+          } catch (err) {
+            setError(
+              `Org created, but failed to set repo scopes: ${
+                err instanceof Error ? err.message : String(err)
+              }`
+            );
+          }
+        }
+        await handleCreated(
+          {
+            ...result.org,
+            repoScopes: repoScopes.length > 0 ? repoScopes : undefined,
+          },
+          result.member
+        );
         return;
       }
 
@@ -367,6 +395,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
     mode,
     onCreated,
     orgName,
+    repoScopesText,
     setCollabMembers,
     setCollabOrgs,
     source,
@@ -560,6 +589,29 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
                 </CollapsibleSection>
               ) : null}
             </>
+          )}
+
+          {source === SUPABASE_SOURCE && mode === CREATE_MODE && (
+            <SectionContainer bare>
+              <SectionRow
+                label={t("navigation:collaboration.repoScopes")}
+                layout="vertical"
+              >
+                <textarea
+                  value={repoScopesText}
+                  onChange={(event) => setRepoScopesText(event.target.value)}
+                  placeholder={t(
+                    "navigation:collaboration.repoScopesPlaceholder"
+                  )}
+                  rows={3}
+                  className="focus:border-accent-5 w-full resize-y rounded border border-border-2 bg-bg-1 px-2 py-1 text-sm text-text-1 outline-none"
+                  style={COLLAB_FORM_CONTROL_STYLE}
+                />
+                <p className="text-[12px] text-text-2">
+                  {t("navigation:collaboration.repoScopesHelp")}
+                </p>
+              </SectionRow>
+            </SectionContainer>
           )}
 
           {source === SUPABASE_SOURCE && mode === JOIN_MODE && (
