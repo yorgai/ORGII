@@ -1,25 +1,129 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import {
+  type BrickHistorySessionRow,
+  type BrickHistorySourceId,
+  brickHistoryRefreshSource,
+  brickHistorySessions,
+} from "@src/api/tauri/brickHistory";
+
 import type { ClaudeCodeSession, CliSession, CursorSession } from "./types";
+
+const BRICK_PAGE_SIZE = 200;
+const BRICK_REFRESH_LIMIT = 1000;
+const MAX_BRICK_PAGES = 50;
+const CURSOR_MODE_AGENT = "agent";
+
+function parseDateParts(date: string): [number, number, number] {
+  const [yearPart, monthPart, dayPart] = date.split("-");
+  return [
+    Number.parseInt(yearPart ?? "1970", 10),
+    Number.parseInt(monthPart ?? "1", 10),
+    Number.parseInt(dayPart ?? "1", 10),
+  ];
+}
+
+function startOfDayMs(date: string): number {
+  const [year, month, day] = parseDateParts(date);
+  return new Date(year, month - 1, day, 0, 0, 0, 0).getTime();
+}
+
+function endOfDayMs(date: string): number {
+  const [year, month, day] = parseDateParts(date);
+  return new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
+}
+
+function isoToMs(value: string): number {
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function cursorIsAgentic(session: BrickHistorySessionRow): boolean {
+  if (typeof session.cursorIsAgentic === "boolean") {
+    return session.cursorIsAgentic;
+  }
+  return session.cursorMode === CURSOR_MODE_AGENT;
+}
+
+async function listBrickSessionsInRange(
+  sourceId: BrickHistorySourceId,
+  startDate: string,
+  endDate: string
+): Promise<BrickHistorySessionRow[]> {
+  const startMs = startOfDayMs(startDate);
+  const endMs = endOfDayMs(endDate);
+  const rows: BrickHistorySessionRow[] = [];
+  let offset = 0;
+
+  await brickHistoryRefreshSource({ sourceId, limit: BRICK_REFRESH_LIMIT });
+
+  for (let page = 0; page < MAX_BRICK_PAGES; page += 1) {
+    const result = await brickHistorySessions({
+      sourceId,
+      limit: BRICK_PAGE_SIZE,
+      offset,
+    });
+    rows.push(
+      ...result.sessions.filter((session) => {
+        const createdAt = isoToMs(session.createdAt);
+        return createdAt >= startMs && createdAt <= endMs;
+      })
+    );
+
+    if (!result.hasMore) break;
+    offset += result.sessions.length;
+    if (result.sessions.length === 0) break;
+  }
+
+  return rows;
+}
 
 export async function getOrgtrackCursorSessions(
   startDate: string,
   endDate: string
 ): Promise<CursorSession[]> {
-  return invoke<CursorSession[]>("orgtrack_get_cursor_sessions", {
+  const sessions = await listBrickSessionsInRange(
+    "cursor_ide",
     startDate,
-    endDate,
-  });
+    endDate
+  );
+  return sessions.map((session) => ({
+    id: session.sessionId,
+    name: session.name,
+    createdAt: isoToMs(session.createdAt),
+    lastActiveAt: isoToMs(session.updatedAt || session.lastSeenAt),
+    status: session.status,
+    isAgentic: cursorIsAgentic(session),
+    mode: session.cursorMode ?? "",
+    model: session.model ?? "",
+    linesAdded: session.linesAdded,
+    linesRemoved: session.linesRemoved,
+    filesChanged: session.filesChanged,
+    tokensUsed: session.totalTokens,
+  }));
 }
 
 export async function getOrgtrackClaudeCodeSessions(
   startDate: string,
   endDate: string
 ): Promise<ClaudeCodeSession[]> {
-  return invoke<ClaudeCodeSession[]>("orgtrack_get_claude_sessions", {
+  const sessions = await listBrickSessionsInRange(
+    "claude_code",
     startDate,
-    endDate,
-  });
+    endDate
+  );
+  return sessions.map((session) => ({
+    id: session.externalSessionId,
+    name: session.name,
+    createdAt: isoToMs(session.createdAt),
+    lastActiveAt: isoToMs(session.updatedAt || session.lastSeenAt),
+    messageCount: session.messageCount,
+    model: session.model ?? "",
+    workspacePath: session.repoPath ?? "",
+    gitBranch: session.branch ?? "",
+    inputTokens: session.inputTokens,
+    outputTokens: session.outputTokens,
+  }));
 }
 
 export async function getOrgtrackCliSessions(

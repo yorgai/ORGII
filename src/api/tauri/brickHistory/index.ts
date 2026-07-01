@@ -48,6 +48,9 @@ export interface BrickHistorySessionRow {
   lastSeenAt: string;
   liveness?: string;
   lastScanLiveness?: string;
+  cursorMode?: string;
+  cursorIsAgentic?: boolean;
+  messageCount: number;
 }
 
 export interface BrickHistorySessionPage {

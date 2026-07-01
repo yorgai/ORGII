@@ -1,36 +1,9 @@
 use database::db::get_connection;
-use orgtrack_core::sources::claude_code::db as claude_code_db;
 use orgtrack_core::sources::cli_session_db::{self, CliSession};
-use orgtrack_core::sources::cursor_ide::{db as cursor_db, history as cursor_db_history};
+use orgtrack_core::sources::cursor_ide::history as cursor_db_history;
 
 fn open_cache_conn() -> Result<rusqlite::Connection, String> {
     get_connection().map_err(|err| format!("Failed to open orgtrack source cache DB: {err}"))
-}
-
-#[tauri::command]
-pub async fn orgtrack_get_cursor_sessions(
-    start_date: String,
-    end_date: String,
-) -> Result<Vec<cursor_db::CursorSession>, String> {
-    tokio::task::spawn_blocking(move || {
-        let mut conn = open_cache_conn()?;
-        cursor_db::get_cursor_sessions(&mut conn, &start_date, &end_date)
-    })
-    .await
-    .map_err(|err| format!("Task join error: {err}"))?
-}
-
-#[tauri::command]
-pub async fn orgtrack_get_claude_sessions(
-    start_date: String,
-    end_date: String,
-) -> Result<Vec<claude_code_db::ClaudeCodeSession>, String> {
-    tokio::task::spawn_blocking(move || {
-        let conn = open_cache_conn()?;
-        claude_code_db::get_claude_sessions(&conn, &start_date, &end_date)
-    })
-    .await
-    .map_err(|err| format!("Task join error: {err}"))?
 }
 
 #[tauri::command]

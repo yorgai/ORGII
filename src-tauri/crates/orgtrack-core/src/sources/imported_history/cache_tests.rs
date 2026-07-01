@@ -3,8 +3,10 @@ use rusqlite::Connection;
 use super::*;
 use crate::sources::imported_history::metadata::{
     ImportedHistoryCacheInput, ImportedHistoryImpactStats, ImportedHistoryRecordSignature,
-    SOURCE_CODEX_APP, SOURCE_OPENCODE,
+    SOURCE_CURSOR_IDE,
 };
+
+const TEST_OTHER_SOURCE: &str = "test_other_source";
 
 fn fixture_conn() -> Connection {
     let conn = Connection::open_in_memory().expect("open in-memory db");
@@ -44,53 +46,6 @@ fn input(
 }
 
 #[test]
-fn cache_query_paginates_newest_first() {
-    let mut conn = fixture_conn();
-    upsert_imported_session_cache_from_conn(
-        &mut conn,
-        &[
-            input(SOURCE_CODEX_APP, "old", 100),
-            input(SOURCE_CODEX_APP, "new", 300),
-            input(SOURCE_CODEX_APP, "mid", 200),
-        ],
-    )
-    .expect("upsert");
-
-    let page = query_imported_session_page_from_conn(&conn, SOURCE_CODEX_APP, 2, 0).expect("page");
-
-    assert!(page.has_more);
-    assert_eq!(page.sessions.len(), 2);
-    assert_eq!(page.sessions[0].session_id, "codex_app-new");
-    assert_eq!(page.sessions[1].session_id, "codex_app-mid");
-}
-
-#[test]
-fn cache_pruning_is_source_scoped() {
-    let mut conn = fixture_conn();
-    upsert_imported_session_cache_from_conn(
-        &mut conn,
-        &[
-            input(SOURCE_CODEX_APP, "keep", 300),
-            input(SOURCE_CODEX_APP, "drop", 200),
-            input(SOURCE_OPENCODE, "other", 100),
-        ],
-    )
-    .expect("upsert");
-
-    prune_missing_records_from_conn(&conn, SOURCE_CODEX_APP, &["keep".to_string()]).expect("prune");
-
-    let codex =
-        query_imported_session_page_from_conn(&conn, SOURCE_CODEX_APP, 10, 0).expect("codex");
-    let opencode =
-        query_imported_session_page_from_conn(&conn, SOURCE_OPENCODE, 10, 0).expect("opencode");
-
-    assert_eq!(codex.sessions.len(), 1);
-    assert_eq!(codex.sessions[0].session_id, "codex_app-keep");
-    assert_eq!(opencode.sessions.len(), 1);
-    assert_eq!(opencode.sessions[0].session_id, "opencode-other");
-}
-
-#[test]
 fn cache_signature_comparison_detects_changed_records() {
     let cached = ImportedHistoryRecordSignature {
         source_session_id: "a".to_string(),
@@ -108,29 +63,40 @@ fn cache_signature_comparison_detects_changed_records() {
 }
 
 #[test]
-fn cache_recent_paths_are_deduped_and_limited() {
+fn cache_pruning_is_source_scoped() {
     let mut conn = fixture_conn();
-    let mut older = input(SOURCE_CODEX_APP, "older", 100);
-    older.repo_path = Some("/tmp/shared".to_string());
-    let mut newer = input(SOURCE_CODEX_APP, "newer", 300);
-    newer.repo_path = Some("/tmp/shared".to_string());
-    upsert_imported_session_cache_from_conn(&mut conn, &[older, newer]).expect("upsert");
+    upsert_imported_session_cache_from_conn(
+        &mut conn,
+        &[
+            input(SOURCE_CURSOR_IDE, "keep", 300),
+            input(SOURCE_CURSOR_IDE, "drop", 200),
+            input(TEST_OTHER_SOURCE, "other", 100),
+        ],
+    )
+    .expect("upsert");
 
-    let paths = query_imported_recent_paths_from_conn(&conn, SOURCE_CODEX_APP, 1).expect("paths");
+    prune_missing_records_from_conn(&conn, SOURCE_CURSOR_IDE, &["keep".to_string()])
+        .expect("prune");
 
-    assert_eq!(paths.len(), 1);
-    assert_eq!(paths[0].path, "/tmp/shared");
-    assert_eq!(paths[0].session_count, 2);
+    let cursor_sessions = query_cached_sessions_for_source_from_conn(&conn, SOURCE_CURSOR_IDE)
+        .expect("cursor sessions");
+    let other_sessions = query_cached_sessions_for_source_from_conn(&conn, TEST_OTHER_SOURCE)
+        .expect("other sessions");
+
+    assert_eq!(cursor_sessions.len(), 1);
+    assert_eq!(cursor_sessions[0].source_session_id, "keep");
+    assert_eq!(other_sessions.len(), 1);
+    assert_eq!(other_sessions[0].source_session_id, "other");
 }
 
 #[test]
 fn cache_single_session_lookup_returns_source_metadata() {
     let mut conn = fixture_conn();
-    let mut cached = input(SOURCE_CODEX_APP, "with-metadata", 100);
+    let mut cached = input(SOURCE_CURSOR_IDE, "with-metadata", 100);
     cached.source_metadata_json = Some(r#"{"status":"completed","mode":"agent"}"#.to_string());
     upsert_imported_session_cache_from_conn(&mut conn, &[cached]).expect("upsert");
 
-    let session = query_cached_session_from_conn(&conn, SOURCE_CODEX_APP, "with-metadata")
+    let session = query_cached_session_from_conn(&conn, SOURCE_CURSOR_IDE, "with-metadata")
         .expect("query")
         .expect("session");
 
@@ -144,12 +110,12 @@ fn cache_single_session_lookup_returns_source_metadata() {
 #[test]
 fn cache_source_list_filters_unlistable_sessions() {
     let mut conn = fixture_conn();
-    let listed = input(SOURCE_CODEX_APP, "listed", 300);
-    let mut hidden = input(SOURCE_CODEX_APP, "hidden", 200);
+    let listed = input(SOURCE_CURSOR_IDE, "listed", 300);
+    let mut hidden = input(SOURCE_CURSOR_IDE, "hidden", 200);
     hidden.listable = false;
     upsert_imported_session_cache_from_conn(&mut conn, &[listed, hidden]).expect("upsert");
 
-    let sessions = query_cached_sessions_for_source_from_conn(&conn, SOURCE_CODEX_APP)
+    let sessions = query_cached_sessions_for_source_from_conn(&conn, SOURCE_CURSOR_IDE)
         .expect("query source sessions");
 
     assert_eq!(sessions.len(), 1);
@@ -157,19 +123,35 @@ fn cache_source_list_filters_unlistable_sessions() {
 }
 
 #[test]
-fn cache_range_query_is_source_scoped_and_filters_unlistable_sessions() {
+fn changed_records_uses_cached_signatures() {
     let mut conn = fixture_conn();
-    let inside = input(SOURCE_CODEX_APP, "inside", 200);
-    let outside = input(SOURCE_CODEX_APP, "outside", 500);
-    let other_source = input(SOURCE_OPENCODE, "other-source", 200);
-    let mut hidden = input(SOURCE_CODEX_APP, "hidden", 220);
-    hidden.listable = false;
-    upsert_imported_session_cache_from_conn(&mut conn, &[inside, outside, other_source, hidden])
+    upsert_imported_session_cache_from_conn(&mut conn, &[input(SOURCE_CURSOR_IDE, "same", 100)])
         .expect("upsert");
 
-    let sessions = query_cached_sessions_in_range_from_conn(&conn, SOURCE_CODEX_APP, 100, 300)
-        .expect("query range");
+    let unchanged = ImportedHistoryRecordSignature {
+        source_session_id: "same".to_string(),
+        source_path: "/tmp/same.jsonl".to_string(),
+        source_mtime_ms: 100,
+        source_size_bytes: 100,
+        source_fingerprint: "100".to_string(),
+        parser_version: 1,
+    };
+    let changed = ImportedHistoryRecordSignature {
+        source_session_id: "changed".to_string(),
+        source_path: "/tmp/changed.jsonl".to_string(),
+        source_mtime_ms: 200,
+        source_size_bytes: 100,
+        source_fingerprint: "200".to_string(),
+        parser_version: 1,
+    };
+    let discovered = vec![unchanged, changed];
 
-    assert_eq!(sessions.len(), 1);
-    assert_eq!(sessions[0].source_session_id, "inside");
+    let changed_records =
+        changed_records_from_conn(&conn, SOURCE_CURSOR_IDE, &discovered, |record| {
+            record.clone()
+        })
+        .expect("changed records");
+
+    assert_eq!(changed_records.len(), 1);
+    assert_eq!(changed_records[0].source_session_id, "changed");
 }

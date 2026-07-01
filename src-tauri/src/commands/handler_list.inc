@@ -954,8 +954,6 @@ agent_core::mcp::registries::glama::glama_search,
 agent_core::mcp::registries::glama::glama_detail,
 // Tokenizer
 // Orgtrack history sources
-orgtrack::history_commands::orgtrack_get_cursor_sessions,
-orgtrack::history_commands::orgtrack_get_claude_sessions,
 orgtrack::history_commands::orgtrack_get_cli_sessions,
 orgtrack::history_commands::cursor_ide_full_refresh,
 orgtrack::history_commands::cursor_ide_turn_window,

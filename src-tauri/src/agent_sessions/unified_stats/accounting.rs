@@ -232,11 +232,10 @@ pub fn query_session_heatmap(
         filter.and_then(|filter| filter.end_date.as_deref()),
     )?;
     let (window_start_ms, window_end_ms) =
-        external_history_epoch_window(&date_window, timezone_offset_minutes)?;
+        heatmap_epoch_window(&date_window, timezone_offset_minutes)?;
     let session_filter = SessionFilter {
         category: filter.and_then(|filter| filter.category.clone()),
         key_source: filter.and_then(|filter| filter.key_source.clone()),
-        include_external_history: Some(false),
         created_after_ms: Some(window_start_ms),
         created_before_ms: Some(window_end_ms),
         skip_orgtrack_upsert: true,
@@ -340,7 +339,7 @@ fn retain_sessions_in_date_window(
     });
 }
 
-fn external_history_epoch_window(
+fn heatmap_epoch_window(
     date_window: &[NaiveDate],
     timezone_offset_minutes: i32,
 ) -> Result<(i64, i64), String> {

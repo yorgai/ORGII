@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use brick_core::{
+    discover_sources, format_source_session_chunks, refresh_source_profile_to_metadata,
     DiscoveredPathKind, DiscoveredSource, MetadataDb, SourcePlanListQuery, SourcePlanRecord,
     SourcePlanSessionEdgeRecord, SourceProfile, SourceRefreshOptions, SourceSessionChunksUpsert,
-    SourceSessionListQuery, SourceSessionRecord, discover_sources, format_source_session_chunks,
-    refresh_source_profile_to_metadata,
+    SourceSessionListQuery, SourceSessionRecord, FUNCTION_ASSISTANT, FUNCTION_USER_MESSAGE,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -29,6 +29,8 @@ const SESSION_STATUS_COMPLETED: &str = "completed";
 const SESSION_CATEGORY_EXTERNAL_HISTORY: &str = "external_history";
 const LIVENESS_ACTIVE: &str = "active";
 const METADATA_KEY_LIVENESS: &str = "liveness";
+const METADATA_KEY_CURSOR_MODE: &str = "cursorMode";
+const METADATA_KEY_CURSOR_IS_AGENTIC: &str = "cursorIsAgentic";
 
 const PREFIX_BRICK_APP: &str = "brickapp-";
 const PREFIX_CLAUDE_CODE: &str = "claudecodeapp-";
@@ -80,6 +82,11 @@ pub struct BrickHistorySessionRow {
     pub liveness: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_scan_liveness: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cursor_mode: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cursor_is_agentic: Option<bool>,
+    pub message_count: i64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -304,7 +311,7 @@ fn list_sessions_for_source(
     let sessions = records
         .into_iter()
         .take(limit)
-        .map(record_to_row)
+        .map(|record| record_to_row(&db, record))
         .collect::<Result<Vec<_>, _>>()?;
     Ok(BrickHistorySessionPage { sessions, has_more })
 }
@@ -506,7 +513,10 @@ fn profile_from_discovered_source(source: &DiscoveredSource) -> SourceProfile {
     }
 }
 
-fn record_to_row(record: SourceSessionRecord) -> Result<BrickHistorySessionRow, String> {
+fn record_to_row(
+    db: &MetadataDb,
+    record: SourceSessionRecord,
+) -> Result<BrickHistorySessionRow, String> {
     let source_id = record.source_id.clone();
     let external_session_id = record.external_session_id.clone();
     let session_id = frontend_session_id(&source_id, &external_session_id);
@@ -529,6 +539,12 @@ fn record_to_row(record: SourceSessionRecord) -> Result<BrickHistorySessionRow, 
     let output_tokens = optional_u64_to_i64(record.output_tokens, "output tokens")?;
     let total_tokens = input_tokens.saturating_add(output_tokens);
     let liveness = metadata_liveness(record.metadata_json.as_ref()).map(ToOwned::to_owned);
+    let cursor_mode = metadata_string(record.metadata_json.as_ref(), METADATA_KEY_CURSOR_MODE);
+    let cursor_is_agentic = metadata_bool(
+        record.metadata_json.as_ref(),
+        METADATA_KEY_CURSOR_IS_AGENTIC,
+    );
+    let message_count = session_message_count(db, &source_id, &external_session_id)?;
     Ok(BrickHistorySessionRow {
         session_id,
         name: record
@@ -561,6 +577,9 @@ fn record_to_row(record: SourceSessionRecord) -> Result<BrickHistorySessionRow, 
         last_seen_at: record.last_seen_at.to_rfc3339(),
         liveness: liveness.clone(),
         last_scan_liveness: liveness,
+        cursor_mode,
+        cursor_is_agentic,
+        message_count,
     })
 }
 
@@ -650,6 +669,37 @@ fn metadata_liveness(value: Option<&Value>) -> Option<&str> {
         .and_then(Value::as_object)
         .and_then(|object| object.get(METADATA_KEY_LIVENESS))
         .and_then(Value::as_str)
+}
+
+fn metadata_string(value: Option<&Value>, key: &str) -> Option<String> {
+    value
+        .and_then(Value::as_object)
+        .and_then(|object| object.get(key))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned)
+}
+
+fn metadata_bool(value: Option<&Value>, key: &str) -> Option<bool> {
+    value
+        .and_then(Value::as_object)
+        .and_then(|object| object.get(key))
+        .and_then(Value::as_bool)
+}
+
+fn session_message_count(
+    db: &MetadataDb,
+    source_id: &str,
+    external_session_id: &str,
+) -> Result<i64, String> {
+    let count = db
+        .list_source_session_chunks(source_id, external_session_id)
+        .map_err(to_string_error)?
+        .into_iter()
+        .filter(|chunk| {
+            chunk.function == FUNCTION_USER_MESSAGE || chunk.function == FUNCTION_ASSISTANT
+        })
+        .count();
+    i64::try_from(count).map_err(|_| format!("Brick message count exceeds i64: {count}"))
 }
 
 fn repo_name_from_path(path: &Path) -> Option<String> {

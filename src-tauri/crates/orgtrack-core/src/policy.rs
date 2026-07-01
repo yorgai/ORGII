@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::canonical::{SOURCE_ORGII_CLI_SESSIONS, SOURCE_ORGII_RUST_AGENTS};
-use crate::sources::imported_history::metadata::{
-    SOURCE_CLAUDE_CODE, SOURCE_CODEX_APP, SOURCE_OPENCODE, SOURCE_WINDSURF,
-};
 
+pub const SOURCE_CLAUDE_CODE: &str = "claude_code";
+pub const SOURCE_CODEX_APP: &str = "codex_app";
 pub const SOURCE_CURSOR_IDE: &str = "cursor_ide";
 pub const SOURCE_IMPORTED_HISTORY: &str = "imported_history";
+pub const SOURCE_OPENCODE: &str = "opencode";
+pub const SOURCE_WINDSURF: &str = "windsurf";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

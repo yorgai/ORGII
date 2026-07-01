@@ -37,7 +37,6 @@ pub trait SourceAdapter {
 }
 
 pub mod activity;
-pub mod claude_code;
 pub mod cli_session_db;
 pub mod cursor_ide;
 pub mod imported_history;

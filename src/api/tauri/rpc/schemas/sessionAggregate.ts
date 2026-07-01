@@ -47,7 +47,6 @@ export const SessionFilterInput = z.object({
   textQuery: z.string().optional(),
   sortBy: z.string().optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
-  includeExternalHistory: z.boolean().optional(),
   activeOnly: z.boolean().optional(),
 });
 

@@ -263,7 +263,6 @@ const SettingsSlot: React.FC<SettingsSlotProps> = ({
   });
   const { isDragging, panelRef, handleMouseDown } = useChatPanelResize({
     useExternalWidth: maximized,
-    embedded,
     position,
   });
 

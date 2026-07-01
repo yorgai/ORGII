@@ -281,9 +281,6 @@ pub struct SessionFilter {
     /// Sort order: "asc" or "desc" (default: "desc")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sort_order: Option<String>,
-    /// Include imported external history rows when loading CLI-category sessions.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub include_external_history: Option<bool>,
     /// Only include sessions created at or after this epoch millisecond.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_after_ms: Option<i64>,

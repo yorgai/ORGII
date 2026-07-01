@@ -5,16 +5,10 @@ use crate::canonical::{AgentMetadata, SessionRecord};
 use crate::privacy::ORGTRACK_SCHEMA_VERSION;
 use crate::store::{sqlite::SqliteRecordStore, RecordStore};
 use chrono::Utc;
-use rusqlite::{
-    params, params_from_iter, types::Type, types::Value as SqlValue, Connection, OptionalExtension,
-};
+use rusqlite::{params, params_from_iter, types::Type, types::Value as SqlValue, Connection};
 
 use super::metadata::{
     ImportedHistoryCacheInput, ImportedHistoryImpactStats, ImportedHistoryRecordSignature,
-};
-use super::{
-    effective_limit, recent_paths_from_rows, row_from_input, ImportedHistoryRecentPath,
-    ImportedHistoryRowInput, ImportedHistorySessionPage, ImportedHistorySessionRow,
 };
 
 #[derive(Debug, Clone)]
@@ -38,26 +32,6 @@ pub struct ImportedHistoryCachedSession {
     pub impact: ImportedHistoryImpactStats,
     pub listable: bool,
     pub source_metadata_json: Option<String>,
-}
-
-impl ImportedHistoryCachedSession {
-    pub fn to_row(&self) -> ImportedHistorySessionRow {
-        row_from_input(ImportedHistoryRowInput {
-            session_id: self.session_id.clone(),
-            name: self.name.clone(),
-            created_at_ms: self.created_at_ms,
-            updated_at_ms: self.updated_at_ms,
-            model: self.model.clone(),
-            input_tokens: self.input_tokens,
-            output_tokens: self.output_tokens,
-            repo_path: self.repo_path.clone(),
-            branch: self.branch.clone(),
-            files_changed: self.impact.files_changed,
-            lines_added: self.impact.lines_added,
-            lines_removed: self.impact.lines_removed,
-            touched_files: self.impact.touched_files.clone(),
-        })
-    }
 }
 
 pub fn cached_record_signatures_from_conn(
@@ -250,71 +224,6 @@ pub fn prune_missing_records_from_conn(
     Ok(())
 }
 
-pub fn query_imported_session_page_from_conn(
-    conn: &Connection,
-    source: &str,
-    limit: usize,
-    offset: usize,
-) -> Result<ImportedHistorySessionPage, String> {
-    let limit = effective_limit(limit);
-    let rows = query_cached_sessions_from_conn(conn, source, limit.saturating_add(1), offset)?;
-    let has_more = rows.len() > limit;
-    let sessions = rows
-        .into_iter()
-        .take(limit)
-        .map(|session| session.to_row())
-        .collect();
-    Ok(ImportedHistorySessionPage { sessions, has_more })
-}
-
-pub fn query_imported_recent_paths_from_conn(
-    conn: &Connection,
-    source: &str,
-    limit: usize,
-) -> Result<Vec<ImportedHistoryRecentPath>, String> {
-    let rows = query_cached_sessions_from_conn(conn, source, i64::MAX as usize, 0)?;
-    Ok(recent_paths_from_rows(
-        &rows
-            .into_iter()
-            .map(|session| session.to_row())
-            .collect::<Vec<_>>(),
-    )
-    .into_iter()
-    .take(effective_limit(limit))
-    .collect())
-}
-
-pub fn get_cached_source_path_from_conn(
-    conn: &Connection,
-    source: &str,
-    source_session_id: &str,
-) -> Result<Option<String>, String> {
-    conn.query_row(
-        "SELECT source_path FROM imported_history_session_cache \
-         WHERE source = ?1 AND source_session_id = ?2",
-        params![source, source_session_id],
-        |row| row.get::<_, String>(0),
-    )
-    .optional()
-    .map_err(|err| format!("Failed to query imported history source path: {err}"))
-}
-
-fn query_cached_sessions_from_conn(
-    conn: &Connection,
-    source: &str,
-    limit: usize,
-    offset: usize,
-) -> Result<Vec<ImportedHistoryCachedSession>, String> {
-    query_cached_sessions_by_filter_from_conn(
-        conn,
-        source,
-        "listable = ?2",
-        &[SqlValue::from(1_i64)],
-        limit,
-        offset,
-    )
-}
-
 fn query_cached_sessions_by_filter_from_conn(
     conn: &Connection,
     source: &str,
@@ -428,26 +337,6 @@ pub fn query_cached_sessions_for_source_from_conn(
         source,
         "listable = ?2",
         &[SqlValue::from(1_i64)],
-        i64::MAX as usize,
-        0,
-    )
-}
-
-pub fn query_cached_sessions_in_range_from_conn(
-    conn: &Connection,
-    source: &str,
-    start_ms: i64,
-    end_ms: i64,
-) -> Result<Vec<ImportedHistoryCachedSession>, String> {
-    query_cached_sessions_by_filter_from_conn(
-        conn,
-        source,
-        "created_at_ms >= ?2 AND created_at_ms <= ?3 AND listable = ?4",
-        &[
-            SqlValue::from(start_ms),
-            SqlValue::from(end_ms),
-            SqlValue::from(1_i64),
-        ],
         i64::MAX as usize,
         0,
     )

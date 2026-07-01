@@ -13,8 +13,8 @@ use core_types::key_source::KeySource;
 const AGENT_ORG_ICON_ID: &str = "network";
 
 use super::conversion::{
-    cli_session_to_aggregate_record, os_session_to_aggregate_record, sde_session_to_aggregate_record,
-    AgentMetadataResolver,
+    cli_session_to_aggregate_record, os_session_to_aggregate_record,
+    sde_session_to_aggregate_record, AgentMetadataResolver,
 };
 use super::display::matches_text_query;
 use super::status::{is_active_status, is_completed_status, is_failed_status};

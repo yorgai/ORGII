@@ -9,7 +9,6 @@ use std::collections::HashSet;
 use std::sync::Mutex;
 use std::time::{Duration, Instant, SystemTime};
 
-use chrono::TimeZone;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -127,25 +126,6 @@ pub struct CursorSession {
     pub lines_removed: i64,
     pub files_changed: i64,
     pub tokens_used: i64,
-}
-
-pub fn get_cursor_sessions(
-    cache_conn: &mut Connection,
-    start_date: &str,
-    end_date: &str,
-) -> Result<Vec<CursorSession>, String> {
-    delta_sync(cache_conn)?;
-    let start_epoch = date_str_to_epoch_ms(start_date);
-    let end_epoch = date_str_to_epoch_ms_end(end_date);
-    source_cache::query_cached_sessions_in_range_from_conn(
-        cache_conn,
-        SOURCE_CURSOR_IDE,
-        start_epoch,
-        end_epoch,
-    )?
-    .into_iter()
-    .map(cursor_session_from_cached)
-    .collect()
 }
 
 pub fn list_for_sidebar(
@@ -462,50 +442,6 @@ impl CursorDiscoveredComposer {
             source_fingerprint: self.source_fingerprint.clone(),
             parser_version: CURSOR_IDE_METADATA_PARSER_VERSION,
         }
-    }
-}
-
-fn date_str_to_epoch_ms(date_str: &str) -> i64 {
-    let parts: Vec<&str> = date_str.split('-').collect();
-    if parts.len() != 3 {
-        return 0;
-    }
-    let year: i32 = parts[0].parse().unwrap_or(2025);
-    let month: u32 = parts[1].parse().unwrap_or(1);
-    let day: u32 = parts[2].parse().unwrap_or(1);
-
-    match chrono::NaiveDate::from_ymd_opt(year, month, day) {
-        Some(date) => {
-            let dt = date.and_hms_opt(0, 0, 0).unwrap_or_default();
-            let local = chrono::Local
-                .from_local_datetime(&dt)
-                .single()
-                .unwrap_or_else(chrono::Local::now);
-            local.timestamp_millis()
-        }
-        None => 0,
-    }
-}
-
-fn date_str_to_epoch_ms_end(date_str: &str) -> i64 {
-    let parts: Vec<&str> = date_str.split('-').collect();
-    if parts.len() != 3 {
-        return i64::MAX;
-    }
-    let year: i32 = parts[0].parse().unwrap_or(2025);
-    let month: u32 = parts[1].parse().unwrap_or(1);
-    let day: u32 = parts[2].parse().unwrap_or(1);
-
-    match chrono::NaiveDate::from_ymd_opt(year, month, day) {
-        Some(date) => {
-            let dt = date.and_hms_opt(23, 59, 59).unwrap_or_default();
-            let local = chrono::Local
-                .from_local_datetime(&dt)
-                .single()
-                .unwrap_or_else(chrono::Local::now);
-            local.timestamp_millis()
-        }
-        None => i64::MAX,
     }
 }
 
