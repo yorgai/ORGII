@@ -72,6 +72,8 @@ interface SourceControlContentProps {
   sectionFilter?: "uncommitted" | "staged" | "unstaged";
   /** Notifies parent when git status loading state changes for this pane. */
   onLoadingChange?: (loading: boolean) => void;
+  /** Parent scope-switch overlay owns loading UI for the changes area. */
+  suppressLoadingPlaceholder?: boolean;
 }
 
 export function NotGitInitializedContent({
@@ -147,6 +149,7 @@ export const SourceControlTabContent = forwardRef<
       navigateWithoutSelecting,
       sectionFilter,
       onLoadingChange,
+      suppressLoadingPlaceholder,
     },
     ref
   ) => {
@@ -267,6 +270,7 @@ export const SourceControlTabContent = forwardRef<
         onPublish={sourceControlState.state.onPublish}
         publishLoading={sourceControlState.state.publishLoading}
         onRefresh={refresh}
+        suppressLoadingPlaceholder={suppressLoadingPlaceholder}
       />
     );
   }
@@ -293,6 +297,7 @@ export const MainRepoSectionContent = forwardRef<
       navigateWithoutSelecting,
       sectionFilter,
       onLoadingChange,
+      suppressLoadingPlaceholder,
     },
     ref
   ) => {
@@ -413,6 +418,7 @@ export const MainRepoSectionContent = forwardRef<
         onPublish={sourceControlState.state.onPublish}
         publishLoading={sourceControlState.state.publishLoading}
         onRefresh={refresh}
+        suppressLoadingPlaceholder={suppressLoadingPlaceholder}
       />
     );
   }
@@ -543,7 +549,7 @@ export const SourceControlWithWorktrees = forwardRef<
           <Placeholder
             variant="loading"
             placement="sidebar"
-            title={t("placeholders.loading")}
+            title={t("placeholders.loadingChanges")}
             fillParentHeight
           />
         </div>
@@ -571,6 +577,7 @@ export const SourceControlWithWorktrees = forwardRef<
             onGitFileSelect={onGitFileSelect}
             onGitFilesChange={handleWorktreeFilesChange}
             onLoadingChange={handlePaneLoadingChange}
+            suppressLoadingPlaceholder={showScopePaneLoading}
             showFilter={showFilter}
             viewMode={viewMode}
             navigateWithoutSelecting={navigateWithoutSelecting}
@@ -586,6 +593,7 @@ export const SourceControlWithWorktrees = forwardRef<
             onGitFilesChange={onGitFilesChange}
             onGitHistorySelectionChange={onGitHistorySelectionChange}
             onLoadingChange={handlePaneLoadingChange}
+            suppressLoadingPlaceholder={showScopePaneLoading}
             showFilter={showFilter}
             viewMode={viewMode}
             showOnlyStashes={showOnlyStashes}

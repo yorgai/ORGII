@@ -117,6 +117,7 @@ export const SourceControlContent: React.FC<SourceControlContentProps> = memo(
     repoPath,
     // Layout
     stickyBgClass,
+    suppressLoadingPlaceholder = false,
   }) => {
     const { t } = useTranslation();
     const { surfaceBgClass, stickyBgClass: layoutStickyBgClass } =
@@ -490,7 +491,7 @@ export const SourceControlContent: React.FC<SourceControlContentProps> = memo(
           }}
         >
           {/* Loading State - only show on initial load when no files exist */}
-          {loading && files.length === 0 && (
+          {loading && files.length === 0 && !suppressLoadingPlaceholder && (
             <Placeholder
               variant="loading"
               placement="sidebar"

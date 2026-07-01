@@ -35,6 +35,8 @@ export interface WorktreeSourceControlSectionProps {
   onGitFilesChange?: (files: GitFile[], worktreePath: string) => void;
   /** Notifies parent when git status loading state changes for this worktree. */
   onLoadingChange?: (loading: boolean) => void;
+  /** Parent scope-switch overlay owns loading UI for the changes area. */
+  suppressLoadingPlaceholder?: boolean;
   showFilter: boolean;
   viewMode: "list-tree" | "list";
   navigateWithoutSelecting?: boolean;
@@ -67,6 +69,7 @@ export const WorktreeSourceControlSection = forwardRef<
       onGitFileSelect,
       onGitFilesChange,
       onLoadingChange,
+      suppressLoadingPlaceholder,
       showFilter,
       viewMode,
       navigateWithoutSelecting,
@@ -166,6 +169,7 @@ export const WorktreeSourceControlSection = forwardRef<
         hasUpstream={state.hasUpstream}
         repoId={hostRepoId}
         repoPath={worktreePath}
+        suppressLoadingPlaceholder={suppressLoadingPlaceholder}
       />
     );
   }
