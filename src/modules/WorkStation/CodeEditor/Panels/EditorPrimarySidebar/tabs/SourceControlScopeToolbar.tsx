@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Search, Trash2 } from "lucide-react";
+import { ChevronRight, Search, Trash2 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -13,6 +13,7 @@ import {
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import IconButton from "@src/components/IconButton";
+import SelectGhostTrigger from "@src/components/Select/SelectGhostTrigger";
 import {
   formatCompactStatNumber,
   formatDiffStatsLabel,
@@ -319,28 +320,28 @@ export function SourceControlScopeToolbar({
       getPopupContainer={() => document.body}
       avoidViewportOverflow
     >
-      <button
-        type="button"
-        className="flex h-7 min-w-0 max-w-[min(100%,32rem)] items-center gap-1.5 truncate rounded px-1.5 text-left transition-colors hover:bg-fill-2"
+      <SelectGhostTrigger
+        open={open}
+        className="w-auto min-w-0 max-w-[min(100%,32rem)]"
         title={`${formatScopePickerPath(activeScopePath)} · ${activeBranch}`}
-        aria-label={triggerAriaLabel}
-      >
-        <span className="flex min-w-0 items-center gap-1 truncate">
-          {breadcrumbSegments.map((segment, index) => (
-            <React.Fragment key={`${segment.label}-${index}`}>
-              {index > 0 ? (
-                <ChevronRight size={10} className="shrink-0 text-text-4" />
-              ) : null}
-              <span
-                className={`truncate ${segment.tone === "primary" ? "min-w-0" : "shrink-0"} ${BREADCRUMB_TONE_CLASS[segment.tone]}`}
-              >
-                {segment.label}
-              </span>
-            </React.Fragment>
-          ))}
-        </span>
-        <ChevronDown size={12} className="shrink-0 text-text-3" />
-      </button>
+        ariaLabel={triggerAriaLabel}
+        value={
+          <span className="flex min-w-0 items-center gap-1 truncate">
+            {breadcrumbSegments.map((segment, index) => (
+              <React.Fragment key={`${segment.label}-${index}`}>
+                {index > 0 ? (
+                  <ChevronRight size={10} className="shrink-0 text-text-4" />
+                ) : null}
+                <span
+                  className={`truncate ${segment.tone === "primary" ? "min-w-0" : "shrink-0"} ${BREADCRUMB_TONE_CLASS[segment.tone]}`}
+                >
+                  {segment.label}
+                </span>
+              </React.Fragment>
+            ))}
+          </span>
+        }
+      />
     </Dropdown>
   );
 }
