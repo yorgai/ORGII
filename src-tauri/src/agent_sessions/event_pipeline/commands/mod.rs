@@ -42,11 +42,31 @@ use tauri::{AppHandle, Emitter, Manager};
 
 const STREAMING_SIMULATOR_UPSERT_LIMIT: usize = 48;
 
+fn backfill_provider_subagent_prompts(events: &mut [SessionEvent]) {
+    prompt_backfill::backfill_subagent_prompts_with_resolver(
+        events,
+        session_providers::subagent_prompt,
+    );
+}
+
+pub(crate) fn prepare_loaded_events(
+    session_id: &str,
+    events: Vec<SessionEvent>,
+) -> Vec<SessionEvent> {
+    let mut events = event_conversion::dedup_by_call_id(events);
+    event_conversion::backfill_tool_inputs_from_messages(session_id, &mut events);
+    event_conversion::backfill_subagent_links(session_id, &mut events);
+    backfill_provider_subagent_prompts(&mut events);
+    events
+}
+
 use session_persistence::CachedEvent;
 
 use crate::agent_sessions::event_pipeline::derived::compute_derived;
+use crate::agent_sessions::event_pipeline::ingestion::prompt_backfill;
 use crate::agent_sessions::event_pipeline::payload_compaction::compact_event_for_snapshot;
 use crate::agent_sessions::event_pipeline::session_manager::SessionStoreManager;
+use crate::agent_sessions::event_pipeline::session_providers;
 use crate::agent_sessions::event_pipeline::store::EventStore;
 use crate::agent_sessions::event_pipeline::types::{
     SessionEvent, SnapshotDelta, StreamingSnapshot,

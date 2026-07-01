@@ -15,11 +15,8 @@ use crate::agent_sessions::event_pipeline::types::{
 use session_persistence as sqlite_cache;
 
 use super::{
-    event_conversion::{
-        backfill_subagent_links, backfill_tool_inputs_from_messages, cached_event_to_session_event,
-        dedup_by_call_id,
-    },
-    schedule_notify, EventStoreState,
+    event_conversion::cached_event_to_session_event, prepare_loaded_events, schedule_notify,
+    EventStoreState,
 };
 
 // ============================================================================
@@ -183,9 +180,7 @@ pub async fn cache_load_session_turn_body(
         .iter()
         .map(cached_event_to_session_event)
         .collect();
-    let mut events = dedup_by_call_id(events);
-    backfill_tool_inputs_from_messages(&session_id, &mut events);
-    backfill_subagent_links(&session_id, &mut events);
+    let events = prepare_loaded_events(&session_id, events);
 
     Ok(SessionTurnBodyWindow {
         turn_id: window.turn_id,
@@ -237,9 +232,7 @@ pub(super) async fn load_initial_turn_window_events(
             .cmp(&right.created_at)
             .then_with(|| left.id.cmp(&right.id))
     });
-    let mut events = dedup_by_call_id(events);
-    backfill_tool_inputs_from_messages(session_id, &mut events);
-    backfill_subagent_links(session_id, &mut events);
+    let events = prepare_loaded_events(session_id, events);
 
     Ok(SessionInitialTurnWindow {
         turns: window.turns,

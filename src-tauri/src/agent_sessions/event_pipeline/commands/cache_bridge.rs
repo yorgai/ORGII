@@ -4,7 +4,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::agent_sessions::event_pipeline::ingestion::prompt_backfill;
 use crate::agent_sessions::event_pipeline::session_providers;
 use tauri::{AppHandle, State};
 
@@ -16,29 +15,15 @@ use session_persistence as sqlite_cache;
 
 use super::{
     event_conversion::{
-        backfill_subagent_links, backfill_tool_inputs_from_messages, cached_event_to_session_event,
-        dedup_by_call_id, is_synthetic_persistence_artifact, session_event_to_cached_event,
+        cached_event_to_session_event, is_synthetic_persistence_artifact,
+        session_event_to_cached_event,
     },
-    save_events_retry, schedule_notify, EventStoreState, BULK_WRITE_MAX_RETRIES,
+    prepare_loaded_events, save_events_retry, schedule_notify, EventStoreState,
+    BULK_WRITE_MAX_RETRIES,
 };
 
 fn try_load_provider_history_events(session_id: &str) -> Result<Vec<SessionEvent>, String> {
     session_providers::load_history_events(session_id)
-}
-
-fn backfill_provider_subagent_prompts(_session_id: &str, events: &mut [SessionEvent]) {
-    prompt_backfill::backfill_subagent_prompts_with_resolver(
-        events,
-        session_providers::subagent_prompt,
-    );
-}
-
-fn prepare_loaded_events(session_id: &str, events: Vec<SessionEvent>) -> Vec<SessionEvent> {
-    let mut events = dedup_by_call_id(events);
-    backfill_tool_inputs_from_messages(session_id, &mut events);
-    backfill_subagent_links(session_id, &mut events);
-    backfill_provider_subagent_prompts(session_id, &mut events);
-    events
 }
 
 // ============================================================================
@@ -371,10 +356,12 @@ pub async fn cache_load_full_session(
 #[cfg(test)]
 mod tests {
     use super::{
-        cached_event_to_session_event, dedup_by_call_id, is_synthetic_persistence_artifact,
+        cached_event_to_session_event, is_synthetic_persistence_artifact,
         session_event_to_cached_event,
     };
-    use crate::agent_sessions::event_pipeline::commands::event_conversion::is_ts_placeholder_id;
+    use crate::agent_sessions::event_pipeline::commands::event_conversion::{
+        dedup_by_call_id, is_ts_placeholder_id,
+    };
     use crate::agent_sessions::event_pipeline::ingestion::prompt_backfill;
     use crate::agent_sessions::event_pipeline::types::{
         ActivityStatus, EventDisplayStatus, EventDisplayVariant, EventSource, PayloadRef,
@@ -684,8 +671,10 @@ mod tests {
         );
         event.ui_canonical = "subagent".to_string();
 
-        let mut events = vec![event];
-        super::backfill_provider_subagent_prompts("opencodeapp-parent", &mut events);
+        let events = crate::agent_sessions::event_pipeline::commands::prepare_loaded_events(
+            "opencodeapp-parent",
+            vec![event],
+        );
 
         assert_eq!(
             events[0].args["prompt"],
@@ -710,8 +699,10 @@ mod tests {
         );
         event.ui_canonical = "subagent".to_string();
 
-        let mut events = vec![event];
-        super::backfill_provider_subagent_prompts(parent_prompt, &mut events);
+        let events = crate::agent_sessions::event_pipeline::commands::prepare_loaded_events(
+            parent_prompt,
+            vec![event],
+        );
 
         assert_eq!(events[0].args["prompt"], "Task");
         assert_eq!(events[0].args["description"], "Task");
