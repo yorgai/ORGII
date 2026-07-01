@@ -5,11 +5,14 @@ import type { GitWorktreeDiffSummary } from "@src/api/http/git/types";
 import {
   diffStatsFromSummary,
   extractMainWorktreeDiffSummary,
+  filterScopePickerWorktrees,
   formatScopePickerPath,
+  mainScopeMatchesQuery,
   readSourceControlScope,
   reconcileSourceControlScope,
   resolveScopeBranchLabel,
   resolveScopeBreadcrumbSegments,
+  shouldShowScopePickerSearch,
   sortWorktreesByDiffActivity,
   sourceControlScopeStorageKey,
   worktreeFolderName,
@@ -221,5 +224,41 @@ describe("resolveScopeBreadcrumbSegments", () => {
       { label: "ORGII", tone: "primary" },
       { label: "main", tone: "secondary" },
     ]);
+  });
+});
+
+describe("scope picker search helpers", () => {
+  const worktrees = [
+    {
+      path: "/tmp/orgii/agent-alpha",
+      branch: "feat/alpha",
+    },
+    {
+      path: "/tmp/orgii/agent-beta",
+      branch: "fix/beta",
+    },
+  ];
+
+  it("shows search when there are at least five worktrees", () => {
+    expect(shouldShowScopePickerSearch(4)).toBe(false);
+    expect(shouldShowScopePickerSearch(5)).toBe(true);
+  });
+
+  it("filters worktrees by folder name or branch", () => {
+    expect(filterScopePickerWorktrees(worktrees, "alpha")).toEqual([
+      worktrees[0],
+    ]);
+    expect(filterScopePickerWorktrees(worktrees, "fix/beta")).toEqual([
+      worktrees[1],
+    ]);
+  });
+
+  it("matches the main checkout by repo or branch", () => {
+    expect(
+      mainScopeMatchesQuery("ORGII", "fix/issue-10", "/tmp/orgii", "issue-10")
+    ).toBe(true);
+    expect(
+      mainScopeMatchesQuery("ORGII", "fix/issue-10", "/tmp/orgii", "missing")
+    ).toBe(false);
   });
 });

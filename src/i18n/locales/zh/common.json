@@ -1959,7 +1959,11 @@
     },
     "scope": {
       "local": "本地",
-      "switchScope": "切换源代码管理范围"
+      "main": "主工作区",
+      "worktrees": "Worktree",
+      "searchPlaceholder": "筛选 worktree…",
+      "switchScope": "切换源代码管理范围",
+      "switchScopeActive": "切换源代码管理范围：{{repo}}，{{branch}}"
     }
   },
   "contextInfo": {

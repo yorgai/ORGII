@@ -1,4 +1,10 @@
-import { ChevronDown, ChevronRight, Folder, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  Search,
+  Trash2,
+} from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -6,15 +12,23 @@ import type { GitWorktreeDiffSummary } from "@src/api/http/git/types";
 import DiffStatsBadge from "@src/components/DiffStatsBadge";
 import Dropdown from "@src/components/Dropdown";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+  DROPDOWN_WIDTHS,
+} from "@src/components/Dropdown/tokens";
+import IconButton from "@src/components/IconButton";
 
 import {
   type ScopePickerWorktreeEntry,
   type SourceControlScope,
   diffStatsFromSummary,
+  filterScopePickerWorktrees,
   formatScopePickerPath,
+  mainScopeMatchesQuery,
   resolveScopeBranchLabel,
   resolveScopeBreadcrumbSegments,
+  shouldShowScopePickerSearch,
   sortWorktreesByDiffActivity,
   worktreeFolderName,
 } from "./sourceControlScopePickerHelpers";
@@ -26,6 +40,13 @@ const BREADCRUMB_TONE_CLASS = {
   primary: "text-[12px] font-medium text-text-1",
   secondary: "text-[11px] text-text-2",
 } as const;
+
+const SCOPE_PICKER_ROW = [
+  "group/scope-row flex w-full items-center gap-1",
+  "min-h-9 rounded-md px-1.5 py-1",
+  DROPDOWN_ITEM.transitionClass,
+  DROPDOWN_ITEM.hoverBgClass,
+].join(" ");
 
 function ScopePickerDiffStats({
   summary,
@@ -46,8 +67,13 @@ function ScopePickerDiffStats({
   );
 }
 
+function ScopePickerSectionLabel({ label }: { label: string }) {
+  return <div className={DROPDOWN_CLASSES.sectionLabel}>{label}</div>;
+}
+
 function ScopePickerItem({
   name,
+  subtitle,
   path,
   summary,
   selected,
@@ -56,6 +82,7 @@ function ScopePickerItem({
   removeLabel,
 }: {
   name: string;
+  subtitle: string;
   path: string;
   summary?: GitWorktreeDiffSummary | null;
   selected: boolean;
@@ -64,28 +91,39 @@ function ScopePickerItem({
   removeLabel: string;
 }) {
   return (
-    <div className={`${DROPDOWN_CLASSES.item} w-full gap-2`}>
+    <div className={SCOPE_PICKER_ROW}>
       <button
         type="button"
-        className="flex min-w-0 flex-1 items-center gap-2"
+        className={`flex min-w-0 flex-1 items-center gap-2 text-left ${selected ? DROPDOWN_CLASSES.itemSelected : "text-text-1"}`}
         onClick={onSelect}
+        aria-current={selected ? "true" : undefined}
+        title={`${formatScopePickerPath(path)} · ${subtitle}`}
       >
-        <Folder size={14} className="shrink-0 text-text-3" />
-        <span className="min-w-0 flex-1 text-left">
-          <span className="block truncate">{name}</span>
-          <span className="block truncate text-[11px] text-text-4" title={path}>
-            {formatScopePickerPath(path)}
+        <Folder
+          size={DROPDOWN_ITEM.iconSize}
+          className="shrink-0 text-text-3"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] leading-tight">
+            {name}
           </span>
+          {subtitle ? (
+            <span className="block truncate text-[11px] leading-tight text-text-3">
+              {subtitle}
+            </span>
+          ) : null}
         </span>
         <span className="flex shrink-0 items-center gap-1.5">
           <ScopePickerDiffStats summary={summary} />
-          {selected && <DropdownSelectedCheck />}
+          {selected ? <DropdownSelectedCheck /> : null}
         </span>
       </button>
       {onRemove ? (
-        <button
+        <IconButton
           type="button"
-          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-text-3 transition-colors hover:bg-danger-1 hover:text-danger-6"
+          size="sm"
+          variant="danger"
+          className="shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/scope-row:opacity-100"
           title={removeLabel}
           aria-label={removeLabel}
           onClick={(event) => {
@@ -93,8 +131,8 @@ function ScopePickerItem({
             onRemove();
           }}
         >
-          <Trash2 size={13} />
-        </button>
+          <Trash2 size={DROPDOWN_ITEM.iconSize} />
+        </IconButton>
       ) : null}
     </div>
   );
@@ -124,11 +162,23 @@ export function SourceControlScopeToolbar({
 }: SourceControlScopeToolbarProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const sortedWorktrees = useMemo(
     () => sortWorktreesByDiffActivity(worktrees),
     [worktrees]
   );
+  const filteredWorktrees = useMemo(
+    () => filterScopePickerWorktrees(sortedWorktrees, searchQuery),
+    [searchQuery, sortedWorktrees]
+  );
+  const showMainScope = mainScopeMatchesQuery(
+    repoName,
+    branchLabel,
+    repoPath,
+    searchQuery
+  );
+  const showSearch = shouldShowScopePickerSearch(worktrees.length);
 
   const selectedWorktree =
     scope.kind === "worktree"
@@ -149,42 +199,95 @@ export function SourceControlScopeToolbar({
       }),
     [activeBranch, repoName, scope, selectedWorktree?.path]
   );
+  const triggerAriaLabel = t("sourceControl.scope.switchScopeActive", {
+    repo: repoName,
+    branch: activeBranch,
+  });
+
+  const handleVisibleChange = useCallback((visible: boolean) => {
+    setOpen(visible);
+    if (!visible) {
+      setSearchQuery("");
+    }
+  }, []);
 
   const selectScope = useCallback(
     (nextScope: SourceControlScope) => {
       onScopeChange(nextScope);
       setOpen(false);
+      setSearchQuery("");
     },
     [onScopeChange]
   );
 
   const droplist = (
-    <div className={`${DROPDOWN_CLASSES.panel} w-[400px] p-1`}>
-      <div className={DROPDOWN_CLASSES.itemsColumn}>
-        <ScopePickerItem
-          name={repoName}
-          path={repoPath}
-          summary={localDiffSummary}
-          selected={scope.kind === "local"}
-          onSelect={() => selectScope({ kind: "local" })}
-          removeLabel={t("sourceControl.removeWorktree")}
-        />
-        {sortedWorktrees.map((worktree) => (
-          <ScopePickerItem
-            key={worktree.path}
-            name={worktreeFolderName(worktree.path)}
-            path={worktree.path}
-            summary={worktree.diff_summary}
-            selected={scope.kind === "worktree" && scope.path === worktree.path}
-            onSelect={() =>
-              selectScope({ kind: "worktree", path: worktree.path })
-            }
-            onRemove={
-              onRemoveWorktree ? () => onRemoveWorktree(worktree) : undefined
-            }
-            removeLabel={t("sourceControl.removeWorktree")}
+    <div
+      className={`${DROPDOWN_CLASSES.panel} ${DROPDOWN_WIDTHS.fileTreeClass} max-w-[400px] overflow-hidden`}
+    >
+      {showSearch ? (
+        <div className={DROPDOWN_CLASSES.searchContainer}>
+          <Search
+            size={DROPDOWN_ITEM.iconSize}
+            className="shrink-0 text-text-3"
           />
-        ))}
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={t("sourceControl.scope.searchPlaceholder")}
+            className={DROPDOWN_CLASSES.searchInput}
+            aria-label={t("sourceControl.scope.searchPlaceholder")}
+          />
+        </div>
+      ) : null}
+      <div className={DROPDOWN_CLASSES.optionsContainerScrollbar}>
+        {showMainScope ? (
+          <>
+            <ScopePickerSectionLabel label={t("sourceControl.scope.main")} />
+            <ScopePickerItem
+              name={repoName}
+              subtitle={branchLabel}
+              path={repoPath}
+              summary={localDiffSummary}
+              selected={scope.kind === "local"}
+              onSelect={() => selectScope({ kind: "local" })}
+              removeLabel={t("sourceControl.removeWorktree")}
+            />
+          </>
+        ) : null}
+        {filteredWorktrees.length > 0 ? (
+          <>
+            <ScopePickerSectionLabel
+              label={t("sourceControl.scope.worktrees")}
+            />
+            {filteredWorktrees.map((worktree) => (
+              <ScopePickerItem
+                key={worktree.path}
+                name={worktreeFolderName(worktree.path)}
+                subtitle={worktree.branch}
+                path={worktree.path}
+                summary={worktree.diff_summary}
+                selected={
+                  scope.kind === "worktree" && scope.path === worktree.path
+                }
+                onSelect={() =>
+                  selectScope({ kind: "worktree", path: worktree.path })
+                }
+                onRemove={
+                  onRemoveWorktree
+                    ? () => onRemoveWorktree(worktree)
+                    : undefined
+                }
+                removeLabel={t("sourceControl.removeWorktree")}
+              />
+            ))}
+          </>
+        ) : null}
+        {!showMainScope && filteredWorktrees.length === 0 ? (
+          <div className={DROPDOWN_CLASSES.listMessage}>
+            {t("placeholders.noResults", "No results")}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -193,7 +296,7 @@ export function SourceControlScopeToolbar({
     <Dropdown
       droplist={droplist}
       popupVisible={open}
-      onVisibleChange={setOpen}
+      onVisibleChange={handleVisibleChange}
       trigger="click"
       position="bottom-start"
       getPopupContainer={() => document.body}
@@ -203,7 +306,7 @@ export function SourceControlScopeToolbar({
         type="button"
         className="flex h-7 min-w-0 max-w-[min(100%,32rem)] items-center gap-1.5 truncate rounded px-1.5 text-left transition-colors hover:bg-fill-2"
         title={`${formatScopePickerPath(activeScopePath)} · ${activeBranch}`}
-        aria-label={t("sourceControl.scope.switchScope")}
+        aria-label={triggerAriaLabel}
       >
         <span className="flex min-w-0 items-center gap-1 truncate">
           {breadcrumbSegments.map((segment, index) => (

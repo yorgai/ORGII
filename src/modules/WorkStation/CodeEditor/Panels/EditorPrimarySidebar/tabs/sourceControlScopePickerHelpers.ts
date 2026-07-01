@@ -136,6 +136,63 @@ export function resolveScopeBreadcrumbSegments(options: {
   return segments;
 }
 
+export function normalizeScopePickerQuery(query: string): string {
+  return query.trim().toLowerCase();
+}
+
+export function scopePickerEntryMatchesQuery(
+  entry: { name: string; branch: string; path: string },
+  query: string
+): boolean {
+  const normalized = normalizeScopePickerQuery(query);
+  if (!normalized) return true;
+
+  const haystack = [
+    entry.name,
+    entry.branch,
+    worktreeFolderName(entry.path),
+    formatScopePickerPath(entry.path),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(normalized);
+}
+
+export function filterScopePickerWorktrees<T extends ScopePickerWorktreeEntry>(
+  worktrees: T[],
+  query: string
+): T[] {
+  if (!normalizeScopePickerQuery(query)) return worktrees;
+
+  return worktrees.filter((worktree) =>
+    scopePickerEntryMatchesQuery(
+      {
+        name: worktreeFolderName(worktree.path),
+        branch: worktree.branch,
+        path: worktree.path,
+      },
+      query
+    )
+  );
+}
+
+export function mainScopeMatchesQuery(
+  repoName: string,
+  branchLabel: string,
+  repoPath: string,
+  query: string
+): boolean {
+  return scopePickerEntryMatchesQuery(
+    { name: repoName, branch: branchLabel, path: repoPath },
+    query
+  );
+}
+
+export function shouldShowScopePickerSearch(worktreeCount: number): boolean {
+  return worktreeCount >= 5;
+}
+
 export function extractMainWorktreeDiffSummary(
   entries: Array<{
     is_main: boolean;
