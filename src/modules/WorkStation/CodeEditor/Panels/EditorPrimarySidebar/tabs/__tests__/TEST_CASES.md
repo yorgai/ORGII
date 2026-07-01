@@ -64,6 +64,8 @@
 
 ## Acceptance Criteria
 
+> **Canonical UX spec:** Scope picker dropdown conventions (trigger, droplist, rows, delete overlay, breadcrumb) are defined in `.cursor/rules/source-control-scope-picker.mdc`; implementation reference is `SourceControlScopeToolbar.tsx`.
+
 - [ ] Picker switches Source Control sidebar content between main checkout and selected worktree
 - [ ] Selecting a new scope shows a single labeled loading state in the changes/file list area on the same interaction (no stale flash, no duplicate spinners)
 - [ ] Previous scope files are cleared from the sidebar and scoped diff state during transition
