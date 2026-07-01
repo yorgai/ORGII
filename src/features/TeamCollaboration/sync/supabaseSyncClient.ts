@@ -11,6 +11,7 @@ import {
   normalizeSupabaseProjectUrl,
 } from "@src/store/collaboration/protocol";
 import {
+  COLLAB_IDENTITY_KIND,
   COLLAB_REPO_JOIN_STATUS,
   COLLAB_ROLE,
   COLLAB_SYNC_BACKEND,
@@ -22,6 +23,7 @@ import type {
   CollabInviteRecord,
   CollabMemberRecord,
   CollabOrgRecord,
+  CollabRole,
 } from "@src/store/collaboration/types";
 
 import type {
@@ -43,7 +45,9 @@ import type {
   RequestRepoJoinInput,
   RequestSessionSnapshotInput,
   ReviewRepoJoinInput,
+  RevokeInviteInput,
   SessionEventsRef,
+  UpdateMemberRoleInput,
   UpdateOrgRepoScopesInput,
   UpsertProjectMetadataInput,
   UpsertSessionEventsInput,
@@ -72,10 +76,19 @@ const RepoJoinRequestSchema = z.object({
     COLLAB_REPO_JOIN_STATUS.APPROVED,
     COLLAB_REPO_JOIN_STATUS.REJECTED,
   ]),
-  reviewerMemberId: z.string().optional(),
-  reviewNote: z.string().optional(),
+  reviewerMemberId: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
+  reviewNote: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
   createdAt: z.string(),
-  reviewedAt: z.string().optional(),
+  reviewedAt: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
 });
 
 const SessionEventsRefSchema = z.object({
@@ -88,13 +101,34 @@ const SessionEventsBlobSchema = z.object({
   events: z.array(z.custom<SessionEvent>()),
 });
 
+// Tombstoned session rows carry a stripped payload ({id, orgId,
+// ownerMemberId, sourceSessionId, deletedAt}); backfill the display fields the
+// full schema requires — tombstones are removed from local state immediately,
+// so the placeholders never render.
+const RemoteSessionWireSchema = z.preprocess((value) => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    if (typeof record.deletedAt === "string" && record.deletedAt) {
+      return {
+        ownerUserId: record.ownerMemberId ?? "",
+        ownerDisplayName: "",
+        ownerIdentityKind: COLLAB_IDENTITY_KIND.HUMAN,
+        title: "",
+        ...record,
+      };
+    }
+  }
+  return value;
+}, RemoteTeammateSessionMetadataSchema);
+
 const OrgStateSchema = z.object({
+  serverTime: z.string().optional(),
   orgs: z.array(CollabOrgRecordSchema).default([]),
   members: z.array(CollabMemberRecordSchema).default([]),
   invites: z.array(JsonRecordSchema).default([]),
   projects: z.array(JsonRecordSchema).default([]),
   workItems: z.array(JsonRecordSchema).default([]),
-  sessions: z.array(RemoteTeammateSessionMetadataSchema).default([]),
+  sessions: z.array(RemoteSessionWireSchema).default([]),
   chatMessages: z.array(CollabChatMessageRecordSchema).default([]),
   repoJoinRequests: z.array(RepoJoinRequestSchema).default([]),
   snapshotRequests: z.array(JsonRecordSchema).default([]),
@@ -109,10 +143,31 @@ function createId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
-function requireOrgSecret(profile: CollabSyncProfile): string {
-  const secret = profile.orgSecret?.trim();
-  if (!secret) throw new Error("ORG sync secret is required");
-  return secret;
+// PostgREST matches RPCs on the exact body key set, so auth params must be
+// spread as-is and nothing else credential-shaped may leak onto the wire.
+function memberAuthParams(profile: CollabSyncProfile): {
+  p_member_id: string;
+  p_member_token: string;
+} {
+  const memberId = profile.memberId?.trim();
+  const memberToken = profile.memberToken?.trim();
+  if (!memberId || !memberToken) {
+    throw new Error("ORGII member credential required");
+  }
+  return { p_member_id: memberId, p_member_token: memberToken };
+}
+
+function flexAuthParams(
+  profile: CollabSyncProfile
+): { p_member_id: string; p_member_token: string } | { p_org_secret: string } {
+  const memberId = profile.memberId?.trim();
+  const memberToken = profile.memberToken?.trim();
+  if (memberId && memberToken) {
+    return { p_member_id: memberId, p_member_token: memberToken };
+  }
+  const orgSecret = profile.orgSecret?.trim();
+  if (orgSecret) return { p_org_secret: orgSecret };
+  throw new Error("ORGII sync credential required");
 }
 
 function supabaseHeaders(anonKey: string, contentType = true): HeadersInit {
@@ -178,7 +233,7 @@ async function sha256Hex(value: string): Promise<string> {
 }
 
 function createOrgSecret(): string {
-  const bytes = new Uint8Array(24);
+  const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join(
     ""
@@ -189,6 +244,7 @@ function createOrgPayload(
   input: CreateOrgInput,
   orgId: string,
   orgSecret: string,
+  memberToken: string,
   localMemberId: string
 ): CollabOrgRecord {
   return {
@@ -198,6 +254,7 @@ function createOrgPayload(
     supabaseUrl: normalizeSupabaseProjectUrl(input.supabaseUrl),
     supabaseAnonKey: input.anonKey,
     orgSecret,
+    memberToken,
     groupId: orgId,
     localMemberId,
     createdAt: new Date().toISOString(),
@@ -238,6 +295,12 @@ function createChatMessagePayload(
   };
 }
 
+function normalizeInviteRole(value: unknown): CollabRole | undefined {
+  return value === COLLAB_ROLE.ADMIN || value === COLLAB_ROLE.MEMBER
+    ? value
+    : undefined;
+}
+
 function normalizeInviteRecord(
   payload: z.infer<typeof JsonRecordSchema>
 ): CollabInviteRecord {
@@ -250,10 +313,19 @@ function normalizeInviteRecord(
       typeof payload.supabaseAnonKey === "string"
         ? payload.supabaseAnonKey
         : undefined,
-    inviteCode: String(payload.inviteCode),
-    inviteLink: String(payload.inviteLink),
+    inviteCode:
+      typeof payload.inviteCode === "string" ? payload.inviteCode : undefined,
+    inviteLink:
+      typeof payload.inviteLink === "string" ? payload.inviteLink : undefined,
     usageLimit: Number(payload.usageLimit ?? 10),
     usageCount: Number(payload.usageCount ?? 0),
+    role: normalizeInviteRole(payload.role),
+    codeSuffix:
+      typeof payload.codeSuffix === "string" ? payload.codeSuffix : undefined,
+    createdByMemberId:
+      typeof payload.createdByMemberId === "string"
+        ? payload.createdByMemberId
+        : undefined,
     expiresAt:
       typeof payload.expiresAt === "string" ? payload.expiresAt : undefined,
     createdAt:
@@ -319,13 +391,14 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
         {},
         z.number().nullable()
       );
+      // The server may run a newer schema than this client understands.
+      const ok =
+        typeof schemaVersion === "number" &&
+        schemaVersion >= SUPABASE_SYNC_SCHEMA_VERSION;
       return {
-        ok: schemaVersion === SUPABASE_SYNC_SCHEMA_VERSION,
+        ok,
         schemaVersion: schemaVersion ?? undefined,
-        missing:
-          schemaVersion === SUPABASE_SYNC_SCHEMA_VERSION
-            ? []
-            : ["orgii_sync_version"],
+        missing: ok ? [] : ["orgii_sync_version"],
       };
     } catch {
       return { ok: false, missing: ["orgii_sync_version"] };
@@ -335,9 +408,24 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
   async createOrg(input: CreateOrgInput) {
     const orgId = createId("org");
     const orgSecret = input.orgSecret?.trim() || createOrgSecret();
+    const memberToken = createOrgSecret();
     const member = createMemberPayload(input, orgId, COLLAB_ROLE.ADMIN);
-    const org = createOrgPayload(input, orgId, orgSecret, member.id);
-    return callRpc(
+    const org = createOrgPayload(
+      input,
+      orgId,
+      orgSecret,
+      memberToken,
+      member.id
+    );
+    // Secrets never go on the wire — the server persists this payload and
+    // serves it back to every member through list_org_state.
+    const {
+      orgSecret: _orgSecret,
+      supabaseAnonKey: _supabaseAnonKey,
+      memberToken: _memberToken,
+      ...wireOrgPayload
+    } = org;
+    const result = await callRpc(
       input,
       "orgii_create_org",
       {
@@ -345,15 +433,29 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
         display_name: input.displayName,
         identity_kind: input.identityKind,
         org_secret_hash: await sha256Hex(orgSecret),
-        payload: org,
+        member_credential_hash: await sha256Hex(memberToken),
+        payload: wireOrgPayload,
         member_payload: member,
       },
       CreateOrgResponseSchema
     );
+    return {
+      org: {
+        ...result.org,
+        syncBackend: COLLAB_SYNC_BACKEND.SUPABASE,
+        supabaseUrl: normalizeSupabaseProjectUrl(input.supabaseUrl),
+        supabaseAnonKey: input.anonKey,
+        orgSecret,
+        memberToken,
+        localMemberId: result.member.id,
+      },
+      member: result.member,
+    };
   },
 
   async acceptInvite(input: AcceptInviteInput) {
     const parsedOrgId = "pending";
+    const memberToken = createOrgSecret();
     const member = createMemberPayload(input, parsedOrgId, COLLAB_ROLE.MEMBER);
     const result = await callRpc(
       input,
@@ -362,6 +464,7 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
         invite_code: input.inviteCode,
         display_name: input.displayName,
         identity_kind: input.identityKind,
+        member_credential_hash: await sha256Hex(memberToken),
         member_payload: member,
       },
       AcceptInviteResponseSchema
@@ -372,7 +475,10 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
         syncBackend: COLLAB_SYNC_BACKEND.SUPABASE,
         supabaseUrl: normalizeSupabaseProjectUrl(input.supabaseUrl),
         supabaseAnonKey: input.anonKey,
-        orgSecret: input.inviteCode,
+        // Joiners never hold the root secret; the member token is their
+        // credential.
+        orgSecret: undefined,
+        memberToken,
         localMemberId: result.member.id,
       },
       member: result.member,
@@ -381,19 +487,16 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
 
   async createInvite(input: CreateInviteInput): Promise<CollabInviteRecord> {
     const inviteCode = createOrgSecret();
-    const invite: CollabInviteRecord = {
+    const role = input.role ?? COLLAB_ROLE.MEMBER;
+    // Wire payload is display metadata only; the plaintext code exists solely
+    // on this client.
+    const wirePayload = {
       id: createId("invite"),
       orgId: input.orgId,
-      supabaseUrl: normalizeSupabaseProjectUrl(input.supabaseUrl),
-      supabaseAnonKey: input.anonKey,
-      inviteCode,
-      inviteLink: buildCollabInviteLink({
-        supabaseUrl: input.supabaseUrl,
-        anonKey: input.anonKey,
-        inviteCode,
-      }),
+      codeSuffix: inviteCode.slice(-4),
       usageLimit: input.usageLimit ?? 10,
       usageCount: 0,
+      role,
       expiresAt: input.expiresAt,
       createdAt: new Date().toISOString(),
     };
@@ -401,16 +504,45 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
       input,
       "orgii_create_invite",
       {
-        org_secret: requireOrgSecret(input),
-        org_id: input.orgId,
+        p_org_id: input.orgId,
+        ...flexAuthParams(input),
         invite_code_hash: await sha256Hex(inviteCode),
-        usage_limit: invite.usageLimit,
+        usage_limit: wirePayload.usageLimit,
         expires_at: input.expiresAt ?? null,
-        payload: invite,
+        invite_role: role,
+        payload: wirePayload,
       },
       JsonRecordSchema
     );
-    return invite;
+    return {
+      ...wirePayload,
+      supabaseUrl: normalizeSupabaseProjectUrl(input.supabaseUrl),
+      supabaseAnonKey: input.anonKey,
+      createdByMemberId: input.memberId,
+      inviteCode,
+      inviteLink: buildCollabInviteLink({
+        supabaseUrl: input.supabaseUrl,
+        anonKey: input.anonKey,
+        inviteCode,
+      }),
+    };
+  },
+
+  async revokeInvite(input: RevokeInviteInput): Promise<void> {
+    await callRpcVoid(input, "orgii_revoke_invite", {
+      p_org_id: input.orgId,
+      ...flexAuthParams(input),
+      invite_id: input.inviteId,
+    });
+  },
+
+  async updateMemberRole(input: UpdateMemberRoleInput): Promise<void> {
+    await callRpcVoid(input, "orgii_update_member_role", {
+      p_org_id: input.orgId,
+      ...flexAuthParams(input),
+      target_member_id: input.targetMemberId,
+      new_role: input.role,
+    });
   },
 
   async removeMember(input: RemoveMemberInput): Promise<CollabMemberRecord> {
@@ -418,9 +550,9 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
       input,
       "orgii_remove_member",
       {
-        org_secret: requireOrgSecret(input),
-        org_id: input.orgId,
-        member_id: input.memberId,
+        p_org_id: input.orgId,
+        ...flexAuthParams(input),
+        target_member_id: input.targetMemberId,
       },
       CollabMemberRecordSchema
     );
@@ -438,12 +570,14 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
   async postChatMessage(
     input: PostChatMessageInput
   ): Promise<CollabChatMessageRecord> {
+    // Server forces authorMemberId to the authenticated member regardless.
     const payload = createChatMessagePayload(input);
     return callRpc(
       input,
       "orgii_post_chat_message",
       {
-        org_secret: requireOrgSecret(input),
+        p_org_id: input.orgId,
+        ...memberAuthParams(input),
         payload,
       },
       CollabChatMessageRecordSchema
@@ -453,26 +587,37 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
   async upsertProjectMetadata(
     input: UpsertProjectMetadataInput
   ): Promise<void> {
+    const projectVersion = input.project.version;
     await callRpcVoid(input, "orgii_upsert_project", {
-      org_secret: requireOrgSecret(input),
-      org_id: input.orgId,
-      payload: input.project,
+      p_org_id: input.orgId,
+      ...flexAuthParams(input),
+      project: input.project,
+      base_version:
+        input.baseVersion ??
+        (typeof projectVersion === "number" ? projectVersion : null),
     });
   },
 
   async upsertWorkItem(input: UpsertWorkItemInput): Promise<void> {
+    const workItemVersion = input.workItem.version;
     await callRpcVoid(input, "orgii_upsert_work_item", {
-      org_secret: requireOrgSecret(input),
-      org_id: input.orgId,
-      payload: input.workItem,
+      p_org_id: input.orgId,
+      ...flexAuthParams(input),
+      work_item: input.workItem,
+      base_version:
+        input.baseVersion ??
+        (typeof workItemVersion === "number" ? workItemVersion : null),
     });
   },
 
   async upsertSessionMetadata(
     input: UpsertSessionMetadataInput
   ): Promise<void> {
+    // Member-only RPC: the function has no p_org_secret parameter, and
+    // PostgREST rejects bodies with unknown keys.
     await callRpcVoid(input, "orgii_upsert_session_metadata", {
-      org_secret: requireOrgSecret(input),
+      p_org_id: input.session.orgId,
+      ...memberAuthParams(input),
       payload: input.session,
     });
   },
@@ -481,8 +626,8 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
     input: RemoveSessionMetadataInput
   ): Promise<void> {
     await callRpcVoid(input, "orgii_remove_session_metadata", {
-      org_secret: requireOrgSecret(input),
-      org_id: input.orgId,
+      p_org_id: input.orgId,
+      ...flexAuthParams(input),
       owner_member_id: input.ownerMemberId,
       source_session_id: input.sourceSessionId,
     });
@@ -495,8 +640,8 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
     const blobPath = `orgs/${input.orgId}/sessions/${input.sourceSessionId}/latest-${contentHash}.json`;
     await uploadSnapshotBlob(input, blobPath, body);
     await callRpcVoid(input, "orgii_upsert_session_events", {
-      org_secret: requireOrgSecret(input),
-      org_id: input.orgId,
+      p_org_id: input.orgId,
+      ...memberAuthParams(input),
       source_session_id: input.sourceSessionId,
       blob_path: blobPath,
       content_hash: contentHash,
@@ -510,8 +655,8 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
       input,
       "orgii_get_session_events",
       {
-        org_secret: requireOrgSecret(input),
-        org_id: input.orgId,
+        p_org_id: input.orgId,
+        ...flexAuthParams(input),
         source_session_id: input.sourceSessionId,
       },
       SessionEventsRefSchema.nullable()
@@ -534,19 +679,20 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
 
   async updateOrgRepoScopes(input: UpdateOrgRepoScopesInput): Promise<void> {
     await callRpcVoid(input, "orgii_update_org_repo_scopes", {
-      org_secret: requireOrgSecret(input),
-      org_id: input.orgId,
+      p_org_id: input.orgId,
+      ...flexAuthParams(input),
       repo_scopes: input.repoScopes,
     });
   },
 
   async requestRepoJoin(input: RequestRepoJoinInput): Promise<void> {
     const requestId = createId("repo-join");
+    // requesterMemberId stays in the payload for display; the server forces
+    // it to the authenticated member.
     await callRpcVoid(input, "orgii_request_repo_join", {
-      org_secret: requireOrgSecret(input),
-      org_id: input.orgId,
+      p_org_id: input.orgId,
+      ...memberAuthParams(input),
       repo_path: input.repoPath,
-      requester_member_id: input.requesterMemberId,
       payload: {
         requestId,
         orgId: input.orgId,
@@ -559,11 +705,13 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
   },
 
   async reviewRepoJoin(input: ReviewRepoJoinInput): Promise<void> {
+    // reviewer_member_id is no longer sent: the server records the
+    // authenticated reviewer itself.
     await callRpcVoid(input, "orgii_review_repo_join", {
-      org_secret: requireOrgSecret(input),
+      p_org_id: input.orgId,
+      ...flexAuthParams(input),
       request_id: input.requestId,
       approve: input.approve,
-      reviewer_member_id: input.reviewerMemberId,
       review_note: input.reviewNote ?? null,
     });
   },
@@ -572,7 +720,8 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
     input: RequestSessionSnapshotInput
   ): Promise<void> {
     await callRpcVoid(input, "orgii_request_session_snapshot", {
-      org_secret: requireOrgSecret(input),
+      p_org_id: input.orgId,
+      ...memberAuthParams(input),
       payload: {
         requestId: input.requestId,
         orgId: input.orgId,
@@ -594,9 +743,9 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
     const blobPath = `orgs/${input.orgId}/sessions/${input.sourceSessionId}/${input.requestId}-${contentHash}.json`;
     await uploadSnapshotBlob(input, blobPath, body);
     await callRpcVoid(input, "orgii_create_session_snapshot", {
-      org_secret: requireOrgSecret(input),
+      p_org_id: input.orgId,
+      ...memberAuthParams(input),
       request_id: input.requestId,
-      org_id: input.orgId,
       source_session_id: input.sourceSessionId,
       metadata: input.session,
       blob_path: blobPath,
@@ -606,7 +755,8 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
 
   async denySessionSnapshot(input: DenySessionSnapshotInput): Promise<void> {
     await callRpcVoid(input, "orgii_deny_session_snapshot", {
-      org_secret: requireOrgSecret(input),
+      p_org_id: input.orgId,
+      ...memberAuthParams(input),
       request_id: input.requestId,
       reason: input.reason,
     });
@@ -618,8 +768,8 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
         input,
         "orgii_list_org_state",
         {
-          org_secret: requireOrgSecret(input),
-          org_id: input.orgId,
+          p_org_id: input.orgId,
+          ...flexAuthParams(input),
           since_timestamp: input.sinceTimestamp ?? null,
         },
         JsonRecordSchema
@@ -639,6 +789,7 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
       })
     );
     return {
+      serverTime: parsed.serverTime,
       orgs: parsed.orgs,
       members: parsed.members,
       invites: parsed.invites.map(normalizeInviteRecord),

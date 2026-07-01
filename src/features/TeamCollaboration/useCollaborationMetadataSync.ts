@@ -112,6 +112,15 @@ function upsertRemoteSession(
   return next;
 }
 
+function removeRemoteSessionsByIds(
+  current: RemoteTeammateSessionMetadata[],
+  ids: ReadonlySet<string>
+): RemoteTeammateSessionMetadata[] {
+  if (ids.size === 0) return current;
+  const next = current.filter((session) => !ids.has(session.id));
+  return next.length === current.length ? current : next;
+}
+
 function upsertChatMessage(
   current: CollabChatMessageRecord[],
   incoming: CollabChatMessageRecord
@@ -406,11 +415,22 @@ export function useCollaborationMetadataSync(): void {
           .reduce(upsertCollabMetadataRecord, current)
       );
 
-      const inScopeSessions = state.sessions.filter((session) =>
-        isRemoteSessionInOrgScope(session, org)
+      // Tombstoned sessions bypass the scope filter: removals must propagate
+      // even when the org repo scopes no longer cover the session.
+      const tombstonedSessionIds = new Set(
+        state.sessions
+          .filter((session) => session.deletedAt)
+          .map((session) => session.id)
+      );
+      const inScopeSessions = state.sessions.filter(
+        (session) =>
+          !session.deletedAt && isRemoteSessionInOrgScope(session, org)
       );
       setRemoteSessions((current) =>
-        inScopeSessions.reduce(upsertRemoteSession, current)
+        inScopeSessions.reduce(
+          upsertRemoteSession,
+          removeRemoteSessionsByIds(current, tombstonedSessionIds)
+        )
       );
       setChatMessages((current) =>
         state.chatMessages.reduce(upsertChatMessage, current)
@@ -513,6 +533,7 @@ export function useCollaborationMetadataSync(): void {
           if (!sourceSession) {
             await supabaseSyncClient.denySessionSnapshot({
               ...profile,
+              orgId: org.id,
               requestId: request.requestId,
               reason: "Session is unavailable on the owner device",
             });
@@ -527,6 +548,7 @@ export function useCollaborationMetadataSync(): void {
           if (!isRemoteSessionEventsPublishAllowed(metadata, org, settings)) {
             await supabaseSyncClient.denySessionSnapshot({
               ...profile,
+              orgId: org.id,
               requestId: request.requestId,
               reason: "Session replay is not allowed by owner settings",
             });
@@ -602,7 +624,12 @@ export function useCollaborationMetadataSync(): void {
       }
 
       setStatus(org.id, COLLAB_CONNECTION_STATUS.CONNECTED);
-      const syncCompletedAt = new Date().toISOString();
+      // Anchor the delta cursor on the server clock (minus a safety window) so
+      // client clock skew cannot skip rows; fall back to client time when the
+      // server predates serverTime.
+      const syncCompletedAt = state.serverTime
+        ? new Date(new Date(state.serverTime).getTime() - 2000).toISOString()
+        : new Date().toISOString();
       setLastSyncTimestamps((current) => ({
         ...current,
         [org.id]: syncCompletedAt,

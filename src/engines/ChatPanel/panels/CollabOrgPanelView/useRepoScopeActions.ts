@@ -114,9 +114,9 @@ export function useRepoScopeActions({ org }: UseRepoScopeActionsParams) {
       try {
         await supabaseSyncClient.reviewRepoJoin({
           ...profile,
+          orgId: org.id,
           requestId: request.requestId,
           approve,
-          reviewerMemberId: currentMember.id,
         });
         setRepoJoinRequests((current) =>
           current.map((item) =>

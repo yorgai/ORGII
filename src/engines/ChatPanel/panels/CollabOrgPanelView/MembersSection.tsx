@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import React from "react";
 
 import Button from "@src/components/Button";
+import { getSyncProfile } from "@src/features/TeamCollaboration/collabSyncUtils";
 import { SectionContainer } from "@src/modules/shared/layouts/SectionLayout";
 import { COLLAB_ROLE } from "@src/store/collaboration/types";
 import type {
@@ -181,7 +182,7 @@ export function MembersSection({
             const canRemoveMember =
               currentMember?.role === COLLAB_ROLE.ADMIN &&
               currentMember.id !== member.id &&
-              Boolean(org.supabaseUrl && org.supabaseAnonKey && org.orgSecret);
+              getSyncProfile(org) !== null;
             const active = activeMemberIds.has(member.id);
             return (
               <div

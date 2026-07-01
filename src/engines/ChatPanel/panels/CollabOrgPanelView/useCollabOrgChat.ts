@@ -1,7 +1,8 @@
 import type { TFunction } from "i18next";
 import { useAtom } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getSyncProfile } from "@src/features/TeamCollaboration/collabSyncUtils";
 import { supabaseSyncClient } from "@src/features/TeamCollaboration/sync/supabaseSyncClient";
 import { collabChatMessagesAtom } from "@src/store/collaboration/collabOrgsAtom";
 import { COLLAB_IDENTITY_KIND } from "@src/store/collaboration/types";
@@ -32,14 +33,14 @@ export function useCollabOrgChat({
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
+  const syncProfile = useMemo(() => (org ? getSyncProfile(org) : null), [org]);
+
   useEffect(() => {
-    if (!org?.supabaseUrl || !org.supabaseAnonKey || !org.orgSecret) return;
+    if (!org || !syncProfile) return;
     let cancelled = false;
     supabaseSyncClient
       .listChatMessages({
-        supabaseUrl: org.supabaseUrl,
-        anonKey: org.supabaseAnonKey,
-        orgSecret: org.orgSecret,
+        ...syncProfile,
         orgId: org.id,
         limit: CHAT_HISTORY_LIMIT,
       })
@@ -56,13 +57,7 @@ export function useCollabOrgChat({
     return () => {
       cancelled = true;
     };
-  }, [
-    org?.id,
-    org?.orgSecret,
-    org?.supabaseAnonKey,
-    org?.supabaseUrl,
-    setChatMessages,
-  ]);
+  }, [org, setChatMessages, syncProfile]);
 
   const handleSendMessage = useCallback(async () => {
     const body = draftMessage.trim();
@@ -70,16 +65,9 @@ export function useCollabOrgChat({
     setSending(true);
     setChatError(null);
     try {
-      if (
-        org.supabaseUrl &&
-        org.supabaseAnonKey &&
-        org.orgSecret &&
-        currentMember
-      ) {
+      if (syncProfile && currentMember) {
         const message = await supabaseSyncClient.postChatMessage({
-          supabaseUrl: org.supabaseUrl,
-          anonKey: org.supabaseAnonKey,
-          orgSecret: org.orgSecret,
+          ...syncProfile,
           orgId: org.id,
           memberId: currentMember.id,
           authorDisplayName: currentMember.displayName,
@@ -120,6 +108,7 @@ export function useCollabOrgChat({
     orgMembers,
     sending,
     setChatMessages,
+    syncProfile,
     t,
   ]);
 

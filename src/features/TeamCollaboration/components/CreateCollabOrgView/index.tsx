@@ -294,11 +294,13 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
         supabaseUrl: org.supabaseUrl ?? supabaseUrl,
         anonKey: org.supabaseAnonKey ?? anonKey,
         orgSecret: org.orgSecret,
+        memberId: org.localMemberId,
+        memberToken: org.memberToken,
         orgId: org.id,
         usageLimit: DEFAULT_INVITE_USAGE_LIMIT,
       });
       setCollabInvites((current) => upsertInvite(current, invite));
-      setLatestInviteLink(invite.inviteLink);
+      setLatestInviteLink(invite.inviteLink ?? "");
     },
     [
       anonKey,
@@ -340,6 +342,8 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
               supabaseUrl: effectiveSupabaseUrl,
               anonKey: effectiveAnonKey,
               orgSecret: result.org.orgSecret,
+              memberId: result.member.id,
+              memberToken: result.org.memberToken,
               orgId: result.org.id,
               repoScopes,
             });

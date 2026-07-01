@@ -30,7 +30,7 @@ export const COLLAB_SYNC_BACKEND = {
 export type CollabSyncBackend =
   (typeof COLLAB_SYNC_BACKEND)[keyof typeof COLLAB_SYNC_BACKEND];
 
-export const SUPABASE_SYNC_SCHEMA_VERSION = 1;
+export const SUPABASE_SYNC_SCHEMA_VERSION = 2;
 
 export const SUPABASE_SESSION_SNAPSHOT_BUCKET = "orgii-session-snapshots";
 
@@ -80,6 +80,7 @@ export interface CollabOrgRecord {
   supabaseUrl?: string;
   supabaseAnonKey?: string;
   orgSecret?: string;
+  memberToken?: string;
   groupId?: string;
   adminMemberId?: string;
   localMemberId?: string;
@@ -103,10 +104,15 @@ export interface CollabInviteRecord {
   orgId: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
-  inviteCode: string;
-  inviteLink: string;
+  // Plaintext invite code/link exist only on the creating client; the server
+  // stores display metadata (codeSuffix, limits, role) plus the code hash.
+  inviteCode?: string;
+  inviteLink?: string;
   usageLimit: number;
   usageCount: number;
+  role?: CollabRole;
+  codeSuffix?: string;
+  createdByMemberId?: string;
   expiresAt?: string;
   createdAt: string;
   revokedAt?: string;
@@ -182,4 +188,5 @@ export interface RemoteTeammateSessionMetadata {
   eventsBlobPath: string | undefined;
   eventsContentHash: string | undefined;
   eventsUpdatedAt: string | undefined;
+  deletedAt?: string;
 }

@@ -11,11 +11,9 @@ import type {
 } from "@src/store/collaboration/types";
 import type { Session } from "@src/store/session/sessionAtom/types";
 
-export interface SupabaseSyncProfile {
-  supabaseUrl: string;
-  anonKey: string;
-  orgSecret: string;
-}
+import type { CollabSyncProfile } from "./sync/CollabSyncBackend";
+
+export type { CollabSyncProfile as SupabaseSyncProfile } from "./sync/CollabSyncBackend";
 
 export function normalizeRepoPath(
   path: string | undefined | null
@@ -86,15 +84,17 @@ export function createDefaultAccessSettings(
   };
 }
 
-export function getSyncProfile(
-  org: CollabOrgRecord
-): SupabaseSyncProfile | null {
+export function getSyncProfile(org: CollabOrgRecord): CollabSyncProfile | null {
   if (org.syncBackend !== COLLAB_SYNC_BACKEND.SUPABASE) return null;
-  if (!org.supabaseUrl || !org.supabaseAnonKey || !org.orgSecret) return null;
+  if (!org.supabaseUrl || !org.supabaseAnonKey) return null;
+  const hasMemberCredential = Boolean(org.memberToken && org.localMemberId);
+  if (!hasMemberCredential && !org.orgSecret) return null;
   return {
     supabaseUrl: org.supabaseUrl,
     anonKey: org.supabaseAnonKey,
     orgSecret: org.orgSecret,
+    memberId: org.localMemberId,
+    memberToken: org.memberToken,
   };
 }
 

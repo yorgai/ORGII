@@ -119,6 +119,7 @@ export const CollabOrgRecordSchema = z.object({
   supabaseUrl: z.string().optional(),
   supabaseAnonKey: z.string().optional(),
   orgSecret: z.string().optional(),
+  memberToken: z.string().optional(),
   groupId: z.string().optional(),
   adminMemberId: z.string().optional(),
   localMemberId: z.string().optional(),
@@ -163,6 +164,13 @@ export const RemoteTeammateSessionMetadataSchema = z.object({
     .string()
     .nullish()
     .transform((value) => value ?? undefined),
+  // Trailing .optional() keeps the inferred key optional (`deletedAt?:`) so
+  // the persisted-atom storage type stays assignable to the interface.
+  deletedAt: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined)
+    .optional(),
 }) satisfies z.ZodType<RemoteTeammateSessionMetadata>;
 
 export const CollabChatMessageRecordSchema = z.object({

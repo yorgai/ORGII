@@ -7,15 +7,20 @@ import type {
   CollabOrgRecord,
   CollabProjectMetadataRecord,
   CollabRepoJoinRequestRecord,
+  CollabRole,
   CollabWorkItemMetadataRecord,
   RemoteTeammateSessionMetadata,
 } from "@src/store/collaboration/types";
 
+// Credential model (schema v2): memberId + memberToken is the per-member
+// credential; orgSecret is the root credential held by the org creator only.
+// Every RPC call sends exactly one credential kind.
 export interface CollabSyncProfile {
   supabaseUrl: string;
   anonKey: string;
   orgSecret?: string;
   memberId?: string;
+  memberToken?: string;
 }
 
 export interface CreateOrgInput extends CollabSyncProfile {
@@ -34,11 +39,25 @@ export interface CreateInviteInput extends CollabSyncProfile {
   orgId: string;
   usageLimit?: number;
   expiresAt?: string;
+  role?: CollabRole;
 }
 
+export interface RevokeInviteInput extends CollabSyncProfile {
+  orgId: string;
+  inviteId: string;
+}
+
+export interface UpdateMemberRoleInput extends CollabSyncProfile {
+  orgId: string;
+  targetMemberId: string;
+  role: CollabRole;
+}
+
+// targetMemberId is distinct from CollabSyncProfile.memberId (the caller's own
+// credential id) — spreading a profile must not clobber the removal target.
 export interface RemoveMemberInput extends CollabSyncProfile {
   orgId: string;
-  memberId: string;
+  targetMemberId: string;
 }
 
 export interface ListChatMessagesInput extends CollabSyncProfile {
@@ -57,11 +76,15 @@ export interface PostChatMessageInput extends CollabSyncProfile {
 export interface UpsertProjectMetadataInput extends CollabSyncProfile {
   orgId: string;
   project: CollabProjectMetadataRecord;
+  /** OCC base version; defaults to `project.version` when omitted. */
+  baseVersion?: number;
 }
 
 export interface UpsertWorkItemInput extends CollabSyncProfile {
   orgId: string;
   workItem: CollabWorkItemMetadataRecord;
+  /** OCC base version; defaults to `workItem.version` when omitted. */
+  baseVersion?: number;
 }
 
 export interface UpsertSessionMetadataInput extends CollabSyncProfile {
@@ -91,6 +114,7 @@ export interface PublishSessionSnapshotInput extends CollabSyncProfile {
 }
 
 export interface DenySessionSnapshotInput extends CollabSyncProfile {
+  orgId: string;
   requestId: string;
   reason: string;
 }
@@ -133,13 +157,14 @@ export interface RequestRepoJoinInput extends CollabSyncProfile {
 }
 
 export interface ReviewRepoJoinInput extends CollabSyncProfile {
+  orgId: string;
   requestId: string;
   approve: boolean;
-  reviewerMemberId: string;
   reviewNote?: string;
 }
 
 export interface CollabOrgState {
+  serverTime?: string;
   orgs: CollabOrgRecord[];
   members: CollabMemberRecord[];
   invites: CollabInviteRecord[];
@@ -180,6 +205,8 @@ export interface CollabSyncBackendClient {
     input: AcceptInviteInput
   ): Promise<{ org: CollabOrgRecord; member: CollabMemberRecord }>;
   createInvite(input: CreateInviteInput): Promise<CollabInviteRecord>;
+  revokeInvite(input: RevokeInviteInput): Promise<void>;
+  updateMemberRole(input: UpdateMemberRoleInput): Promise<void>;
   removeMember(input: RemoveMemberInput): Promise<CollabMemberRecord>;
   listChatMessages(
     input: ListChatMessagesInput

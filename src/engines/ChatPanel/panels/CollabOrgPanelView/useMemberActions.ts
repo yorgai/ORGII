@@ -1,6 +1,7 @@
 import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useMemo, useState } from "react";
 
+import { getSyncProfile } from "@src/features/TeamCollaboration/collabSyncUtils";
 import { supabaseSyncClient } from "@src/features/TeamCollaboration/sync/supabaseSyncClient";
 import {
   collabInvitesAtom,
@@ -51,39 +52,33 @@ export function useMemberActions({
     [invites, selectedCollabOrg.orgId]
   );
 
+  const syncProfile = useMemo(() => (org ? getSyncProfile(org) : null), [org]);
+
   const canCreateInvite =
-    Boolean(org?.supabaseUrl && org.supabaseAnonKey && org.orgSecret) &&
-    currentMember?.role === COLLAB_ROLE.ADMIN;
+    syncProfile !== null && currentMember?.role === COLLAB_ROLE.ADMIN;
 
   const handleCreateInvite = useCallback(async () => {
-    if (
-      !org?.supabaseUrl ||
-      !org.supabaseAnonKey ||
-      !org.orgSecret ||
-      creatingInvite
-    ) {
-      return;
-    }
+    if (!org || !syncProfile || creatingInvite) return;
     setCreatingInvite(true);
     setInviteError(null);
     try {
       const invite = await supabaseSyncClient.createInvite({
-        supabaseUrl: org.supabaseUrl,
-        anonKey: org.supabaseAnonKey,
-        orgSecret: org.orgSecret,
+        ...syncProfile,
         orgId: org.id,
         usageLimit: DEFAULT_INVITE_USAGE_LIMIT,
       });
       setInvites((current) => upsertInvite(current, invite));
-      await copyText(invite.inviteLink);
-      setCopyingInvite(true);
-      window.setTimeout(() => setCopyingInvite(false), 1500);
+      if (invite.inviteLink) {
+        await copyText(invite.inviteLink);
+        setCopyingInvite(true);
+        window.setTimeout(() => setCopyingInvite(false), 1500);
+      }
     } catch (error) {
       setInviteError(error instanceof Error ? error.message : String(error));
     } finally {
       setCreatingInvite(false);
     }
-  }, [creatingInvite, org, setInvites]);
+  }, [creatingInvite, org, setInvites, syncProfile]);
 
   const handleCopyInvite = useCallback(async () => {
     if (!latestInvite?.inviteLink || copyingInvite) return;
@@ -99,23 +94,14 @@ export function useMemberActions({
 
   const handleRemoveMember = useCallback(
     async (member: CollabMemberRecord) => {
-      if (
-        !org?.supabaseUrl ||
-        !org.supabaseAnonKey ||
-        !org.orgSecret ||
-        removingMemberId
-      ) {
-        return;
-      }
+      if (!org || !syncProfile || removingMemberId) return;
       setRemovingMemberId(member.id);
       setMemberError(null);
       try {
         const removedMember = await supabaseSyncClient.removeMember({
-          supabaseUrl: org.supabaseUrl,
-          anonKey: org.supabaseAnonKey,
-          orgSecret: org.orgSecret,
+          ...syncProfile,
           orgId: org.id,
-          memberId: member.id,
+          targetMemberId: member.id,
         });
         setMembers((current) => upsertMember(current, removedMember));
         if (selectedCollabOrg.memberId === member.id) {
@@ -134,6 +120,7 @@ export function useMemberActions({
       selectedCollabOrg.orgId,
       setMembers,
       setSelectedCollabOrg,
+      syncProfile,
     ]
   );
 
