@@ -15,7 +15,8 @@ import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Dropdown from "@src/components/Dropdown";
-import type { DropdownOption } from "@src/components/Dropdown/types";
+import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
+import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
 import { useGitStatus } from "@src/contexts/git";
 import { useRepoGitInitialization } from "@src/hooks/git";
@@ -64,74 +65,77 @@ function SourceControlScopePicker({
       ? worktrees.find((worktree) => worktree.path === scope.path)
       : undefined;
   const activeLabel = selectedWorktree?.branch || branchLabel;
-  const value = scope.kind === "worktree" ? scope.path : "__local__";
-  const options = useMemo<DropdownOption[]>(
-    () => [
-      {
-        value: "__local__",
-        label: (
-          <span className="inline-flex min-w-0 items-center gap-2">
-            <Folder size={14} className="shrink-0 text-text-3" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate">{repoName}</span>
-              <span className="block truncate text-[11px] text-text-4">
-                {repoPath}
-              </span>
-            </span>
-            <span className="max-w-[96px] shrink-0 truncate text-[11px] text-text-4">
-              {branchLabel}
-            </span>
-          </span>
-        ),
-        triggerLabel: branchLabel,
-      },
-      ...worktrees.map((worktree) => ({
-        value: worktree.path,
-        label: (
-          <span className="inline-flex min-w-0 items-center gap-2">
-            <Folder size={14} className="shrink-0 text-text-3" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate">
-                {worktreeLabel(worktree.path)}
-              </span>
-              <span className="block truncate text-[11px] text-text-4">
-                {worktree.path}
-              </span>
-            </span>
-            <span className="max-w-[96px] shrink-0 truncate text-[11px] text-text-4">
-              {worktree.branch}
-            </span>
-          </span>
-        ),
-        triggerLabel: worktreeLabel(worktree.path),
-      })),
-    ],
-    [branchLabel, repoName, repoPath, worktrees]
-  );
+  const [open, setOpen] = useState(false);
 
-  const handleSelectScope = useCallback(
-    (nextValue: string | number | (string | number)[]) => {
-      if (Array.isArray(nextValue)) return;
-      const selectedValue = String(nextValue);
-      onScopeChange(
-        selectedValue === "__local__"
-          ? { kind: "local" }
-          : { kind: "worktree", path: selectedValue }
-      );
+  const selectScope = useCallback(
+    (nextScope: SourceControlScope) => {
+      onScopeChange(nextScope);
+      setOpen(false);
     },
     [onScopeChange]
   );
 
+  const droplist = (
+    <div className={`${DROPDOWN_CLASSES.panel} w-[360px] p-1`}>
+      <div className={DROPDOWN_CLASSES.itemsColumn}>
+        <button
+          type="button"
+          className={`${DROPDOWN_CLASSES.item} w-full`}
+          onClick={() => selectScope({ kind: "local" })}
+        >
+          <Folder size={14} className="shrink-0 text-text-3" />
+          <span className="min-w-0 flex-1 text-left">
+            <span className="block truncate">{repoName}</span>
+            <span className="block truncate text-[11px] text-text-4">
+              {repoPath}
+            </span>
+          </span>
+          <span className="max-w-[96px] shrink-0 truncate text-[11px] text-text-4">
+            {branchLabel}
+          </span>
+          {scope.kind === "local" && <DropdownSelectedCheck />}
+        </button>
+        {worktrees.map((worktree) => {
+          const selected =
+            scope.kind === "worktree" && scope.path === worktree.path;
+          return (
+            <button
+              key={worktree.path}
+              type="button"
+              className={`${DROPDOWN_CLASSES.item} w-full`}
+              onClick={() =>
+                selectScope({ kind: "worktree", path: worktree.path })
+              }
+            >
+              <Folder size={14} className="shrink-0 text-text-3" />
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block truncate">
+                  {worktreeLabel(worktree.path)}
+                </span>
+                <span className="block truncate text-[11px] text-text-4">
+                  {worktree.path}
+                </span>
+              </span>
+              <span className="max-w-[96px] shrink-0 truncate text-[11px] text-text-4">
+                {worktree.branch}
+              </span>
+              {selected && <DropdownSelectedCheck />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <Dropdown
-      options={options}
-      value={value}
-      onSelect={handleSelectScope}
+      droplist={droplist}
+      popupVisible={open}
+      onVisibleChange={setOpen}
       trigger="click"
       position="bottom-end"
       getPopupContainer={() => document.body}
       avoidViewportOverflow
-      style={{ width: 360 }}
     >
       <button
         type="button"
