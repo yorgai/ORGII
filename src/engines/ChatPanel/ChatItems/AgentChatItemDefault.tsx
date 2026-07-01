@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 
 import { ChatBubbleCopyButton } from "@src/components/ChatBubble";
 import Markdown from "@src/components/MarkDown";
+import { containsMarkdownFence } from "@src/components/MarkDown/markdownUtils";
 import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { themesAtom } from "@src/store";
 import { chatAppearanceAtom } from "@src/store/config/configAtom";
@@ -40,6 +41,7 @@ const AgentChatItemDefault: React.FC<AgentChatItemProps> = ({
   const chatAppearance = useAtomValue(chatAppearanceAtom);
 
   const isStreaming = Boolean(streamHtml);
+  const hasCodeBlockCopy = !isStreaming && containsMarkdownFence(children);
   const shouldUseDecryptEffect =
     !isStreaming && chatAppearance.decryptEffectEnabled;
 
@@ -56,7 +58,7 @@ const AgentChatItemDefault: React.FC<AgentChatItemProps> = ({
               className="chat-text relative flex flex-col items-start gap-3 self-stretch text-text-1"
               data-testid="chat-message-assistant"
             >
-              {!isStreaming && children && (
+              {!isStreaming && children && !hasCodeBlockCopy && (
                 <ChatBubbleCopyButton
                   content={children}
                   hoverGroupClass="group-hover/agent-msg:opacity-100"

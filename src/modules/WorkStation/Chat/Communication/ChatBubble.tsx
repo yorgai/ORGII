@@ -29,6 +29,7 @@ import {
 } from "@src/components/ChatBubble";
 import { ChatImageThumbnailRow } from "@src/components/ChatImageThumbnail";
 import Markdown from "@src/components/MarkDown";
+import { containsMarkdownFence } from "@src/components/MarkDown/markdownUtils";
 import { TerminalOutput } from "@src/components/TerminalDisplay";
 import { PILL_REGEX, PILL_TYPES, type PillType } from "@src/config/pillTokens";
 import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/UserMessageContent";
@@ -729,6 +730,7 @@ export const ChatBubble: React.FC<{
       typeof resolvedContent === "string"
         ? resolvedContent
         : String(resolvedContent ?? "");
+    const hasCodeBlockCopy = !isUser && containsMarkdownFence(rawContent);
     const userImages = useMemo<string[] | undefined>(() => {
       if (!isUser) return undefined;
       const result = message.event.result as { images?: unknown } | undefined;
@@ -789,7 +791,7 @@ export const ChatBubble: React.FC<{
               isLatest ? "bg-fill-2" : "bg-fill-1"
             }`}
           >
-            <ChatBubbleCopyButton content={rawContent} />
+            {!hasCodeBlockCopy && <ChatBubbleCopyButton content={rawContent} />}
             <div className={`min-w-0 ${SESSION_UI_TOKENS.TEXT.BODY_BASE}`}>
               <ReplayMarkdown content={rawContent} />
               <MessageReferenceCards
