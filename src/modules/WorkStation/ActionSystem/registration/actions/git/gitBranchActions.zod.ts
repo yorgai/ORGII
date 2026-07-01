@@ -87,10 +87,10 @@ export const gitCreateBranchFromCommit = defineZodAction(
       checkout,
     });
 
-    if (!created) {
+    if (!created.success) {
       return {
         success: false,
-        message: "Failed to create branch from commit",
+        message: created.error || "Failed to create branch from commit",
       };
     }
 

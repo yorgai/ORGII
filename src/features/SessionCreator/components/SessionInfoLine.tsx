@@ -289,14 +289,20 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
   const handleCreateBranch = useCallback(
     async (branch: string, startPoint?: string) => {
       if (!repoId || !repoPath) return;
-      const success = await gitApi.gitCreateBranch({
+      const result = await gitApi.gitCreateBranch({
         repo_id: repoId,
         repo_path: repoPath,
         name: branch,
         start_point: startPoint ?? null,
         checkout: false,
       });
-      if (!success) return;
+      if (!result.success) {
+        showGitActionDialogSafely(
+          result.error || `Failed to create branch "${branch}"`,
+          "error"
+        );
+        return;
+      }
       await handleBranchSelect(branch);
     },
     [handleBranchSelect, repoId, repoPath]
@@ -315,14 +321,14 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
         return { success: false, message };
       }
 
-      const success = await gitApi.gitDeleteBranch({
+      const result = await gitApi.gitDeleteBranch({
         repo_id: repoId,
         repo_path: repoPath,
         branch_name: branch,
       });
 
-      if (!success) {
-        const message = `Failed to delete branch "${branch}"`;
+      if (!result.success) {
+        const message = result.error || `Failed to delete branch "${branch}"`;
         if (!options?.silent) {
           showGitActionDialogSafely(message, "error");
         }
