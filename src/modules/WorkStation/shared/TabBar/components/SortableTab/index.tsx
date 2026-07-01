@@ -34,6 +34,7 @@ import {
   Search,
   Settings,
   Sparkles,
+  SquareTerminal,
   Terminal,
 } from "lucide-react";
 import React, { memo, useState } from "react";
@@ -92,6 +93,7 @@ const WORKSTATION_TAB_ICONS = {
   Search,
   Settings,
   Sparkles,
+  SquareTerminal,
   Terminal,
 } as const satisfies Record<string, LucideIcon>;
 
