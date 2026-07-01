@@ -8,7 +8,7 @@ use database::db::get_connection;
 
 use core_types::key_source::KeySource;
 
-use super::aggregation::{cached_external_history_sessions_in_range, list_all_sessions};
+use super::aggregation::list_all_sessions;
 use super::types::{SessionAggregateRecord, SessionFilter};
 
 pub const DEFAULT_INPUT_COST_PER_MTOK: f64 = 3.0;
@@ -243,12 +243,6 @@ pub fn query_session_heatmap(
         ..SessionFilter::default()
     };
     let mut sessions = list_all_sessions(Some(&session_filter))?.sessions;
-    if should_include_cli_history(filter) {
-        let (external_start_ms, external_end_ms) = (window_start_ms, window_end_ms);
-        let external_sessions =
-            cached_external_history_sessions_in_range(external_start_ms, external_end_ms)?;
-        sessions.extend(external_sessions);
-    }
     retain_sessions_in_date_window(&mut sessions, &date_window, timezone_offset_minutes);
     let usage_by_session = session_usage_summaries(&sessions)?;
     let date_index: BTreeMap<NaiveDate, u8> = date_window
@@ -344,22 +338,6 @@ fn retain_sessions_in_date_window(
             .map(|(session_date, _hour)| date_index.contains_key(&session_date))
             .unwrap_or(false)
     });
-}
-
-fn should_include_cli_history(filter: Option<&SessionHeatmapFilter>) -> bool {
-    let includes_cli_category = filter
-        .and_then(|filter| filter.category.as_deref())
-        .map(|raw| raw.split(',').map(str::trim).any(|value| value == "cli"))
-        .unwrap_or(true);
-    let includes_own_key = filter
-        .and_then(|filter| filter.key_source.as_deref())
-        .map(|raw| {
-            raw.split(',')
-                .map(str::trim)
-                .any(|value| value == KeySource::OwnKey.as_ref())
-        })
-        .unwrap_or(true);
-    includes_cli_category && includes_own_key
 }
 
 fn external_history_epoch_window(

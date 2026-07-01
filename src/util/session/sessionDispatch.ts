@@ -111,6 +111,13 @@ export const SESSION_PREFIX_REGISTRY: readonly SessionPrefixConfig[] = [
     externalHistorySourceId: "claude_code",
   },
   {
+    prefix: "cursoragentapp-",
+    category: "external_history",
+    variant: undefined,
+    iconId: "cursor",
+    externalHistorySourceId: "cursor_agent",
+  },
+  {
     prefix: "opencodeapp-",
     category: "external_history",
     variant: undefined,
@@ -131,6 +138,13 @@ export const SESSION_PREFIX_REGISTRY: readonly SessionPrefixConfig[] = [
     iconId: "workbuddy",
     externalHistorySourceId: "workbuddy",
   },
+  {
+    prefix: "geminiapp-",
+    category: "external_history",
+    variant: undefined,
+    iconId: "gemini",
+    externalHistorySourceId: "gemini",
+  },
 ] as const;
 
 // ============================================
@@ -150,7 +164,7 @@ export const CLI_SESSION_PREFIX = "cliagent-";
  * Prefix for Cursor IDE history session IDs. The bare composer UUID from
  * Cursor's `state.vscdb` is wrapped as `${CURSOR_IDE_SESSION_PREFIX}${uuid}`
  * before crossing into our system; the prefix is stripped only inside the
- * `cursor_ide_chunks` Tauri command. Frontend code never sees the bare UUID.
+ * Brick-backed Cursor IDE chunk loading. Frontend code never sees the bare UUID.
  */
 export const CURSOR_IDE_SESSION_PREFIX = "cursoride-";
 
@@ -160,6 +174,9 @@ export const CODEX_APP_SESSION_PREFIX = "codexapp-";
 /** Prefix for imported Claude Code event session IDs. */
 export const CLAUDE_CODE_HISTORY_SESSION_PREFIX = "claudecodeapp-";
 
+/** Prefix for imported Cursor Agent event session IDs. */
+export const CURSOR_AGENT_HISTORY_SESSION_PREFIX = "cursoragentapp-";
+
 /** Prefix for imported OpenCode event session IDs. */
 export const OPENCODE_HISTORY_SESSION_PREFIX = "opencodeapp-";
 
@@ -168,6 +185,9 @@ export const WINDSURF_HISTORY_SESSION_PREFIX = "windsurfapp-";
 
 /** Prefix for imported WorkBuddy event session IDs. */
 export const WORKBUDDY_HISTORY_SESSION_PREFIX = "workbuddyapp-";
+
+/** Prefix for imported Gemini event session IDs. */
+export const GEMINI_HISTORY_SESSION_PREFIX = "geminiapp-";
 
 /** Prefix for Wingman Agent session IDs */
 export const WINGMAN_SESSION_PREFIX = "wingman-";
@@ -257,6 +277,12 @@ export function isClaudeCodeHistorySession(
   return getExternalHistorySourceId(sessionId) === "claude_code";
 }
 
+export function isCursorAgentHistorySession(
+  sessionId: string | null | undefined
+): boolean {
+  return getExternalHistorySourceId(sessionId) === "cursor_agent";
+}
+
 export function isOpenCodeHistorySession(
   sessionId: string | null | undefined
 ): boolean {
@@ -273,6 +299,12 @@ export function isWorkBuddyHistorySession(
   sessionId: string | null | undefined
 ): boolean {
   return getExternalHistorySourceId(sessionId) === "workbuddy";
+}
+
+export function isGeminiHistorySession(
+  sessionId: string | null | undefined
+): boolean {
+  return getExternalHistorySourceId(sessionId) === "gemini";
 }
 
 /**

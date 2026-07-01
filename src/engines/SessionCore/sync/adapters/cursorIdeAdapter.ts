@@ -5,7 +5,7 @@
  * sessions in our app **and** lets the user send new prompts back into
  * the live Cursor probe instance through {@link sendMessage}.
  *
- * - `loadHistory` reads bubbles from Cursor's DB via `cursor_ide_chunks`
+ * - `loadHistory` reads historical bubbles through Brick-backed chunks
  *   and pipes them through the same Rust normalizer (`processChunksRust`)
  *   that CLI sessions use, so `ChatHistory` and the simulator render them
  *   without any UI-layer changes.
@@ -33,8 +33,8 @@ import {
 } from "@src/api/tauri/cursorBridge";
 import { promptRestartCursorWithDebugPort } from "@src/api/tauri/cursorBridge/restartDialog";
 import {
-  cursorIdeFullRefresh,
-  cursorIdeInitialWindow,
+  cursorIdeChunks,
+  cursorIdeLiveFullRefresh,
 } from "@src/api/tauri/cursorIde";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
@@ -61,7 +61,6 @@ import type {
 const logger = createLogger("CursorIdeAdapter");
 
 const CURSOR_IDE_CATEGORY = "cursor_ide";
-const CURSOR_IDE_INITIAL_RECENT_BUBBLE_LIMIT = 100;
 
 /**
  * In-flight `sendMessage` calls keyed by sessionId. A second prompt for the
@@ -224,11 +223,8 @@ async function loadCursorIdeEventsIntoStore(
   force: boolean
 ): Promise<void> {
   const loadResult = force
-    ? await cursorIdeFullRefresh(sessionId)
-    : await cursorIdeInitialWindow({
-        sessionId,
-        recentLimit: CURSOR_IDE_INITIAL_RECENT_BUBBLE_LIMIT,
-      });
+    ? await cursorIdeLiveFullRefresh(sessionId)
+    : { chunks: await cursorIdeChunks(sessionId), turns: [] };
 
   getInstrumentedStore().set(
     cursorIdeTurnSummariesAtomFamily(sessionId),
@@ -267,16 +263,9 @@ export const cursorIdeAdapter: SessionAdapter = {
   category: CURSOR_IDE_CATEGORY,
 
   async loadHistory(sessionId, signal) {
-    const initialWindow = await cursorIdeInitialWindow({
-      sessionId,
-      recentLimit: CURSOR_IDE_INITIAL_RECENT_BUBBLE_LIMIT,
-    });
+    const chunks = await cursorIdeChunks(sessionId);
     if (signal.aborted) return [];
-    getInstrumentedStore().set(
-      cursorIdeTurnSummariesAtomFamily(sessionId),
-      initialWindow.turns
-    );
-    const { chunks } = initialWindow;
+    getInstrumentedStore().set(cursorIdeTurnSummariesAtomFamily(sessionId), []);
     if (!Array.isArray(chunks) || chunks.length === 0) {
       return [];
     }

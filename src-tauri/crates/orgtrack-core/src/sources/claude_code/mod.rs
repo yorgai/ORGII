@@ -1,4 +1,3 @@
-//! Claude Code session data — DB scanner and JSONL history reader.
+//! Claude Code session metadata DB scanner.
 
 pub mod db;
-pub mod history;

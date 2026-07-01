@@ -3,8 +3,8 @@
 //! These helpers are extracted from `GatewayService::start` so the service
 //! entry point stays focused on wiring rather than per-task logic.
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use serde_json::Value;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};

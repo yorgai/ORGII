@@ -8,7 +8,15 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 
+import {
+  type BrickHistorySessionPage,
+  type BrickHistorySessionRow,
+  brickHistoryChunks,
+  brickHistorySessions,
+} from "@src/api/tauri/brickHistory";
 import type { ActivityChunk } from "@src/types/session/session";
+
+const CURSOR_IDE_BRICK_SOURCE_ID = "cursor_ide" as const;
 
 /**
  * One Cursor IDE composer surfaced as a frontend-ready session row.
@@ -36,7 +44,7 @@ export interface CursorIdeSessionRow {
 }
 
 /**
- * Page returned from `cursor_ide_list_sessions`.
+ * Page returned from Brick-backed Cursor IDE session listing.
  *
  * `hasMore` reflects whether a follow-up `(limit, offset + sessions.length)`
  * call would surface more rows. The sidebar's per-category pagination uses
@@ -82,6 +90,46 @@ export interface CursorIdeTurnWindow {
   loadedBubbleCount: number;
 }
 
+function asCursorIdeSessionRow(
+  row: BrickHistorySessionRow
+): CursorIdeSessionRow {
+  return {
+    sessionId: row.sessionId,
+    name: row.name,
+    status: row.status,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    category: "cursor_ide",
+    readOnly: true,
+    model: row.model,
+    totalTokens: row.totalTokens,
+    linesAdded: row.linesAdded,
+    linesRemoved: row.linesRemoved,
+    filesChanged: row.filesChanged,
+    touchedFiles: row.touchedFiles,
+    background: row.background,
+    isActive: row.isActive,
+    repoPath: row.repoPath,
+    repoName: row.repoName,
+    branch: row.branch,
+  };
+}
+
+function asCursorIdeSessionPage(
+  page: BrickHistorySessionPage
+): CursorIdeSessionPage {
+  return {
+    sessions: page.sessions.map(asCursorIdeSessionRow),
+    hasMore: page.hasMore,
+  };
+}
+
+export async function cursorIdeLiveFullRefresh(
+  sessionId: string
+): Promise<CursorIdeFullRefresh> {
+  return invoke<CursorIdeFullRefresh>("cursor_ide_full_refresh", { sessionId });
+}
+
 /**
  * Paginated list of Cursor IDE composers, ordered most-recent-first.
  *
@@ -94,10 +142,12 @@ export async function cursorIdeListSessions(args?: {
   limit?: number;
   offset?: number;
 }): Promise<CursorIdeSessionPage> {
-  return invoke<CursorIdeSessionPage>("cursor_ide_list_sessions", {
+  const page = await brickHistorySessions({
+    sourceId: CURSOR_IDE_BRICK_SOURCE_ID,
     limit: args?.limit,
     offset: args?.offset,
   });
+  return asCursorIdeSessionPage(page);
 }
 
 /**
@@ -108,23 +158,40 @@ export async function cursorIdeListSessions(args?: {
 export async function cursorIdeChunks(
   sessionId: string
 ): Promise<ActivityChunk[]> {
-  return invoke<ActivityChunk[]>("cursor_ide_chunks", { sessionId });
+  return brickHistoryChunks({
+    sourceId: CURSOR_IDE_BRICK_SOURCE_ID,
+    sessionId,
+  });
 }
 
 export async function cursorIdeInitialWindow(args: {
   sessionId: string;
   recentLimit?: number;
 }): Promise<CursorIdeInitialWindow> {
-  return invoke<CursorIdeInitialWindow>("cursor_ide_initial_window", {
+  const chunks = await brickHistoryChunks({
+    sourceId: CURSOR_IDE_BRICK_SOURCE_ID,
     sessionId: args.sessionId,
-    recentLimit: args.recentLimit,
   });
+  return {
+    chunks,
+    turns: [],
+    totalBubbleCount: chunks.length,
+    userBubbleCount: 0,
+    recentBubbleCount: chunks.length,
+    recentStartCursor: null,
+    recentEndCursor: null,
+    hasUnloadedMiddle: false,
+  };
 }
 
 export async function cursorIdeFullRefresh(
   sessionId: string
 ): Promise<CursorIdeFullRefresh> {
-  return invoke<CursorIdeFullRefresh>("cursor_ide_full_refresh", { sessionId });
+  const chunks = await brickHistoryChunks({
+    sourceId: CURSOR_IDE_BRICK_SOURCE_ID,
+    sessionId,
+  });
+  return { chunks, turns: [] };
 }
 
 export async function cursorIdeTurnWindow(args: {

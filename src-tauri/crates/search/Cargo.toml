@@ -32,7 +32,7 @@ grep-regex = "0.1"
 lru = "0.12"
 
 # Tree-sitter for symbol indexing (TS, JS, Python, Rust grammars).
-tree-sitter = "0.24"
+tree-sitter = "0.25"
 tree-sitter-javascript = "0.23"
 tree-sitter-python = "0.23"
 tree-sitter-rust = "0.23"

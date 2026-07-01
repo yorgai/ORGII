@@ -132,7 +132,9 @@ fn mysql_row_to_json(row: &sqlx::mysql::MySqlRow) -> Vec<serde_json::Value> {
                     .map(serde_json::Value::Number)
                     .unwrap_or(serde_json::Value::Null),
                 "JSON" => row
-                    .try_get::<serde_json::Value, _>(col.ordinal())
+                    .try_get::<String, _>(col.ordinal())
+                    .ok()
+                    .and_then(|value| serde_json::from_str(&value).ok())
                     .unwrap_or(serde_json::Value::Null),
                 _ => row
                     .try_get::<String, _>(col.ordinal())

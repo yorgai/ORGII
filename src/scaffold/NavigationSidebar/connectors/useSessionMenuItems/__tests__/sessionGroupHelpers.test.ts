@@ -1,21 +1,16 @@
 import { describe, expect, it } from "vitest";
 
+import { IMPORTED_HISTORY_SOURCES } from "@src/api/tauri/importedHistory";
+
 import { groupKeyToWireCategory } from "../sessionGroupHelpers";
 
 describe("groupKeyToWireCategory", () => {
   it("keeps imported history load-more categories source-specific", () => {
-    expect(groupKeyToWireCategory("external_history:codex_app")).toBe(
-      "external_history:codex_app"
-    );
-    expect(groupKeyToWireCategory("external_history:claude_code")).toBe(
-      "external_history:claude_code"
-    );
-    expect(groupKeyToWireCategory("external_history:opencode")).toBe(
-      "external_history:opencode"
-    );
-    expect(groupKeyToWireCategory("external_history:windsurf")).toBe(
-      "external_history:windsurf"
-    );
+    for (const source of IMPORTED_HISTORY_SOURCES) {
+      expect(groupKeyToWireCategory(source.listCategory)).toBe(
+        source.listCategory
+      );
+    }
   });
 
   it("maps existing non-imported groups to their loader categories", () => {

@@ -209,11 +209,10 @@ mod tests {
             let snap = make_snapshot(sid).unwrap();
             track_edit(sid, &snap, &file).unwrap();
             crate::core::session::persistence::save_snapshot(sid, "tool-call-1", &snap).unwrap();
-            let created_at = crate::persistence::session_snapshots::get_snapshot_created_at_by_hash(
-                sid, &snap,
-            )
-            .unwrap()
-            .unwrap();
+            let created_at =
+                crate::persistence::session_snapshots::get_snapshot_created_at_by_hash(sid, &snap)
+                    .unwrap()
+                    .unwrap();
 
             fs::write(&file, b"v2").unwrap();
             let rewind_stats = rewind_to_message(sid, &created_at).unwrap();

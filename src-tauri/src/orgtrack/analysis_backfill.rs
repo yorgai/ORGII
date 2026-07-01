@@ -2,30 +2,18 @@ use std::collections::BTreeMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Mutex, MutexGuard};
 
-use core_types::activity::ActivityChunk;
 use core_types::extracted::ExtractedData;
 use database::db::get_connection;
 use orgtrack_core::canonical::{
-    AgentMetadata, ArtifactQuality, CommitLinkRecord, FileChangeRecord, SessionCheckpointRecord,
-    SessionRecord, SOURCE_ORGII_CLI_SESSIONS, SOURCE_ORGII_RUST_AGENTS,
+    ArtifactQuality, CommitLinkRecord, FileChangeRecord, SessionCheckpointRecord, SessionRecord,
+    SOURCE_ORGII_CLI_SESSIONS, SOURCE_ORGII_RUST_AGENTS,
 };
 use orgtrack_core::edit_extraction::{
     artifacts_from_extracted_edit, final_diff_from_chunks, EditArtifactContext,
 };
-use orgtrack_core::policy::{source_tier_policy, TierSupport, SOURCE_CURSOR_IDE};
+use orgtrack_core::policy::{source_tier_policy, TierSupport};
 use orgtrack_core::privacy::ORGTRACK_SCHEMA_VERSION;
 use orgtrack_core::repo_sync::paths::{path_hash, record_id};
-use orgtrack_core::sources::claude_code::history as claude_code_history;
-use orgtrack_core::sources::codex::app as codex_app_history;
-use orgtrack_core::sources::cursor_ide::history as cursor_ide_history;
-use orgtrack_core::sources::imported_history::metadata::{
-    SOURCE_CLAUDE_CODE, SOURCE_CODEX_APP, SOURCE_OPENCODE, SOURCE_WINDSURF,
-};
-use orgtrack_core::sources::imported_history::{
-    ImportedHistorySessionRow, IMPORTED_HISTORY_CATEGORY,
-};
-use orgtrack_core::sources::opencode::history as opencode_history;
-use orgtrack_core::sources::windsurf::history as windsurf_history;
 use orgtrack_core::store::{sqlite::SqliteRecordStore, RecordStore};
 
 use crate::agent_sessions::event_pipeline::commands::event_conversion::{
@@ -37,8 +25,6 @@ use crate::agent_sessions::event_pipeline::extractors::git_artifacts::{
     parse_git_artifacts, GitArtifactParseInput,
 };
 use crate::agent_sessions::event_pipeline::extractors::types::GitArtifactKind;
-use crate::agent_sessions::event_pipeline::ingestion;
-use crate::agent_sessions::event_pipeline::ingestion::types::RawActivityChunk;
 use crate::agent_sessions::unified_stats::conversion::{
     os_session_to_aggregate_record, sde_session_to_aggregate_record, AgentMetadataResolver,
 };
@@ -50,7 +36,6 @@ use crate::orgtrack::extraction_scheduler::{
 static ANALYSIS_LOCK: Mutex<()> = Mutex::new(());
 const MAX_EVENTS_PER_SESSION: usize = 500;
 const MAX_ON_DEMAND_SESSIONS: usize = 1;
-const ANALYSIS_HYDRATION_PAGE_SIZE: usize = 200;
 const ANALYSIS_ARTIFACT_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Default, serde::Serialize)]
@@ -241,8 +226,7 @@ fn should_pause(config: &ExtractionMemoryGateConfig) -> bool {
 }
 
 fn hydrate_analyzable_session_records() -> Result<(), String> {
-    hydrate_rust_agent_session_records()?;
-    hydrate_external_session_records()
+    hydrate_rust_agent_session_records()
 }
 
 fn hydrate_rust_agent_session_records() -> Result<(), String> {
@@ -281,141 +265,6 @@ fn hydrate_rust_agent_session_records() -> Result<(), String> {
     }
 
     upsert_aggregate_sessions(&records)
-}
-
-fn hydrate_external_session_records() -> Result<(), String> {
-    let mut conn = get_connection().map_err(|err| err.to_string())?;
-
-    let cursor_sessions = cursor_ide_history::list_cursor_ide_sessions_paginated(
-        &mut conn,
-        ANALYSIS_HYDRATION_PAGE_SIZE,
-        0,
-    )?;
-    {
-        let store = SqliteRecordStore::new(&conn);
-        for row in cursor_sessions.sessions {
-            store.upsert_session(&cursor_row_to_session_record(row))?;
-        }
-    }
-
-    let imported_pages = [
-        claude_code_history::list_claude_code_history_sessions_paginated(
-            &mut conn,
-            ANALYSIS_HYDRATION_PAGE_SIZE,
-            0,
-        )?,
-        codex_app_history::list_codex_app_sessions_paginated(
-            &mut conn,
-            ANALYSIS_HYDRATION_PAGE_SIZE,
-            0,
-        )?,
-        opencode_history::list_opencode_history_sessions_paginated(
-            &mut conn,
-            ANALYSIS_HYDRATION_PAGE_SIZE,
-            0,
-        )?,
-        windsurf_history::list_windsurf_history_sessions_paginated(
-            &mut conn,
-            ANALYSIS_HYDRATION_PAGE_SIZE,
-            0,
-        )?,
-    ];
-    let store = SqliteRecordStore::new(&conn);
-    for page in imported_pages {
-        for row in page.sessions {
-            store.upsert_session(&imported_row_to_session_record(row))?;
-        }
-    }
-    Ok(())
-}
-
-fn cursor_row_to_session_record(row: cursor_ide_history::CursorIdeSessionRow) -> SessionRecord {
-    let source_session_id = row
-        .session_id
-        .strip_prefix("cursoride-")
-        .unwrap_or(&row.session_id)
-        .to_string();
-    SessionRecord {
-        schema_version: ORGTRACK_SCHEMA_VERSION,
-        source: SOURCE_CURSOR_IDE.to_string(),
-        source_session_id,
-        session_id: row.session_id,
-        title: row.name,
-        status: Some(row.status.clone()),
-        created_at: Some(row.created_at),
-        updated_at: Some(row.updated_at.clone()),
-        completed_at: if row.is_active {
-            None
-        } else {
-            Some(row.updated_at)
-        },
-        workspace_path: row.repo_path,
-        branch: row.branch,
-        parent_session_id: None,
-        org_member_id: None,
-        metadata: AgentMetadata {
-            dispatch_category: Some("cursor_ide".to_string()),
-            model: row.model,
-            origin: Some(SOURCE_CURSOR_IDE.to_string()),
-            display_name: Some("Cursor IDE".to_string()),
-            ..AgentMetadata::default()
-        },
-    }
-}
-
-fn imported_row_to_session_record(row: ImportedHistorySessionRow) -> SessionRecord {
-    let source = imported_source_for_session_id(&row.session_id);
-    let source_session_id = imported_source_session_id(&row.session_id);
-    SessionRecord {
-        schema_version: ORGTRACK_SCHEMA_VERSION,
-        source: source.to_string(),
-        source_session_id,
-        session_id: row.session_id,
-        title: row.name,
-        status: Some(row.status),
-        created_at: Some(row.created_at),
-        updated_at: Some(row.updated_at.clone()),
-        completed_at: if row.is_active {
-            None
-        } else {
-            Some(row.updated_at)
-        },
-        workspace_path: row.repo_path,
-        branch: row.branch,
-        parent_session_id: None,
-        org_member_id: None,
-        metadata: AgentMetadata {
-            dispatch_category: Some(IMPORTED_HISTORY_CATEGORY.to_string()),
-            model: row.model,
-            origin: Some(source.to_string()),
-            display_name: Some(source.to_string()),
-            ..AgentMetadata::default()
-        },
-    }
-}
-
-fn imported_source_for_session_id(session_id: &str) -> &'static str {
-    if session_id.starts_with("claudecodeapp-") {
-        SOURCE_CLAUDE_CODE
-    } else if session_id.starts_with("codexapp-") {
-        SOURCE_CODEX_APP
-    } else if session_id.starts_with("opencodeapp-") {
-        SOURCE_OPENCODE
-    } else if session_id.starts_with("windsurfapp-") {
-        SOURCE_WINDSURF
-    } else {
-        IMPORTED_HISTORY_CATEGORY
-    }
-}
-
-fn imported_source_session_id(session_id: &str) -> String {
-    session_id
-        .strip_prefix("claudecodeapp-")
-        .or_else(|| session_id.strip_prefix("codexapp-"))
-        .or_else(|| session_id.strip_prefix("opencodeapp-"))
-        .or_else(|| session_id.strip_prefix("windsurfapp-"))
-        .unwrap_or(session_id)
-        .to_string()
 }
 
 fn delete_backfill_owned_artifacts(
@@ -583,35 +432,6 @@ struct AnalysisPayload {
 
 fn load_analysis_payload(session: &SessionRecord) -> Result<AnalysisPayload, String> {
     match session.source.as_str() {
-        SOURCE_CURSOR_IDE => load_external_activity_analysis_payload(
-            &session.session_id,
-            cursor_ide_history::load_history_for_session(&session.session_id)?,
-        ),
-        SOURCE_CLAUDE_CODE => {
-            let conn = get_connection().map_err(|err| err.to_string())?;
-            load_external_activity_analysis_payload(
-                &session.session_id,
-                claude_code_history::load_claude_code_history_for_session(
-                    &conn,
-                    &session.session_id,
-                )?,
-            )
-        }
-        SOURCE_CODEX_APP => {
-            let conn = get_connection().map_err(|err| err.to_string())?;
-            load_external_activity_analysis_payload(
-                &session.session_id,
-                codex_app_history::load_codex_app_for_session(&conn, &session.session_id)?,
-            )
-        }
-        SOURCE_OPENCODE => load_external_activity_analysis_payload(
-            &session.session_id,
-            opencode_history::load_opencode_history_for_session(&session.session_id)?,
-        ),
-        SOURCE_WINDSURF => load_external_activity_analysis_payload(
-            &session.session_id,
-            windsurf_history::load_windsurf_history_for_session(&session.session_id)?,
-        ),
         SOURCE_ORGII_CLI_SESSIONS | SOURCE_ORGII_RUST_AGENTS => Ok(AnalysisPayload {
             events: load_orgii_replay_analysis_events(&session.session_id)?,
         }),
@@ -635,40 +455,6 @@ fn load_orgii_replay_analysis_events(
         .take(MAX_EVENTS_PER_SESSION)
         .filter_map(|event| extract_event_data(&event).map(|data| (event.id, data)))
         .collect())
-}
-
-fn load_external_activity_analysis_payload(
-    session_id: &str,
-    chunks: Vec<ActivityChunk>,
-) -> Result<AnalysisPayload, String> {
-    let raw_chunks = chunks
-        .into_iter()
-        .map(activity_chunk_to_raw)
-        .collect::<Vec<_>>();
-    let result = ingestion::ingest_raw_chunks(&raw_chunks, session_id);
-    Ok(AnalysisPayload {
-        events: result
-            .events
-            .into_iter()
-            .take(MAX_EVENTS_PER_SESSION)
-            .filter_map(|event| extract_event_data(&event).map(|data| (event.id, data)))
-            .collect(),
-    })
-}
-
-fn activity_chunk_to_raw(chunk: ActivityChunk) -> RawActivityChunk {
-    RawActivityChunk {
-        chunk_id: Some(chunk.chunk_id),
-        session_id: Some(chunk.session_id),
-        action_type: Some(chunk.action_type),
-        function: Some(chunk.function),
-        args: Some(chunk.args),
-        result: Some(chunk.result),
-        created_at: Some(chunk.created_at),
-        thread_id: chunk.thread_id,
-        process_id: chunk.process_id,
-        call_id: None,
-    }
 }
 
 fn upsert_analysis_marker_checkpoint(

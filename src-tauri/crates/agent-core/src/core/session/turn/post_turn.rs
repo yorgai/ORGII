@@ -416,7 +416,10 @@ pub(super) async fn spawn_auto_dream(input: AutoDreamInput<'_>) {
             state.mark_scan_now();
         }
 
-        info!("[unified_processor] Spawning auto_dream for session {}", sid);
+        info!(
+            "[unified_processor] Spawning auto_dream for session {}",
+            sid
+        );
 
         let params = crate::memory::MemoryAgentParams {
             messages: &messages,

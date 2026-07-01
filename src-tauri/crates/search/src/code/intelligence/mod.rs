@@ -15,9 +15,11 @@ pub use language::{Language, TSLanguage, TSLanguageConfig, ALL_LANGUAGES};
 pub use namespace::*;
 pub use scope_resolution::ScopeGraph;
 
+use std::time::{Duration, Instant};
+
 use scope_resolution::ResolutionMethod;
 use streaming_iterator::StreamingIterator;
-use tree_sitter::{Parser, Tree};
+use tree_sitter::{ParseOptions, ParseState, Parser, Tree};
 
 use super::super::text_range::TextRange;
 
@@ -42,6 +44,16 @@ pub enum TreeSitterFileError {
     FileTooLarge,
 }
 
+const PARSE_TIMEOUT: Duration = Duration::from_secs(1);
+
+fn parse_with_timeout(parser: &mut Parser, src: &[u8]) -> Option<Tree> {
+    let deadline = Instant::now() + PARSE_TIMEOUT;
+    let mut read = |byte_offset: usize, _position| &src[byte_offset..];
+    let mut progress = |_state: &ParseState| Instant::now() < deadline;
+    let options = ParseOptions::new().progress_callback(&mut progress);
+    parser.parse_with_options(&mut read, None, Some(options))
+}
+
 impl<'a> TreeSitterFile<'a> {
     /// Create a TreeSitterFile out of a sourcefile
     pub fn try_build(src: &'a [u8], lang_id: &str) -> Result<Self, TreeSitterFileError> {
@@ -60,12 +72,7 @@ impl<'a> TreeSitterFile<'a> {
             .set_language(&(language.grammar)())
             .map_err(|_| TreeSitterFileError::LanguageMismatch)?;
 
-        // do not permit files that take >1s to parse
-        parser.set_timeout_micros(10u64.pow(6));
-
-        let tree = parser
-            .parse(src, None)
-            .ok_or(TreeSitterFileError::ParseTimeout)?;
+        let tree = parse_with_timeout(&mut parser, src).ok_or(TreeSitterFileError::ParseTimeout)?;
 
         Ok(Self {
             src,
@@ -93,11 +100,7 @@ impl<'a> TreeSitterFile<'a> {
             .set_language(&(language.grammar)())
             .map_err(|_| TreeSitterFileError::LanguageMismatch)?;
 
-        parser.set_timeout_micros(10u64.pow(6));
-
-        let tree = parser
-            .parse(src, None)
-            .ok_or(TreeSitterFileError::ParseTimeout)?;
+        let tree = parse_with_timeout(&mut parser, src).ok_or(TreeSitterFileError::ParseTimeout)?;
 
         Ok(Self {
             src,

@@ -113,7 +113,7 @@ tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", default-features = false }
 petgraph = { version = "0.6.4", default-features = false, features = ["serde-1"] }
 chrono = { version = "0.4", features = ["serde"] }
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.40.1", features = ["bundled"] }
 axum = { version = "0.8", features = ["ws"] }
 
 # Modern Objective-C bindings (replaces the unmaintained `objc 0.2` /
@@ -325,6 +325,8 @@ inbox = { path = "crates/inbox" }
 # called once at boot from `app::run()`.
 project_management = { path = "crates/project-management" }
 orgtrack_core = { path = "crates/orgtrack-core" }
+brick_core = { package = "brick-core", path = "../vendor/brick/crates/core" }
+brick_protocol = { package = "brick-protocol", path = "../vendor/brick/crates/protocol" }
 
 # Language Server Protocol manager + lint tooling. Owns LSP server processes,
 # JSON-RPC parsing, lint-tool catalog (eslint/ruff/mypy/golangci-lint/clippy),
@@ -447,6 +449,7 @@ terminal = { path = "crates/terminal" }
 
 
 parking_lot = "0.12"           # Fast RwLock for state store
+anyhow = "1.0"
 rusqlite = { workspace = true } # SQLite driver
 # `sqlx` (Postgres + MySQL async drivers) used to live here, but `app/src`
 # never imported it — the only consumer was `work_station/database/mod.rs`,

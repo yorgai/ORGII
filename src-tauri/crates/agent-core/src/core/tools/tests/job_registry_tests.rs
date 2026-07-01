@@ -228,7 +228,9 @@ fn test_claim_subagent_wake_lifecycle() {
     );
 
     // Other sessions are never matched.
-    assert!(!registry::claim_subagent_wake_for_session("some-other-session"));
+    assert!(!registry::claim_subagent_wake_for_session(
+        "some-other-session"
+    ));
 
     registry::remove(&handle);
 }

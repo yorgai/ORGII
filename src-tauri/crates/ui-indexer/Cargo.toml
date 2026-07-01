@@ -15,7 +15,7 @@ log = "0.4"
 regex = "1.9.5"
 ignore = "0.4"
 rayon = "1.8"
-tree-sitter = "0.24"
+tree-sitter = "0.25"
 tree-sitter-typescript = "0.23"
 
 [dev-dependencies]

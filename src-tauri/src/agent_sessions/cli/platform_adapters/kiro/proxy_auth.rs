@@ -41,7 +41,7 @@ fn kiro_sqlite_relative_path() -> PathBuf {
 fn create_kiro_auth_schema(conn: &rusqlite::Connection) -> Result<(), String> {
     let now_secs = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|duration| duration.as_secs())
+        .map(|duration| i64::try_from(duration.as_secs()).unwrap_or(i64::MAX))
         .unwrap_or(0);
 
     conn.execute_batch(

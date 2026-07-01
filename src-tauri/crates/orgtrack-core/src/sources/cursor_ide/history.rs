@@ -46,19 +46,6 @@ use super::summaries::{
 
 pub use super::models::CursorIdeTurnSummary;
 
-// Items brought into scope so the test module's `use super::*` can reach them.
-#[cfg(test)]
-use super::helpers::{
-    assistant_text_bubble_to_chunk, assistant_tool_bubble_to_chunk, cursor_tool_name_to_canonical,
-    normalize_created_at, parse_inner_json, user_bubble_to_chunk,
-};
-#[cfg(test)]
-use super::io::load_content_blob;
-#[cfg(test)]
-use super::models::{RawBubble, RawComposerForOrder, RawCursorSubagentInfo, RawToolFormerData};
-#[cfg(test)]
-use serde_json::{json, Value};
-
 // ============================================================================
 // Constants
 // ============================================================================
@@ -539,7 +526,3 @@ pub fn load_turn_window_for_session(
         loaded_bubble_count: turn_headers.len(),
     })
 }
-
-#[cfg(test)]
-#[path = "history_tests.rs"]
-mod tests;

@@ -374,10 +374,8 @@ mod tests {
             Err(poisoned) => poisoned.into_inner(),
         };
         let previous = std::env::var("ORGII_HOME").ok();
-        let root = std::env::temp_dir().join(format!(
-            "orgii-tool-usage-test-{}",
-            std::process::id()
-        ));
+        let root =
+            std::env::temp_dir().join(format!("orgii-tool-usage-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).expect("create temp ORGII_HOME");
         std::env::set_var("ORGII_HOME", &root);
@@ -432,15 +430,18 @@ mod tests {
             )
             .expect("insert usage telemetry");
 
-            let spans = get_llm_usage_spans("session-1", Some("turn-1"))
-                .expect("load llm usage spans");
+            let spans =
+                get_llm_usage_spans("session-1", Some("turn-1")).expect("load llm usage spans");
             assert_eq!(spans.len(), 1);
             assert_eq!(spans[0].iteration_index, 1);
             assert_eq!(
                 spans[0].related_tool_call_ids_json.as_deref(),
                 Some(related_tool_call_ids_json)
             );
-            assert_eq!(spans[0].context_usage_json.as_deref(), Some(context_usage_json));
+            assert_eq!(
+                spans[0].context_usage_json.as_deref(),
+                Some(context_usage_json)
+            );
 
             let attributions = get_tool_usage_attributions_for_call("session-1", "call-1")
                 .expect("load tool usage attribution");

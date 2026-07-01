@@ -1,4 +1,4 @@
-import { codexAppChunks } from "@src/api/tauri/codexApp";
+import { brickHistoryChunks } from "@src/api/tauri/brickHistory";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import type { Session } from "@src/store/session";
 import type { ActivityChunk } from "@src/types/session/session";
@@ -103,7 +103,10 @@ export async function forkCodexAppHistoryIntoOrgiiSession(params: {
   sourceSession?: Session;
   userMessage: string;
 }): Promise<string> {
-  const chunks = await codexAppChunks(params.sourceSessionId);
+  const chunks = await brickHistoryChunks({
+    sourceId: "codex_app",
+    sessionId: params.sourceSessionId,
+  });
   const content = buildCodexHandoffPrompt(chunks, params.userMessage);
   const result = await SessionService.create({
     task: content,

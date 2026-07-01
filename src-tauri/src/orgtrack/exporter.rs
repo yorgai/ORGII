@@ -1673,12 +1673,14 @@ fn table_columns(
         .map_err(|err| format!("Failed to inspect {}: {}", table, err))?;
     let rows = stmt
         .query_map([], |row| {
-            Ok((row.get::<_, String>(1)?, row.get::<_, usize>(0)?))
+            Ok((row.get::<_, String>(1)?, row.get::<_, i64>(0)?))
         })
         .map_err(|err| format!("Failed to inspect {}: {}", table, err))?;
     let mut columns = BTreeMap::new();
     for row in rows {
         let (name, index) = row.map_err(|err| format!("Failed to inspect {}: {}", table, err))?;
+        let index = usize::try_from(index)
+            .map_err(|err| format!("Invalid column index for {}.{}: {}", table, name, err))?;
         columns.insert(name, index);
     }
     Ok(columns)

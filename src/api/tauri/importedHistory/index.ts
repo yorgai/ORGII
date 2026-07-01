@@ -1,47 +1,24 @@
 import type { ActivityChunk } from "@src/types/session/session";
 
 import {
-  claudeCodeHistoryChunks,
-  claudeCodeHistoryListSessions,
-} from "../claudeCodeHistory";
-import type {
-  ClaudeCodeHistorySessionPage,
-  ClaudeCodeHistorySessionRow,
-} from "../claudeCodeHistory";
-import { codexAppChunks, codexAppListSessions } from "../codexApp";
-import type { CodexAppSessionPage, CodexAppSessionRow } from "../codexApp";
-import {
-  opencodeHistoryChunks,
-  opencodeHistoryListSessions,
-} from "../opencodeHistory";
-import type {
-  OpenCodeHistorySessionPage,
-  OpenCodeHistorySessionRow,
-} from "../opencodeHistory";
+  type BrickHistorySessionPage,
+  type BrickHistorySessionRow,
+  type BrickHistorySourceId,
+  brickHistoryChunks,
+  brickHistorySessions,
+} from "../brickHistory";
 import type { DispatchCategory } from "../session";
-import {
-  windsurfHistoryChunks,
-  windsurfHistoryListSessions,
-} from "../windsurfHistory";
-import type {
-  WindsurfHistorySessionPage,
-  WindsurfHistorySessionRow,
-} from "../windsurfHistory";
-import {
-  workBuddyHistoryChunks,
-  workBuddyHistoryListSessions,
-} from "../workbuddyHistory";
-import type {
-  WorkBuddyHistorySessionPage,
-  WorkBuddyHistorySessionRow,
-} from "../workbuddyHistory";
 
-export type ImportedHistorySourceId =
+export type ImportedHistorySourceId = Extract<
+  BrickHistorySourceId,
   | "codex_app"
   | "claude_code"
+  | "cursor_agent"
   | "opencode"
   | "windsurf"
-  | "workbuddy";
+  | "workbuddy"
+  | "gemini"
+>;
 
 export type ImportedHistoryListCategory =
   `external_history:${ImportedHistorySourceId}`;
@@ -89,82 +66,93 @@ export interface ImportedHistorySource {
 }
 
 function asImportedPage(
-  page:
-    | CodexAppSessionPage
-    | ClaudeCodeHistorySessionPage
-    | OpenCodeHistorySessionPage
-    | WindsurfHistorySessionPage
-    | WorkBuddyHistorySessionPage
+  page: BrickHistorySessionPage
 ): ImportedHistorySessionPage {
-  return page;
+  return {
+    sessions: page.sessions.map((row) => ({
+      ...row,
+      category: "external_history",
+    })),
+    hasMore: page.hasMore,
+  };
+}
+
+function createBrickImportedSource(config: {
+  sourceId: ImportedHistorySourceId;
+  prefix: string;
+  iconId: string;
+  displayName: string;
+  groupLabel: string;
+}): ImportedHistorySource {
+  return {
+    ...config,
+    listCategory: `external_history:${config.sourceId}`,
+    dispatchCategory: "external_history",
+    async listSessions(args) {
+      return asImportedPage(
+        await brickHistorySessions({
+          sourceId: config.sourceId,
+          limit: args?.limit,
+          offset: args?.offset,
+        })
+      );
+    },
+    loadChunks(sessionId) {
+      return brickHistoryChunks({ sourceId: config.sourceId, sessionId });
+    },
+  };
 }
 
 export const IMPORTED_HISTORY_SOURCES: readonly ImportedHistorySource[] = [
-  {
+  createBrickImportedSource({
     sourceId: "codex_app",
-    listCategory: "external_history:codex_app",
-    dispatchCategory: "external_history",
     prefix: "codexapp-",
     iconId: "codex",
     displayName: "Codex",
     groupLabel: "Codex App",
-    async listSessions(args) {
-      return asImportedPage(await codexAppListSessions(args));
-    },
-    loadChunks: codexAppChunks,
-  },
-  {
+  }),
+  createBrickImportedSource({
     sourceId: "claude_code",
-    listCategory: "external_history:claude_code",
-    dispatchCategory: "external_history",
     prefix: "claudecodeapp-",
     iconId: "claude_code",
     displayName: "Claude Code",
     groupLabel: "Claude Code",
-    async listSessions(args) {
-      return asImportedPage(await claudeCodeHistoryListSessions(args));
-    },
-    loadChunks: claudeCodeHistoryChunks,
-  },
-  {
+  }),
+  createBrickImportedSource({
+    sourceId: "cursor_agent",
+    prefix: "cursoragentapp-",
+    iconId: "cursor",
+    displayName: "Cursor Agent",
+    groupLabel: "Cursor Agent",
+  }),
+  createBrickImportedSource({
     sourceId: "opencode",
-    listCategory: "external_history:opencode",
-    dispatchCategory: "external_history",
     prefix: "opencodeapp-",
     iconId: "opencode",
     displayName: "OpenCode",
     groupLabel: "OpenCode",
-    async listSessions(args) {
-      return asImportedPage(await opencodeHistoryListSessions(args));
-    },
-    loadChunks: opencodeHistoryChunks,
-  },
-  {
+  }),
+  createBrickImportedSource({
     sourceId: "windsurf",
-    listCategory: "external_history:windsurf",
-    dispatchCategory: "external_history",
     prefix: "windsurfapp-",
     iconId: "windsurf",
     displayName: "Windsurf",
     groupLabel: "Windsurf",
-    async listSessions(args) {
-      return asImportedPage(await windsurfHistoryListSessions(args));
-    },
-    loadChunks: windsurfHistoryChunks,
-  },
-  {
+  }),
+  createBrickImportedSource({
     sourceId: "workbuddy",
-    listCategory: "external_history:workbuddy",
-    dispatchCategory: "external_history",
     prefix: "workbuddyapp-",
     iconId: "workbuddy",
     displayName: "WorkBuddy",
     groupLabel: "WorkBuddy",
-    async listSessions(args) {
-      return asImportedPage(await workBuddyHistoryListSessions(args));
-    },
-    loadChunks: workBuddyHistoryChunks,
-  },
+  }),
+  createBrickImportedSource({
+    sourceId: "gemini",
+    prefix: "geminiapp-",
+    iconId: "gemini",
+    displayName: "Gemini",
+    groupLabel: "Gemini",
+  }),
 ];
 
 export function getImportedHistorySourceBySessionId(
@@ -199,10 +187,16 @@ export function isImportedHistorySourceSession(
   return sessionId.startsWith(source.prefix);
 }
 
-export type {
-  CodexAppSessionRow,
-  ClaudeCodeHistorySessionRow,
-  OpenCodeHistorySessionRow,
-  WindsurfHistorySessionRow,
-  WorkBuddyHistorySessionRow,
-};
+export type CodexAppSessionRow = ImportedHistorySessionRow;
+export type ClaudeCodeHistorySessionRow = ImportedHistorySessionRow;
+export type OpenCodeHistorySessionRow = ImportedHistorySessionRow;
+export type WindsurfHistorySessionRow = ImportedHistorySessionRow;
+export type WorkBuddyHistorySessionRow = ImportedHistorySessionRow;
+
+export type CodexAppSessionPage = ImportedHistorySessionPage;
+export type ClaudeCodeHistorySessionPage = ImportedHistorySessionPage;
+export type OpenCodeHistorySessionPage = ImportedHistorySessionPage;
+export type WindsurfHistorySessionPage = ImportedHistorySessionPage;
+export type WorkBuddyHistorySessionPage = ImportedHistorySessionPage;
+
+export type { BrickHistorySessionRow };

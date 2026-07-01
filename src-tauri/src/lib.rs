@@ -106,6 +106,7 @@ fn apply_linux_webkit_cpu_guards() {}
 pub mod agent_sessions; // Agent session management (CLI, event pipeline, persistence, aggregation)
 pub mod api;
 pub mod benchmark;
+pub mod brick_history;
 pub mod cursor_ide_watch; // cursor_ide streaming delta watch commands
 pub mod infrastructure; // In-tree-only cross-cutting infrastructure (paths, platform, archive, index_manager, jsonrpc, housekeeping). Leaf pieces live in their own workspace crates.
 pub mod orgtrack;

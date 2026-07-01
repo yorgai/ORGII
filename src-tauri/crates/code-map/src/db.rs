@@ -259,6 +259,7 @@ impl CodeMapDb {
             check_cancelled(cancellation, &workspace_path)?;
             let errors_json = serde_json::to_string(&extracted.record.errors)
                 .unwrap_or_else(|_| String::from("[]"));
+            let file_size = sqlite_i64(extracted.record.size, "file size")?;
             transaction.execute(
                 "INSERT INTO files(path, content_hash, language, size, modified_at, indexed_at, node_count, errors_json, stale)
                  VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
@@ -266,7 +267,7 @@ impl CodeMapDb {
                     extracted.record.path,
                     extracted.record.content_hash,
                     extracted.record.language.as_str(),
-                    extracted.record.size,
+                    file_size,
                     extracted.record.modified_at,
                     extracted.record.indexed_at,
                     extracted.nodes.len() as u32,
@@ -761,6 +762,12 @@ fn bool_to_int(value: bool) -> i64 {
     } else {
         0
     }
+}
+
+fn sqlite_i64(value: u64, label: &str) -> Result<i64> {
+    i64::try_from(value).map_err(|_| {
+        CodeMapError::InvalidRequest(format!("{label} exceeds SQLite INTEGER range: {value}"))
+    })
 }
 
 fn format_fts_query(query: &str) -> String {

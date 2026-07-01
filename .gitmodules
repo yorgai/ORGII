@@ -1,0 +1,4 @@
+[submodule "vendor/brick"]
+	path = vendor/brick
+	url = https://github.com/yorgai/Brick-Vault.git
+	branch = main

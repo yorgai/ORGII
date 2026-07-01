@@ -74,7 +74,11 @@ pub(super) async fn execute_parallel_group(
         info!("[agent-core] Tool call: {}({})", call.name, args_preview);
 
         if is_cancelled(cancel_flag) {
-            return ParallelResult::EarlyExit(denied_count, Vec::new(), ToolBatchOutcome::Cancelled);
+            return ParallelResult::EarlyExit(
+                denied_count,
+                Vec::new(),
+                ToolBatchOutcome::Cancelled,
+            );
         }
 
         let display_name = match call
@@ -157,7 +161,11 @@ pub(super) async fn execute_parallel_group(
         .await
         {
             if is_cancelled(cancel_flag) {
-                return ParallelResult::EarlyExit(denied_count, Vec::new(), ToolBatchOutcome::Cancelled);
+                return ParallelResult::EarlyExit(
+                    denied_count,
+                    Vec::new(),
+                    ToolBatchOutcome::Cancelled,
+                );
             }
             handler.on_tool_result(session_id, &call.id, &call.name, &display_name, &denied_msg);
             add_tool_result(messages, &call.id, &call.name, &denied_msg, true);
@@ -196,7 +204,11 @@ pub(super) async fn execute_parallel_group(
         }
 
         if is_cancelled(cancel_flag) {
-            return ParallelResult::EarlyExit(denied_count, Vec::new(), ToolBatchOutcome::Cancelled);
+            return ParallelResult::EarlyExit(
+                denied_count,
+                Vec::new(),
+                ToolBatchOutcome::Cancelled,
+            );
         }
         let call = calls[prep.index];
         handler.on_tool_execute_start(session_id, &call.id, &call.name, &prep.effective_args);

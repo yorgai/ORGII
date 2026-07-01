@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { claudeCodeRecentPaths } from "@src/api/tauri/claudeCodeHistory";
-import { codexAppRecentPaths } from "@src/api/tauri/codexApp";
-import { opencodeRecentPaths } from "@src/api/tauri/opencodeHistory";
-import { windsurfRecentPaths } from "@src/api/tauri/windsurfHistory";
+import { brickHistoryRecentPaths } from "@src/api/tauri/brickHistory";
 import type { RepoItem } from "@src/scaffold/GlobalSpotlight/types";
 import { REPO_KIND } from "@src/store/repo";
 
@@ -77,23 +74,22 @@ export function useExternalRecentPaths({
 
     let cancelled = false;
 
-    Promise.all([
-      codexAppRecentPaths({ limit: EXTERNAL_RECENT_PATH_LIMIT }),
-      claudeCodeRecentPaths({ limit: EXTERNAL_RECENT_PATH_LIMIT }),
-      opencodeRecentPaths({ limit: EXTERNAL_RECENT_PATH_LIMIT }),
-      windsurfRecentPaths({ limit: EXTERNAL_RECENT_PATH_LIMIT }),
-    ]).then(([codexPaths, claudePaths, opencodePaths, windsurfPaths]) => {
-      if (!cancelled) {
-        setPaths(
-          mergeRecentPaths([
-            ...codexPaths,
-            ...claudePaths,
-            ...opencodePaths,
-            ...windsurfPaths,
-          ])
-        );
+    brickHistoryRecentPaths({ limit: EXTERNAL_RECENT_PATH_LIMIT }).then(
+      (recentPaths) => {
+        if (!cancelled) {
+          setPaths(
+            mergeRecentPaths(
+              recentPaths.map((recentPath) => ({
+                path: recentPath.repoPath,
+                name: recentPath.repoName,
+                lastUsedAt: recentPath.lastSeenAt,
+                sessionCount: recentPath.sessionCount,
+              }))
+            )
+          );
+        }
       }
-    });
+    );
 
     return () => {
       cancelled = true;

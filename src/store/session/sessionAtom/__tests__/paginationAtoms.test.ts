@@ -24,25 +24,12 @@ describe("session pagination categories", () => {
   it("initializes pagination state for each source-specific imported category", () => {
     const state = resetPaginationState();
 
-    expect(state["external_history:codex_app"]).toEqual({
-      loaded: 0,
-      hasMore: false,
-      loading: false,
-    });
-    expect(state["external_history:claude_code"]).toEqual({
-      loaded: 0,
-      hasMore: false,
-      loading: false,
-    });
-    expect(state["external_history:opencode"]).toEqual({
-      loaded: 0,
-      hasMore: false,
-      loading: false,
-    });
-    expect(state["external_history:windsurf"]).toEqual({
-      loaded: 0,
-      hasMore: false,
-      loading: false,
-    });
+    for (const source of IMPORTED_HISTORY_SOURCES) {
+      expect(state[source.listCategory]).toEqual({
+        loaded: 0,
+        hasMore: false,
+        loading: false,
+      });
+    }
   });
 });

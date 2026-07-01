@@ -58,11 +58,11 @@ tokio = { workspace = true }
 
 # The whole point of this crate. `default-features = false` strips out
 # sqlx's native-tls path; `tls-rustls` keeps everything ring-based.
-# `json` is needed for `try_get::<serde_json::Value, _>` against
-# Postgres JSONB / MySQL JSON columns. The actual `postgres` /
-# `mysql` engine features come from THIS crate's [features] block
-# above, not enabled here directly.
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "json"] }
+# The actual `postgres` / `mysql` engine features come from THIS crate's
+# [features] block above, not enabled here directly. Do not enable sqlx's
+# umbrella `json` feature here: in sqlx 0.8 it also activates sqlite support,
+# which conflicts with the workspace rusqlite/libsqlite3-sys link version.
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls"] }
 
 [lib]
 path = "src/lib.rs"

@@ -305,24 +305,20 @@ fn reconstruct(messages: &[AgentMessageRow]) -> Vec<serde_json::Value> {
     // payloads are large and can exceed gateway/body limits quickly. Preserve
     // multimodal content for the most recent image-bearing user message, and
     // render older image messages as text-only history.
-    let last_image_msg_index = messages
-        .iter()
-        .enumerate()
-        .rev()
-        .find_map(|(idx, msg)| {
-            if msg.role == message_role::USER
-                && msg
-                    .images
-                    .as_deref()
-                    .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
-                    .map(|refs| !refs.is_empty())
-                    .unwrap_or(false)
-            {
-                Some(idx)
-            } else {
-                None
-            }
-        });
+    let last_image_msg_index = messages.iter().enumerate().rev().find_map(|(idx, msg)| {
+        if msg.role == message_role::USER
+            && msg
+                .images
+                .as_deref()
+                .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
+                .map(|refs| !refs.is_empty())
+                .unwrap_or(false)
+        {
+            Some(idx)
+        } else {
+            None
+        }
+    });
 
     for (msg_idx, msg) in messages.iter().enumerate() {
         match msg.role.as_str() {
@@ -348,14 +344,14 @@ fn reconstruct(messages: &[AgentMessageRow]) -> Vec<serde_json::Value> {
                     if let Some(images_json) = &msg.images {
                         if let Ok(image_refs) = serde_json::from_str::<Vec<String>>(images_json) {
                             if !image_refs.is_empty() {
-                            result.push(serde_json::json!({
-                                "role": message_role::USER,
-                                "content": build_multimodal_content(&msg.content, &image_refs),
-                            }));
-                            continue;
+                                result.push(serde_json::json!({
+                                    "role": message_role::USER,
+                                    "content": build_multimodal_content(&msg.content, &image_refs),
+                                }));
+                                continue;
+                            }
                         }
                     }
-                }
                 }
                 result.push(serde_json::json!({
                     "role": message_role::USER,

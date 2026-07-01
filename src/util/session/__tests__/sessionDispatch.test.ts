@@ -2,10 +2,13 @@ import {
   CLAUDE_CODE_HISTORY_SESSION_PREFIX,
   CLI_SESSION_PREFIX,
   CODEX_APP_SESSION_PREFIX,
+  CURSOR_AGENT_HISTORY_SESSION_PREFIX,
+  GEMINI_HISTORY_SESSION_PREFIX,
   OPENCODE_HISTORY_SESSION_PREFIX,
   OS_AGENT_SESSION_PREFIX,
   SDE_AGENT_SESSION_PREFIX,
   WINDSURF_HISTORY_SESSION_PREFIX,
+  WORKBUDDY_HISTORY_SESSION_PREFIX,
   getDispatchCategory,
   getExternalHistorySourceId,
   getRustAgentType,
@@ -13,9 +16,12 @@ import {
   isClaudeCodeHistorySession,
   isCliSession,
   isCodexAppSession,
+  isCursorAgentHistorySession,
   isExternalHistorySession,
+  isGeminiHistorySession,
   isOpenCodeHistorySession,
   isWindsurfHistorySession,
+  isWorkBuddyHistorySession,
 } from "../sessionDispatch";
 
 describe("sessionDispatch constants", () => {
@@ -25,8 +31,11 @@ describe("sessionDispatch constants", () => {
     expect(CLI_SESSION_PREFIX).toBe("cliagent-");
     expect(CODEX_APP_SESSION_PREFIX).toBe("codexapp-");
     expect(CLAUDE_CODE_HISTORY_SESSION_PREFIX).toBe("claudecodeapp-");
+    expect(CURSOR_AGENT_HISTORY_SESSION_PREFIX).toBe("cursoragentapp-");
     expect(OPENCODE_HISTORY_SESSION_PREFIX).toBe("opencodeapp-");
     expect(WINDSURF_HISTORY_SESSION_PREFIX).toBe("windsurfapp-");
+    expect(WORKBUDDY_HISTORY_SESSION_PREFIX).toBe("workbuddyapp-");
+    expect(GEMINI_HISTORY_SESSION_PREFIX).toBe("geminiapp-");
   });
 });
 
@@ -71,8 +80,11 @@ describe("getDispatchCategory", () => {
     expect(getDispatchCategory("cliagent-x")).toBe("cli_agent");
     expect(getDispatchCategory("codexapp-x")).toBe("external_history");
     expect(getDispatchCategory("claudecodeapp-x")).toBe("external_history");
+    expect(getDispatchCategory("cursoragentapp-x")).toBe("external_history");
     expect(getDispatchCategory("opencodeapp-x")).toBe("external_history");
     expect(getDispatchCategory("windsurfapp-x")).toBe("external_history");
+    expect(getDispatchCategory("workbuddyapp-x")).toBe("external_history");
+    expect(getDispatchCategory("geminiapp-x")).toBe("external_history");
   });
 
   it("returns rust_agent for unknown id (default)", () => {
@@ -97,6 +109,14 @@ describe("external history source detection", () => {
     );
   });
 
+  it("recognizes Cursor Agent imported history sessions", () => {
+    expect(isExternalHistorySession("cursoragentapp-session-1")).toBe(true);
+    expect(isCursorAgentHistorySession("cursoragentapp-session-1")).toBe(true);
+    expect(getExternalHistorySourceId("cursoragentapp-session-1")).toBe(
+      "cursor_agent"
+    );
+  });
+
   it("recognizes OpenCode imported history sessions", () => {
     expect(isExternalHistorySession("opencodeapp-session-1")).toBe(true);
     expect(isOpenCodeHistorySession("opencodeapp-session-1")).toBe(true);
@@ -111,6 +131,20 @@ describe("external history source detection", () => {
     expect(getExternalHistorySourceId("windsurfapp-session-1")).toBe(
       "windsurf"
     );
+  });
+
+  it("recognizes WorkBuddy imported history sessions", () => {
+    expect(isExternalHistorySession("workbuddyapp-session-1")).toBe(true);
+    expect(isWorkBuddyHistorySession("workbuddyapp-session-1")).toBe(true);
+    expect(getExternalHistorySourceId("workbuddyapp-session-1")).toBe(
+      "workbuddy"
+    );
+  });
+
+  it("recognizes Gemini imported history sessions", () => {
+    expect(isExternalHistorySession("geminiapp-session-1")).toBe(true);
+    expect(isGeminiHistorySession("geminiapp-session-1")).toBe(true);
+    expect(getExternalHistorySourceId("geminiapp-session-1")).toBe("gemini");
   });
 
   it("does not treat Cursor IDE as external history", () => {
