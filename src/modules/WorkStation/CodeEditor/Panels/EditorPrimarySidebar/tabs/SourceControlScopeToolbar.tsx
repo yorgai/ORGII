@@ -18,6 +18,10 @@ import {
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import IconButton from "@src/components/IconButton";
+import {
+  formatCompactStatNumber,
+  formatDiffStatsLabel,
+} from "@src/shared/pr/formatStatNumber";
 
 import {
   type ScopePickerWorktreeEntry,
@@ -57,13 +61,19 @@ function ScopePickerDiffStats({
   if (!stats) return null;
 
   return (
-    <DiffStatsBadge
-      additions={stats.additions}
-      deletions={stats.deletions}
-      variant="plain"
-      size="xs"
+    <span
       className="shrink-0"
-    />
+      title={formatDiffStatsLabel(stats.additions, stats.deletions)}
+    >
+      <DiffStatsBadge
+        additions={stats.additions}
+        deletions={stats.deletions}
+        variant="plain"
+        size="xs"
+        formatValue={formatCompactStatNumber}
+        valueClassName="min-w-0"
+      />
+    </span>
   );
 }
 
