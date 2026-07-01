@@ -13,7 +13,6 @@ import {
   resolveScopeBranchLabel,
   resolveScopeBreadcrumbSegments,
   resolveScopeRepoRoot,
-  scopeBreadcrumbFolderMatchesBranch,
   scopePickerRowLabel,
   scopePickerRowTitle,
   shouldShowScopePickerSearch,
@@ -225,23 +224,6 @@ describe("truncateScopeBreadcrumbLabel", () => {
   });
 });
 
-describe("scopeBreadcrumbFolderMatchesBranch", () => {
-  it("matches when the branch leaf equals the folder name", () => {
-    expect(
-      scopeBreadcrumbFolderMatchesBranch(
-        "issue-173-rewind-redo-tool",
-        "fix/issue-173-rewind-redo-tool"
-      )
-    ).toBe(true);
-  });
-
-  it("does not match unrelated folder and branch names", () => {
-    expect(
-      scopeBreadcrumbFolderMatchesBranch("agent-abc", "feat/other-task")
-    ).toBe(false);
-  });
-});
-
 describe("resolveScopeBreadcrumbSegments", () => {
   it("omits a worktree prefix for the main checkout", () => {
     expect(
@@ -256,7 +238,7 @@ describe("resolveScopeBreadcrumbSegments", () => {
     ]);
   });
 
-  it("shows only the branch when the worktree folder repeats branch info", () => {
+  it("shows only the branch for worktree scope", () => {
     expect(
       resolveScopeBreadcrumbSegments({
         repoName: "ORGII",
@@ -267,7 +249,7 @@ describe("resolveScopeBreadcrumbSegments", () => {
     ).toEqual([{ label: "fix/issue-173-redo", tone: "primary" }]);
   });
 
-  it("shows folder and branch without repo when they differ", () => {
+  it("omits worktree folder even when it differs from the branch name", () => {
     expect(
       resolveScopeBreadcrumbSegments({
         repoName: "ORGII",
@@ -275,10 +257,21 @@ describe("resolveScopeBreadcrumbSegments", () => {
         scope: { kind: "worktree", path: "/tmp/orgii/agent-abc" },
         selectedWorktreePath: "/tmp/orgii/agent-abc",
       })
-    ).toEqual([
-      { label: "agent-abc", tone: "muted" },
-      { label: "feat/agent-task", tone: "primary" },
-    ]);
+    ).toEqual([{ label: "feat/agent-task", tone: "primary" }]);
+  });
+
+  it("omits orgii-prefixed folder when branch uses slash segments", () => {
+    expect(
+      resolveScopeBreadcrumbSegments({
+        repoName: "ORGII",
+        branchLabel: "fix/issue-165-session-pill",
+        scope: {
+          kind: "worktree",
+          path: "/tmp/orgii/orgii-issue-165-fix-session-pill",
+        },
+        selectedWorktreePath: "/tmp/orgii/orgii-issue-165-fix-session-pill",
+      })
+    ).toEqual([{ label: "fix/issue-165-session-pill", tone: "primary" }]);
   });
 
   it("ignores a worktree prefix when scope is local", () => {

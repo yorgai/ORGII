@@ -14,6 +14,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -35,7 +36,13 @@ import { useSourceControlState } from "../hooks/useSourceControlState";
 import {
   type SourceControlScope,
   normalizeScopePath,
+  resolveScopeRepoRoot,
 } from "./sourceControlScopePickerHelpers";
+import {
+  isScopeIdentityChanging,
+  scopeIdentityKey,
+  shouldShowScopePaneLoading,
+} from "./sourceControlScopeSwitchHelpers";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -63,6 +70,8 @@ interface SourceControlContentProps {
   navigateWithoutSelecting?: boolean;
   /** Working-tree section filter: "uncommitted" | "staged" | "unstaged". */
   sectionFilter?: "uncommitted" | "staged" | "unstaged";
+  /** Notifies parent when git status loading state changes for this pane. */
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 export function NotGitInitializedContent({
@@ -137,6 +146,7 @@ export const SourceControlTabContent = forwardRef<
       showOnlyStashes,
       navigateWithoutSelecting,
       sectionFilter,
+      onLoadingChange,
     },
     ref
   ) => {
@@ -145,6 +155,10 @@ export const SourceControlTabContent = forwardRef<
       repoId,
       onGitFileSelect,
     });
+
+    useEffect(() => {
+      onLoadingChange?.(sourceControlState.loading);
+    }, [onLoadingChange, sourceControlState.loading]);
 
     useEffect(() => {
       onGitFilesChange?.(sourceControlState.state.files, repoPath);
@@ -278,6 +292,7 @@ export const MainRepoSectionContent = forwardRef<
       showOnlyStashes,
       navigateWithoutSelecting,
       sectionFilter,
+      onLoadingChange,
     },
     ref
   ) => {
@@ -286,6 +301,10 @@ export const MainRepoSectionContent = forwardRef<
       repoId,
       onGitFileSelect,
     });
+
+    useEffect(() => {
+      onLoadingChange?.(sourceControlState.loading);
+    }, [onLoadingChange, sourceControlState.loading]);
 
     useEffect(() => {
       onGitFilesChange?.(sourceControlState.state.files, repoPath);
@@ -468,6 +487,39 @@ export const SourceControlWithWorktrees = forwardRef<
     const pendingWorktreeScope =
       scope.kind === "worktree" && !selectedWorktree && worktreesLoading;
 
+    const scopeKey = scopeIdentityKey(scope);
+    const [trackedScopeKey, setTrackedScopeKey] = useState(scopeKey);
+    const scopeIdentityChanging = isScopeIdentityChanging(
+      trackedScopeKey,
+      scopeKey
+    );
+    const [paneLoading, setPaneLoading] = useState(true);
+    const activeScopeRepoRoot = resolveScopeRepoRoot(scope, repoPath);
+
+    if (scopeIdentityChanging) {
+      setTrackedScopeKey(scopeKey);
+      setPaneLoading(true);
+    }
+
+    const previousScopeKeyForClearRef = useRef(scopeKey);
+    useLayoutEffect(() => {
+      if (previousScopeKeyForClearRef.current === scopeKey) {
+        return;
+      }
+      previousScopeKeyForClearRef.current = scopeKey;
+      onGitFilesChange?.([], activeScopeRepoRoot);
+    }, [activeScopeRepoRoot, onGitFilesChange, scopeKey]);
+
+    const handlePaneLoadingChange = useCallback((loading: boolean) => {
+      setPaneLoading(loading);
+    }, []);
+
+    const showScopePaneLoading = shouldShowScopePaneLoading({
+      pendingWorktreeScope,
+      scopeIdentityChanging,
+      paneLoading,
+    });
+
     const mainRef = useRef<SourceControlContentHandle>(null);
     const worktreeRef = useRef<WorktreeSourceControlSectionHandle>(null);
 
@@ -499,14 +551,26 @@ export const SourceControlWithWorktrees = forwardRef<
     }
 
     return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        {showScopePaneLoading ? (
+          <div className="bg-surface-1 absolute inset-0 z-10 flex min-h-0 flex-col">
+            <Placeholder
+              variant="loading"
+              placement="sidebar"
+              title={t("placeholders.loadingChanges")}
+              fillParentHeight
+            />
+          </div>
+        ) : null}
         {selectedWorktree ? (
           <WorktreeSourceControlSection
+            key={scopeKey}
             ref={worktreeRef}
             worktreePath={selectedWorktree.path}
             hostRepoId={repoId}
             onGitFileSelect={onGitFileSelect}
             onGitFilesChange={handleWorktreeFilesChange}
+            onLoadingChange={handlePaneLoadingChange}
             showFilter={showFilter}
             viewMode={viewMode}
             navigateWithoutSelecting={navigateWithoutSelecting}
@@ -514,12 +578,14 @@ export const SourceControlWithWorktrees = forwardRef<
           />
         ) : (
           <MainRepoSectionContent
+            key={scopeKey}
             ref={mainRef}
             repoPath={repoPath}
             repoId={repoId}
             onGitFileSelect={onGitFileSelect}
             onGitFilesChange={onGitFilesChange}
             onGitHistorySelectionChange={onGitHistorySelectionChange}
+            onLoadingChange={handlePaneLoadingChange}
             showFilter={showFilter}
             viewMode={viewMode}
             showOnlyStashes={showOnlyStashes}

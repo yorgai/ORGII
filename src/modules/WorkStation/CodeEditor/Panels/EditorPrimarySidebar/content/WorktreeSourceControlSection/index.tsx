@@ -33,6 +33,8 @@ export interface WorktreeSourceControlSectionProps {
    * render worktree diffs without requiring a per-file click first.
    */
   onGitFilesChange?: (files: GitFile[], worktreePath: string) => void;
+  /** Notifies parent when git status loading state changes for this worktree. */
+  onLoadingChange?: (loading: boolean) => void;
   showFilter: boolean;
   viewMode: "list-tree" | "list";
   navigateWithoutSelecting?: boolean;
@@ -64,6 +66,7 @@ export const WorktreeSourceControlSection = forwardRef<
       hostRepoId,
       onGitFileSelect,
       onGitFilesChange,
+      onLoadingChange,
       showFilter,
       viewMode,
       navigateWithoutSelecting,
@@ -103,6 +106,10 @@ export const WorktreeSourceControlSection = forwardRef<
     useEffect(() => {
       onGitFilesChange?.(absoluteFiles, worktreePath);
     }, [onGitFilesChange, absoluteFiles, worktreePath]);
+
+    useEffect(() => {
+      onLoadingChange?.(loading);
+    }, [loading, onLoadingChange]);
 
     const handleRefresh = useCallback(() => {
       void refresh();

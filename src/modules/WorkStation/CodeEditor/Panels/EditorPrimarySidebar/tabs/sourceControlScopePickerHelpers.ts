@@ -177,52 +177,18 @@ export function truncateScopeBreadcrumbLabel(
   return `${label.slice(0, maxLength - 1)}…`;
 }
 
-/** True when worktree folder name repeats info already shown in the branch label. */
-export function scopeBreadcrumbFolderMatchesBranch(
-  folderName: string,
-  branchLabel: string
-): boolean {
-  if (!folderName || !branchLabel) return false;
-
-  const normalizedFolder = folderName.toLowerCase();
-  const normalizedBranch = branchLabel.toLowerCase();
-  if (normalizedFolder === normalizedBranch) return true;
-
-  const branchLeaf = normalizedBranch.split("/").pop() ?? normalizedBranch;
-  if (normalizedFolder === branchLeaf) return true;
-  if (
-    branchLeaf.includes(normalizedFolder) ||
-    normalizedFolder.includes(branchLeaf)
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
-/** Breadcrumb segments for the scope toolbar trigger — worktree prefix only when scoped. */
+/** Breadcrumb segments for the scope toolbar trigger — worktree shows branch only. */
 export function resolveScopeBreadcrumbSegments(options: {
   repoName: string;
   branchLabel: string;
   scope: SourceControlScope;
   selectedWorktreePath?: string;
 }): ScopeBreadcrumbSegment[] {
-  const { repoName, branchLabel, scope, selectedWorktreePath } = options;
+  const { repoName, branchLabel, scope } = options;
   const branch = truncateScopeBreadcrumbLabel(branchLabel);
 
-  if (scope.kind === "worktree" && selectedWorktreePath) {
-    const folderName = worktreeFolderName(selectedWorktreePath);
-    if (scopeBreadcrumbFolderMatchesBranch(folderName, branchLabel)) {
-      return [{ label: branch, tone: "primary" }];
-    }
-
-    return [
-      {
-        label: truncateScopeBreadcrumbLabel(folderName),
-        tone: "muted",
-      },
-      { label: branch, tone: "primary" },
-    ];
+  if (scope.kind === "worktree") {
+    return [{ label: branch, tone: "primary" }];
   }
 
   return [
