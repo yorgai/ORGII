@@ -50,8 +50,79 @@
 - **Hover-reveal absolute delete on list row** — also seen in: `QueryHistoryContent`, `DatabasePrimarySidebar` patterns, chat attachment thumbnails (2–3). Watch-list; not yet ≥ 3 identical scope-picker rows.
 - **Breadcrumb tone segments in compact trigger** — unique to this toolbar; no abstract candidate.
 
+## Pass 2 — ScopePickerItem row structure (lines 126–154)
+
+User flagged the custom `div` + nested `<button>` row instead of DS dropdown primitives.
+
+| Line    | Element                                   | Verdict                      | Reason                                                                                                                                                                                                                                                          | Suggested change                                                                       |
+| ------- | ----------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 126–137 | `div.SCOPE_PICKER_ROW` + inner `<button>` | **fix**                      | Duplicates hover/height (`DROPDOWN_ITEM.hoverBgClass` on wrapper, `h-8` again on button). `DropdownItem` already renders a single `div` with `DROPDOWN_CLASSES.item`, trailing `suffix`, and `aria-selected`. Homemade split row diverges from other droplists. | Refactor to `DropdownItem` inside a `relative` wrapper only.                           |
+| 127–137 | Raw `<button>` row select                 | **fix**                      | DS `DropdownItem` covers label + suffix (diff badge + check).                                                                                                                                                                                                   | Replace inner `<button>` with `<DropdownItem onClick={onSelect} selected suffix={…}>`. |
+| 126     | Outer `div` wrapper                       | **fix** (after DropdownItem) | Only needed for absolute delete overlay. Drop `SCOPE_PICKER_ROW` hover duplication — let `DropdownItem` own row chrome.                                                                                                                                         | `relative group/scope-row` + `DropdownItem` + absolute `IconButton`.                   |
+| 138–153 | Absolute `IconButton` delete              | keep with reason             | Secondary destructive action on hover; `DropdownItem` has no built-in trailing action slot beyond `suffix`. Overlay pattern is valid once row uses `DropdownItem`.                                                                                              | —                                                                                      |
+| 325–346 | Trigger `<button>`                        | keep with reason             | Unchanged from pass 1 — breadcrumb trigger is not a menu row.                                                                                                                                                                                                   | —                                                                                      |
+
+### Why it looks wrong
+
+`DropdownItem` (`src/components/Dropdown/DropdownItem.tsx:154–198`) is a **single** interactive `div[role=option]` with built-in label + suffix layout. `ScopePickerItem` reimplements that with an outer hover `div` and an inner full-width `<button>`, which:
+
+1. Stacks two interactive-looking layers (wrapper hover + button click).
+2. Re-specifies row height/typography (`text-[13px]`, `h-8`) that `DROPDOWN_CLASSES.item` already defines.
+3. Makes keyboard focus land on the inner button while hover styles live on the parent — split semantics.
+
+Delete overlay does **not** require the inner `<button>`; `DropdownItem` + `relative` parent + absolute `IconButton` is sufficient (same as current delete placement).
+
+### Recommended refactor (minimal)
+
+```tsx
+<div className="group/scope-row relative">
+  <DropdownItem
+    selected={selected}
+    onClick={onSelect}
+    className="pr-8" // optional: room for delete overlay on hover
+    suffix={
+      <>
+        <ScopePickerDiffStats summary={summary} />
+      </>
+    }
+  >
+    <span title={title}>{label}</span>
+  </DropdownItem>
+  {onRemove ? <IconButton className={SCOPE_PICKER_REMOVE_BUTTON} … /> : null}
+</div>
+```
+
+Use `DropdownItemGroup` + `DROPDOWN_CLASSES.sectionLabel` for section headers to replace raw `ScopePickerSectionLabel` div (optional second fix).
+
 ## Summary
+
+### Pass 1 (initial)
 
 - **0** fixes recommended
 - **16** kept with documented reason
 - **1** abstract candidate (custom droplist search field, ≥ 3 occurrences repo-wide)
+
+### Pass 2 (ScopePickerItem)
+
+- **3** fixes recommended (row wrapper + replace raw button with `DropdownItem`)
+- **2** kept with reason (delete overlay, trigger button)
+- **0** new abstract candidates
+
+## Pass 3 — Fixes applied (2026-07-01)
+
+Refactored `ScopePickerItem` per Pass 2 recommendations:
+
+| Line (before) | Change                                                                                                                                                                  | Status                 |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 126–137       | Removed `SCOPE_PICKER_ROW` wrapper with duplicated `h-8` / `hover:bg-surface-hover`; replaced inner `<button>` with `DropdownItem` using `DROPDOWN_CLASSES.item` tokens | **fixed**              |
+| 126           | Outer wrapper now `group/scope-row relative w-full` only — hover/height owned by `DropdownItem`                                                                         | **fixed**              |
+| 129           | Eliminated inline `text-[13px]`, `h-8`, manual `itemSelected` class string on raw button                                                                                | **fixed**              |
+| 138–153       | Delete `IconButton` overlay unchanged; `pr-8` on row when `onRemove` present reserves hover space                                                                       | kept (overlay pattern) |
+
+Selection semantics: `aria-current` on raw button → `aria-selected` via `DropdownItem` (`role="option"`), consistent with other droplist rows.
+
+### Updated summary (all passes)
+
+- **3** fixes applied (Pass 2 ScopePickerItem row)
+- **18** kept with documented reason (Pass 1 + overlay/trigger/section labels)
+- **1** abstract candidate unchanged (custom droplist search field, ≥ 3 occurrences repo-wide)

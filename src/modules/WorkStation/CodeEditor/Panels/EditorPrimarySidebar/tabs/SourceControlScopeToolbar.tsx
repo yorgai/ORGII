@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { GitWorktreeDiffSummary } from "@src/api/http/git/types";
 import DiffStatsBadge from "@src/components/DiffStatsBadge";
 import Dropdown from "@src/components/Dropdown";
+import DropdownItem from "@src/components/Dropdown/DropdownItem";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
@@ -44,13 +45,6 @@ const BREADCRUMB_TONE_CLASS = {
 
 const SCOPE_SECTION_LABEL =
   "px-1.5 pb-0.5 pt-2 text-[11px] font-medium text-text-4 first:pt-1";
-
-const SCOPE_PICKER_ROW = [
-  "group/scope-row relative flex w-full items-center",
-  "h-8 rounded-md pl-1.5 pr-1",
-  DROPDOWN_ITEM.transitionClass,
-  DROPDOWN_ITEM.hoverBgClass,
-].join(" ");
 
 const SCOPE_PICKER_REMOVE_BUTTON = [
   "absolute right-1 top-1/2 z-[1] -translate-y-1/2 bg-surface-hover",
@@ -123,18 +117,21 @@ function ScopePickerItem({
     .join("\n");
 
   return (
-    <div className={SCOPE_PICKER_ROW}>
-      <button
-        type="button"
-        className={`flex h-8 w-full min-w-0 items-center gap-2 truncate text-left text-[13px] ${selected ? DROPDOWN_CLASSES.itemSelected : "text-text-1"}`}
+    <div className="group/scope-row relative w-full">
+      <DropdownItem
+        selected={selected}
+        showCheckmark={false}
         onClick={onSelect}
-        aria-current={selected ? "true" : undefined}
-        title={title}
+        className={onRemove ? "w-full pr-8" : "w-full"}
+        suffix={
+          <span className="flex items-center gap-1">
+            <ScopePickerDiffStats summary={summary} />
+            {selected ? <DropdownSelectedCheck /> : null}
+          </span>
+        }
       >
-        <span className="min-w-0 flex-1 truncate">{label}</span>
-        <ScopePickerDiffStats summary={summary} />
-        {selected ? <DropdownSelectedCheck /> : null}
-      </button>
+        <span title={title}>{label}</span>
+      </DropdownItem>
       {onRemove ? (
         <IconButton
           type="button"
