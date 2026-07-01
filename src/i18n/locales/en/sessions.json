@@ -2373,8 +2373,8 @@
       "filterUnstaged": "Unstaged",
       "filterStaged": "Staged",
       "filterStashed": "Stashed",
-      "filterCountLabel_one": "{{count}} {{label}} change",
-      "filterCountLabel_other": "{{count}} {{label}} changes",
+      "filterCountLabel_one": "{{count}} {{label}}",
+      "filterCountLabel_other": "{{count}} {{label}}",
       "failedToLoad": "Failed to load git status",
       "noBranchChanges": "No unpushed commits",
       "unknownAuthor": "Unknown"

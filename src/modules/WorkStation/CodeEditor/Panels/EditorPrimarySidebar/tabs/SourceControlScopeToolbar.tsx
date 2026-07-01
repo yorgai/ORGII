@@ -46,10 +46,18 @@ const SCOPE_SECTION_LABEL =
   "px-1.5 pb-0.5 pt-2 text-[11px] font-medium text-text-4 first:pt-1";
 
 const SCOPE_PICKER_ROW = [
-  "group/scope-row flex w-full items-center gap-0.5",
+  "group/scope-row relative flex w-full items-center",
   "h-8 rounded-md pl-1.5 pr-1",
   DROPDOWN_ITEM.transitionClass,
   DROPDOWN_ITEM.hoverBgClass,
+].join(" ");
+
+const SCOPE_PICKER_REMOVE_BUTTON = [
+  "absolute right-1 top-1/2 z-[1] -translate-y-1/2 bg-surface-hover",
+  "pointer-events-none opacity-0 transition-opacity",
+  "group-hover/scope-row:pointer-events-auto group-hover/scope-row:opacity-100",
+  "group-focus-within/scope-row:pointer-events-auto group-focus-within/scope-row:opacity-100",
+  "focus-visible:pointer-events-auto focus-visible:opacity-100",
 ].join(" ");
 
 function ScopePickerDiffStats({
@@ -118,12 +126,13 @@ function ScopePickerItem({
     <div className={SCOPE_PICKER_ROW}>
       <button
         type="button"
-        className={`flex h-8 min-w-0 flex-1 items-center gap-2 truncate text-left text-[13px] ${selected ? DROPDOWN_CLASSES.itemSelected : "text-text-1"}`}
+        className={`flex h-8 w-full min-w-0 items-center gap-2 truncate text-left text-[13px] ${selected ? DROPDOWN_CLASSES.itemSelected : "text-text-1"}`}
         onClick={onSelect}
         aria-current={selected ? "true" : undefined}
         title={title}
       >
         <span className="min-w-0 flex-1 truncate">{label}</span>
+        <ScopePickerDiffStats summary={summary} />
         {selected ? <DropdownSelectedCheck /> : null}
       </button>
       {onRemove ? (
@@ -131,7 +140,7 @@ function ScopePickerItem({
           type="button"
           size="sm"
           variant="danger"
-          className="shrink-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover/scope-row:opacity-100"
+          className={SCOPE_PICKER_REMOVE_BUTTON}
           title={removeLabel}
           aria-label={removeLabel}
           onClick={(event) => {
@@ -194,9 +203,6 @@ export function SourceControlScopeToolbar({
       : undefined;
   const activeBranch = resolveScopeBranchLabel(branchLabel, selectedWorktree);
   const activeScopePath = selectedWorktree?.path ?? repoPath;
-  const activeDiffSummary = selectedWorktree
-    ? selectedWorktree.diff_summary
-    : localDiffSummary;
   const breadcrumbSegments = useMemo(
     () =>
       resolveScopeBreadcrumbSegments({
@@ -233,7 +239,10 @@ export function SourceControlScopeToolbar({
       className={`${DROPDOWN_CLASSES.panel} ${DROPDOWN_WIDTHS.fileTreeClass} max-w-[320px] overflow-hidden`}
     >
       {showSearch ? (
-        <div className={DROPDOWN_CLASSES.searchContainer}>
+        <div
+          className={DROPDOWN_CLASSES.searchContainer}
+          onMouseDown={(event) => event.preventDefault()}
+        >
           <Search
             size={DROPDOWN_ITEM.iconSize}
             className="shrink-0 text-text-3"
@@ -242,6 +251,11 @@ export function SourceControlScopeToolbar({
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => {
+              event.stopPropagation();
+              event.currentTarget.focus();
+            }}
             placeholder={t("sourceControl.scope.searchPlaceholder")}
             className={DROPDOWN_CLASSES.searchInput}
             aria-label={t("sourceControl.scope.searchPlaceholder")}
@@ -334,7 +348,6 @@ export function SourceControlScopeToolbar({
             </React.Fragment>
           ))}
         </span>
-        <ScopePickerDiffStats summary={activeDiffSummary} />
         <ChevronDown size={12} className="shrink-0 text-text-3" />
       </button>
     </Dropdown>

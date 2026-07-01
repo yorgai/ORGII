@@ -13,11 +13,13 @@ import {
   resolveScopeBranchLabel,
   resolveScopeBreadcrumbSegments,
   resolveScopeRepoRoot,
+  scopeBreadcrumbFolderMatchesBranch,
   scopePickerRowLabel,
   scopePickerRowTitle,
   shouldShowScopePickerSearch,
   sortWorktreesByDiffActivity,
   sourceControlScopeStorageKey,
+  truncateScopeBreadcrumbLabel,
   worktreeFolderName,
 } from "../sourceControlScopePickerHelpers";
 
@@ -210,6 +212,36 @@ describe("worktreeFolderName", () => {
   });
 });
 
+describe("truncateScopeBreadcrumbLabel", () => {
+  it("returns the label unchanged when within the limit", () => {
+    expect(truncateScopeBreadcrumbLabel("fix/issue-10")).toBe("fix/issue-10");
+  });
+
+  it("truncates long labels with an ellipsis", () => {
+    const longBranch = "fix/very-long-branch-name-that-overflows";
+    expect(truncateScopeBreadcrumbLabel(longBranch)).toBe(
+      "fix/very-long-branch-name-t…"
+    );
+  });
+});
+
+describe("scopeBreadcrumbFolderMatchesBranch", () => {
+  it("matches when the branch leaf equals the folder name", () => {
+    expect(
+      scopeBreadcrumbFolderMatchesBranch(
+        "issue-173-rewind-redo-tool",
+        "fix/issue-173-rewind-redo-tool"
+      )
+    ).toBe(true);
+  });
+
+  it("does not match unrelated folder and branch names", () => {
+    expect(
+      scopeBreadcrumbFolderMatchesBranch("agent-abc", "feat/other-task")
+    ).toBe(false);
+  });
+});
+
 describe("resolveScopeBreadcrumbSegments", () => {
   it("omits a worktree prefix for the main checkout", () => {
     expect(
@@ -224,7 +256,18 @@ describe("resolveScopeBreadcrumbSegments", () => {
     ]);
   });
 
-  it("prepends the worktree folder when scoped to a worktree", () => {
+  it("shows only the branch when the worktree folder repeats branch info", () => {
+    expect(
+      resolveScopeBreadcrumbSegments({
+        repoName: "ORGII",
+        branchLabel: "fix/issue-173-redo",
+        scope: { kind: "worktree", path: "/tmp/orgii/issue-173-redo" },
+        selectedWorktreePath: "/tmp/orgii/issue-173-redo",
+      })
+    ).toEqual([{ label: "fix/issue-173-redo", tone: "primary" }]);
+  });
+
+  it("shows folder and branch without repo when they differ", () => {
     expect(
       resolveScopeBreadcrumbSegments({
         repoName: "ORGII",
@@ -234,8 +277,7 @@ describe("resolveScopeBreadcrumbSegments", () => {
       })
     ).toEqual([
       { label: "agent-abc", tone: "muted" },
-      { label: "ORGII", tone: "primary" },
-      { label: "feat/agent-task", tone: "secondary" },
+      { label: "feat/agent-task", tone: "primary" },
     ]);
   });
 

@@ -167,6 +167,39 @@ export interface ScopeBreadcrumbSegment {
   tone: "muted" | "primary" | "secondary";
 }
 
+const BREADCRUMB_MAX_LABEL_LENGTH = 28;
+
+export function truncateScopeBreadcrumbLabel(
+  label: string,
+  maxLength = BREADCRUMB_MAX_LABEL_LENGTH
+): string {
+  if (label.length <= maxLength) return label;
+  return `${label.slice(0, maxLength - 1)}…`;
+}
+
+/** True when worktree folder name repeats info already shown in the branch label. */
+export function scopeBreadcrumbFolderMatchesBranch(
+  folderName: string,
+  branchLabel: string
+): boolean {
+  if (!folderName || !branchLabel) return false;
+
+  const normalizedFolder = folderName.toLowerCase();
+  const normalizedBranch = branchLabel.toLowerCase();
+  if (normalizedFolder === normalizedBranch) return true;
+
+  const branchLeaf = normalizedBranch.split("/").pop() ?? normalizedBranch;
+  if (normalizedFolder === branchLeaf) return true;
+  if (
+    branchLeaf.includes(normalizedFolder) ||
+    normalizedFolder.includes(branchLeaf)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 /** Breadcrumb segments for the scope toolbar trigger — worktree prefix only when scoped. */
 export function resolveScopeBreadcrumbSegments(options: {
   repoName: string;
@@ -175,18 +208,27 @@ export function resolveScopeBreadcrumbSegments(options: {
   selectedWorktreePath?: string;
 }): ScopeBreadcrumbSegment[] {
   const { repoName, branchLabel, scope, selectedWorktreePath } = options;
-  const segments: ScopeBreadcrumbSegment[] = [];
+  const branch = truncateScopeBreadcrumbLabel(branchLabel);
 
   if (scope.kind === "worktree" && selectedWorktreePath) {
-    segments.push({
-      label: worktreeFolderName(selectedWorktreePath),
-      tone: "muted",
-    });
+    const folderName = worktreeFolderName(selectedWorktreePath);
+    if (scopeBreadcrumbFolderMatchesBranch(folderName, branchLabel)) {
+      return [{ label: branch, tone: "primary" }];
+    }
+
+    return [
+      {
+        label: truncateScopeBreadcrumbLabel(folderName),
+        tone: "muted",
+      },
+      { label: branch, tone: "primary" },
+    ];
   }
 
-  segments.push({ label: repoName, tone: "primary" });
-  segments.push({ label: branchLabel, tone: "secondary" });
-  return segments;
+  return [
+    { label: truncateScopeBreadcrumbLabel(repoName), tone: "primary" },
+    { label: branch, tone: "secondary" },
+  ];
 }
 
 export function normalizeScopePickerQuery(query: string): string {
