@@ -1,5 +1,126 @@
 use crate::agent_tool::*;
 
+#[cfg(any(target_os = "windows", unix))]
+static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+// ============================================
+// default_shell_path
+// ============================================
+
+#[test]
+fn resolve_default_shell_path_uses_powershell_on_windows() {
+    assert_eq!(
+        resolve_default_shell_path(DefaultShellPlatform::Windows, Some("/bin/bash")),
+        "powershell.exe"
+    );
+}
+
+#[test]
+fn resolve_default_shell_path_uses_shell_env_on_macos() {
+    assert_eq!(
+        resolve_default_shell_path(DefaultShellPlatform::Macos, Some("/bin/bash")),
+        "/bin/bash"
+    );
+}
+
+#[test]
+fn resolve_default_shell_path_falls_back_to_zsh_on_macos() {
+    assert_eq!(
+        resolve_default_shell_path(DefaultShellPlatform::Macos, None),
+        "zsh"
+    );
+    assert_eq!(
+        resolve_default_shell_path(DefaultShellPlatform::Macos, Some("  ")),
+        "zsh"
+    );
+}
+
+#[test]
+fn resolve_default_shell_path_uses_shell_env_on_unix() {
+    assert_eq!(
+        resolve_default_shell_path(DefaultShellPlatform::Unix, Some("/usr/bin/bash")),
+        "/usr/bin/bash"
+    );
+}
+
+#[test]
+fn resolve_default_shell_path_falls_back_to_bash_on_unix() {
+    assert_eq!(
+        resolve_default_shell_path(DefaultShellPlatform::Unix, None),
+        "bash"
+    );
+    assert_eq!(
+        resolve_default_shell_path(DefaultShellPlatform::Unix, Some("  ")),
+        "bash"
+    );
+}
+
+#[cfg(target_os = "windows")]
+#[test]
+fn default_shell_path_matches_windows_platform() {
+    assert_eq!(default_shell_path(), "powershell.exe");
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn default_shell_path_uses_shell_env_on_macos_platform() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    let previous = std::env::var_os("SHELL");
+
+    std::env::set_var("SHELL", "/bin/bash");
+    assert_eq!(default_shell_path(), "/bin/bash");
+
+    if let Some(value) = previous {
+        std::env::set_var("SHELL", value);
+    } else {
+        std::env::remove_var("SHELL");
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn default_shell_path_falls_back_to_zsh_on_macos_platform() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    let previous = std::env::var_os("SHELL");
+
+    std::env::remove_var("SHELL");
+    assert_eq!(default_shell_path(), "zsh");
+
+    if let Some(value) = previous {
+        std::env::set_var("SHELL", value);
+    }
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+#[test]
+fn default_shell_path_uses_shell_env_on_unix_platform() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    let previous = std::env::var_os("SHELL");
+
+    std::env::set_var("SHELL", "/usr/bin/bash");
+    assert_eq!(default_shell_path(), "/usr/bin/bash");
+
+    if let Some(value) = previous {
+        std::env::set_var("SHELL", value);
+    } else {
+        std::env::remove_var("SHELL");
+    }
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+#[test]
+fn default_shell_path_falls_back_to_bash_on_unix_platform() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    let previous = std::env::var_os("SHELL");
+
+    std::env::remove_var("SHELL");
+    assert_eq!(default_shell_path(), "bash");
+
+    if let Some(value) = previous {
+        std::env::set_var("SHELL", value);
+    }
+}
+
 // ============================================
 // clean_pty_output
 // ============================================
