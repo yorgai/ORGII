@@ -482,6 +482,15 @@ export const cliAdapter: SessionAdapter = {
       return typeof value === "string" && value.length > 0 ? value : undefined;
     }
 
+    function rawNumber(raw: RawSessionEvent, key: string): number | null {
+      const value = raw[key];
+      return typeof value === "number" && Number.isFinite(value) ? value : null;
+    }
+
+    function asNumber(value: unknown): number | null {
+      return typeof value === "number" && Number.isFinite(value) ? value : null;
+    }
+
     function handlePlanReadyForApproval(raw: RawSessionEvent): void {
       const store = getStore();
       if (!store) return;
@@ -497,6 +506,7 @@ export const cliAdapter: SessionAdapter = {
           planId: rawString(raw, "planId"),
           planRevisionId: rawString(raw, "planRevisionId"),
           originToolCallId: rawString(raw, "originToolCallId"),
+          autoApproveAt: rawNumber(raw, "autoApproveAt"),
         })
       );
     }
@@ -541,6 +551,7 @@ export const cliAdapter: SessionAdapter = {
           planId: asString(args.planId),
           planRevisionId: asString(args.planRevisionId),
           originToolCallId: asString(args.originToolCallId),
+          autoApproveAt: asNumber(args.autoApproveAt),
         })
       );
       normalizeChunkRust(chunk, sessionId)

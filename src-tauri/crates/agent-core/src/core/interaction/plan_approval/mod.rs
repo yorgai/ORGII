@@ -382,12 +382,7 @@ impl PlanApprovalManager {
 
         // Presence policy: initial auto-approve deadline (if any) rides on
         // the broadcast so the FE can render a countdown on the Build card.
-        let auto_approve_at_ms = match super::presence_state::global_policy().plan_auto_approve {
-            super::presence_policy::AutoResolve::Off => None,
-            super::presence_policy::AutoResolve::After(window) => {
-                Some(created_at_ms + window.as_millis() as i64)
-            }
-        };
+        let auto_approve_at_ms = auto_approve_deadline_ms(snapshot.created_at_ms);
 
         let payload = serde_json::json!({
             "sessionId": &snapshot.session_id,
@@ -518,6 +513,8 @@ impl PlanApprovalManager {
 
         self.push_plan_approval_event(&snapshot, "rehydrate", PlanApprovalCardStatus::Pending);
 
+        let auto_approve_at_ms = auto_approve_deadline_ms(snapshot.created_at_ms);
+
         let payload = serde_json::json!({
             "sessionId": &snapshot.session_id,
             "planPath": &snapshot.plan_path,
@@ -528,6 +525,7 @@ impl PlanApprovalManager {
             "planRevisionId": &snapshot.plan_revision_id,
             "originToolCallId": &snapshot.origin_tool_call_id,
             "planEventSource": "rehydrate",
+            "autoApproveAt": auto_approve_at_ms,
         });
         crate::bus::broadcast_event("agent:plan_ready_for_approval", payload);
 
@@ -576,6 +574,19 @@ fn plan_id_for(session_id: &str, plan_path: &str) -> String {
 
 fn revision_id_for(tool_call_id: Option<&str>, fallback: &str) -> String {
     tool_call_id.unwrap_or(fallback).to_string()
+}
+
+fn auto_approve_deadline_ms(created_at_ms: i64) -> Option<i64> {
+    match super::presence_state::global_policy().plan_auto_approve {
+        super::presence_policy::AutoResolve::Off => None,
+        super::presence_policy::AutoResolve::After(window) => {
+            Some(created_at_ms + window.as_millis() as i64)
+        }
+    }
+}
+
+pub fn auto_approve_deadline_for_snapshot(snapshot: &PendingPlanApproval) -> Option<i64> {
+    auto_approve_deadline_ms(snapshot.created_at_ms)
 }
 
 fn plan_created_at_iso(snapshot: &PendingPlanApproval) -> String {

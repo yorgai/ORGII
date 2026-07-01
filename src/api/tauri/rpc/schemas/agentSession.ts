@@ -172,6 +172,7 @@ export const PendingPlanApprovalSchema = z
     planId: z.string().optional(),
     planRevisionId: z.string().optional(),
     originToolCallId: z.string().optional(),
+    autoApproveAt: z.number().nullable().optional(),
   })
   .nullable();
 
