@@ -192,7 +192,7 @@ impl RepoWatcher {
     /// Adjusts polling frequency based on window focus, git activity, and health:
     /// - Window focused + healthy: 5s
     /// - Window not focused + healthy: 30s
-    /// - No watched repos: 5s lightweight wake, no git status work
+    /// - No watched repos: 60s idle sweep, no git status work
     /// - Unhealthy (degraded): Exponential backoff up to 60s
     ///
     /// Note: Each git status operation spawns 4-6 git processes, so conservative intervals
@@ -292,7 +292,7 @@ impl RepoWatcher {
         max_failures: u32,
     ) -> u64 {
         if watched_state_count == 0 {
-            return 5000;
+            return 60000;
         }
 
         if any_unhealthy {
