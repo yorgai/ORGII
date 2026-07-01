@@ -309,6 +309,41 @@ describe("plan display event derivation", () => {
     expect(derived[0].result.status).toBe("cancelled");
   });
 
+  it("does not label a cancelled plan as drafting when the raw draft is still running", () => {
+    const raw = rawCreatePlan({
+      id: "tool-call-call_1",
+      callId: "call_1",
+      displayStatus: "running",
+      createdAt: "2026-05-15T00:00:00.000Z",
+    });
+    const cancelled = planApproval({
+      id: "call_1-cancelled",
+      callId: "call_1",
+      result: {
+        status: "cancelled",
+        planId: "plan-1",
+        planRevisionId: "call_1",
+        planPath: "/tmp/plan.md",
+      },
+      displayStatus: "completed",
+      createdAt: "2026-05-15T00:00:01.000Z",
+    });
+
+    const [displayEvent] = derivePlanDisplayEvents([raw, cancelled]);
+    const viewState = derivePlanApprovalViewState({
+      pendingPlan: null,
+      chatEvents: [displayEvent],
+    });
+
+    expect(displayEvent.result.status).toBe("cancelled");
+    expect(viewState.getEventState(displayEvent, "transcript")).toMatchObject({
+      status: "cancelled",
+      readyForReview: false,
+      actionable: false,
+      label: "skipped",
+    });
+  });
+
   it("does not render rehydrated pending-plan snapshots in transcript history", () => {
     const rehydratedApproval = planApproval({
       id: "call_1",
