@@ -4,7 +4,7 @@
   <p>基于 Rust 和 Tauri 构建，面向 local-first 执行，磁盘占用低于 100MB。支持 Agent 轨迹直播和回放，易于跟踪和审查。</p>
   <p>
     <a href="https://github.com/yorgai/ORG2/releases/latest"><img alt="Downloads" src="https://img.shields.io/github/downloads/yorgai/ORG2/total?style=flat-square&label=downloads" /></a>
-    <a href="https://github.com/yorgai/ORG2/commits/develop"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2?style=flat-square&label=last%20commit" /></a>
+    <a href="https://github.com/yorgai/ORG2/commits/release"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2/release?style=flat-square&label=last%20commit" /></a>
     <a href="https://github.com/yorgai/ORG2/graphs/commit-activity"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/yorgai/ORG2?style=flat-square&label=commit%20activity" /></a>
   </p>
 </div>

@@ -4,7 +4,7 @@
   <p>Rust와 Tauri로 구축되어 100MB 미만의 디스크 사용량으로 local-first 실행을 지원합니다. Agent trajectory livestream과 replay를 지원합니다. 따라가기 쉽고 리뷰하기 쉽습니다.</p>
   <p>
     <a href="https://github.com/yorgai/ORG2/releases/latest"><img alt="Downloads" src="https://img.shields.io/github/downloads/yorgai/ORG2/total?style=flat-square&label=downloads" /></a>
-    <a href="https://github.com/yorgai/ORG2/commits/develop"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2?style=flat-square&label=last%20commit" /></a>
+    <a href="https://github.com/yorgai/ORG2/commits/release"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2/release?style=flat-square&label=last%20commit" /></a>
     <a href="https://github.com/yorgai/ORG2/graphs/commit-activity"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/yorgai/ORG2?style=flat-square&label=commit%20activity" /></a>
   </p>
 </div>

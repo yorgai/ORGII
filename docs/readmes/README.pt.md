@@ -4,7 +4,7 @@
   <p>Criado com Rust e Tauri para execução local-first com menos de 100 MB em disco. Suporta livestream e replay de trajetórias de Agents. Fácil de acompanhar e revisar.</p>
   <p>
     <a href="https://github.com/yorgai/ORG2/releases/latest"><img alt="Downloads" src="https://img.shields.io/github/downloads/yorgai/ORG2/total?style=flat-square&label=downloads" /></a>
-    <a href="https://github.com/yorgai/ORG2/commits/develop"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2?style=flat-square&label=last%20commit" /></a>
+    <a href="https://github.com/yorgai/ORG2/commits/release"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2/release?style=flat-square&label=last%20commit" /></a>
     <a href="https://github.com/yorgai/ORG2/graphs/commit-activity"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/yorgai/ORG2?style=flat-square&label=commit%20activity" /></a>
   </p>
 </div>
