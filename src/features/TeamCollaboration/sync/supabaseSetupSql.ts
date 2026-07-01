@@ -235,13 +235,36 @@ drop function if exists public.orgii_request_repo_join(text, text, text, text, j
 drop function if exists public.orgii_review_repo_join(text, text, boolean, text, text);
 drop function if exists public.orgii_list_org_state(text, text, timestamptz);
 
+-- v2.0 signatures (auth params led the argument list, blocking PostgREST
+-- default-omission and later renames): drop before recreating.
+drop function if exists public.orgii_create_invite(text, text, text, text, text, integer, timestamptz, text, jsonb);
+drop function if exists public.orgii_revoke_invite(text, text, text, text, text);
+drop function if exists public.orgii_remove_member(text, text, text, text, text);
+drop function if exists public.orgii_update_member_role(text, text, text, text, text, text);
+drop function if exists public.orgii_upsert_session_metadata(text, text, text, jsonb);
+drop function if exists public.orgii_remove_session_metadata(text, text, text, text, text, text);
+drop function if exists public.orgii_upsert_session_events(text, text, text, text, text, text);
+drop function if exists public.orgii_get_session_events(text, text, text, text, text);
+drop function if exists public.orgii_post_chat_message(text, text, text, jsonb);
+drop function if exists public.orgii_upsert_project(text, text, text, text, jsonb, integer);
+drop function if exists public.orgii_delete_project(text, text, text, text, text);
+drop function if exists public.orgii_upsert_work_item(text, text, text, text, jsonb, integer);
+drop function if exists public.orgii_delete_work_item(text, text, text, text, text);
+drop function if exists public.orgii_request_session_snapshot(text, text, text, jsonb);
+drop function if exists public.orgii_create_session_snapshot(text, text, text, text, text, jsonb, text, text);
+drop function if exists public.orgii_deny_session_snapshot(text, text, text, text, text);
+drop function if exists public.orgii_update_org_repo_scopes(text, text, text, text, text[]);
+drop function if exists public.orgii_request_repo_join(text, text, text, text, jsonb);
+drop function if exists public.orgii_review_repo_join(text, text, text, text, text, boolean, text);
+drop function if exists public.orgii_list_org_state(text, text, text, text, timestamptz);
+
 -- ============================================================ auth
 
 create or replace function public.orgii_sync_version()
 returns integer
 language sql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
   select max(schema_version) from public.orgii_sync_meta;
 $$;
@@ -255,7 +278,7 @@ create or replace function public.orgii_authenticate(
 returns table (member_id text, member_role text, is_root boolean)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_has_member boolean := p_member_id is not null and p_member_token is not null;
@@ -303,7 +326,7 @@ create or replace function public.orgii_authenticate_admin(
 returns table (member_id text, is_root boolean)
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -331,7 +354,7 @@ create or replace function public.orgii_create_org(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   next_org_id text := coalesce(payload->>'id', gen_random_uuid()::text);
@@ -371,7 +394,7 @@ create or replace function public.orgii_accept_invite(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   next_member_id text := coalesce(member_payload->>'id', gen_random_uuid()::text);
@@ -422,19 +445,19 @@ $$;
 
 create or replace function public.orgii_create_invite(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
   invite_code_hash text,
   usage_limit integer,
   expires_at timestamptz,
   invite_role text,
-  payload jsonb
+  payload jsonb,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -467,15 +490,15 @@ $$;
 
 create or replace function public.orgii_revoke_invite(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
-  invite_id text
+  invite_id text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -497,15 +520,15 @@ $$;
 
 create or replace function public.orgii_remove_member(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
-  target_member_id text
+  target_member_id text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -545,16 +568,16 @@ $$;
 
 create or replace function public.orgii_update_member_role(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
   target_member_id text,
-  new_role text
+  new_role text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_target record;
@@ -591,14 +614,14 @@ $$;
 
 create or replace function public.orgii_upsert_session_metadata(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  payload jsonb
+  payload jsonb,
+  p_member_id text default null,
+  p_member_token text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -635,16 +658,16 @@ $$;
 
 create or replace function public.orgii_remove_session_metadata(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
   owner_member_id text,
-  source_session_id text
+  source_session_id text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -682,16 +705,16 @@ $$;
 -- but now member-authenticated and owner-scoped.
 create or replace function public.orgii_upsert_session_events(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
   source_session_id text,
   blob_path text,
-  content_hash text
+  content_hash text,
+  p_member_id text default null,
+  p_member_token text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -717,15 +740,15 @@ $$;
 
 create or replace function public.orgii_get_session_events(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
-  source_session_id text
+  source_session_id text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   result jsonb;
@@ -752,14 +775,14 @@ $$;
 
 create or replace function public.orgii_post_chat_message(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  payload jsonb
+  payload jsonb,
+  p_member_id text default null,
+  p_member_token text default null
 )
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -783,16 +806,16 @@ $$;
 
 create or replace function public.orgii_upsert_project(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
   project jsonb,
-  base_version integer
+  base_version integer,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -842,15 +865,15 @@ $$;
 
 create or replace function public.orgii_delete_project(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
-  project_id text
+  project_id text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   perform public.orgii_authenticate_admin(p_org_id, p_member_id, p_member_token, p_org_secret);
@@ -865,22 +888,23 @@ begin
      set deleted_at = now(),
          updated_at = now(),
          version = version + 1
-   where project_id = orgii_delete_project.project_id and org_id = p_org_id and deleted_at is null;
+   where orgii_work_items.project_id = orgii_delete_project.project_id
+     and org_id = p_org_id and deleted_at is null;
 end;
 $$;
 
 create or replace function public.orgii_upsert_work_item(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
   work_item jsonb,
-  base_version integer
+  base_version integer,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -934,15 +958,15 @@ $$;
 
 create or replace function public.orgii_delete_work_item(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
-  work_item_id text
+  work_item_id text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   perform public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
@@ -959,14 +983,14 @@ $$;
 
 create or replace function public.orgii_request_session_snapshot(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  payload jsonb
+  payload jsonb,
+  p_member_id text default null,
+  p_member_token text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -991,18 +1015,18 @@ $$;
 
 create or replace function public.orgii_create_session_snapshot(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
   request_id text,
   source_session_id text,
   metadata jsonb,
   blob_path text,
-  content_hash text
+  content_hash text,
+  p_member_id text default null,
+  p_member_token text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -1035,15 +1059,15 @@ $$;
 
 create or replace function public.orgii_deny_session_snapshot(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
   request_id text,
-  reason text
+  reason text,
+  p_member_id text default null,
+  p_member_token text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -1068,15 +1092,15 @@ $$;
 
 create or replace function public.orgii_update_org_repo_scopes(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
-  repo_scopes text[]
+  repo_scopes text[],
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 begin
   perform public.orgii_authenticate_admin(p_org_id, p_member_id, p_member_token, p_org_secret);
@@ -1089,15 +1113,15 @@ $$;
 
 create or replace function public.orgii_request_repo_join(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
   repo_path text,
-  payload jsonb
+  payload jsonb,
+  p_member_id text default null,
+  p_member_token text default null
 )
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -1131,17 +1155,17 @@ $$;
 
 create or replace function public.orgii_review_repo_join(
   p_org_id text,
-  p_member_id text,
-  p_member_token text,
-  p_org_secret text,
   request_id text,
   approve boolean,
-  review_note text
+  review_note text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
 )
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -1171,7 +1195,7 @@ begin
            '{status}', to_jsonb(new_status), true),
            '{reviewerMemberId}', coalesce(to_jsonb(v_ctx.member_id), 'null'::jsonb), true),
            '{reviewedAt}', to_jsonb(now()::text), true)
-   where request_id = orgii_review_repo_join.request_id;
+   where orgii_repo_join_requests.request_id = orgii_review_repo_join.request_id;
 
   if approve then
     update public.orgii_orgs
@@ -1198,15 +1222,15 @@ $$;
 
 create or replace function public.orgii_list_org_state(
   p_org_id text,
+  since_timestamp timestamptz default null,
   p_member_id text default null,
   p_member_token text default null,
-  p_org_secret text default null,
-  since_timestamp timestamptz default null
+  p_org_secret text default null
 )
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_ctx record;
@@ -1301,26 +1325,26 @@ grant execute on function public.orgii_authenticate(text, text, text, text) to a
 grant execute on function public.orgii_authenticate_admin(text, text, text, text) to anon;
 grant execute on function public.orgii_create_org(text, text, text, text, text, jsonb, jsonb) to anon;
 grant execute on function public.orgii_accept_invite(text, text, text, text, jsonb) to anon;
-grant execute on function public.orgii_create_invite(text, text, text, text, text, integer, timestamptz, text, jsonb) to anon;
+grant execute on function public.orgii_create_invite(text, text, integer, timestamptz, text, jsonb, text, text, text) to anon;
 grant execute on function public.orgii_revoke_invite(text, text, text, text, text) to anon;
 grant execute on function public.orgii_remove_member(text, text, text, text, text) to anon;
 grant execute on function public.orgii_update_member_role(text, text, text, text, text, text) to anon;
-grant execute on function public.orgii_upsert_session_metadata(text, text, text, jsonb) to anon;
+grant execute on function public.orgii_upsert_session_metadata(text, jsonb, text, text) to anon;
 grant execute on function public.orgii_remove_session_metadata(text, text, text, text, text, text) to anon;
 grant execute on function public.orgii_upsert_session_events(text, text, text, text, text, text) to anon;
 grant execute on function public.orgii_get_session_events(text, text, text, text, text) to anon;
-grant execute on function public.orgii_post_chat_message(text, text, text, jsonb) to anon;
-grant execute on function public.orgii_upsert_project(text, text, text, text, jsonb, integer) to anon;
+grant execute on function public.orgii_post_chat_message(text, jsonb, text, text) to anon;
+grant execute on function public.orgii_upsert_project(text, jsonb, integer, text, text, text) to anon;
 grant execute on function public.orgii_delete_project(text, text, text, text, text) to anon;
-grant execute on function public.orgii_upsert_work_item(text, text, text, text, jsonb, integer) to anon;
+grant execute on function public.orgii_upsert_work_item(text, jsonb, integer, text, text, text) to anon;
 grant execute on function public.orgii_delete_work_item(text, text, text, text, text) to anon;
-grant execute on function public.orgii_request_session_snapshot(text, text, text, jsonb) to anon;
-grant execute on function public.orgii_create_session_snapshot(text, text, text, text, text, jsonb, text, text) to anon;
+grant execute on function public.orgii_request_session_snapshot(text, jsonb, text, text) to anon;
+grant execute on function public.orgii_create_session_snapshot(text, text, text, jsonb, text, text, text, text) to anon;
 grant execute on function public.orgii_deny_session_snapshot(text, text, text, text, text) to anon;
-grant execute on function public.orgii_update_org_repo_scopes(text, text, text, text, text[]) to anon;
-grant execute on function public.orgii_request_repo_join(text, text, text, text, jsonb) to anon;
-grant execute on function public.orgii_review_repo_join(text, text, text, text, text, boolean, text) to anon;
-grant execute on function public.orgii_list_org_state(text, text, text, text, timestamptz) to anon;
+grant execute on function public.orgii_update_org_repo_scopes(text, text[], text, text, text) to anon;
+grant execute on function public.orgii_request_repo_join(text, text, jsonb, text, text) to anon;
+grant execute on function public.orgii_review_repo_join(text, text, boolean, text, text, text, text) to anon;
+grant execute on function public.orgii_list_org_state(text, timestamptz, text, text, text) to anon;
 
 insert into public.orgii_sync_meta (schema_version)
 values (${SUPABASE_SYNC_SCHEMA_VERSION})
