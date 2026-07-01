@@ -11,11 +11,10 @@
  * - Intersection observer for lazy syntax highlighting
  * - Virtual scrolling for large code blocks (>100 lines)
  */
-import { ArrowUpRight, Check, Clipboard, Eye, EyeOff } from "lucide-react";
+import { ArrowUpRight, Check, Copy, Eye, EyeOff } from "lucide-react";
 import React, { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-import Button from "@src/components/Button";
 import DiffStatsBadge from "@src/components/DiffStatsBadge";
 import ExpandOverlay from "@src/components/ExpandOverlay";
 import { FileTreeHoverPreview } from "@src/components/FileTreePreview/exports";
@@ -155,6 +154,8 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
       showCopyButton && hasContent && Boolean(code) && !isCollapsed;
     const shouldShowOpenButton =
       showOpenButton && hasContent && Boolean(filePath) && !isCollapsed;
+    const shouldShowFloatingToolbar =
+      hideHeader && (shouldShowOpenButton || shouldShowCopyButton);
 
     const {
       useTerminalLayout,
@@ -196,8 +197,8 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
     });
 
     const containerClass = useTerminalLayout
-      ? `group group/expand ${getEventBlockContainerClasses(false)}`
-      : `group ${getEventBlockContainerClasses()} ${className}`;
+      ? `group group/expand relative ${getEventBlockContainerClasses(false)}`
+      : `group relative ${getEventBlockContainerClasses()} ${className}`;
 
     return (
       <div className={containerClass}>
@@ -333,32 +334,20 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                 )}
 
                 {shouldShowOpenButton && (
-                  <Button
-                    variant="tertiary"
-                    appearance="ghost"
-                    size="mini"
-                    iconOnly
-                    icon={<ArrowUpRight size={12} strokeWidth={1.75} />}
+                  <button
+                    type="button"
                     title={t("common:actions.open")}
                     aria-label={t("common:actions.open")}
-                    className="ml-auto shrink-0 text-text-4 hover:text-text-2"
+                    className="ml-auto inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-event-block p-0 text-text-3 transition-colors hover:bg-fill-3 hover:text-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-6/30"
                     onClick={handleOpenFile}
-                  />
+                  >
+                    <ArrowUpRight size={14} strokeWidth={1.75} />
+                  </button>
                 )}
 
                 {shouldShowCopyButton && (
-                  <Button
-                    variant="tertiary"
-                    appearance="ghost"
-                    size="mini"
-                    iconOnly
-                    icon={
-                      copied ? (
-                        <Check size={12} strokeWidth={1.75} />
-                      ) : (
-                        <Clipboard size={12} strokeWidth={1.75} />
-                      )
-                    }
+                  <button
+                    type="button"
                     title={
                       copied
                         ? t("common:status.copied")
@@ -369,11 +358,17 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
                         ? t("common:status.copied")
                         : t("common:actions.copy")
                     }
-                    className={`shrink-0 text-text-3 hover:bg-fill-2 hover:text-text-1 ${
+                    className={`inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 bg-event-block p-0 text-text-3 transition-colors hover:bg-fill-3 hover:text-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-6/30 ${
                       shouldShowOpenButton ? "" : "ml-auto"
                     }`}
                     onClick={handleCopyContent}
-                  />
+                  >
+                    {copied ? (
+                      <Check size={14} strokeWidth={1.75} />
+                    ) : (
+                      <Copy size={14} strokeWidth={1.75} />
+                    )}
+                  </button>
                 )}
 
                 {isPreviewable && (
@@ -405,6 +400,47 @@ const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
               </>
             )}
           </EventBlockHeader>
+        )}
+
+        {shouldShowFloatingToolbar && (
+          <div className="absolute right-1.5 top-[16px] z-10 -translate-y-1/2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+            <div className="flex items-center gap-1">
+              {shouldShowOpenButton && (
+                <button
+                  type="button"
+                  title={t("common:actions.open")}
+                  aria-label={t("common:actions.open")}
+                  className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border-0 bg-event-block p-0 text-text-3 transition-colors hover:bg-fill-3 hover:text-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-6/30"
+                  onClick={handleOpenFile}
+                >
+                  <ArrowUpRight size={14} strokeWidth={1.75} />
+                </button>
+              )}
+              {shouldShowCopyButton && (
+                <button
+                  type="button"
+                  title={
+                    copied
+                      ? t("common:status.copied")
+                      : t("common:actions.copy")
+                  }
+                  aria-label={
+                    copied
+                      ? t("common:status.copied")
+                      : t("common:actions.copy")
+                  }
+                  className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border-0 bg-event-block p-0 text-text-3 transition-colors hover:bg-fill-3 hover:text-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-6/30"
+                  onClick={handleCopyContent}
+                >
+                  {copied ? (
+                    <Check size={14} strokeWidth={1.75} />
+                  ) : (
+                    <Copy size={14} strokeWidth={1.75} />
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
         )}
 
         {hasContent && !isCollapsed && !(isLoading && !code) && (

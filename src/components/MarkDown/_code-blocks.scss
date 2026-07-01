@@ -80,31 +80,30 @@
   width: 100%;
   max-width: 100%;
 
-  .code-block-open-button,
-  .code-block-copy-button {
+  .code-block-toolbar {
     position: absolute;
-    top: 6px;
+    top: 16px;
+    right: 6px;
     z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
     opacity: 0;
+    transform: translateY(-50%);
     transition: opacity 120ms ease;
   }
 
-  .code-block-open-button {
-    right: 34px;
-  }
-
+  .code-block-open-button,
   .code-block-copy-button {
-    right: 6px;
+    background: var(--color-fill-2);
   }
 
-  &:hover .code-block-open-button,
-  &:hover .code-block-copy-button,
-  .code-block-open-button:focus-visible,
-  .code-block-copy-button:focus-visible {
+  &:hover .code-block-toolbar,
+  .code-block-toolbar:focus-within {
     opacity: 1;
   }
 
-  & > div {
+  & > div:not(.code-block-toolbar) {
     min-width: 100%;
     background: transparent !important;
   }
@@ -152,6 +151,11 @@
     }
 
     .code-block-wrapper {
+      background: var(--color-bg-2);
+    }
+
+    .code-block-open-button,
+    .code-block-copy-button {
       background: var(--color-bg-2);
     }
 

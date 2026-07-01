@@ -366,21 +366,21 @@ const UserChatItem = ({
         onClick={isEditableDisplay ? handleEditClick : undefined}
       >
         {fullContent && (
-          <div className="absolute right-2 top-2 z-10 opacity-0 transition-opacity group-hover:opacity-100">
-            <div className="flex items-center gap-1 rounded-lg border border-fill-2 bg-fill-2 p-0.5">
+          <div className="absolute right-1.5 top-[19px] z-10 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="flex items-center gap-1 rounded-lg border border-fill-2 bg-fill-2 px-1 py-0.5">
               <ChatBubbleCopyButton content={fullContent} placement="toolbar" />
               {isEditableDisplay && onRestoreCheckpoint && (
                 <button
                   type="button"
                   data-testid="chat-message-restore-checkpoint"
                   title={t("chat.restoreCheckpoint", "Restore checkpoint")}
-                  className="flex cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0.5 text-text-2 hover:text-danger-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-6/30"
+                  className="flex cursor-pointer items-center justify-center rounded-md border-none bg-transparent p-0.5 text-text-3 hover:text-danger-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-6/30"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRestoreCheckpoint();
                   }}
                 >
-                  <Undo2 size={14} strokeWidth={1.75} />
+                  <Undo2 size={15} strokeWidth={1.75} />
                 </button>
               )}
               {isEditableDisplay && (
