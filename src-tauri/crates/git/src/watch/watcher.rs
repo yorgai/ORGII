@@ -22,7 +22,7 @@
 //! - Fetches/pushes (refs/remotes changes)
 //! - Merges/rebases (MERGE_HEAD, REBASE_HEAD)
 //!
-//! **Via polling (5-8s delay):**
+//! **Via active-workspace polling:**
 //! - File edits in working directory
 //! - New untracked files
 //!
@@ -56,11 +56,10 @@
 //!
 //! | Condition | Interval | Rationale |
 //! |-----------|----------|-----------|
-//! | Focused + recent git activity + healthy | 2s | User is actively working |
-//! | Focused + idle + healthy | 5s | User viewing, less activity |
-//! | Window not focused | 15s | Background, save resources |
-//! | No git changes in 5+ min | 30s | Repo is idle |
-//! | Unhealthy (failures) | Exponential backoff up to 60s | Avoid hammering broken state |
+//! | Focused + healthy watched repos | 5s | User is viewing active workspace state |
+//! | Window not focused + healthy watched repos | 30s | Background, save resources |
+//! | No watched repos | Parked | No active workspace needs polling |
+//! | Unhealthy watched repos | Exponential backoff up to 60s | Avoid hammering broken state |
 //!
 //! # Critical vs Debounced Git Paths
 //!
@@ -74,7 +73,7 @@ use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
 use super::debounce::DebounceManager;
@@ -156,6 +155,8 @@ pub struct RepoWatcher {
     window_focused: Arc<RwLock<bool>>,
     /// Last poll attempt per repo (prevents stacking of slow polls)
     last_poll_attempt: Arc<RwLock<HashMap<String, Instant>>>,
+    /// Wakes the poller when the watch scope transitions from empty to active.
+    poll_wake: Arc<(Mutex<u64>, Condvar)>,
 }
 
 impl RepoWatcher {
@@ -176,6 +177,7 @@ impl RepoWatcher {
             last_git_change: Arc::new(RwLock::new(HashMap::new())),
             window_focused: Arc::new(RwLock::new(true)), // Assume focused initially
             last_poll_attempt: Arc::new(RwLock::new(HashMap::new())),
+            poll_wake: Arc::new((Mutex::new(0), Condvar::new())),
         };
 
         // Start event processing loop
@@ -192,7 +194,7 @@ impl RepoWatcher {
     /// Adjusts polling frequency based on window focus, git activity, and health:
     /// - Window focused + healthy: 5s
     /// - Window not focused + healthy: 30s
-    /// - No watched repos: 60s idle sweep, no git status work
+    /// - No watched repos: parked until a repo is watched
     /// - Unhealthy (degraded): Exponential backoff up to 60s
     ///
     /// Note: Each git status operation spawns 4-6 git processes, so conservative intervals
@@ -202,12 +204,14 @@ impl RepoWatcher {
         let debounce_manager = self.debounce_manager.clone();
         let window_focused = self.window_focused.clone();
         let last_poll_attempt = self.last_poll_attempt.clone();
+        let poll_wake = self.poll_wake.clone();
 
         std::thread::Builder::new()
             .name("git-status-poller".to_string())
             .spawn(move || {
                 // Small initial delay to let watchers initialize
                 std::thread::sleep(Duration::from_secs(2));
+                let mut seen_wake_generation = 0;
 
                 loop {
                     // Calculate adaptive polling interval with health awareness
@@ -215,6 +219,18 @@ impl RepoWatcher {
                     let states = state_store.get_all_states();
 
                     let watched_state_count = states.values().filter(|state| state.watch_enabled).count();
+                    if watched_state_count == 0 {
+                        let (lock, condvar) = &*poll_wake;
+                        let mut wake_generation =
+                            lock.lock().expect("RepoWatch poll wake mutex poisoned");
+                        while *wake_generation == seen_wake_generation {
+                            wake_generation = condvar
+                                .wait(wake_generation)
+                                .expect("RepoWatch poll wake mutex poisoned");
+                        }
+                        seen_wake_generation = *wake_generation;
+                        continue;
+                    }
 
                     // Check if any watched repo is unhealthy
                     let any_unhealthy = states
@@ -228,12 +244,8 @@ impl RepoWatcher {
                         .max()
                         .unwrap_or(0);
 
-                    let poll_interval_ms = Self::calculate_poll_interval_with_health(
-                        is_focused,
-                        watched_state_count,
-                        any_unhealthy,
-                        max_failures,
-                    );
+                    let poll_interval_ms =
+                        Self::calculate_poll_interval_with_health(is_focused, any_unhealthy, max_failures);
 
                     std::thread::sleep(Duration::from_millis(poll_interval_ms));
 
@@ -284,17 +296,12 @@ impl RepoWatcher {
             .expect("Failed to spawn git status poller thread");
     }
 
-    /// Calculate adaptive polling interval based on active watch scope, window focus, and health.
+    /// Calculate adaptive polling interval based on window focus and health.
     fn calculate_poll_interval_with_health(
         is_focused: bool,
-        watched_state_count: usize,
         any_unhealthy: bool,
         max_failures: u32,
     ) -> u64 {
-        if watched_state_count == 0 {
-            return 60000;
-        }
-
         if any_unhealthy {
             let backoff_seconds = std::cmp::min(5 * (1 << max_failures), 60);
             log::debug!(
@@ -362,8 +369,14 @@ impl RepoWatcher {
             return Err(format!("Not a git repository: {:?}", repo_path));
         }
 
-        // Add to state store
+        // Add to state store and wake the poller if it was parked with no active repos.
         self.state_store.add_repo(repo_info.clone());
+        {
+            let (lock, condvar) = &*self.poll_wake;
+            let mut wake_generation = lock.lock().expect("RepoWatch poll wake mutex poisoned");
+            *wake_generation = wake_generation.wrapping_add(1);
+            condvar.notify_one();
+        }
 
         // Create watcher
         let repo_id = repo_info.repo_id.clone();
