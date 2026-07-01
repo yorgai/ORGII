@@ -14,12 +14,15 @@ import type {
 import { getGitWorktrees } from "@src/api/http/git/worktrees";
 import { getCodeEditorWebSocket } from "@src/api/realtime/codeEditorWebSocket";
 import { useMountedCleanup } from "@src/hooks/lifecycle/useMounted";
+import { createLogger } from "@src/hooks/logger";
 import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
 } from "@src/hooks/perf/useDebouncedCallback";
 
 import { extractMainWorktreeDiffSummary } from "../tabs/sourceControlScopePickerHelpers";
+
+const logger = createLogger("useGitWorktrees");
 
 export interface UseGitWorktreesOptions {
   repoId: string;
@@ -61,11 +64,8 @@ export function useGitWorktrees({
       if (!mountedRef.current) return;
       setWorktrees(entries.filter((entry) => !entry.is_main));
       setMainDiffSummary(extractMainWorktreeDiffSummary(entries));
-    } catch {
-      if (mountedRef.current) {
-        setWorktrees([]);
-        setMainDiffSummary(null);
-      }
+    } catch (error) {
+      logger.warn("Failed to fetch git worktrees", error);
     } finally {
       if (mountedRef.current) {
         loadedRef.current = true;

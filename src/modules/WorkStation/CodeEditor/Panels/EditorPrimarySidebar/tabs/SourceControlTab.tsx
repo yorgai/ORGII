@@ -186,6 +186,7 @@ export function useSourceControlTabConfig({
           repoPath={repoPath}
           repoId={repoId}
           worktrees={worktrees}
+          worktreesLoading={worktreesLoading}
           scope={effectiveScope}
           onGitFileSelect={onGitFileSelect}
           onGitFilesChange={onGitFilesChange}

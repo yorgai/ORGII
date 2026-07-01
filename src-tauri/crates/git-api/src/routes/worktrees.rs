@@ -124,7 +124,9 @@ fn summarize_worktree_diff(
         if base == worktree_branch || worktree_branch.is_empty() {
             return None;
         }
-        crate::commands::diff::get_diff_numstat(&worktree_path, base, Some("HEAD"), false).ok()
+        let merge_base = resolve_merge_base_sha(&worktree_path, base, "HEAD")?;
+        crate::commands::diff::get_diff_numstat(&worktree_path, &merge_base, Some("HEAD"), false)
+            .ok()
     });
 
     let uncommitted_files = uncommitted
@@ -174,6 +176,27 @@ fn summarize_worktree_diff(
         uncommitted_deletions,
         base_ref,
     })
+}
+
+/// Merge-base between two refs in the shared object database opened at `repo_path`.
+fn resolve_merge_base_sha(repo_path: &FsPath, left_ref: &str, right_ref: &str) -> Option<String> {
+    use git2::Repository;
+
+    let repo = Repository::open(repo_path).ok()?;
+    let left_oid = repo
+        .revparse_single(left_ref)
+        .ok()?
+        .peel_to_commit()
+        .ok()?
+        .id();
+    let right_oid = repo
+        .revparse_single(right_ref)
+        .ok()?
+        .peel_to_commit()
+        .ok()?
+        .id();
+    let base = repo.merge_base(left_oid, right_oid).ok()?;
+    Some(base.to_string())
 }
 
 fn resolve_repo_path(repo_id: &str, query_path: Option<&str>) -> GitApiResult<std::path::PathBuf> {

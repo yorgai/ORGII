@@ -27,9 +27,15 @@ import type { SourceControlHistorySelection } from "@src/store/workstation/tabs"
 import type { GitFile } from "@src/types/git/types";
 
 import SourceControlContent from "../content/SourceControlContent";
-import { WorktreeSourceControlSection } from "../content/WorktreeSourceControlSection";
+import {
+  WorktreeSourceControlSection,
+  type WorktreeSourceControlSectionHandle,
+} from "../content/WorktreeSourceControlSection";
 import { useSourceControlState } from "../hooks/useSourceControlState";
-import type { SourceControlScope } from "./sourceControlScopePickerHelpers";
+import {
+  type SourceControlScope,
+  normalizeScopePath,
+} from "./sourceControlScopePickerHelpers";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -401,6 +407,7 @@ interface SourceControlWithWorktreesProps {
   repoPath: string;
   repoId: string;
   worktrees: GitWorktreeEntry[];
+  worktreesLoading?: boolean;
   scope: SourceControlScope;
   onGitFileSelect?: (file: GitFile) => void;
   /**
@@ -429,6 +436,7 @@ export const SourceControlWithWorktrees = forwardRef<
       repoPath,
       repoId,
       worktrees,
+      worktreesLoading = false,
       scope,
       onGitFileSelect,
       onGitFilesChange,
@@ -441,6 +449,7 @@ export const SourceControlWithWorktrees = forwardRef<
     },
     ref
   ) => {
+    const { t } = useTranslation();
     const handleWorktreeFilesChange = useCallback(
       (files: GitFile[], worktreePath: string) => {
         onGitFilesChange?.(files, worktreePath);
@@ -450,27 +459,52 @@ export const SourceControlWithWorktrees = forwardRef<
 
     const selectedWorktree =
       scope.kind === "worktree"
-        ? worktrees.find((worktree) => worktree.path === scope.path)
+        ? worktrees.find(
+            (worktree) =>
+              normalizeScopePath(worktree.path) ===
+              normalizeScopePath(scope.path)
+          )
         : undefined;
+    const pendingWorktreeScope =
+      scope.kind === "worktree" && !selectedWorktree && worktreesLoading;
 
     const mainRef = useRef<SourceControlContentHandle>(null);
+    const worktreeRef = useRef<WorktreeSourceControlSectionHandle>(null);
 
     useImperativeHandle(
       ref,
       () => ({
         refresh: async () => {
+          if (selectedWorktree) {
+            await worktreeRef.current?.refresh();
+            return;
+          }
           await mainRef.current?.refresh();
         },
       }),
-      []
+      [selectedWorktree]
     );
+
+    if (pendingWorktreeScope) {
+      return (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <Placeholder
+            variant="loading"
+            placement="sidebar"
+            title={t("placeholders.loading")}
+            fillParentHeight
+          />
+        </div>
+      );
+    }
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {selectedWorktree ? (
           <WorktreeSourceControlSection
+            ref={worktreeRef}
             worktreePath={selectedWorktree.path}
-            worktreeId={`worktree:${selectedWorktree.path}`}
+            hostRepoId={repoId}
             onGitFileSelect={onGitFileSelect}
             onGitFilesChange={handleWorktreeFilesChange}
             showFilter={showFilter}

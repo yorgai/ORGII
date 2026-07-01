@@ -12,6 +12,7 @@ import {
   reconcileSourceControlScope,
   resolveScopeBranchLabel,
   resolveScopeBreadcrumbSegments,
+  resolveScopeRepoRoot,
   shouldShowScopePickerSearch,
   sortWorktreesByDiffActivity,
   sourceControlScopeStorageKey,
@@ -37,10 +38,10 @@ function createSummary(
 }
 
 describe("diffStatsFromSummary", () => {
-  it("returns additions and deletions when summary has changes", () => {
+  it("returns uncommitted additions and deletions for the picker badge", () => {
     expect(diffStatsFromSummary(createSummary())).toEqual({
-      additions: 10,
-      deletions: 4,
+      additions: 8,
+      deletions: 3,
     });
   });
 
@@ -49,13 +50,13 @@ describe("diffStatsFromSummary", () => {
     expect(diffStatsFromSummary(undefined)).toBeNull();
   });
 
-  it("returns null when summary has no net changes", () => {
+  it("returns null when there are no uncommitted changes", () => {
     expect(
       diffStatsFromSummary(
         createSummary({
-          total_files: 0,
-          total_additions: 0,
-          total_deletions: 0,
+          uncommitted_files: 0,
+          uncommitted_additions: 0,
+          uncommitted_deletions: 0,
         })
       )
     ).toBeNull();
@@ -158,6 +159,30 @@ describe("reconcileSourceControlScope", () => {
         { worktreesReady: true }
       )
     ).toEqual({ kind: "local" });
+  });
+
+  it("matches worktree paths after normalization", () => {
+    expect(
+      reconcileSourceControlScope(
+        { kind: "worktree", path: "/tmp/wt/" },
+        [{ path: "/tmp/wt", branch: "feature" }],
+        { worktreesReady: true }
+      )
+    ).toEqual({ kind: "worktree", path: "/tmp/wt/" });
+  });
+});
+
+describe("resolveScopeRepoRoot", () => {
+  it("returns the host path for local scope", () => {
+    expect(resolveScopeRepoRoot({ kind: "local" }, "/tmp/repo")).toBe(
+      "/tmp/repo"
+    );
+  });
+
+  it("returns the worktree path for worktree scope", () => {
+    expect(
+      resolveScopeRepoRoot({ kind: "worktree", path: "/tmp/wt" }, "/tmp/repo")
+    ).toBe("/tmp/wt");
   });
 });
 

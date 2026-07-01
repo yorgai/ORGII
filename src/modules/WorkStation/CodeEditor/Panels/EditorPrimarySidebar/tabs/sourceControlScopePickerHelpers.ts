@@ -26,25 +26,29 @@ export function diffStatsFromSummary(
 ): ScopePickerDiffStats | null {
   if (!summary) return null;
   if (
-    summary.total_files <= 0 &&
-    summary.total_additions <= 0 &&
-    summary.total_deletions <= 0
+    summary.uncommitted_files <= 0 &&
+    summary.uncommitted_additions <= 0 &&
+    summary.uncommitted_deletions <= 0
   ) {
     return null;
   }
 
   return {
-    additions: summary.total_additions,
-    deletions: summary.total_deletions,
+    additions: summary.uncommitted_additions,
+    deletions: summary.uncommitted_deletions,
   };
 }
 
 export function diffActivityScore(
   summary?: GitWorktreeDiffSummary | null
 ): number {
-  const stats = diffStatsFromSummary(summary);
-  if (!stats) return 0;
-  return stats.additions + stats.deletions;
+  if (!summary) return 0;
+  return (
+    summary.uncommitted_additions +
+    summary.uncommitted_deletions +
+    summary.committed_additions +
+    summary.committed_deletions
+  );
 }
 
 export function formatScopePickerPath(path: string): string {
@@ -53,6 +57,35 @@ export function formatScopePickerPath(path: string): string {
 
 export function sourceControlScopeStorageKey(repoPath: string): string {
   return normalizeDisplayPath(repoPath).replace(/\/+$/, "");
+}
+
+export function normalizeScopePath(path: string): string {
+  return sourceControlScopeStorageKey(path);
+}
+
+export function resolveScopeRepoRoot(
+  scope: SourceControlScope,
+  repoPath: string
+): string {
+  return scope.kind === "worktree" ? scope.path : repoPath;
+}
+
+export function formatScopeDiffStatsTooltip(
+  summary: GitWorktreeDiffSummary
+): string {
+  const parts: string[] = [];
+  if (summary.uncommitted_additions > 0 || summary.uncommitted_deletions > 0) {
+    parts.push(
+      `Working tree +${summary.uncommitted_additions} -${summary.uncommitted_deletions}`
+    );
+  }
+  if (summary.committed_additions > 0 || summary.committed_deletions > 0) {
+    const base = summary.base_ref ? `since ${summary.base_ref}` : "committed";
+    parts.push(
+      `${base} +${summary.committed_additions} -${summary.committed_deletions}`
+    );
+  }
+  return parts.join(" · ");
 }
 
 export function readSourceControlScope(
@@ -70,7 +103,10 @@ export function reconcileSourceControlScope(
   if (scope.kind === "local") return scope;
   if (options?.worktreesReady === false) return scope;
 
-  const exists = worktrees.some((worktree) => worktree.path === scope.path);
+  const scopePath = normalizeScopePath(scope.path);
+  const exists = worktrees.some(
+    (worktree) => normalizeScopePath(worktree.path) === scopePath
+  );
   return exists ? scope : { kind: "local" };
 }
 

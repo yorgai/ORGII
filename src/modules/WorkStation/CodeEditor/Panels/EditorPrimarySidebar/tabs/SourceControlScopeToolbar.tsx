@@ -28,6 +28,7 @@ import {
   type SourceControlScope,
   diffStatsFromSummary,
   filterScopePickerWorktrees,
+  formatScopeDiffStatsTooltip,
   formatScopePickerPath,
   mainScopeMatchesQuery,
   resolveScopeBranchLabel,
@@ -63,7 +64,11 @@ function ScopePickerDiffStats({
   return (
     <span
       className="shrink-0"
-      title={formatDiffStatsLabel(stats.additions, stats.deletions)}
+      title={
+        summary
+          ? formatScopeDiffStatsTooltip(summary)
+          : formatDiffStatsLabel(stats.additions, stats.deletions)
+      }
     >
       <DiffStatsBadge
         additions={stats.additions}

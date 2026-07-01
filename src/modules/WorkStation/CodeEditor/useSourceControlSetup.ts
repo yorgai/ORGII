@@ -32,7 +32,10 @@ import { useGitWorktrees } from "./Panels/EditorPrimarySidebar/hooks/useGitWorkt
 import { useSourceControlScope } from "./Panels/EditorPrimarySidebar/hooks/useSourceControlScope";
 import { useWorkstationPr } from "./Panels/EditorPrimarySidebar/hooks/useWorkstationPr";
 import { SourceControlScopeToolbar } from "./Panels/EditorPrimarySidebar/tabs/SourceControlScopeToolbar";
-import type { ScopePickerWorktreeEntry } from "./Panels/EditorPrimarySidebar/tabs/sourceControlScopePickerHelpers";
+import {
+  type ScopePickerWorktreeEntry,
+  resolveScopeRepoRoot,
+} from "./Panels/EditorPrimarySidebar/tabs/sourceControlScopePickerHelpers";
 import { resolveGitDiffSelection } from "./sourceControlSelection";
 import { useStashCount } from "./useStashCount";
 
@@ -46,6 +49,7 @@ interface UseSourceControlSetupParams {
   activeTab: WorkStationTab | undefined | null;
   setPrimaryPanel: (updater: (prev: PanelState) => PanelState) => void;
   handleGitFileSelect: (file: GitFile) => void;
+  isMultiRoot?: boolean;
 }
 
 export interface UseSourceControlSetupReturn {
@@ -76,6 +80,7 @@ export function useSourceControlSetup({
   activeTab,
   setPrimaryPanel,
   handleGitFileSelect,
+  isMultiRoot = false,
 }: UseSourceControlSetupParams): UseSourceControlSetupReturn {
   const { t } = useTranslation();
   const setSourceControlFocusTarget = useSetAtom(sourceControlFocusTargetAtom);
@@ -102,11 +107,6 @@ export function useSourceControlSetup({
     enabled: isGitInitialized === true && hasWorktrees,
     worktreesReady: !worktreesLoading,
   });
-
-  useEffect(() => {
-    if (activeTab?.type === "source-control" || !hasWorktrees) return;
-    setScope({ kind: "local" });
-  }, [activeTab?.type, hasWorktrees, setScope]);
 
   const repoName = useMemo(() => {
     const segments = repoPath.replace(/\/+$/, "").split("/");
@@ -150,8 +150,9 @@ export function useSourceControlSetup({
     if (!repoPath) {
       return { uncommitted: 0, unstaged: 0, staged: 0 };
     }
+    const activeRepoRoot = resolveScopeRepoRoot(scope, repoPath);
     const files = Array.from(gitFilesByPath.values()).filter(
-      (file) => file.repoRoot === repoPath
+      (file) => (file.repoRoot ?? repoPath) === activeRepoRoot
     );
     const staged = files.filter((file) => file.staged).length;
     return {
@@ -159,7 +160,7 @@ export function useSourceControlSetup({
       unstaged: files.length - staged,
       staged,
     };
-  }, [gitFilesByPath, repoPath]);
+  }, [gitFilesByPath, repoPath, scope]);
 
   const sourceControlStashCount = useStashCount({
     repoPath,
@@ -244,6 +245,7 @@ export function useSourceControlSetup({
   const showScopePicker =
     activeTab?.type === "source-control" &&
     hasWorktrees &&
+    !isMultiRoot &&
     sourceControlFilterMode !== "history" &&
     sourceControlFilterMode !== "pr" &&
     sourceControlFilterMode !== "issues";

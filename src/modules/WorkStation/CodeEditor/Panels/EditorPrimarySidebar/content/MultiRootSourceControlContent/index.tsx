@@ -391,7 +391,6 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
   const toggle = useCallback(() => setExpanded((prev) => !prev), []);
 
   const folderName = worktree.path.split("/").pop() || "worktree";
-  const worktreeId = `worktree:${worktree.path}`;
 
   const removeWorktree = useCallback(async () => {
     if (!repoId || !repoPath) return;
@@ -431,7 +430,7 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
         <div className="flex min-h-[280px] flex-col overflow-hidden">
           <WorktreeSourceControlSection
             worktreePath={worktree.path}
-            worktreeId={worktreeId}
+            hostRepoId={repoId}
             onGitFileSelect={onGitFileSelect}
             showFilter={showFilter}
             viewMode={viewMode}
