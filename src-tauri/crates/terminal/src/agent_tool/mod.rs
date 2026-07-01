@@ -91,6 +91,59 @@ const CLOSE_FLUSH_MS: u64 = 250;
 // Session Management
 // ============================================
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DefaultShellPlatform {
+    #[cfg(any(test, target_os = "windows"))]
+    Windows,
+    #[cfg(any(test, target_os = "macos"))]
+    Macos,
+    #[cfg(any(test, all(unix, not(target_os = "macos"))))]
+    Unix,
+}
+
+pub(crate) fn resolve_default_shell_path(
+    platform: DefaultShellPlatform,
+    shell_env: Option<&str>,
+) -> String {
+    match platform {
+        #[cfg(any(test, target_os = "windows"))]
+        DefaultShellPlatform::Windows => "powershell.exe".to_string(),
+        #[cfg(any(test, target_os = "macos"))]
+        DefaultShellPlatform::Macos => shell_env
+            .filter(|shell| !shell.trim().is_empty())
+            .unwrap_or("zsh")
+            .to_string(),
+        #[cfg(any(test, all(unix, not(target_os = "macos"))))]
+        DefaultShellPlatform::Unix => shell_env
+            .filter(|shell| !shell.trim().is_empty())
+            .unwrap_or("bash")
+            .to_string(),
+    }
+}
+
+fn default_shell_path() -> String {
+    #[cfg(target_os = "windows")]
+    {
+        resolve_default_shell_path(DefaultShellPlatform::Windows, None)
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        resolve_default_shell_path(
+            DefaultShellPlatform::Macos,
+            std::env::var("SHELL").ok().as_deref(),
+        )
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        resolve_default_shell_path(
+            DefaultShellPlatform::Unix,
+            std::env::var("SHELL").ok().as_deref(),
+        )
+    }
+}
+
 /// Parameters for creating a new PTY session.
 pub struct CreateSessionParams {
     pub session_id: String,
@@ -143,18 +196,7 @@ pub async fn create_session(params: CreateSessionParams) -> Result<(), String> {
         .map_err(|err| format!("Failed to create PTY: {}", err))?;
 
     // Determine shell to use
-    let shell_path = if let Some(ref shell_override) = shell {
-        shell_override.clone()
-    } else {
-        #[cfg(target_os = "windows")]
-        {
-            "powershell.exe".to_string()
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            "zsh".to_string()
-        }
-    };
+    let shell_path = shell.unwrap_or_else(default_shell_path);
 
     let shell_kind = ShellKind::from_shell_path(&shell_path);
 
