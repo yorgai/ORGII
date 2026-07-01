@@ -127,7 +127,9 @@ function asCursorIdeSessionPage(
 export async function cursorIdeLiveFullRefresh(
   sessionId: string
 ): Promise<CursorIdeFullRefresh> {
-  return invoke<CursorIdeFullRefresh>("cursor_ide_full_refresh", { sessionId });
+  return invoke<CursorIdeFullRefresh>("brick_history_cursor_full_refresh", {
+    sessionId,
+  });
 }
 
 /**
@@ -187,18 +189,16 @@ export async function cursorIdeInitialWindow(args: {
 export async function cursorIdeFullRefresh(
   sessionId: string
 ): Promise<CursorIdeFullRefresh> {
-  const chunks = await brickHistoryChunks({
-    sourceId: CURSOR_IDE_BRICK_SOURCE_ID,
+  return invoke<CursorIdeFullRefresh>("brick_history_cursor_full_refresh", {
     sessionId,
   });
-  return { chunks, turns: [] };
 }
 
 export async function cursorIdeTurnWindow(args: {
   sessionId: string;
   userBubbleId: string;
 }): Promise<CursorIdeTurnWindow> {
-  return invoke<CursorIdeTurnWindow>("cursor_ide_turn_window", {
+  return invoke<CursorIdeTurnWindow>("brick_history_cursor_turn_window", {
     sessionId: args.sessionId,
     userBubbleId: args.userBubbleId,
   });

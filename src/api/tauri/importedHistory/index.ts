@@ -4,8 +4,9 @@ import {
   type BrickHistorySessionPage,
   type BrickHistorySessionRow,
   type BrickHistorySourceId,
+  type BrickHistorySourceRow,
   brickHistoryChunks,
-  brickHistorySessions,
+  brickHistoryQuerySessions,
 } from "../brickHistory";
 import type { DispatchCategory } from "../session";
 
@@ -65,6 +66,82 @@ export interface ImportedHistorySource {
   loadChunks(sessionId: string): Promise<ActivityChunk[]>;
 }
 
+const ICON_ID_BY_SOURCE: Record<ImportedHistorySourceId, string> = {
+  codex_app: "codex",
+  claude_code: "claude_code",
+  cursor_agent: "cursor",
+  opencode: "opencode",
+  windsurf: "windsurf",
+  workbuddy: "workbuddy",
+  gemini: "gemini",
+};
+
+const BRICK_IMPORTED_SOURCE_CATALOG: readonly BrickHistorySourceRow[] = [
+  {
+    sourceId: "codex_app",
+    displayName: "Codex",
+    sessionIdPrefix: "codexapp-",
+    category: "external_history",
+    capabilities: ["sessions", "chunks", "plans", "recent_paths", "artifacts"],
+    available: true,
+    paths: [],
+  },
+  {
+    sourceId: "claude_code",
+    displayName: "Claude Code",
+    sessionIdPrefix: "claudecodeapp-",
+    category: "external_history",
+    capabilities: ["sessions", "chunks", "plans", "recent_paths", "artifacts"],
+    available: true,
+    paths: [],
+  },
+  {
+    sourceId: "cursor_agent",
+    displayName: "Cursor Agent",
+    sessionIdPrefix: "cursoragentapp-",
+    category: "external_history",
+    capabilities: ["sessions", "chunks", "plans", "recent_paths", "artifacts"],
+    available: true,
+    paths: [],
+  },
+  {
+    sourceId: "opencode",
+    displayName: "OpenCode",
+    sessionIdPrefix: "opencodeapp-",
+    category: "external_history",
+    capabilities: ["sessions", "chunks", "plans", "recent_paths", "artifacts"],
+    available: true,
+    paths: [],
+  },
+  {
+    sourceId: "windsurf",
+    displayName: "Windsurf",
+    sessionIdPrefix: "windsurfapp-",
+    category: "external_history",
+    capabilities: ["sessions", "chunks", "plans", "recent_paths", "artifacts"],
+    available: true,
+    paths: [],
+  },
+  {
+    sourceId: "workbuddy",
+    displayName: "WorkBuddy",
+    sessionIdPrefix: "workbuddyapp-",
+    category: "external_history",
+    capabilities: ["sessions", "chunks", "plans", "recent_paths", "artifacts"],
+    available: true,
+    paths: [],
+  },
+  {
+    sourceId: "gemini",
+    displayName: "Gemini",
+    sessionIdPrefix: "geminiapp-",
+    category: "external_history",
+    capabilities: ["sessions", "chunks", "plans", "recent_paths", "artifacts"],
+    available: true,
+    paths: [],
+  },
+];
+
 function asImportedPage(
   page: BrickHistorySessionPage
 ): ImportedHistorySessionPage {
@@ -77,83 +154,35 @@ function asImportedPage(
   };
 }
 
-function createBrickImportedSource(config: {
-  sourceId: ImportedHistorySourceId;
-  prefix: string;
-  iconId: string;
-  displayName: string;
-  groupLabel: string;
-}): ImportedHistorySource {
+function createBrickImportedSource(
+  catalogRow: BrickHistorySourceRow
+): ImportedHistorySource {
+  const sourceId = catalogRow.sourceId as ImportedHistorySourceId;
   return {
-    ...config,
-    listCategory: `external_history:${config.sourceId}`,
+    sourceId,
+    prefix: catalogRow.sessionIdPrefix,
+    iconId: ICON_ID_BY_SOURCE[sourceId],
+    displayName: catalogRow.displayName,
+    groupLabel: catalogRow.displayName,
+    listCategory: `external_history:${sourceId}`,
     dispatchCategory: "external_history",
     async listSessions(args) {
       return asImportedPage(
-        await brickHistorySessions({
-          sourceId: config.sourceId,
+        await brickHistoryQuerySessions({
+          sourceId,
           limit: args?.limit,
           offset: args?.offset,
         })
       );
     },
     loadChunks(sessionId) {
-      return brickHistoryChunks({ sourceId: config.sourceId, sessionId });
+      return brickHistoryChunks({ sourceId, sessionId });
     },
   };
 }
 
-export const IMPORTED_HISTORY_SOURCES: readonly ImportedHistorySource[] = [
-  createBrickImportedSource({
-    sourceId: "codex_app",
-    prefix: "codexapp-",
-    iconId: "codex",
-    displayName: "Codex",
-    groupLabel: "Codex App",
-  }),
-  createBrickImportedSource({
-    sourceId: "claude_code",
-    prefix: "claudecodeapp-",
-    iconId: "claude_code",
-    displayName: "Claude Code",
-    groupLabel: "Claude Code",
-  }),
-  createBrickImportedSource({
-    sourceId: "cursor_agent",
-    prefix: "cursoragentapp-",
-    iconId: "cursor",
-    displayName: "Cursor Agent",
-    groupLabel: "Cursor Agent",
-  }),
-  createBrickImportedSource({
-    sourceId: "opencode",
-    prefix: "opencodeapp-",
-    iconId: "opencode",
-    displayName: "OpenCode",
-    groupLabel: "OpenCode",
-  }),
-  createBrickImportedSource({
-    sourceId: "windsurf",
-    prefix: "windsurfapp-",
-    iconId: "windsurf",
-    displayName: "Windsurf",
-    groupLabel: "Windsurf",
-  }),
-  createBrickImportedSource({
-    sourceId: "workbuddy",
-    prefix: "workbuddyapp-",
-    iconId: "workbuddy",
-    displayName: "WorkBuddy",
-    groupLabel: "WorkBuddy",
-  }),
-  createBrickImportedSource({
-    sourceId: "gemini",
-    prefix: "geminiapp-",
-    iconId: "gemini",
-    displayName: "Gemini",
-    groupLabel: "Gemini",
-  }),
-];
+export const IMPORTED_HISTORY_SOURCES: readonly ImportedHistorySource[] =
+  BRICK_IMPORTED_SOURCE_CATALOG.map(createBrickImportedSource);
 
 export function getImportedHistorySourceBySessionId(
   sessionId: string | null | undefined

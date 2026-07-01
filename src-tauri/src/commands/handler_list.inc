@@ -10,6 +10,10 @@ usage_diagnostics::commands::diagnostics_configure,
 // Brick external history commands
 brick_history::commands::brick_history_sources,
 brick_history::commands::brick_history_sessions,
+brick_history::commands::brick_history_query_sessions,
+brick_history::commands::brick_history_usage_summary,
+brick_history::commands::brick_history_cursor_full_refresh,
+brick_history::commands::brick_history_cursor_turn_window,
 brick_history::commands::brick_history_chunks,
 brick_history::commands::brick_history_refresh_source,
 brick_history::commands::brick_history_recent_paths,
@@ -955,8 +959,6 @@ agent_core::mcp::registries::glama::glama_detail,
 // Tokenizer
 // Orgtrack history sources
 orgtrack::history_commands::orgtrack_get_cli_sessions,
-orgtrack::history_commands::cursor_ide_full_refresh,
-orgtrack::history_commands::cursor_ide_turn_window,
 // Cursor IDE control — drive a running Cursor.app via CDP `Input.*`
 // so users can submit prompts (start + follow-up) without leaving ORGII.
 // See `crates/cursor-bridge-app/src/lib.rs` and

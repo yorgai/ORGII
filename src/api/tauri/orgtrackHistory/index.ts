@@ -3,15 +3,12 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   type BrickHistorySessionRow,
   type BrickHistorySourceId,
-  brickHistoryRefreshSource,
-  brickHistorySessions,
+  brickHistoryQuerySessions,
 } from "@src/api/tauri/brickHistory";
 
 import type { ClaudeCodeSession, CliSession, CursorSession } from "./types";
 
-const BRICK_PAGE_SIZE = 200;
-const BRICK_REFRESH_LIMIT = 1000;
-const MAX_BRICK_PAGES = 50;
+const BRICK_DEVRECORD_LIMIT = 1000;
 const CURSOR_MODE_AGENT = "agent";
 
 function parseDateParts(date: string): [number, number, number] {
@@ -23,14 +20,14 @@ function parseDateParts(date: string): [number, number, number] {
   ];
 }
 
-function startOfDayMs(date: string): number {
+function startOfDayIso(date: string): string {
   const [year, month, day] = parseDateParts(date);
-  return new Date(year, month - 1, day, 0, 0, 0, 0).getTime();
+  return new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
 }
 
-function endOfDayMs(date: string): number {
+function endOfDayIso(date: string): string {
   const [year, month, day] = parseDateParts(date);
-  return new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
+  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
 }
 
 function isoToMs(value: string): number {
@@ -50,32 +47,14 @@ async function listBrickSessionsInRange(
   startDate: string,
   endDate: string
 ): Promise<BrickHistorySessionRow[]> {
-  const startMs = startOfDayMs(startDate);
-  const endMs = endOfDayMs(endDate);
-  const rows: BrickHistorySessionRow[] = [];
-  let offset = 0;
-
-  await brickHistoryRefreshSource({ sourceId, limit: BRICK_REFRESH_LIMIT });
-
-  for (let page = 0; page < MAX_BRICK_PAGES; page += 1) {
-    const result = await brickHistorySessions({
-      sourceId,
-      limit: BRICK_PAGE_SIZE,
-      offset,
-    });
-    rows.push(
-      ...result.sessions.filter((session) => {
-        const createdAt = isoToMs(session.createdAt);
-        return createdAt >= startMs && createdAt <= endMs;
-      })
-    );
-
-    if (!result.hasMore) break;
-    offset += result.sessions.length;
-    if (result.sessions.length === 0) break;
-  }
-
-  return rows;
+  const result = await brickHistoryQuerySessions({
+    sourceId,
+    createdAfter: startOfDayIso(startDate),
+    createdBefore: endOfDayIso(endDate),
+    limit: BRICK_DEVRECORD_LIMIT,
+    refreshLimit: BRICK_DEVRECORD_LIMIT,
+  });
+  return result.sessions;
 }
 
 export async function getOrgtrackCursorSessions(

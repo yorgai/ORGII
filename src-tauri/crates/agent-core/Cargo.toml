@@ -28,6 +28,7 @@ app_paths = { path = "../app-paths" }
 app_platform = { path = "../app-platform" }
 app_utils = { path = "../app-utils" }
 browser = { path = "../browser" }
+brick_core = { package = "brick-core", path = "../../../vendor/brick/crates/core" }
 
 # Runtime infrastructure agent_core composes against (no back-edges from
 # any of these crates into agent_core — IoC slots inside agent_core

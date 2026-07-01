@@ -12,9 +12,20 @@ export type BrickHistorySourceId =
   | "workbuddy"
   | "gemini";
 
+export type BrickHistorySourceCapability =
+  | "sessions"
+  | "chunks"
+  | "plans"
+  | "recent_paths"
+  | "artifacts"
+  | "cursor_readonly_windows";
+
 export interface BrickHistorySourceRow {
   sourceId: BrickHistorySourceId;
   displayName: string;
+  sessionIdPrefix: string;
+  category: "external_history" | "cursor_ide";
+  capabilities: BrickHistorySourceCapability[];
   available: boolean;
   paths: string[];
 }
@@ -56,6 +67,36 @@ export interface BrickHistorySessionRow {
 export interface BrickHistorySessionPage {
   sessions: BrickHistorySessionRow[];
   hasMore: boolean;
+}
+
+export interface BrickHistorySessionQuery {
+  sourceId?: BrickHistorySourceId;
+  createdAfter?: string;
+  createdBefore?: string;
+  repoPath?: string;
+  model?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+  refreshLimit?: number;
+}
+
+export interface BrickHistoryUsageModelSummaryRow {
+  model: string;
+  sessionCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
+export interface BrickHistoryUsageSummaryRow {
+  sessionCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  totalDurationMs: number;
+  averageDurationMs?: number;
+  modelBreakdown: BrickHistoryUsageModelSummaryRow[];
 }
 
 export interface BrickHistoryRefreshStats {
@@ -134,6 +175,22 @@ export async function brickHistorySessions(args: {
     sourceId: args.sourceId,
     limit: args.limit,
     offset: args.offset,
+  });
+}
+
+export async function brickHistoryQuerySessions(
+  args: BrickHistorySessionQuery
+): Promise<BrickHistorySessionPage> {
+  return invoke<BrickHistorySessionPage>("brick_history_query_sessions", {
+    request: args,
+  });
+}
+
+export async function brickHistoryUsageSummary(
+  args: BrickHistorySessionQuery
+): Promise<BrickHistoryUsageSummaryRow> {
+  return invoke<BrickHistoryUsageSummaryRow>("brick_history_usage_summary", {
+    request: args,
   });
 }
 

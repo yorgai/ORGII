@@ -3,9 +3,11 @@ use std::path::{Path, PathBuf};
 
 use brick_core::{
     discover_sources, format_source_session_chunks, refresh_source_profile_to_metadata,
-    DiscoveredPathKind, DiscoveredSource, MetadataDb, SourcePlanListQuery, SourcePlanRecord,
+    source_session_full_refresh, source_session_turn_window, DiscoveredPathKind, DiscoveredSource,
+    DiscoveredSourceKind, MetadataDb, SourcePlanListQuery, SourcePlanRecord,
     SourcePlanSessionEdgeRecord, SourceProfile, SourceRefreshOptions, SourceSessionChunksUpsert,
-    SourceSessionListQuery, SourceSessionRecord, FUNCTION_ASSISTANT, FUNCTION_USER_MESSAGE,
+    SourceSessionListQuery, SourceSessionRecord, SourceUsageSummaryQuery, FUNCTION_ASSISTANT,
+    FUNCTION_USER_MESSAGE,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -16,31 +18,12 @@ const DEFAULT_REFRESH_LIMIT: usize = 500;
 const MAX_LIST_LIMIT: usize = 1_000;
 const BRICK_HOME_DIR: &str = "brick";
 
-const SOURCE_CLAUDE_CODE: &str = "claude_code";
-const SOURCE_CODEX_APP: &str = "codex_app";
-const SOURCE_CURSOR_AGENT: &str = "cursor_agent";
-const SOURCE_CURSOR_IDE: &str = "cursor_ide";
-const SOURCE_GEMINI: &str = "gemini";
-const SOURCE_OPENCODE: &str = "opencode";
-const SOURCE_WINDSURF: &str = "windsurf";
-const SOURCE_WORKBUDDY: &str = "workbuddy";
-
 const SESSION_STATUS_COMPLETED: &str = "completed";
 const SESSION_CATEGORY_EXTERNAL_HISTORY: &str = "external_history";
 const LIVENESS_ACTIVE: &str = "active";
 const METADATA_KEY_LIVENESS: &str = "liveness";
 const METADATA_KEY_CURSOR_MODE: &str = "cursorMode";
 const METADATA_KEY_CURSOR_IS_AGENTIC: &str = "cursorIsAgentic";
-
-const PREFIX_BRICK_APP: &str = "brickapp-";
-const PREFIX_CLAUDE_CODE: &str = "claudecodeapp-";
-const PREFIX_CODEX_APP: &str = "codexapp-";
-const PREFIX_CURSOR_AGENT: &str = "cursoragentapp-";
-const PREFIX_CURSOR_IDE: &str = "cursoride-";
-const PREFIX_GEMINI: &str = "geminiapp-";
-const PREFIX_OPENCODE: &str = "opencodeapp-";
-const PREFIX_WINDSURF: &str = "windsurfapp-";
-const PREFIX_WORKBUDDY: &str = "workbuddyapp-";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -101,6 +84,9 @@ pub struct BrickHistorySessionPage {
 pub struct BrickHistorySourceRow {
     pub source_id: String,
     pub display_name: String,
+    pub session_id_prefix: String,
+    pub category: String,
+    pub capabilities: Vec<String>,
     pub available: bool,
     pub paths: Vec<String>,
 }
@@ -183,6 +169,59 @@ pub struct BrickHistoryChunksRequest {
     pub session_id: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrickHistorySessionQueryRequest {
+    pub source_id: Option<String>,
+    pub created_after: Option<String>,
+    pub created_before: Option<String>,
+    pub repo_path: Option<String>,
+    pub model: Option<String>,
+    pub status: Option<String>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+    pub refresh_limit: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrickHistoryUsageModelSummaryRow {
+    pub model: String,
+    pub session_count: usize,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub total_tokens: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrickHistoryUsageSummaryRow {
+    pub session_count: usize,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    pub total_tokens: u64,
+    pub total_duration_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub average_duration_ms: Option<u64>,
+    pub model_breakdown: Vec<BrickHistoryUsageModelSummaryRow>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrickHistoryCursorFullRefresh {
+    pub chunks: Vec<Value>,
+    pub turns: Vec<Value>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrickHistoryCursorTurnWindow {
+    pub chunks: Vec<Value>,
+    pub user_bubble_id: String,
+    pub next_user_bubble_id: Option<String>,
+    pub loaded_bubble_count: usize,
+}
+
 #[tauri::command]
 pub async fn brick_history_sources() -> Result<Vec<BrickHistorySourceRow>, String> {
     tokio::task::spawn_blocking(|| {
@@ -191,6 +230,14 @@ pub async fn brick_history_sources() -> Result<Vec<BrickHistorySourceRow>, Strin
             .map(|(source, profile)| BrickHistorySourceRow {
                 source_id: profile.name,
                 display_name: source.source.label().to_string(),
+                session_id_prefix: source.source.session_id_prefix().to_string(),
+                category: source.source.category().to_string(),
+                capabilities: source
+                    .source
+                    .capabilities()
+                    .iter()
+                    .map(|capability| (*capability).to_string())
+                    .collect(),
                 available: true,
                 paths: source
                     .paths
@@ -213,6 +260,24 @@ pub async fn brick_history_sessions(
     tokio::task::spawn_blocking(move || list_sessions_for_source(&source_id, limit, offset))
         .await
         .map_err(|err| format!("Brick history session task failed: {err}"))?
+}
+
+#[tauri::command]
+pub async fn brick_history_query_sessions(
+    request: BrickHistorySessionQueryRequest,
+) -> Result<BrickHistorySessionPage, String> {
+    tokio::task::spawn_blocking(move || query_sessions(request))
+        .await
+        .map_err(|err| format!("Brick history filtered session task failed: {err}"))?
+}
+
+#[tauri::command]
+pub async fn brick_history_usage_summary(
+    request: BrickHistorySessionQueryRequest,
+) -> Result<BrickHistoryUsageSummaryRow, String> {
+    tokio::task::spawn_blocking(move || usage_summary(request))
+        .await
+        .map_err(|err| format!("Brick history usage summary task failed: {err}"))?
 }
 
 #[tauri::command]
@@ -249,6 +314,25 @@ pub async fn brick_history_chunks(
     })
     .await
     .map_err(|err| format!("Brick history chunks task failed: {err}"))?
+}
+
+#[tauri::command]
+pub async fn brick_history_cursor_full_refresh(
+    session_id: String,
+) -> Result<BrickHistoryCursorFullRefresh, String> {
+    tokio::task::spawn_blocking(move || cursor_full_refresh(session_id))
+        .await
+        .map_err(|err| format!("Brick Cursor full refresh task failed: {err}"))?
+}
+
+#[tauri::command]
+pub async fn brick_history_cursor_turn_window(
+    session_id: String,
+    user_bubble_id: String,
+) -> Result<BrickHistoryCursorTurnWindow, String> {
+    tokio::task::spawn_blocking(move || cursor_turn_window(session_id, user_bubble_id))
+        .await
+        .map_err(|err| format!("Brick Cursor turn window task failed: {err}"))?
 }
 
 #[tauri::command]
@@ -305,6 +389,7 @@ fn list_sessions_for_source(
             source_id: Some(source_id.to_string()),
             limit: limit + 1,
             offset,
+            ..SourceSessionListQuery::default()
         })
         .map_err(to_string_error)?;
     let has_more = records.len() > limit;
@@ -314,6 +399,169 @@ fn list_sessions_for_source(
         .map(|record| record_to_row(&db, record))
         .collect::<Result<Vec<_>, _>>()?;
     Ok(BrickHistorySessionPage { sessions, has_more })
+}
+
+fn query_sessions(
+    request: BrickHistorySessionQueryRequest,
+) -> Result<BrickHistorySessionPage, String> {
+    let limit = normalize_limit(request.limit);
+    let offset = request.offset.unwrap_or(0);
+    if let Some(source_id) = request.source_id.as_deref() {
+        refresh_source(
+            source_id,
+            Some(request.refresh_limit.unwrap_or(DEFAULT_REFRESH_LIMIT)),
+        )?;
+    }
+    let db = open_metadata_db()?;
+    let query = source_session_query_from_request(&request, limit + 1, offset)?;
+    let records = db.list_source_sessions(&query).map_err(to_string_error)?;
+    let has_more = records.len() > limit;
+    let sessions = records
+        .into_iter()
+        .take(limit)
+        .map(|record| record_to_row(&db, record))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(BrickHistorySessionPage { sessions, has_more })
+}
+
+fn usage_summary(
+    request: BrickHistorySessionQueryRequest,
+) -> Result<BrickHistoryUsageSummaryRow, String> {
+    if let Some(source_id) = request.source_id.as_deref() {
+        refresh_source(
+            source_id,
+            Some(request.refresh_limit.unwrap_or(DEFAULT_REFRESH_LIMIT)),
+        )?;
+    }
+    let db = open_metadata_db()?;
+    let query = source_usage_query_from_request(&request)?;
+    let summary = db.source_usage_summary(&query).map_err(to_string_error)?;
+    Ok(BrickHistoryUsageSummaryRow {
+        session_count: summary.session_count,
+        input_tokens: summary.input_tokens,
+        output_tokens: summary.output_tokens,
+        total_tokens: summary.total_tokens,
+        total_duration_ms: summary.total_duration_ms,
+        average_duration_ms: summary.average_duration_ms,
+        model_breakdown: summary
+            .model_breakdown
+            .into_iter()
+            .map(|model| BrickHistoryUsageModelSummaryRow {
+                model: model.model,
+                session_count: model.session_count,
+                input_tokens: model.input_tokens,
+                output_tokens: model.output_tokens,
+                total_tokens: model.total_tokens,
+            })
+            .collect(),
+    })
+}
+
+fn source_session_query_from_request(
+    request: &BrickHistorySessionQueryRequest,
+    limit: usize,
+    offset: usize,
+) -> Result<SourceSessionListQuery, String> {
+    Ok(SourceSessionListQuery {
+        source_id: request.source_id.clone(),
+        created_after: parse_optional_rfc3339(request.created_after.as_deref())?,
+        created_before: parse_optional_rfc3339(request.created_before.as_deref())?,
+        repo_path: request.repo_path.as_ref().map(PathBuf::from),
+        model: request.model.clone(),
+        status: request.status.clone(),
+        limit,
+        offset,
+    })
+}
+
+fn source_usage_query_from_request(
+    request: &BrickHistorySessionQueryRequest,
+) -> Result<SourceUsageSummaryQuery, String> {
+    Ok(SourceUsageSummaryQuery {
+        source_id: request.source_id.clone(),
+        created_after: parse_optional_rfc3339(request.created_after.as_deref())?,
+        created_before: parse_optional_rfc3339(request.created_before.as_deref())?,
+        repo_path: request.repo_path.as_ref().map(PathBuf::from),
+        model: request.model.clone(),
+        status: request.status.clone(),
+    })
+}
+
+fn parse_optional_rfc3339(value: Option<&str>) -> Result<Option<DateTime<Utc>>, String> {
+    value
+        .map(|raw| {
+            DateTime::parse_from_rfc3339(raw)
+                .map(|parsed| parsed.with_timezone(&Utc))
+                .map_err(|err| format!("Invalid RFC3339 timestamp {raw}: {err}"))
+        })
+        .transpose()
+}
+
+fn cursor_full_refresh(session_id: String) -> Result<BrickHistoryCursorFullRefresh, String> {
+    let (external_session_id, source_path) = cursor_source_context(&session_id)?;
+    let refresh =
+        source_session_full_refresh("cursor_ide", &external_session_id, source_path.as_deref())
+            .map_err(to_string_error)?;
+    persist_cursor_chunks(&external_session_id, refresh.chunks.clone())?;
+    Ok(BrickHistoryCursorFullRefresh {
+        chunks: chunks_to_values(refresh.chunks)?,
+        turns: Vec::new(),
+    })
+}
+
+fn cursor_turn_window(
+    session_id: String,
+    user_bubble_id: String,
+) -> Result<BrickHistoryCursorTurnWindow, String> {
+    let (external_session_id, source_path) = cursor_source_context(&session_id)?;
+    let window = source_session_turn_window(
+        "cursor_ide",
+        &external_session_id,
+        source_path.as_deref(),
+        &user_bubble_id,
+    )
+    .map_err(to_string_error)?;
+    Ok(BrickHistoryCursorTurnWindow {
+        loaded_bubble_count: window.loaded_part_count,
+        chunks: chunks_to_values(window.chunks)?,
+        user_bubble_id: window.user_part_id,
+        next_user_bubble_id: window.next_user_part_id,
+    })
+}
+
+fn cursor_source_context(session_id: &str) -> Result<(String, Option<PathBuf>), String> {
+    let external_session_id = external_session_id_from_frontend_id("cursor_ide", session_id);
+    refresh_source("cursor_ide", Some(DEFAULT_REFRESH_LIMIT))?;
+    let db = open_metadata_db()?;
+    let source_path = db
+        .get_source_session("cursor_ide", &external_session_id)
+        .map_err(to_string_error)?
+        .and_then(|record| record.source_path);
+    Ok((external_session_id, source_path))
+}
+
+fn persist_cursor_chunks(
+    external_session_id: &str,
+    chunks: Vec<brick_core::ActivityChunk>,
+) -> Result<(), String> {
+    if chunks.is_empty() {
+        return Ok(());
+    }
+    let mut db = open_metadata_db()?;
+    db.upsert_source_session_chunks(&SourceSessionChunksUpsert {
+        source_id: "cursor_ide".to_string(),
+        external_session_id: external_session_id.to_string(),
+        chunks,
+    })
+    .map_err(to_string_error)
+}
+
+fn chunks_to_values(chunks: Vec<brick_core::ActivityChunk>) -> Result<Vec<Value>, String> {
+    chunks
+        .into_iter()
+        .map(serde_json::to_value)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|err| format!("Failed to encode Brick Cursor chunks: {err}"))
 }
 
 fn refresh_source(
@@ -359,6 +607,7 @@ fn list_recent_paths(limit: Option<usize>) -> Result<Vec<BrickHistoryRecentPathR
             source_id: None,
             limit: MAX_LIST_LIMIT,
             offset: 0,
+            ..SourceSessionListQuery::default()
         })
         .map_err(to_string_error)?;
     let mut groups: BTreeMap<String, BrickHistoryRecentPathAccumulator> = BTreeMap::new();
@@ -554,7 +803,7 @@ fn record_to_row(
         status: SESSION_STATUS_COMPLETED.to_string(),
         created_at,
         updated_at,
-        category: session_category(&source_id).to_string(),
+        category: session_category(&source_id),
         read_only: true,
         model: record.model,
         total_tokens,
@@ -618,12 +867,10 @@ fn plan_edge_to_row(
     })
 }
 
-fn session_category(source_id: &str) -> &'static str {
-    if source_id == SOURCE_CURSOR_IDE {
-        SOURCE_CURSOR_IDE
-    } else {
-        SESSION_CATEGORY_EXTERNAL_HISTORY
-    }
+fn session_category(source_id: &str) -> String {
+    source_kind(source_id)
+        .map(|kind| kind.category().to_string())
+        .unwrap_or_else(|| SESSION_CATEGORY_EXTERNAL_HISTORY.to_string())
 }
 
 fn frontend_session_id(source_id: &str, external_session_id: &str) -> String {
@@ -631,24 +878,21 @@ fn frontend_session_id(source_id: &str, external_session_id: &str) -> String {
 }
 
 fn external_session_id_from_frontend_id(source_id: &str, session_id: &str) -> String {
+    let prefix = source_prefix(source_id);
     session_id
-        .strip_prefix(source_prefix(source_id))
+        .strip_prefix(prefix.as_str())
         .unwrap_or(session_id)
         .to_string()
 }
 
-fn source_prefix(source_id: &str) -> &'static str {
-    match source_id {
-        SOURCE_CLAUDE_CODE => PREFIX_CLAUDE_CODE,
-        SOURCE_CODEX_APP => PREFIX_CODEX_APP,
-        SOURCE_CURSOR_AGENT => PREFIX_CURSOR_AGENT,
-        SOURCE_CURSOR_IDE => PREFIX_CURSOR_IDE,
-        SOURCE_GEMINI => PREFIX_GEMINI,
-        SOURCE_OPENCODE => PREFIX_OPENCODE,
-        SOURCE_WINDSURF => PREFIX_WINDSURF,
-        SOURCE_WORKBUDDY => PREFIX_WORKBUDDY,
-        _ => PREFIX_BRICK_APP,
-    }
+fn source_prefix(source_id: &str) -> String {
+    source_kind(source_id)
+        .map(|kind| kind.session_id_prefix().to_string())
+        .unwrap_or_else(|| "brickapp-".to_string())
+}
+
+fn source_kind(source_id: &str) -> Option<DiscoveredSourceKind> {
+    DiscoveredSourceKind::from_profile_name(source_id)
 }
 
 fn touched_files(value: Option<&Value>) -> Vec<String> {
