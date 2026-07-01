@@ -237,12 +237,11 @@ export function SourceControlScopeToolbar({
   const droplist = (
     <div
       className={`${DROPDOWN_CLASSES.panel} ${DROPDOWN_WIDTHS.fileTreeClass} max-w-[320px] overflow-hidden`}
+      onClick={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
     >
       {showSearch ? (
-        <div
-          className={DROPDOWN_CLASSES.searchContainer}
-          onMouseDown={(event) => event.preventDefault()}
-        >
+        <div className={DROPDOWN_CLASSES.searchContainer}>
           <Search
             size={DROPDOWN_ITEM.iconSize}
             className="shrink-0 text-text-3"
@@ -251,11 +250,6 @@ export function SourceControlScopeToolbar({
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            onClick={(event) => event.stopPropagation()}
-            onMouseDown={(event) => {
-              event.stopPropagation();
-              event.currentTarget.focus();
-            }}
             placeholder={t("sourceControl.scope.searchPlaceholder")}
             className={DROPDOWN_CLASSES.searchInput}
             aria-label={t("sourceControl.scope.searchPlaceholder")}
