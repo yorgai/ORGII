@@ -1,3 +1,4 @@
+import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import { z } from "zod/v4";
 
@@ -239,3 +240,20 @@ export const collabLastSyncTimestampsAtom = atomWithStorage<
   { getOnInit: true }
 );
 collabLastSyncTimestampsAtom.debugLabel = "collabLastSyncTimestampsAtom";
+
+/**
+ * One-shot bridge from CollabSyncEngine (plain TS, cannot call React hooks)
+ * to the UI: when the engine finishes importing a snapshot that should be
+ * opened, it parks the target here; `useCollabSyncEngine` consumes it
+ * (read → openSession → reset to null). Aligned with the pendingInvite
+ * pattern; deliberately NOT persisted.
+ */
+export interface CollabPendingOpenSession {
+  sessionId: string;
+  title: string;
+  repoPath?: string;
+}
+
+export const collabPendingOpenSessionAtom =
+  atom<CollabPendingOpenSession | null>(null);
+collabPendingOpenSessionAtom.debugLabel = "collabPendingOpenSessionAtom";

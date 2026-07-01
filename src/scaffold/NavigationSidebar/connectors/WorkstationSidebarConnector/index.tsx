@@ -8,8 +8,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { type ProjectOrg, projectApi } from "@src/api/http/project";
 import type { WorkspaceRecord } from "@src/api/tauri/workspace";
 import { ROUTES } from "@src/config/routes";
-import { useCollaborationMetadataSync } from "@src/features/TeamCollaboration/useCollaborationMetadataSync";
-import { useCollaborationSessionPush } from "@src/features/TeamCollaboration/useCollaborationSessionPush";
+import { useCollabSyncEngine } from "@src/features/TeamCollaboration/engine/useCollabSyncEngine";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { useKeyVault } from "@src/hooks/keyVault";
 import { createLogger } from "@src/hooks/logger";
@@ -355,8 +354,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     selectedOrgId: activeOrgId,
   });
 
-  useCollaborationMetadataSync();
-  useCollaborationSessionPush();
+  useCollabSyncEngine();
 
   const rename = useRenameSessionModal();
   const activeSessionId = useAtomValue(workstationActiveSessionIdAtom) ?? "";
