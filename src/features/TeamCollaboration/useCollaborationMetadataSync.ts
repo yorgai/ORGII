@@ -490,6 +490,7 @@ export function useCollaborationMetadataSync(): void {
           });
           persistSessions(getInstrumentedStore().get(sessionsAtom));
           await eventStoreProxy.set(localEvents, localSessionId);
+          await eventStoreProxy.saveToCache(localSessionId);
         } catch (error) {
           setStatus(
             org.id,
@@ -584,6 +585,7 @@ export function useCollaborationMetadataSync(): void {
           });
           persistSessions(getInstrumentedStore().get(sessionsAtom));
           await eventStoreProxy.set(localEvents, localSessionId);
+          await eventStoreProxy.saveToCache(localSessionId);
           setSnapshotRequests((current) =>
             current.map((item) =>
               item.requestId === request.requestId

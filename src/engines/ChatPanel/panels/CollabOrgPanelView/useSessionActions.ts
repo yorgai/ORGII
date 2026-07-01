@@ -156,6 +156,7 @@ export function useSessionActions({
               getInstrumentedStore().get(sessionsAtom) as Session[]
             );
             await eventStoreProxy.set(localEvents, localSessionId);
+            await eventStoreProxy.saveToCache(localSessionId);
             openSession(
               localSessionId,
               remoteSession.title,

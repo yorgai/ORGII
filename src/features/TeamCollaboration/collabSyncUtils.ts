@@ -54,6 +54,9 @@ export function isSessionPushAllowed(
   org: CollabOrgRecord,
   settings: CollabSessionAccessSettings
 ): boolean {
+  // Imported teammate sessions must never be pushed back, or every
+  // consumer re-uploads them under its own member id (org-wide echo loop).
+  if (session.category === "external_history") return false;
   if (settings.accessMode === COLLAB_SESSION_ACCESS_MODE.OFF) return false;
   return isLocalSessionInOrgScope(session, org);
 }
