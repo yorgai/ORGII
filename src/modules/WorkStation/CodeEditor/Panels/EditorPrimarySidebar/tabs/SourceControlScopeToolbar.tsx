@@ -6,7 +6,6 @@ import type { GitWorktreeDiffSummary } from "@src/api/http/git/types";
 import DiffStatsBadge from "@src/components/DiffStatsBadge";
 import Dropdown from "@src/components/Dropdown";
 import DropdownItem from "@src/components/Dropdown/DropdownItem";
-import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
   DROPDOWN_ITEM,
@@ -123,13 +122,8 @@ function ScopePickerItem({
         selected={selected}
         showCheckmark={false}
         onClick={onSelect}
-        className={onRemove ? "w-full pr-8" : "w-full"}
-        suffix={
-          <span className="flex items-center gap-1">
-            <ScopePickerDiffStats summary={summary} />
-            {selected ? <DropdownSelectedCheck /> : null}
-          </span>
-        }
+        className="w-full"
+        suffix={<ScopePickerDiffStats summary={summary} />}
       >
         <span title={title}>{label}</span>
       </DropdownItem>

@@ -20,8 +20,8 @@
 | 6   | Switch to another editor tab and back        | Previously selected scope **persists** (not reset to main)                                                                                                                                                  |
 | 7   | Hover diff stats on dropdown row             | Tooltip shows working-tree breakdown (e.g. `Working tree +8 -3`); each dropdown row shows compact +/- badge when uncommitted diffs exist                                                                    |
 | 8   | Remove a worktree via trash icon (hover row) | Confirm dialog → worktree removed from disk; if it was active scope, falls back to main                                                                                                                     |
-| 9   | Inspect row layout (no hover)                | Rows align flush to the right edge — no empty gutter reserved for delete; diff stats and checkmark sit at trailing edge                                                                                     |
-| 10  | Hover worktree row with diff stats           | Trash icon overlays the trailing stats/check area without shifting label or row width                                                                                                                       |
+| 9   | Inspect row layout (no hover)                | Rows align flush to the right edge — no empty gutter reserved for delete; diff stats sit at trailing edge; selected row uses highlight only (no checkmark)                                                  |
+| 10  | Hover worktree row with diff stats           | Trash icon overlays the trailing stats area without shifting label or row width                                                                                                                             |
 
 ## Edge Cases
 
