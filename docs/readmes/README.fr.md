@@ -3,7 +3,6 @@
   <p><strong>IDE agentique open-source dans le style de Cursor — mais conçu pour la lisibilité des revues, la traçabilité et la liberté créative, pas seulement pour coder plus vite.</strong></p>
   <p>Construit avec Rust et Tauri pour une exécution local-first sous 100 Mo sur disque. Prend en charge le livestream et le replay des trajectoires d’Agents. Facile à suivre et à relire.</p>
   <p>
-    <a href="../../LICENSE"><img alt="License" src="https://img.shields.io/github/license/yorgai/ORG2?style=flat-square" /></a>
     <a href="https://github.com/yorgai/ORG2/releases/latest"><img alt="Downloads" src="https://img.shields.io/github/downloads/yorgai/ORG2/total?style=flat-square&label=downloads" /></a>
     <a href="https://github.com/yorgai/ORG2/commits/develop"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2?style=flat-square&label=last%20commit" /></a>
     <a href="https://github.com/yorgai/ORG2/graphs/commit-activity"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/yorgai/ORG2?style=flat-square&label=commit%20activity" /></a>
