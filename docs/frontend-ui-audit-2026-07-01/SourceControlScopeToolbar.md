@@ -135,8 +135,17 @@ User requested visual parity with right filter `Select` (`size="small"`, `varian
 | Line (before) | Change                                                                                                                           | Status    |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | 324–348       | Replaced raw `<button>` / partial `Button` with `SelectGhostTrigger`; `open` drives ghost open background + chevron `rotate-180` | **fixed** |
-| 324–348       | Layout: `min-w-0 max-w-[min(100%,32rem)] w-auto`; breadcrumb tone segments unchanged inside `select-value`                       | **fixed** |
-| 324–348       | Hover/open: `select-ghost` tokens (`surface-hover` / `fill-2`) instead of ad-hoc `hover:bg-fill-2`                               | **fixed** |
-| 324–348       | Height/padding: `select-size-small` + ghost padding (`0 6px`, 13px font) — matches filter header Select                          | **fixed** |
+
+## Pass 5 — SelectGhostTrigger uses design-system Button (2026-07-01)
+
+PR review: `SelectGhostTrigger` must not render a raw `<button>` in app code. Refactored to `@src/components/Button` with `variant="tertiary"` / `appearance="ghost"` and layout resets so existing `select-ghost` SCSS keeps filter-pill parity (Button ghost tokens differ in height, padding, and open/hover fill).
+
+| Element                   | Verdict                                                                                                    | Reason                                                                                                                       |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `SelectGhostTrigger` root | **fixed**                                                                                                  | Uses `Button` + `BUTTON_RESET_CLASS` + inline style reset; Select SCSS retained for visual match with header filter `Select` |
+| `SpotlightSelectTrigger`  | kept                                                                                                       | Out of scope for this PR; still uses raw `<button>` with bordered Select styling                                             |
+| 324–348                   | Layout: `min-w-0 max-w-[min(100%,32rem)] w-auto`; breadcrumb tone segments unchanged inside `select-value` | **fixed**                                                                                                                    |
+| 324–348                   | Hover/open: `select-ghost` tokens (`surface-hover` / `fill-2`) instead of ad-hoc `hover:bg-fill-2`         | **fixed**                                                                                                                    |
+| 324–348                   | Height/padding: `select-size-small` + ghost padding (`0 6px`, 13px font) — matches filter header Select    | **fixed**                                                                                                                    |
 
 Preserved: `title` tooltip (path · branch), `aria-label`, breadcrumb segment rendering, custom droplist (search, sections, diff badges, delete overlay).

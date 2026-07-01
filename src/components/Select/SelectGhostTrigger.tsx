@@ -8,10 +8,15 @@
  * Use when a custom droplist (`Dropdown` droplist mode, spotlight palette,
  * etc.) must share the compact workstation-header select appearance
  * without adopting `Select`'s built-in option panel.
+ *
+ * Renders via design-system `Button` (not a raw `<button>`). Select SCSS
+ * classes drive the pill look because Button's ghost appearance does not
+ * match `Select` ghost (height, padding, hover/open fill tokens).
  */
 import { ChevronDown } from "lucide-react";
 import React, { forwardRef } from "react";
 
+import Button from "@src/components/Button";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import { RADIUS_CLASS_MAP } from "./config";
@@ -34,6 +39,10 @@ export interface SelectGhostTriggerProps {
   ariaLabel?: string;
   dataTestId?: string;
 }
+
+/** Reset Button layout so `select-wrapper` / `select-selector` SCSS wins. */
+const BUTTON_RESET_CLASS =
+  "!inline-block !h-auto !min-h-0 !justify-start !items-stretch !p-0 !font-normal !border-0 !bg-transparent [&>span]:contents";
 
 const SelectGhostTrigger = forwardRef<
   HTMLButtonElement,
@@ -64,25 +73,27 @@ const SelectGhostTrigger = forwardRef<
     disabled && "select-disabled",
     open && "select-open",
     isDark && "select-dark",
+    BUTTON_RESET_CLASS,
     className,
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <button
+    <Button
       ref={ref}
-      type="button"
+      variant="tertiary"
+      appearance="ghost"
+      size={size}
+      disabled={disabled}
       className={wrapperClasses}
       style={{
-        ...style,
-        appearance: "none",
-        background: "transparent",
-        border: "none",
+        height: "auto",
         padding: 0,
+        gap: 0,
         textAlign: "left",
+        ...style,
       }}
-      disabled={disabled}
       title={title}
       aria-label={ariaLabel}
       aria-haspopup="listbox"
@@ -100,7 +111,7 @@ const SelectGhostTrigger = forwardRef<
           />
         </div>
       </div>
-    </button>
+    </Button>
   );
 });
 
