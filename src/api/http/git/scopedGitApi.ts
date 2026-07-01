@@ -22,12 +22,13 @@ import {
 
 import { gitCommit } from "./commits";
 import { gitDiscardChanges, gitStageFiles, gitUnstageFiles } from "./staging";
+import type { GitCommitResponse } from "./types";
 
 export interface ScopedGitApi {
   stage: (files: string[]) => Promise<boolean>;
   unstage: (files: string[]) => Promise<boolean>;
   discard: (files: string[]) => Promise<boolean>;
-  commit: (message: string) => Promise<unknown>;
+  commit: (message: string) => Promise<GitCommitResponse["data"]>;
 }
 
 export function createScopedGitApi(

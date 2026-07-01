@@ -426,7 +426,7 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
           ) : null
         }
       />
-      {expanded && (
+      {expanded && repoId && (
         <div className="flex min-h-[280px] flex-col overflow-hidden">
           <WorktreeSourceControlSection
             worktreePath={worktree.path}

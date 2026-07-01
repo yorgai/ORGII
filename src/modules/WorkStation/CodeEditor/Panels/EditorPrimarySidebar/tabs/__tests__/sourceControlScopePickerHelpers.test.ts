@@ -158,7 +158,7 @@ describe("reconcileSourceControlScope", () => {
     expect(
       reconcileSourceControlScope(
         { kind: "worktree", path: "/tmp/missing" },
-        [{ path: "/tmp/other", branch: "other" }],
+        [{ path: "/tmp/other" }],
         { worktreesReady: true }
       )
     ).toEqual({ kind: "local" });
@@ -168,7 +168,7 @@ describe("reconcileSourceControlScope", () => {
     expect(
       reconcileSourceControlScope(
         { kind: "worktree", path: "/tmp/wt/" },
-        [{ path: "/tmp/wt", branch: "feature" }],
+        [{ path: "/tmp/wt" }],
         { worktreesReady: true }
       )
     ).toEqual({ kind: "worktree", path: "/tmp/wt/" });
