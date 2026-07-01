@@ -225,17 +225,14 @@ describe("truncateScopeBreadcrumbLabel", () => {
 });
 
 describe("resolveScopeBreadcrumbSegments", () => {
-  it("omits a worktree prefix for the main checkout", () => {
+  it("shows only the branch for local scope", () => {
     expect(
       resolveScopeBreadcrumbSegments({
         repoName: "ORGII",
         branchLabel: "fix/issue-10",
         scope: { kind: "local" },
       })
-    ).toEqual([
-      { label: "ORGII", tone: "primary" },
-      { label: "fix/issue-10", tone: "secondary" },
-    ]);
+    ).toEqual([{ label: "fix/issue-10", tone: "primary" }]);
   });
 
   it("shows only the branch for worktree scope", () => {
@@ -282,10 +279,7 @@ describe("resolveScopeBreadcrumbSegments", () => {
         scope: { kind: "local" },
         selectedWorktreePath: "/tmp/orgii/agent-abc",
       })
-    ).toEqual([
-      { label: "ORGII", tone: "primary" },
-      { label: "main", tone: "secondary" },
-    ]);
+    ).toEqual([{ label: "main", tone: "primary" }]);
   });
 });
 

@@ -12,11 +12,11 @@
 
 | #   | Steps                                        | Expected Result                                                                                                                                                                                             |
 | --- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Open Source Control on a repo with worktrees | Header shows breadcrumb `ORGII > {branch}` and a chevron dropdown trigger                                                                                                                                   |
+| 1   | Open Source Control on a repo with worktrees | Header shows breadcrumb `{branch}` only and a chevron dropdown trigger; hover title shows full repo path and branch                                                                                         |
 | 2   | Click the scope trigger                      | Dropdown opens with **Main checkout** section (branch name only, same as worktree rows) and **Worktrees** section                                                                                           |
 | 3   | Select a worktree row                        | Breadcrumb shows `{branch}` only (no redundant folder prefix); **one** loading state with readable label (`Loading changes…`) appears immediately in the changes area; previous scope files are not visible |
 | 4   | Wait for git status to finish                | Loading dismisses; selected worktree's changed files appear                                                                                                                                                 |
-| 5   | Select **Main checkout** again               | Loading appears immediately; breadcrumb returns to `ORGII > {main-branch}`; sidebar shows host repo changes                                                                                                 |
+| 5   | Select **Main checkout** again               | Loading appears immediately; breadcrumb shows `{main-branch}` only; sidebar shows host repo changes                                                                                                         |
 | 6   | Switch to another editor tab and back        | Previously selected scope **persists** (not reset to main)                                                                                                                                                  |
 | 7   | Hover diff stats on dropdown row             | Tooltip shows working-tree breakdown (e.g. `Working tree +8 -3`); each dropdown row shows compact +/- badge when uncommitted diffs exist                                                                    |
 | 8   | Remove a worktree via trash icon (hover row) | Confirm dialog → worktree removed from disk; if it was active scope, falls back to main                                                                                                                     |
@@ -68,7 +68,7 @@
 - [ ] Selecting a new scope shows a single labeled loading state in the changes/file list area on the same interaction (no stale flash, no duplicate spinners)
 - [ ] Previous scope files are cleared from the sidebar and scoped diff state during transition
 - [ ] Loading dismisses when the new scope's git status fetch completes
-- [ ] Worktree breadcrumb in scope toolbar shows branch name only (no redundant folder prefix)
+- [ ] Scope toolbar breadcrumb shows branch name only (no repo or worktree folder prefix); full path available via trigger title/tooltip
 - [ ] Diff badge on each dropdown row reflects **uncommitted** line counts; tooltip includes working-tree breakdown
 - [ ] Committed stats use merge-base (not branch-tip comparison); no inflated million-line deletions after app restart
 - [ ] Filter header counts (uncommitted / staged / unstaged) match **active scope** file list

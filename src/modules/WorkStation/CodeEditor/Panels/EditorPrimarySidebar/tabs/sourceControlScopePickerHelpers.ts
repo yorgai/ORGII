@@ -174,24 +174,17 @@ export function truncateScopeBreadcrumbLabel(
   return `${label.slice(0, maxLength - 1)}…`;
 }
 
-/** Breadcrumb segments for the scope toolbar trigger — worktree shows branch only. */
+/** Breadcrumb segments for the scope toolbar trigger — branch only (repo path is in title/tooltip). */
 export function resolveScopeBreadcrumbSegments(options: {
   repoName: string;
   branchLabel: string;
   scope: SourceControlScope;
   selectedWorktreePath?: string;
 }): ScopeBreadcrumbSegment[] {
-  const { repoName, branchLabel, scope } = options;
+  const { branchLabel } = options;
   const branch = truncateScopeBreadcrumbLabel(branchLabel);
 
-  if (scope.kind === "worktree") {
-    return [{ label: branch, tone: "primary" }];
-  }
-
-  return [
-    { label: truncateScopeBreadcrumbLabel(repoName), tone: "primary" },
-    { label: branch, tone: "secondary" },
-  ];
+  return [{ label: branch, tone: "primary" }];
 }
 
 export function normalizeScopePickerQuery(query: string): string {
