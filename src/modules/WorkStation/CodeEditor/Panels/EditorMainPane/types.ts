@@ -75,6 +75,7 @@ export interface EditorContentProps {
   terminalState: UseTerminalStateReturn;
 
   // Source Control header controls
+  sourceControlHeaderLeadingSlot?: ReactNode;
   sourceControlHeaderTrailingSlot?: ReactNode;
   sourceControlFilterMode?: SourceControlFilterMode;
   showSourceControlModePill?: boolean;

@@ -36,6 +36,11 @@ import {
   type UsePerRepoSourceControlResult,
   usePerRepoSourceControl,
 } from "../../hooks/usePerRepoSourceControl";
+import {
+  type SourceControlTarget,
+  fileWithSourceControlTarget,
+  filesWithSourceControlTarget,
+} from "../../tabs/sourceControlScopePickerHelpers";
 import SourceControlContent from "../SourceControlContent";
 import {
   WorktreeActionsMenu,
@@ -75,13 +80,6 @@ export interface MultiRootSourceControlContentHandle {
 
 export interface FolderSectionHandle {
   refresh: () => Promise<void>;
-}
-
-function toAbsoluteFolderFile(file: GitFile, folderPath: string): GitFile {
-  const absolutePath = file.path.startsWith("/")
-    ? file.path
-    : `${folderPath}/${file.path}`;
-  return { ...file, path: absolutePath, repoRoot: folderPath };
 }
 
 function normalizeFsPath(path: string | undefined): string {
@@ -264,11 +262,22 @@ const FolderSectionContent = React.forwardRef<
     },
     ref
   ) => {
+    const sourceControlTarget = useMemo<SourceControlTarget>(
+      () => ({
+        kind: "folder",
+        repoId: folder.id,
+        repoPath: folder.path,
+      }),
+      [folder.id, folder.path]
+    );
+
     const handleGitFileSelect = useCallback(
       (file: GitFile) => {
-        onGitFileSelect?.(toAbsoluteFolderFile(file, folder.path));
+        onGitFileSelect?.(
+          fileWithSourceControlTarget(file, sourceControlTarget)
+        );
       },
-      [folder.path, onGitFileSelect]
+      [onGitFileSelect, sourceControlTarget]
     );
 
     const { state, refresh, loading }: UsePerRepoSourceControlResult =
@@ -279,8 +288,8 @@ const FolderSectionContent = React.forwardRef<
       });
 
     const absoluteFiles = useMemo(
-      () => state.files.map((file) => toAbsoluteFolderFile(file, folder.path)),
-      [folder.path, state.files]
+      () => filesWithSourceControlTarget(state.files, sourceControlTarget),
+      [sourceControlTarget, state.files]
     );
 
     useEffect(() => {
@@ -391,7 +400,6 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
   const toggle = useCallback(() => setExpanded((prev) => !prev), []);
 
   const folderName = worktree.path.split("/").pop() || "worktree";
-  const worktreeId = `worktree:${worktree.path}`;
 
   const removeWorktree = useCallback(async () => {
     if (!repoId || !repoPath) return;
@@ -427,11 +435,11 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
           ) : null
         }
       />
-      {expanded && (
+      {expanded && repoId && (
         <div className="flex min-h-[280px] flex-col overflow-hidden">
           <WorktreeSourceControlSection
             worktreePath={worktree.path}
-            worktreeId={worktreeId}
+            hostRepoId={repoId}
             onGitFileSelect={onGitFileSelect}
             showFilter={showFilter}
             viewMode={viewMode}

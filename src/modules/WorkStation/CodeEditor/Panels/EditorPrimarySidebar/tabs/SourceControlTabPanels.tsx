@@ -4,42 +4,43 @@
  * Internal panel components for the Source Control tab:
  * - SourceControlTabContent: wraps SourceControlContent with useSourceControlState
  * - MainRepoSectionContent: main repository content for multi-worktree layout
- * - SourceControlWithWorktrees: collapsible worktree sections
+ * - SourceControlWithWorktrees: scoped host/worktree source control pane
  *
  * Extracted from SourceControlTab.tsx to keep it under 600 lines.
  * PERFORMANCE (Jan 2026): useSourceControlState only runs on first mount.
  */
-import { useAtomValue } from "jotai";
 import {
   forwardRef,
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { removeGitWorktree } from "@src/api/http/git";
 import type { GitWorktreeEntry } from "@src/api/http/git/types";
 import { repoApi } from "@src/api/tauri/repo";
 import Message from "@src/components/Message";
-import { FolderHeaderRow } from "@src/modules/WorkStation/shared/FolderHeaderRow";
-import { FOLDER_HEADER } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { workspaceGitStatusMapAtom } from "@src/store/git";
 import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
 import type { GitFile } from "@src/types/git/types";
-import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
-import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
 
 import SourceControlContent from "../content/SourceControlContent";
 import {
-  WorktreeActionsMenu,
-  WorktreeContextMenu,
-} from "../content/WorktreeActionsMenu";
-import { WorktreeSourceControlSection } from "../content/WorktreeSourceControlSection";
+  WorktreeSourceControlSection,
+  type WorktreeSourceControlSectionHandle,
+} from "../content/WorktreeSourceControlSection";
 import { useSourceControlState } from "../hooks/useSourceControlState";
+import {
+  type SourceControlScope,
+  normalizeScopePath,
+  sourceControlTargetFromScope,
+  sourceControlTargetKey,
+  sourceControlTargetRepoRoot,
+} from "./sourceControlScopePickerHelpers";
+import { useSourceControlScopeSwitchState } from "./sourceControlScopeSwitchHelpers";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -67,6 +68,10 @@ interface SourceControlContentProps {
   navigateWithoutSelecting?: boolean;
   /** Working-tree section filter: "uncommitted" | "staged" | "unstaged". */
   sectionFilter?: "uncommitted" | "staged" | "unstaged";
+  /** Notifies parent when git status loading state changes for this pane. */
+  onLoadingChange?: (loading: boolean) => void;
+  /** Parent scope-switch overlay owns loading UI for the changes area. */
+  suppressLoadingPlaceholder?: boolean;
 }
 
 export function NotGitInitializedContent({
@@ -141,6 +146,8 @@ export const SourceControlTabContent = forwardRef<
       showOnlyStashes,
       navigateWithoutSelecting,
       sectionFilter,
+      onLoadingChange,
+      suppressLoadingPlaceholder,
     },
     ref
   ) => {
@@ -149,6 +156,10 @@ export const SourceControlTabContent = forwardRef<
       repoId,
       onGitFileSelect,
     });
+
+    useEffect(() => {
+      onLoadingChange?.(sourceControlState.loading);
+    }, [onLoadingChange, sourceControlState.loading]);
 
     useEffect(() => {
       onGitFilesChange?.(sourceControlState.state.files, repoPath);
@@ -257,6 +268,7 @@ export const SourceControlTabContent = forwardRef<
         onPublish={sourceControlState.state.onPublish}
         publishLoading={sourceControlState.state.publishLoading}
         onRefresh={refresh}
+        suppressLoadingPlaceholder={suppressLoadingPlaceholder}
       />
     );
   }
@@ -282,6 +294,8 @@ export const MainRepoSectionContent = forwardRef<
       showOnlyStashes,
       navigateWithoutSelecting,
       sectionFilter,
+      onLoadingChange,
+      suppressLoadingPlaceholder,
     },
     ref
   ) => {
@@ -290,6 +304,10 @@ export const MainRepoSectionContent = forwardRef<
       repoId,
       onGitFileSelect,
     });
+
+    useEffect(() => {
+      onLoadingChange?.(sourceControlState.loading);
+    }, [onLoadingChange, sourceControlState.loading]);
 
     useEffect(() => {
       onGitFilesChange?.(sourceControlState.state.files, repoPath);
@@ -398,6 +416,7 @@ export const MainRepoSectionContent = forwardRef<
         onPublish={sourceControlState.state.onPublish}
         publishLoading={sourceControlState.state.publishLoading}
         onRefresh={refresh}
+        suppressLoadingPlaceholder={suppressLoadingPlaceholder}
       />
     );
   }
@@ -405,55 +424,14 @@ export const MainRepoSectionContent = forwardRef<
 
 MainRepoSectionContent.displayName = "MainRepoSectionContent";
 
-async function confirmAndRemoveWorktree({
-  repoId,
-  repoPath,
-  worktree,
-  folderName,
-  onRemoved,
-  t,
-}: {
-  repoId: string;
-  repoPath: string;
-  worktree: GitWorktreeEntry;
-  folderName: string;
-  onRemoved?: () => Promise<void>;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}) {
-  const confirmed = await confirmDestructiveAction({
-    title: t("sourceControl.removeWorktreeTitle", { name: folderName }),
-    message: t("sourceControl.removeWorktreeMessage"),
-    okLabel: t("sourceControl.removeWorktree"),
-  });
-  if (!confirmed) return;
-
-  try {
-    await removeGitWorktree({
-      repo_id: repoId,
-      repo_path: repoPath,
-      worktree_path: worktree.path,
-      force: true,
-    });
-    await onRemoved?.();
-    showGitActionDialogSafely(t("sourceControl.removeWorktreeSuccess"), "info");
-  } catch (error) {
-    showGitActionDialogSafely(
-      error instanceof Error
-        ? error.message
-        : t("sourceControl.removeWorktreeFailed"),
-      "error"
-    );
-  }
-}
-
 // ── SourceControlWithWorktrees ────────────────────────────────────────────────
 
 interface SourceControlWithWorktreesProps {
   repoPath: string;
   repoId: string;
-  repoName: string;
   worktrees: GitWorktreeEntry[];
-  onWorktreesRefresh?: () => Promise<void>;
+  worktreesLoading?: boolean;
+  scope: SourceControlScope;
   onGitFileSelect?: (file: GitFile) => void;
   /**
    * Notified whenever the file list of any pane (host or worktree) changes.
@@ -480,9 +458,9 @@ export const SourceControlWithWorktrees = forwardRef<
     {
       repoPath,
       repoId,
-      repoName,
       worktrees,
-      onWorktreesRefresh,
+      worktreesLoading = false,
+      scope,
       onGitFileSelect,
       onGitFilesChange,
       onGitHistorySelectionChange,
@@ -494,143 +472,123 @@ export const SourceControlWithWorktrees = forwardRef<
     },
     ref
   ) => {
+    const { t } = useTranslation();
     const handleWorktreeFilesChange = useCallback(
       (files: GitFile[], worktreePath: string) => {
         onGitFilesChange?.(files, worktreePath);
       },
       [onGitFilesChange]
     );
-    const [mainExpanded, setMainExpanded] = useState(true);
-    const [worktreeExpanded, setWorktreeExpanded] = useState<
-      Record<string, boolean>
-    >({});
-    const [contextMenuState, setContextMenuState] = useState<{
-      worktree: GitWorktreeEntry;
-      x: number;
-      y: number;
-    } | null>(null);
 
-    const { t } = useTranslation();
-    const gitStatusMap = useAtomValue(workspaceGitStatusMapAtom);
-    const mainBranch = gitStatusMap.get(repoPath)?.current_branch;
+    const selectedWorktree =
+      scope.kind === "worktree"
+        ? worktrees.find(
+            (worktree) =>
+              normalizeScopePath(worktree.path) ===
+              normalizeScopePath(scope.path)
+          )
+        : undefined;
+    const pendingWorktreeScope =
+      scope.kind === "worktree" && !selectedWorktree && worktreesLoading;
+
+    const activeTarget = sourceControlTargetFromScope({
+      scope,
+      repoId,
+      repoPath,
+      selectedWorktree,
+    });
+    const scopeKey = sourceControlTargetKey(activeTarget);
+    const activeScopeRepoRoot = sourceControlTargetRepoRoot(activeTarget);
+    const {
+      showScopePaneLoading,
+      onPaneLoadingChange: handlePaneLoadingChange,
+    } = useSourceControlScopeSwitchState({
+      scopeKey,
+      pendingWorktreeScope,
+    });
+
+    const previousScopeKeyForClearRef = useRef(scopeKey);
+    useLayoutEffect(() => {
+      if (previousScopeKeyForClearRef.current === scopeKey) {
+        return;
+      }
+      previousScopeKeyForClearRef.current = scopeKey;
+      onGitFilesChange?.([], activeScopeRepoRoot);
+    }, [activeScopeRepoRoot, onGitFilesChange, scopeKey]);
 
     const mainRef = useRef<SourceControlContentHandle>(null);
+    const worktreeRef = useRef<WorktreeSourceControlSectionHandle>(null);
 
     useImperativeHandle(
       ref,
       () => ({
         refresh: async () => {
+          if (selectedWorktree) {
+            await worktreeRef.current?.refresh();
+            return;
+          }
           await mainRef.current?.refresh();
         },
       }),
-      []
+      [selectedWorktree]
     );
 
-    const toggleMain = useCallback(() => setMainExpanded((prev) => !prev), []);
-
-    const toggleWorktree = useCallback((path: string) => {
-      setWorktreeExpanded((prev) => ({ ...prev, [path]: !prev[path] }));
-    }, []);
-
-    const removeWorktree = useCallback(
-      async (worktree: GitWorktreeEntry) => {
-        const folderName = worktree.path.split("/").pop() || "worktree";
-        await confirmAndRemoveWorktree({
-          repoId,
-          repoPath,
-          worktree,
-          folderName,
-          onRemoved: onWorktreesRefresh,
-          t,
-        });
-      },
-      [onWorktreesRefresh, repoId, repoPath, t]
-    );
+    if (pendingWorktreeScope) {
+      return (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <Placeholder
+            variant="loading"
+            placement="sidebar"
+            title={t("placeholders.loadingChanges")}
+            fillParentHeight
+          />
+        </div>
+      );
+    }
 
     return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div
-          className={`${FOLDER_HEADER.section} flex flex-col ${
-            mainExpanded ? "min-h-0 flex-1 overflow-hidden" : "flex-shrink-0"
-          }`}
-        >
-          <FolderHeaderRow
-            name={repoName}
-            expanded={mainExpanded}
-            onToggle={toggleMain}
-            branchName={mainBranch}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        {showScopePaneLoading ? (
+          <div className="bg-surface-1 absolute inset-0 z-10 flex min-h-0 flex-col">
+            <Placeholder
+              variant="loading"
+              placement="sidebar"
+              title={t("placeholders.loadingChanges")}
+              fillParentHeight
+            />
+          </div>
+        ) : null}
+        {selectedWorktree ? (
+          <WorktreeSourceControlSection
+            key={scopeKey}
+            ref={worktreeRef}
+            worktreePath={selectedWorktree.path}
+            hostRepoId={repoId}
+            onGitFileSelect={onGitFileSelect}
+            onGitFilesChange={handleWorktreeFilesChange}
+            onLoadingChange={handlePaneLoadingChange}
+            suppressLoadingPlaceholder={showScopePaneLoading}
+            showFilter={showFilter}
+            viewMode={viewMode}
+            navigateWithoutSelecting={navigateWithoutSelecting}
+            sectionFilter={sectionFilter}
           />
-          {mainExpanded && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <MainRepoSectionContent
-                ref={mainRef}
-                repoPath={repoPath}
-                repoId={repoId}
-                onGitFileSelect={onGitFileSelect}
-                onGitFilesChange={onGitFilesChange}
-                onGitHistorySelectionChange={onGitHistorySelectionChange}
-                showFilter={showFilter}
-                viewMode={viewMode}
-                showOnlyStashes={showOnlyStashes}
-                navigateWithoutSelecting={navigateWithoutSelecting}
-                sectionFilter={sectionFilter}
-              />
-            </div>
-          )}
-        </div>
-
-        {worktrees.map((worktree) => {
-          const isExpanded = worktreeExpanded[worktree.path] ?? false;
-          const folderName = worktree.path.split("/").pop() || "worktree";
-          return (
-            <div key={worktree.path} className={FOLDER_HEADER.section}>
-              <div className="mx-2 h-px bg-border-1" aria-hidden />
-              <FolderHeaderRow
-                name={folderName}
-                expanded={isExpanded}
-                onToggle={() => toggleWorktree(worktree.path)}
-                branchName={worktree.branch || undefined}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  setContextMenuState({
-                    worktree,
-                    x: event.clientX,
-                    y: event.clientY,
-                  });
-                }}
-                actions={
-                  <WorktreeActionsMenu
-                    onRemove={() => {
-                      void removeWorktree(worktree);
-                    }}
-                  />
-                }
-              />
-              {isExpanded && (
-                <div className="flex min-h-[280px] flex-col overflow-hidden">
-                  <WorktreeSourceControlSection
-                    worktreePath={worktree.path}
-                    worktreeId={`worktree:${worktree.path}`}
-                    onGitFileSelect={onGitFileSelect}
-                    onGitFilesChange={handleWorktreeFilesChange}
-                    showFilter={showFilter}
-                    viewMode={viewMode}
-                    navigateWithoutSelecting={navigateWithoutSelecting}
-                    sectionFilter={sectionFilter}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {contextMenuState && (
-          <WorktreeContextMenu
-            x={contextMenuState.x}
-            y={contextMenuState.y}
-            onRemove={() => {
-              void removeWorktree(contextMenuState.worktree);
-            }}
-            onClose={() => setContextMenuState(null)}
+        ) : (
+          <MainRepoSectionContent
+            key={scopeKey}
+            ref={mainRef}
+            repoPath={repoPath}
+            repoId={repoId}
+            onGitFileSelect={onGitFileSelect}
+            onGitFilesChange={onGitFilesChange}
+            onGitHistorySelectionChange={onGitHistorySelectionChange}
+            onLoadingChange={handlePaneLoadingChange}
+            suppressLoadingPlaceholder={showScopePaneLoading}
+            showFilter={showFilter}
+            viewMode={viewMode}
+            showOnlyStashes={showOnlyStashes}
+            navigateWithoutSelecting={navigateWithoutSelecting}
+            sectionFilter={sectionFilter}
           />
         )}
       </div>

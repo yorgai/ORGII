@@ -235,6 +235,7 @@ const EditorContent: React.FC<EditorContentProps> = memo(
     onDiagnosticsChange,
     onCursorPositionChange,
     terminalState,
+    sourceControlHeaderLeadingSlot,
     sourceControlHeaderTrailingSlot,
     sourceControlFilterMode = "uncommitted",
     showSourceControlModePill = true,
@@ -653,6 +654,13 @@ const EditorContent: React.FC<EditorContentProps> = memo(
       const showIssueHeader = isIssuesMode && selectedIssue;
       return (
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          {sourceControlHeaderLeadingSlot}
+          {sourceControlHeaderLeadingSlot && sourceControlHeaderTrailingSlot ? (
+            <span
+              className="pointer-events-none mx-0.5 h-4 w-px shrink-0 bg-border-2"
+              aria-hidden
+            />
+          ) : null}
           {sourceControlHeaderTrailingSlot}
           {showIssueHeader && (
             <div className="flex min-w-0 flex-1 items-center gap-2 pl-1">
@@ -828,6 +836,7 @@ const EditorContent: React.FC<EditorContentProps> = memo(
       selectedIssueState,
       showSourceControlModePill,
       sourceControlFilterMode,
+      sourceControlHeaderLeadingSlot,
       sourceControlHeaderTrailingSlot,
       sourceControlSessionFilter,
       sourceControlSessionOptions,

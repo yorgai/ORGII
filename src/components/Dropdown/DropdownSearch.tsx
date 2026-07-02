@@ -47,14 +47,36 @@ export interface DropdownSearchProps {
   placeholder?: string;
 
   /**
+   * Accessible name when placeholder alone is insufficient
+   */
+  ariaLabel?: string;
+
+  /**
    * Auto-focus the input when mounted
    * @default false
    */
   autoFocus?: boolean;
+
+  /**
+   * When true (default), mousedown on the field does not bubble — keeps custom
+   * droplist panels open when the user focuses the search input.
+   * @default true
+   */
+  stopMouseDownPropagation?: boolean;
 }
 
 const DropdownSearch = forwardRef<HTMLInputElement, DropdownSearchProps>(
-  ({ value, onChange, placeholder = "Search...", autoFocus = false }, ref) => {
+  (
+    {
+      value,
+      onChange,
+      placeholder = "Search...",
+      ariaLabel,
+      autoFocus = false,
+      stopMouseDownPropagation = true,
+    },
+    ref
+  ) => {
     const internalRef = useRef<HTMLInputElement>(null);
     const inputRef = (ref as React.RefObject<HTMLInputElement>) || internalRef;
     const tauriSelectAll = useTauriSelectAllShortcut();
@@ -75,24 +97,34 @@ const DropdownSearch = forwardRef<HTMLInputElement, DropdownSearchProps>(
     };
 
     // Prevent dropdown from closing when clicking inside search
-    const handleClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
+    const handlePointerGuard = (event: React.MouseEvent) => {
+      event.stopPropagation();
     };
 
+    const handleMouseDown = stopMouseDownPropagation
+      ? handlePointerGuard
+      : undefined;
+
     return (
-      <div className={DROPDOWN_CLASSES.searchContainer}>
+      <div
+        className={DROPDOWN_CLASSES.searchContainer}
+        onClick={handlePointerGuard}
+        onMouseDown={handleMouseDown}
+      >
         <Search
           size={DROPDOWN_SEARCH.iconSize}
           className="flex-shrink-0 text-text-3"
         />
         <input
           ref={inputRef}
-          type="text"
+          type="search"
           value={value}
           onChange={handleChange}
-          onClick={handleClick}
+          onClick={handlePointerGuard}
+          onMouseDown={handleMouseDown}
           onKeyDown={tauriSelectAll}
           placeholder={placeholder}
+          aria-label={ariaLabel ?? placeholder}
           className={DROPDOWN_CLASSES.searchInput}
         />
       </div>

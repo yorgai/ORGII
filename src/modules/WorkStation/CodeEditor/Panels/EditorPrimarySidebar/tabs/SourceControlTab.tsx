@@ -13,6 +13,7 @@ import { useAtomValue } from "jotai";
 import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { GitWorktreeEntry } from "@src/api/http/git/types";
 import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
 import { useGitStatus } from "@src/contexts/git";
 import { useRepoGitInitialization } from "@src/hooks/git";
@@ -26,6 +27,7 @@ import { ICON_CONFIG, PANEL_CONSTANTS } from "../config";
 import MultiRootSourceControlContent from "../content/MultiRootSourceControlContent";
 import type { MultiRootSourceControlContentHandle } from "../content/MultiRootSourceControlContent";
 import { useGitWorktrees } from "../hooks/useGitWorktrees";
+import { useSourceControlScope } from "../hooks/useSourceControlScope";
 import type { SourceControlContentHandle } from "./SourceControlTabPanels";
 import {
   NotGitInitializedContent,
@@ -40,6 +42,7 @@ import {
 export interface SourceControlTabConfigProps {
   repoPath: string;
   repoId: string;
+  branchName?: string;
   onGitFileSelect?: (file: GitFile) => void;
   /**
    * Notified when any source-control pane's file list changes. The optional
@@ -72,11 +75,17 @@ export interface SourceControlTabConfigProps {
    * filter-mode dropdown to swap to git history when "Branch" is selected.
    */
   sourceControlContentOverride?: React.ReactNode;
+  /** Optional worktree bundle from the host to avoid duplicate API fetches. */
+  worktrees?: GitWorktreeEntry[];
+  hasWorktrees?: boolean;
+  worktreesLoading?: boolean;
+  refreshWorktrees?: () => Promise<void>;
 }
 
 export function useSourceControlTabConfig({
   repoPath,
   repoId,
+  branchName: _branchName,
   onGitFileSelect,
   onGitFilesChange,
   onGitHistorySelectionChange,
@@ -90,6 +99,10 @@ export function useSourceControlTabConfig({
   sectionFilter,
   sourceControlTitleOverride,
   sourceControlContentOverride,
+  worktrees: hostWorktrees,
+  hasWorktrees: hostHasWorktrees,
+  worktreesLoading: hostWorktreesLoading,
+  refreshWorktrees: hostRefreshWorktrees,
 }: SourceControlTabConfigProps): PrimarySidebarTab {
   const { t } = useTranslation();
   const SourceControlIcon = ICON_CONFIG.sourceControl;
@@ -104,24 +117,23 @@ export function useSourceControlTabConfig({
     await forceRefresh();
   }, [forceRefresh, refreshGitInitialization]);
 
-  // Worktrees for the current repo
-  const {
-    worktrees,
-    hasWorktrees,
-    loading: worktreesLoading,
-    refresh: refreshWorktrees,
-  } = useGitWorktrees({
+  // Worktrees for the current repo (host may already fetch them once).
+  const fetchedWorktrees = useGitWorktrees({
     repoId,
     repoPath,
-    enabled: isGitInitialized === true,
+    enabled: isGitInitialized === true && hostWorktrees === undefined,
   });
+  const worktrees = hostWorktrees ?? fetchedWorktrees.worktrees;
+  const hasWorktrees = hostHasWorktrees ?? fetchedWorktrees.hasWorktrees;
+  const worktreesLoading = hostWorktreesLoading ?? fetchedWorktrees.loading;
+  const refreshWorktrees = hostRefreshWorktrees ?? fetchedWorktrees.refresh;
 
-  // Git History view mode: graph (with icons) or list (plain)
-  // Derive repo name from path for display when worktrees exist
-  const repoName = useMemo(() => {
-    const segments = repoPath.replace(/\/+$/, "").split("/");
-    return segments[segments.length - 1] || "Repository";
-  }, [repoPath]);
+  const { scope: effectiveScope } = useSourceControlScope({
+    repoPath,
+    worktrees,
+    enabled: isGitInitialized === true && hasWorktrees,
+    worktreesReady: !worktreesLoading,
+  });
 
   const sourceControlContent = useMemo(() => {
     if (isGitInitialized === null) {
@@ -144,10 +156,6 @@ export function useSourceControlTabConfig({
           onInitialized={handleGitInitialized}
         />
       );
-    }
-
-    if (worktreesLoading) {
-      return <div className="flex h-full min-h-0 flex-col" />;
     }
 
     if (isMultiRoot && workspaceFolders.length > 1) {
@@ -177,9 +185,9 @@ export function useSourceControlTabConfig({
           ref={sourceControlRef}
           repoPath={repoPath}
           repoId={repoId}
-          repoName={repoName}
           worktrees={worktrees}
-          onWorktreesRefresh={refreshWorktrees}
+          worktreesLoading={worktreesLoading}
+          scope={effectiveScope}
           onGitFileSelect={onGitFileSelect}
           onGitFilesChange={onGitFilesChange}
           onGitHistorySelectionChange={onGitHistorySelectionChange}
@@ -209,12 +217,11 @@ export function useSourceControlTabConfig({
   }, [
     isGitInitialized,
     handleGitInitialized,
-    worktreesLoading,
     isMultiRoot,
     workspaceFolders,
+    effectiveScope,
     repoPath,
     repoId,
-    repoName,
     onGitFileSelect,
     onGitFilesChange,
     onGitHistorySelectionChange,
@@ -226,7 +233,12 @@ export function useSourceControlTabConfig({
     sourceControlRef,
     worktrees,
     hasWorktrees,
+    worktreesLoading,
     refreshWorktrees,
+    hostWorktrees,
+    hostHasWorktrees,
+    hostWorktreesLoading,
+    hostRefreshWorktrees,
     t,
   ]);
 

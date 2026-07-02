@@ -122,6 +122,17 @@ export function usePerRepoSourceControl(
     onGitFileSelectRef.current = onGitFileSelect;
   }, [onGitFileSelect]);
 
+  // Reset stale pane state immediately when the scoped repo path changes
+  // (e.g. switching worktree scope) so the file list never flashes the
+  // previous scope's files while the next status fetch is in flight.
+  useEffect(() => {
+    setGitStatus(null);
+    setInitialLoading(true);
+    setError(null);
+    setSelectedFileId("");
+    setNumstatMap(new Map());
+  }, [repoPath]);
+
   // Load per-file numstat (non-blocking, runs after status)
   const fetchNumstat = useCallback(async () => {
     const raw = await fetchNumstatMap(repoId, repoPath);

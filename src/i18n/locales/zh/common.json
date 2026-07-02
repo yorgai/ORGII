@@ -179,6 +179,8 @@
     "stop": "停止",
     "find": "查找",
     "filter": "筛选",
+    "filterCommits": "筛选提交…",
+    "filterPullRequests": "筛选 Pull Request…",
     "loading": "加载中...",
     "replace": "替换",
     "publish": "Publish",
@@ -814,6 +816,7 @@
     "selectToViewConfig": "选择 {{type}} 以查看或配置",
     "selectToViewConfigSubtitle": "从左侧列表中选择一项",
     "noOptions": "无选项",
+    "noResults": "无结果",
     "noResultsSubtitle": "请尝试其他搜索词",
     "noResultsWithFilters": "请尝试其他搜索词或调整过滤器",
     "noRows": "无数据行",
@@ -1206,6 +1209,7 @@
       "shaCopied": "SHA 已复制到剪贴板"
     },
     "issues": {
+      "title": "Issues",
       "updated": "最后更新",
       "notUpdated": "未更新",
       "assignedTo": "分配给 {{assignees}}",
@@ -1956,6 +1960,14 @@
     },
     "sessionFilter": {
       "allSessions": "所有会话"
+    },
+    "scope": {
+      "local": "本地",
+      "main": "主工作区",
+      "worktrees": "Worktree",
+      "searchPlaceholder": "筛选 worktree…",
+      "switchScope": "切换源代码管理范围",
+      "switchScopeActive": "切换源代码管理范围：{{repo}}，{{branch}}"
     }
   },
   "contextInfo": {

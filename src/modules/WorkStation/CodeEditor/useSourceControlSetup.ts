@@ -1,7 +1,10 @@
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
+import type { GitWorktreeEntry } from "@src/api/http/git/types";
 import { useGitStatus } from "@src/contexts/git";
+import { useRepoGitInitialization } from "@src/hooks/git";
 import { useGitFiles } from "@src/hooks/git/sourceControl";
 import { createLogger } from "@src/hooks/logger";
 import { loadGitFileDiffContent } from "@src/hooks/workStation/editor/gitDiffContent";
@@ -24,7 +27,15 @@ import {
   SourceControlFilterHeader,
   type SourceControlFilterMode,
 } from "../shared/SidebarModules";
+import { confirmAndRemoveWorktree } from "./Panels/EditorPrimarySidebar/content/worktreeRemoveActions";
+import { useGitWorktrees } from "./Panels/EditorPrimarySidebar/hooks/useGitWorktrees";
+import { useSourceControlScope } from "./Panels/EditorPrimarySidebar/hooks/useSourceControlScope";
 import { useWorkstationPr } from "./Panels/EditorPrimarySidebar/hooks/useWorkstationPr";
+import { SourceControlScopeToolbar } from "./Panels/EditorPrimarySidebar/tabs/SourceControlScopeToolbar";
+import {
+  type ScopePickerWorktreeEntry,
+  resolveScopeRepoRoot,
+} from "./Panels/EditorPrimarySidebar/tabs/sourceControlScopePickerHelpers";
 import { resolveGitDiffSelection } from "./sourceControlSelection";
 import { useStashCount } from "./useStashCount";
 
@@ -38,12 +49,14 @@ interface UseSourceControlSetupParams {
   activeTab: WorkStationTab | undefined | null;
   setPrimaryPanel: (updater: (prev: PanelState) => PanelState) => void;
   handleGitFileSelect: (file: GitFile) => void;
+  isMultiRoot?: boolean;
 }
 
 export interface UseSourceControlSetupReturn {
   sourceControlFilterMode: SourceControlFilterMode;
   sourceControlFilterCounts: SourceControlFilterCounts;
   sourceControlHeaderFilter: React.ReactNode;
+  sourceControlHeaderScopePicker: React.ReactNode;
   tabSidebarExtraContext: {
     surface: {
       sourceControl: {
@@ -67,11 +80,38 @@ export function useSourceControlSetup({
   activeTab,
   setPrimaryPanel,
   handleGitFileSelect,
+  isMultiRoot = false,
 }: UseSourceControlSetupParams): UseSourceControlSetupReturn {
+  const { t } = useTranslation();
   const setSourceControlFocusTarget = useSetAtom(sourceControlFocusTargetAtom);
   const [sourceControlFilterMode, setSourceControlFilterMode] = useAtom(
     sourceControlFilterModeAtom
   );
+
+  const { isGitInitialized } = useRepoGitInitialization(repoPath);
+  const resolvedRepoId = repoId ?? repoPath;
+  const {
+    worktrees,
+    mainDiffSummary,
+    hasWorktrees,
+    loading: worktreesLoading,
+    refresh: refreshWorktrees,
+  } = useGitWorktrees({
+    repoId: resolvedRepoId,
+    repoPath,
+    enabled: isGitInitialized === true,
+  });
+  const { scope, setScope } = useSourceControlScope({
+    repoPath,
+    worktrees,
+    enabled: isGitInitialized === true && hasWorktrees,
+    worktreesReady: !worktreesLoading,
+  });
+
+  const repoName = useMemo(() => {
+    const segments = repoPath.replace(/\/+$/, "").split("/");
+    return segments[segments.length - 1] || "Repository";
+  }, [repoPath]);
 
   // PR state — this is the SINGLE mount of useWorkstationPr. It runs at the
   // CodeEditor level so eligibility/create callbacks stay available regardless
@@ -110,8 +150,9 @@ export function useSourceControlSetup({
     if (!repoPath) {
       return { uncommitted: 0, unstaged: 0, staged: 0 };
     }
+    const activeRepoRoot = resolveScopeRepoRoot(scope, repoPath);
     const files = Array.from(gitFilesByPath.values()).filter(
-      (file) => file.repoRoot === repoPath
+      (file) => (file.repoRoot ?? repoPath) === activeRepoRoot
     );
     const staged = files.filter((file) => file.staged).length;
     return {
@@ -119,7 +160,7 @@ export function useSourceControlSetup({
       unstaged: files.length - staged,
       staged,
     };
-  }, [gitFilesByPath, repoPath]);
+  }, [gitFilesByPath, repoPath, scope]);
 
   const sourceControlStashCount = useStashCount({
     repoPath,
@@ -201,6 +242,57 @@ export function useSourceControlSetup({
     ]
   );
 
+  const showScopePicker =
+    activeTab?.type === "source-control" &&
+    hasWorktrees &&
+    !isMultiRoot &&
+    sourceControlFilterMode !== "history" &&
+    sourceControlFilterMode !== "pr" &&
+    sourceControlFilterMode !== "issues";
+
+  const handleRemoveWorktree = useCallback(
+    async (worktree: ScopePickerWorktreeEntry) => {
+      const folderName = worktree.path.split("/").pop() || "worktree";
+      const removed = await confirmAndRemoveWorktree({
+        repoId: resolvedRepoId,
+        repoPath,
+        worktree: worktree as GitWorktreeEntry,
+        folderName,
+        onRemoved: refreshWorktrees,
+        t,
+      });
+      if (!removed) return;
+      if (scope.kind === "worktree" && scope.path === worktree.path) {
+        setScope({ kind: "local" });
+      }
+    },
+    [repoPath, refreshWorktrees, resolvedRepoId, scope, setScope, t]
+  );
+
+  const sourceControlHeaderScopePicker = useMemo(() => {
+    if (!showScopePicker) return null;
+    return React.createElement(SourceControlScopeToolbar, {
+      repoName,
+      branchLabel: currentBranch || repoName,
+      repoPath,
+      localDiffSummary: mainDiffSummary,
+      worktrees,
+      scope,
+      onScopeChange: setScope,
+      onRemoveWorktree: handleRemoveWorktree,
+    });
+  }, [
+    currentBranch,
+    handleRemoveWorktree,
+    mainDiffSummary,
+    repoName,
+    repoPath,
+    scope,
+    setScope,
+    showScopePicker,
+    worktrees,
+  ]);
+
   const isSourceControlAllChangesActive =
     activeTab?.type === "source-control" &&
     activeTab.data.mode === "all-changes";
@@ -211,10 +303,21 @@ export function useSourceControlSetup({
         sourceControl: {
           filterMode: sourceControlFilterMode,
           navigateWithoutSelecting: isSourceControlAllChangesActive,
+          worktrees,
+          hasWorktrees,
+          worktreesLoading,
+          refreshWorktrees,
         },
       },
     }),
-    [isSourceControlAllChangesActive, sourceControlFilterMode]
+    [
+      hasWorktrees,
+      isSourceControlAllChangesActive,
+      refreshWorktrees,
+      sourceControlFilterMode,
+      worktrees,
+      worktreesLoading,
+    ]
   );
 
   const handleSourceControlHistorySelectionChange = useCallback(
@@ -308,6 +411,7 @@ export function useSourceControlSetup({
     sourceControlFilterMode,
     sourceControlFilterCounts,
     sourceControlHeaderFilter,
+    sourceControlHeaderScopePicker,
     tabSidebarExtraContext,
     handleGitFilesChange,
     handleSourceControlHistorySelectionChange,

@@ -2,6 +2,8 @@
 //!
 //! Lists git worktrees registered for a repository.
 
+use std::path::{Path as FsPath, PathBuf};
+
 use axum::{
     extract::{Path, Query},
     routing::{delete, get},
@@ -12,7 +14,8 @@ use serde::Deserialize;
 use crate::error::{GitApiError, GitApiResult};
 use crate::extractors::{lookup_repo_path, validate_path};
 use crate::types::{
-    RemoveWorktreeRequest, WorktreeEntry, WorktreeListResponse, WorktreeRemoveResponse,
+    RemoveWorktreeRequest, WorktreeDiffSummary, WorktreeEntry, WorktreeListResponse,
+    WorktreeRemoveResponse,
 };
 
 pub fn routes() -> Router {
@@ -48,11 +51,15 @@ pub async fn get_worktrees(
 
     let data = entries
         .into_iter()
-        .map(|entry| WorktreeEntry {
-            path: entry.path,
-            branch: entry.branch,
-            head_sha: entry.head_sha,
-            is_main: entry.is_main,
+        .map(|entry| {
+            let diff_summary = summarize_worktree_diff(&repo_path, &entry.path, &entry.branch);
+            WorktreeEntry {
+                path: entry.path,
+                branch: entry.branch,
+                head_sha: entry.head_sha,
+                is_main: entry.is_main,
+                diff_summary,
+            }
         })
         .collect();
 
@@ -97,8 +104,71 @@ pub async fn remove_worktree(
             branch: String::new(),
             head_sha: String::new(),
             is_main: false,
+            diff_summary: None,
         },
     }))
+}
+
+fn summarize_worktree_diff(
+    _main_repo_path: &FsPath,
+    worktree_path: &str,
+    _worktree_branch: &str,
+) -> Option<WorktreeDiffSummary> {
+    let worktree_path = PathBuf::from(worktree_path);
+    let uncommitted =
+        crate::commands::diff::get_diff_numstat_combined(&worktree_path, "HEAD").ok()?;
+
+    let uncommitted_files = uncommitted.files_changed;
+    let uncommitted_additions = uncommitted.total_insertions;
+    let uncommitted_deletions = uncommitted.total_deletions;
+
+    if is_pathological_worktree_checkout(
+        uncommitted_files,
+        uncommitted_additions,
+        uncommitted_deletions,
+    ) {
+        return None;
+    }
+
+    if uncommitted_files == 0 && uncommitted_additions == 0 && uncommitted_deletions == 0 {
+        return None;
+    }
+
+    Some(WorktreeDiffSummary {
+        total_files: uncommitted_files,
+        total_additions: uncommitted_additions,
+        total_deletions: uncommitted_deletions,
+        committed_files: 0,
+        committed_additions: 0,
+        committed_deletions: 0,
+        uncommitted_files,
+        uncommitted_additions,
+        uncommitted_deletions,
+        base_ref: None,
+    })
+}
+
+/// Detect stale/broken worktrees where the checkout deleted most tracked files on disk.
+/// These produce million-line deletion stats that are technically `git diff HEAD` but not
+/// meaningful scope-picker signal (common on abandoned agent worktrees).
+fn is_pathological_worktree_checkout(files: u32, additions: u32, deletions: u32) -> bool {
+    files > 100 && deletions > 100_000 && additions < deletions / 100
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_pathological_worktree_checkout;
+
+    #[test]
+    fn detects_mass_deletion_checkout_drift() {
+        assert!(is_pathological_worktree_checkout(8072, 0, 1_446_726));
+    }
+
+    #[test]
+    fn accepts_normal_uncommitted_changes() {
+        assert!(!is_pathological_worktree_checkout(2, 10, 3));
+        assert!(!is_pathological_worktree_checkout(50, 500, 120));
+    }
 }
 
 fn resolve_repo_path(repo_id: &str, query_path: Option<&str>) -> GitApiResult<std::path::PathBuf> {
