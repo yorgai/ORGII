@@ -404,11 +404,11 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
       ) : undefined;
     const planActions = ownsActions ? (
       <div
-        className={`flex items-center justify-end gap-1 px-3 py-2 ${isCollapsed ? "" : "border-t border-border-2"}`}
+        className={`flex flex-wrap items-center justify-end gap-2 px-3 py-2 ${isCollapsed ? "" : "border-t border-border-2"}`}
         onClick={(event) => event.stopPropagation()}
       >
         {autoApproveRemaining !== null && ready && !isEditing && (
-          <span className="chat-block-xs tabular-nums text-text-3">
+          <span className="chat-block-xs mr-auto min-w-0 truncate tabular-nums text-text-3">
             {t("chat.autoExecuteCountdown", {
               seconds: autoApproveRemaining,
             })}
