@@ -263,6 +263,41 @@ pub fn subagent_of_subagent_rejection(delegation_chain: &[String]) -> Option<Too
     )))
 }
 
+/// One-shot agents whose results skip the usage/resume trailer — these are
+/// fire-and-forget research helpers where the ~150-char trailer is dead
+/// weight at high call volume and resuming them is not a meaningful flow.
+const ONE_SHOT_AGENT_IDS: &[&str] = &[crate::definitions::builtin::EXPLORE_AGENT_ID];
+
+/// Append the usage/resume trailer to a successful foreground subagent
+/// result, telling the parent what the run cost and how to continue it.
+///
+/// Skipped for one-shot agents (Explore) — mirroring the reference
+/// implementation's decision that the trailer is pure overhead there.
+pub fn append_result_trailer(
+    response: String,
+    agent_definition_id: &str,
+    session_id: &str,
+    total_tokens: i64,
+    tool_uses: usize,
+) -> String {
+    if ONE_SHOT_AGENT_IDS.contains(&agent_definition_id) {
+        return response;
+    }
+    format!(
+        "{response}\n\n---\nsession_id: {session_id} (pass as resume_session_id to continue this agent)\n<usage>total_tokens: {total_tokens}\ntool_uses: {tool_uses}</usage>"
+    )
+}
+
+/// Count tool calls in a subagent transcript (assistant messages'
+/// `tool_calls` arrays) for the usage trailer.
+pub fn count_tool_uses(messages: &[serde_json::Value]) -> usize {
+    messages
+        .iter()
+        .filter_map(|msg| msg.get("tool_calls").and_then(|tc| tc.as_array()))
+        .map(|arr| arr.len())
+        .sum()
+}
+
 /// Build the tool_result message returned to the parent agent when a
 /// background subagent is launched.
 ///

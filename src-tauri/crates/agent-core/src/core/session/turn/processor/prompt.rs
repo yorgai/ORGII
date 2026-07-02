@@ -225,12 +225,20 @@ impl UnifiedMessageProcessor {
 
         // Background-jobs reminder — lists running/unacknowledged-completed
         // processes so the model doesn't have to call AwaitTool to notice them.
+        // Completed subagents' final results are INLINED in the reminder and
+        // acknowledged here, so the parent acts on them without an extra
+        // await_output round-trip.
         {
             let jobs =
                 crate::tools::impls::coding::exec::registry::list_jobs_for_reminder(session_id);
             if !jobs.is_empty() {
                 dynamic_sections
                     .push(super::super::background_reminder::build_background_jobs_reminder(&jobs));
+                let inlined =
+                    super::super::background_reminder::inlined_result_handles(&jobs);
+                if !inlined.is_empty() {
+                    crate::tools::impls::coding::exec::registry::acknowledge_outputs(&inlined);
+                }
             }
         }
 

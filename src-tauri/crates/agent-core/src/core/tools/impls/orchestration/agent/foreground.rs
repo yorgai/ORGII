@@ -157,6 +157,15 @@ impl AgentTool {
                 // suppress the unread-output system reminder that background
                 // jobs rely on.
                 job_registry::acknowledge_output(&subagent_session_id);
+                // Usage/resume trailer: parent learns the cost and how to
+                // continue this agent. One-shot agents (Explore) skip it.
+                let resp = super::helpers::append_result_trailer(
+                    resp,
+                    &agent.id,
+                    &subagent_session_id,
+                    result.total_tokens,
+                    super::helpers::count_tool_uses(&result.messages),
+                );
                 (
                     if was_cancelled {
                         LinkedSessionStatus::Cancelled
