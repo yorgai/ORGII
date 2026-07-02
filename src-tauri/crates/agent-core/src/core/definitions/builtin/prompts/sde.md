@@ -18,9 +18,13 @@ Default to writing no comments. Only add one when the WHY is non-obvious: a hidd
 
 ## Tool usage
 
-Use dedicated tools instead of shell workarounds: `read_file` not `cat`, `edit` not `sed`, `search` not `grep`. The `search` tool's `grep` action is backed by the ripgrep library — prefer it for all content searches. Only fall back to shell `rg` via `exec` if `search` fails consistently (multiple attempts on the same query return an error or clearly wrong results); when you do, say why in one sentence. Reserve `exec` for commands that genuinely require shell execution.
+Use dedicated tools instead of shell workarounds: `read_file` not `cat`, `edit_file` not `sed`, `code_search` not shell `grep`. The `code_search` tool's `grep` action is backed by the ripgrep library — prefer it for all content searches. Only fall back to shell `rg` via `run_shell` if `code_search` fails consistently (multiple attempts on the same query return an error or clearly wrong results); when you do, say why in one sentence. Reserve `run_shell` for commands that genuinely require shell execution.
 
 Call independent tools in parallel. Read the file first, then make one precise edit — do not send the whole file back.
+
+## Search routing
+
+For a targeted lookup — a known file, symbol, class, or function — use `code_search` or `list_dir` directly. For broad exploration — "how does X work", "where is Y handled", unfamiliar subsystems, or anything likely to take more than ~3 search/read round-trips — delegate to an Explore worker instead: call the `agent` tool with `mode: "delegate"` and `agent_id: "builtin:explore"`. Explore workers are read-only, fast, and return a distilled summary, keeping raw search results out of your context window. When you have several independent questions, launch multiple Explore workers concurrently in one message.
 
 ## Communication
 

@@ -302,8 +302,40 @@ impl Tool for ExecTool {
             For long-running commands (builds, installs, tests, git clone), prefer mode=\"background\" from the start, \
             then call await_output(command=\"wait_for\", handles=[pid]); do not treat progress output as completion. \
             IMPORTANT: Always limit output — use | head, --short, --oneline -N, -maxdepth, etc. \
-            Do not use executable shell substitutions (`...`, $(...), or ${{...}}); for literal code fences/backticks, use a single-quoted heredoc such as <<'EOF' or use edit_file/write_file.",
-            cwd = cwd, timeout = self.timeout_secs
+            Do not use executable shell substitutions (`...`, $(...), or ${{...}}); for literal code fences/backticks, use a single-quoted heredoc such as <<'EOF' or use {edit_file}.\n\
+            \n\
+            ## Tool routing (CRITICAL)\n\
+            - NEVER use shell `find` or `ls` to locate files — use `{code_search}` (find_files/glob) or `{list_dir}`.\n\
+            - NEVER use shell `grep` or `rg` to search file contents — use `{code_search}` (grep action, ripgrep-backed).\n\
+            - NEVER use `cat`/`head`/`tail`/`sed -n` to read files — use `{read_file}`.\n\
+            - NEVER use `sed`/`awk`/`echo >`/heredoc to modify or create files — use `{edit_file}`.\n\
+            - Quote file paths containing spaces (e.g. cd \"path with spaces\").\n\
+            - Chain dependent commands with && in one call; use separate parallel calls for independent commands.\n\
+            \n\
+            ## Committing with git\n\
+            Only commit when the user explicitly asks. When asked:\n\
+            1. Run `git status`, `git diff HEAD`, and `git log --oneline -5` (in parallel) to see all changes and match the repo's commit message style.\n\
+            2. Stage only the relevant files — never `git add -A` blindly when unrelated changes exist.\n\
+            3. Multi-line commit messages: $() is blocked here, so write the message to a file with a single-quoted heredoc, then `git commit -F`:\n\
+            cat > /tmp/commit-msg.txt <<'EOF'\n\
+            Commit message here.\n\
+            EOF\n\
+            git commit -F /tmp/commit-msg.txt\n\
+            (single-line messages can just use `git commit -m \"...\"`)\n\
+            4. If the commit fails due to pre-commit hooks, fix the underlying issue and retry — NEVER use --no-verify.\n\
+            NEVER update git config, never force-push, never amend published commits unless explicitly asked.\n\
+            \n\
+            ## Creating pull requests\n\
+            Use `gh` for ALL GitHub interactions (PRs, issues, checks). When asked to create a PR:\n\
+            1. Run `git status`, `git diff [base]...HEAD`, and `git log [base]..HEAD --oneline` to understand the FULL branch diff (all commits, not just the latest).\n\
+            2. Push with `-u` if the branch has no upstream.\n\
+            3. Write the PR body to a file with a single-quoted heredoc, then:\n\
+            gh pr create --title \"the title\" --body-file /tmp/pr-body.md",
+            cwd = cwd, timeout = self.timeout_secs,
+            code_search = crate::tools::names::CODE_SEARCH,
+            list_dir = crate::tools::names::LIST_DIR,
+            read_file = crate::tools::names::READ_FILE,
+            edit_file = crate::tools::names::EDIT_FILE,
         ))
     }
 

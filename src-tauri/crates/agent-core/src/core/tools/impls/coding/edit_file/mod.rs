@@ -109,13 +109,18 @@ impl Tool for EditTool {
     fn llm_description(&self) -> Option<String> {
         let workspace = self.workspace.as_ref().map(|p| p.display().to_string())?;
         Some(format!(
-            "Create, overwrite, or edit files in {workspace} with fuzzy search-and-replace.\n\n\
+            "Create, overwrite, or edit files in {workspace} with fuzzy search-and-replace. \
+             ALWAYS use this tool for file modifications — NEVER use `sed`, `awk`, `echo >`, or heredocs \
+             through the shell tool.\n\n\
              **Create/Overwrite mode**: provide `file_path` + `content`.\n\
              **Edit mode**: provide `file_path` + `old_string` + `new_string`.\n\
              - You MUST use read_file at least once before editing. Never edit blind.\n\
              - Preserve exact indentation (tabs/spaces) as in the file.\n\
-             - FAIL if old_string not found or matches multiple locations.\n\
-             - 9 fuzzy matching strategies. Use replace_all: true for rename-all.\n\
+             - FAIL if old_string not found — re-read the file and copy the exact text.\n\
+             - FAIL if old_string matches multiple locations — include more surrounding lines to make it \
+             unique, or pass replace_all: true to change every occurrence (e.g. renaming a variable).\n\
+             - Fuzzy matching (9 strategies) tolerates whitespace/indentation drift, not content differences.\n\
+             - old_string must differ from new_string.\n\
              - read_file output has a line-number prefix (e.g. \"     1│\") — \
              never include this prefix in old_string; use only the actual file content after the │."
         ))

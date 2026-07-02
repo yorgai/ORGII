@@ -523,10 +523,13 @@ impl SkillsLoader {
         let lines: Vec<&str> = entries.iter().map(|entry| entry.line.as_str()).collect();
         Some(format!(
             "Skills relevant to your task:\n\
-             Before replying: scan the skill descriptions below.\n\
-             - If exactly one skill clearly applies: read its SKILL.md using `read_file`, then follow it.\n\
+             BLOCKING REQUIREMENT: scan the skill descriptions below BEFORE generating any other response. \
+             If a skill matches the task, you MUST read its SKILL.md using `read_file` and follow it before answering — \
+             skills encode workspace-specific conventions that override your defaults. \
+             NEVER mention or apply a skill without reading its SKILL.md first.\n\
+             - If exactly one skill matches: read it, then follow it.\n\
              - If multiple could apply: choose the most specific one, then read/follow it.\n\
-             - If none clearly apply: do not read any SKILL.md.\n\
+             - Only skip reading when no skill plausibly relates to the task.\n\
              Constraints: never read more than one skill up front; only read after selecting.\n\n\
              {}",
             lines.join("\n")
