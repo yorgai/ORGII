@@ -9,6 +9,11 @@ import { fetchRustApi, gitRepoUrl } from "./client";
 
 const log = createLogger("GitAPI");
 
+export interface GitBranchMutationResult {
+  success: boolean;
+  error?: string;
+}
+
 /**
  * Create a new branch
  * Uses Rust HTTP server
@@ -19,7 +24,7 @@ export const gitCreateBranch = async (params: {
   name: string;
   start_point?: string | null;
   checkout?: boolean;
-}): Promise<boolean> => {
+}): Promise<GitBranchMutationResult> => {
   const queryParams = new URLSearchParams();
   if (params.repo_path) queryParams.append("path", params.repo_path);
 
@@ -35,10 +40,11 @@ export const gitCreateBranch = async (params: {
         }),
       }
     );
-    return true;
+    return { success: true };
   } catch (error) {
-    log.error("[GitAPI] Failed to create branch:", error);
-    return false;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    log.error("[GitAPI] Failed to create branch:", errorMessage);
+    return { success: false, error: errorMessage };
   }
 };
 
@@ -51,7 +57,7 @@ export const gitDeleteBranch = async (params: {
   repo_path?: string;
   branch_name: string;
   force?: boolean;
-}): Promise<boolean> => {
+}): Promise<GitBranchMutationResult> => {
   const queryParams = new URLSearchParams();
   if (params.repo_path) queryParams.append("path", params.repo_path);
 
@@ -60,10 +66,11 @@ export const gitDeleteBranch = async (params: {
       `${gitRepoUrl(params.repo_id)}/branch/${encodeURIComponent(params.branch_name)}${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
       { method: "DELETE" }
     );
-    return true;
+    return { success: true };
   } catch (error) {
-    log.error("[GitAPI] Failed to delete branch:", error);
-    return false;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    log.error("[GitAPI] Failed to delete branch:", errorMessage);
+    return { success: false, error: errorMessage };
   }
 };
 

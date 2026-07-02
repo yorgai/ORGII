@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { normalizeGitActionDialogMessage } from "../gitActionDialog";
 import {
   type GitErrorDialogOptions,
   buildGitErrorInfo,
@@ -221,5 +222,22 @@ describe("buildGitErrorInfo — basic fields", () => {
   it("preserves errorMessage", () => {
     const info = buildGitErrorInfo(makeOptions({ errorMessage: "my error" }));
     expect(info.errorMessage).toBe("my error");
+  });
+});
+
+describe("normalizeGitActionDialogMessage", () => {
+  it("replaces WebKit fetch transport errors with actionable Git service text", () => {
+    expect(normalizeGitActionDialogMessage("Load failed")).toContain(
+      "local Git service"
+    );
+    expect(normalizeGitActionDialogMessage("failed to fetch")).toContain(
+      "local Git service"
+    );
+  });
+
+  it("preserves normal git errors", () => {
+    expect(normalizeGitActionDialogMessage("Branch not found")).toBe(
+      "Branch not found"
+    );
   });
 });
