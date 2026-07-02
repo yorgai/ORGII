@@ -2158,6 +2158,7 @@
       "noActivePage": "Keine aktive Seite zum Erfassen"
     },
     "selectedElement": {
+      "addElement": "Element hinzufügen",
       "sentToChat": "Element zum Chat hinzugefügt"
     },
     "openedInBrowser": "Im Browser geöffnet",

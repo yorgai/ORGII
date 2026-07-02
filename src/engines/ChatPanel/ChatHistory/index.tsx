@@ -170,7 +170,9 @@ export interface BrowserAddToConversationNavState {
   showAddToConversation: boolean;
   addToConversationLabel: string;
   addToConversationTooltipLabel: string;
+  cancelAddToConversationLabel: string;
   onAddToConversation: () => void;
+  onCancelAddToConversation: () => void;
 }
 
 export interface ScrollNavState
@@ -192,7 +194,9 @@ const EMPTY_BROWSER_ADD_TO_CONVERSATION_NAV: BrowserAddToConversationNavState =
     showAddToConversation: false,
     addToConversationLabel: "",
     addToConversationTooltipLabel: "",
+    cancelAddToConversationLabel: "",
     onAddToConversation: () => undefined,
+    onCancelAddToConversation: () => undefined,
   };
 
 interface ChatHistoryProps {
@@ -367,7 +371,9 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     showAddToConversation,
     addToConversationLabel,
     addToConversationTooltipLabel,
+    cancelAddToConversationLabel,
     onAddToConversation,
+    onCancelAddToConversation,
   } = browserAddToConversationNav;
 
   const { hasPinnedContent: hasPinnedContentRaw } = usePinnedContent();
@@ -847,7 +853,9 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       showAddToConversation,
       addToConversationLabel,
       addToConversationTooltipLabel,
+      cancelAddToConversationLabel,
       onAddToConversation,
+      onCancelAddToConversation,
     });
   }, [
     showScrollToBottom,
@@ -860,7 +868,9 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     showAddToConversation,
     addToConversationLabel,
     addToConversationTooltipLabel,
+    cancelAddToConversationLabel,
     onAddToConversation,
+    onCancelAddToConversation,
     onScrollNavChange,
   ]);
 

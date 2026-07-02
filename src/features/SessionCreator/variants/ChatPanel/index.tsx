@@ -18,7 +18,10 @@ import SelectorPill from "@src/components/SelectorPill";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { isRegionSanctioned } from "@src/config/providerRegions";
+import type { ScrollNavState } from "@src/engines/ChatPanel/ChatHistory";
+import CollapsedInlineRow from "@src/engines/ChatPanel/InputArea/components/CollapsedInlineRow";
 import PinnedActionsBar from "@src/engines/ChatPanel/InputArea/components/PinnedActionsBar";
+import { useBrowserAddToConversationAction } from "@src/engines/ChatPanel/hooks/useBrowserAddToConversationAction";
 import type { ChatPanelRegionNotice } from "@src/engines/ChatPanel/types";
 import { useSessionCreator } from "@src/engines/SessionCore/hooks/session/useSessionCreator";
 import type {
@@ -136,6 +139,7 @@ const SessionCreatorChatPanelSingle: React.FC<
   resolveWorkItemContext,
 }) => {
   const { t } = useTranslation("sessions");
+  const browserAddToConversationNav = useBrowserAddToConversationAction();
   const { registry } = useAgentCompatibility();
   const { orgs } = useAgentOrgs();
   const { agents: cliAgentList } = useCliAgents({ enabled: true });
@@ -637,6 +641,24 @@ const SessionCreatorChatPanelSingle: React.FC<
     </div>
   );
 
+  const browserElementScrollNav = useMemo<ScrollNavState>(
+    () => ({
+      showScrollToBottom: false,
+      onScrollToBottom: () => undefined,
+      showFollowAgent: false,
+      followAgentLabel: "",
+      followAgentTooltipLabel: "",
+      followAgentShortcut: "",
+      onFollowAgent: () => undefined,
+      ...browserAddToConversationNav,
+    }),
+    [browserAddToConversationNav]
+  );
+  const browserElementRowContent =
+    browserElementScrollNav.showAddToConversation ? (
+      <CollapsedInlineRow sections={[]} scrollNav={browserElementScrollNav} />
+    ) : null;
+
   const editorArea = (
     <div className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}>
       <EditorArea
@@ -774,6 +796,7 @@ const SessionCreatorChatPanelSingle: React.FC<
               managePanelAlign="left"
               leadingContent={
                 <>
+                  {browserElementRowContent}
                   {leadingActionSlot}
                   <WorkItemAttachmentControl
                     currentWorkItemContext={attachedWorkItemContext}

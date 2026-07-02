@@ -64,7 +64,6 @@ const BrowserStatusBar: React.FC<BrowserStatusBarProps> = memo(
     const { t } = useTranslation();
 
     const itemTextClass = "text-text-1";
-    const mutedTextClass = "text-text-2";
 
     // Left content: console issue counts (opens in-app DevTools on click)
     const leftContent = useMemo(
@@ -96,13 +95,11 @@ const BrowserStatusBar: React.FC<BrowserStatusBarProps> = memo(
       [itemTextClass, warningCount, errorCount, onToggleDevTools]
     );
 
-    // Right content: selected-element label + clear-selection + primary
-    // "Add to Chat" action when a DOM element is picked via the inspector.
     // Button text reuses the terminal selection menu label so both surfaces
     // read the same way.
     const rightContent = useMemo(() => {
       if (!hasSelectedElement || !onSendSelectedElementToChat) return null;
-      const sendLabel = t("selectionMenu.addToChat");
+      const sendLabel = t("browser.selectedElement.addElement");
       const clearLabel = t("actions.clearSelection");
       return (
         <div className="flex h-full items-center gap-1">
@@ -119,7 +116,7 @@ const BrowserStatusBar: React.FC<BrowserStatusBarProps> = memo(
             <StatusBarButton
               onClick={onClearSelectedElement}
               title={clearLabel}
-              className={mutedTextClass}
+              className="text-text-2"
             >
               <BrushCleaning size={13} />
             </StatusBarButton>
@@ -139,7 +136,6 @@ const BrowserStatusBar: React.FC<BrowserStatusBarProps> = memo(
       onSendSelectedElementToChat,
       onClearSelectedElement,
       selectedElementLabel,
-      mutedTextClass,
       t,
     ]);
 

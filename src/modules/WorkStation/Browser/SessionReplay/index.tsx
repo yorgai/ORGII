@@ -381,13 +381,16 @@ const SessionReplayBrowserComponent: React.FC<SessionReplayBrowserProps> = ({
     ]
   );
 
+  const selectedElement = myTabsBrowser.selectedElement;
+  const currentUrl = myTabsBrowser.currentUrl;
+  const clearSelection = myTabsBrowser.clearSelection;
+
   const handleSendSelectedElementToChat = useCallback(() => {
-    const element = myTabsBrowser.selectedElement;
-    if (!element) return;
+    if (!selectedElement) return;
 
     const { jsonText, fileName } = buildDomComponentJsonFromElementInfo(
-      element,
-      myTabsBrowser.currentUrl
+      selectedElement,
+      currentUrl
     );
 
     setAddToAgent({
@@ -395,13 +398,9 @@ const SessionReplayBrowserComponent: React.FC<SessionReplayBrowserProps> = ({
       fileName,
       jsonText,
     });
+    clearSelection();
     Message.success(tCommon("browser.selectedElement.sentToChat"));
-  }, [
-    myTabsBrowser.selectedElement,
-    myTabsBrowser.currentUrl,
-    setAddToAgent,
-    tCommon,
-  ]);
+  }, [selectedElement, currentUrl, clearSelection, setAddToAgent, tCommon]);
 
   const myTabsStatusBar = useMemo(() => {
     if (!showActiveMyTabsBrowser) return null;

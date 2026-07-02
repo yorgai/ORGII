@@ -2155,6 +2155,7 @@
       "noActivePage": "Yakalanacak aktif sayfa yok"
     },
     "selectedElement": {
+      "addElement": "Öğe ekle",
       "sentToChat": "Öğe sohbete eklendi"
     },
     "openedInBrowser": "Tarayıcıda açıldı",

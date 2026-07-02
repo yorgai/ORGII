@@ -9,7 +9,7 @@
  *
  * Each pill shows icon + numeric count only. gap-1 between pills.
  */
-import { Layout, Plus } from "lucide-react";
+import { BrushCleaning, Layout, Plus } from "lucide-react";
 import React, { memo, useState } from "react";
 
 import Button from "@src/components/Button";
@@ -82,6 +82,49 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
 
     return (
       <div className="flex items-center gap-1 px-0.5">
+        {showAddToConversation && (
+          <Tooltip
+            content={
+              <KeyboardShortcutTooltipContent
+                label={scrollNav!.addToConversationTooltipLabel}
+              />
+            }
+            position="top"
+            mouseEnterDelay={250}
+            framedPanel
+          >
+            <span className="inline-flex items-center gap-1">
+              <Button
+                variant="secondary"
+                appearance="outline"
+                size="small"
+                shape="round"
+                icon={<Plus size={13} strokeWidth={2} />}
+                onClick={scrollNav!.onAddToConversation}
+                aria-label={scrollNav!.addToConversationTooltipLabel}
+                data-testid="browser-add-to-conversation-pill"
+                className="max-w-[190px] !text-primary-6"
+              >
+                {scrollNav!.addToConversationLabel}
+              </Button>
+              <Button
+                variant="secondary"
+                appearance="outline"
+                size="small"
+                shape="round"
+                icon={<BrushCleaning size={13} strokeWidth={2} />}
+                iconOnly
+                onClick={scrollNav!.onCancelAddToConversation}
+                aria-label={scrollNav!.cancelAddToConversationLabel}
+                title={scrollNav!.cancelAddToConversationLabel}
+                data-testid="browser-cancel-add-to-conversation-pill"
+                className="!text-primary-6"
+              />
+              <span className="mx-0.5 h-4 w-px bg-border-2" />
+            </span>
+          </Tooltip>
+        )}
+
         {sections.map((section) => {
           const button = (
             <Button
@@ -166,35 +209,6 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
                 aria-label={scrollNav!.followAgentTooltipLabel}
               >
                 {scrollNav!.followAgentLabel}
-              </Button>
-            </span>
-          </Tooltip>
-        )}
-
-        {showAddToConversation && (
-          <Tooltip
-            content={
-              <KeyboardShortcutTooltipContent
-                label={scrollNav!.addToConversationTooltipLabel}
-              />
-            }
-            position="top"
-            mouseEnterDelay={250}
-            framedPanel
-          >
-            <span className="inline-flex">
-              <Button
-                variant="primary"
-                appearance="outline"
-                size="small"
-                shape="round"
-                icon={<Plus size={13} strokeWidth={2} />}
-                onClick={scrollNav!.onAddToConversation}
-                aria-label={scrollNav!.addToConversationTooltipLabel}
-                data-testid="browser-add-to-conversation-pill"
-                className="max-w-[190px]"
-              >
-                {scrollNav!.addToConversationLabel}
               </Button>
             </span>
           </Tooltip>

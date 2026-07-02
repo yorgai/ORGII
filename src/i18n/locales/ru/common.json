@@ -2150,6 +2150,7 @@
       "noActivePage": "Нет активной страницы для снимка"
     },
     "selectedElement": {
+      "addElement": "Добавить элемент",
       "sentToChat": "Элемент прикреплён к чату"
     },
     "openedInBrowser": "Открыто в браузере",

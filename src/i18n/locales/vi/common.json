@@ -2151,6 +2151,7 @@
       "noActivePage": "Không có trang đang hoạt động để chụp"
     },
     "selectedElement": {
+      "addElement": "Thêm phần tử",
       "sentToChat": "Đã đính phần tử vào chat"
     },
     "openedInBrowser": "Đã mở trong trình duyệt",

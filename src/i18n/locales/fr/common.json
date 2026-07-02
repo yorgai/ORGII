@@ -2153,6 +2153,7 @@
       "noActivePage": "Aucune page active à capturer"
     },
     "selectedElement": {
+      "addElement": "Ajouter l’élément",
       "sentToChat": "Élément ajouté au chat"
     },
     "openedInBrowser": "Ouvert dans le navigateur",

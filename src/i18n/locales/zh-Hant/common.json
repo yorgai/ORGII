@@ -2168,6 +2168,7 @@
       "noActivePage": "沒有可截取的活動頁面"
     },
     "selectedElement": {
+      "addElement": "添加元素",
       "sentToChat": "元素已添加到聊天"
     },
     "openedInBrowser": "已在瀏覽器中開啟",

@@ -11,7 +11,9 @@ export interface UseBrowserAddToConversationActionReturn {
   showAddToConversation: boolean;
   addToConversationLabel: string;
   addToConversationTooltipLabel: string;
+  cancelAddToConversationLabel: string;
   onAddToConversation: () => void;
+  onCancelAddToConversation: () => void;
 }
 
 const noop = () => undefined;
@@ -21,10 +23,12 @@ export function useBrowserAddToConversationAction(): UseBrowserAddToConversation
   const browserStatus = useAtomValue(browserStatusBarStateAtom);
   const browserCallbacks = useAtomValue(browserStatusBarCallbacksAtom);
 
-  const addToConversationLabel = t("selectionMenu.addToChat");
+  const addToConversationLabel = t("browser.selectedElement.addElement");
+  const cancelAddToConversationLabel = t("actions.clearSelection");
   const selectedElementLabel = browserStatus.browserSelectedElementLabel;
   const onSendSelectedElementToChat =
     browserCallbacks.onSendSelectedElementToChat;
+  const onClearSelectedElement = browserCallbacks.onClearSelectedElement;
   const showAddToConversation =
     browserStatus.browserHasSelectedElement === true &&
     typeof onSendSelectedElementToChat === "function";
@@ -36,13 +40,17 @@ export function useBrowserAddToConversationAction(): UseBrowserAddToConversation
       addToConversationTooltipLabel: selectedElementLabel
         ? `${addToConversationLabel}: ${selectedElementLabel}`
         : addToConversationLabel,
+      cancelAddToConversationLabel,
       onAddToConversation: onSendSelectedElementToChat ?? noop,
+      onCancelAddToConversation: onClearSelectedElement ?? noop,
     }),
     [
       showAddToConversation,
       addToConversationLabel,
+      cancelAddToConversationLabel,
       selectedElementLabel,
       onSendSelectedElementToChat,
+      onClearSelectedElement,
     ]
   );
 }
