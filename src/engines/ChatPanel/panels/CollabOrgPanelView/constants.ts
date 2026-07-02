@@ -10,7 +10,6 @@ export const COLLAB_ORG_TAB = {
 export type CollabOrgTab = (typeof COLLAB_ORG_TAB)[keyof typeof COLLAB_ORG_TAB];
 
 export const CHAT_HISTORY_LIMIT = 100;
-export const DEFAULT_INVITE_USAGE_LIMIT = 10;
 
 export const COLLAB_SNAPSHOT_REQUEST_STATUS = {
   PENDING: "pending",

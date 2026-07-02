@@ -23,6 +23,10 @@ import {
   collabOrgsAtom,
 } from "@src/store/collaboration/collabOrgsAtom";
 import { collabPendingInviteAtom } from "@src/store/collaboration/collabPendingInviteAtom";
+import {
+  INVITE_KIND,
+  createInviteDefaults,
+} from "@src/store/collaboration/inviteDefaults";
 import { parseCollabInviteInput } from "@src/store/collaboration/protocol";
 import { COLLAB_IDENTITY_KIND } from "@src/store/collaboration/types";
 import type {
@@ -33,6 +37,7 @@ import type {
 } from "@src/store/collaboration/types";
 import { copyText } from "@src/util/data/clipboard";
 
+import { resolveRepoScopeKeys } from "../../repoScopeResolver";
 import { ORGII_SUPABASE_SETUP_SQL } from "../../sync/supabaseSetupSql";
 import { supabaseSyncClient } from "../../sync/supabaseSyncClient";
 
@@ -40,11 +45,10 @@ const LOCAL_SOURCE = "local";
 const SUPABASE_SOURCE = "supabase";
 const CREATE_MODE = "create";
 const JOIN_MODE = "join";
-const DEFAULT_INVITE_USAGE_LIMIT = 10;
 
 const SUPABASE_SETUP_MARKDOWN = `1. Create a Supabase project in the Supabase dashboard.
 
-2. Copy the Project URL and anon public key into ORGII.
+2. Copy the Project URL and the publishable (anon) API key into ORGII.
 
 3. Click **Copy setup SQL** below.
 
@@ -290,6 +294,9 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
       setCollabOrgs((current) => upsertOrg(current, canonicalOrg));
       setCollabMembers((current) => upsertMember(current, member));
       onCreated?.({ source: SUPABASE_SOURCE, org: canonicalOrg, member });
+      // Bootstrap invite (design §8.1): multi-use (10) / 7 days — canonical
+      // flow is pasting it into a team channel, so a single-use ticket
+      // (the PANEL default) would lock out member #2.
       const invite = await supabaseSyncClient.createInvite({
         supabaseUrl: org.supabaseUrl ?? supabaseUrl,
         anonKey: org.supabaseAnonKey ?? anonKey,
@@ -297,7 +304,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
         memberId: org.localMemberId,
         memberToken: org.memberToken,
         orgId: org.id,
-        usageLimit: DEFAULT_INVITE_USAGE_LIMIT,
+        ...createInviteDefaults(INVITE_KIND.BOOTSTRAP),
       });
       setCollabInvites((current) => upsertInvite(current, invite));
       setLatestInviteLink(invite.inviteLink ?? "");
@@ -332,10 +339,15 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
           displayName,
           identityKind: COLLAB_IDENTITY_KIND.HUMAN,
         });
-        const repoScopes = repoScopesText
-          .split("\n")
-          .map((line) => line.trim())
-          .filter((line) => line.length > 0);
+        // Scope key v2 (design §8.3): entered paths become normalized git
+        // remote keys when a remote is resolvable; repos without a remote
+        // keep their normalized absolute path.
+        const repoScopes = await resolveRepoScopeKeys(
+          repoScopesText
+            .split("\n")
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0)
+        );
         if (repoScopes.length > 0) {
           try {
             await supabaseSyncClient.updateOrgRepoScopes({
@@ -530,7 +542,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
                   <Input
                     value={anonKey}
                     onChange={setAnonKey}
-                    placeholder="eyJhbGciOi..."
+                    placeholder="sb_publishable_... / eyJhbGci..."
                     style={COLLAB_FORM_CONTROL_STYLE}
                   />
                 </SectionRow>

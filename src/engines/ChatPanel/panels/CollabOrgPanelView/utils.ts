@@ -34,6 +34,40 @@ export function getInviteRemainingUses(invite: CollabInviteRecord): number {
   return Math.max(0, invite.usageLimit - invite.usageCount);
 }
 
+/** Active = not revoked, not exhausted, not past its expiry (design §8.1). */
+export function isInviteActive(
+  invite: CollabInviteRecord,
+  nowMs: number = Date.now()
+): boolean {
+  if (invite.revokedAt) return false;
+  if (getInviteRemainingUses(invite) <= 0) return false;
+  if (invite.expiresAt) {
+    const expiresMs = Date.parse(invite.expiresAt);
+    if (Number.isFinite(expiresMs) && expiresMs <= nowMs) return false;
+  }
+  return true;
+}
+
+/** Active invites of one org, newest first (members-tab invite list, §8.1). */
+export function getActiveOrgInvites(
+  invites: CollabInviteRecord[],
+  orgId: string,
+  nowMs: number = Date.now()
+): CollabInviteRecord[] {
+  return invites
+    .filter((invite) => invite.orgId === orgId && isInviteActive(invite, nowMs))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+/**
+ * ORGII_LAST_ADMIN surfaces from `orgii_remove_member` /
+ * `orgii_update_member_role` when the target is the only remaining admin;
+ * the raw code must be translated into a human explanation (§8.4).
+ */
+export function isCollabLastAdminError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("ORGII_LAST_ADMIN");
+}
+
 export function isToday(value: string | undefined): boolean {
   if (!value) return false;
   const date = new Date(value);

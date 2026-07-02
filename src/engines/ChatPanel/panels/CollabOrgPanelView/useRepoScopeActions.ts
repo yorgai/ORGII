@@ -3,6 +3,10 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getSyncProfile } from "@src/features/TeamCollaboration/collabSyncUtils";
+import {
+  resolveRepoScopeKey,
+  resolveRepoScopeKeys,
+} from "@src/features/TeamCollaboration/repoScopeResolver";
 import { supabaseSyncClient } from "@src/features/TeamCollaboration/sync/supabaseSyncClient";
 import {
   collabMembersAtom,
@@ -25,7 +29,6 @@ interface UseRepoScopeActionsParams {
 export function useRepoScopeActions({ org }: UseRepoScopeActionsParams) {
   const { t } = useTranslation("navigation");
   const members = useAtomValue(collabMembersAtom);
-  const orgs = useAtomValue(collabOrgsAtom);
   const repoJoinRequests = useAtomValue(collabRepoJoinRequestsAtom);
   const setRepoJoinRequests = useSetAtom(collabRepoJoinRequestsAtom);
   const setOrgs = useSetAtom(collabOrgsAtom);
@@ -88,10 +91,13 @@ export function useRepoScopeActions({ org }: UseRepoScopeActionsParams) {
       setJoinError(null);
       setJoinSubmitted(false);
       try {
+        // Scope key v2 (design §8.3): normalize to the git remote key (or
+        // the normalized path when the repo has no remote) BEFORE
+        // request_repo_join — the approve RPC stores it verbatim.
         await supabaseSyncClient.requestRepoJoin({
           ...profile,
           orgId: org.id,
-          repoPath: repoPath.trim(),
+          repoPath: await resolveRepoScopeKey(repoPath),
           requesterMemberId: currentMember.id,
         });
         setJoinSubmitted(true);
@@ -164,12 +170,13 @@ export function useRepoScopeActions({ org }: UseRepoScopeActionsParams) {
       setScopesError(null);
       setScopesSaved(false);
       try {
-        const normalized = Array.from(
-          new Set(
-            repoScopes
-              .map((path) => path.trim())
-              .filter((path) => path.length > 0)
-          )
+        // Same normalization as the join path (design §8.3): admin-entered
+        // paths become remote keys when resolvable, deduped after
+        // resolution. Existing remote-style keys pass through unchanged.
+        const normalized = await resolveRepoScopeKeys(
+          repoScopes
+            .map((path) => path.trim())
+            .filter((path) => path.length > 0)
         );
         await supabaseSyncClient.updateOrgRepoScopes({
           ...profile,

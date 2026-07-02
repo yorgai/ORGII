@@ -452,11 +452,6 @@
     "localHuman": "로컬 Human",
     "backToOrg": "ORG로 돌아가기",
     "invite": {
-      "title": "초대 링크",
-      "description": "팀원이 이 ORG에 참여할 수 있는 초대 링크를 만듭니다. 최신 링크가 여기에 표시되어 빠르게 복사할 수 있습니다.",
-      "adminOnly": "ORG 관리자만 초대 링크를 만들 수 있습니다.",
-      "create": "초대 만들기",
-      "createNew": "새 초대",
       "remainingUses": "{{count}}회 사용 가능",
       "expires": "{{date}} 만료"
     },
@@ -487,7 +482,12 @@
       "requestPending": "소유자에게 session replay를 요청 중..."
     },
     "members": {
-      "remove": "제거"
+      "remove": "제거",
+      "makeAdmin": "Make admin",
+      "makeMember": "Make member",
+      "roleChangeConfirmPromote": "Give {{member}} admin rights for this ORG?",
+      "roleChangeConfirmDemote": "Remove admin rights from {{member}}?",
+      "lastAdminError": "This member is the last admin. Promote another member to admin first."
     },
     "share": {
       "menuItem": "Share settings…",
@@ -530,6 +530,34 @@
       "shareAllDescription": "Sessions in the org's repo scope become visible, including past ones.",
       "accessOffBanner": "Your sessions are not shared with this org.",
       "accessOffBannerAction": "Open settings"
+    },
+    "invites": {
+      "title": "Invites",
+      "adminOnly": "Only ORG admins can manage invites.",
+      "empty": "No active invites.",
+      "code": "Invite ····{{suffix}}",
+      "neverExpires": "Never expires",
+      "createdBy": "Created by {{member}}",
+      "roleAdmin": "Admin",
+      "roleMember": "Member",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke this invite? Links created from it stop working immediately.",
+      "usageLimitLabel": "Uses",
+      "expiryLabel": "Expires in",
+      "roleLabel": "Role",
+      "expiryOption1d": "1 day",
+      "expiryOption7d": "7 days",
+      "expiryOption30d": "30 days",
+      "create": "Create invite"
+    },
+    "leave": {
+      "action": "Leave ORG",
+      "confirmTitle": "Leave this ORG?",
+      "warning": "You will stop syncing with this ORG. Imported session copies stay on this device unless you choose to remove them.",
+      "removeImported": "Also remove imported session copies from this device",
+      "confirm": "Leave ORG",
+      "cancel": "Cancel",
+      "lastAdminError": "You are the last admin. Transfer the admin role or delete the ORG before leaving."
     }
   }
 }

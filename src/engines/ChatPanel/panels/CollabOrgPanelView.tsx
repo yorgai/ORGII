@@ -107,17 +107,25 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
             selectedMember={model.selectedMember}
             currentMember={model.currentMember}
             activeMemberIds={model.activeMemberIds}
+            activeInvites={model.activeInvites}
             latestInvite={model.latestInvite}
             canCreateInvite={model.canCreateInvite}
             creatingInvite={model.creatingInvite}
             copyingInvite={model.copyingInvite}
             inviteError={model.inviteError}
+            revokingInviteId={model.revokingInviteId}
             memberError={model.memberError}
             removingMemberId={model.removingMemberId}
+            updatingRoleMemberId={model.updatingRoleMemberId}
+            leavingOrg={model.leavingOrg}
+            leaveError={model.leaveError}
             onCreateInvite={model.handleCreateInvite}
             onCopyInvite={model.handleCopyInvite}
+            onRevokeInvite={model.handleRevokeInvite}
             onSelectMember={model.handleSelectMember}
             onRemoveMember={model.handleRemoveMember}
+            onUpdateMemberRole={model.handleUpdateMemberRole}
+            onLeaveOrg={model.handleLeaveOrg}
           />
         ) : null}
 

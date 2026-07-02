@@ -452,11 +452,6 @@
     "localHuman": "Yerel insan",
     "backToOrg": "ORG’ye dön",
     "invite": {
-      "title": "Davet bağlantısı",
-      "description": "Takım arkadaşlarının bu ORG’ye katılması için bir davet bağlantısı oluşturun. En son bağlantı hızlı kopyalama için burada gösterilir.",
-      "adminOnly": "Davet bağlantılarını yalnızca ORG yöneticileri oluşturabilir.",
-      "create": "Davet oluştur",
-      "createNew": "Yeni davet",
       "remainingUses": "{{count}} kullanım kaldı",
       "expires": "{{date}} tarihinde sona erer"
     },
@@ -487,7 +482,12 @@
       "requestPending": "Session replay sahibinden isteniyor..."
     },
     "members": {
-      "remove": "Kaldır"
+      "remove": "Kaldır",
+      "makeAdmin": "Make admin",
+      "makeMember": "Make member",
+      "roleChangeConfirmPromote": "Give {{member}} admin rights for this ORG?",
+      "roleChangeConfirmDemote": "Remove admin rights from {{member}}?",
+      "lastAdminError": "This member is the last admin. Promote another member to admin first."
     },
     "share": {
       "menuItem": "Share settings…",
@@ -530,6 +530,34 @@
       "shareAllDescription": "Sessions in the org's repo scope become visible, including past ones.",
       "accessOffBanner": "Your sessions are not shared with this org.",
       "accessOffBannerAction": "Open settings"
+    },
+    "invites": {
+      "title": "Invites",
+      "adminOnly": "Only ORG admins can manage invites.",
+      "empty": "No active invites.",
+      "code": "Invite ····{{suffix}}",
+      "neverExpires": "Never expires",
+      "createdBy": "Created by {{member}}",
+      "roleAdmin": "Admin",
+      "roleMember": "Member",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke this invite? Links created from it stop working immediately.",
+      "usageLimitLabel": "Uses",
+      "expiryLabel": "Expires in",
+      "roleLabel": "Role",
+      "expiryOption1d": "1 day",
+      "expiryOption7d": "7 days",
+      "expiryOption30d": "30 days",
+      "create": "Create invite"
+    },
+    "leave": {
+      "action": "Leave ORG",
+      "confirmTitle": "Leave this ORG?",
+      "warning": "You will stop syncing with this ORG. Imported session copies stay on this device unless you choose to remove them.",
+      "removeImported": "Also remove imported session copies from this device",
+      "confirm": "Leave ORG",
+      "cancel": "Cancel",
+      "lastAdminError": "You are the last admin. Transfer the admin role or delete the ORG before leaving."
     }
   }
 }

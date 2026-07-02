@@ -452,11 +452,6 @@
     "localHuman": "ローカル Human",
     "backToOrg": "ORG に戻る",
     "invite": {
-      "title": "招待リンク",
-      "description": "チームメイトがこの ORG に参加できる招待リンクを作成します。最新のリンクはここに表示され、すぐコピーできます。",
-      "adminOnly": "ORG 管理者だけが招待リンクを作成できます。",
-      "create": "招待を作成",
-      "createNew": "新しい招待",
       "remainingUses": "残り {{count}} 回使用可能",
       "expires": "{{date}} に期限切れ"
     },
@@ -487,7 +482,12 @@
       "requestPending": "所有者に session replay をリクエスト中..."
     },
     "members": {
-      "remove": "削除"
+      "remove": "削除",
+      "makeAdmin": "Make admin",
+      "makeMember": "Make member",
+      "roleChangeConfirmPromote": "Give {{member}} admin rights for this ORG?",
+      "roleChangeConfirmDemote": "Remove admin rights from {{member}}?",
+      "lastAdminError": "This member is the last admin. Promote another member to admin first."
     },
     "share": {
       "menuItem": "Share settings…",
@@ -530,6 +530,34 @@
       "shareAllDescription": "Sessions in the org's repo scope become visible, including past ones.",
       "accessOffBanner": "Your sessions are not shared with this org.",
       "accessOffBannerAction": "Open settings"
+    },
+    "invites": {
+      "title": "Invites",
+      "adminOnly": "Only ORG admins can manage invites.",
+      "empty": "No active invites.",
+      "code": "Invite ····{{suffix}}",
+      "neverExpires": "Never expires",
+      "createdBy": "Created by {{member}}",
+      "roleAdmin": "Admin",
+      "roleMember": "Member",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke this invite? Links created from it stop working immediately.",
+      "usageLimitLabel": "Uses",
+      "expiryLabel": "Expires in",
+      "roleLabel": "Role",
+      "expiryOption1d": "1 day",
+      "expiryOption7d": "7 days",
+      "expiryOption30d": "30 days",
+      "create": "Create invite"
+    },
+    "leave": {
+      "action": "Leave ORG",
+      "confirmTitle": "Leave this ORG?",
+      "warning": "You will stop syncing with this ORG. Imported session copies stay on this device unless you choose to remove them.",
+      "removeImported": "Also remove imported session copies from this device",
+      "confirm": "Leave ORG",
+      "cancel": "Cancel",
+      "lastAdminError": "You are the last admin. Transfer the admin role or delete the ORG before leaving."
     }
   }
 }

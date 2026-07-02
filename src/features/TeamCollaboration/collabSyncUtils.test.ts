@@ -17,6 +17,7 @@ import {
   getShareCapableOrgsForSession,
   isRepoPathInScope,
   isSessionPushAllowed,
+  normalizeRepoScopeKey,
   toRemoteMetadata,
 } from "./collabSyncUtils";
 
@@ -382,6 +383,75 @@ describe("getShareCapableOrgsForSession", () => {
   });
 });
 
+describe("normalizeRepoScopeKey", () => {
+  it("collapses the three canonical remote forms to host/path (design §8.3)", () => {
+    expect(normalizeRepoScopeKey("git@github.com:org/x.git")).toBe(
+      "github.com/org/x"
+    );
+    expect(normalizeRepoScopeKey("https://github.com/org/x.git")).toBe(
+      "github.com/org/x"
+    );
+    expect(normalizeRepoScopeKey("ssh://git@github.com/org/x")).toBe(
+      "github.com/org/x"
+    );
+  });
+
+  it("normalizes remote-form variants: no .git, trailing slash, host case, http, git://", () => {
+    expect(normalizeRepoScopeKey("https://github.com/org/x")).toBe(
+      "github.com/org/x"
+    );
+    expect(normalizeRepoScopeKey("https://github.com/org/x/")).toBe(
+      "github.com/org/x"
+    );
+    expect(normalizeRepoScopeKey("https://GitHub.COM/org/x.git")).toBe(
+      "github.com/org/x"
+    );
+    expect(normalizeRepoScopeKey("http://github.com/org/x.git")).toBe(
+      "github.com/org/x"
+    );
+    expect(normalizeRepoScopeKey("git://github.com/org/x.git")).toBe(
+      "github.com/org/x"
+    );
+    expect(normalizeRepoScopeKey("ssh://git@github.com/org/x.git")).toBe(
+      "github.com/org/x"
+    );
+    expect(normalizeRepoScopeKey("git@GitHub.com:org/x")).toBe(
+      "github.com/org/x"
+    );
+    // scp-like with an absolute server path keeps a single leading slash.
+    expect(normalizeRepoScopeKey("git@server.local:/srv/git/x.git")).toBe(
+      "server.local/srv/git/x"
+    );
+  });
+
+  it("preserves path case in the repo segment (only the host is lowercased)", () => {
+    expect(normalizeRepoScopeKey("git@github.com:Org/X.git")).toBe(
+      "github.com/Org/X"
+    );
+  });
+
+  it("returns non-URL inputs trimmed minus trailing slashes", () => {
+    expect(normalizeRepoScopeKey("  /repo/shared/  ")).toBe("/repo/shared");
+    expect(normalizeRepoScopeKey("/repo/shared///")).toBe("/repo/shared");
+    expect(normalizeRepoScopeKey("/Users/me/my.git.tools")).toBe(
+      "/Users/me/my.git.tools"
+    );
+    expect(normalizeRepoScopeKey("")).toBe("");
+    expect(normalizeRepoScopeKey("   ")).toBe("");
+  });
+
+  it("does not treat Windows drive letters as scp hosts", () => {
+    expect(normalizeRepoScopeKey("C:\\repos\\x")).toBe("C:\\repos\\x");
+  });
+
+  it("is idempotent over already-normalized keys", () => {
+    expect(normalizeRepoScopeKey("github.com/org/x")).toBe("github.com/org/x");
+    expect(
+      normalizeRepoScopeKey(normalizeRepoScopeKey("git@github.com:org/x.git"))
+    ).toBe("github.com/org/x");
+  });
+});
+
 describe("isRepoPathInScope", () => {
   it("matches after trailing-slash normalization", () => {
     expect(isRepoPathInScope("/repo/shared/", ["/repo/shared"])).toBe(true);
@@ -389,5 +459,40 @@ describe("isRepoPathInScope", () => {
 
   it("rejects when scope list is empty", () => {
     expect(isRepoPathInScope("/repo/shared", [])).toBe(false);
+  });
+
+  it("keeps path-vs-path matching backward compatible", () => {
+    expect(isRepoPathInScope("/repo/shared", ["/repo/shared/"])).toBe(true);
+    expect(isRepoPathInScope("/repo/other", ["/repo/shared"])).toBe(false);
+  });
+
+  it("matches remote keys across formats (scope stored ≠ format submitted)", () => {
+    expect(
+      isRepoPathInScope("git@github.com:org/x.git", ["github.com/org/x"])
+    ).toBe(true);
+    expect(
+      isRepoPathInScope("https://github.com/org/x.git", [
+        "ssh://git@github.com/org/x",
+      ])
+    ).toBe(true);
+    expect(
+      isRepoPathInScope("git@github.com:org/y.git", ["github.com/org/x"])
+    ).toBe(false);
+  });
+
+  it("does not cross-match a local path against a remote scope key (resolution is submission-side)", () => {
+    expect(isRepoPathInScope("/Users/me/x", ["github.com/org/x"])).toBe(false);
+  });
+
+  it("matches mixed scope lists on the right entry", () => {
+    expect(
+      isRepoPathInScope("https://github.com/org/x", [
+        "/repo/shared",
+        "git@github.com:org/x.git",
+      ])
+    ).toBe(true);
+    expect(
+      isRepoPathInScope("/repo/shared/", ["github.com/org/x", "/repo/shared"])
+    ).toBe(true);
   });
 });

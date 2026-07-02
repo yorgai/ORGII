@@ -565,11 +565,6 @@
     "localHuman": "本地 Human",
     "backToOrg": "返回 ORG",
     "invite": {
-      "title": "邀请链接",
-      "description": "创建邀请链接，让队友加入此 ORG。最新链接会显示在这里，方便快速复制。",
-      "adminOnly": "只有 ORG 管理员可以创建邀请链接。",
-      "create": "创建邀请",
-      "createNew": "新邀请",
       "remainingUses": "剩余 {{count}} 次使用",
       "expires": "{{date}} 过期"
     },
@@ -600,7 +595,12 @@
       "requestPending": "正在向所有者请求 session replay..."
     },
     "members": {
-      "remove": "移除"
+      "remove": "移除",
+      "makeAdmin": "设为管理员",
+      "makeMember": "设为成员",
+      "roleChangeConfirmPromote": "将 {{member}} 设为该 ORG 的管理员？",
+      "roleChangeConfirmDemote": "取消 {{member}} 的管理员权限？",
+      "lastAdminError": "该成员是最后一位管理员，请先将其他成员设为管理员。"
     },
     "share": {
       "menuItem": "共享设置…",
@@ -643,6 +643,34 @@
       "shareAllDescription": "org repo 范围内的 session(含历史)将全部可见。",
       "accessOffBanner": "你的 session 未共享给该 org。",
       "accessOffBannerAction": "前往设置"
+    },
+    "invites": {
+      "title": "邀请",
+      "adminOnly": "只有 ORG 管理员可以管理邀请。",
+      "empty": "暂无有效邀请。",
+      "code": "邀请 ····{{suffix}}",
+      "neverExpires": "永不过期",
+      "createdBy": "由 {{member}} 创建",
+      "roleAdmin": "管理员",
+      "roleMember": "成员",
+      "revoke": "撤销",
+      "revokeConfirm": "确定撤销该邀请？由它生成的链接将立即失效。",
+      "usageLimitLabel": "可用次数",
+      "expiryLabel": "有效期",
+      "roleLabel": "角色",
+      "expiryOption1d": "1 天",
+      "expiryOption7d": "7 天",
+      "expiryOption30d": "30 天",
+      "create": "创建邀请"
+    },
+    "leave": {
+      "action": "退出 ORG",
+      "confirmTitle": "退出该 ORG？",
+      "warning": "退出后将停止与该 ORG 同步。除非勾选移除，已导入的 session 副本会保留在本机。",
+      "removeImported": "同时移除本机已导入的 session 副本",
+      "confirm": "退出 ORG",
+      "cancel": "取消",
+      "lastAdminError": "你是最后一位管理员，请先转移管理员或删除该 ORG 再退出。"
     }
   }
 }

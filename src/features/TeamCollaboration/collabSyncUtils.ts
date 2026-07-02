@@ -21,22 +21,69 @@ import type { CollabSyncProfile } from "./sync/CollabSyncBackend";
 
 export type { CollabSyncProfile as SupabaseSyncProfile } from "./sync/CollabSyncBackend";
 
-export function normalizeRepoPath(
-  path: string | undefined | null
-): string | null {
-  const trimmed = path?.trim();
-  if (!trimmed) return null;
-  return trimmed.replace(/\/+$/, "");
+function stripRepoScopePathSuffix(path: string): string {
+  return path.replace(/\/+$/, "").replace(/\.git$/i, "");
 }
 
+/**
+ * Repo scope key normalization (design §8.3): scope keys are normalized git
+ * remote URLs, so two machines with different checkout paths agree on the
+ * same key. Every remote form collapses to `host/path`:
+ *
+ *   git@github.com:org/x.git      → github.com/org/x
+ *   https://github.com/org/x.git  → github.com/org/x
+ *   ssh://git@github.com/org/x    → github.com/org/x
+ *
+ * Non-URL inputs (absolute paths, for repos without a remote) are returned
+ * trimmed minus trailing slashes — path-vs-path matching is unchanged.
+ */
+export function normalizeRepoScopeKey(input: string): string {
+  const trimmed = input.trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+
+  // scheme://[user[:pass]@]host[:port]/path
+  const urlMatch = /^[a-z][a-z0-9+.-]*:\/\/(?:[^/@]+@)?([^/]+)(\/.*)?$/i.exec(
+    trimmed
+  );
+  if (urlMatch) {
+    const host = urlMatch[1].toLowerCase();
+    const path = stripRepoScopePathSuffix(urlMatch[2] ?? "");
+    return `${host}${path}`;
+  }
+
+  // scp-like syntax: [user@]host:path. The host must look like a hostname
+  // (an explicit user@ or a dot) so Windows drive letters fall through.
+  const scpMatch = /^(?:([^/@:]+)@)?([^/@:]+):(.+)$/.exec(trimmed);
+  if (scpMatch && (scpMatch[1] !== undefined || scpMatch[2].includes("."))) {
+    const host = scpMatch[2].toLowerCase();
+    const path = stripRepoScopePathSuffix(
+      `/${scpMatch[3].replace(/^\/+/, "")}`
+    );
+    return `${host}${path}`;
+  }
+
+  return trimmed;
+}
+
+/**
+ * Scope matching (design §8.3, single point): both sides go through
+ * `normalizeRepoScopeKey`, so a scope stored as any remote-URL format
+ * matches a candidate in any other format, and plain absolute paths keep
+ * matching absolute paths exactly as before. A LOCAL path is never resolved
+ * to its remote here (that requires async IPC) — resolution happens on the
+ * submission side via `resolveRepoScopeKey`, before `request_repo_join`.
+ */
 export function isRepoPathInScope(
   repoPath: string | undefined | null,
   orgRepoScopes: string[] | undefined
 ): boolean {
-  const normalized = normalizeRepoPath(repoPath);
+  if (!repoPath) return false;
+  const normalized = normalizeRepoScopeKey(repoPath);
   if (!normalized) return false;
   if (!orgRepoScopes || orgRepoScopes.length === 0) return false;
-  return orgRepoScopes.some((scope) => normalizeRepoPath(scope) === normalized);
+  return orgRepoScopes.some(
+    (scope) => normalizeRepoScopeKey(scope) === normalized
+  );
 }
 
 export function isLocalSessionInOrgScope(
