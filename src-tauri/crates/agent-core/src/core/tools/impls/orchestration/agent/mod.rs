@@ -494,7 +494,10 @@ impl Tool for AgentTool {
     }
 
     fn persist_threshold(&self) -> usize {
-        100_000
+        // Never disk-stub subagent results (frontend parses them into
+        // cards; the parent consumes them inline) — see
+        // allow_persisted_output below for the new-path exemption.
+        usize::MAX
     }
 
     /// Subagent results are parsed by the frontend (result cards, trailer
