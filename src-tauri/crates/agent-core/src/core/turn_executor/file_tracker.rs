@@ -16,6 +16,18 @@
 //! content change"; hashing the content answers that question directly — no
 //! tolerance window, no precision pitfalls, and it still catches genuine
 //! external edits (different bytes → different hash).
+//!
+//! ## Performance: stat fast path
+//!
+//! Hashing is O(file size) and both the per-turn history seed and the
+//! per-iteration changed-files scan touch EVERY tracked file. Doing full
+//! content hashing there caused multi-second stalls in long sessions.
+//! Each entry therefore also records `(mtime, len)`:
+//! - unchanged stat → assumed fresh, no bytes read (µs per file);
+//! - changed stat with a recorded hash → hash to confirm (mtime-only
+//!   touches stay non-stale, preserving the hash semantics above);
+//! - changed stat without a recorded hash (history-seeded entries, whose
+//!   baseline was stat-only by design) → treated as changed.
 
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
@@ -29,21 +41,50 @@ use crate::tools::names as tool_names;
 // File content tracker
 // ============================================
 
-/// Tracks file content hashes to detect stale edits.
+/// Cheap file identity: `(mtime_millis, len)`. `None` when the file cannot
+/// be stat'd.
+type FileStat = (Option<u128>, u64);
+
+/// One tracked file: the stat snapshot (always present) plus the content
+/// hash (present for files actually read/written this turn; absent for
+/// entries seeded from prior-turn history, where hashing every file would
+/// block the turn start).
+#[derive(Debug, Clone)]
+struct TrackedEntry {
+    stat: Option<FileStat>,
+    hash: Option<u64>,
+}
+
+/// Tracks file content identity to detect stale edits.
 ///
-/// `read_file` records the content hash. Before a file-modifying tool runs,
-/// `assert_fresh` re-hashes the file and rejects the edit if the hash differs
-/// (content changed externally). Files never read always pass — the edit tool
-/// itself enforces read-before-edit via its description.
+/// `read_file` records the content hash + stat. Before a file-modifying
+/// tool runs, `assert_fresh` checks stat (fast) then hash (exact) and
+/// rejects the edit if the content changed externally. Files never read
+/// pass `assert_fresh`; the `assert_read_before_edit` gate separately
+/// rejects edits to never-read files.
 #[derive(Debug, Clone, Default)]
 pub struct FileTimeTracker {
-    /// file_path → last-observed content hash (after read or our own write)
-    read_hashes: HashMap<String, u64>,
+    /// file_path → last-observed identity (after read, write, or seed)
+    entries: HashMap<String, TrackedEntry>,
     /// Insertion order for FIFO eviction (HashMap iteration is unordered)
     insertion_order: Vec<String>,
 }
 
 const MAX_FILE_TRACKER_ENTRIES: usize = 500;
+
+/// Stat a file cheaply. `None` when the file cannot be stat'd.
+fn stat_file(file_path: &str) -> Option<FileStat> {
+    let meta = std::fs::metadata(file_path).ok()?;
+    if meta.is_dir() {
+        return None;
+    }
+    let mtime = meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis());
+    Some((mtime, meta.len()))
+}
 
 /// Hash a file's full content. `None` when the file cannot be read (missing,
 /// permission, or it is a directory). Callers treat `None` as "no trustworthy
@@ -62,25 +103,25 @@ impl FileTimeTracker {
 
     /// Returns true if no files have been tracked.
     pub fn is_empty(&self) -> bool {
-        self.read_hashes.is_empty()
+        self.entries.is_empty()
     }
 
     /// Returns the number of tracked files.
     pub fn len(&self) -> usize {
-        self.read_hashes.len()
+        self.entries.len()
     }
 
-    /// Insert/refresh a file's content hash with FIFO eviction. Shared by the
-    /// read and write recording paths so eviction logic lives in one place.
-    fn upsert_hash(&mut self, file_path: &str, hash: u64) {
-        let is_new = !self.read_hashes.contains_key(file_path);
-        if is_new && self.read_hashes.len() >= MAX_FILE_TRACKER_ENTRIES {
+    /// Insert/refresh a file's entry with FIFO eviction. Shared by the
+    /// read, write, and seed recording paths so eviction lives in one place.
+    fn upsert(&mut self, file_path: &str, entry: TrackedEntry) {
+        let is_new = !self.entries.contains_key(file_path);
+        if is_new && self.entries.len() >= MAX_FILE_TRACKER_ENTRIES {
             if let Some(oldest_key) = self.insertion_order.first().cloned() {
-                self.read_hashes.remove(&oldest_key);
+                self.entries.remove(&oldest_key);
                 self.insertion_order.remove(0);
             }
         }
-        self.read_hashes.insert(file_path.to_string(), hash);
+        self.entries.insert(file_path.to_string(), entry);
         if is_new {
             self.insertion_order.push(file_path.to_string());
         }
@@ -90,7 +131,7 @@ impl FileTimeTracker {
     /// write). The next `assert_fresh` then takes the "never read → pass"
     /// branch instead of comparing against a stale snapshot forever.
     fn forget(&mut self, file_path: &str) {
-        if self.read_hashes.remove(file_path).is_some() {
+        if self.entries.remove(file_path).is_some() {
             self.insertion_order.retain(|p| p != file_path);
         }
     }
@@ -101,10 +142,12 @@ impl FileTimeTracker {
     /// read-before-edit is a **session-level** invariant: a file read in an
     /// earlier turn is legitimately editable now. Replay every read/write
     /// tool call already in the transcript so the gate doesn't false-reject
-    /// cross-turn edits. Hashes are taken from current disk content — the
-    /// stale-edit check (`assert_fresh`) therefore treats "read long ago,
-    /// unchanged since turn start" as fresh, which is the correct baseline
-    /// for a new turn.
+    /// cross-turn edits.
+    ///
+    /// STAT-ONLY on purpose: the baseline is "state at turn start" (matching
+    /// the documented fresh-baseline semantics), and hashing every
+    /// historical file here is exactly the multi-second turn-start stall
+    /// this fast path removes. No file content is read.
     pub fn seed_from_history(&mut self, messages: &[Value]) {
         for msg in messages {
             let Some(tool_calls) = msg.get("tool_calls").and_then(Value::as_array) else {
@@ -127,10 +170,18 @@ impl FileTimeTracker {
                 else {
                     continue;
                 };
-                // record_* fail open on unreadable paths, so errored calls
-                // in history (file absent) simply record nothing.
                 for path in extract_file_paths(name, &args) {
-                    self.record_read(&path);
+                    // Missing/unreadable files record nothing (fail open,
+                    // same as record_read on errored calls).
+                    if let Some(stat) = stat_file(&path) {
+                        self.upsert(
+                            &path,
+                            TrackedEntry {
+                                stat: Some(stat),
+                                hash: None,
+                            },
+                        );
+                    }
                 }
             }
         }
@@ -138,55 +189,95 @@ impl FileTimeTracker {
 
     /// Detect files whose on-disk content changed since we last read/wrote
     /// them (external edits by the user or another process). Refreshes the
-    /// recorded hash for each reported path so the same change is reported
-    /// exactly once. Returns the changed paths.
+    /// recorded identity for each reported path so the same change is
+    /// reported exactly once. Returns the changed paths.
     ///
-    /// Used by the turn loop's changed-files injector — the model deserves
-    /// to KNOW a file it read is now different, not just have its next edit
-    /// rejected by `assert_fresh`.
+    /// Stat-first: files whose `(mtime, len)` are unchanged are skipped
+    /// without reading any bytes, so this per-iteration scan stays cheap.
+    /// A changed stat with a recorded hash is confirmed by re-hashing
+    /// (mtime-only touches are not reported).
     pub fn drain_externally_changed(&mut self) -> Vec<String> {
         let mut changed = Vec::new();
-        let paths: Vec<String> = self.read_hashes.keys().cloned().collect();
+        let paths: Vec<String> = self.entries.keys().cloned().collect();
         for path in paths {
-            let Some(current_hash) = hash_file_content(&path) else {
+            let Some(current_stat) = stat_file(&path) else {
                 continue; // unreadable/deleted — fail open, assert_fresh also passes
             };
-            if self.read_hashes.get(&path) != Some(&current_hash) {
-                self.upsert_hash(&path, current_hash);
+            let Some(entry) = self.entries.get(&path) else {
+                continue;
+            };
+            if entry.stat == Some(current_stat) {
+                continue; // fast path: stat unchanged → content unchanged
+            }
+            // Stat changed. Confirm with content hash when we have a
+            // baseline; stat-only (seeded) entries report on stat alone.
+            let confirmed_changed = match entry.hash {
+                Some(recorded_hash) => hash_file_content(&path) != Some(recorded_hash),
+                None => true,
+            };
+            let new_hash = if confirmed_changed {
+                hash_file_content(&path)
+            } else {
+                entry.hash
+            };
+            self.upsert(
+                &path,
+                TrackedEntry {
+                    stat: Some(current_stat),
+                    hash: new_hash,
+                },
+            );
+            if confirmed_changed {
                 changed.push(path);
             }
         }
         changed
     }
 
-    /// Record the current content hash of a file after a successful read.
+    /// Record the current content identity of a file after a successful read.
     pub fn record_read(&mut self, file_path: &str) {
         if let Some(hash) = hash_file_content(file_path) {
-            self.upsert_hash(file_path, hash);
+            self.upsert(
+                file_path,
+                TrackedEntry {
+                    stat: stat_file(file_path),
+                    hash: Some(hash),
+                },
+            );
         }
     }
 
     /// Check if a file's content changed since the last recorded read/write.
     /// Returns Ok(()) if safe to edit, Err(message) if stale. Files never read
-    /// always pass; files we cannot re-hash also pass (fail open — we have no
+    /// always pass; files we cannot re-stat also pass (fail open — we have no
     /// trustworthy "changed" signal and must not block a legitimate edit).
     pub fn assert_fresh(&self, file_path: &str) -> Result<(), String> {
-        let Some(recorded_hash) = self.read_hashes.get(file_path) else {
+        let Some(entry) = self.entries.get(file_path) else {
             return Ok(()); // Never read — read-before-edit gate handles this case
         };
 
-        let Some(current_hash) = hash_file_content(file_path) else {
-            return Ok(()); // Cannot read content — fail open, don't fabricate stale
-        };
-
-        if current_hash != *recorded_hash {
-            return Err(format!(
-                "File was modified since you last read it: {}. Read it again before editing.",
-                file_path
-            ));
+        let current_stat = stat_file(file_path);
+        if current_stat.is_none() {
+            return Ok(()); // Cannot stat — fail open, don't fabricate stale
+        }
+        if entry.stat == current_stat {
+            return Ok(()); // stat unchanged → content unchanged
         }
 
-        Ok(())
+        // Stat changed: confirm with content when we have a hash baseline
+        // (an mtime-only touch must NOT count as stale).
+        if let Some(recorded_hash) = entry.hash {
+            match hash_file_content(file_path) {
+                None => return Ok(()), // fail open
+                Some(current_hash) if current_hash == recorded_hash => return Ok(()),
+                Some(_) => {}
+            }
+        }
+
+        Err(format!(
+            "File was modified since you last read it: {}. Read it again before editing.",
+            file_path
+        ))
     }
 
     /// Hard read-before-edit gate for `edit_file`.
@@ -212,7 +303,7 @@ impl FileTimeTracker {
         else {
             return Ok(());
         };
-        if self.read_hashes.contains_key(path) {
+        if self.entries.contains_key(path) {
             return Ok(());
         }
 
@@ -232,12 +323,19 @@ impl FileTimeTracker {
         Ok(())
     }
 
-    /// Record a write — refresh the tracked content hash after a successful
-    /// edit/write. If the file can no longer be hashed (e.g. it was deleted),
-    /// forget it so a stale snapshot never causes repeated false rejections.
+    /// Record a write — refresh the tracked content identity after a
+    /// successful edit/write. If the file can no longer be hashed (e.g. it
+    /// was deleted), forget it so a stale snapshot never causes repeated
+    /// false rejections.
     pub fn record_write(&mut self, file_path: &str) {
         match hash_file_content(file_path) {
-            Some(hash) => self.upsert_hash(file_path, hash),
+            Some(hash) => self.upsert(
+                file_path,
+                TrackedEntry {
+                    stat: stat_file(file_path),
+                    hash: Some(hash),
+                },
+            ),
             None => self.forget(file_path),
         }
     }
