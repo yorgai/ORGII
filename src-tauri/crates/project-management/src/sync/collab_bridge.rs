@@ -601,10 +601,37 @@ fn hydrate_work_item(
     let (op, payload) = match data {
         None => (OP_DELETE.to_string(), None),
         Some(data) if data.frontmatter.deleted_at.is_some() => (OP_DELETE.to_string(), None),
-        Some(data) => (
-            OP_UPSERT.to_string(),
-            Some(work_item_wire(&data.frontmatter, &data.body)),
-        ),
+        Some(data) => {
+            // Per-field revision times ride the wire so the puller can merge
+            // per field instead of against our whole-row updatedAt (which
+            // would revert a teammate's edit to any field we didn't change).
+            // Only project-scoped items carry them; standalone items use
+            // whole-row semantics on both ends.
+            let project_slug: Option<String> = conn
+                .query_row(
+                    "SELECT p.slug FROM workitems w
+                       JOIN projects p ON w.project_id = p.id
+                      WHERE w.id = ?1 AND w.org_id = ?2",
+                    params![work_item_id, org_id],
+                    |row| row.get(0),
+                )
+                .optional()
+                .map_err(|err| format!("DB error (work item slug): {}", err))?;
+            let field_revisions = match &project_slug {
+                Some(slug) => read_sync_metadata(slug, &data.frontmatter.short_id)?
+                    .map(|m| m.field_revisions)
+                    .unwrap_or_default(),
+                None => Default::default(),
+            };
+            (
+                OP_UPSERT.to_string(),
+                Some(work_item_wire(
+                    &data.frontmatter,
+                    &data.body,
+                    &field_revisions,
+                )),
+            )
+        }
     };
 
     Ok(CollabPushItem {
@@ -623,11 +650,22 @@ fn hydrate_work_item(
 /// server's `orgii_upsert_work_item` column extraction exactly; the
 /// long tail rides in the same object and round-trips through
 /// [`apply_work_item`]'s typed deserialization.
-fn work_item_wire(frontmatter: &WorkItemFrontmatter, body: &str) -> Value {
+fn work_item_wire(
+    frontmatter: &WorkItemFrontmatter,
+    body: &str,
+    field_revisions: &std::collections::HashMap<String, crate::projects::io::FieldRevision>,
+) -> Value {
     fn to_value<T: Serialize>(value: &T) -> Value {
         serde_json::to_value(value).unwrap_or(Value::Null)
     }
+    // { localFieldName: mtimeMs } — the puller compares each field against its
+    // own remote mtime and keeps local for any field absent here.
+    let field_mtimes: serde_json::Map<String, Value> = field_revisions
+        .iter()
+        .map(|(name, rev)| (name.clone(), json!(rev.mtime)))
+        .collect();
     json!({
+        "_fieldRevisions": field_mtimes,
         "id": frontmatter.id,
         "projectId": frontmatter.project,
         "shortId": frontmatter.short_id,
@@ -813,7 +851,7 @@ pub fn ensure_collab_project_org(org_id: &str, org_name: Option<&str>) -> Result
     Ok(())
 }
 
-fn entity_deleted_at<'a>(entity: &'a CollabRemoteEntity) -> Option<&'a str> {
+fn entity_deleted_at(entity: &CollabRemoteEntity) -> Option<&str> {
     entity
         .deleted_at
         .as_deref()
@@ -949,6 +987,14 @@ fn apply_project(org_id: &str, entity: &CollabRemoteEntity) -> Result<bool, Stri
     };
 
     meta.org_id = org_id.to_string();
+    // NOTE (collab field-merge residual): work items carry per-field revision
+    // mtimes on the wire (`_fieldRevisions`, see work_item_wire) so a whole-row
+    // snapshot never reverts a field the remote author didn't touch. Projects
+    // have no per-field revision store, so they still rely on the pending-edit
+    // guard below: a project field the local edited AND already pushed can be
+    // reverted by a stale concurrent remote push. Lower impact than work items
+    // (few fields, rare concurrent metadata edits); a full fix needs per-field
+    // project revisions. Tracked as a follow-up.
     let protected = |field: &str| protected_fields.iter().any(|entry| entry == field);
     if !protected("name") {
         if let Some(name) = wire_name {
@@ -1027,6 +1073,20 @@ fn unique_project_slug(desired: &str, project_id: &str) -> Result<String, String
 
 /// Normalize the camelCase wire keys into the local field-name JSON the
 /// resolver walks. Keys are always present (nulls clear the field).
+/// Parse the `_fieldRevisions` map (local field name → mtime ms) a peer sends
+/// alongside a whole-row snapshot. `None` when absent — the resolver then falls
+/// back to the whole-row clock (legacy/pre-fix peers; not reachable post-M6a).
+fn parse_wire_field_mtimes(payload: &Value) -> Option<std::collections::HashMap<String, i64>> {
+    let obj = payload.get("_fieldRevisions")?.as_object()?;
+    let mut map = std::collections::HashMap::with_capacity(obj.len());
+    for (name, value) in obj {
+        if let Some(mtime) = value.as_i64() {
+            map.insert(name.clone(), mtime);
+        }
+    }
+    Some(map)
+}
+
 fn work_item_fields_from_wire(payload: &Value) -> Value {
     json!({
         "title": payload.get("title").cloned().unwrap_or(Value::Null),
@@ -1214,6 +1274,7 @@ fn apply_work_item(org_id: &str, entity: &CollabRemoteEntity) -> Result<bool, St
                 // (remote wins per field unless the local watermark is
                 // newer; ties adopt remote).
                 let metadata = read_sync_metadata(&slug, &short_id)?.unwrap_or_default();
+                let remote_field_mtimes = parse_wire_field_mtimes(&entity.payload);
                 let change = super::adapter::ExternalChange {
                     entity_type: EntityType::WorkItem,
                     external_id: work_item_id.clone(),
@@ -1228,6 +1289,7 @@ fn apply_work_item(org_id: &str, entity: &CollabRemoteEntity) -> Result<bool, St
                     &metadata,
                     COLLAB_REVISION_SOURCE,
                     &COLLAB_FIELD_MAP,
+                    remote_field_mtimes.as_ref(),
                     |_| super::adapter::ConflictResolution::UseRemote,
                 );
 
@@ -1757,6 +1819,93 @@ mod tests {
         // The pending local push (title edit) is still queued for the
         // retry push; the remote apply must not have consumed it.
         assert!(pending_org_rows() >= 1);
+    }
+
+    /// End-to-end wire contract for the critical field-merge fix: a peer sends
+    /// a WHOLE-ROW snapshot with `_fieldRevisions` naming only the field it
+    /// changed. A locally-edited field the remote did NOT touch must survive
+    /// even though the remote's whole-row `updatedAt` is newer than the local
+    /// edit — the exact case the old whole-row-clock merge got wrong.
+    #[test]
+    fn apply_remote_whole_row_snapshot_preserves_untouched_local_field() {
+        let _sandbox = test_env::sandbox();
+        seed_collab_org();
+        apply_remote(
+            ORG,
+            None,
+            vec![
+                CollabRemoteEntity {
+                    kind: KIND_PROJECT.to_string(),
+                    payload: json!({
+                        "id": "proj-remote",
+                        "slug": "remote-project",
+                        "name": "Remote Project",
+                        "workItemPrefix": "REM",
+                        "updatedAt": "2026-07-01T00:00:00Z",
+                    }),
+                    version: 1,
+                    updated_by: None,
+                    deleted_at: None,
+                },
+                CollabRemoteEntity {
+                    kind: KIND_WORK_ITEM.to_string(),
+                    payload: json!({
+                        "id": "REM-0001",
+                        "projectId": "proj-remote",
+                        "shortId": "REM-0001",
+                        "title": "Original title",
+                        "status": "backlog",
+                        "updatedAt": "2026-07-01T00:00:00Z",
+                    }),
+                    version: 1,
+                    updated_by: None,
+                    deleted_at: None,
+                },
+            ],
+        )
+        .expect("seed remote");
+
+        // Local changes STATUS. Its per-field watermark is stamped at real now.
+        let mut update = WorkItemPartialUpdate::default();
+        update.status = Some("in_review".to_string());
+        update_work_item_partial("remote-project", "REM-0001", &update).expect("local status edit");
+
+        // Teammate pushes a WHOLE-ROW snapshot (v2): they changed only `title`.
+        // `updatedAt` and title's mtime are far in the future (newer than the
+        // local status edit), and `status` carries a STALE value the teammate
+        // never touched — status is deliberately ABSENT from `_fieldRevisions`.
+        let future_ms: i64 = 4_070_908_800_000; // 2099-01-01
+        let applied = apply_remote(
+            ORG,
+            None,
+            vec![CollabRemoteEntity {
+                kind: KIND_WORK_ITEM.to_string(),
+                payload: json!({
+                    "id": "REM-0001",
+                    "projectId": "proj-remote",
+                    "shortId": "REM-0001",
+                    "title": "Teammate new title",
+                    "status": "backlog",
+                    "updatedAt": "2099-01-01T00:00:00Z",
+                    "_fieldRevisions": { "title": future_ms },
+                }),
+                version: 2,
+                updated_by: Some("member-b".to_string()),
+                deleted_at: None,
+            }],
+        )
+        .expect("apply merge");
+        assert_eq!(applied, 1);
+
+        let item = read_work_item("remote-project", "REM-0001").expect("item");
+        assert_eq!(
+            item.frontmatter.status, "in_review",
+            "a field the remote did not touch must not be reverted by its whole-row snapshot"
+        );
+        assert_eq!(
+            item.frontmatter.title, "Teammate new title",
+            "the field the remote genuinely changed is adopted"
+        );
     }
 
     #[test]

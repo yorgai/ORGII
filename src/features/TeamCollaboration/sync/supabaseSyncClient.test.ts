@@ -827,6 +827,51 @@ describe("supabaseSyncClient", () => {
     expect(result.snapshotRequests[0]?.events).toEqual(events);
   });
 
+  it("listOrgState tolerates pending snapshot requests with null session/events", async () => {
+    // The server LEFT JOINs snapshots onto requests, so a pending/denied
+    // request returns session:null and events:null. Parsing must not throw —
+    // a throw here would wedge the org's sync permanently (cursor never
+    // advances past the failing pull).
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      mockJsonResponse({
+        serverTime: "2026-07-01T12:00:00.000Z",
+        orgs: [],
+        members: [],
+        invites: [],
+        projects: [],
+        workItems: [],
+        sessions: [],
+        chatMessages: [],
+        repoJoinRequests: [],
+        snapshotRequests: [
+          {
+            requestId: "req-pending",
+            orgId: "org-1",
+            requesterMemberId: "member-1",
+            ownerMemberId: "member-2",
+            sourceSessionId: "session-2",
+            status: "pending",
+            error: null,
+            createdAt: "2026-07-01T00:00:00.000Z",
+            payloadGz: null,
+            session: null,
+            events: null,
+          },
+        ],
+      })
+    );
+
+    const result = await supabaseSyncClient.listOrgState({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+    });
+
+    expect(result.snapshotRequests).toHaveLength(1);
+    expect(result.snapshotRequests[0]?.status).toBe("pending");
+    expect(result.snapshotRequests[0]?.session).toBeUndefined();
+    expect(result.snapshotRequests[0]?.events).toBeUndefined();
+  });
+
   it("gcSessionEventSegments calls the retention RPC with a default of 90 days", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")

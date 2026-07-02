@@ -1049,14 +1049,17 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
             : new Date().toISOString(),
         updatedAt:
           typeof request.updatedAt === "string" ? request.updatedAt : undefined,
+        // The server LEFT JOINs snapshots onto requests, so a pending or
+        // denied request comes back with session:null / events:null. zod
+        // .optional() rejects an explicit null, so parsing it directly would
+        // throw and (since the sync cursor only advances past a clean pull)
+        // permanently wedge the whole org's sync. Treat null as absent.
         session:
-          "session" in request
-            ? RemoteTeammateSessionMetadataSchema.optional().parse(
-                request.session
-              )
+          request.session != null
+            ? RemoteTeammateSessionMetadataSchema.parse(request.session)
             : undefined,
         events:
-          "events" in request
+          request.events != null
             ? z.array(z.custom<SessionEvent>()).parse(request.events)
             : undefined,
       })),

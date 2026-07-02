@@ -12,7 +12,7 @@
  * The hook listens for deep link events from Tauri and either routes the
  * React Router to the appropriate path or opens the collaboration JOIN surface.
  */
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -88,12 +88,18 @@ export function useDeepLinkHandler(): void {
   const navigate = useNavigate();
   const setPendingInvite = useSetAtom(collabPendingInviteAtom);
   const setPendingShare = useSetAtom(collabPendingShareAtom);
+  const pendingShare = useAtomValue(collabPendingShareAtom);
   const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
   const setStationMode = useSetAtom(stationModeAtom);
   const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
   const hasSetupListener = useRef(false);
   const hasProcessedInitialDeepLink = useRef(false);
   const processedDeepLinks = useRef<Set<string>>(new Set());
+  // A share link is one-shot plaintext the owner can't regenerate, so unlike a
+  // join link it must be re-clickable after the import dialog is dismissed
+  // without importing. We drop its URL from the dedup set once the pending
+  // share clears, re-arming that exact link.
+  const lastShareUrlRef = useRef<string | null>(null);
   const unlistenRef = useRef<(() => void) | null>(null);
 
   // Route an incoming collaboration invite into the JOIN flow: stash the
@@ -125,6 +131,15 @@ export function useDeepLinkHandler(): void {
   // surface that hosts the confirmation dialog is visible. The dialog itself
   // resolves the token, imports read-only and (for combined links) surfaces
   // the "join this org" CTA — share resolves FIRST, invite is deferred.
+  useEffect(() => {
+    // Pending share cleared (dialog dismissed or import done) → re-arm the
+    // link so re-clicking the same one-shot URL re-opens the dialog.
+    if (pendingShare === null && lastShareUrlRef.current !== null) {
+      processedDeepLinks.current.delete(lastShareUrlRef.current);
+      lastShareUrlRef.current = null;
+    }
+  }, [pendingShare]);
+
   const routeToCollabShare = useCallback(
     (share: CollabShareDeepLink) => {
       setPendingShare(share);
@@ -168,6 +183,7 @@ export function useDeepLinkHandler(): void {
             const collabShare = parseCollabShareDeepLink(url);
             if (collabShare) {
               processedDeepLinks.current.add(url);
+              lastShareUrlRef.current = url;
               log(
                 "DeepLinkHandler",
                 "Routing collaboration session share into import flow"
@@ -256,6 +272,7 @@ export function useDeepLinkHandler(): void {
             const collabShare = parseCollabShareDeepLink(url);
             if (collabShare) {
               processedDeepLinks.current.add(url);
+              lastShareUrlRef.current = url;
               log(
                 "DeepLinkHandler",
                 "Routing initial collaboration session share into import flow"

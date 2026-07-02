@@ -424,9 +424,39 @@ describe("normalizeRepoScopeKey", () => {
     );
   });
 
-  it("preserves path case in the repo segment (only the host is lowercased)", () => {
-    expect(normalizeRepoScopeKey("git@github.com:Org/X.git")).toBe(
-      "github.com/Org/X"
+  it("drops the scheme's default port so an explicit :443/:80/:22 does not split the key", () => {
+    expect(normalizeRepoScopeKey("https://github.com:443/org/x.git")).toBe(
+      "github.com/org/x"
+    );
+    expect(normalizeRepoScopeKey("http://github.com:80/org/x")).toBe(
+      "github.com/org/x"
+    );
+    expect(normalizeRepoScopeKey("ssh://git@github.com:22/org/x")).toBe(
+      "github.com/org/x"
+    );
+    // A non-default port is preserved (it identifies a distinct endpoint).
+    expect(normalizeRepoScopeKey("https://ghe.corp:8443/org/x")).toBe(
+      "ghe.corp:8443/org/x"
+    );
+  });
+
+  it("folds owner/repo case on case-insensitive hosts but not elsewhere", () => {
+    expect(normalizeRepoScopeKey("git@github.com:MyOrg/MyRepo.git")).toBe(
+      "github.com/myorg/myrepo"
+    );
+    expect(normalizeRepoScopeKey("https://GitLab.com/Group/Sub/Repo")).toBe(
+      "gitlab.com/group/sub/repo"
+    );
+    // A self-hosted (case-sensitive) host keeps path case.
+    expect(normalizeRepoScopeKey("git@git.corp.local:Team/Repo.git")).toBe(
+      "git.corp.local/Team/Repo"
+    );
+  });
+
+  it("preserves path case on case-sensitive hosts (only the host is lowercased)", () => {
+    // Self-hosted git servers are path-case-sensitive, so casing is kept.
+    expect(normalizeRepoScopeKey("git@Git.Corp:Org/X.git")).toBe(
+      "git.corp/Org/X"
     );
   });
 

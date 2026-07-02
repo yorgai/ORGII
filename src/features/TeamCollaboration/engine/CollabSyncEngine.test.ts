@@ -262,7 +262,15 @@ describe("CollabSyncEngine", () => {
     eventStoreMock.getEvents.mockResolvedValue([]);
     eventStoreMock.getPersistedEvents.mockResolvedValue([]);
     eventStoreMock.set.mockResolvedValue(undefined);
-    eventStoreMock.saveToCache.mockResolvedValue(0);
+    // es_save_to_cache returns the number of events durably persisted (0 on a
+    // failed/empty write). Mirror that: report the count of the most recent
+    // set() so a successful import reports > 0 and the failure path can be
+    // driven by overriding to 0.
+    eventStoreMock.saveToCache.mockImplementation(async () => {
+      const lastSet = eventStoreMock.set.mock.calls.at(-1);
+      const events = lastSet?.[0] as unknown[] | undefined;
+      return events?.length ?? 0;
+    });
     // resetAllMocks wipes the module-mock implementations — re-arm the
     // ProjectSyncChannel bridge as a well-behaved no-op every test.
     bridgeMock.drainOutbox.mockResolvedValue([]);
@@ -398,6 +406,35 @@ describe("CollabSyncEngine", () => {
     await settle();
     expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
     expect(syncMock.upsertSessionMetadata).not.toHaveBeenCalled();
+  });
+
+  it("never pushes event segments for a METADATA_ONLY session (transcript stays private)", async () => {
+    seedConnection(COLLAB_SESSION_ACCESS_MODE.METADATA_ONLY);
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    // A live session with real events — under FULL_REPLAY these would be
+    // pushed as segments. METADATA_ONLY must publish the title/branch metadata
+    // but never the event transcript.
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1"),
+      makeEvent("e2", "running"),
+    ]);
+
+    engine.start(store);
+    await settle();
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(1);
+
+    // Drive an event-store change, which under FULL_REPLAY triggers a segment
+    // push. It must produce no segment RPC of any kind.
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+
+    expect(syncMock.appendSessionEvents).not.toHaveBeenCalled();
+    expect(syncMock.rewriteSessionEvents).not.toHaveBeenCalled();
+    // No push cursor is created — nothing about the transcript left the device.
+    expect(store.get(collabSessionPushCursorsAtom)["org-1:session-1"]).toBe(
+      undefined
+    );
   });
 
   it("re-runs a push that arrives while one is in flight instead of dropping it", async () => {
@@ -784,6 +821,60 @@ describe("CollabSyncEngine", () => {
     await settle(20);
     expect(syncMock.appendSessionEvents).not.toHaveBeenCalled();
     expect(syncMock.rewriteSessionEvents).not.toHaveBeenCalled();
+  });
+
+  it("does not persist an import cursor when the durable cache write fails", async () => {
+    seedConnection();
+    const remote = remoteSession({
+      eventsEpoch: 1,
+      eventsFrozenSeq: 1,
+      eventsCount: 2,
+      eventsTailHash: "tail-hash",
+    });
+    syncMock.listOrgState
+      .mockImplementationOnce(async () => ({
+        ...emptyOrgState(),
+        sessions: [remote],
+      }))
+      .mockImplementation(async () => emptyOrgState());
+    syncMock.getSessionEventSegments.mockResolvedValue({
+      epoch: 1,
+      frozenSeq: 1,
+      tailHash: "tail-hash",
+      count: 2,
+      segments: [
+        {
+          seq: 1,
+          isTail: false,
+          events: [makeEvent("e1")],
+          eventCount: 1,
+          segmentHash: "h1",
+        },
+        {
+          seq: 1_000_000_000,
+          isTail: true,
+          events: [makeEvent("e2", "running")],
+          eventCount: 1,
+          segmentHash: "tail-hash",
+        },
+      ],
+    });
+    // The durable cache write fails (transient SQLite lock → swallowed → 0).
+    eventStoreMock.saveToCache.mockResolvedValue(0);
+
+    engine.start(store);
+    await vi.advanceTimersByTimeAsync(0);
+    await settle(20);
+
+    // Events were attempted, but no "complete" session record/cursor was
+    // persisted — otherwise the next pull would see a matching cursor and
+    // never re-fetch, stranding a permanently empty transcript.
+    expect(eventStoreMock.set).toHaveBeenCalledTimes(1);
+    const localSessionId = eventStoreMock.set.mock.calls[0][1] as string;
+    const imported = store
+      .get(sessionsAtom)
+      .find((session) => session.session_id === localSessionId);
+    expect(imported).toBeUndefined();
   });
 
   it("applies incremental segment pulls onto the existing imported session", async () => {

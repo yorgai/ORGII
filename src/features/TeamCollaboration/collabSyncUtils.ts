@@ -25,6 +25,41 @@ function stripRepoScopePathSuffix(path: string): string {
   return path.replace(/\/+$/, "").replace(/\.git$/i, "");
 }
 
+// Hosts that treat the owner/repo path case-insensitively. On these, the path
+// is lowercased so `MyOrg/MyRepo` and `myorg/myrepo` resolve to one scope key.
+const CASE_INSENSITIVE_SCOPE_HOSTS = new Set([
+  "github.com",
+  "gitlab.com",
+  "bitbucket.org",
+]);
+
+const DEFAULT_SCHEME_PORTS: Record<string, string> = {
+  https: "443",
+  http: "80",
+  ssh: "22",
+  git: "9418",
+};
+
+// `host[:port]` → host, dropping only the scheme's default port so that
+// `github.com:443` and `github.com` collapse to one key.
+function stripDefaultPort(
+  hostWithPort: string,
+  scheme: string | undefined
+): string {
+  const portMatch = /^(.+):(\d+)$/.exec(hostWithPort);
+  if (!portMatch) return hostWithPort;
+  const [, host, port] = portMatch;
+  if (scheme && DEFAULT_SCHEME_PORTS[scheme.toLowerCase()] === port)
+    return host;
+  return hostWithPort;
+}
+
+function applyHostCaseFolding(host: string, path: string): string {
+  return CASE_INSENSITIVE_SCOPE_HOSTS.has(host)
+    ? `${host}${path.toLowerCase()}`
+    : `${host}${path}`;
+}
+
 /**
  * Repo scope key normalization (design §8.3): scope keys are normalized git
  * remote URLs, so two machines with different checkout paths agree on the
@@ -42,13 +77,14 @@ export function normalizeRepoScopeKey(input: string): string {
   if (!trimmed) return "";
 
   // scheme://[user[:pass]@]host[:port]/path
-  const urlMatch = /^[a-z][a-z0-9+.-]*:\/\/(?:[^/@]+@)?([^/]+)(\/.*)?$/i.exec(
+  const urlMatch = /^([a-z][a-z0-9+.-]*):\/\/(?:[^/@]+@)?([^/]+)(\/.*)?$/i.exec(
     trimmed
   );
   if (urlMatch) {
-    const host = urlMatch[1].toLowerCase();
-    const path = stripRepoScopePathSuffix(urlMatch[2] ?? "");
-    return `${host}${path}`;
+    const scheme = urlMatch[1];
+    const host = stripDefaultPort(urlMatch[2].toLowerCase(), scheme);
+    const path = stripRepoScopePathSuffix(urlMatch[3] ?? "");
+    return applyHostCaseFolding(host, path);
   }
 
   // scp-like syntax: [user@]host:path. The host must look like a hostname
@@ -59,7 +95,7 @@ export function normalizeRepoScopeKey(input: string): string {
     const path = stripRepoScopePathSuffix(
       `/${scpMatch[3].replace(/^\/+/, "")}`
     );
-    return `${host}${path}`;
+    return applyHostCaseFolding(host, path);
   }
 
   return trimmed;

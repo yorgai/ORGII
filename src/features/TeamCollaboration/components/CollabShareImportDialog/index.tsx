@@ -91,12 +91,18 @@ const CollabShareImportDialog: React.FC = () => {
   const currentImport =
     share && importState?.token === share.shareToken ? importState : null;
 
-  const hasError = Boolean(
-    missingCoordinates || resolved?.failed || currentImport?.status === "failed"
-  );
+  // Resolve failure = the token itself is invalid/expired/revoked (no session
+  // to import). Import failure is DIFFERENT and retryable: a transient network
+  // error, or a valid share whose owner hasn't pushed event segments yet.
+  const resolveFailed = Boolean(missingCoordinates || resolved?.failed);
   const isImported = currentImport?.status === "imported";
   const isImporting = currentImport?.status === "importing";
-  const isReady = Boolean(resolved?.session) && !hasError && !currentImport;
+  // A prior failure must NOT latch the button off — the guest can retry.
+  const canImport =
+    Boolean(resolved?.session) && !resolveFailed && !isImporting && !isImported;
+  // The invite in a combined link is valid independently of the import, so the
+  // join CTA stays reachable even if the import failed.
+  const showJoinCta = Boolean(share?.inviteCode) && !isImporting;
 
   const handleClose = useCallback(() => {
     // One-shot consume: clears the atom so nothing can replay this link.
@@ -163,19 +169,19 @@ const CollabShareImportDialog: React.FC = () => {
         className="flex flex-col gap-3"
         data-testid="collab-share-import-dialog"
       >
-        {!resolved && !hasError ? (
+        {!resolved && !resolveFailed ? (
           <div className="text-[12px] text-text-3">
             {t("collaboration.share.incomingResolving")}
           </div>
         ) : null}
 
-        {hasError ? (
+        {resolveFailed ? (
           <div className="rounded-lg bg-danger-1 px-3 py-2 text-[12px] text-danger-6">
             {t("collaboration.share.incomingError")}
           </div>
         ) : null}
 
-        {resolved?.session && !hasError ? (
+        {resolved?.session && !resolveFailed ? (
           <div className="rounded-xl border border-border-2 bg-bg-2 px-3 py-3">
             <div className="text-[13px] font-semibold text-text-1">
               {resolved.session.title}
@@ -202,22 +208,27 @@ const CollabShareImportDialog: React.FC = () => {
           <Button htmlType="button" variant="secondary" onClick={handleClose}>
             {t("collaboration.share.incomingDismiss")}
           </Button>
-          {isImported && share?.inviteCode ? (
-            <Button htmlType="button" variant="primary" onClick={handleJoinOrg}>
-              {t("collaboration.share.incomingJoinCta")}
-            </Button>
-          ) : (
+          {!isImported ? (
             <Button
               htmlType="button"
               variant="primary"
               loading={isImporting}
-              disabled={!isReady}
+              disabled={!canImport}
               onClick={() => void handleImport()}
               data-testid="collab-share-import-confirm"
             >
               {t("collaboration.share.incomingImport")}
             </Button>
-          )}
+          ) : null}
+          {showJoinCta ? (
+            <Button
+              htmlType="button"
+              variant={isImported ? "primary" : "secondary"}
+              onClick={handleJoinOrg}
+            >
+              {t("collaboration.share.incomingJoinCta")}
+            </Button>
+          ) : null}
         </div>
       </div>
     </Modal>

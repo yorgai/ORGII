@@ -478,6 +478,20 @@ export async function importRemoteSession(
     tailHash: assembled.tailHash ?? undefined,
     importedAt: now,
   };
+  // Durably cache the events BEFORE persisting the session record + cursor.
+  // The cursor claims the import is complete, so if we persisted it first and
+  // then the cache write failed (saveToCache swallows errors and returns 0) or
+  // the app crashed in between, the next pull would see a matching cursor and
+  // never re-fetch — stranding a permanently empty transcript. Ordering the
+  // durable write first means a failure just leaves no record and the next
+  // pull retries cleanly.
+  await eventStoreProxy.set(localEvents, localSessionId);
+  const savedCount = await eventStoreProxy.saveToCache(localSessionId);
+  if (localEvents.length > 0 && savedCount <= 0) {
+    // Cache write failed for a non-empty import — do not persist a "complete"
+    // cursor. Report failure so the caller retries on the next cycle.
+    return null;
+  }
   upsertSession({
     session_id: localSessionId,
     status: "completed",
@@ -497,9 +511,6 @@ export async function importRemoteSession(
     error_message: undefined,
   });
   persistSessions(store.get(sessionsAtom) as Session[]);
-  await eventStoreProxy.set(localEvents, localSessionId);
-  // Imports must survive restart (fix P7).
-  await eventStoreProxy.saveToCache(localSessionId);
   return { localSessionId, updated: true };
 }
 
