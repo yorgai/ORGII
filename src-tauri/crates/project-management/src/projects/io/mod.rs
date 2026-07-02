@@ -27,7 +27,9 @@ pub use orgs::{
     configure_project_org_collab_sync, configure_project_org_git_folder_sync, create_project_org,
     read_project_org, read_project_orgs,
 };
-pub(crate) use projects::write_project_remote;
+pub(crate) use projects::{
+    read_project_field_revisions, write_project_remote, PROJECT_SYNC_FIELDS,
+};
 pub use projects::{
     delete_project, derive_work_item_prefix, normalize_custom_work_item_prefix, read_all_projects,
     read_all_projects_scoped, read_project, read_project_scoped, write_project,

@@ -192,6 +192,70 @@ where
     decision
 }
 
+/// Named-field variant of [`resolve_with_policy`] for entities that are
+/// not adapter entities — projects, whose field set (`name`, `health`,
+/// `lead`, `description`, `work_item_prefix`, …) has no
+/// [`EntityField`](super::adapter::EntityField) variants and therefore
+/// no [`FieldMap`]. Same per-field policy:
+///
+/// - `remote_field_mtimes = Some(map)`: each field present in `fields`
+///   is compared against its OWN remote mtime; a field absent from the
+///   map is a stale whole-row carry-over the remote author didn't touch
+///   — keep local.
+/// - `remote_field_mtimes = None`: legacy whole-row clock
+///   (`remote_row_mtime_ms` for every field).
+///
+/// `revisions` is the entity's local per-field watermark store (for
+/// projects, `projects.field_revisions_json`). Ties adopt remote,
+/// matching the collab bridge's fixed `UseRemote` policy.
+pub fn resolve_named_fields(
+    field_names: &[&str],
+    fields: &Value,
+    remote_row_mtime_ms: i64,
+    revisions: &HashMap<String, FieldRevision>,
+    revision_source: &str,
+    remote_field_mtimes: Option<&HashMap<String, i64>>,
+) -> ResolverDecision {
+    let mut decision = ResolverDecision::default();
+    let Some(remote_obj) = fields.as_object() else {
+        return decision;
+    };
+    let mut tie_break = |_: &str| ConflictResolution::UseRemote;
+    for &local_name in field_names {
+        let Some(remote_value) = remote_obj.get(local_name) else {
+            continue;
+        };
+        let field_mtime_ms = match remote_field_mtimes {
+            Some(map) => match map.get(local_name) {
+                Some(mtime) => *mtime,
+                None => {
+                    decision.kept_local.push(local_name.to_string());
+                    continue;
+                }
+            },
+            None => remote_row_mtime_ms,
+        };
+        match decide_one(local_name, field_mtime_ms, revisions, &mut tie_break) {
+            Verdict::AdoptRemote => {
+                decision
+                    .adopted_fields
+                    .insert(local_name.to_string(), remote_value.clone());
+                decision.new_revisions.insert(
+                    local_name.to_string(),
+                    FieldRevision {
+                        mtime: field_mtime_ms,
+                        source: revision_source.to_string(),
+                    },
+                );
+            }
+            Verdict::KeepLocal => {
+                decision.kept_local.push(local_name.to_string());
+            }
+        }
+    }
+    decision
+}
+
 enum Verdict {
     AdoptRemote,
     KeepLocal,

@@ -481,8 +481,16 @@ fn ensure_projects_sync_columns(conn: &Connection) -> SqliteResult<()> {
 /// (bumped on every local write) and `sync_cursor_blob` is the
 /// project-bound adapter's pull cursor — both have incompatible
 /// semantics with a remote row version.
+///
+/// `projects.field_revisions_json` is the project counterpart of
+/// `workitem_extras.field_revisions`: a JSON map of
+/// `local field name → { mtime, source }` watermarks stamped on local
+/// edits and on remote-adopted fields, consumed by the collab bridge's
+/// per-field project merge. NULL / absent = never stamped (whole-row
+/// fallback semantics).
 fn ensure_collab_sync_columns(conn: &Connection) -> SqliteResult<()> {
     ensure_column(conn, "projects", "collab_remote_version", "INTEGER")?;
+    ensure_column(conn, "projects", "field_revisions_json", "TEXT")?;
     ensure_column(conn, "workitems", "collab_remote_version", "INTEGER")
 }
 
@@ -753,6 +761,8 @@ mod tests {
             "sync_last_pull_at",
             "sync_cursor_blob",
             "sync_last_webhook_at",
+            "collab_remote_version",
+            "field_revisions_json",
         ] {
             assert!(
                 cols.iter().any(|column| column == expected),
@@ -812,6 +822,8 @@ mod tests {
             "sync_last_pull_at",
             "sync_cursor_blob",
             "sync_last_webhook_at",
+            "collab_remote_version",
+            "field_revisions_json",
         ] {
             assert!(
                 cols.iter().any(|column| column == expected),

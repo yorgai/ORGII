@@ -46,9 +46,10 @@ use super::conflict;
 use super::io;
 use super::types::{EntityType, OutboxOp, OutboxStatus};
 use crate::projects::io::{
-    apply_remote_merge, create_project_org, read_project_org, read_project_scoped,
-    read_sync_metadata, read_work_item_by_row_id, update_work_item_partial_with_revisions,
-    write_project_remote, write_work_item_remote,
+    apply_remote_merge, create_project_org, read_project_field_revisions, read_project_org,
+    read_project_scoped, read_sync_metadata, read_work_item_by_row_id,
+    update_work_item_partial_with_revisions, write_project_remote, write_work_item_remote,
+    FieldRevision, PROJECT_SYNC_FIELDS,
 };
 use crate::projects::types::work_items::{default_priority, default_status};
 use crate::projects::types::{
@@ -542,7 +543,15 @@ fn hydrate_project(
         });
     };
 
+    // { localFieldName: mtimeMs } — same wire contract as work items
+    // (see work_item_wire): the puller compares each field against its
+    // own remote mtime and keeps local for any field absent here.
+    let field_mtimes: serde_json::Map<String, Value> = read_project_field_revisions(project_id)?
+        .iter()
+        .map(|(name, rev)| (name.clone(), json!(rev.mtime)))
+        .collect();
     let payload = json!({
+        "_fieldRevisions": field_mtimes,
         "id": project_id,
         "slug": slug,
         "name": name,
@@ -886,8 +895,10 @@ fn entity_deleted_at(entity: &CollabRemoteEntity) -> Option<&str> {
 
 /// Pending local field paths newer than `remote_ms` for one entity —
 /// those fields keep their local value when the remote row lands.
-/// (Cross-clock; used only for projects, which have no per-field
-/// revision store — see the residual note in [`apply_project`].)
+/// (Cross-clock; legacy guard used only by [`apply_project`]'s
+/// whole-row fallback, for peers whose project rows carry no
+/// `_fieldRevisions` map. The per-field merge path never consults it —
+/// local watermarks subsume it.)
 fn newer_pending_fields(
     conn: &Connection,
     org_id: &str,
@@ -1002,8 +1013,19 @@ fn apply_project(org_id: &str, entity: &CollabRemoteEntity) -> Result<bool, Stri
 
     let remote_ms =
         iso_to_ms(entity.payload.get("updatedAt").and_then(Value::as_str)).unwrap_or_else(now_ms);
-    let protected_fields =
-        newer_pending_fields(&conn, org_id, EntityType::Project, &project_id, remote_ms)?;
+    // Per-field revision mtimes on the wire — parity with work items
+    // (`_fieldRevisions`, see work_item_wire): when present, the merge
+    // below compares each field against ITS OWN remote mtime, so a
+    // whole-row snapshot never reverts a project field the remote
+    // author didn't touch. Absent/empty map = legacy peer → whole-row
+    // clock guarded by the cross-clock pending-edit probe (pre-fix
+    // behavior, backward safe).
+    let remote_field_mtimes = parse_wire_field_mtimes(&entity.payload);
+    let protected_fields = if existing.is_some() && remote_field_mtimes.is_none() {
+        newer_pending_fields(&conn, org_id, EntityType::Project, &project_id, remote_ms)?
+    } else {
+        Vec::new()
+    };
     drop(conn);
 
     let wire_name = string_field(&entity.payload, "name");
@@ -1044,59 +1066,194 @@ fn apply_project(org_id: &str, entity: &CollabRemoteEntity) -> Result<bool, Stri
     };
 
     meta.org_id = org_id.to_string();
-    // NOTE (collab field-merge residual): work items carry per-field revision
-    // mtimes on the wire (`_fieldRevisions`, see work_item_wire) so a whole-row
-    // snapshot never reverts a field the remote author didn't touch. Projects
-    // have no per-field revision store, so they still rely on the pending-edit
-    // guard below: a project field the local edited AND already pushed can be
-    // reverted by a stale concurrent remote push. Lower impact than work items
-    // (few fields, rare concurrent metadata edits); a full fix needs per-field
-    // project revisions. Tracked as a follow-up.
-    let protected = |field: &str| protected_fields.iter().any(|entry| entry == field);
-    if !protected("name") {
-        if let Some(name) = wire_name {
-            meta.name = name;
-        }
-    }
-    if !protected("status") {
-        if let Some(status) = string_field(&entity.payload, "status") {
-            meta.status = status;
-        }
-    }
-    if !protected("priority") {
-        if let Some(priority) = string_field(&entity.payload, "priority") {
-            meta.priority = priority;
-        }
-    }
-    if !protected("health") {
-        if let Some(health) = string_field(&entity.payload, "health") {
-            meta.health = health;
-        }
-    }
-    if !protected("lead") {
-        meta.lead = string_field(&entity.payload, "leadMemberId");
-    }
-    if !protected("start_date") {
-        meta.start_date = string_field(&entity.payload, "startDate");
-    }
-    if !protected("target_date") {
-        meta.target_date = string_field(&entity.payload, "targetDate");
-    }
-    if !protected("description") {
-        if let Some(body) = entity.payload.get("description").and_then(Value::as_str) {
-            description = body.to_string();
-        }
-    }
-    if let Some(prefix) = wire_prefix {
-        meta.work_item_prefix = prefix;
-        meta.work_item_prefix_custom = true;
-    }
+    let adopted_revisions: HashMap<String, FieldRevision> =
+        match (&existing, remote_field_mtimes.as_ref()) {
+            (Some(_), Some(mtimes)) => {
+                // Per-field merge — identical policy to apply_work_item's
+                // FieldRevision resolver: a wire field applies only when
+                // its own remote mtime beats the local watermark
+                // (same-field latest-wins; ties adopt remote); fields
+                // absent from the wire map are stale whole-row carry-overs
+                // the remote author didn't change — keep local.
+                let local_revisions = read_project_field_revisions(&project_id)?;
+                let decision = conflict::resolve_named_fields(
+                    PROJECT_SYNC_FIELDS,
+                    &project_fields_from_wire(&entity.payload),
+                    remote_ms,
+                    &local_revisions,
+                    COLLAB_REVISION_SOURCE,
+                    Some(mtimes),
+                );
+                for (field, value) in &decision.adopted_fields {
+                    apply_adopted_project_field(&mut meta, &mut description, field, value);
+                }
+                // The row's prefix is established either way (kept local
+                // or wire-adopted just above); mark it custom so the
+                // write path doesn't re-derive it from an adopted name.
+                meta.work_item_prefix_custom = true;
+                decision.new_revisions
+            }
+            _ => {
+                // Whole-row apply: remote creation (nothing local to
+                // protect) or a legacy peer without `_fieldRevisions`
+                // (degrade to the pre-fix whole-row clock + pending-edit
+                // guard). Applied fields are stamped at their remote
+                // watermark so later per-field merges compare correctly
+                // (mirrors apply_work_item's create path).
+                let protected = |field: &str| protected_fields.iter().any(|entry| entry == field);
+                let mut applied: Vec<&'static str> = Vec::new();
+                if !protected("name") {
+                    if let Some(name) = wire_name {
+                        meta.name = name;
+                        applied.push("name");
+                    }
+                }
+                if !protected("status") {
+                    if let Some(status) = string_field(&entity.payload, "status") {
+                        meta.status = status;
+                        applied.push("status");
+                    }
+                }
+                if !protected("priority") {
+                    if let Some(priority) = string_field(&entity.payload, "priority") {
+                        meta.priority = priority;
+                        applied.push("priority");
+                    }
+                }
+                if !protected("health") {
+                    if let Some(health) = string_field(&entity.payload, "health") {
+                        meta.health = health;
+                        applied.push("health");
+                    }
+                }
+                if !protected("lead") {
+                    meta.lead = string_field(&entity.payload, "leadMemberId");
+                    applied.push("lead");
+                }
+                if !protected("start_date") {
+                    meta.start_date = string_field(&entity.payload, "startDate");
+                    applied.push("start_date");
+                }
+                if !protected("target_date") {
+                    meta.target_date = string_field(&entity.payload, "targetDate");
+                    applied.push("target_date");
+                }
+                if !protected("description") {
+                    if let Some(body) = entity.payload.get("description").and_then(Value::as_str) {
+                        description = body.to_string();
+                        applied.push("description");
+                    }
+                }
+                if let Some(prefix) = wire_prefix {
+                    meta.work_item_prefix = prefix;
+                    meta.work_item_prefix_custom = true;
+                    applied.push("work_item_prefix");
+                }
+                applied
+                    .into_iter()
+                    .map(|field| {
+                        let mtime = remote_field_mtimes
+                            .as_ref()
+                            .and_then(|map| map.get(field))
+                            .copied()
+                            .unwrap_or(remote_ms);
+                        (
+                            field.to_string(),
+                            FieldRevision {
+                                mtime,
+                                source: COLLAB_REVISION_SOURCE.to_string(),
+                            },
+                        )
+                    })
+                    .collect()
+            }
+        };
 
-    write_project_remote(&slug, &meta, &description)?;
+    write_project_remote(&slug, &meta, &description, &adopted_revisions)?;
 
     let conn = io::conn()?;
     store_remote_version(&conn, KIND_PROJECT, &project_id, entity.version)?;
     Ok(true)
+}
+
+/// Normalize the camelCase project wire keys into the local field-name
+/// JSON [`conflict::resolve_named_fields`] walks — the project
+/// counterpart of [`work_item_fields_from_wire`]. Keys are always
+/// present (nulls clear nullable fields when adopted).
+fn project_fields_from_wire(payload: &Value) -> Value {
+    json!({
+        "name": payload.get("name").cloned().unwrap_or(Value::Null),
+        "status": payload.get("status").cloned().unwrap_or(Value::Null),
+        "priority": payload.get("priority").cloned().unwrap_or(Value::Null),
+        "health": payload.get("health").cloned().unwrap_or(Value::Null),
+        "lead": payload.get("leadMemberId").cloned().unwrap_or(Value::Null),
+        "start_date": payload.get("startDate").cloned().unwrap_or(Value::Null),
+        "target_date": payload.get("targetDate").cloned().unwrap_or(Value::Null),
+        "description": payload.get("description").cloned().unwrap_or(Value::Null),
+        "work_item_prefix": payload.get("workItemPrefix").cloned().unwrap_or(Value::Null),
+    })
+}
+
+/// Write one resolver-adopted field into the project meta/description,
+/// with the exact per-field value semantics of the whole-row apply
+/// path: required strings only overwrite with non-empty values,
+/// nullable fields clear on null/empty, an adopted prefix flips the
+/// custom flag (`workItemPrefix` changes are admin-gated server-side,
+/// so an adopted value is authoritative by the time it reaches a pull).
+fn apply_adopted_project_field(
+    meta: &mut ProjectMeta,
+    description: &mut String,
+    field: &str,
+    value: &Value,
+) {
+    let non_empty = |value: &Value| {
+        value
+            .as_str()
+            .filter(|text| !text.is_empty())
+            .map(str::to_string)
+    };
+    match field {
+        "name" => {
+            if let Some(name) = non_empty(value) {
+                meta.name = name;
+            }
+        }
+        "status" => {
+            if let Some(status) = non_empty(value) {
+                meta.status = status;
+            }
+        }
+        "priority" => {
+            if let Some(priority) = non_empty(value) {
+                meta.priority = priority;
+            }
+        }
+        "health" => {
+            if let Some(health) = non_empty(value) {
+                meta.health = health;
+            }
+        }
+        "lead" => meta.lead = non_empty(value),
+        "start_date" => meta.start_date = non_empty(value),
+        "target_date" => meta.target_date = non_empty(value),
+        "description" => {
+            if let Some(body) = value.as_str() {
+                *description = body.to_string();
+            }
+        }
+        "work_item_prefix" => {
+            if let Some(prefix) = non_empty(value) {
+                meta.work_item_prefix = prefix;
+                meta.work_item_prefix_custom = true;
+            }
+        }
+        other => {
+            tracing::warn!(
+                "[collab_bridge] resolver adopted unknown project field '{}'",
+                other
+            );
+        }
+    }
 }
 
 /// Pick a slug that doesn't collide with a different project (the slug
@@ -2419,6 +2576,258 @@ mod tests {
         assert_eq!(
             item.frontmatter.status, "backlog",
             "pre-fix whole-row semantics: every field follows the row clock"
+        );
+    }
+
+    /// Seed a remote-owned project (version 1, mtime
+    /// 2026-07-01T00:00:00Z) via `apply_remote`, so no local outbox
+    /// rows exist afterwards.
+    fn seed_remote_project() {
+        apply_remote(
+            ORG,
+            None,
+            vec![CollabRemoteEntity {
+                kind: KIND_PROJECT.to_string(),
+                payload: json!({
+                    "id": "proj-remote",
+                    "slug": "remote-project",
+                    "name": "Remote Project",
+                    "status": "active",
+                    "priority": "none",
+                    "health": "on_track",
+                    "workItemPrefix": "REM",
+                    "description": "original description",
+                    "updatedAt": "2026-07-01T00:00:00Z",
+                }),
+                version: 1,
+                updated_by: None,
+                deleted_at: None,
+            }],
+        )
+        .expect("seed remote project");
+        assert_eq!(pending_org_rows(), 0, "seeding must not echo");
+    }
+
+    /// Locally edit one field of `remote-project` through the normal
+    /// local write path (stamps a `("local", now)` watermark and
+    /// enqueues a bridge push).
+    fn edit_remote_project_locally(mutate: impl FnOnce(&mut ProjectMeta)) {
+        let mut data = read_project("remote-project").expect("read project");
+        // Keep the stored prefix explicit so the write path doesn't
+        // re-derive it from the name (reads surface custom=false).
+        data.meta.work_item_prefix_custom = true;
+        mutate(&mut data.meta);
+        write_project("remote-project", &data.meta, &data.description, false)
+            .expect("local project edit");
+    }
+
+    /// Project parity with the work-item field-merge fix: a peer sends
+    /// a WHOLE-ROW project snapshot with `_fieldRevisions` naming only
+    /// the field it changed. A locally-edited field the remote did NOT
+    /// touch must survive even though the remote's whole-row
+    /// `updatedAt` is newer than the local edit — the exact case the
+    /// old whole-row-clock project merge got wrong (including after
+    /// the local edit was already pushed and acked).
+    #[test]
+    fn apply_remote_whole_row_project_snapshot_preserves_untouched_local_field() {
+        let _sandbox = test_env::sandbox();
+        seed_collab_org();
+        seed_remote_project();
+
+        // Local changes STATUS; its watermark is stamped at real now.
+        edit_remote_project_locally(|meta| meta.status = "paused".to_string());
+        assert!(pending_org_rows() >= 1, "local edit should be pending");
+
+        // Teammate pushes a WHOLE-ROW snapshot (v2): they renamed the
+        // project. `updatedAt` and name's mtime are far in the future
+        // (newer than the local status edit), and `status` carries a
+        // STALE value the teammate never touched — status is
+        // deliberately ABSENT from `_fieldRevisions`.
+        let future_ms: i64 = 4_070_908_800_000; // 2099-01-01
+        let applied = apply_remote(
+            ORG,
+            None,
+            vec![CollabRemoteEntity {
+                kind: KIND_PROJECT.to_string(),
+                payload: json!({
+                    "id": "proj-remote",
+                    "slug": "remote-project",
+                    "name": "Teammate rename",
+                    "status": "active",
+                    "workItemPrefix": "REM",
+                    "updatedAt": "2099-01-01T00:00:00Z",
+                    "_fieldRevisions": { "name": future_ms },
+                }),
+                version: 2,
+                updated_by: Some("member-b".to_string()),
+                deleted_at: None,
+            }],
+        )
+        .expect("apply merge");
+        assert_eq!(applied, 1);
+
+        let project = read_project("remote-project").expect("project");
+        assert_eq!(
+            project.meta.status, "paused",
+            "a project field the remote did not touch must not be reverted by its whole-row snapshot"
+        );
+        assert_eq!(
+            project.meta.name, "Teammate rename",
+            "the field the remote genuinely changed is adopted"
+        );
+        assert!(
+            pending_org_rows() >= 1,
+            "the pending local push must not be consumed by the apply"
+        );
+    }
+
+    /// Same-field latest-wins still holds under per-field project
+    /// mtimes: an OLDER remote watermark for a locally-edited field
+    /// keeps local, a NEWER one adopts remote.
+    #[test]
+    fn apply_remote_project_same_field_resolves_by_per_field_mtime() {
+        let _sandbox = test_env::sandbox();
+        seed_collab_org();
+        seed_remote_project();
+
+        // Local rename stamps `name` at real now.
+        edit_remote_project_locally(|meta| meta.name = "Local rename".to_string());
+
+        // v2: teammate's name mtime is OLDER than the local edit → keep local.
+        let applied = apply_remote(
+            ORG,
+            None,
+            vec![CollabRemoteEntity {
+                kind: KIND_PROJECT.to_string(),
+                payload: json!({
+                    "id": "proj-remote",
+                    "slug": "remote-project",
+                    "name": "Stale teammate rename",
+                    "workItemPrefix": "REM",
+                    "updatedAt": "2026-07-01T00:00:30Z",
+                    "_fieldRevisions": { "name": 1_000_000_000_000_i64 }, // 2001
+                }),
+                version: 2,
+                updated_by: Some("member-b".to_string()),
+                deleted_at: None,
+            }],
+        )
+        .expect("apply stale");
+        assert_eq!(applied, 1);
+        let project = read_project("remote-project").expect("project");
+        assert_eq!(
+            project.meta.name, "Local rename",
+            "an older remote watermark must not beat the newer local edit"
+        );
+
+        // v3: teammate edits the SAME field with a NEWER mtime → adopt remote.
+        let future_ms: i64 = 4_070_908_800_000; // 2099-01-01
+        let applied = apply_remote(
+            ORG,
+            None,
+            vec![CollabRemoteEntity {
+                kind: KIND_PROJECT.to_string(),
+                payload: json!({
+                    "id": "proj-remote",
+                    "slug": "remote-project",
+                    "name": "Future teammate rename",
+                    "workItemPrefix": "REM",
+                    "updatedAt": "2099-01-01T00:00:00Z",
+                    "_fieldRevisions": { "name": future_ms },
+                }),
+                version: 3,
+                updated_by: Some("member-b".to_string()),
+                deleted_at: None,
+            }],
+        )
+        .expect("apply newer");
+        assert_eq!(applied, 1);
+        let project = read_project("remote-project").expect("project");
+        assert_eq!(
+            project.meta.name, "Future teammate rename",
+            "same-field latest-wins: the newer remote edit is adopted"
+        );
+    }
+
+    /// An EMPTY `_fieldRevisions` object on a project row (wiped /
+    /// never-stamped pusher) must degrade to the pre-fix whole-row
+    /// clock, not to "remote touched nothing" — otherwise such a peer
+    /// could never propagate a project change at all.
+    #[test]
+    fn empty_project_field_revisions_falls_back_to_whole_row() {
+        let _sandbox = test_env::sandbox();
+        seed_collab_org();
+        seed_remote_project();
+
+        // Local edit stamps a "local" watermark at real now.
+        edit_remote_project_locally(|meta| meta.status = "paused".to_string());
+
+        let applied = apply_remote(
+            ORG,
+            None,
+            vec![CollabRemoteEntity {
+                kind: KIND_PROJECT.to_string(),
+                payload: json!({
+                    "id": "proj-remote",
+                    "slug": "remote-project",
+                    "name": "Teammate rename",
+                    "status": "active",
+                    "workItemPrefix": "REM",
+                    "updatedAt": "2099-01-01T00:00:00Z",
+                    "_fieldRevisions": {},
+                }),
+                version: 2,
+                updated_by: Some("member-b".to_string()),
+                deleted_at: None,
+            }],
+        )
+        .expect("apply");
+        assert_eq!(applied, 1);
+
+        let project = read_project("remote-project").expect("project");
+        assert_eq!(
+            project.meta.name, "Teammate rename",
+            "with the whole-row fallback the newer remote row must win"
+        );
+        assert_eq!(
+            project.meta.status, "active",
+            "pre-fix whole-row semantics: every field follows the row clock"
+        );
+    }
+
+    /// Wire-builder side of the project parity fix: a drained project
+    /// push carries `_fieldRevisions` naming exactly the locally-edited
+    /// fields (untouched fields stay absent so peers keep their local
+    /// values).
+    #[test]
+    fn drain_project_carries_per_field_revisions() {
+        let _sandbox = test_env::sandbox();
+        seed_collab_org();
+        seed_project("alpha");
+
+        let mut data = read_project("alpha").expect("read project");
+        data.meta.work_item_prefix_custom = true;
+        data.meta.priority = "high".to_string();
+        write_project("alpha", &data.meta, &data.description, false).expect("local edit");
+
+        let items = drain_outbox(ORG, 50).expect("drain");
+        let project = items
+            .iter()
+            .find(|item| item.kind == KIND_PROJECT)
+            .expect("project push");
+        let payload = project.payload.as_ref().expect("payload");
+        let revisions = payload["_fieldRevisions"]
+            .as_object()
+            .expect("_fieldRevisions map");
+        assert!(
+            revisions.get("priority").and_then(Value::as_i64).is_some(),
+            "the locally-edited field must carry its watermark: {:?}",
+            revisions
+        );
+        assert!(
+            !revisions.contains_key("name"),
+            "untouched fields must stay absent from the wire map: {:?}",
+            revisions
         );
     }
 
