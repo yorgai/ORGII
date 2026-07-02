@@ -148,6 +148,12 @@ export interface SourceControlContentProps {
 
   /** Tailwind bg class for sticky section/folder headers. Defaults to bg-workstation-bg. */
   stickyBgClass?: string;
+
+  /**
+   * When true, skip the in-pane loading placeholder. Used when a parent
+   * overlay (e.g. scope-switch loading) already covers the changes area.
+   */
+  suppressLoadingPlaceholder?: boolean;
 }
 
 /** Props passed to section components */

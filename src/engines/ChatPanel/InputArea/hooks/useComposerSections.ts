@@ -52,6 +52,8 @@ export interface UseComposerSectionsOptions {
   hasModeSwitch?: boolean;
   /** Whether the CreatePlanCard currently has a pending plan to review. */
   hasPlan?: boolean;
+  /** Label shown on the collapsed plan pill. */
+  planPillLabel?: string;
   /** Commit / pull request counts supplied by Rust Orgtrack for the current session. */
   gitArtifactStats?: GitArtifactStats;
   /** Opens the dedicated file-diff surface when the files/submissions pill is clicked. */
@@ -130,6 +132,7 @@ export function useComposerSections({
   hasPermission = false,
   hasModeSwitch = false,
   hasPlan = false,
+  planPillLabel = "Plan",
   gitArtifactStats = { commitCount: 0, pullRequestCount: 0 },
   onFilesExpand,
   filesMenu,
@@ -329,7 +332,7 @@ export function useComposerSections({
         key: "plan",
         icon: React.createElement(ClipboardList, { size: 13 }),
         count: 0,
-        label: "Plan",
+        label: planPillLabel,
         active: false,
         variant: "primary",
         onExpand: expandPlan,
@@ -389,6 +392,7 @@ export function useComposerSections({
     hasModeSwitch,
     modeSwitchCollapsed,
     hasPlan,
+    planPillLabel,
     planCollapsed,
     expandQuestion,
     expandPermission,

@@ -175,7 +175,16 @@ export const Placeholder: React.FC<PlaceholderProps> = memo(
       : `${stretchClass}flex ${fillParentHeight ? "" : "h-full "}flex-col items-center justify-center gap-1 p-4 text-center ${className}`.trim();
 
     if (isLoading) {
-      return <DebouncedLoadingSpinner containerClass={containerClass} />;
+      return (
+        <DebouncedLoadingSpinner
+          containerClass={containerClass}
+          title={resolvedTitle}
+          subtitle={resolvedSubtitle}
+          titleClass={titleClass}
+          subtitleClass={subtitleClass}
+          showLabel={isDetailPanel ? Boolean(title ?? subtitle) : true}
+        />
+      );
     }
 
     if (isDetailPanel) {
@@ -247,6 +256,12 @@ Placeholder.displayName = "Placeholder";
 
 interface DebouncedLoadingSpinnerProps {
   containerClass: string;
+  title: string;
+  subtitle?: string;
+  titleClass: string;
+  subtitleClass: string;
+  /** Detail-panel keeps spinner-only unless an explicit title/subtitle was passed. */
+  showLabel: boolean;
 }
 
 /**
@@ -256,7 +271,14 @@ interface DebouncedLoadingSpinnerProps {
  * doesn't bloat the main `Placeholder` render path.
  */
 const DebouncedLoadingSpinner: React.FC<DebouncedLoadingSpinnerProps> = memo(
-  ({ containerClass }) => {
+  ({
+    containerClass,
+    title,
+    subtitle,
+    titleClass,
+    subtitleClass,
+    showLabel,
+  }) => {
     const [showSpinner, setShowSpinner] = useState(false);
 
     useEffect(() => {
@@ -271,10 +293,22 @@ const DebouncedLoadingSpinner: React.FC<DebouncedLoadingSpinnerProps> = memo(
     return (
       <div className={containerClass} aria-busy="true">
         {showSpinner && (
-          <Loader2
-            size={SPINNER_TOKENS.default}
-            className="animate-spin text-text-3"
-          />
+          <>
+            <Loader2
+              size={SPINNER_TOKENS.default}
+              className="animate-spin text-text-3"
+            />
+            {showLabel ? (
+              <>
+                <span className={`${titleClass} text-text-2`}>{title}</span>
+                {subtitle ? (
+                  <span className={`${subtitleClass} text-text-3`}>
+                    {subtitle}
+                  </span>
+                ) : null}
+              </>
+            ) : null}
+          </>
         )}
       </div>
     );

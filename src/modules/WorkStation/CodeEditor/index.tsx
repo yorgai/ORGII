@@ -209,6 +209,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
       sourceControlFilterMode,
       sourceControlFilterCounts,
       sourceControlHeaderFilter,
+      sourceControlHeaderScopePicker,
       tabSidebarExtraContext,
       handleGitFilesChange,
       handleSourceControlHistorySelectionChange,
@@ -221,6 +222,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
       activeTab,
       setPrimaryPanel,
       handleGitFileSelect,
+      isMultiRoot: workspaceFolders.length > 1,
     });
 
     // === Pinned tabs (always-visible icon-only tabs) ===
@@ -390,6 +392,9 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
     );
 
     const isSourceControlActive = activeTab?.type === "source-control";
+    const editorSourceControlScopePicker = isSourceControlActive
+      ? sourceControlHeaderScopePicker
+      : null;
     const editorSourceControlHeaderSlot = isSourceControlActive
       ? sourceControlHeaderFilter
       : null;
@@ -429,6 +434,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
             isBinary={codeEditorState.isBinary}
             onCursorPositionChange={handleCursorPositionChange}
             terminalState={terminalState}
+            sourceControlHeaderLeadingSlot={editorSourceControlScopePicker}
             sourceControlHeaderTrailingSlot={editorSourceControlHeaderSlot}
             sourceControlFilterMode={editorSourceControlFilterMode}
             showSourceControlModePill={editorShowSourceControlModePill}
@@ -458,6 +464,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
         handleAllChangesClick,
         handleCursorPositionChange,
         terminalState,
+        editorSourceControlScopePicker,
         editorSourceControlHeaderSlot,
         editorSourceControlFilterMode,
         editorShowSourceControlModePill,

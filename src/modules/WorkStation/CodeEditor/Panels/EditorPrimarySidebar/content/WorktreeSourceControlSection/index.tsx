@@ -6,7 +6,13 @@
  *   - SourceControlTab   (single-repo + worktrees layout)
  *   - MultiRootSourceControlContent  (multi-root layout)
  */
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+} from "react";
 
 import type { GitFile } from "@src/types/git/types";
 
@@ -18,7 +24,8 @@ import SourceControlContent from "../SourceControlContent";
 
 export interface WorktreeSourceControlSectionProps {
   worktreePath: string;
-  worktreeId: string;
+  /** Host repository id used for git-api calls and status websocket events. */
+  hostRepoId: string;
   onGitFileSelect?: (file: GitFile) => void;
   /**
    * Continuously sync this worktree's file list (with absolute paths and
@@ -26,11 +33,19 @@ export interface WorktreeSourceControlSectionProps {
    * render worktree diffs without requiring a per-file click first.
    */
   onGitFilesChange?: (files: GitFile[], worktreePath: string) => void;
+  /** Notifies parent when git status loading state changes for this worktree. */
+  onLoadingChange?: (loading: boolean) => void;
+  /** Parent scope-switch overlay owns loading UI for the changes area. */
+  suppressLoadingPlaceholder?: boolean;
   showFilter: boolean;
   viewMode: "list-tree" | "list";
   navigateWithoutSelecting?: boolean;
   /** Working-tree section filter forwarded to SourceControlContent. */
   sectionFilter?: "uncommitted" | "staged" | "unstaged";
+}
+
+export interface WorktreeSourceControlSectionHandle {
+  refresh: () => Promise<void>;
 }
 
 const toAbsoluteWorktreeFile = (
@@ -43,105 +58,122 @@ const toAbsoluteWorktreeFile = (
   return { ...file, path: absolutePath, repoRoot: worktreePath };
 };
 
-export const WorktreeSourceControlSection: React.FC<
+export const WorktreeSourceControlSection = forwardRef<
+  WorktreeSourceControlSectionHandle,
   WorktreeSourceControlSectionProps
-> = ({
-  worktreePath,
-  worktreeId,
-  onGitFileSelect,
-  onGitFilesChange,
-  showFilter,
-  viewMode,
-  navigateWithoutSelecting,
-  sectionFilter,
-}) => {
-  // Paths inside a worktree are relative. The upstream onGitFileSelect handler
-  // (handleGitFileSelect in useCodeEditorHandlers) builds the absolute path by
-  // prepending the host's repoPath — which is the *main* repo, not this
-  // worktree. Pre-resolve relative paths to absolute worktree paths here so
-  // the handler fetches the diff from the correct directory.
-  const handleGitFileSelect = useCallback(
-    (file: GitFile) => {
-      if (!onGitFileSelect) return;
-      onGitFileSelect(toAbsoluteWorktreeFile(file, worktreePath));
+>(
+  (
+    {
+      worktreePath,
+      hostRepoId,
+      onGitFileSelect,
+      onGitFilesChange,
+      onLoadingChange,
+      suppressLoadingPlaceholder,
+      showFilter,
+      viewMode,
+      navigateWithoutSelecting,
+      sectionFilter,
     },
-    [onGitFileSelect, worktreePath]
-  );
+    ref
+  ) => {
+    const handleGitFileSelect = useCallback(
+      (file: GitFile) => {
+        if (!onGitFileSelect) return;
+        onGitFileSelect(toAbsoluteWorktreeFile(file, worktreePath));
+      },
+      [onGitFileSelect, worktreePath]
+    );
 
-  const { state, refresh, loading }: UsePerRepoSourceControlResult =
-    usePerRepoSourceControl({
-      repoPath: worktreePath,
-      repoId: worktreeId,
-      onGitFileSelect: handleGitFileSelect,
-    });
+    const { state, refresh, loading }: UsePerRepoSourceControlResult =
+      usePerRepoSourceControl({
+        repoPath: worktreePath,
+        repoId: hostRepoId,
+        onGitFileSelect: handleGitFileSelect,
+      });
 
-  const absoluteFiles = useMemo(
-    () => state.files.map((file) => toAbsoluteWorktreeFile(file, worktreePath)),
-    [state.files, worktreePath]
-  );
+    useImperativeHandle(
+      ref,
+      () => ({
+        refresh,
+      }),
+      [refresh]
+    );
 
-  useEffect(() => {
-    onGitFilesChange?.(absoluteFiles, worktreePath);
-  }, [onGitFilesChange, absoluteFiles, worktreePath]);
+    const absoluteFiles = useMemo(
+      () =>
+        state.files.map((file) => toAbsoluteWorktreeFile(file, worktreePath)),
+      [state.files, worktreePath]
+    );
 
-  const handleRefresh = useCallback(() => {
-    refresh();
-  }, [refresh]);
+    useEffect(() => {
+      onGitFilesChange?.(absoluteFiles, worktreePath);
+    }, [onGitFilesChange, absoluteFiles, worktreePath]);
 
-  const files = state.files;
-  const selectFile = state.onFileSelect;
+    useEffect(() => {
+      onLoadingChange?.(loading);
+    }, [loading, onLoadingChange]);
 
-  const handleContentFileSelect = useCallback(
-    (fileId: string) => {
-      if (!navigateWithoutSelecting) {
-        selectFile(fileId);
-        return;
-      }
-      const file = files.find((candidate) => candidate.id === fileId);
-      if (file) {
-        handleGitFileSelect(file);
-      }
-    },
-    [files, handleGitFileSelect, navigateWithoutSelecting, selectFile]
-  );
+    const handleRefresh = useCallback(() => {
+      void refresh();
+    }, [refresh]);
 
-  return (
-    <SourceControlContent
-      files={state.files}
-      filteredFiles={state.filteredFiles}
-      selectedFileId={navigateWithoutSelecting ? "" : state.selectedFileId}
-      loading={loading}
-      error={state.error}
-      onFileSelect={handleContentFileSelect}
-      onStageToggle={state.onStageToggle}
-      onDiscard={state.onDiscard}
-      onDiscardFiles={state.onDiscardFiles}
-      onStageAll={state.onStageAll}
-      onUnstageAll={state.onUnstageAll}
-      onDiscardAll={state.onDiscardAll}
-      commitMessage={state.commitMessage}
-      onCommitMessageChange={state.onCommitMessageChange}
-      onCommit={state.onCommit}
-      commitLoading={state.commitLoading}
-      generateCommitMessageLoading={state.generateCommitMessageLoading}
-      onGenerateCommitMessage={state.onGenerateCommitMessage}
-      stagedFilesCount={state.stagedFilesCount}
-      branchName={state.branchName}
-      searchQuery={state.searchQuery}
-      onSearchChange={state.onSearchChange}
-      showFilter={showFilter}
-      viewMode={viewMode}
-      sectionFilter={sectionFilter}
-      navigateWithoutSelecting={navigateWithoutSelecting}
-      onRefresh={handleRefresh}
-      ahead={state.ahead}
-      behind={state.behind}
-      hasUpstream={state.hasUpstream}
-      repoId={worktreeId}
-      repoPath={worktreePath}
-    />
-  );
-};
+    const files = state.files;
+    const selectFile = state.onFileSelect;
+
+    const handleContentFileSelect = useCallback(
+      (fileId: string) => {
+        if (!navigateWithoutSelecting) {
+          selectFile(fileId);
+          return;
+        }
+        const file = files.find((candidate) => candidate.id === fileId);
+        if (file) {
+          handleGitFileSelect(file);
+        }
+      },
+      [files, handleGitFileSelect, navigateWithoutSelecting, selectFile]
+    );
+
+    return (
+      <SourceControlContent
+        files={state.files}
+        filteredFiles={state.filteredFiles}
+        selectedFileId={navigateWithoutSelecting ? "" : state.selectedFileId}
+        loading={loading}
+        error={state.error}
+        onFileSelect={handleContentFileSelect}
+        onStageToggle={state.onStageToggle}
+        onDiscard={state.onDiscard}
+        onDiscardFiles={state.onDiscardFiles}
+        onStageAll={state.onStageAll}
+        onUnstageAll={state.onUnstageAll}
+        onDiscardAll={state.onDiscardAll}
+        commitMessage={state.commitMessage}
+        onCommitMessageChange={state.onCommitMessageChange}
+        onCommit={state.onCommit}
+        commitLoading={state.commitLoading}
+        generateCommitMessageLoading={state.generateCommitMessageLoading}
+        onGenerateCommitMessage={state.onGenerateCommitMessage}
+        stagedFilesCount={state.stagedFilesCount}
+        branchName={state.branchName}
+        searchQuery={state.searchQuery}
+        onSearchChange={state.onSearchChange}
+        showFilter={showFilter}
+        viewMode={viewMode}
+        sectionFilter={sectionFilter}
+        navigateWithoutSelecting={navigateWithoutSelecting}
+        onRefresh={handleRefresh}
+        ahead={state.ahead}
+        behind={state.behind}
+        hasUpstream={state.hasUpstream}
+        repoId={hostRepoId}
+        repoPath={worktreePath}
+        suppressLoadingPlaceholder={suppressLoadingPlaceholder}
+      />
+    );
+  }
+);
 
 WorktreeSourceControlSection.displayName = "WorktreeSourceControlSection";
 

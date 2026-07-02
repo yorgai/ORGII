@@ -5,6 +5,7 @@ import { stripAnsiCodes } from "@src/components/TerminalDisplay/utils/ansiProces
 import { eventsAtom } from "@src/engines/SessionCore/core/atoms";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { isShellTool } from "@src/engines/SessionCore/sync/adapters/shared";
+import { useTerminalSurfaceStyle } from "@src/hooks/terminal/useTerminalSurfaceStyle";
 import { listenTauri } from "@src/util/platform/tauri/init";
 
 interface TerminalReadOnlyProps {
@@ -101,6 +102,7 @@ const TerminalReadOnly: React.FC<TerminalReadOnlyProps> = ({
   agentSessionId,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const surfaceStyle = useTerminalSurfaceStyle();
   const agentSessionIdRef = useRef(agentSessionId);
   const eventsAtomRef = useRef<SessionEvent[]>([]);
   const streamingReceivedIdsRef = useRef<Set<string>>(new Set());
@@ -280,10 +282,14 @@ const TerminalReadOnly: React.FC<TerminalReadOnlyProps> = ({
   }, [appendOutput, events]);
 
   return (
-    <div className="h-full w-full overflow-hidden bg-[var(--cm-editor-background)]">
+    <div
+      className="h-full w-full overflow-hidden"
+      style={{ backgroundColor: surfaceStyle.background }}
+    >
       <div
         ref={scrollRef}
-        className="scrollbar-overlay h-full w-full overflow-y-auto whitespace-pre-wrap break-words px-3 py-2 text-[13px] leading-5 text-text-2"
+        className="scrollbar-overlay h-full w-full overflow-y-auto whitespace-pre-wrap break-words px-3 py-2"
+        style={{ ...surfaceStyle.typography, color: surfaceStyle.foreground }}
       >
         {output}
       </div>

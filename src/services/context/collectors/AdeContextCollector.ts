@@ -87,17 +87,46 @@ function normalizeRepoPath(value: string | undefined | null): string | null {
   return value.replace(/\/+$/, "");
 }
 
+function resolveActiveProfileSettings(
+  settings: Record<string, unknown>
+): Record<string, unknown> {
+  const activeProfileId = settings["general.activeProfileId"];
+  const presets = settings["general.profilePresets"];
+  if (typeof activeProfileId !== "string" || !Array.isArray(presets)) {
+    return settings;
+  }
+  const preset = presets.find(
+    (item): item is Record<string, unknown> =>
+      typeof item === "object" && item !== null && item.id === activeProfileId
+  );
+  if (!preset) return settings;
+  return {
+    ...settings,
+    "general.profileTechSavvy": preset.techSavvy,
+    "general.profileJobRoles": preset.jobRoles,
+    "general.profileFamiliarTechStacks": preset.familiarTechStacks,
+    "general.profileDescription": preset.description,
+    "general.activeProfileName": preset.name,
+  };
+}
+
 export function buildUserProfileWire(
   settings: Record<string, unknown>
 ): UserProfileWire | undefined {
+  const resolvedSettings = resolveActiveProfileSettings(settings);
   const profile: UserProfileWire = {};
 
-  const techSavvy = settings["general.profileTechSavvy"];
+  const profileName = resolvedSettings["general.activeProfileName"];
+  if (typeof profileName === "string" && profileName.trim().length > 0) {
+    profile.name = profileName.trim();
+  }
+
+  const techSavvy = resolvedSettings["general.profileTechSavvy"];
   if (typeof techSavvy === "string" && techSavvy.trim().length > 0) {
     profile.techSavvy = techSavvy as UserProfileWire["techSavvy"];
   }
 
-  const jobRoles = settings["general.profileJobRoles"];
+  const jobRoles = resolvedSettings["general.profileJobRoles"];
   if (Array.isArray(jobRoles) && jobRoles.length > 0) {
     const filteredJobRoles = jobRoles.filter(
       (role): role is string => typeof role === "string" && role.length > 0
@@ -107,7 +136,8 @@ export function buildUserProfileWire(
     }
   }
 
-  const familiarTechStacks = settings["general.profileFamiliarTechStacks"];
+  const familiarTechStacks =
+    resolvedSettings["general.profileFamiliarTechStacks"];
   if (Array.isArray(familiarTechStacks) && familiarTechStacks.length > 0) {
     const filteredTechStacks = familiarTechStacks.filter(
       (stack): stack is string => typeof stack === "string" && stack.length > 0
@@ -117,7 +147,7 @@ export function buildUserProfileWire(
     }
   }
 
-  const description = settings["general.profileDescription"];
+  const description = resolvedSettings["general.profileDescription"];
   if (typeof description === "string" && description.trim().length > 0) {
     profile.description = description.trim();
   }

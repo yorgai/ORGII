@@ -69,7 +69,6 @@ pub use commands::{
     cache_get_session_metadata, cache_get_stats, cache_load_events, cache_load_session,
     cache_load_turn_index, cache_save_events, cache_save_session, cache_search_all_sessions,
     cache_search_events, cache_truncate_after_event, cache_update_event,
-    cache_update_session_specs, get_session_llm_usage_spans,
-    get_session_token_usage_records, get_session_tool_usage_attributions,
-    get_session_tool_usage_attributions_for_call,
+    cache_update_session_specs, get_session_llm_usage_spans, get_session_token_usage_records,
+    get_session_tool_usage_attributions, get_session_tool_usage_attributions_for_call,
 };

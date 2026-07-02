@@ -94,9 +94,7 @@ pub fn should_attempt(state: &AutoDreamState, workspace: &Path) -> bool {
 /// 3. Runs a forked agent with the consolidation prompt
 /// 4. On success, the lock mtime advances (recording consolidation)
 /// 5. On failure, rolls back the lock
-pub async fn run_consolidation(
-    params: super::super::MemoryAgentParams<'_>,
-) -> Result<(), String> {
+pub async fn run_consolidation(params: super::super::MemoryAgentParams<'_>) -> Result<(), String> {
     let workspace = params.workspace;
     let mem_dir = super::memory_dir(workspace);
 

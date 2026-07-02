@@ -78,7 +78,10 @@ pub(super) fn parse_feishu_event(
         .get("message_type")
         .and_then(|m| m.as_str())
         .unwrap_or("text");
-    tracing::info!("[feishu:debug] message_type={:?} raw_content_preview", message_type);
+    tracing::info!(
+        "[feishu:debug] message_type={:?} raw_content_preview",
+        message_type
+    );
     let sender_id = sender
         .get("sender_id")
         .and_then(|s| s.get("open_id"))
@@ -188,7 +191,9 @@ pub(super) fn parse_feishu_event(
                 .map(|s| s.to_string())
         }) {
             tracing::info!("[feishu:debug] extracted image_key, media push");
-            inbound.media.push(format!("feishu:image:{}:{}", message_id, key));
+            inbound
+                .media
+                .push(format!("feishu:image:{}:{}", message_id, key));
         } else {
             tracing::warn!("[feishu:debug] FAILED to extract image_key from raw_content");
         }
@@ -199,7 +204,9 @@ pub(super) fn parse_feishu_event(
             let mut keys = Vec::new();
             collect_post_image_keys(&parsed, &mut keys);
             for key in keys {
-                inbound.media.push(format!("feishu:image:{}:{}", message_id, key));
+                inbound
+                    .media
+                    .push(format!("feishu:image:{}:{}", message_id, key));
             }
         }
     } else if message_type == "file" {
@@ -271,9 +278,7 @@ fn collect_post_image_keys(parsed: &Value, out: &mut Vec<String>) {
                 for element in elements {
                     let tag = element.get("tag").and_then(|t| t.as_str()).unwrap_or("");
                     if tag == "img" {
-                        if let Some(key) =
-                            element.get("image_key").and_then(|k| k.as_str())
-                        {
+                        if let Some(key) = element.get("image_key").and_then(|k| k.as_str()) {
                             out.push(key.to_string());
                         }
                     }
@@ -282,7 +287,6 @@ fn collect_post_image_keys(parsed: &Value, out: &mut Vec<String>) {
         }
     }
 }
-
 
 /// Flatten Feishu "post" rich text to plain text.
 fn flatten_post_content(parsed: &Value) -> String {

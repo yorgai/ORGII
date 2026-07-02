@@ -108,8 +108,12 @@ impl UsageTelemetryCollector {
             .get(usage_key::CACHE_WRITE_TOKENS)
             .copied()
             .unwrap_or(0);
-        let related_tool_call_ids = tool_calls.iter().map(|tool_call| tool_call.id.clone()).collect();
-        let context_usage_json = context_usage_snapshot.and_then(|snapshot| serde_json::to_string(snapshot).ok());
+        let related_tool_call_ids = tool_calls
+            .iter()
+            .map(|tool_call| tool_call.id.clone())
+            .collect();
+        let context_usage_json =
+            context_usage_snapshot.and_then(|snapshot| serde_json::to_string(snapshot).ok());
         self.spans.push(LlmUsageSpan {
             iteration_index,
             prompt_tokens,
@@ -132,7 +136,12 @@ impl UsageTelemetryCollector {
         for tool_result in tool_results {
             let decision = self.pending_decisions.remove(&tool_result.tool_call_id);
             let (decision_completion_tokens, attribution_method) = decision
-                .map(|pending| (pending.decision_completion_tokens, pending.attribution_method))
+                .map(|pending| {
+                    (
+                        pending.decision_completion_tokens,
+                        pending.attribution_method,
+                    )
+                })
                 .unwrap_or((0, AttributionMethod::BytesOnly));
             self.tool_attributions.push(ToolUsageAttribution {
                 event_id: format!("tool-call-{}", tool_result.tool_call_id),
@@ -219,7 +228,9 @@ impl UsageTelemetryCollector {
 }
 
 fn serialized_tool_call_size(tool_call: &ToolCallRequest) -> i64 {
-    tool_call.id.len() as i64 + tool_call.name.len() as i64 + tool_call.arguments.to_string().len() as i64
+    tool_call.id.len() as i64
+        + tool_call.name.len() as i64
+        + tool_call.arguments.to_string().len() as i64
 }
 
 pub fn estimate_tokens_from_bytes(bytes: i64) -> i64 {
@@ -270,7 +281,10 @@ mod tests {
         );
         let telemetry = collector.finish();
         assert_eq!(telemetry.tool_attributions.len(), 1);
-        assert_eq!(telemetry.tool_attributions[0].decision_completion_tokens, 42);
+        assert_eq!(
+            telemetry.tool_attributions[0].decision_completion_tokens,
+            42
+        );
         assert_eq!(
             telemetry.tool_attributions[0].attribution_method,
             AttributionMethod::SingleToolIteration
@@ -283,7 +297,11 @@ mod tests {
         let mut collector = UsageTelemetryCollector::default();
         let tool_calls = vec![
             call("call-1", "read_file", json!({"path":"a.md"})),
-            call("call-2", "read_file", json!({"path":"a-very-long-path-name.md"})),
+            call(
+                "call-2",
+                "read_file",
+                json!({"path":"a-very-long-path-name.md"}),
+            ),
         ];
         let mut usage = HashMap::new();
         usage.insert(usage_key::COMPLETION_TOKENS.to_string(), 100);

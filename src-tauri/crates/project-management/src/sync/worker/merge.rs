@@ -4,10 +4,10 @@ use tracing::{debug, info, warn};
 
 use super::{events, finalize_failure, finalize_success, io, now_ms};
 use crate::projects::io::{
-    FieldRevision, SyncMetadata, allocate_short_id, apply_remote_merge, delete_work_item,
-    find_by_external_ref, read_labels, read_members, read_project, read_sync_metadata,
-    read_work_item, update_work_item_partial_with_revisions, write_labels, write_members,
-    write_work_item,
+    allocate_short_id, apply_remote_merge, delete_work_item, find_by_external_ref, read_labels,
+    read_members, read_project, read_sync_metadata, read_work_item,
+    update_work_item_partial_with_revisions, write_labels, write_members, write_work_item,
+    FieldRevision, SyncMetadata,
 };
 use crate::projects::types::work_items::{default_priority, default_status};
 use crate::projects::types::{

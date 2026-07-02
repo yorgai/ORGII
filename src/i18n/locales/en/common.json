@@ -2007,6 +2007,14 @@
     },
     "sessionFilter": {
       "allSessions": "All sessions"
+    },
+    "scope": {
+      "local": "Local",
+      "main": "Main checkout",
+      "worktrees": "Worktrees",
+      "searchPlaceholder": "Filter worktrees…",
+      "switchScope": "Switch source control scope",
+      "switchScopeActive": "Switch source control scope: {{repo}}, {{branch}}"
     }
   },
   "contextInfo": {

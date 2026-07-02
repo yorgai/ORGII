@@ -22,6 +22,7 @@ import type {
 import type { UserPresenceWire } from "@src/types/userPresence";
 
 export interface UserProfileWire {
+  name?: string;
   techSavvy?: TechSavvyLevel;
   jobRoles?: string[];
   familiarTechStacks?: string[];

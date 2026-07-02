@@ -7,14 +7,22 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { GitWorktreeEntry } from "@src/api/http/git/types";
+import type {
+  GitWorktreeDiffSummary,
+  GitWorktreeEntry,
+} from "@src/api/http/git/types";
 import { getGitWorktrees } from "@src/api/http/git/worktrees";
 import { getCodeEditorWebSocket } from "@src/api/realtime/codeEditorWebSocket";
 import { useMountedCleanup } from "@src/hooks/lifecycle/useMounted";
+import { createLogger } from "@src/hooks/logger";
 import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
 } from "@src/hooks/perf/useDebouncedCallback";
+
+import { extractMainWorktreeDiffSummary } from "../tabs/sourceControlScopePickerHelpers";
+
+const logger = createLogger("useGitWorktrees");
 
 export interface UseGitWorktreesOptions {
   repoId: string;
@@ -24,6 +32,8 @@ export interface UseGitWorktreesOptions {
 
 export interface UseGitWorktreesResult {
   worktrees: GitWorktreeEntry[];
+  /** Uncommitted diff stats for the host repo (main worktree). */
+  mainDiffSummary: GitWorktreeDiffSummary | null;
   hasWorktrees: boolean;
   loading: boolean;
   refresh: () => Promise<void>;
@@ -35,6 +45,8 @@ export function useGitWorktrees({
   enabled = true,
 }: UseGitWorktreesOptions): UseGitWorktreesResult {
   const [worktrees, setWorktrees] = useState<GitWorktreeEntry[]>([]);
+  const [mainDiffSummary, setMainDiffSummary] =
+    useState<GitWorktreeDiffSummary | null>(null);
   const [loading, setLoading] = useState(enabled);
   const loadedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -51,8 +63,9 @@ export function useGitWorktrees({
       });
       if (!mountedRef.current) return;
       setWorktrees(entries.filter((entry) => !entry.is_main));
-    } catch {
-      if (mountedRef.current) setWorktrees([]);
+      setMainDiffSummary(extractMainWorktreeDiffSummary(entries));
+    } catch (error) {
+      logger.warn("Failed to fetch git worktrees", error);
     } finally {
       if (mountedRef.current) {
         loadedRef.current = true;
@@ -71,6 +84,7 @@ export function useGitWorktrees({
     setLoading(enabled);
     if (!enabled) {
       setWorktrees([]);
+      setMainDiffSummary(null);
       return;
     }
 
@@ -103,6 +117,7 @@ export function useGitWorktrees({
 
   return {
     worktrees: visibleWorktrees,
+    mainDiffSummary: enabled ? mainDiffSummary : null,
     hasWorktrees: visibleWorktrees.length > 0,
     loading,
     refresh: fetchWorktrees,
