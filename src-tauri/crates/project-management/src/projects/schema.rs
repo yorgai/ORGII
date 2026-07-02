@@ -423,6 +423,7 @@ fn init_local_tables(conn: &Connection) -> SqliteResult<()> {
     )?;
     ensure_workitems_deleted_at_column(conn)?;
     ensure_projects_sync_columns(conn)?;
+    ensure_collab_sync_columns(conn)?;
     ensure_routine_definitions_durable_columns(conn)?;
     ensure_routine_fires_durable_columns(conn)?;
     conn.execute(
@@ -472,6 +473,17 @@ fn ensure_projects_sync_columns(conn: &Connection) -> SqliteResult<()> {
         ensure_column(conn, "projects", column, definition)?;
     }
     Ok(())
+}
+
+/// Last server row version applied/acknowledged for the `orgii_collab`
+/// provider (design §16.4). NULL for rows that never synced. Kept as a
+/// dedicated column because `local_version` is the local OCC counter
+/// (bumped on every local write) and `sync_cursor_blob` is the
+/// project-bound adapter's pull cursor — both have incompatible
+/// semantics with a remote row version.
+fn ensure_collab_sync_columns(conn: &Connection) -> SqliteResult<()> {
+    ensure_column(conn, "projects", "collab_remote_version", "INTEGER")?;
+    ensure_column(conn, "workitems", "collab_remote_version", "INTEGER")
 }
 
 fn ensure_routine_definitions_durable_columns(conn: &Connection) -> SqliteResult<()> {
@@ -551,6 +563,17 @@ pub fn init_outbox_table(conn: &Connection) -> SqliteResult<()> {
         CREATE INDEX IF NOT EXISTS idx_outbox_project_entity
             ON outbox_entries(project_slug, entity_type, entity_id);
         "#,
+    )?;
+    // `org_id` discriminates orgii_collab bridge rows (design §16.8): a
+    // non-NULL org_id means the row is drained/acked by the TS
+    // CollabSyncEngine through the `project_collab_outbox_*` commands,
+    // never by the in-process worker — both worker claim paths filter
+    // `org_id IS NULL`. Legacy rows (adapter-bound projects) keep NULL.
+    ensure_column(conn, "outbox_entries", "org_id", "TEXT")?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_outbox_org_status
+             ON outbox_entries(org_id, status, created_at)",
+        [],
     )?;
     Ok(())
 }

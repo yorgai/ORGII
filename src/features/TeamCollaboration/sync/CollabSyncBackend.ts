@@ -78,14 +78,57 @@ export interface UpsertProjectMetadataInput extends CollabSyncProfile {
   orgId: string;
   project: CollabProjectMetadataRecord;
   /** OCC base version; defaults to `project.version` when omitted. */
-  baseVersion?: number;
+  baseVersion?: number | null;
 }
 
 export interface UpsertWorkItemInput extends CollabSyncProfile {
   orgId: string;
   workItem: CollabWorkItemMetadataRecord;
   /** OCC base version; defaults to `workItem.version` when omitted. */
-  baseVersion?: number;
+  baseVersion?: number | null;
+}
+
+/** Server acknowledgement of an OCC upsert: the row's new version. */
+export interface CollabUpsertResult {
+  id: string;
+  version: number;
+}
+
+export interface DeleteProjectMetadataInput extends CollabSyncProfile {
+  orgId: string;
+  projectId: string;
+}
+
+export interface DeleteWorkItemMetadataInput extends CollabSyncProfile {
+  orgId: string;
+  workItemId: string;
+}
+
+export interface AllocateWorkItemShortIdInput extends CollabSyncProfile {
+  orgId: string;
+  /** Server project row id (== local `projects.id`, design §16.2). */
+  projectId: string;
+}
+
+/** Server-allocated short id (design §16.5): `<PREFIX>-<n>`. */
+export interface AllocateWorkItemShortIdResult {
+  shortId: string;
+  n: number;
+}
+
+export interface AcquireWorkItemLockInput extends CollabSyncProfile {
+  orgId: string;
+  workItemId: string;
+  /**
+   * Lock payload stored at `payload.executionLock` (design §16.6). The
+   * server forces `lockedByMemberId` to the authenticated member.
+   */
+  lockPayload: Record<string, unknown>;
+}
+
+export interface ReleaseWorkItemLockInput extends CollabSyncProfile {
+  orgId: string;
+  workItemId: string;
 }
 
 export interface UpsertSessionMetadataInput extends CollabSyncProfile {
@@ -324,8 +367,22 @@ export interface CollabSyncBackendClient {
   postChatMessage(
     input: PostChatMessageInput
   ): Promise<CollabChatMessageRecord>;
-  upsertProjectMetadata(input: UpsertProjectMetadataInput): Promise<void>;
-  upsertWorkItem(input: UpsertWorkItemInput): Promise<void>;
+  upsertProjectMetadata(
+    input: UpsertProjectMetadataInput
+  ): Promise<CollabUpsertResult>;
+  upsertWorkItem(input: UpsertWorkItemInput): Promise<CollabUpsertResult>;
+  deleteProjectMetadata(input: DeleteProjectMetadataInput): Promise<void>;
+  deleteWorkItemMetadata(input: DeleteWorkItemMetadataInput): Promise<void>;
+  /** Server-side per-project short-id counter (design §16.5). */
+  allocateWorkItemShortId(
+    input: AllocateWorkItemShortIdInput
+  ): Promise<AllocateWorkItemShortIdResult>;
+  /**
+   * Execution-lock arbitration (design §16.6). Acquire raises
+   * ORGII_CONFLICT while held; both return the row's new version.
+   */
+  acquireWorkItemLock(input: AcquireWorkItemLockInput): Promise<number>;
+  releaseWorkItemLock(input: ReleaseWorkItemLockInput): Promise<number>;
   upsertSessionMetadata(input: UpsertSessionMetadataInput): Promise<void>;
   removeSessionMetadata(input: RemoveSessionMetadataInput): Promise<void>;
   appendSessionEvents(input: AppendSessionEventsInput): Promise<void>;

@@ -11,6 +11,9 @@ import { cachedRead, invalidateCache } from "./cache";
 import type {
   BatchDeleteResult,
   BatchUpdateResult,
+  CollabOutboxAckResult,
+  CollabOutboxPushItem,
+  CollabRemoteEntity,
   ConfigureProjectOrgGitFolderSyncRequest,
   CreateProjectOrgRequest,
   EnrichedWorkItem,
@@ -88,6 +91,65 @@ export async function resolveOrgGitFolderConflict(
   request: ResolveProjectOrgGitFolderConflictRequest
 ): Promise<void> {
   return invoke("project_resolve_org_git_folder_conflict", { request });
+}
+
+// ============================================
+// Collab sync bridge (design §16.8)
+// ============================================
+
+/**
+ * Mark a local project org as backed by the orgii collab plane
+ * (`source='collab'`, `sync_provider='orgii_collab'`). Local mutations
+ * under the org start enqueueing orgii_collab outbox rows from here on.
+ */
+export async function configureOrgCollabSync(input: {
+  orgId: string;
+  externalOrgId?: string;
+}): Promise<ProjectOrg> {
+  const result = await invoke<ProjectOrg>("project_configure_org_collab_sync", {
+    orgId: input.orgId,
+    externalOrgId: input.externalOrgId ?? null,
+  });
+  invalidateCache("__project_orgs__");
+  return result;
+}
+
+/** Claim + hydrate pending collab pushes for one local project org. */
+export async function drainCollabOutbox(input: {
+  orgId: string;
+  max?: number;
+}): Promise<CollabOutboxPushItem[]> {
+  return invoke("project_collab_outbox_drain", {
+    orgId: input.orgId,
+    max: input.max ?? null,
+  });
+}
+
+/** Persist collab push outcomes (success / conflict-requeue / backoff). */
+export async function ackCollabOutbox(
+  results: CollabOutboxAckResult[]
+): Promise<void> {
+  return invoke("project_collab_outbox_ack", { results });
+}
+
+/**
+ * Apply pulled server rows into the local store (per-field merged,
+ * echo-free). Returns how many entities changed local state.
+ */
+export async function applyCollabRemote(input: {
+  orgId: string;
+  orgName?: string;
+  entities: CollabRemoteEntity[];
+}): Promise<number> {
+  const applied = await invoke<number>("project_collab_apply_remote", {
+    orgId: input.orgId,
+    orgName: input.orgName ?? null,
+    entities: input.entities,
+  });
+  if (applied > 0) {
+    invalidateCache();
+  }
+  return applied;
 }
 
 // ============================================

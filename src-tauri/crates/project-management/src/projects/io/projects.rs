@@ -141,6 +141,34 @@ pub fn write_project(
     description: &str,
     expect_new: bool,
 ) -> Result<(), String> {
+    write_project_inner(slug, meta, description, expect_new)?;
+    // orgii_collab bridge (design §16.8): project writes under a
+    // collab-synced org enqueue one bridge row. Remote-applied writes go
+    // through `write_project_remote` and never enqueue (no echo).
+    crate::sync::collab_bridge::record_project_write(
+        &meta.org_id,
+        &meta.id,
+        slug,
+        crate::sync::types::OutboxOp::Update,
+    )
+}
+
+/// Silent variant used exclusively by the collab bridge's remote-apply
+/// path (no outbox emission).
+pub(crate) fn write_project_remote(
+    slug: &str,
+    meta: &ProjectMeta,
+    description: &str,
+) -> Result<(), String> {
+    write_project_inner(slug, meta, description, false)
+}
+
+fn write_project_inner(
+    slug: &str,
+    meta: &ProjectMeta,
+    description: &str,
+    expect_new: bool,
+) -> Result<(), String> {
     let mut next_meta = meta.clone();
     if next_meta.work_item_prefix_custom {
         next_meta.work_item_prefix =
@@ -240,11 +268,30 @@ pub fn write_project(
 /// labels, milestones, and members.
 pub fn delete_project(slug: &str) -> Result<(), String> {
     let connection = conn()?;
+    let row: Option<(String, String)> = map_db(
+        connection
+            .query_row(
+                "SELECT id, org_id FROM projects WHERE slug = ?1",
+                params![slug],
+                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+            )
+            .optional(),
+    )?;
     let affected =
         map_db(connection.execute("DELETE FROM projects WHERE slug = ?1", params![slug]))?;
 
     if affected == 0 {
         return Err(format!("Project '{}' not found", slug));
+    }
+    drop(connection);
+    if let Some((project_id, org_id)) = row {
+        // Collab orgs propagate the delete as a server tombstone.
+        crate::sync::collab_bridge::record_project_write(
+            &org_id,
+            &project_id,
+            slug,
+            crate::sync::types::OutboxOp::Delete,
+        )?;
     }
     Ok(())
 }

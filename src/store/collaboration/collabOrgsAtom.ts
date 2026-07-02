@@ -150,6 +150,13 @@ export const collabInvitesAtom = atomWithStorage<CollabInviteRecord[]>(
 );
 collabInvitesAtom.debugLabel = "collabInvitesAtom";
 
+/**
+ * @deprecated M6 (design §16.2): shared projects are NATIVE rows in the
+ * local project store, synced by the engine's ProjectSyncChannel and read
+ * through `projectApi` scoped by `org.projectOrgId ?? org.id`. Nothing
+ * writes this mirror anymore; it is kept only so persisted localStorage
+ * state keeps parsing until the atom is removed outright.
+ */
 export const collabProjectsAtom = atomWithStorage<
   CollabProjectMetadataRecord[]
 >(
@@ -160,6 +167,10 @@ export const collabProjectsAtom = atomWithStorage<
 );
 collabProjectsAtom.debugLabel = "collabProjectsAtom";
 
+/**
+ * @deprecated M6 (design §16.2): see {@link collabProjectsAtom} — shared
+ * work items are native local rows now; this mirror is write-dead.
+ */
 export const collabWorkItemsAtom = atomWithStorage<
   CollabWorkItemMetadataRecord[]
 >(

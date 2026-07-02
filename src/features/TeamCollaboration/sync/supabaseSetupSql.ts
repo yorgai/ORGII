@@ -327,6 +327,13 @@ drop function if exists public.orgii_create_session_snapshot(text, text, text, j
 -- drop the M3 signature so the old overload cannot linger next to it.
 drop function if exists public.orgii_get_session_event_segments(text, text, integer, text, text, text);
 
+-- M6 (project/work-item collab sync): allocator + execution-lock RPCs.
+-- Dropped before (re)creation so a future signature change can never leave
+-- a stale overload behind.
+drop function if exists public.orgii_allocate_work_item_short_id(text, text, text, text, text);
+drop function if exists public.orgii_acquire_work_item_lock(text, text, jsonb, text, text, text);
+drop function if exists public.orgii_release_work_item_lock(text, text, text, text, text);
+
 -- ============================================================ auth
 
 create or replace function public.orgii_sync_version()
@@ -1593,6 +1600,148 @@ begin
 end;
 $$;
 
+-- Short-id allocator (design §16.5): the per-project counter lives on the
+-- server so two members can never mint the same PREFIX-n. Atomic
+-- update-returning; the counter is server-owned — orgii_upsert_project never
+-- writes next_work_item_id, and allocation does NOT bump version/updated_at
+-- (nothing row-visible changes for other members). Missing/tombstoned
+-- project raises the uniform ORGII_CONFLICT so callers fall back to a local
+-- provisional id without learning why.
+create or replace function public.orgii_allocate_work_item_short_id(
+  p_org_id text,
+  project_id text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_n integer;
+  v_prefix text;
+begin
+  perform public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
+
+  update public.orgii_projects
+     set next_work_item_id = next_work_item_id + 1
+   where id = project_id and org_id = p_org_id and deleted_at is null
+  returning next_work_item_id - 1, coalesce(work_item_prefix, 'WI')
+    into v_n, v_prefix;
+
+  if v_n is null then
+    raise exception 'ORGII_CONFLICT';
+  end if;
+
+  return jsonb_build_object('shortId', v_prefix || '-' || lpad(v_n::text, 4, '0'), 'n', v_n);
+end;
+$$;
+
+-- Execution lock arbitration (design §16.6): the lock is stored inside the
+-- work item payload jsonb so it propagates to every member through the
+-- normal delta. Acquire is OCC — it succeeds only while no lock is present;
+-- a held lock raises the uniform ORGII_CONFLICT (holder identity travels in
+-- the synced row, never in the error). lockedByMemberId is forced to the
+-- authenticated member so a client cannot acquire on someone else's behalf.
+create or replace function public.orgii_acquire_work_item_lock(
+  p_org_id text,
+  work_item_id text,
+  lock_payload jsonb,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_ctx record;
+  v_lock jsonb;
+  v_version integer;
+begin
+  select * into v_ctx
+  from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
+
+  v_lock := coalesce(lock_payload, '{}'::jsonb);
+  if v_ctx.member_id is not null then
+    v_lock := jsonb_set(v_lock, '{lockedByMemberId}', to_jsonb(v_ctx.member_id), true);
+  end if;
+
+  update public.orgii_work_items
+     set payload = jsonb_set(payload, '{executionLock}', v_lock, true),
+         version = version + 1,
+         updated_by_member_id = v_ctx.member_id,
+         updated_at = now()
+   where id = work_item_id and org_id = p_org_id and deleted_at is null
+     and (payload->'executionLock' is null or payload->'executionLock' = 'null'::jsonb)
+  returning version into v_version;
+
+  if v_version is null then
+    raise exception 'ORGII_CONFLICT';
+  end if;
+
+  return v_version;
+end;
+$$;
+
+-- Release: only the lock holder or an admin/root may clear. Releasing an
+-- already-unlocked row is idempotent (returns the current version).
+create or replace function public.orgii_release_work_item_lock(
+  p_org_id text,
+  work_item_id text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_ctx record;
+  v_row record;
+  v_version integer;
+begin
+  select * into v_ctx
+  from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
+
+  select w.version, w.payload->'executionLock' as lock into v_row
+  from public.orgii_work_items w
+  where w.id = work_item_id and w.org_id = p_org_id and w.deleted_at is null;
+
+  if v_row.version is null then
+    raise exception 'ORGII_CONFLICT';
+  end if;
+
+  if v_row.lock is null or v_row.lock = 'null'::jsonb then
+    return v_row.version;
+  end if;
+
+  if not (
+    v_ctx.is_root
+    or v_ctx.member_role = 'admin'
+    or v_row.lock->>'lockedByMemberId' = v_ctx.member_id
+  ) then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+
+  update public.orgii_work_items
+     set payload = payload - 'executionLock',
+         version = version + 1,
+         updated_by_member_id = v_ctx.member_id,
+         updated_at = now()
+   where id = work_item_id and org_id = p_org_id
+  returning version into v_version;
+
+  return v_version;
+end;
+$$;
+
 -- ============================================================ legacy snapshot flow (retired with segments)
 
 create or replace function public.orgii_request_session_snapshot(
@@ -1983,6 +2132,9 @@ grant execute on function public.orgii_upsert_project(text, jsonb, integer, text
 grant execute on function public.orgii_delete_project(text, text, text, text, text) to anon;
 grant execute on function public.orgii_upsert_work_item(text, jsonb, integer, text, text, text) to anon;
 grant execute on function public.orgii_delete_work_item(text, text, text, text, text) to anon;
+grant execute on function public.orgii_allocate_work_item_short_id(text, text, text, text, text) to anon;
+grant execute on function public.orgii_acquire_work_item_lock(text, text, jsonb, text, text, text) to anon;
+grant execute on function public.orgii_release_work_item_lock(text, text, text, text, text) to anon;
 grant execute on function public.orgii_request_session_snapshot(text, jsonb, text, text) to anon;
 grant execute on function public.orgii_create_session_snapshot(text, text, text, jsonb, text, text, text) to anon;
 grant execute on function public.orgii_deny_session_snapshot(text, text, text, text, text) to anon;

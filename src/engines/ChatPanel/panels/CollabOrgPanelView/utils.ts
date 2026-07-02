@@ -158,35 +158,6 @@ export function upsertMember(
   return next;
 }
 
-export function getStringField(
-  record: Record<string, unknown>,
-  fieldNames: string[],
-  fallback = "—"
-): string {
-  for (const fieldName of fieldNames) {
-    const value = record[fieldName];
-    if (typeof value === "string" && value.trim()) return value;
-  }
-  return fallback;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function getRecordField(
-  record: Record<string, unknown>,
-  fieldName: string
-): Record<string, unknown> | null {
-  const value = record[fieldName];
-  return isRecord(value) ? value : null;
-}
-
-export function getMetadataId(record: Record<string, unknown>): string | null {
-  const id = record.id;
-  return typeof id === "string" && id.trim() ? id : null;
-}
-
 // Single source of the default-OFF access settings (design §6.3, fix S8):
 // the panel and the sync engine must agree, so the implementation lives in
 // collabSyncUtils and is re-exported here for the panel hooks.

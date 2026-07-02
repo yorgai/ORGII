@@ -29,15 +29,21 @@ import type {
 
 import type {
   AcceptInviteInput,
+  AcquireWorkItemLockInput,
+  AllocateWorkItemShortIdInput,
+  AllocateWorkItemShortIdResult,
   AppendSessionEventsInput,
   CollabOrgState,
   CollabSessionShareRecord,
   CollabSyncBackendClient,
   CollabSyncProfile,
+  CollabUpsertResult,
   CreateInviteInput,
   CreateOrgInput,
   CreateSessionShareInput,
   CreateSessionShareResult,
+  DeleteProjectMetadataInput,
+  DeleteWorkItemMetadataInput,
   DenySessionSnapshotInput,
   GcSessionEventSegmentsInput,
   GetSessionEventSegmentsInput,
@@ -46,6 +52,7 @@ import type {
   ListSessionSharesInput,
   PostChatMessageInput,
   PublishSessionSnapshotInput,
+  ReleaseWorkItemLockInput,
   RemoveMemberInput,
   RemoveSessionMetadataInput,
   RequestRepoJoinInput,
@@ -72,6 +79,11 @@ import {
 } from "./collabGzip";
 
 const JsonRecordSchema = z.record(z.string(), z.unknown());
+
+const CollabUpsertResultSchema = z.object({
+  id: z.string(),
+  version: z.number(),
+}) satisfies z.ZodType<CollabUpsertResult>;
 
 const CreateOrgResponseSchema = z.object({
   org: CollabOrgRecordSchema,
@@ -619,28 +631,102 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
 
   async upsertProjectMetadata(
     input: UpsertProjectMetadataInput
-  ): Promise<void> {
+  ): Promise<CollabUpsertResult> {
     const projectVersion = input.project.version;
-    await callRpcVoid(input, "orgii_upsert_project", {
+    return callRpc(
+      input,
+      "orgii_upsert_project",
+      {
+        p_org_id: input.orgId,
+        ...flexAuthParams(input),
+        project: input.project,
+        base_version:
+          input.baseVersion ??
+          (typeof projectVersion === "number" ? projectVersion : null),
+      },
+      CollabUpsertResultSchema
+    );
+  },
+
+  async upsertWorkItem(
+    input: UpsertWorkItemInput
+  ): Promise<CollabUpsertResult> {
+    const workItemVersion = input.workItem.version;
+    return callRpc(
+      input,
+      "orgii_upsert_work_item",
+      {
+        p_org_id: input.orgId,
+        ...flexAuthParams(input),
+        work_item: input.workItem,
+        base_version:
+          input.baseVersion ??
+          (typeof workItemVersion === "number" ? workItemVersion : null),
+      },
+      CollabUpsertResultSchema
+    );
+  },
+
+  async deleteProjectMetadata(
+    input: DeleteProjectMetadataInput
+  ): Promise<void> {
+    await callRpcVoid(input, "orgii_delete_project", {
       p_org_id: input.orgId,
       ...flexAuthParams(input),
-      project: input.project,
-      base_version:
-        input.baseVersion ??
-        (typeof projectVersion === "number" ? projectVersion : null),
+      project_id: input.projectId,
     });
   },
 
-  async upsertWorkItem(input: UpsertWorkItemInput): Promise<void> {
-    const workItemVersion = input.workItem.version;
-    await callRpcVoid(input, "orgii_upsert_work_item", {
+  async deleteWorkItemMetadata(
+    input: DeleteWorkItemMetadataInput
+  ): Promise<void> {
+    await callRpcVoid(input, "orgii_delete_work_item", {
       p_org_id: input.orgId,
       ...flexAuthParams(input),
-      work_item: input.workItem,
-      base_version:
-        input.baseVersion ??
-        (typeof workItemVersion === "number" ? workItemVersion : null),
+      work_item_id: input.workItemId,
     });
+  },
+
+  async allocateWorkItemShortId(
+    input: AllocateWorkItemShortIdInput
+  ): Promise<AllocateWorkItemShortIdResult> {
+    return callRpc(
+      input,
+      "orgii_allocate_work_item_short_id",
+      {
+        p_org_id: input.orgId,
+        ...flexAuthParams(input),
+        project_id: input.projectId,
+      },
+      z.object({ shortId: z.string(), n: z.number() })
+    );
+  },
+
+  async acquireWorkItemLock(input: AcquireWorkItemLockInput): Promise<number> {
+    return callRpc(
+      input,
+      "orgii_acquire_work_item_lock",
+      {
+        p_org_id: input.orgId,
+        ...flexAuthParams(input),
+        work_item_id: input.workItemId,
+        lock_payload: input.lockPayload,
+      },
+      z.number()
+    );
+  },
+
+  async releaseWorkItemLock(input: ReleaseWorkItemLockInput): Promise<number> {
+    return callRpc(
+      input,
+      "orgii_release_work_item_lock",
+      {
+        p_org_id: input.orgId,
+        ...flexAuthParams(input),
+        work_item_id: input.workItemId,
+      },
+      z.number()
+    );
   },
 
   async upsertSessionMetadata(

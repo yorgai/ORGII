@@ -180,6 +180,36 @@ describe("Supabase sync setup SQL", () => {
       "grant execute on function public.orgii_get_session_event_segments(text, text, integer, text, text, text, text) to anon;"
     );
   });
+
+  it("declares the M6 project/work-item collab RPCs: allocator + execution lock", () => {
+    // Short-id allocator (§16.5): server-owned counter, atomic
+    // update-returning, uniform conflict on missing/tombstoned project.
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "orgii_allocate_work_item_short_id"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "next_work_item_id = next_work_item_id + 1"
+    );
+    // Execution lock (§16.6): OCC acquire only while unlocked; holder
+    // forced to the authenticated member; release holder/admin-gated.
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_acquire_work_item_lock");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_release_work_item_lock");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("{executionLock}");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("lockedByMemberId");
+    // Grants + drop-before-create discipline.
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "grant execute on function public.orgii_allocate_work_item_short_id(text, text, text, text, text) to anon;"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "grant execute on function public.orgii_acquire_work_item_lock(text, text, jsonb, text, text, text) to anon;"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "grant execute on function public.orgii_release_work_item_lock(text, text, text, text, text) to anon;"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "drop function if exists public.orgii_allocate_work_item_short_id(text, text, text, text, text);"
+    );
+  });
 });
 
 describe("supabaseSyncClient", () => {
@@ -996,5 +1026,111 @@ describe("supabaseSyncClient", () => {
     expect(body).not.toHaveProperty("p_member_id");
     expect(body).not.toHaveProperty("p_member_token");
     expect(body).not.toHaveProperty("p_org_secret");
+  });
+
+  it("upsertWorkItem sends the OCC base version and returns the new server version", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(mockJsonResponse({ id: "AAA-0001", version: 4 }));
+
+    const result = await supabaseSyncClient.upsertWorkItem({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      workItem: { id: "AAA-0001", title: "T" },
+      baseVersion: 3,
+    });
+
+    const body = getRpcBody(fetchMock, "orgii_upsert_work_item");
+    expect(body.p_org_id).toBe("org-1");
+    expect(body.base_version).toBe(3);
+    expect(body.work_item).toEqual({ id: "AAA-0001", title: "T" });
+    expect(result).toEqual({ id: "AAA-0001", version: 4 });
+  });
+
+  it("upsertProjectMetadata returns the new server version (never-synced base is null)", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(mockJsonResponse({ id: "p-1", version: 1 }));
+
+    const result = await supabaseSyncClient.upsertProjectMetadata({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      project: { id: "p-1", name: "P" },
+      baseVersion: null,
+    });
+
+    const body = getRpcBody(fetchMock, "orgii_upsert_project");
+    expect(body.base_version).toBeNull();
+    expect(result).toEqual({ id: "p-1", version: 1 });
+  });
+
+  it("delete RPCs send the entity id under the RPC's parameter name", async () => {
+    // A Response body is single-read: mint a fresh one per call.
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => mockJsonResponse(null));
+
+    await supabaseSyncClient.deleteWorkItemMetadata({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      workItemId: "AAA-0001",
+    });
+    await supabaseSyncClient.deleteProjectMetadata({
+      ...ROOT_PROFILE,
+      orgId: "org-1",
+      projectId: "p-1",
+    });
+
+    expect(getRpcBody(fetchMock, "orgii_delete_work_item").work_item_id).toBe(
+      "AAA-0001"
+    );
+    const projectBody = getRpcBody(fetchMock, "orgii_delete_project");
+    expect(projectBody.project_id).toBe("p-1");
+    expect(projectBody.p_org_secret).toBe("secret-1");
+  });
+
+  it("allocateWorkItemShortId parses the server-allocated id (§16.5)", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(mockJsonResponse({ shortId: "AUT-0007", n: 7 }));
+
+    const allocated = await supabaseSyncClient.allocateWorkItemShortId({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      projectId: "p-1",
+    });
+
+    const body = getRpcBody(fetchMock, "orgii_allocate_work_item_short_id");
+    expect(body.p_org_id).toBe("org-1");
+    expect(body.project_id).toBe("p-1");
+    expect(body.p_member_id).toBe("member-1");
+    expect(allocated).toEqual({ shortId: "AUT-0007", n: 7 });
+  });
+
+  it("acquire/release work item lock round-trip the row version (§16.6)", async () => {
+    // A Response body is single-read: mint a fresh one per call.
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => mockJsonResponse(5));
+
+    const acquired = await supabaseSyncClient.acquireWorkItemLock({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      workItemId: "AAA-0001",
+      lockPayload: { activeSessionId: "session-9" },
+    });
+    const released = await supabaseSyncClient.releaseWorkItemLock({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      workItemId: "AAA-0001",
+    });
+
+    const acquireBody = getRpcBody(fetchMock, "orgii_acquire_work_item_lock");
+    expect(acquireBody.work_item_id).toBe("AAA-0001");
+    expect(acquireBody.lock_payload).toEqual({ activeSessionId: "session-9" });
+    const releaseBody = getRpcBody(fetchMock, "orgii_release_work_item_lock");
+    expect(releaseBody.work_item_id).toBe("AAA-0001");
+    expect(acquired).toBe(5);
+    expect(released).toBe(5);
   });
 });

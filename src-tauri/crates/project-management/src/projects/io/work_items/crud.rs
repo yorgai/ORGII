@@ -153,7 +153,17 @@ pub fn write_work_item(
     ))?;
     drop(connection);
 
-    write_work_item_with_scope(Some(project_id), &org_id, short_id, frontmatter, body)
+    write_work_item_with_scope(Some(project_id), &org_id, short_id, frontmatter, body)?;
+    // orgii_collab bridge (design §16.8): full writes — create, delete,
+    // restore, whole-row update — enqueue one bridge row when the org is
+    // collab-synced. Remote-applied writes go through
+    // `write_work_item_remote` instead and never enqueue (no echo).
+    crate::sync::collab_bridge::record_work_item_write(
+        &org_id,
+        Some(project_slug),
+        &frontmatter.id,
+        frontmatter.deleted_at.is_some(),
+    )
 }
 
 pub fn write_standalone_work_item(
@@ -162,13 +172,55 @@ pub fn write_standalone_work_item(
     frontmatter: &WorkItemFrontmatter,
     body: &str,
 ) -> Result<(), String> {
-    write_work_item_with_scope(
+    let org_id = org_id.unwrap_or("personal-org");
+    write_work_item_with_scope(None, org_id, short_id, frontmatter, body)?;
+    crate::sync::collab_bridge::record_work_item_write(
+        org_id,
         None,
-        org_id.unwrap_or("personal-org"),
-        short_id,
-        frontmatter,
-        body,
+        &frontmatter.id,
+        frontmatter.deleted_at.is_some(),
     )
+}
+
+/// Silent variant used exclusively by the collab bridge's remote-apply
+/// path: identical write semantics, but never emits an outbox row —
+/// applying a pulled change must not echo it back to the server.
+pub(crate) fn write_work_item_remote(
+    project_id: Option<String>,
+    org_id: &str,
+    short_id: &str,
+    frontmatter: &WorkItemFrontmatter,
+    body: &str,
+) -> Result<(), String> {
+    write_work_item_with_scope(project_id, org_id, short_id, frontmatter, body)
+}
+
+/// Read one work item by its `workitems.id` primary key, scoped to an
+/// org. The collab bridge's outbox rows carry the row id (stable across
+/// project moves) rather than a `(project, short_id)` pair.
+pub fn read_work_item_by_row_id(
+    org_id: &str,
+    work_item_id: &str,
+) -> Result<Option<WorkItemData>, String> {
+    let connection = conn()?;
+    let core = map_db(
+        connection
+            .query_row(
+                "SELECT id, project_id, short_id, title, body, status, priority, assignee, assignee_type,
+                        milestone, parent, start_date, target_date, created_at, updated_at, deleted_at
+                 FROM workitems
+                 WHERE id = ?1 AND org_id = ?2",
+                params![work_item_id, org_id],
+                row_to_core,
+            )
+            .optional(),
+    )?;
+    let Some(core) = core else {
+        return Ok(None);
+    };
+    let labels = read_labels_for(&connection, &core.work_item_id)?;
+    let extras = read_extras_for(&connection, &core.work_item_id)?;
+    Ok(Some(assemble_work_item(core, labels, extras)))
 }
 
 fn write_work_item_with_scope(
@@ -432,7 +484,24 @@ pub fn move_work_item(short_id: &str, from_project: &str, to_project: &str) -> R
         ));
     }
 
+    let moved: Option<(String, String)> = map_db(
+        tx.query_row(
+            "SELECT id, org_id FROM workitems WHERE project_id = ?1 AND short_id = ?2",
+            params![&to_id, short_id],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        )
+        .optional(),
+    )?;
+
     map_db(tx.commit())?;
+    if let Some((work_item_id, org_id)) = moved {
+        crate::sync::collab_bridge::record_work_item_write(
+            &org_id,
+            Some(to_project),
+            &work_item_id,
+            false,
+        )?;
+    }
     Ok(())
 }
 

@@ -5,9 +5,7 @@ import { useTranslation } from "react-i18next";
 import {
   collabMembersAtom,
   collabOrgsAtom,
-  collabProjectsAtom,
   collabSessionSnapshotRequestsAtom,
-  collabWorkItemsAtom,
   remoteTeammateSessionsAtom,
 } from "@src/store/collaboration/collabOrgsAtom";
 import { COLLAB_ROLE } from "@src/store/collaboration/types";
@@ -20,8 +18,8 @@ import { COLLAB_ORG_TAB } from "./constants";
 import type { CollabOrgTab } from "./constants";
 import { useAccessSettingsModel } from "./useAccessSettingsModel";
 import { useCollabOrgChat } from "./useCollabOrgChat";
-import { useLocalOrgMetadata } from "./useLocalOrgMetadata";
 import { useMemberActions } from "./useMemberActions";
+import { useOrgLocalEntities } from "./useOrgLocalEntities";
 import { useSessionActions } from "./useSessionActions";
 import { getSessionsTabBanners, isToday, toSessionTableItem } from "./utils";
 
@@ -33,8 +31,6 @@ export function useCollabOrgPanelModel(
   const sessions = useAtomValue(sessionsAtom);
   const remoteSessions = useAtomValue(remoteTeammateSessionsAtom);
   const members = useAtomValue(collabMembersAtom);
-  const projects = useAtomValue(collabProjectsAtom);
-  const workItems = useAtomValue(collabWorkItemsAtom);
   const snapshotRequests = useAtomValue(collabSessionSnapshotRequestsAtom);
   const setSelectedCollabOrg = useSetAtom(chatPanelSelectedCollabOrgAtom);
   const [activeTab, setActiveTab] = useState<CollabOrgTab>(
@@ -86,7 +82,11 @@ export function useCollabOrgPanelModel(
     currentMember,
     selectedCollabOrg,
   });
-  const { localMetadataError } = useLocalOrgMetadata(org);
+  // Native local rows (design §16.2), keyed by the aliased project org —
+  // projectOrgId, NOT org.id (they differ when the alias matched an
+  // existing local org by name).
+  const { orgProjects, orgWorkItems, localMetadataError } =
+    useOrgLocalEntities(org);
 
   const orgSessions = useMemo(
     () =>
@@ -142,20 +142,6 @@ export function useCollabOrgPanelModel(
         .filter((message) => message.orgId === selectedCollabOrg.orgId)
         .sort((left, right) => left.createdAt.localeCompare(right.createdAt)),
     [chatModel.chatMessages, selectedCollabOrg.orgId]
-  );
-
-  const orgProjects = useMemo(
-    () =>
-      projects.filter((project) => project.orgId === selectedCollabOrg.orgId),
-    [projects, selectedCollabOrg.orgId]
-  );
-
-  const orgWorkItems = useMemo(
-    () =>
-      workItems.filter(
-        (workItem) => workItem.orgId === selectedCollabOrg.orgId
-      ),
-    [selectedCollabOrg.orgId, workItems]
   );
 
   const latestSnapshotRequest = useMemo(

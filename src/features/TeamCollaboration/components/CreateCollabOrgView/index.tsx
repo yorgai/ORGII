@@ -124,17 +124,23 @@ async function ensureProjectOrgForCollabOrg(
   org: CollabOrgRecord
 ): Promise<ProjectOrg> {
   const projectOrgs = await projectApi.readOrgs();
-  const existingOrg = projectOrgs.find(
-    (projectOrg) => projectOrg.id === org.id
-  );
-  if (existingOrg) return existingOrg;
+  const projectOrg =
+    projectOrgs.find((candidate) => candidate.id === org.id) ??
+    projectOrgs.find((candidate) => candidate.name === org.name) ??
+    (await projectApi.createOrg({ name: org.name, id: org.id }));
 
-  const existingByName = projectOrgs.find(
-    (projectOrg) => projectOrg.name === org.name
-  );
-  if (existingByName) return existingByName;
-
-  return projectApi.createOrg({ name: org.name, id: org.id });
+  // Mark the aliased local org as collab-synced (design §16.2/§16.8):
+  // source='collab' + sync_provider='orgii_collab' is what routes local
+  // project / work-item mutations into the orgii_collab outbox. The
+  // engine's apply path self-heals this flag too, but stamping it here
+  // makes the very first local mutation sync without waiting for a pull.
+  if (projectOrg.sync_provider !== "orgii_collab") {
+    return projectApi.configureOrgCollabSync({
+      orgId: projectOrg.id,
+      externalOrgId: org.id,
+    });
+  }
+  return projectOrg;
 }
 
 const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({

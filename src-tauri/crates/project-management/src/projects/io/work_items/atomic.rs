@@ -391,8 +391,32 @@ pub fn update_work_item_partial(
     if !changed_fields.is_empty() {
         let payload = changed_fields_payload(&data, &changed_fields);
         crate::sync::io::record_local_update(project_slug, short_id, &changed_fields, &payload)?;
+    } else if touches_payload_tail(updates) {
+        // Payload-tail-only patch (todos / comments / linked sessions /
+        // orchestrator state / lock …): not covered by the sync-tracked
+        // diff, but collab-synced orgs still need to push the row —
+        // those fields travel in the server payload jsonb (design §16.3).
+        crate::sync::collab_bridge::record_work_item_payload_touch(project_slug, short_id)?;
     }
     Ok(data)
+}
+
+/// True when the patch touches any field that lives only in the server
+/// payload jsonb (outside the sync-tracked field set).
+fn touches_payload_tail(updates: &WorkItemPartialUpdate) -> bool {
+    updates.todos.is_some()
+        || updates.comments.is_some()
+        || updates.linked_sessions.is_some()
+        || updates.orchestrator_config.is_some()
+        || updates.orchestrator_state.is_some()
+        || updates.schedule.is_some()
+        || updates.execution_lock.is_some()
+        || updates.close_out.is_some()
+        || updates.work_products.is_some()
+        || updates.starred.is_some()
+        || updates.assignee_type.is_some()
+        || updates.project.is_some()
+        || updates.created_by.is_some()
 }
 
 /// Build the JSON payload that gets persisted to

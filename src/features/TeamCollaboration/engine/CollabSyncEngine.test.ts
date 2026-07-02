@@ -13,12 +13,10 @@ import {
   collabMembersAtom,
   collabOrgsAtom,
   collabPendingOpenSessionAtom,
-  collabProjectsAtom,
   collabRepoJoinRequestsAtom,
   collabSessionAccessSettingsAtom,
   collabSessionPushCursorsAtom,
   collabSessionSnapshotRequestsAtom,
-  collabWorkItemsAtom,
   remoteTeammateSessionsAtom,
 } from "@src/store/collaboration/collabOrgsAtom";
 import {
@@ -42,6 +40,7 @@ import { createInstrumentedStore } from "@src/util/core/state/instrumentedStore"
 import type { CollabOrgState } from "../sync/CollabSyncBackend";
 import { supabaseSyncClient } from "../sync/supabaseSyncClient";
 import { CollabSyncEngine } from "./CollabSyncEngine";
+import { tauriProjectSyncBridge } from "./projectSyncBridge";
 
 vi.mock("../sync/supabaseSyncClient", () => ({
   supabaseSyncClient: {
@@ -69,8 +68,21 @@ vi.mock("@src/engines/SessionCore/core/store/EventStoreProxy", () => ({
   },
 }));
 
+// ProjectSyncChannel's Tauri bridge (design §16.8): the engine tests only
+// need the channel to be a well-behaved no-op — ProjectSyncChannel.test.ts
+// covers the drain/push/ack/apply protocol itself.
+vi.mock("./projectSyncBridge", () => ({
+  tauriProjectSyncBridge: {
+    drainOutbox: vi.fn(async () => []),
+    ackOutbox: vi.fn(async () => undefined),
+    applyRemote: vi.fn(async () => 0),
+    notifyDataChanged: vi.fn(async () => undefined),
+  },
+}));
+
 const syncMock = vi.mocked(supabaseSyncClient);
 const eventStoreMock = vi.mocked(eventStoreProxy);
+const bridgeMock = vi.mocked(tauriProjectSyncBridge);
 
 const REPO_PATH = "/repo/alpha";
 
@@ -198,8 +210,6 @@ describe("CollabSyncEngine", () => {
     store.set(collabOrgsAtom, []);
     store.set(collabMembersAtom, []);
     store.set(collabInvitesAtom, []);
-    store.set(collabProjectsAtom, []);
-    store.set(collabWorkItemsAtom, []);
     store.set(collabConnectionStatesAtom, []);
     store.set(collabChatMessagesAtom, []);
     store.set(collabSessionAccessSettingsAtom, []);
@@ -253,6 +263,12 @@ describe("CollabSyncEngine", () => {
     eventStoreMock.getPersistedEvents.mockResolvedValue([]);
     eventStoreMock.set.mockResolvedValue(undefined);
     eventStoreMock.saveToCache.mockResolvedValue(0);
+    // resetAllMocks wipes the module-mock implementations — re-arm the
+    // ProjectSyncChannel bridge as a well-behaved no-op every test.
+    bridgeMock.drainOutbox.mockResolvedValue([]);
+    bridgeMock.ackOutbox.mockResolvedValue(undefined);
+    bridgeMock.applyRemote.mockResolvedValue(0);
+    bridgeMock.notifyDataChanged.mockResolvedValue(undefined);
 
     resetAtoms();
     engine = new CollabSyncEngine();

@@ -30,12 +30,10 @@ import {
   collabMembersAtom,
   collabOrgsAtom,
   collabPendingOpenSessionAtom,
-  collabProjectsAtom,
   collabRepoJoinRequestsAtom,
   collabSessionAccessSettingsAtom,
   collabSessionPushCursorsAtom,
   collabSessionSnapshotRequestsAtom,
-  collabWorkItemsAtom,
   remoteTeammateSessionsAtom,
 } from "@src/store/collaboration/collabOrgsAtom";
 import type { CollabSessionPushCursor } from "@src/store/collaboration/collabOrgsAtom";
@@ -48,9 +46,7 @@ import type {
   CollabMemberRecord,
   CollabOrgConnectionState,
   CollabOrgRecord,
-  CollabProjectMetadataRecord,
   CollabSessionAccessSettings,
-  CollabWorkItemMetadataRecord,
   RemoteTeammateSessionMetadata,
 } from "@src/store/collaboration/types";
 import { sessionsAtom } from "@src/store/session/sessionAtom/atoms";
@@ -74,6 +70,7 @@ import {
 import type { CollabOrgState } from "../sync/CollabSyncBackend";
 import { computeSegmentHash } from "../sync/collabGzip";
 import { supabaseSyncClient } from "../sync/supabaseSyncClient";
+import { ProjectSyncChannel } from "./ProjectSyncChannel";
 import {
   addMemberIfUnknown,
   computeFrozenEventCount,
@@ -88,14 +85,13 @@ import {
   splitFrozenIntoSegments,
   upsertChatMessage,
   upsertCollabMember,
-  upsertCollabMetadataRecord,
   upsertConnectionState,
   upsertInviteRecord,
   upsertRemoteSession,
   upsertRepoJoinRequest,
   upsertSnapshotRequest,
-  withOrgId,
 } from "./collabSyncEngineHelpers";
+import { tauriProjectSyncBridge } from "./projectSyncBridge";
 
 type CollabStore = ReturnType<typeof getInstrumentedStore>;
 
@@ -144,6 +140,11 @@ export class CollabSyncEngine {
 
   // --- PullLoop state -------------------------------------------------------
   private readonly pullStates = new Map<string, OrgPullState>();
+  /** Project/work-item sync (design §16.8), one shared channel instance. */
+  private readonly projectSyncChannel = new ProjectSyncChannel({
+    client: supabaseSyncClient,
+    bridge: tauriProjectSyncBridge,
+  });
   private readonly verifiedOrgIds = new Set<string>();
   /** Segments retention sweep fired once per admin org per engine start (§7.5). */
   private readonly gcTriggeredOrgIds = new Set<string>();
@@ -469,20 +470,18 @@ export class CollabSyncEngine {
     store.set(collabInvitesAtom, (current) =>
       state.invites.reduce(upsertInviteRecord, current)
     );
-    store.set(collabProjectsAtom, (current) =>
-      state.projects
-        .map((project) =>
-          withOrgId<CollabProjectMetadataRecord>(org.id, project)
-        )
-        .reduce(upsertCollabMetadataRecord, current)
-    );
-    store.set(collabWorkItemsAtom, (current) =>
-      state.workItems
-        .map((workItem) =>
-          withOrgId<CollabWorkItemMetadataRecord>(org.id, workItem)
-        )
-        .reduce(upsertCollabMetadataRecord, current)
-    );
+
+    // Projects / work items land as NATIVE local rows (design §16.2/§16.8):
+    // the delta is applied into SQLite (per-field merged, echo-free) and the
+    // org's orgii_collab outbox is drained/pushed/acked — the old jsonb
+    // mirror atoms are retired. Channel errors surface like any other pull
+    // failure (connection ERROR + backoff).
+    await this.projectSyncChannel.sync({
+      org,
+      profile,
+      state,
+    });
+    if (this.generation !== generation) return;
 
     // Tombstoned sessions bypass the scope filter: removals must propagate
     // even when the org repo scopes no longer cover the session.

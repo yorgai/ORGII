@@ -170,6 +170,45 @@ pub fn configure_project_org_git_folder_sync(
     read_project_org(org_id)
 }
 
+/// Mark a project org as backed by the orgii collab plane (design
+/// §16.2): `source='collab'`, `sync_provider='orgii_collab'`. Mirrors
+/// [`configure_project_org_git_folder_sync`]; the two providers are
+/// mutually exclusive per org. `external_org_id` records the collab org
+/// id when the aliased local org uses a different id.
+pub fn configure_project_org_collab_sync(
+    org_id: &str,
+    external_org_id: Option<&str>,
+) -> Result<ProjectOrg, String> {
+    let org_id = org_id.trim();
+    if org_id.is_empty() {
+        return Err("Org ID is required".to_string());
+    }
+    let now = now_ms();
+    let connection = conn()?;
+    let updated = map_db(connection.execute(
+        "UPDATE project_orgs
+            SET source = ?1,
+                sync_provider = ?2,
+                sync_config_json = NULL,
+                sync_connection_id = NULL,
+                external_org_id = ?3,
+                updated_at = ?4
+          WHERE id = ?5",
+        params![
+            crate::sync::collab_bridge::COLLAB_ORG_SOURCE,
+            crate::sync::collab_bridge::COLLAB_SYNC_PROVIDER,
+            external_org_id,
+            now,
+            org_id,
+        ],
+    ))?;
+    if updated == 0 {
+        return Err(format!("org not found: {}", org_id));
+    }
+
+    read_project_org(org_id)
+}
+
 fn row_to_project_org(row: &rusqlite::Row<'_>) -> rusqlite::Result<ProjectOrg> {
     let created_at_ms: i64 = row.get(9)?;
     let updated_at_ms: i64 = row.get(10)?;

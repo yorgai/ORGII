@@ -153,32 +153,6 @@ export function upsertChatMessage(
   return next;
 }
 
-function getMetadataId(record: Record<string, unknown>): string | null {
-  const id = record.id;
-  return typeof id === "string" && id.trim() ? id : null;
-}
-
-export function upsertCollabMetadataRecord<
-  TRecord extends Record<string, unknown>,
->(current: TRecord[], incoming: TRecord): TRecord[] {
-  const incomingId = getMetadataId(incoming);
-  if (!incomingId) return [incoming, ...current];
-  const existingIndex = current.findIndex(
-    (record) => getMetadataId(record) === incomingId
-  );
-  if (existingIndex < 0) return [incoming, ...current];
-  const next = [...current];
-  next[existingIndex] = { ...current[existingIndex], ...incoming };
-  return next;
-}
-
-export function withOrgId<TRecord extends Record<string, unknown>>(
-  orgId: string,
-  record: TRecord
-): TRecord {
-  return { ...record, orgId };
-}
-
 export function upsertSnapshotRequest(
   current: CollabSessionSnapshotRequestRecord[],
   incoming: CollabSessionSnapshotRequestRecord

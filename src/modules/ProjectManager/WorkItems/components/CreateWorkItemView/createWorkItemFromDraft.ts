@@ -3,6 +3,7 @@ import {
   type WorkItemFrontmatter,
   projectApi,
 } from "@src/api/http/project";
+import { allocateCollabAwareWorkItemId } from "@src/features/TeamCollaboration/collabShortId";
 import { unresolveImagePathsForStorage } from "@src/modules/ProjectManager/shared/utils/workItemImagePaths";
 import type { WorkItemDraft } from "@src/store/workstation/projectManager";
 import {
@@ -42,8 +43,10 @@ export async function createWorkItemFromDraft({
   const descriptionText = unresolveImagePathsForStorage(
     (description ?? draft.description).trim()
   );
+  // Collab-synced orgs allocate on the server (design §16.5) with a
+  // local-counter fallback when offline; everything else stays local.
   const shortId = selectedProjectSlug
-    ? await projectApi.allocateWorkItemId(selectedProjectSlug)
+    ? await allocateCollabAwareWorkItemId(selectedProjectSlug)
     : await projectApi.allocateStandaloneWorkItemId();
   const frontmatter: WorkItemFrontmatter = {
     id: shortId,

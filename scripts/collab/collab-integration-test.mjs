@@ -669,6 +669,148 @@ async function main() {
     (j) => j?.version === 2
   );
 
+  // ---- M6: short-id allocator (design §16.5) ----
+  assertOk(
+    "project gains a work item prefix (v3)",
+    await rpc("orgii_upsert_project", {
+      p_org_id: orgId, ...memberAuthB, base_version: 2,
+      project: { id: projectId, orgId, name: "P v2", slug: `p-${run}`, status: "in_progress", workItemPrefix: "AUT" },
+    }),
+    (j) => j?.version === 3
+  );
+  const alloc1 = await rpc("orgii_allocate_work_item_short_id", {
+    p_org_id: orgId, ...memberAuthA, project_id: projectId,
+  });
+  assertOk("allocator returns PREFIX-0001", alloc1, (j) => j?.shortId === "AUT-0001" && j?.n === 1);
+  const alloc2 = await rpc("orgii_allocate_work_item_short_id", {
+    p_org_id: orgId, ...memberAuthB, project_id: projectId,
+  });
+  assertOk(
+    "second allocation increments (never reuses)",
+    alloc2,
+    (j) => j?.shortId === "AUT-0002" && j?.n === 2
+  );
+  assertError(
+    "allocator rejects non-members",
+    await rpc("orgii_allocate_work_item_short_id", {
+      p_org_id: orgId, p_member_id: `member-ghost-${run}`, p_member_token: randomHex(), project_id: projectId,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+  assertError(
+    "allocator on unknown project raises uniform conflict",
+    await rpc("orgii_allocate_work_item_short_id", {
+      p_org_id: orgId, ...memberAuthA, project_id: `proj-ghost-${run}`,
+    }),
+    "ORGII_CONFLICT"
+  );
+  const allocatedProject = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthA });
+  const allocatedRow = (allocatedProject.json?.projects ?? []).find((p) => p.id === projectId);
+  record(
+    "allocation does not bump the project row version (server-owned counter)",
+    allocatedRow?.version === 3,
+    `got version ${allocatedRow?.version}`
+  );
+
+  // ---- M6: work item OCC retry realism (design §16.4) ----
+  const workItemId = "AUT-0001";
+  const workItemBase = {
+    id: workItemId, projectId, shortId: workItemId, title: "Item v1",
+    body: "b", status: "backlog", priority: "none",
+  };
+  assertOk(
+    "work item create returns version 1",
+    await rpc("orgii_upsert_work_item", {
+      p_org_id: orgId, ...memberAuthA, base_version: null, work_item: workItemBase,
+    }),
+    (j) => j?.version === 1
+  );
+  assertOk(
+    "teammate update bumps to version 2",
+    await rpc("orgii_upsert_work_item", {
+      p_org_id: orgId, ...memberAuthB, base_version: 1,
+      work_item: { ...workItemBase, title: "Teammate title" },
+    }),
+    (j) => j?.version === 2
+  );
+  assertError(
+    "stale push (base 1) conflicts",
+    await rpc("orgii_upsert_work_item", {
+      p_org_id: orgId, ...memberAuthA, base_version: 1,
+      work_item: { ...workItemBase, title: "Stale local title" },
+    }),
+    "ORGII_CONFLICT"
+  );
+  // Client-side recovery (§16.4): pull the fresh row, merge per-field
+  // locally, re-push with the fresh base — second attempt succeeds.
+  const freshState = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthA });
+  const freshRow = (freshState.json?.workItems ?? []).find((w) => w.id === workItemId);
+  record("fresh remote row carries version 2", freshRow?.version === 2);
+  assertOk(
+    "re-push with fresh base succeeds (version 3)",
+    await rpc("orgii_upsert_work_item", {
+      p_org_id: orgId, ...memberAuthA, base_version: freshRow?.version ?? -1,
+      work_item: { ...workItemBase, title: "Merged title", status: "in_progress" },
+    }),
+    (j) => j?.version === 3
+  );
+
+  // ---- M6: execution lock lifecycle (design §16.6) ----
+  const acquired = await rpc("orgii_acquire_work_item_lock", {
+    p_org_id: orgId, ...memberAuthA, work_item_id: workItemId,
+    lock_payload: { activeSessionId: `session-${run}`, lockedByMemberId: bId /* spoof */ },
+  });
+  assertOk("member acquires the free lock", acquired, (j) => Number(j) === 4);
+  const lockedState = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthA });
+  const lockedRow = (lockedState.json?.workItems ?? []).find((w) => w.id === workItemId);
+  record(
+    "lock holder forced to authenticated member (spoof ignored)",
+    lockedRow?.executionLock?.lockedByMemberId === aId,
+    `got ${JSON.stringify(lockedRow?.executionLock)}`
+  );
+  assertError(
+    "second acquire while held conflicts",
+    await rpc("orgii_acquire_work_item_lock", {
+      p_org_id: orgId, ...memberAuthB, work_item_id: workItemId, lock_payload: { activeSessionId: "other" },
+    }),
+    "ORGII_CONFLICT"
+  );
+  assertError(
+    "non-holder member cannot release",
+    await rpc("orgii_release_work_item_lock", {
+      p_org_id: orgId, ...memberAuthB, work_item_id: workItemId,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+  assertOk(
+    "holder releases the lock",
+    await rpc("orgii_release_work_item_lock", {
+      p_org_id: orgId, ...memberAuthA, work_item_id: workItemId,
+    }),
+    (j) => Number(j) === 5
+  );
+  assertOk(
+    "release when unlocked is idempotent (version unchanged)",
+    await rpc("orgii_release_work_item_lock", {
+      p_org_id: orgId, ...memberAuthA, work_item_id: workItemId,
+    }),
+    (j) => Number(j) === 5
+  );
+  assertOk(
+    "member B acquires after release",
+    await rpc("orgii_acquire_work_item_lock", {
+      p_org_id: orgId, ...memberAuthB, work_item_id: workItemId, lock_payload: { activeSessionId: "b-session" },
+    }),
+    (j) => Number(j) === 6
+  );
+  assertOk(
+    "admin force-releases another member's lock",
+    await rpc("orgii_release_work_item_lock", {
+      p_org_id: orgId, ...memberAuthA, work_item_id: workItemId,
+    }),
+    (j) => Number(j) === 7
+  );
+
   // ---- roles: promote, last-admin guard, removal kills token ----
   assertOk(
     "admin promotes B to admin",
