@@ -76,10 +76,10 @@ function getPlanStateLabel(
   isStreaming: boolean,
   ready: boolean
 ): string {
-  if (isStreaming) return t("planDoc.drafting");
   if (status === "approved") return t("planDoc.built");
   if (status === "archived") return t("planDoc.archived");
   if (status === "cancelled") return t("planDoc.cancelled");
+  if (isStreaming) return t("planDoc.drafting");
   if (ready) return t("planDoc.readyForReview");
   return t("planDoc.idle");
 }

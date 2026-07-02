@@ -439,10 +439,10 @@ function planSurfaceLabel(options: {
   readyForReview: boolean;
   isStreaming: boolean;
 }): PlanStateLabel {
-  if (options.isStreaming) return "drafting";
   if (options.status === "approved") return "built";
   if (options.status === "archived") return "archived";
   if (options.status === "cancelled") return "skipped";
+  if (options.isStreaming) return "drafting";
   if (options.readyForReview) return "ready";
   return "idle";
 }
