@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import NumberInput from "@src/components/NumberInput";
 import Select, { type SelectOption } from "@src/components/Select";
+import Switch from "@src/components/Switch";
 import TagsInput from "@src/components/TagsInput";
 import Textarea from "@src/components/Textarea";
 import {
@@ -88,6 +89,9 @@ const MyRolesSection: React.FC<MyRolesSectionProps> = ({
   const goalMaxTurnsByPresence = settings[
     "agent.sde.goalMaxTurnsByPresence"
   ] as Record<BuiltInPresenceMode, number>;
+  const modeSwitchAutoPlanByPresence = settings[
+    "agent.sde.modeSwitchAutoPlanByPresence"
+  ] as Record<BuiltInPresenceMode, boolean>;
   const presenceGuidanceOnline =
     (settings["general.presenceGuidanceOnline"] as string | undefined) ?? "";
   const presenceGuidanceInvisible =
@@ -199,6 +203,19 @@ const MyRolesSection: React.FC<MyRolesSectionProps> = ({
     [goalMaxTurnsByPresence, updateSetting]
   );
 
+  const handleModeSwitchAutoPlanChange = useCallback(
+    (mode: BuiltInPresenceMode) => (checked: boolean) => {
+      updateSetting({
+        key: "agent.sde.modeSwitchAutoPlanByPresence",
+        value: {
+          ...modeSwitchAutoPlanByPresence,
+          [mode]: checked,
+        },
+      });
+    },
+    [modeSwitchAutoPlanByPresence, updateSetting]
+  );
+
   const renderPolicyRows = useCallback(
     (mode: BuiltInPresenceMode, statusLabel: string) => (
       <>
@@ -260,6 +277,25 @@ const MyRolesSection: React.FC<MyRolesSectionProps> = ({
             style={SECTION_CONTROL_STYLE}
           />
         </SectionRow>
+        <SectionRow
+          label={t("sdeAgent.modeSwitchAutoPlanByStatus", {
+            status: statusLabel,
+            defaultValue: `${statusLabel} mode switch auto-plan`,
+          })}
+          description={t("sdeAgent.modeSwitchAutoPlanByStatusDesc", {
+            defaultValue:
+              "Auto-switch pending Plan mode suggestions when their confirmation timer expires.",
+          })}
+        >
+          <Switch
+            checked={modeSwitchAutoPlanByPresence[mode]}
+            onChange={handleModeSwitchAutoPlanChange(mode)}
+            ariaLabel={t("sdeAgent.modeSwitchAutoPlanByStatus", {
+              status: statusLabel,
+              defaultValue: `${statusLabel} mode switch auto-plan`,
+            })}
+          />
+        </SectionRow>
       </>
     ),
     [
@@ -267,9 +303,11 @@ const MyRolesSection: React.FC<MyRolesSectionProps> = ({
       questionAutoSkipTimeoutByPresence,
       planAutoApproveTimeoutByPresence,
       goalMaxTurnsByPresence,
+      modeSwitchAutoPlanByPresence,
       handleQuestionAutoSkipTimeoutChange,
       handlePlanAutoApproveTimeoutChange,
       handleGoalMaxTurnsChange,
+      handleModeSwitchAutoPlanChange,
     ]
   );
 
