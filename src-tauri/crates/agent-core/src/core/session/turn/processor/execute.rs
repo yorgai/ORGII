@@ -38,6 +38,7 @@ impl UnifiedMessageProcessor {
         session_id: &str,
         turn_id: &str,
         messages: &mut Vec<Value>,
+        reasoning_trigger: Option<crate::providers::thinking_mode::ReasoningLevel>,
     ) -> Result<(TurnResult, UnifiedEventHandler), String> {
         let effective_policy = self.effective_tool_policy();
 
@@ -45,8 +46,30 @@ impl UnifiedMessageProcessor {
             .provider
             .begin_logical_turn(session_id, turn_id);
 
+        // Reasoning trigger words ("think hard", "ultrathink") escalate the
+        // model's reasoning level FOR THIS TURN ONLY by re-encoding the
+        // variant suffix; an explicit user-selected level is never lowered.
+        let turn_model = match reasoning_trigger {
+            Some(level) => {
+                let escalated = crate::providers::thinking_mode::escalate_model_reasoning(
+                    &self.runtime.model,
+                    level,
+                );
+                if escalated != self.runtime.model {
+                    tracing::info!(
+                        "[unified_processor] Reasoning trigger escalated model {} -> {} (session={})",
+                        self.runtime.model,
+                        escalated,
+                        session_id
+                    );
+                }
+                escalated
+            }
+            None => self.runtime.model.clone(),
+        };
+
         let turn_config = TurnConfig {
-            model: self.runtime.model.clone(),
+            model: turn_model,
             account_id: self.runtime.account_id.clone(),
             context_window_override: self
                 .runtime

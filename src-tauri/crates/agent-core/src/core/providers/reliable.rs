@@ -155,6 +155,8 @@ impl ReliableProvider {
             ProviderError::RateLimited { .. } => "rate_limited",
             ProviderError::Overloaded { .. } => "overloaded",
             ProviderError::ContextTooLong(_) => "context_too_long",
+            ProviderError::MaxTokensExceedContext(_) => "max_tokens_exceed_context",
+            ProviderError::MediaTooLarge(_) => "media_too_large",
             ProviderError::AuthError(_) => "auth_error",
             ProviderError::ModelNotFound(_) => "model_not_found",
             ProviderError::Cancelled => "cancelled",
@@ -179,6 +181,11 @@ impl ReliableProvider {
             ProviderError::AuthError(_)
             | ProviderError::ModelNotFound(_)
             | ProviderError::ContextTooLong(_)
+            // Recoverable by the turn loop's dedicated rescue arms (lower
+            // max_tokens / strip media) — provider-level retry of the SAME
+            // request would just re-fail.
+            | ProviderError::MaxTokensExceedContext(_)
+            | ProviderError::MediaTooLarge(_)
             | ProviderError::Cancelled => true,
             ProviderError::RequestFailed(msg) => {
                 let lower = msg.to_lowercase();
@@ -223,6 +230,8 @@ impl ReliableProvider {
             ProviderError::AuthError(_)
             | ProviderError::ModelNotFound(_)
             | ProviderError::ContextTooLong(_)
+            | ProviderError::MaxTokensExceedContext(_)
+            | ProviderError::MediaTooLarge(_)
             | ProviderError::Cancelled
             | ProviderError::RequestFailed(_)
             | ProviderError::ParseError(_)

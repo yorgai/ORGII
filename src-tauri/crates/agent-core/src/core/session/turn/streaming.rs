@@ -189,6 +189,12 @@ impl From<ProviderError> for StreamingError {
             ProviderError::ContextTooLong(msg) => {
                 Self::new(msg, StreamingErrorCode::ContextOverflow)
             }
+            // Both are normally recovered inside the turn loop; reaching
+            // the frontend means the rescue arm was already burned.
+            ProviderError::MaxTokensExceedContext(msg) => {
+                Self::new(msg, StreamingErrorCode::ContextOverflow)
+            }
+            ProviderError::MediaTooLarge(msg) => Self::new(msg, StreamingErrorCode::ToolError),
             ProviderError::Cancelled => Self::new(
                 "Cancelled by user".to_string(),
                 StreamingErrorCode::Cancelled,

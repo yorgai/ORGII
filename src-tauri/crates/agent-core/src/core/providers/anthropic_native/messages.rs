@@ -127,10 +127,10 @@ pub(super) fn extract_system(messages: &[Value]) -> (Option<Value>, Vec<Value>) 
                 }
 
                 if content_blocks.is_empty() {
-                    content_blocks.push(serde_json::json!({
-                        "type": "text",
-                        "text": "",
-                    }));
+                    // Nothing to say and no tool calls — emitting an empty
+                    // text block would 400 on the API. Drop the message;
+                    // consecutive same-role neighbors merge downstream.
+                    continue;
                 }
 
                 converted.push(serde_json::json!({
@@ -177,9 +177,15 @@ pub(super) fn extract_system(messages: &[Value]) -> (Option<Value>, Vec<Value>) 
                 }
                 let mut blocks_for_message: Vec<Value> = vec![tool_result_block];
 
-                if let Some(sidecar) = msg.get("_orgii_structured") {
-                    if let Some(extra_blocks) = sidecar_to_anthropic_sibling_blocks(sidecar) {
-                        blocks_for_message.extend(extra_blocks);
+                // Error tool_results must carry ONLY text — attaching media
+                // siblings to a failed call confuses the model (it reasons
+                // over an image that "succeeded" next to an error) and some
+                // gateways reject the combination outright.
+                if !is_error {
+                    if let Some(sidecar) = msg.get("_orgii_structured") {
+                        if let Some(extra_blocks) = sidecar_to_anthropic_sibling_blocks(sidecar) {
+                            blocks_for_message.extend(extra_blocks);
+                        }
                     }
                 }
 
@@ -236,6 +242,14 @@ pub(super) fn extract_system(messages: &[Value]) -> (Option<Value>, Vec<Value>) 
     }
 
     let system = render_system_blocks(&system_parts);
+
+    // Final wire-hygiene pass (each rule maps to a real API 400 class):
+    // 1. A message whose content ends with a thinking block and nothing
+    //    after it (orphan thinking — stream died before text/tool_use)
+    //    is rejected; drop the orphan thinking block.
+    // 2. Trailing assistant message with effectively-empty text is
+    //    rejected ("final assistant content cannot be empty").
+    finalize_wire_hygiene(&mut converted);
 
     // Sliding history breakpoint (BP3): stamp `cache_control: ephemeral`
     // on the last non-volatile content block. Combined with
@@ -335,6 +349,55 @@ fn strip_cache_scope_markers(messages: &mut [Value]) {
             }
         }
     }
+}
+
+/// Final wire-hygiene fixes applied after conversion, before cache
+/// stamping. Mutates in place; drops messages that end up empty.
+fn finalize_wire_hygiene(messages: &mut Vec<Value>) {
+    // 1. Orphan thinking: a thinking block at the END of an assistant
+    //    message's content (no text/tool_use after it) is rejected by the
+    //    API. Pop such blocks.
+    for msg in messages.iter_mut() {
+        if msg.get("role").and_then(Value::as_str) != Some("assistant") {
+            continue;
+        }
+        let Some(blocks) = msg.get_mut("content").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        while blocks
+            .last()
+            .and_then(|b| b.get("type").and_then(Value::as_str))
+            .map(|t| t == "thinking" || t == "redacted_thinking")
+            .unwrap_or(false)
+        {
+            blocks.pop();
+        }
+    }
+
+    // 2. Drop messages whose content collapsed to nothing (or to only
+    //    whitespace text) — empty content arrays are rejected. Never drop
+    //    tool_result-bearing user messages.
+    messages.retain(|msg| {
+        let Some(blocks) = msg.get("content").and_then(Value::as_array) else {
+            return true; // string content — handled upstream
+        };
+        if blocks.is_empty() {
+            return false;
+        }
+        blocks.iter().any(|block| {
+            match block.get("type").and_then(Value::as_str) {
+                Some("text") => block
+                    .get("text")
+                    .and_then(Value::as_str)
+                    .map(|t| !t.trim().is_empty())
+                    .unwrap_or(false),
+                // tool_use / tool_result / image / document all count as
+                // substantive content.
+                Some(_) => true,
+                None => false,
+            }
+        })
+    });
 }
 
 fn anthropic_thinking_block(tool_call: &Value) -> Option<Value> {

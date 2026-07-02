@@ -131,6 +131,11 @@ pub async fn execute_turn(
     // In-turn ContextTooLong rescue attempts already burned (see the
     // `ContextTooLong` arm below).
     let mut context_rescue_attempts = 0u32;
+    // One-shot flags for the two withhold-then-recover arms: lowering
+    // max_tokens on "input + max_tokens exceed" and stripping historical
+    // media blocks on media-413. Reset never — one attempt each per turn.
+    let mut max_tokens_lowered = false;
+    let mut media_stripped = false;
     // Stop-hook blocking continuations already burned. Hard cap so a hook
     // that always blocks cannot spin the loop forever (death-spiral guard).
     let mut stop_hook_blocks = 0u32;
@@ -402,6 +407,43 @@ pub async fn execute_turn(
                         session_id
                     );
                     *messages = truncated;
+                }
+                continue;
+            }
+            Err(err @ crate::providers::traits::ProviderError::MaxTokensExceedContext(_))
+                if !max_tokens_lowered =>
+            {
+                // The PROMPT fits — only prompt + max_tokens overflows.
+                // Compacting history for this would destroy context for no
+                // reason; shrink the output budget for this turn instead.
+                // One-shot: a second overflow after halving means the prompt
+                // is genuinely at the edge and falls through to the
+                // ContextTooLong arm on retry.
+                max_tokens_lowered = true;
+                let lowered = (effective_max_tokens / 2).max(1024);
+                warn!(
+                    "[agent-core] max_tokens + input exceeds context (session={}); lowering max_tokens {} -> {} and retrying: {}",
+                    session_id, effective_max_tokens, lowered, err
+                );
+                effective_max_tokens = lowered;
+                continue;
+            }
+            Err(err @ crate::providers::traits::ProviderError::MediaTooLarge(_))
+                if !media_stripped =>
+            {
+                // Oversized base64 media (screenshot / PDF) in HISTORY is
+                // being re-sent on every request. Strip historical media
+                // blocks to text placeholders and retry — text compaction
+                // would not remove them and the model rarely needs the raw
+                // pixels of an old screenshot again. One-shot per turn.
+                media_stripped = true;
+                let stripped = strip_historical_media_blocks(messages);
+                warn!(
+                    "[agent-core] Media too large (session={}); stripped {} historical media block(s) and retrying: {}",
+                    session_id, stripped, err
+                );
+                if stripped == 0 {
+                    return Err(format!("LLM error: {}", err));
                 }
                 continue;
             }
@@ -876,6 +918,38 @@ pub async fn execute_turn(
     })
 }
 
+/// Replace image/document content blocks in HISTORICAL messages with text
+/// placeholders. The LAST user message keeps its media (it is usually the
+/// input the current turn is about); everything older is fair game — old
+/// screenshots/PDFs are re-sent on every request and are the usual cause of
+/// media-size rejections. Returns the number of blocks replaced.
+fn strip_historical_media_blocks(messages: &mut [Value]) -> usize {
+    let last_user_idx = messages
+        .iter()
+        .rposition(|msg| msg.get("role").and_then(Value::as_str) == Some("user"));
+
+    let mut stripped = 0usize;
+    for (idx, msg) in messages.iter_mut().enumerate() {
+        if Some(idx) == last_user_idx {
+            continue;
+        }
+        let Some(blocks) = msg.get_mut("content").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for block in blocks.iter_mut() {
+            let block_type = block.get("type").and_then(Value::as_str).unwrap_or("");
+            if matches!(block_type, "image_url" | "image" | "document") {
+                *block = serde_json::json!({
+                    "type": "text",
+                    "text": "[media removed: this image/document was too large to keep re-sending. Re-read the source file if you need it again.]",
+                });
+                stripped += 1;
+            }
+        }
+    }
+    stripped
+}
+
 /// Drain the mid-turn steering buffer into `messages`.
 ///
 /// All pending steering messages are merged into ONE
@@ -918,4 +992,37 @@ async fn drain_steering_queue(
         ),
     }));
     true
+}
+
+#[cfg(test)]
+mod media_strip_tests {
+    use super::strip_historical_media_blocks;
+    use serde_json::json;
+
+    #[test]
+    fn strips_old_media_keeps_last_user_media() {
+        let mut messages = vec![
+            json!({"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,OLD"}},
+                {"type": "text", "text": "old screenshot"},
+            ]}),
+            json!({"role": "assistant", "content": "looked at it"}),
+            json!({"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,NEW"}},
+                {"type": "text", "text": "new screenshot"},
+            ]}),
+        ];
+        let stripped = strip_historical_media_blocks(&mut messages);
+        assert_eq!(stripped, 1);
+        // Old media replaced with text placeholder.
+        assert_eq!(messages[0]["content"][0]["type"], "text");
+        // Latest user media untouched.
+        assert_eq!(messages[2]["content"][0]["type"], "image_url");
+    }
+
+    #[test]
+    fn no_media_returns_zero() {
+        let mut messages = vec![json!({"role": "user", "content": "plain text"})];
+        assert_eq!(strip_historical_media_blocks(&mut messages), 0);
+    }
 }

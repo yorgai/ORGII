@@ -26,4 +26,4 @@ pub use message_writer::{
     TOOL_RESULT_IS_ERROR_KEY,
 };
 pub(crate) use permission::check_permission;
-pub use truncate::{safe_truncate_end, truncate_output};
+pub use truncate::{safe_truncate_end, truncate_or_persist_output, truncate_output};
