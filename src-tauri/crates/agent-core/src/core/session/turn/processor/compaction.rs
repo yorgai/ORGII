@@ -192,6 +192,10 @@ impl UnifiedMessageProcessor {
             &pre_compact_messages,
             messages,
         );
+        crate::model_context::plan_preservation::reinject_plan_after_compaction(
+            &pre_compact_messages,
+            messages,
+        );
 
         outcome
     }
@@ -349,6 +353,12 @@ impl UnifiedMessageProcessor {
 
         // Post-compact file re-injection
         crate::model_context::file_reinjection::reinject_files_after_compaction(
+            &pre_compact_messages,
+            messages,
+        );
+        // Approved-plan preservation: the plan must survive compaction
+        // verbatim, or long Build sessions silently stop following it.
+        crate::model_context::plan_preservation::reinject_plan_after_compaction(
             &pre_compact_messages,
             messages,
         );

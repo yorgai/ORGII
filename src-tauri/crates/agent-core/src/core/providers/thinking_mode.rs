@@ -219,9 +219,13 @@ impl ReasoningLevel {
 ///
 /// Ordered strongest-first: "ultrathink" → Max, "think harder" /
 /// "think really hard" / "think very hard" → ExtraHigh, "think hard" /
-/// "megathink" → High, bare "think" → Medium. Matching is case-insensitive
-/// on the raw text; the bare "think" tier requires word boundaries so
-/// "rethinking"/"thinks" don't trigger.
+/// "megathink" → High. Matching is case-insensitive.
+///
+/// Deliberately NO bare-"think" tier: "I think the bug is…" is ordinary
+/// prose, and forcing an explicit effort level onto adaptive-thinking
+/// models can DOWNGRADE what the API would have chosen dynamically. The
+/// reference implementation's current version keeps only explicit trigger
+/// phrases for the same reason.
 pub fn detect_reasoning_trigger(text: &str) -> Option<ReasoningLevel> {
     let lower = text.to_lowercase();
     if lower.contains("ultrathink") {
@@ -240,20 +244,6 @@ pub fn detect_reasoning_trigger(text: &str) -> Option<ReasoningLevel> {
         || lower.contains("think deeply")
     {
         return Some(ReasoningLevel::High);
-    }
-    let bytes = lower.as_bytes();
-    let mut search_from = 0;
-    while let Some(pos) = lower[search_from..].find("think") {
-        let start = search_from + pos;
-        let end = start + "think".len();
-        let boundary_before =
-            start == 0 || !bytes[start - 1].is_ascii_alphanumeric() && bytes[start - 1] != b'_';
-        let boundary_after =
-            end >= bytes.len() || !bytes[end].is_ascii_alphanumeric() && bytes[end] != b'_';
-        if boundary_before && boundary_after {
-            return Some(ReasoningLevel::Medium);
-        }
-        search_from = end;
     }
     None
 }
@@ -313,11 +303,11 @@ mod reasoning_trigger_tests {
     }
 
     #[test]
-    fn bare_think_maps_to_medium_with_word_boundary() {
-        assert_eq!(
-            detect_reasoning_trigger("think about it"),
-            Some(ReasoningLevel::Medium)
-        );
+    fn bare_think_does_not_trigger() {
+        // Ordinary prose must never escalate — and never force an explicit
+        // level onto adaptive models that would have chosen dynamically.
+        assert_eq!(detect_reasoning_trigger("I think the bug is in auth.rs"), None);
+        assert_eq!(detect_reasoning_trigger("think about it"), None);
         assert_eq!(detect_reasoning_trigger("rethinking the approach"), None);
         assert_eq!(detect_reasoning_trigger("he thinks so"), None);
     }

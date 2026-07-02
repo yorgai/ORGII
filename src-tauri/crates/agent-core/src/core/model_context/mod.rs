@@ -22,6 +22,7 @@ pub mod cleanup;
 pub mod compaction;
 pub mod file_reinjection;
 pub mod microcompact;
+pub mod plan_preservation;
 pub mod session_memory;
 pub(crate) mod summarization;
 pub mod tokenizer;
