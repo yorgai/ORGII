@@ -99,6 +99,7 @@ pub enum ModelType {
     ZenmuxApi,
     VllmApi,
     MinimaxApi,
+    LongcatApi,
     AzureOpenaiApi,
     /// Azure-hosted Anthropic gateway. Same auth shape as `AzureOpenaiApi`
     /// (an Azure resource key + base URL) but routed through the Anthropic
@@ -134,6 +135,7 @@ impl ModelType {
             ModelType::ZenmuxApi => "zenmux_api",
             ModelType::VllmApi => "vllm_api",
             ModelType::MinimaxApi => "minimax_api",
+            ModelType::LongcatApi => "longcat_api",
             ModelType::AzureOpenaiApi => "azure_openai_api",
             ModelType::AzureAnthropicApi => "azure_anthropic_api",
             ModelType::OrgiiOrchestrator => "orgii_orchestrator",
@@ -166,6 +168,7 @@ impl ModelType {
             "zenmux_api" | "zenmux" => Some(ModelType::ZenmuxApi),
             "vllm_api" | "vllm" => Some(ModelType::VllmApi),
             "minimax_api" | "minimax" => Some(ModelType::MinimaxApi),
+            "longcat_api" | "longcat" => Some(ModelType::LongcatApi),
             "azure_openai_api" | "azure_openai" | "azure" => Some(ModelType::AzureOpenaiApi),
             "azure_anthropic_api" | "azure_anthropic" => Some(ModelType::AzureAnthropicApi),
             "orgii_orchestrator" | "orgii" => Some(ModelType::OrgiiOrchestrator),

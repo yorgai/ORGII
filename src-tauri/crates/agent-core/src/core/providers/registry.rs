@@ -32,6 +32,7 @@ pub mod provider_id {
     pub const ZHIPU: &str = "zhipu";
     pub const DASHSCOPE: &str = "dashscope";
     pub const MINIMAX: &str = "minimax";
+    pub const LONGCAT: &str = "longcat";
     pub const MOONSHOT: &str = "moonshot";
     pub const AZURE_OPENAI: &str = "azure_openai";
     pub const VLLM: &str = "vllm";
@@ -196,6 +197,17 @@ pub static PROVIDERS: &[ProviderSpec] = &[
         default_anthropic_api_base: None,
         is_local: false,
         env_key: Some("MINIMAX_API_KEY"),
+    },
+    ProviderSpec {
+        name: provider_id::LONGCAT,
+        display_name: "LongCat",
+        keywords: &["longcat"],
+        litellm_prefix: None,
+        skip_prefixes: &[],
+        default_api_base: Some("https://api.longcat.chat/openai"),
+        default_anthropic_api_base: Some("https://api.longcat.chat/anthropic"),
+        is_local: false,
+        env_key: Some("LONGCAT_API_KEY"),
     },
     ProviderSpec {
         name: provider_id::MOONSHOT,

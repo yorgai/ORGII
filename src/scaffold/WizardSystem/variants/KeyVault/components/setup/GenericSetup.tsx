@@ -35,6 +35,7 @@ import {
 } from "@src/scaffold/WizardSystem/primitives";
 
 import { useProviderConfig } from "../../config";
+import { getOfficialBaseUrlForProtocol } from "./providerProtocolUrls";
 import type { AgentSetupProps } from "./types";
 
 type SetupMethod = "autodetect" | "enter_key" | "extract";
@@ -96,10 +97,11 @@ const GenericSetup: FC<AgentSetupProps> = ({
     (envConfig?.supportedProtocols.length ?? 0) > 1;
   const selectedProtocol =
     data.protocol ?? envConfig?.defaultProtocol ?? "openai";
-  const officialBaseUrl =
-    selectedProtocol === "anthropic" && data.agent_type === "zenmux_api"
-      ? "https://zenmux.ai/api/anthropic"
-      : envConfig?.defaultBaseUrl;
+  const officialBaseUrl = getOfficialBaseUrlForProtocol(
+    data.agent_type,
+    selectedProtocol,
+    envConfig?.defaultBaseUrl
+  );
 
   // Sync official URL to data when in official mode (for validation)
   useEffect(() => {
@@ -268,10 +270,11 @@ const GenericSetup: FC<AgentSetupProps> = ({
                 value={selectedProtocol}
                 onChange={(val) => {
                   const protocol = val as typeof selectedProtocol;
-                  const nextOfficialBaseUrl =
-                    protocol === "anthropic" && data.agent_type === "zenmux_api"
-                      ? "https://zenmux.ai/api/anthropic"
-                      : envConfig.defaultBaseUrl;
+                  const nextOfficialBaseUrl = getOfficialBaseUrlForProtocol(
+                    data.agent_type,
+                    protocol,
+                    envConfig.defaultBaseUrl
+                  );
                   onChange({
                     protocol,
                     extracted_base_url:

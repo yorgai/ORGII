@@ -21,6 +21,7 @@ import {
 } from "@src/modules/shared/layouts/SectionLayout";
 
 import { useProviderConfig } from "../../config";
+import { getOfficialBaseUrlForProtocol } from "./providerProtocolUrls";
 import type { AgentSetupProps } from "./types";
 
 type BaseUrlMode = "official" | "custom";
@@ -41,10 +42,11 @@ const ApiKeyProviderSetup: React.FC<AgentSetupProps> = ({
     (envConfig?.supportedProtocols.length ?? 0) > 1;
   const selectedProtocol =
     data.protocol ?? envConfig?.defaultProtocol ?? "openai";
-  const officialBaseUrl =
-    selectedProtocol === "anthropic" && data.agent_type === "zenmux_api"
-      ? "https://zenmux.ai/api/anthropic"
-      : envConfig?.defaultBaseUrl;
+  const officialBaseUrl = getOfficialBaseUrlForProtocol(
+    data.agent_type,
+    selectedProtocol,
+    envConfig?.defaultBaseUrl
+  );
 
   // Determine if user's current URL differs from the official default
   const hasCustomBaseUrl = useMemo(() => {
@@ -132,10 +134,11 @@ const ApiKeyProviderSetup: React.FC<AgentSetupProps> = ({
               value={selectedProtocol}
               onChange={(val) => {
                 const protocol = val as typeof selectedProtocol;
-                const nextOfficialBaseUrl =
-                  protocol === "anthropic" && data.agent_type === "zenmux_api"
-                    ? "https://zenmux.ai/api/anthropic"
-                    : envConfig.defaultBaseUrl;
+                const nextOfficialBaseUrl = getOfficialBaseUrlForProtocol(
+                  data.agent_type,
+                  protocol,
+                  envConfig.defaultBaseUrl
+                );
                 onChange({
                   protocol,
                   extracted_base_url:

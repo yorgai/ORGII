@@ -101,6 +101,7 @@ fn default_anthropic_base_url_for_provider(agent_type: &str) -> Option<String> {
             Some("https://api.anthropic.com/v1".to_string())
         }
         "zenmux_api" => Some("https://zenmux.ai/api/anthropic".to_string()),
+        "longcat_api" => Some("https://api.longcat.chat/anthropic".to_string()),
         _ => None,
     }
 }
@@ -243,8 +244,8 @@ pub async fn run_validate_key(
 
         // OpenAI-compatible API providers (use OpenAI validator with provider's base URL)
         "deepseek_api" | "groq_api" | "xai_api" | "zhipu_api" | "dashscope_api"
-        | "moonshot_api" | "minimax_api" | "openrouter_api" | "zenmux_api" | "vllm_api"
-        | "orgii_orchestrator" | "orgii" => {
+        | "moonshot_api" | "minimax_api" | "longcat_api" | "openrouter_api" | "zenmux_api"
+        | "vllm_api" | "orgii_orchestrator" | "orgii" => {
             if protocol_lower.as_deref() == Some("anthropic") {
                 let effective_url = base_url
                     .clone()
@@ -269,7 +270,7 @@ pub async fn run_validate_key(
         }
 
         _ => Err(format!(
-            "Unknown agent type: {}. Supported: copilot, cursor_cli, openai, anthropic, google, gemini_cli, codex, claude_code, kiro, opencode, openai_api, anthropic_api, gemini_api, deepseek_api, groq_api, xai_api, zhipu_api, dashscope_api, moonshot_api, minimax_api, openrouter_api, zenmux_api, vllm_api, azure_openai_api, azure_anthropic_api",
+            "Unknown agent type: {}. Supported: copilot, cursor_cli, openai, anthropic, google, gemini_cli, codex, claude_code, kiro, opencode, openai_api, anthropic_api, gemini_api, deepseek_api, groq_api, xai_api, zhipu_api, dashscope_api, moonshot_api, minimax_api, longcat_api, openrouter_api, zenmux_api, vllm_api, azure_openai_api, azure_anthropic_api",
             agent_type
         )),
     }
@@ -418,8 +419,8 @@ pub fn validate_token_format(agent_type: String, token: String) -> Result<(bool,
 
         // OpenAI-compatible providers: just verify non-empty and reasonable length
         "deepseek_api" | "groq_api" | "xai_api" | "zhipu_api" | "dashscope_api"
-        | "moonshot_api" | "minimax_api" | "openrouter_api" | "zenmux_api" | "vllm_api"
-        | "orgii_orchestrator" | "orgii" => {
+        | "moonshot_api" | "minimax_api" | "longcat_api" | "openrouter_api" | "zenmux_api"
+        | "vllm_api" | "orgii_orchestrator" | "orgii" => {
             if token.is_empty() {
                 Ok((false, "API key is required".to_string()))
             } else if token.len() < 8 {
@@ -472,6 +473,7 @@ pub async fn fetch_key_quota(
         | "dashscope_api"
         | "moonshot_api"
         | "minimax_api"
+        | "longcat_api"
         | "openrouter_api"
         | "zenmux_api"
         | "vllm_api"
@@ -1037,6 +1039,7 @@ mod tests {
             "dashscope_api",
             "moonshot_api",
             "minimax_api",
+            "longcat_api",
             "openrouter_api",
             "zenmux_api",
             "vllm_api",
@@ -1059,6 +1062,7 @@ mod tests {
             "dashscope_api",
             "moonshot_api",
             "minimax_api",
+            "longcat_api",
             "openrouter_api",
             "zenmux_api",
             "vllm_api",
@@ -1078,6 +1082,7 @@ mod tests {
             "deepseek_api",
             "groq_api",
             "xai_api",
+            "longcat_api",
             "orgii_orchestrator",
             "orgii",
         ] {

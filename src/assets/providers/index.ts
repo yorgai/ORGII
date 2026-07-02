@@ -69,6 +69,7 @@ export const API_KEY_PROVIDER_LIST: ApiProviderType[] = [
   "groq_api", // Groq
   "xai_api", // xAI Grok
   "minimax_api", // MiniMax
+  "longcat_api", // LongCat
   "moonshot_api", // Kimi Moonshot
   "openai_api", // OpenAI
   "openrouter_api", // OpenRouter

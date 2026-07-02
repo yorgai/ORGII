@@ -45,6 +45,7 @@ fn api_providers_are_api_key_providers() {
         ModelType::ZenmuxApi,
         ModelType::VllmApi,
         ModelType::MinimaxApi,
+        ModelType::LongcatApi,
         ModelType::AzureOpenaiApi,
         ModelType::AzureAnthropicApi,
     ];
@@ -137,6 +138,7 @@ fn as_str_round_trips_through_from_str() {
         ModelType::ZenmuxApi,
         ModelType::VllmApi,
         ModelType::MinimaxApi,
+        ModelType::LongcatApi,
         ModelType::AzureOpenaiApi,
         ModelType::AzureAnthropicApi,
         ModelType::OrgiiOrchestrator,

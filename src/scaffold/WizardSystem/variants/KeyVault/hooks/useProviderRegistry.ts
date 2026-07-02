@@ -147,6 +147,7 @@ const PRIMARY_PROVIDER_KEYS = new Set([
   "xai_api",
   "moonshot_api",
   "minimax_api",
+  "longcat_api",
 ]);
 
 /**

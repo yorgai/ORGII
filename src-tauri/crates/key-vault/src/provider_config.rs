@@ -160,6 +160,14 @@ pub fn get_provider_config(model_type: &str) -> ProviderConfig {
             true,
             Some("https://api.minimax.io/v1"),
         ),
+        "longcat_api" => ProviderConfig::with_protocols(
+            "LONGCAT_API_KEY",
+            None,
+            true,
+            Some("https://api.longcat.chat/openai"),
+            &["openai", "anthropic"],
+            "openai",
+        ),
         "vllm_api" => ProviderConfig::with_protocols(
             "VLLM_API_KEY",
             None,
@@ -215,6 +223,7 @@ pub fn get_all_provider_configs() -> Vec<(String, ProviderConfig)> {
         "openrouter_api",
         "zenmux_api",
         "minimax_api",
+        "longcat_api",
         "vllm_api",
         "azure_openai_api",
         "azure_anthropic_api",
@@ -269,6 +278,20 @@ mod tests {
         assert_eq!(
             config.default_base_url,
             Some("https://zenmux.ai/api/v1".to_string())
+        );
+        assert_eq!(config.supported_protocols, vec!["openai", "anthropic"]);
+        assert_eq!(config.default_protocol, "openai");
+    }
+
+    #[test]
+    fn test_get_provider_config_longcat() {
+        let config = get_provider_config("longcat_api");
+        assert_eq!(config.api_key_env_var, "LONGCAT_API_KEY");
+        assert!(config.base_url_env_var.is_none());
+        assert!(config.supports_base_url);
+        assert_eq!(
+            config.default_base_url,
+            Some("https://api.longcat.chat/openai".to_string())
         );
         assert_eq!(config.supported_protocols, vec!["openai", "anthropic"]);
         assert_eq!(config.default_protocol, "openai");

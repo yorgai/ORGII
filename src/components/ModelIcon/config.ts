@@ -43,6 +43,7 @@ import GroqIcon from "@src/assets/modelIcons/groq.svg";
 import HunyuanIcon from "@src/assets/modelIcons/hunyuan.svg";
 import LlamaCppIcon from "@src/assets/modelIcons/llama-cpp.svg";
 import LmStudioIcon from "@src/assets/modelIcons/lmstudio.svg";
+import LongCatIcon from "@src/assets/modelIcons/longcat.svg";
 import MetaIcon from "@src/assets/modelIcons/meta.svg";
 import MinimaxIcon from "@src/assets/modelIcons/minimax.svg";
 import MistralIcon from "@src/assets/modelIcons/mistral.svg";
@@ -100,6 +101,7 @@ export type IconProvider =
   | "zhipu"
   | "baichuan"
   | "minimax"
+  | "longcat"
   | "doubao"
   | "openrouter"
   | "zenmux"
@@ -158,6 +160,7 @@ export const ICON_MAP: Record<
   zhipu: ZhipuIcon,
   baichuan: BaichuanIcon,
   minimax: MinimaxIcon,
+  longcat: LongCatIcon,
   doubao: DoubaoIcon,
   openrouter: OpenRouterIcon,
   zenmux: ZenMuxIcon,
@@ -205,6 +208,7 @@ export const SELECTABLE_ICON_PROVIDERS: IconProvider[] = [
   "zhipu",
   "baichuan",
   "minimax",
+  "longcat",
   "doubao",
   "openrouter",
   "zenmux",
@@ -262,6 +266,7 @@ const MODEL_TYPE_TO_ICON: Record<ModelType, IconProvider> = {
   zhipu_api: "zhipu",
   dashscope_api: "qwen",
   minimax_api: "minimax",
+  longcat_api: "longcat",
   moonshot_api: "kimi",
   openrouter_api: "openrouter",
   zenmux_api: "zenmux",
@@ -458,6 +463,11 @@ export function getIconProviderFromModelName(
   // Minimax models
   if (lower.includes("minimax") || lower.includes("abab")) {
     return "minimax";
+  }
+
+  // LongCat models
+  if (lower.includes("longcat") || lower.startsWith("meituan/")) {
+    return "longcat";
   }
 
   return "unknown";

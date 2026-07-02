@@ -38,6 +38,7 @@ const ICON_PROVIDER_DISPLAY_LABELS: Partial<Record<IconProvider, string>> = {
   groq: "Groq",
   kimi: "Kimi",
   kiro: "Kiro",
+  longcat: "LongCat",
   meta: "Meta",
   minimax: "Minimax",
   mistral: "Mistral",

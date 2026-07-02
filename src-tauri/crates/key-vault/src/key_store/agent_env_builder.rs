@@ -6,6 +6,8 @@ use core_types::providers::KIMI_CODE_URL_FRAGMENT;
 
 const ZENMUX_OPENAI_BASE_URL: &str = "https://zenmux.ai/api/v1";
 const ZENMUX_ANTHROPIC_BASE_URL: &str = "https://zenmux.ai/api/anthropic";
+const LONGCAT_OPENAI_BASE_URL: &str = "https://api.longcat.chat/openai";
+const LONGCAT_ANTHROPIC_BASE_URL: &str = "https://api.longcat.chat/anthropic";
 
 impl KeyService {
     /// Get environment variables for running an agent
@@ -85,6 +87,11 @@ impl KeyService {
                     env.insert(
                         "ANTHROPIC_BASE_URL".to_string(),
                         ZENMUX_ANTHROPIC_BASE_URL.to_string(),
+                    );
+                } else if entry.model_type == ModelType::LongcatApi {
+                    env.insert(
+                        "ANTHROPIC_BASE_URL".to_string(),
+                        LONGCAT_ANTHROPIC_BASE_URL.to_string(),
                     );
                 }
                 // When using a compatible provider key (e.g. moonshot_api), Claude Code's
@@ -166,6 +173,11 @@ impl KeyService {
                     env.insert(
                         "OPENAI_BASE_URL".to_string(),
                         ZENMUX_OPENAI_BASE_URL.to_string(),
+                    );
+                } else if entry.model_type == ModelType::LongcatApi {
+                    env.insert(
+                        "OPENAI_BASE_URL".to_string(),
+                        LONGCAT_OPENAI_BASE_URL.to_string(),
                     );
                 }
             }
@@ -318,6 +330,7 @@ impl KeyService {
             | ModelType::DashscopeApi
             | ModelType::MoonshotApi
             | ModelType::MinimaxApi
+            | ModelType::LongcatApi
             | ModelType::OpenrouterApi
             | ModelType::ZenmuxApi
             | ModelType::VllmApi
@@ -343,6 +356,7 @@ impl KeyService {
                     ModelType::DashscopeApi => "DASHSCOPE_API_KEY",
                     ModelType::MoonshotApi => "MOONSHOT_API_KEY",
                     ModelType::MinimaxApi => "MINIMAX_API_KEY",
+                    ModelType::LongcatApi => "LONGCAT_API_KEY",
                     ModelType::OpenrouterApi => "OPENROUTER_API_KEY",
                     ModelType::ZenmuxApi => "ZENMUX_API_KEY",
                     ModelType::VllmApi => "VLLM_API_KEY",
@@ -452,6 +466,7 @@ impl KeyService {
             | ModelType::DashscopeApi
             | ModelType::MoonshotApi
             | ModelType::MinimaxApi
+            | ModelType::LongcatApi
             | ModelType::OpenrouterApi
             | ModelType::ZenmuxApi
             | ModelType::VllmApi
@@ -476,6 +491,7 @@ impl KeyService {
                     ModelType::DashscopeApi => "DASHSCOPE_API_KEY",
                     ModelType::MoonshotApi => "MOONSHOT_API_KEY",
                     ModelType::MinimaxApi => "MINIMAX_API_KEY",
+                    ModelType::LongcatApi => "LONGCAT_API_KEY",
                     ModelType::OpenrouterApi => "OPENROUTER_API_KEY",
                     ModelType::ZenmuxApi => "ZENMUX_API_KEY",
                     ModelType::VllmApi => "VLLM_API_KEY",
