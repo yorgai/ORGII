@@ -130,6 +130,9 @@ pub struct UnifiedEventHandler {
     /// Read by the processor after `execute_turn` to decide whether to reset
     /// the nag-reminder counter.
     todo_called: AtomicBool,
+    /// Set to `true` the first time the `agent` tool is invoked during this
+    /// turn. Read by the processor to reset the subagent-reminder counter.
+    agent_called: AtomicBool,
     /// Streaming buffer for message/thinking accumulation (Rust single source of truth).
     streaming_buffer: StreamingBuffer,
     flushed_message_sessions: Mutex<HashSet<String>>,
@@ -140,6 +143,9 @@ pub struct UnifiedEventHandler {
     /// authoritative `on_tool_call` event later overwrites the same
     /// `tool-call-{id}` row, so nothing here survives the final state.
     plan_draft_streams: Mutex<std::collections::HashMap<usize, PlanDraftStream>>,
+    /// Latest context-usage token count observed via `on_context_usage`.
+    /// Feeds the Stop hook's `ORGII_TOTAL_TOKENS` env var.
+    last_context_tokens: std::sync::atomic::AtomicI64,
 }
 
 /// Accumulated state for one streaming `create_plan` call.
@@ -178,9 +184,11 @@ impl UnifiedEventHandler {
             config,
             tool_call_count: AtomicU32::new(0),
             todo_called: AtomicBool::new(false),
+            agent_called: AtomicBool::new(false),
             streaming_buffer: StreamingBuffer::with_default_timeout(),
             flushed_message_sessions: Mutex::new(HashSet::new()),
             plan_draft_streams: Mutex::new(std::collections::HashMap::new()),
+            last_context_tokens: std::sync::atomic::AtomicI64::new(0),
         }
     }
 
@@ -238,6 +246,13 @@ impl UnifiedEventHandler {
     /// turn. Used by the processor to reset the nag-reminder counter.
     pub fn todo_was_called(&self) -> bool {
         self.todo_called.load(Ordering::Relaxed)
+    }
+
+    /// Returns `true` if the `agent` tool was called at least once during
+    /// this turn. Used by the processor to reset the subagent-reminder
+    /// counter.
+    pub fn agent_was_called(&self) -> bool {
+        self.agent_called.load(Ordering::Relaxed)
     }
 
     /// Push a SessionEvent into the session's EventStore so frontend
@@ -437,6 +452,8 @@ impl TurnEventHandler for UnifiedEventHandler {
     }
 
     fn on_context_usage(&self, session_id: &str, usage: &ContextUsageSnapshot) {
+        self.last_context_tokens
+            .store(usage.used_tokens, Ordering::Relaxed);
         if self.is_cancelled() {
             return;
         }
@@ -448,6 +465,7 @@ impl TurnEventHandler for UnifiedEventHandler {
                 "turnId": self.config.turn_id.as_deref(),
                 "contextTokens": usage.used_tokens,
                 "contextUsage": usage,
+                "warningLevel": usage.warning_level(),
             }),
         );
     }
@@ -467,6 +485,9 @@ impl TurnEventHandler for UnifiedEventHandler {
         self.tool_call_count.fetch_add(1, Ordering::Relaxed);
         if tool_name == tool_names::MANAGE_TODO {
             self.todo_called.store(true, Ordering::Relaxed);
+        }
+        if tool_name == tool_names::AGENT {
+            self.agent_called.store(true, Ordering::Relaxed);
         }
         if tool_name == tool_names::CREATE_PLAN {
             // The authoritative event replaces the streaming skeleton row.
@@ -717,6 +738,59 @@ impl TurnEventHandler for UnifiedEventHandler {
             args,
         )
         .await
+    }
+
+    async fn on_turn_stop_check(&self, session_id: &str) -> Option<String> {
+        hooks_dispatch::dispatch_stop_check(
+            self.config.hook_executor.as_ref(),
+            session_id,
+            self.config.turn_id.as_deref(),
+            self.tool_call_count.load(Ordering::Relaxed),
+            self.last_context_tokens.load(Ordering::Relaxed),
+        )
+        .await
+    }
+
+    fn on_steering_consumed(
+        &self,
+        session_id: &str,
+        injection: &crate::turn_executor::SteeringInjection,
+    ) {
+        // Persist the user message so the durable transcript (and the next
+        // turn's reloaded history) contains it as a plain user row — the
+        // in-memory <system-reminder> wrapper is a per-turn presentation.
+        let message_id = match crate::session::persistence::save_user_msg(
+            session_id,
+            &injection.content,
+            None,
+        ) {
+            Ok(id) => id,
+            Err(err) => {
+                tracing::warn!(
+                    "[unified_handler] Failed to persist steering message for session {}: {}",
+                    session_id,
+                    err
+                );
+                return;
+            }
+        };
+        if let Some(handle) = self.config.app_handle.as_ref() {
+            crate::bus::event_pipeline_bridge::persist_user_message_event(
+                handle,
+                session_id,
+                &message_id,
+                &injection.content,
+                None,
+                None,
+                crate::bus::event_pipeline_bridge::PersistedUserMessageSource::User,
+                &injection.turn_intent_id,
+            );
+        }
+        crate::foundation::session_bridge::update_turn_intent_status(
+            session_id,
+            &injection.turn_intent_id,
+            crate::foundation::session_bridge::TurnIntentBridgeStatus::Completed,
+        );
     }
 
     async fn after_tool_execute(

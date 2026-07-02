@@ -212,6 +212,10 @@ pub struct ResolvedAgent {
     pub sub_agents: Vec<SubAgentRef>,
     pub soul_content: String,
     pub sovereign_prompt: bool,
+    /// Feature-gated auto-continue for the turn loop (default `false`).
+    /// Resolved from `AgentDefinition.auto_continue`.
+    #[serde(default)]
+    pub auto_continue: bool,
 
     // Legit `Option`s — see module docs.
     pub selected_account_id: Option<String>,
@@ -357,6 +361,7 @@ impl ResolvedAgent {
             sub_agents,
             soul_content,
             sovereign_prompt: merged.sovereign_prompt,
+            auto_continue: merged.auto_continue,
 
             selected_account_id: merged.selected_account_id.clone(),
             delegation_config: merged.delegation_config.clone(),

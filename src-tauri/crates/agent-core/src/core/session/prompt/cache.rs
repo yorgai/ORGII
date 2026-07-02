@@ -484,6 +484,29 @@ pub struct PromptCacheBreakTracker {
     breaks: u64,
 }
 
+/// Build the per-turn volatile context reminder message.
+///
+/// A `user`-role message wrapping the volatile system-prompt body + dynamic
+/// sections in `<system-reminder>` tags. Appended AFTER the conversation
+/// history so the ever-changing content sits past the sliding prompt-cache
+/// breakpoint instead of invalidating the prefix. The content block carries
+/// a `volatile` cache-scope marker so providers can (a) skip it when
+/// placing the trailing cache breakpoint and (b) strip the marker before
+/// the wire.
+pub fn volatile_context_reminder_message(text: &str) -> Value {
+    serde_json::json!({
+        "role": "user",
+        "content": [{
+            "type": "text",
+            "text": format!(
+                "<system-reminder>\nThe following is per-turn session context (environment, IDE state, mode, reminders). It is not a message from the user — do not respond to it directly; apply it to the user's actual request.\n\n{}\n</system-reminder>",
+                text
+            ),
+            (ORGII_SYSTEM_CACHE_SCOPE_KEY): RenderedSystemBlockScope::Volatile.as_str(),
+        }],
+    })
+}
+
 pub fn rendered_system_blocks_from_messages(messages: &[Value]) -> Vec<RenderedSystemBlock> {
     let mut blocks = Vec::new();
     for message in messages {

@@ -20,11 +20,16 @@ use crate::core::session::prompt::sections::build_agent_org_context_section;
 use crate::core::session::types::{SystemPromptConfig, ToolSummary};
 
 impl UnifiedMessageProcessor {
-    /// Builds the stable, cacheable system prompt.
+    /// Builds the system prompt split into `(stable, volatile)` bodies.
+    ///
+    /// `stable` is the cacheable prefix; `volatile` holds the per-turn
+    /// sections (environment, IDE context, presence, mode suffix, …) and is
+    /// appended after the history by `process()` so it never breaks the
+    /// provider prompt-cache prefix.
     pub(in crate::core::session::turn) async fn build_system_prompt(
         &self,
         session_id: &str,
-    ) -> String {
+    ) -> (String, String) {
         let tool_summaries = self.build_tool_summaries();
 
         let live_workspace = Some(self.runtime.workspace_state.read().clone());
@@ -64,7 +69,7 @@ impl UnifiedMessageProcessor {
 
         let mut prompt_cache = self.session.prompt_cache.lock().await;
         let mut learnings_prompt_cache = self.session.learnings_prompt_cache.lock().await;
-        super::super::super::prompt::builder::build_unified_system_prompt_with_cache(
+        super::super::super::prompt::builder::build_unified_system_prompt_split_with_cache(
             session_id,
             &tool_summaries,
             &prompt_config,
@@ -220,33 +225,120 @@ impl UnifiedMessageProcessor {
 
         // Background-jobs reminder — lists running/unacknowledged-completed
         // processes so the model doesn't have to call AwaitTool to notice them.
+        // Completed subagents' final results are INLINED in the reminder and
+        // acknowledged here, so the parent acts on them without an extra
+        // await_output round-trip.
         {
             let jobs =
                 crate::tools::impls::coding::exec::registry::list_jobs_for_reminder(session_id);
             if !jobs.is_empty() {
                 dynamic_sections
                     .push(super::super::background_reminder::build_background_jobs_reminder(&jobs));
+                let inlined =
+                    super::super::background_reminder::inlined_result_handles(&jobs);
+                if !inlined.is_empty() {
+                    crate::tools::impls::coding::exec::registry::acknowledge_outputs(&inlined);
+                }
             }
         }
 
         // Todo nag reminder — nudges the model back to `manage_todo` after
-        // NAG_THRESHOLD consecutive turns without a todo call. Injected as a
-        // dynamic (non-persisted) section so the user-visible transcript is clean.
-        const NAG_THRESHOLD: u32 = 3;
+        // NAG_THRESHOLD consecutive turns without a todo call, and includes
+        // the current list snapshot so the model can act without an extra
+        // read call. Injected as a dynamic (non-persisted) section so the
+        // user-visible transcript is clean.
+        const NAG_THRESHOLD: u32 = 10;
         {
             let rounds = *self.rounds_since_todo.lock().await;
             if rounds >= NAG_THRESHOLD {
-                dynamic_sections.push(
+                let todo_snapshot = tokio::task::block_in_place(|| {
+                    crate::persistence::db_helpers::todos::get_todos(session_id).unwrap_or_default()
+                });
+                let mut reminder = String::from(
                     "<system-reminder>If you are working on a multi-step task, \
                      remember to use the manage_todo tool to keep the task list \
                      up to date. Mark the current task in_progress and completed \
-                     as you proceed.</system-reminder>"
-                        .to_string(),
+                     as you proceed.",
                 );
+                if todo_snapshot.is_empty() {
+                    reminder.push_str(" The todo list is currently empty.");
+                } else {
+                    reminder.push_str("\nCurrent todo list:\n");
+                    for (idx, todo) in todo_snapshot.iter().enumerate() {
+                        reminder.push_str(&format!(
+                            "{}. [{}] {}\n",
+                            idx, todo.status, todo.content
+                        ));
+                    }
+                }
+                reminder.push_str("</system-reminder>");
+                dynamic_sections.push(reminder);
                 info!(
-                    "[unified_processor] Nag reminder injected ({} turns since last todo call, session={})",
-                    rounds, session_id
+                    "[unified_processor] Nag reminder injected ({} turns since last todo call, {} todos attached, session={})",
+                    rounds,
+                    todo_snapshot.len(),
+                    session_id
                 );
+            }
+        }
+
+        // Subagent-delegation reminder — periodically re-surfaces the `agent`
+        // tool and its parallel-dispatch guidance (mirrors Claude Code's
+        // agent_listing_delta system-reminder; the one-shot mention in the
+        // tool schema gets diluted in long sessions). Same cadence pattern
+        // as the todo nag above. Skipped for worker sessions: subagents
+        // cannot delegate further (see subagent_of_subagent_rejection).
+        const SUBAGENT_REMINDER_THRESHOLD: u32 = 10;
+        {
+            use crate::definitions::prefix_lookup::{
+                SHADOW_SUBAGENT_SESSION_PREFIX, SUBAGENT_SESSION_PREFIX,
+            };
+            let is_worker_session = session_id.starts_with(SUBAGENT_SESSION_PREFIX)
+                || session_id.starts_with(SHADOW_SUBAGENT_SESSION_PREFIX);
+            let rounds = *self.rounds_since_subagent_reminder.lock().await;
+            if !is_worker_session && rounds >= SUBAGENT_REMINDER_THRESHOLD {
+                let effective_policy = self.effective_tool_policy();
+                let has_agent_tool = self
+                    .runtime
+                    .tool_registry
+                    .prompt_tool_names(effective_policy.as_ref())
+                    .iter()
+                    .any(|n| n == crate::tools::names::AGENT);
+                if has_agent_tool {
+                    // Same allowlist source the `agent` tool schema uses —
+                    // agent list changes propagate to both surfaces.
+                    let allowed: Option<Vec<String>> = if self.runtime.resolved.sub_agents.is_empty()
+                    {
+                        None
+                    } else {
+                        Some(
+                            self.runtime
+                                .resolved
+                                .sub_agents
+                                .iter()
+                                .map(|s| s.agent_id.clone())
+                                .collect(),
+                        )
+                    };
+                    let ids = crate::tools::impls::orchestration::agent::llm_visible_agent_ids(
+                        allowed.as_ref(),
+                    );
+                    if !ids.is_empty() {
+                        dynamic_sections.push(format!(
+                            "<system-reminder>Delegation check: for independent research \
+                             questions or parallelizable subtasks, use the `agent` tool — \
+                             launch multiple workers CONCURRENTLY in a single message \
+                             (available: {}). Do not delegate trivial single-lookup \
+                             work.</system-reminder>",
+                            ids.join(", ")
+                        ));
+                        *self.rounds_since_subagent_reminder.lock().await = 0;
+                        info!(
+                            "[unified_processor] Subagent reminder injected ({} turns since last, session={})",
+                            rounds, session_id
+                        );
+                    }
+                }
             }
         }
 

@@ -71,6 +71,25 @@ fn is_zero_i64(v: &i64) -> bool {
 }
 
 impl ContextUsageSnapshot {
+    /// Three-tier low-context signal derived from `percent_used`:
+    /// `warning` (≥75%), `error` (≥90%), `blocking` (≥98%). `None` while
+    /// comfortably within budget or when the window size is unknown.
+    /// Rides the `agent:context_usage` broadcast so the frontend can color
+    /// the gauge, and drives the one-shot model-side budget nudge in the
+    /// turn loop.
+    pub fn warning_level(&self) -> Option<&'static str> {
+        let percent = self.percent_used?;
+        if percent >= 98.0 {
+            Some("blocking")
+        } else if percent >= 90.0 {
+            Some("error")
+        } else if percent >= 75.0 {
+            Some("warning")
+        } else {
+            None
+        }
+    }
+
     pub fn from_payload(
         messages: &[Value],
         tools: &[Value],

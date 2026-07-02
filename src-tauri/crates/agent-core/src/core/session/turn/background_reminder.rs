@@ -6,11 +6,29 @@
 //!
 //! Design goals:
 //! - **Accurate status** — uses real-time registry state, not cached text.
+//! - **Result delivery** — a completed subagent's final result is inlined
+//!   directly (capped) so the parent can act on it immediately instead of
+//!   spending a tool call on `await_output`. Inlined jobs are acknowledged
+//!   by the caller via [`inlined_result_handles`].
 //! - **Auto-cleanup** — completed jobs whose output was read via AwaitTool
 //!   are excluded (acknowledged).
-//! - **Compact** — one block, fixed token budget regardless of job count.
+//! - **Compact** — one block, bounded per-result budget.
 
 use crate::tools::impls::coding::exec::registry::{JobSnapshot, JobStatus};
+
+/// Cap on an inlined subagent result inside the reminder. Full text remains
+/// available via `await_output(monitor)` before acknowledgement and in the
+/// subagent transcript afterwards.
+const INLINE_RESULT_MAX_CHARS: usize = 8_000;
+
+/// Handles whose final result the reminder inlines — the caller must
+/// acknowledge exactly these so results are delivered once.
+pub fn inlined_result_handles(jobs: &[JobSnapshot]) -> Vec<String> {
+    jobs.iter()
+        .filter(|job| job.has_unread_output && job.final_result.is_some())
+        .map(|job| job.handle.clone())
+        .collect()
+}
 
 pub fn build_background_jobs_reminder(jobs: &[JobSnapshot]) -> String {
     let mut running: Vec<&JobSnapshot> = Vec::new();
@@ -65,14 +83,38 @@ pub fn build_background_jobs_reminder(jobs: &[JobSnapshot]) -> String {
                 "- `{}` ({}) — `{}` [{}]",
                 job.handle, job.kind_label, job.label, status_label,
             ));
+            // Subagent results are inlined so the parent can act immediately
+            // (mirrors the task-notification pattern: result travels WITH the
+            // completion notice, not behind another tool call).
+            if let Some(ref result) = job.final_result {
+                let capped = if result.len() > INLINE_RESULT_MAX_CHARS {
+                    format!(
+                        "{}\n[result truncated at {}K chars — full text in the subagent transcript]",
+                        crate::utils::safe_truncate_utf8(result, INLINE_RESULT_MAX_CHARS),
+                        INLINE_RESULT_MAX_CHARS / 1000
+                    )
+                } else {
+                    result.clone()
+                };
+                lines.push(format!("  <result>\n{}\n  </result>", capped));
+            }
         }
     }
 
     lines.push(String::new());
 
-    if !unread_completed.is_empty() && running.is_empty() {
+    let any_inlined = unread_completed.iter().any(|j| j.final_result.is_some());
+    let any_pending_read = unread_completed.iter().any(|j| j.final_result.is_none());
+    if any_inlined {
         lines.push(
-            "Use `await_output(command=\"monitor\", handles=[...])` to read their output."
+            "The <result> blocks above are the completed subagents' final reports — act on them \
+             directly; no await_output call is needed for those."
+                .to_string(),
+        );
+    }
+    if any_pending_read && running.is_empty() {
+        lines.push(
+            "Use `await_output(command=\"monitor\", handles=[...])` to read the remaining jobs' output."
                 .to_string(),
         );
     } else if !running.is_empty() {
@@ -110,6 +152,7 @@ mod tests {
             status: JobStatus::Running,
             age_ms: 45_000,
             has_unread_output: false,
+            final_result: None,
         }
     }
 
@@ -121,6 +164,7 @@ mod tests {
             status: JobStatus::Exited(code),
             age_ms: 120_000,
             has_unread_output: true,
+            final_result: None,
         }
     }
 
@@ -132,6 +176,19 @@ mod tests {
             status: JobStatus::Exited(0),
             age_ms: 300_000,
             has_unread_output: false,
+            final_result: None,
+        }
+    }
+
+    fn make_completed_subagent(handle: &str, result: &str) -> JobSnapshot {
+        JobSnapshot {
+            handle: handle.to_string(),
+            label: "Explore".to_string(),
+            kind_label: "subagent:explore".to_string(),
+            status: JobStatus::Completed,
+            age_ms: 60_000,
+            has_unread_output: true,
+            final_result: Some(result.to_string()),
         }
     }
 
@@ -185,5 +242,34 @@ mod tests {
         assert_eq!(format_age(5_000), "5s");
         assert_eq!(format_age(90_000), "1m 30s");
         assert_eq!(format_age(3_661_000), "1h 1m");
+    }
+
+    #[test]
+    fn subagent_result_is_inlined() {
+        let jobs = vec![make_completed_subagent("agent-x", "Found 3 call sites in foo.rs")];
+        let result = build_background_jobs_reminder(&jobs);
+        assert!(result.contains("<result>"), "got: {result}");
+        assert!(result.contains("Found 3 call sites in foo.rs"));
+        assert!(result.contains("act on them"));
+        // No await_output nudge for inlined results.
+        assert!(!result.contains("to read the remaining jobs"));
+    }
+
+    #[test]
+    fn long_result_is_capped() {
+        let long = "x".repeat(10_000);
+        let jobs = vec![make_completed_subagent("agent-y", &long)];
+        let result = build_background_jobs_reminder(&jobs);
+        assert!(result.contains("[result truncated"));
+    }
+
+    #[test]
+    fn inlined_handles_only_cover_result_bearing_jobs() {
+        let jobs = vec![
+            make_completed_subagent("agent-z", "done"),
+            make_completed("shell-1", "cargo test", 0),
+            make_running("shell-2", "npm run dev"),
+        ];
+        assert_eq!(inlined_result_handles(&jobs), vec!["agent-z".to_string()]);
     }
 }

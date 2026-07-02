@@ -20,7 +20,7 @@ use serde_json::Value;
 use tracing::{info, warn};
 
 use super::UnifiedMessageProcessor;
-use crate::model_context::compaction::{CompactionOutcome, ContextCompactor};
+use crate::model_context::compaction::CompactionOutcome;
 use crate::turn_executor::{self, PermissionProvider, TurnConfig, TurnIterationHook, TurnResult};
 
 use super::super::event_handler::UnifiedEventHandler;
@@ -38,6 +38,7 @@ impl UnifiedMessageProcessor {
         session_id: &str,
         turn_id: &str,
         messages: &mut Vec<Value>,
+        reasoning_trigger: Option<crate::providers::thinking_mode::ReasoningLevel>,
     ) -> Result<(TurnResult, UnifiedEventHandler), String> {
         let effective_policy = self.effective_tool_policy();
 
@@ -45,8 +46,30 @@ impl UnifiedMessageProcessor {
             .provider
             .begin_logical_turn(session_id, turn_id);
 
+        // Reasoning trigger words ("think hard", "ultrathink") escalate the
+        // model's reasoning level FOR THIS TURN ONLY by re-encoding the
+        // variant suffix; an explicit user-selected level is never lowered.
+        let turn_model = match reasoning_trigger {
+            Some(level) => {
+                let escalated = crate::providers::thinking_mode::escalate_model_reasoning(
+                    &self.runtime.model,
+                    level,
+                );
+                if escalated != self.runtime.model {
+                    tracing::info!(
+                        "[unified_processor] Reasoning trigger escalated model {} -> {} (session={})",
+                        self.runtime.model,
+                        escalated,
+                        session_id
+                    );
+                }
+                escalated
+            }
+            None => self.runtime.model.clone(),
+        };
+
         let turn_config = TurnConfig {
-            model: self.runtime.model.clone(),
+            model: turn_model,
             account_id: self.runtime.account_id.clone(),
             context_window_override: self
                 .runtime
@@ -68,6 +91,8 @@ impl UnifiedMessageProcessor {
                 .session
                 .persist_next_cancel_marker
                 .load(std::sync::atomic::Ordering::SeqCst),
+            steering_queue: Some(Arc::clone(&self.session.steering_queue)),
+            auto_continue: self.runtime.resolved.auto_continue,
         };
 
         let mut event_handler_config = self.event_handler_config.clone();
@@ -122,7 +147,6 @@ impl UnifiedMessageProcessor {
             .runtime
             .tool_registry
             .get_definitions_budgeted(effective_policy.as_ref());
-        let workspace_root = self.workspace_root();
         let result: TurnResult = match turn_executor::execute_turn(
             messages,
             self.runtime.provider.as_ref(),
@@ -133,7 +157,6 @@ impl UnifiedMessageProcessor {
             &handler,
             perm_provider,
             Some(&self.session.cancel_flag),
-            workspace_root.as_deref(),
             self.runtime.policy_context_activator.as_deref(),
         )
         .await
@@ -150,7 +173,6 @@ impl UnifiedMessageProcessor {
                     effective_policy.as_ref(),
                     &handler,
                     perm_provider,
-                    workspace_root.as_deref(),
                 )
                 .await?
             }
@@ -165,6 +187,15 @@ impl UnifiedMessageProcessor {
             result.cache_read_tokens,
             result.cache_write_tokens,
         );
+
+        // Record the provider-reported context fill so the next pre-turn
+        // compaction check can correct the local token estimate (which
+        // systematically undercounts — images, tokenizer mismatch).
+        if result.context_tokens > 0 {
+            self.session
+                .last_context_tokens
+                .store(result.context_tokens, std::sync::atomic::Ordering::SeqCst);
+        }
 
         Ok((result, handler))
     }
@@ -183,7 +214,6 @@ impl UnifiedMessageProcessor {
         effective_policy: &crate::tools::policy::ResolvedToolPolicy,
         handler: &UnifiedEventHandler,
         perm_provider: Option<&dyn PermissionProvider>,
-        workspace_root: Option<&std::path::Path>,
     ) -> Result<TurnResult, String> {
         const MAX_REACTIVE_RETRIES: usize = 2;
         let mut last_err = first_err;
@@ -194,27 +224,13 @@ impl UnifiedMessageProcessor {
                 "[unified_processor] ContextTooLong hit for session {} — reactive compact attempt {}/{}",
                 session_id, attempt, MAX_REACTIVE_RETRIES,
             );
-            let context_window =
-                crate::providers::model_capabilities::resolve_effective_context_window(
-                    &self.runtime.model,
-                    self.runtime.account_id.as_deref(),
-                    self.runtime
-                        .resolved
-                        .context_window_configured
-                        .then_some(self.runtime.resolved.context_window),
-                );
-            let mut state = self.compaction_state.lock().await;
-            let (compacted, reactive_outcome) = ContextCompactor::compact(
-                messages,
-                context_window,
-                &self.runtime.resolved.compaction,
-                &mut state,
-                self.runtime.provider.as_ref(),
-                &self.runtime.model,
-            )
-            .await;
-            *messages = crate::model_context::cleanup::post_compact_cleanup(compacted);
-            drop(state);
+            // Full rebuild pipeline (prefix protection + SM-compact first +
+            // file re-injection), mirroring the pre-turn path. The error
+            // string carries the provider-reported actual token count, used
+            // to calibrate the estimate-denominated budget.
+            let reactive_outcome = self
+                .run_reactive_compaction(session_id, messages, Some(&last_err))
+                .await;
             self.session
                 .invalidate_prompt_cache(
                     crate::session::prompt::cache::PromptCacheInvalidationReason::Compaction,
@@ -227,6 +243,23 @@ impl UnifiedMessageProcessor {
                     &format!(
                         "Reactive compaction fell back to truncation ({} messages dropped without summary, attempt {})",
                         messages_dropped, attempt
+                    ),
+                    "compaction",
+                );
+            } else if reactive_outcome == CompactionOutcome::Skipped {
+                // The provider just rejected the prompt as too long, yet the
+                // compactor's estimate judged the history within budget — the
+                // retry is doomed to fail identically. Surface it instead of
+                // spinning silently.
+                warn!(
+                    "[unified_processor] Reactive compaction SKIPPED for session {} despite ContextTooLong (attempt {}) — estimator undercount",
+                    session_id, attempt
+                );
+                broadcast_agent_warning(
+                    session_id,
+                    &format!(
+                        "Reactive compaction skipped (estimate under budget despite provider rejection, attempt {})",
+                        attempt
                     ),
                     "compaction",
                 );
@@ -249,7 +282,6 @@ impl UnifiedMessageProcessor {
                 handler,
                 perm_provider,
                 Some(&self.session.cancel_flag),
-                workspace_root,
                 self.runtime.policy_context_activator.as_deref(),
             )
             .await

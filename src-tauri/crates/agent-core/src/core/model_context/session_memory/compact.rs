@@ -92,13 +92,15 @@ pub(in crate::core::model_context) const LLM_COMPACT_BOUNDARY_PREFIX: &str =
 
 /// Check if a message is a compaction boundary marker.
 ///
-/// Both SM-compact and LLM-compact insert system messages with
-/// recognisable prefixes. The backward expansion in
+/// Both SM-compact and LLM-compact insert summary messages with
+/// recognisable prefixes. New summaries land as `user` messages (with a
+/// continuation instruction); summaries persisted before that change were
+/// `system` messages, so both roles are accepted. The backward expansion in
 /// [`calculate_messages_to_keep_index`] must not cross these boundaries
 /// to avoid re-summarising already-compacted content.
 pub fn is_compact_boundary_message(msg: &Value) -> bool {
     let role = msg.get("role").and_then(|val| val.as_str()).unwrap_or("");
-    if role != "system" {
+    if role != "system" && role != "user" {
         return false;
     }
     let content = compact_boundary_text(msg).unwrap_or("");

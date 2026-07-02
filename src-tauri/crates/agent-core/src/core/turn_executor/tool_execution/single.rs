@@ -18,7 +18,7 @@ use super::super::file_tracker::{
 };
 use super::super::helpers::{
     add_tool_result, add_tool_result_rich_with_timestamp, add_tool_result_with_timestamp,
-    check_permission, truncate_output,
+    check_permission, truncate_or_persist_output, truncate_output,
 };
 use super::super::types::{PermissionProvider, TurnEventHandler};
 use super::super::usage_telemetry::{serialized_value_bytes, string_bytes, ToolExecutionUsage};
@@ -47,7 +47,6 @@ pub(super) async fn execute_single_tool(
     cancel_flag: Option<&Arc<AtomicBool>>,
     file_tracker: &mut FileTimeTracker,
     consecutive_errors: &mut u32,
-    workspace_path: Option<&std::path::Path>,
     policy_context_activator: Option<&SessionScopedContextActivator>,
 ) -> SingleResult {
     let input_bytes = serialized_value_bytes(&tool_call.arguments);
@@ -187,11 +186,15 @@ pub(super) async fn execute_single_tool(
 
         let file_time_error = if is_file_write_tool(&tool_call.name) {
             let paths = extract_file_paths(&tool_call.name, &effective_args);
-            let mut err: Option<String> = None;
-            for path in &paths {
-                if let Err(msg) = file_tracker.assert_fresh(path) {
-                    err = Some(msg);
-                    break;
+            let mut err = file_tracker
+                .assert_read_before_edit(&tool_call.name, &effective_args)
+                .err();
+            if err.is_none() {
+                for path in &paths {
+                    if let Err(msg) = file_tracker.assert_fresh(path) {
+                        err = Some(msg);
+                        break;
+                    }
                 }
             }
             err
@@ -267,8 +270,14 @@ pub(super) async fn execute_single_tool(
                 }
             }
 
-            let budget = tools.get(&tool_call.name).map(|t| t.output_budget());
-            let mut truncated = truncate_output(&raw_result, budget);
+            let tool_ref = tools.get(&tool_call.name);
+            let budget = tool_ref.map(|t| t.output_budget());
+            let allow_persist = tool_ref.map(|t| t.allow_persisted_output()).unwrap_or(true);
+            let mut truncated = if allow_persist {
+                truncate_or_persist_output(&raw_result, budget, session_id, &tool_call.name)
+            } else {
+                truncate_output(&raw_result, budget)
+            };
 
             if truncated.trim().is_empty() {
                 truncated = "[No output]".to_string();
@@ -293,29 +302,6 @@ pub(super) async fn execute_single_tool(
                     .and_then(|activator| activator.augment_for_read_paths(&paths))
                 {
                     truncated.push_str(&extra);
-                }
-            }
-
-            if let Some(ws) = workspace_path {
-                let persist_threshold = tools
-                    .get(&tool_call.name)
-                    .map(|t| t.persist_threshold())
-                    .unwrap_or(usize::MAX);
-                if truncated.len() > persist_threshold && !is_error {
-                    use super::super::tool_result_storage;
-                    match tool_result_storage::persist_tool_result(
-                        ws,
-                        session_id,
-                        &tool_call.id,
-                        &truncated,
-                    ) {
-                        Ok(persisted) => {
-                            truncated = tool_result_storage::build_large_result_message(&persisted);
-                        }
-                        Err(err) => {
-                            warn!("[agent-core] Failed to persist tool result: {}", err);
-                        }
-                    }
                 }
             }
 
@@ -484,7 +470,6 @@ mod tests {
             None,
             &mut file_tracker,
             &mut consecutive_errors,
-            None,
             None,
         )
         .await;

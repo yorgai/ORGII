@@ -16,6 +16,18 @@ pub struct HookResult {
     pub stdout: String,
     pub stderr: String,
     pub duration_ms: u64,
+    /// Process exit code for command hooks (`None` for prompt/http hooks
+    /// and spawn/timeout failures). Exit code 2 is the blocking-feedback
+    /// contract: stderr is fed back to the model and the action is blocked.
+    pub exit_code: Option<i32>,
+}
+
+impl HookResult {
+    /// The ecosystem-standard blocking contract: exit code 2 means "block
+    /// this action and feed my stderr back to the model".
+    pub fn is_blocking_exit(&self) -> bool {
+        self.exit_code == Some(2)
+    }
 }
 
 /// Executes hooks for lifecycle events.
@@ -71,14 +83,26 @@ impl HookExecutor {
 
     /// Execute all hooks for an event. Returns results in order.
     /// Hooks run sequentially — a failing hook does NOT prevent subsequent hooks.
+    /// Command hooks with a `matcher` are skipped when the event's tool name
+    /// (ORGII_TOOL_NAME) does not match the anchored regex.
     pub async fn run(&self, event: HookEvent, context: &HookContext) -> Vec<HookResult> {
         let hooks = self.config.hooks_for(event);
         if hooks.is_empty() {
             return Vec::new();
         }
 
+        let tool_name = context.env_vars.get("ORGII_TOOL_NAME").cloned();
         let mut results = Vec::with_capacity(hooks.len());
         for entry in hooks {
+            if let HookEntry::Command {
+                matcher: Some(matcher),
+                ..
+            } = entry
+            {
+                if !matcher_applies(matcher, tool_name.as_deref()) {
+                    continue;
+                }
+            }
             let result = self.execute_entry(event, entry, context).await;
             results.push(result);
         }
@@ -121,6 +145,7 @@ impl HookExecutor {
                 stdout: String::new(),
                 stderr: String::new(),
                 duration_ms: 0,
+                exit_code: None,
             },
             HookEntry::Http {
                 url,
@@ -222,6 +247,7 @@ impl HookExecutor {
                     stdout: body_text,
                     stderr: String::new(),
                     duration_ms: start.elapsed().as_millis() as u64,
+                    exit_code: None,
                 }
             }
             Err(err) => {
@@ -242,6 +268,7 @@ impl HookExecutor {
                         format!("HTTP error: {}", err)
                     },
                     duration_ms: start.elapsed().as_millis() as u64,
+                    exit_code: None,
                 }
             }
         }
@@ -272,6 +299,7 @@ impl HookExecutor {
         cmd.arg(shell.1)
             .arg(command)
             .current_dir(&self.workspace_root)
+            .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped());
 
@@ -284,63 +312,104 @@ impl HookExecutor {
         #[cfg(windows)]
         cmd.creation_flags(app_platform::CREATE_NO_WINDOW);
 
-        let result =
-            match tokio::time::timeout(Duration::from_millis(timeout_ms), cmd.output()).await {
-                Ok(Ok(output)) => {
-                    let success = output.status.success();
-                    let stdout = String::from_utf8_lossy(&output.stdout)
-                        .chars()
-                        .take(10_000)
-                        .collect::<String>();
-                    let stderr = String::from_utf8_lossy(&output.stderr)
-                        .chars()
-                        .take(10_000)
-                        .collect::<String>();
+        // Structured stdin payload (ecosystem-standard hook contract):
+        // hooks can parse one JSON object from stdin instead of scraping
+        // env vars. Env vars remain for backward compatibility.
+        let stdin_payload = serde_json::json!({
+            "hook_event_name": event.as_str(),
+            "context": context.env_vars,
+        })
+        .to_string();
 
-                    if !success {
-                        warn!(
-                            "[hooks] {} hook failed (exit={}): {}",
-                            event,
-                            output.status.code().unwrap_or(-1),
-                            &stderr[..stderr.len().min(200)]
-                        );
-                    }
+        let run = async {
+            let mut child = cmd.spawn()?;
+            if let Some(mut stdin) = child.stdin.take() {
+                use tokio::io::AsyncWriteExt;
+                // A hook that never reads stdin is fine — the write may hit
+                // a closed pipe; ignore that error.
+                let _ = stdin.write_all(stdin_payload.as_bytes()).await;
+                drop(stdin);
+            }
+            child.wait_with_output().await
+        };
 
-                    HookResult {
-                        event,
-                        success,
-                        stdout,
-                        stderr,
-                        duration_ms: start.elapsed().as_millis() as u64,
-                    }
-                }
-                Ok(Err(err)) => {
-                    warn!("[hooks] {} hook spawn error: {}", event, err);
-                    HookResult {
-                        event,
-                        success: false,
-                        stdout: String::new(),
-                        stderr: format!("Failed to spawn: {}", err),
-                        duration_ms: start.elapsed().as_millis() as u64,
-                    }
-                }
-                Err(_) => {
+        let result = match tokio::time::timeout(Duration::from_millis(timeout_ms), run).await {
+            Ok(Ok(output)) => {
+                let success = output.status.success();
+                let exit_code = output.status.code();
+                let stdout = String::from_utf8_lossy(&output.stdout)
+                    .chars()
+                    .take(10_000)
+                    .collect::<String>();
+                let stderr = String::from_utf8_lossy(&output.stderr)
+                    .chars()
+                    .take(10_000)
+                    .collect::<String>();
+
+                if !success {
                     warn!(
-                        "[hooks] {} hook timed out after {}ms: {}",
+                        "[hooks] {} hook failed (exit={}): {}",
                         event,
-                        timeout_ms,
-                        &command[..command.len().min(80)]
+                        exit_code.unwrap_or(-1),
+                        &stderr[..stderr.len().min(200)]
                     );
-                    HookResult {
-                        event,
-                        success: false,
-                        stdout: String::new(),
-                        stderr: format!("Hook timed out after {}ms", timeout_ms),
-                        duration_ms: timeout_ms,
-                    }
                 }
-            };
+
+                HookResult {
+                    event,
+                    success,
+                    stdout,
+                    stderr,
+                    duration_ms: start.elapsed().as_millis() as u64,
+                    exit_code,
+                }
+            }
+            Ok(Err(err)) => {
+                warn!("[hooks] {} hook spawn error: {}", event, err);
+                HookResult {
+                    event,
+                    success: false,
+                    stdout: String::new(),
+                    stderr: format!("Failed to spawn: {}", err),
+                    duration_ms: start.elapsed().as_millis() as u64,
+                    exit_code: None,
+                }
+            }
+            Err(_) => {
+                warn!(
+                    "[hooks] {} hook timed out after {}ms: {}",
+                    event,
+                    timeout_ms,
+                    &command[..command.len().min(80)]
+                );
+                HookResult {
+                    event,
+                    success: false,
+                    stdout: String::new(),
+                    stderr: format!("Hook timed out after {}ms", timeout_ms),
+                    duration_ms: timeout_ms,
+                    exit_code: None,
+                }
+            }
+        };
 
         result
+    }
+}
+
+/// Check a tool-name matcher against the current tool. The matcher is an
+/// anchored regex (`Edit|Write` matches exactly those names); an invalid
+/// pattern falls back to exact string comparison. No tool name (non-tool
+/// event) never matches a matcher-gated hook.
+fn matcher_applies(matcher: &str, tool_name: Option<&str>) -> bool {
+    let Some(tool_name) = tool_name else {
+        return false;
+    };
+    if matcher == "*" || matcher.is_empty() {
+        return true;
+    }
+    match regex::Regex::new(&format!("^(?:{matcher})$")) {
+        Ok(pattern) => pattern.is_match(tool_name),
+        Err(_) => matcher == tool_name,
     }
 }

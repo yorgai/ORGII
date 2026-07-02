@@ -5,6 +5,13 @@ use serde_json::Value;
 use super::compaction::ContextCompactor;
 use crate::core::side_query::{self, SideQueryConfig, StructuredOutput};
 
+/// Relaxed cap for tool results fed to the summarizer. Large enough to keep
+/// exact error messages / paths intact; the per-message oversized guard in
+/// `summarize_messages` still protects the summarizer's context window.
+const TOOL_RESULT_SUMMARY_MAX_CHARS: usize = 4_000;
+/// Cap for tool-call argument echoes in the summarizer input.
+const TOOL_ARGS_SUMMARY_MAX_CHARS: usize = 1_000;
+
 /// Truncate text for inclusion in the summary prompt.
 pub(crate) fn truncate_for_summary(text: &str, max_chars: usize) -> String {
     if text.len() <= max_chars {
@@ -21,31 +28,37 @@ pub(crate) fn truncate_for_summary(text: &str, max_chars: usize) -> String {
 // Summarization Prompt
 // ============================================
 
-pub(crate) const SUMMARIZATION_SYSTEM_PROMPT: &str = r#"You are a context compactor. Your job is to summarize a conversation between a user and an AI assistant, preserving the most important information for continued work.
+pub(crate) const SUMMARIZATION_SYSTEM_PROMPT: &str = r#"You are a context compactor. Your task is to create a detailed summary of a conversation between a user and an AI coding assistant, paying close attention to the user's explicit requests and the assistant's previous actions. The summary will REPLACE the older conversation history — anything you omit is lost, and the assistant must be able to resume work from your summary alone.
 
-## Instructions
+Before writing, silently review the entire conversation and verify: every user request captured? every touched file listed? the most recent work identified? Then output the summary.
 
-Produce a concise summary that captures:
+## Required structure
 
-1. **Decisions made** — What the user decided, what approach was chosen, any preferences stated
-2. **Files changed** — Which files were created, edited, or deleted, and what the changes were
-3. **Errors encountered** — Any errors, their causes, and how they were resolved
-4. **Current state** — What is the project/task state right now? What was the last thing done?
-5. **Pending items** — Any tasks mentioned but not yet completed, next steps discussed
-6. **Key context** — Names, paths, IDs, configurations, or technical details that the assistant will need to continue the work
+Use exactly these sections:
 
-## Format
+1. **Primary Request and Intent** — all of the user's explicit requests and intents, in detail
+2. **Key Technical Concepts** — technologies, frameworks, and conventions involved
+3. **Files and Code Sections** — files created/edited/read that matter, with exact paths; include the important code snippets or signatures and why each matters
+4. **Errors and Fixes** — every error encountered, its cause, and how it was fixed (or that it remains open); include exact error messages. Pay special attention to explicit user feedback or corrections
+5. **Problem Solving** — problems solved so far and any ongoing troubleshooting
+6. **All User Messages** — a list of ALL non-tool-result user messages, condensed but preserving intent and constraints; these are critical for understanding what the user actually asked
+7. **Pending Tasks** — tasks explicitly requested but not yet done
+8. **Current Work** — precisely what was being worked on immediately before this summary, with file paths and code where relevant
+9. **Next Step** — the immediate next step, ONLY if it is a direct continuation of explicitly requested work; include a verbatim quote of the most recent instruction that justifies it. If there is no explicit next task, omit the step rather than inventing one
 
-Write the summary as structured bullet points grouped by topic. Use markdown formatting.
-Be concise but preserve specifics (exact file paths, error messages, config values).
-Do NOT include pleasantries or conversational filler.
-Target ~500-1000 words."#;
+Preserve specifics: exact file paths, function names, error messages, config values, branch names, IDs.
+Do NOT include pleasantries or conversational filler."#;
 
 // ============================================
 // Message Formatting
 // ============================================
 
 /// Format messages (references) into a readable representation for the summarizer.
+///
+/// User and assistant text is passed through in full (images are already
+/// excluded upstream — multimodal arrays render as empty strings here).
+/// Tool results and tool-call args keep a relaxed cap so one noisy command
+/// dump cannot crowd out the rest of the history.
 pub(crate) fn format_messages_for_summary_refs(messages: &[&Value]) -> String {
     let mut parts = Vec::new();
 
@@ -61,15 +74,14 @@ pub(crate) fn format_messages_for_summary_refs(messages: &[&Value]) -> String {
 
         match role {
             "user" => {
-                parts.push(format!("**User:** {}", truncate_for_summary(content, 500)));
+                parts.push(format!("**User:** {}", content));
             }
             "assistant" => {
                 let tool_calls = format_tool_calls(msg);
                 if content.is_empty() && !tool_calls.is_empty() {
                     parts.push(format!("**Assistant:**\n{}", tool_calls));
                 } else if !content.is_empty() {
-                    let mut entry =
-                        format!("**Assistant:** {}", truncate_for_summary(content, 500));
+                    let mut entry = format!("**Assistant:** {}", content);
                     if !tool_calls.is_empty() {
                         entry.push_str(&format!("\n{}", tool_calls));
                     }
@@ -84,16 +96,12 @@ pub(crate) fn format_messages_for_summary_refs(messages: &[&Value]) -> String {
                 parts.push(format!(
                     "**Tool result ({}):** {}",
                     tool_name,
-                    truncate_for_summary(content, 300)
+                    truncate_for_summary(content, TOOL_RESULT_SUMMARY_MAX_CHARS)
                 ));
             }
             "system" => {}
             _ => {
-                parts.push(format!(
-                    "**{}:** {}",
-                    role,
-                    truncate_for_summary(content, 200)
-                ));
+                parts.push(format!("**{}:** {}", role, content));
             }
         }
     }
@@ -121,7 +129,7 @@ pub(crate) fn format_tool_calls(msg: &Value) -> String {
                     format!(
                         "  → tool_call: {}({})",
                         name,
-                        truncate_for_summary(args, 200)
+                        truncate_for_summary(args, TOOL_ARGS_SUMMARY_MAX_CHARS)
                     )
                 })
                 .collect::<Vec<_>>()

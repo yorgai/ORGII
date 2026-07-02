@@ -125,8 +125,14 @@ pub async fn scratchpad_edit(cfg: &Config) -> bool {
                         used_edit && edit_count >= 2,
                     ),
                     (
+                        // Success evidence is the tool trajectory + read-back
+                        // content, not the reply mentioning the filename — the
+                        // terse SDE prompt legitimately answers with just the
+                        // file body.
                         "File created in scratchpad",
-                        content.contains("notes.md") || content.contains("scratchpad"),
+                        content.contains("notes.md")
+                            || content.contains("scratchpad")
+                            || (used_edit && content.contains("draft")),
                     ),
                     (
                         "Edit applied (contains 'validated' or 'done')",

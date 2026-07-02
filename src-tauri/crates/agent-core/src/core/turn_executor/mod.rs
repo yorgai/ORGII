@@ -14,7 +14,6 @@ mod screenshot;
 mod stream_error_recovery;
 pub(crate) mod stream_normalizer;
 pub(crate) mod tool_execution;
-pub(crate) mod tool_result_storage;
 mod types;
 mod usage_accumulator;
 mod usage_telemetry;
@@ -31,8 +30,8 @@ pub use helpers::{
     truncate_output,
 };
 pub use types::{
-    PermissionProvider, PermissionVerdict, ToolHookIntervention, TurnConfig, TurnEventHandler,
-    TurnIterationHook, TurnResult,
+    PermissionProvider, PermissionVerdict, SteeringInjection, SteeringQueue, ToolHookIntervention,
+    TurnConfig, TurnEventHandler, TurnIterationHook, TurnResult,
 };
 pub use usage_telemetry::{AttributionMethod, LlmUsageSpan, ToolUsageAttribution, UsageTelemetry};
 
@@ -76,6 +75,62 @@ mod tests;
 #[path = "../../tests/turn_executor_retry_tests.rs"]
 mod retry_tests;
 
+// ============================================
+// Auto-continue (feature-gated, default off)
+// ============================================
+
+/// Hard cap on auto-continue nudges per turn. Mirrors Claude Code's
+/// TOKEN_BUDGET auto-continue semantics (also feature-gated, default off).
+const MAX_AUTO_CONTINUATIONS: u32 = 3;
+/// Minimum output tokens a continuation must have produced for the next
+/// nudge to be worth sending — below this the model is spinning without
+/// real progress (diminishing returns), so we let the turn end.
+const AUTO_CONTINUE_MIN_PROGRESS_TOKENS: i64 = 500;
+/// Context-window fill (percent) at or above which auto-continue defers to
+/// the model's own wrap-up. Matches the `error` tier in
+/// `context_accounting::ContextUsageSnapshot::warning_level` — at ≥90% the
+/// model closing out the turn is the *correct* behavior.
+const AUTO_CONTINUE_MAX_CONTEXT_PERCENT: f64 = 90.0;
+
+/// Decide whether the turn loop should inject an auto-continue nudge instead
+/// of letting the model end the turn with plain text.
+///
+/// Pure predicate so the policy is unit-testable without driving the loop:
+/// - `enabled`: the per-turn feature gate (`TurnConfig::auto_continue`).
+/// - `continuations`: nudges already burned this turn (cap: 3).
+/// - `last_progress_tokens`: output tokens produced since the previous
+///   nudge (`None` when no nudge fired yet). Below 500 → diminishing
+///   returns, give up.
+/// - `context_percent`: real context-window fill from the last provider
+///   response (`None` when unknown → fail closed, let the turn end).
+fn should_auto_continue(
+    enabled: bool,
+    continuations: u32,
+    last_progress_tokens: Option<i64>,
+    context_percent: Option<f64>,
+) -> bool {
+    if !enabled {
+        return false;
+    }
+    if continuations >= MAX_AUTO_CONTINUATIONS {
+        return false;
+    }
+    // Unknown fill level → we cannot prove the model is stopping early.
+    // Fail closed (simple mechanism, no LLM judge): let the turn end.
+    let Some(percent) = context_percent else {
+        return false;
+    };
+    if percent >= AUTO_CONTINUE_MAX_CONTEXT_PERCENT {
+        return false;
+    }
+    if let Some(progress) = last_progress_tokens {
+        if progress < AUTO_CONTINUE_MIN_PROGRESS_TOKENS {
+            return false;
+        }
+    }
+    true
+}
+
 /// Execute one agent turn: messages → (LLM + tools)* → final response.
 ///
 /// This is the generic agentic loop shared by all agent sessions.
@@ -100,7 +155,6 @@ pub async fn execute_turn(
     handler: &dyn TurnEventHandler,
     permission_provider: Option<&dyn PermissionProvider>,
     cancel_flag: Option<&Arc<AtomicBool>>,
-    workspace_path: Option<&std::path::Path>,
     policy_context_activator: Option<&SessionScopedContextActivator>,
 ) -> Result<TurnResult, String> {
     let mut iteration = 0u32;
@@ -131,8 +185,32 @@ pub async fn execute_turn(
     // In-turn ContextTooLong rescue attempts already burned (see the
     // `ContextTooLong` arm below).
     let mut context_rescue_attempts = 0u32;
+    // One-shot flags for the two withhold-then-recover arms: lowering
+    // max_tokens on "input + max_tokens exceed" and stripping historical
+    // media blocks on media-413. Reset never — one attempt each per turn.
+    let mut max_tokens_lowered = false;
+    let mut media_stripped = false;
+    // Stop-hook blocking continuations already burned. Hard cap so a hook
+    // that always blocks cannot spin the loop forever (death-spiral guard).
+    let mut stop_hook_blocks = 0u32;
+    const MAX_STOP_HOOK_BLOCKS: u32 = 3;
+    // Auto-continue nudges already burned this turn, plus the cumulative
+    // completion-token count observed at the last nudge (the
+    // diminishing-returns baseline for `should_auto_continue`).
+    let mut auto_continuations = 0u32;
+    let mut auto_continue_completion_baseline: Option<i64> = None;
+    // One-shot model-side context-budget nudge for this turn. Set when a
+    // snapshot crosses the error tier; consumed (injected) at the top of the
+    // next iteration so it never lands between an assistant tool_use and its
+    // tool_result rows.
+    let mut budget_nudge_sent = false;
+    let mut pending_budget_nudge: Option<String> = None;
 
     let mut file_tracker = file_tracker::FileTimeTracker::new();
+    // Read-before-edit is session-scoped: seed the fresh per-turn tracker
+    // with every file the transcript already read/wrote so cross-turn edits
+    // aren't false-rejected.
+    file_tracker.seed_from_history(messages);
     let mc_config = microcompact::MicrocompactConfig::default();
     let iteration_hook = config.iteration_hook.as_deref();
 
@@ -164,6 +242,43 @@ pub async fn execute_turn(
             hook.before_llm_iteration(session_id, iteration, messages)
                 .await;
         }
+
+        // Mid-turn steering: drain user messages that arrived while this
+        // turn was running and inject them into the current loop so the
+        // model can change course immediately instead of after the turn.
+        drain_steering_queue(&config.steering_queue, session_id, messages, handler).await;
+
+        // Deferred context-budget nudge from the previous iteration.
+        if let Some(nudge) = pending_budget_nudge.take() {
+            messages.push(serde_json::json!({
+                "role": "user",
+                "content": nudge,
+            }));
+        }
+
+        // Changed-files injector: tell the model when files it read this
+        // turn were modified externally (user edit, linter, another agent)
+        // instead of letting the next edit fail the stale-content guard.
+        let externally_changed = file_tracker.drain_externally_changed();
+        if !externally_changed.is_empty() {
+            info!(
+                "[agent-core] {} externally changed file(s) detected mid-turn (session={})",
+                externally_changed.len(),
+                session_id
+            );
+            messages.push(serde_json::json!({
+                "role": "user",
+                "content": format!(
+                    "<system-reminder>\nThe following file(s) were modified externally (by the user or another process) since you read them:\n{}\nRe-read any of these files before editing them — your remembered content is stale.\n</system-reminder>",
+                    externally_changed
+                        .iter()
+                        .map(|path| format!("- {path}"))
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                ),
+            }));
+        }
+
         let limit_display = config
             .max_iterations
             .map_or("∞".to_string(), |m| m.to_string());
@@ -224,8 +339,27 @@ pub async fn execute_turn(
 
         let cancel_for_stream = cancel_flag.cloned();
         let cancel_ref = cancel_flag.as_ref().map(|f| f.as_ref());
-        let stream_result = provider
-            .chat_streaming(
+        let stream_result = if retry_budgets.non_streaming_fallback {
+            // Non-streaming fallback: the SSE path failed repeatedly with no
+            // partial output — request the whole response in one shot. No
+            // live deltas for this attempt; the assembled response flows
+            // through the normal completion path.
+            info!(
+                "[agent-core] Using non-streaming request for this attempt (session={})",
+                session_id
+            );
+            provider
+                .chat(
+                    &llm_messages,
+                    Some(&tool_defs),
+                    &config.model,
+                    effective_max_tokens,
+                    config.temperature,
+                )
+                .await
+        } else {
+            provider
+                .chat_streaming(
                 &llm_messages,
                 Some(&tool_defs),
                 &config.model,
@@ -280,7 +414,8 @@ pub async fn execute_turn(
                 },
                 cancel_ref,
             )
-            .await;
+            .await
+        };
 
         let response = match stream_result {
             Ok(resp) => resp,
@@ -319,18 +454,85 @@ pub async fn execute_turn(
                             config.account_id.as_deref(),
                             config.context_window_override,
                         );
-                    let budget = window.saturating_mul(3) / 4;
-                    let truncated =
+                    let mut budget = window.saturating_mul(3) / 4;
+                    // The budget is denominated in ESTIMATED tokens but the
+                    // provider just rejected the ACTUAL prompt — calibrate by
+                    // the observed undercount (the error carries the real
+                    // count) or truncation can decide "already within budget"
+                    // and delete nothing, spinning through every rescue
+                    // attempt without progress.
+                    let estimated =
+                        crate::model_context::compaction::ContextCompactor::estimate_messages_tokens(
+                            messages,
+                        );
+                    if let Some(actual) =
+                        crate::model_context::compaction::ContextCompactor::parse_actual_tokens_from_error(
+                            &err.to_string(),
+                        )
+                    {
+                        budget = crate::model_context::compaction::ContextCompactor::calibrate_budget(
+                            budget, estimated, actual,
+                        );
+                    }
+                    let mut truncated =
                         crate::model_context::compaction::ContextCompactor::simple_truncate(
                             messages, budget,
                         );
+                    // Progress guarantee: keep halving the budget until the
+                    // truncation actually drops something (or the budget is
+                    // too small to matter).
+                    while truncated.len() == messages.len() && budget > 10_000 {
+                        budget /= 2;
+                        truncated =
+                            crate::model_context::compaction::ContextCompactor::simple_truncate(
+                                messages, budget,
+                            );
+                    }
                     warn!(
-                        "[agent-core] Context rescue truncation: {} -> {} messages (session={})",
+                        "[agent-core] Context rescue truncation: {} -> {} messages, budget ~{} est-tokens (session={})",
                         messages.len(),
                         truncated.len(),
+                        budget,
                         session_id
                     );
                     *messages = truncated;
+                }
+                continue;
+            }
+            Err(err @ crate::providers::traits::ProviderError::MaxTokensExceedContext(_))
+                if !max_tokens_lowered =>
+            {
+                // The PROMPT fits — only prompt + max_tokens overflows.
+                // Compacting history for this would destroy context for no
+                // reason; shrink the output budget for this turn instead.
+                // One-shot: a second overflow after halving means the prompt
+                // is genuinely at the edge and falls through to the
+                // ContextTooLong arm on retry.
+                max_tokens_lowered = true;
+                let lowered = (effective_max_tokens / 2).max(1024);
+                warn!(
+                    "[agent-core] max_tokens + input exceeds context (session={}); lowering max_tokens {} -> {} and retrying: {}",
+                    session_id, effective_max_tokens, lowered, err
+                );
+                effective_max_tokens = lowered;
+                continue;
+            }
+            Err(err @ crate::providers::traits::ProviderError::MediaTooLarge(_))
+                if !media_stripped =>
+            {
+                // Oversized base64 media (screenshot / PDF) in HISTORY is
+                // being re-sent on every request. Strip historical media
+                // blocks to text placeholders and retry — text compaction
+                // would not remove them and the model rarely needs the raw
+                // pixels of an old screenshot again. One-shot per turn.
+                media_stripped = true;
+                let stripped = strip_historical_media_blocks(messages);
+                warn!(
+                    "[agent-core] Media too large (session={}); stripped {} historical media block(s) and retrying: {}",
+                    session_id, stripped, err
+                );
+                if stripped == 0 {
+                    return Err(format!("LLM error: {}", err));
                 }
                 continue;
             }
@@ -381,6 +583,25 @@ pub async fn execute_turn(
                 &response.tool_calls,
                 Some(&snapshot),
             );
+
+            // Model-side budget nudge (once per turn): past the error tier
+            // the model should wrap up instead of starting broad new work —
+            // pre-turn compaction will fire next turn, but mid-turn the
+            // model is otherwise blind to how close the window is. Queued
+            // here, injected at the top of the next iteration.
+            if !budget_nudge_sent {
+                if let Some(level @ ("error" | "blocking")) = snapshot.warning_level() {
+                    budget_nudge_sent = true;
+                    let percent = snapshot.percent_used.unwrap_or(0.0);
+                    pending_budget_nudge = Some(format!(
+                        "<system-reminder>\nContext window is {percent:.0}% full ({level}). Prioritize finishing the current task with the remaining budget: prefer targeted reads over broad exploration, avoid re-reading large files, and summarize instead of quoting long output. The system will compact older history automatically on the next turn.\n</system-reminder>"
+                    ));
+                    info!(
+                        "[agent-core] Queued context-budget nudge ({level}, {percent:.1}% used, session={session_id})"
+                    );
+                }
+            }
+
             context_usage_snapshot = Some(snapshot);
         }
 
@@ -528,7 +749,6 @@ pub async fn execute_turn(
                 cancel_flag,
                 &mut file_tracker,
                 &mut consecutive_errors,
-                workspace_path,
                 policy_context_activator,
                 config.max_tool_use_concurrency,
             )
@@ -606,6 +826,150 @@ pub async fn execute_turn(
             }
         } else {
             // Terminal non-tool, non-length, non-stream-error iteration.
+            //
+            // Final steering drain: a user message that arrived during the
+            // last LLM call must not be silently deferred to a turn that may
+            // never come — inject it and give the model another iteration.
+            if !cancel_flag
+                .map(|flag| flag.load(Ordering::SeqCst))
+                .unwrap_or(false)
+                && drain_steering_queue(&config.steering_queue, session_id, messages, handler)
+                    .await
+            {
+                if let Some(ref text) = response.content {
+                    if !text.trim().is_empty() {
+                        handler.on_assistant_iteration_complete(
+                            session_id,
+                            Some(text.as_str()),
+                            false,
+                            &config.model,
+                        );
+                        // Keep the in-memory list consistent with what was
+                        // persisted: the steering user message must FOLLOW
+                        // the assistant text the model just produced.
+                        let steering_msg = messages.pop();
+                        messages.push(serde_json::json!({
+                            "role": "assistant",
+                            "content": text,
+                        }));
+                        if let Some(steering_msg) = steering_msg {
+                            messages.push(steering_msg);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // Stop-hook gate first: user-defined `Stop` hooks may BLOCK this
+            // completion (stdout `{"decision":"block","message":...}`), in
+            // which case the feedback is persisted as the assistant text,
+            // the block message is injected as a user message, and the loop
+            // continues. Skipped for cancelled turns and capped at
+            // MAX_STOP_HOOK_BLOCKS to prevent a death spiral. Stream-error
+            // endings never reach this arm (they break earlier), so API
+            // failures cannot be blocked into a retry loop.
+            if stop_hook_blocks < MAX_STOP_HOOK_BLOCKS
+                && !cancel_flag
+                    .map(|flag| flag.load(Ordering::SeqCst))
+                    .unwrap_or(false)
+            {
+                if let Some(feedback) = handler.on_turn_stop_check(session_id).await {
+                    stop_hook_blocks += 1;
+                    warn!(
+                        "[agent-core] Stop hook blocked turn completion ({}/{}) for session {}: {}",
+                        stop_hook_blocks,
+                        MAX_STOP_HOOK_BLOCKS,
+                        session_id,
+                        &feedback[..feedback.len().min(200)]
+                    );
+                    // Persist what the model said this iteration so the
+                    // transcript stays coherent before the injected feedback.
+                    if let Some(ref text) = response.content {
+                        if !text.trim().is_empty() {
+                            handler.on_assistant_iteration_complete(
+                                session_id,
+                                Some(text.as_str()),
+                                false,
+                                &config.model,
+                            );
+                            messages.push(serde_json::json!({
+                                "role": "assistant",
+                                "content": text,
+                            }));
+                        }
+                    }
+                    messages.push(serde_json::json!({
+                        "role": "user",
+                        "content": format!(
+                            "<system-reminder>\nA Stop hook blocked this completion:\n{}\nAddress the feedback and continue; do not stop until it is resolved.\n</system-reminder>",
+                            feedback
+                        ),
+                    }));
+                    continue;
+                }
+            }
+
+            // Auto-continue gate (feature-gated, default off): the model
+            // ended the turn with plain text while the context window still
+            // has real room. Long-horizon models sometimes "self-ration" —
+            // narrating that context is nearly exhausted and wrapping up /
+            // handing off when the window is actually < 90% used. When the
+            // agent opts in, inject a continue nudge and give the model
+            // another iteration. Guardrails live in `should_auto_continue`
+            // (per-turn cap + diminishing-returns check); cancelled turns
+            // never continue, and stream-error / length endings never reach
+            // this arm (they break earlier).
+            if !cancel_flag
+                .map(|flag| flag.load(Ordering::SeqCst))
+                .unwrap_or(false)
+            {
+                let context_percent = context_usage_snapshot
+                    .as_ref()
+                    .and_then(|snapshot| snapshot.percent_used);
+                let last_progress_tokens = auto_continue_completion_baseline
+                    .map(|baseline| usage.completion - baseline);
+                if should_auto_continue(
+                    config.auto_continue,
+                    auto_continuations,
+                    last_progress_tokens,
+                    context_percent,
+                ) {
+                    auto_continuations += 1;
+                    auto_continue_completion_baseline = Some(usage.completion);
+                    let pct = context_percent.unwrap_or(0.0).round() as i64;
+                    info!(
+                        "[agent-core] Auto-continue {}/{} injected (context {}% used, session={})",
+                        auto_continuations, MAX_AUTO_CONTINUATIONS, pct, session_id
+                    );
+                    // Persist what the model said this iteration so the
+                    // transcript stays coherent before the injected nudge
+                    // (same pattern as the stop-hook block above — the
+                    // user message must never land between an assistant
+                    // tool_use and its tool_result).
+                    if let Some(ref text) = response.content {
+                        if !text.trim().is_empty() {
+                            handler.on_assistant_iteration_complete(
+                                session_id,
+                                Some(text.as_str()),
+                                false,
+                                &config.model,
+                            );
+                            messages.push(serde_json::json!({
+                                "role": "assistant",
+                                "content": text,
+                            }));
+                        }
+                    }
+                    messages.push(serde_json::json!({
+                        "role": "user",
+                        "content": format!(
+                            "<system-reminder>\nContext window is only {pct}% used. Do not wrap up, summarize, or hand off — continue working on the task directly.\n</system-reminder>"
+                        ),
+                    }));
+                    continue;
+                }
+            }
+
             // Normally `response.content` carries the model's final text.
             // But some stop reasons end the turn with an EMPTY body — most
             // notably Anthropic `stop_reason=refusal` (mapped to
@@ -701,4 +1065,170 @@ pub async fn execute_turn(
         cache_write_tokens: usage.cache_write,
         usage_telemetry: usage_telemetry.finish(),
     })
+}
+
+/// Replace image/document content blocks in HISTORICAL messages with text
+/// placeholders. The LAST user message keeps its media (it is usually the
+/// input the current turn is about); everything older is fair game — old
+/// screenshots/PDFs are re-sent on every request and are the usual cause of
+/// media-size rejections. Returns the number of blocks replaced.
+fn strip_historical_media_blocks(messages: &mut [Value]) -> usize {
+    let last_user_idx = messages
+        .iter()
+        .rposition(|msg| msg.get("role").and_then(Value::as_str) == Some("user"));
+
+    let mut stripped = 0usize;
+    for (idx, msg) in messages.iter_mut().enumerate() {
+        if Some(idx) == last_user_idx {
+            continue;
+        }
+        let Some(blocks) = msg.get_mut("content").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for block in blocks.iter_mut() {
+            let block_type = block.get("type").and_then(Value::as_str).unwrap_or("");
+            if matches!(block_type, "image_url" | "image" | "document") {
+                *block = serde_json::json!({
+                    "type": "text",
+                    "text": "[media removed: this image/document was too large to keep re-sending. Re-read the source file if you need it again.]",
+                });
+                stripped += 1;
+            }
+        }
+    }
+    stripped
+}
+
+/// Drain the mid-turn steering buffer into `messages`.
+///
+/// All pending steering messages are merged into ONE
+/// `<system-reminder>`-wrapped user message (keeping the injection a single
+/// list entry so terminal-arm reordering stays trivial). Each consumed
+/// injection is reported to the handler for persistence + intent lifecycle.
+/// Returns `true` when anything was injected.
+async fn drain_steering_queue(
+    steering_queue: &Option<crate::turn_executor::SteeringQueue>,
+    session_id: &str,
+    messages: &mut Vec<Value>,
+    handler: &dyn TurnEventHandler,
+) -> bool {
+    let Some(queue) = steering_queue else {
+        return false;
+    };
+    let drained: Vec<crate::turn_executor::SteeringInjection> = {
+        let mut guard = queue.lock().await;
+        std::mem::take(&mut *guard)
+    };
+    if drained.is_empty() {
+        return false;
+    }
+
+    info!(
+        "[agent-core] Injecting {} steering message(s) mid-turn (session={})",
+        drained.len(),
+        session_id
+    );
+    let mut bodies = Vec::with_capacity(drained.len());
+    for injection in &drained {
+        handler.on_steering_consumed(session_id, injection);
+        bodies.push(injection.content.clone());
+    }
+    messages.push(serde_json::json!({
+        "role": "user",
+        "content": format!(
+            "<system-reminder>\nThe user sent the following message(s) while you were working. Adjust course accordingly — this may change or refine the current task:\n\n{}\n</system-reminder>",
+            bodies.join("\n\n---\n\n")
+        ),
+    }));
+    true
+}
+
+#[cfg(test)]
+mod media_strip_tests {
+    use super::strip_historical_media_blocks;
+    use serde_json::json;
+
+    #[test]
+    fn strips_old_media_keeps_last_user_media() {
+        let mut messages = vec![
+            json!({"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,OLD"}},
+                {"type": "text", "text": "old screenshot"},
+            ]}),
+            json!({"role": "assistant", "content": "looked at it"}),
+            json!({"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,NEW"}},
+                {"type": "text", "text": "new screenshot"},
+            ]}),
+        ];
+        let stripped = strip_historical_media_blocks(&mut messages);
+        assert_eq!(stripped, 1);
+        // Old media replaced with text placeholder.
+        assert_eq!(messages[0]["content"][0]["type"], "text");
+        // Latest user media untouched.
+        assert_eq!(messages[2]["content"][0]["type"], "image_url");
+    }
+
+    #[test]
+    fn no_media_returns_zero() {
+        let mut messages = vec![json!({"role": "user", "content": "plain text"})];
+        assert_eq!(strip_historical_media_blocks(&mut messages), 0);
+    }
+}
+
+#[cfg(test)]
+mod auto_continue_tests {
+    use super::{should_auto_continue, MAX_AUTO_CONTINUATIONS};
+
+    #[test]
+    fn disabled_never_continues() {
+        // Feature gate off → never continue, even under ideal conditions.
+        assert!(!should_auto_continue(false, 0, None, Some(10.0)));
+    }
+
+    #[test]
+    fn enabled_below_threshold_continues() {
+        // First nudge, plenty of context room, no prior progress data.
+        assert!(should_auto_continue(true, 0, None, Some(42.0)));
+        // Just below the 90% boundary still continues.
+        assert!(should_auto_continue(true, 0, None, Some(89.9)));
+    }
+
+    #[test]
+    fn context_at_or_above_90_percent_stops() {
+        // At ≥90% the model wrapping up is the correct behavior.
+        assert!(!should_auto_continue(true, 0, None, Some(90.0)));
+        assert!(!should_auto_continue(true, 0, None, Some(97.5)));
+    }
+
+    #[test]
+    fn unknown_context_fill_fails_closed() {
+        // No snapshot / unknown window → cannot prove early stop → end turn.
+        assert!(!should_auto_continue(true, 0, None, None));
+    }
+
+    #[test]
+    fn continuation_cap_stops() {
+        assert!(should_auto_continue(
+            true,
+            MAX_AUTO_CONTINUATIONS - 1,
+            Some(5_000),
+            Some(30.0)
+        ));
+        assert!(!should_auto_continue(
+            true,
+            MAX_AUTO_CONTINUATIONS,
+            Some(5_000),
+            Some(30.0)
+        ));
+    }
+
+    #[test]
+    fn diminishing_returns_stops() {
+        // Previous nudge produced < 500 output tokens → give up.
+        assert!(!should_auto_continue(true, 1, Some(499), Some(30.0)));
+        assert!(!should_auto_continue(true, 1, Some(0), Some(30.0)));
+        // Real progress since the last nudge → keep going.
+        assert!(should_auto_continue(true, 1, Some(500), Some(30.0)));
+    }
 }

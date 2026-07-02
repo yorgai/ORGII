@@ -56,6 +56,11 @@ pub const SETUP_REPO: &str = "setup_repo";
 pub const ASK_USER_QUESTIONS: &str = "ask_user_questions";
 pub const ASK_USER_PERMISSIONS: &str = "ask_user_permissions";
 
+/// First-class skill invocation. Atomically expands a skill's full
+/// SKILL.md body into the conversation, replacing the two-step
+/// listing → `read_file` flow that models routinely skipped.
+pub const SKILL: &str = "skill";
+
 /// Out-of-band secret capture. The agent asks the user (via a dedicated
 /// frontend modal) to provide a sensitive value — API key, password, OAuth
 /// token. The plaintext never enters the LLM transcript or tool args; only

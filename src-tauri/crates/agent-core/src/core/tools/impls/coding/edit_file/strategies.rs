@@ -35,6 +35,7 @@ pub fn replace(
     ];
 
     let mut not_found = true;
+    let mut ambiguous_match_count = 0usize;
 
     for replacer in replacers {
         for search in replacer(content, old_string) {
@@ -48,6 +49,9 @@ pub fn replace(
 
             let last_idx = content.rfind(&search).unwrap_or(idx);
             if idx != last_idx {
+                if ambiguous_match_count == 0 {
+                    ambiguous_match_count = content.matches(&search).count();
+                }
                 continue;
             }
 
@@ -62,15 +66,17 @@ pub fn replace(
     if not_found {
         Err(
             "Could not find old_string in the file. It must match the file content \
-             (whitespace, indentation, and line endings are matched flexibly)."
+             (whitespace, indentation, and line endings are matched flexibly). \
+             Re-read the file and copy the exact text, without the line-number prefix."
                 .to_string(),
         )
     } else {
-        Err(
-            "Found multiple matches for old_string. Provide more surrounding context \
-             to make the match unique."
-                .to_string(),
-        )
+        Err(format!(
+            "Found {ambiguous_match_count} matches for old_string. To replace only one occurrence, \
+             include more surrounding lines in old_string to make it unique. \
+             To replace all {ambiguous_match_count} occurrences (e.g. renaming a symbol), \
+             retry with replace_all: true.",
+        ))
     }
 }
 

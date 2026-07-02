@@ -42,8 +42,23 @@ DO still select memories containing warnings, gotchas, or known issues about tho
 /// Maximum memories to inject per turn.
 const MAX_SELECTED_MEMORIES: usize = 5;
 
-/// Maximum bytes of memory content to inject into the system prompt.
-const MAX_MEMORY_INJECTION_BYTES: usize = 50_000;
+/// Maximum bytes of memory content to inject into the system prompt per turn.
+pub const MAX_MEMORY_INJECTION_BYTES: usize = 50_000;
+
+/// Maximum bytes of a single memory file injected into the prompt.
+///
+/// Mirrors Claude Code's relevant_memories per-file budget (4KB/file).
+/// Oversized files are truncated at a line boundary and tagged with
+/// [`MEMORY_FILE_TRUNCATION_NOTICE`].
+pub const MAX_MEMORY_FILE_BYTES: usize = 4096;
+
+/// Byte-stable marker appended to memories truncated to the per-file budget.
+///
+/// Deliberately contains no dynamic numbers (byte counts, filenames) so the
+/// injected section stays byte-identical across turns and does not bust
+/// provider prompt caches.
+const MEMORY_FILE_TRUNCATION_NOTICE: &str =
+    "\n\n> [memory truncated to file budget — read the full file for details]";
 
 /// Maximum tokens for the memory-selection side-query response.
 const SELECTION_MAX_TOKENS: u32 = 256;
@@ -82,6 +97,11 @@ pub struct RelevantMemory {
 /// offline newest-first selector so workspace memory remains best-effort instead
 /// of disappearing. A successful empty selection is respected as "no relevant
 /// memory" instead of forcing unrelated memories into the prompt.
+///
+/// `byte_budget` caps the total memory content loaded this turn — callers pass
+/// `min(MAX_MEMORY_INJECTION_BYTES, remaining session budget)`. A zero budget
+/// short-circuits before spending the LLM side-query.
+#[allow(clippy::too_many_arguments)]
 pub async fn select_memories(
     provider: &dyn LLMProvider,
     workspace: &Path,
@@ -89,7 +109,11 @@ pub async fn select_memories(
     model: &str,
     recent_tools: &[String],
     already_surfaced: &HashSet<String>,
+    byte_budget: usize,
 ) -> Vec<RelevantMemory> {
+    if byte_budget == 0 {
+        return Vec::new();
+    }
     let mem_dir = super::memory_dir(workspace);
     if !mem_dir.exists() {
         return Vec::new();
@@ -106,13 +130,13 @@ pub async fn select_memories(
     }
 
     match select_relevant_headers(provider, user_query, &headers, model, recent_tools).await {
-        Ok(selected) => load_selected_memories(&selected, MAX_SELECTED_MEMORIES),
+        Ok(selected) => load_selected_memories(&selected, MAX_SELECTED_MEMORIES, byte_budget),
         Err(err) => {
             warn!(
                 "[relevance_prefetch] Selector failed: {}; falling back to newest-first",
                 err
             );
-            load_selected_memories(&headers, MAX_SELECTED_MEMORIES)
+            load_selected_memories(&headers, MAX_SELECTED_MEMORIES, byte_budget)
         }
     }
 }
@@ -129,7 +153,7 @@ pub fn select_memories_offline(workspace: &Path, _user_query: &str) -> Vec<Relev
         return Vec::new();
     }
 
-    load_selected_memories(&headers, MAX_SELECTED_MEMORIES)
+    load_selected_memories(&headers, MAX_SELECTED_MEMORIES, MAX_MEMORY_INJECTION_BYTES)
 }
 
 async fn select_relevant_headers(
@@ -274,7 +298,14 @@ fn parse_selected_filenames(text: &str) -> Vec<String> {
 }
 
 /// Load memory file contents for the selected headers.
-fn load_selected_memories(headers: &[MemoryHeader], max_count: usize) -> Vec<RelevantMemory> {
+///
+/// Each file is individually capped at [`MAX_MEMORY_FILE_BYTES`]; the running
+/// total is capped at `byte_budget`.
+fn load_selected_memories(
+    headers: &[MemoryHeader],
+    max_count: usize,
+    byte_budget: usize,
+) -> Vec<RelevantMemory> {
     let mut memories = Vec::new();
     let mut total_bytes = 0;
 
@@ -290,7 +321,9 @@ fn load_selected_memories(headers: &[MemoryHeader], max_count: usize) -> Vec<Rel
             }
         };
 
-        if total_bytes + content.len() > MAX_MEMORY_INJECTION_BYTES {
+        let content = truncate_memory_to_file_budget(content);
+
+        if total_bytes + content.len() > byte_budget {
             info!(
                 "[relevance_prefetch] Byte limit reached after {} memories",
                 memories.len()
@@ -310,6 +343,31 @@ fn load_selected_memories(headers: &[MemoryHeader], max_count: usize) -> Vec<Rel
     }
 
     memories
+}
+
+/// Cap a single memory's content at [`MAX_MEMORY_FILE_BYTES`].
+///
+/// The cut is snapped to a UTF-8 char boundary (never panics on multi-byte
+/// chars), then aligned back to the last line boundary so the injected text
+/// does not end mid-sentence. A byte-stable truncation notice is appended.
+fn truncate_memory_to_file_budget(content: String) -> String {
+    if content.len() <= MAX_MEMORY_FILE_BYTES {
+        return content;
+    }
+
+    // MAX_MEMORY_FILE_BYTES can land inside a multi-byte UTF-8 char (em-dash,
+    // CJK, emoji). Snap the budget down to the nearest char boundary first;
+    // both `content[..limit]` and `String::truncate(limit)` panic otherwise.
+    let safe_limit = crate::utils::safe_truncate_utf8(&content, MAX_MEMORY_FILE_BYTES).len();
+    let mut result = content;
+    // `rfind('\n')` yields an ASCII '\n' index, always a valid boundary.
+    if let Some(last_nl) = result[..safe_limit].rfind('\n') {
+        result.truncate(last_nl);
+    } else {
+        result.truncate(safe_limit);
+    }
+    result.push_str(MEMORY_FILE_TRUNCATION_NOTICE);
+    result
 }
 
 // ============================================
@@ -357,7 +415,9 @@ pub fn build_memory_prompt_section(
     // Selected memory contents
     if !memories.is_empty() {
         sections.push(String::new());
-        sections.push(format!("## Loaded Memories ({} files)", memories.len()));
+        // Byte-stable header: no file count so the section prefix stays
+        // identical across turns (provider prompt-cache friendliness).
+        sections.push("## Loaded Memories".to_string());
 
         for mem in memories {
             sections.push(String::new());
@@ -560,6 +620,152 @@ mod tests {
             freshness: super::super::memory_freshness_text(now_ms - 10 * 86_400_000),
         };
 
-        assert!(mem.freshness.contains("10 days old"));
+        // Coarse bucket, not an exact day count — byte-stable across days.
+        assert!(mem.freshness.contains("over a week old"));
+        assert!(!mem.freshness.contains("10"));
+    }
+
+    #[test]
+    fn test_truncate_memory_to_file_budget_short_content_untouched() {
+        let content = "short memory\nwith two lines".to_string();
+        let result = truncate_memory_to_file_budget(content.clone());
+        assert_eq!(result, content);
+    }
+
+    #[test]
+    fn test_truncate_memory_to_file_budget_cuts_at_line_boundary_with_marker() {
+        // ~100-byte lines, well past the 4KB cap.
+        let line = "x".repeat(99);
+        let content: String = std::iter::repeat(line.as_str())
+            .take(100)
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(content.len() > MAX_MEMORY_FILE_BYTES);
+
+        let result = truncate_memory_to_file_budget(content);
+
+        assert!(result.ends_with(MEMORY_FILE_TRUNCATION_NOTICE));
+        let body = result
+            .strip_suffix(MEMORY_FILE_TRUNCATION_NOTICE)
+            .expect("marker must be a clean suffix");
+        // Body is within the per-file budget and ends on a full line (no
+        // trailing partial line, no trailing newline after rfind cut).
+        assert!(body.len() <= MAX_MEMORY_FILE_BYTES);
+        assert!(body.ends_with(&line));
+        // Marker is byte-stable: no dynamic numbers.
+        assert!(!MEMORY_FILE_TRUNCATION_NOTICE.chars().any(|c| c.is_ascii_digit()));
+    }
+
+    #[test]
+    fn test_truncate_memory_to_file_budget_utf8_mid_char_no_panic() {
+        // Em-dash '—' is 3 bytes; 4096 is not divisible by 3, so the budget
+        // always lands inside a char. No newlines, so the rfind('\n') branch
+        // falls through to truncate(safe_limit).
+        let content = "—".repeat(MAX_MEMORY_FILE_BYTES / 3 + 100);
+        assert!(content.len() > MAX_MEMORY_FILE_BYTES);
+        assert!(!content.is_char_boundary(MAX_MEMORY_FILE_BYTES));
+
+        let result = truncate_memory_to_file_budget(content);
+
+        assert!(std::str::from_utf8(result.as_bytes()).is_ok());
+        assert!(result.ends_with(MEMORY_FILE_TRUNCATION_NOTICE));
+        let body = result
+            .strip_suffix(MEMORY_FILE_TRUNCATION_NOTICE)
+            .unwrap();
+        assert!(body.len() <= MAX_MEMORY_FILE_BYTES);
+        assert!(body.is_char_boundary(body.len()));
+    }
+
+    #[test]
+    fn test_load_selected_memories_zero_budget_loads_nothing() {
+        let tmp = TempDir::new().unwrap();
+        let mem_dir = tmp.path().join(".orgii").join("workspace-memory");
+        std::fs::create_dir_all(&mem_dir).unwrap();
+        std::fs::write(
+            mem_dir.join("prefs.md"),
+            "---\nname: Prefs\ndescription: Preferences\ntype: user\n---\nI prefer tabs.",
+        )
+        .unwrap();
+
+        let headers = super::super::scan_memory_files(&mem_dir);
+        assert_eq!(headers.len(), 1);
+
+        let memories = load_selected_memories(&headers, MAX_SELECTED_MEMORIES, 0);
+        assert!(memories.is_empty());
+    }
+
+    #[test]
+    fn test_load_selected_memories_stops_at_byte_budget() {
+        let tmp = TempDir::new().unwrap();
+        let mem_dir = tmp.path().join(".orgii").join("workspace-memory");
+        std::fs::create_dir_all(&mem_dir).unwrap();
+        // Two ~2KB memories against a 3KB budget: only the first fits.
+        for name in ["a.md", "b.md"] {
+            std::fs::write(
+                mem_dir.join(name),
+                format!(
+                    "---\nname: {name}\ndescription: test\ntype: user\n---\n{}",
+                    "y".repeat(2000)
+                ),
+            )
+            .unwrap();
+        }
+
+        let headers = super::super::scan_memory_files(&mem_dir);
+        assert_eq!(headers.len(), 2);
+
+        let memories = load_selected_memories(&headers, MAX_SELECTED_MEMORIES, 3000);
+        assert_eq!(memories.len(), 1);
+    }
+
+    #[test]
+    fn test_load_selected_memories_applies_per_file_cap() {
+        let tmp = TempDir::new().unwrap();
+        let mem_dir = tmp.path().join(".orgii").join("workspace-memory");
+        std::fs::create_dir_all(&mem_dir).unwrap();
+        let big_body: String = std::iter::repeat("z".repeat(80))
+            .take(200) // ~16KB, 4x over the per-file cap
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::write(
+            mem_dir.join("big.md"),
+            format!("---\nname: Big\ndescription: big\ntype: user\n---\n{big_body}"),
+        )
+        .unwrap();
+
+        let headers = super::super::scan_memory_files(&mem_dir);
+        let memories =
+            load_selected_memories(&headers, MAX_SELECTED_MEMORIES, MAX_MEMORY_INJECTION_BYTES);
+
+        assert_eq!(memories.len(), 1);
+        let content = &memories[0].content;
+        assert!(content.len() <= MAX_MEMORY_FILE_BYTES + MEMORY_FILE_TRUNCATION_NOTICE.len());
+        assert!(content.ends_with(MEMORY_FILE_TRUNCATION_NOTICE));
+    }
+
+    #[test]
+    fn test_build_memory_prompt_section_header_is_byte_stable() {
+        let tmp = TempDir::new().unwrap();
+        let mem_dir = tmp.path().join(".orgii").join("workspace-memory");
+        std::fs::create_dir_all(&mem_dir).unwrap();
+
+        let mem = |path: &str| RelevantMemory {
+            path: path.to_string(),
+            mtime_ms: 1712448000000,
+            content: "content".to_string(),
+            freshness: String::new(),
+        };
+
+        let one = build_memory_prompt_section(tmp.path(), &[mem("/tmp/a.md")]).unwrap();
+        let two =
+            build_memory_prompt_section(tmp.path(), &[mem("/tmp/a.md"), mem("/tmp/b.md")])
+                .unwrap();
+
+        // Header carries no file count: identical regardless of how many
+        // memories were selected.
+        assert!(one.contains("## Loaded Memories\n"));
+        assert!(two.contains("## Loaded Memories\n"));
+        assert!(!one.contains("files)"));
+        assert!(!two.contains("files)"));
     }
 }

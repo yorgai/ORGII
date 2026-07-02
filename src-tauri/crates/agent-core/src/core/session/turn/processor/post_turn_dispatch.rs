@@ -4,11 +4,13 @@
 //!
 //! 1. **`agent:complete` broadcast** — first, so the user sees "done"
 //!    before any background work fires.
-//! 2. **`HookEvent::Stop`** — `.orgii/hooks.json` `Stop` hook.
-//! 3. **Computer Use lock release** — best-effort, no-op if not held.
-//! 4. **Session memory extraction** — fire-and-forget, 60s timeout.
-//! 5. **Extract memories** — forked extractor agent, fire-and-forget.
-//! 6. **Auto-dream** — periodic memory consolidation, fire-and-forget.
+//! 2. **Computer Use lock release** — best-effort, no-op if not held.
+//! 3. **Session memory extraction** — fire-and-forget, 60s timeout.
+//! 4. **Extract memories** — forked extractor agent, fire-and-forget.
+//! 5. **Auto-dream** — periodic memory consolidation, fire-and-forget.
+//!
+//! (`HookEvent::Stop` no longer fires here — it runs *inside* the turn
+//! loop as a blocking gate; see `on_turn_stop_check`.)
 //!
 //! Post-turn background work uses [`should_run_post_turn_work`] to skip the
 //! work for cancelled turns (the user explicitly stopped).
@@ -66,22 +68,11 @@ impl UnifiedMessageProcessor {
             context_usage_snapshot: result.context_usage_snapshot.as_ref(),
         });
 
-        // 9a. Fire HookEvent::Stop — agent turn concluded.
-        if let Some(ref executor) = self.event_handler_config.hook_executor {
-            if executor.has_hooks_for(crate::specialization::hooks::HookEvent::Stop) {
-                let ctx =
-                    crate::specialization::hooks::events::HookContext::for_session(session_id)
-                        .with_var("ORGII_TURN_ID", turn_id)
-                        .with_var("ORGII_TOOL_CALLS", tool_calls_count.to_string())
-                        .with_var("ORGII_TOTAL_TOKENS", result.total_tokens.to_string());
-                let stop_executor = executor.clone();
-                tokio::spawn(async move {
-                    stop_executor
-                        .run(crate::specialization::hooks::HookEvent::Stop, &ctx)
-                        .await;
-                });
-            }
-        }
+        // 9a. `HookEvent::Stop` now runs INSIDE the turn loop
+        // (`turn_executor::execute_turn` terminal arm via
+        // `on_turn_stop_check`), where blocking feedback can still pull the
+        // model back. No post-turn re-fire — that would double-invoke the
+        // user's Stop hooks.
 
         // 9a½. Release Computer Use lock if held (zero-syscall check for non-CU turns).
         if integrations::computer_use_lock::is_held_locally() {

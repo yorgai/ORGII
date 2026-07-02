@@ -46,6 +46,10 @@ pub struct JobSnapshot {
     pub status: JobStatus,
     pub age_ms: u64,
     pub has_unread_output: bool,
+    /// Final result text for completed subagent jobs (None for shell
+    /// processes and still-running jobs). Lets the per-turn reminder inject
+    /// the result directly instead of forcing an extra `await_output` hop.
+    pub final_result: Option<String>,
 }
 
 const MAX_RECENT_LINES: usize = 200;
@@ -133,6 +137,23 @@ impl BackgroundJob {
             status: self.status.clone(),
             age_ms: self.started_at.elapsed().as_millis() as u64,
             has_unread_output,
+            final_result: if has_unread_output {
+                self.final_result.clone()
+            } else {
+                None
+            },
+        }
+    }
+}
+
+/// Mark every completed-with-result job in `handles` as acknowledged.
+/// Called by the reminder builder after it inlines those results, so they
+/// are delivered to the parent exactly once.
+pub fn acknowledge_outputs(handles: &[String]) {
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    for handle in handles {
+        if let Some(job) = reg.get_mut(handle) {
+            job.output_acknowledged = true;
         }
     }
 }

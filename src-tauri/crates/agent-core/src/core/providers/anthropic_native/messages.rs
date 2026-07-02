@@ -127,10 +127,10 @@ pub(super) fn extract_system(messages: &[Value]) -> (Option<Value>, Vec<Value>) 
                 }
 
                 if content_blocks.is_empty() {
-                    content_blocks.push(serde_json::json!({
-                        "type": "text",
-                        "text": "",
-                    }));
+                    // Nothing to say and no tool calls — emitting an empty
+                    // text block would 400 on the API. Drop the message;
+                    // consecutive same-role neighbors merge downstream.
+                    continue;
                 }
 
                 converted.push(serde_json::json!({
@@ -177,9 +177,15 @@ pub(super) fn extract_system(messages: &[Value]) -> (Option<Value>, Vec<Value>) 
                 }
                 let mut blocks_for_message: Vec<Value> = vec![tool_result_block];
 
-                if let Some(sidecar) = msg.get("_orgii_structured") {
-                    if let Some(extra_blocks) = sidecar_to_anthropic_sibling_blocks(sidecar) {
-                        blocks_for_message.extend(extra_blocks);
+                // Error tool_results must carry ONLY text — attaching media
+                // siblings to a failed call confuses the model (it reasons
+                // over an image that "succeeded" next to an error) and some
+                // gateways reject the combination outright.
+                if !is_error {
+                    if let Some(sidecar) = msg.get("_orgii_structured") {
+                        if let Some(extra_blocks) = sidecar_to_anthropic_sibling_blocks(sidecar) {
+                            blocks_for_message.extend(extra_blocks);
+                        }
                     }
                 }
 
@@ -237,13 +243,25 @@ pub(super) fn extract_system(messages: &[Value]) -> (Option<Value>, Vec<Value>) 
 
     let system = render_system_blocks(&system_parts);
 
+    // Final wire-hygiene pass (each rule maps to a real API 400 class):
+    // 1. A message whose content ends with a thinking block and nothing
+    //    after it (orphan thinking — stream died before text/tool_use)
+    //    is rejected; drop the orphan thinking block.
+    // 2. Trailing assistant message with effectively-empty text is
+    //    rejected ("final assistant content cannot be empty").
+    finalize_wire_hygiene(&mut converted);
+
     // Sliding history breakpoint (BP3): stamp `cache_control: ephemeral`
-    // on the last content block of the last message. Combined with
+    // on the last non-volatile content block. Combined with
     // BP1 (system end) and BP2 (tools end) elsewhere this gives us the
     // 3-breakpoint Anthropic agentic-loop pattern. Without BP3 the entire
     // message history is re-tokenised on every turn, so cache_read covers
     // only system + tools and cache_creation grows linearly with turn count.
+    // Volatile blocks (the per-turn context reminder appended after the
+    // history) are skipped: stamping them would move the breakpoint onto
+    // content that changes every turn and defeat the cache.
     stamp_trailing_cache_control(&mut converted);
+    strip_cache_scope_markers(&mut converted);
 
     (system, converted)
 }
@@ -283,30 +301,103 @@ fn render_system_blocks(system_parts: &[RenderedSystemBlock]) -> Option<Value> {
     }
     Some(Value::Array(blocks))
 }
-/// Put `cache_control: ephemeral` on the last content block of the
-/// last converted message. Skips cleanly when the message list is
-/// empty or the last message's content isn't a block array.
+/// Put `cache_control: ephemeral` on the last non-volatile content block
+/// across all converted messages. Skips cleanly when the message list is
+/// empty or no block qualifies.
 ///
 /// Cache-control on a block tells Anthropic "cache everything up to
-/// and including this block." Placing it on the trailing block every
+/// and including this block." Placing it on the trailing stable block every
 /// turn creates a sliding breakpoint that captures all historical
-/// turns as the conversation grows.
+/// turns as the conversation grows. Blocks marked with a `volatile` cache
+/// scope (the per-turn context reminder) are skipped so the breakpoint
+/// never lands on content that changes each turn.
 fn stamp_trailing_cache_control(messages: &mut [Value]) {
-    let Some(last_msg) = messages.last_mut() else {
-        return;
-    };
-    let Some(blocks) = last_msg.get_mut("content").and_then(Value::as_array_mut) else {
-        return;
-    };
-    let Some(last_block) = blocks.last_mut() else {
-        return;
-    };
-    if let Some(obj) = last_block.as_object_mut() {
-        obj.insert(
-            "cache_control".to_string(),
-            serde_json::json!({ "type": "ephemeral" }),
-        );
+    for msg in messages.iter_mut().rev() {
+        let Some(blocks) = msg.get_mut("content").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for block in blocks.iter_mut().rev() {
+            let is_volatile = block
+                .get(ORGII_SYSTEM_CACHE_SCOPE_KEY)
+                .and_then(Value::as_str)
+                == Some("volatile");
+            if is_volatile {
+                continue;
+            }
+            if let Some(obj) = block.as_object_mut() {
+                obj.insert(
+                    "cache_control".to_string(),
+                    serde_json::json!({ "type": "ephemeral" }),
+                );
+            }
+            return;
+        }
     }
+}
+
+/// Remove internal `_orgii_cache_scope` markers from every content block
+/// before the request goes on the wire — Anthropic rejects unknown fields
+/// on content blocks.
+fn strip_cache_scope_markers(messages: &mut [Value]) {
+    for msg in messages.iter_mut() {
+        let Some(blocks) = msg.get_mut("content").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for block in blocks.iter_mut() {
+            if let Some(obj) = block.as_object_mut() {
+                obj.remove(ORGII_SYSTEM_CACHE_SCOPE_KEY);
+            }
+        }
+    }
+}
+
+/// Final wire-hygiene fixes applied after conversion, before cache
+/// stamping. Mutates in place; drops messages that end up empty.
+fn finalize_wire_hygiene(messages: &mut Vec<Value>) {
+    // 1. Orphan thinking: a thinking block at the END of an assistant
+    //    message's content (no text/tool_use after it) is rejected by the
+    //    API. Pop such blocks.
+    for msg in messages.iter_mut() {
+        if msg.get("role").and_then(Value::as_str) != Some("assistant") {
+            continue;
+        }
+        let Some(blocks) = msg.get_mut("content").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        while blocks
+            .last()
+            .and_then(|b| b.get("type").and_then(Value::as_str))
+            .map(|t| t == "thinking" || t == "redacted_thinking")
+            .unwrap_or(false)
+        {
+            blocks.pop();
+        }
+    }
+
+    // 2. Drop messages whose content collapsed to nothing (or to only
+    //    whitespace text) — empty content arrays are rejected. Never drop
+    //    tool_result-bearing user messages.
+    messages.retain(|msg| {
+        let Some(blocks) = msg.get("content").and_then(Value::as_array) else {
+            return true; // string content — handled upstream
+        };
+        if blocks.is_empty() {
+            return false;
+        }
+        blocks.iter().any(|block| {
+            match block.get("type").and_then(Value::as_str) {
+                Some("text") => block
+                    .get("text")
+                    .and_then(Value::as_str)
+                    .map(|t| !t.trim().is_empty())
+                    .unwrap_or(false),
+                // tool_use / tool_result / image / document all count as
+                // substantive content.
+                Some(_) => true,
+                None => false,
+            }
+        })
+    });
 }
 
 fn anthropic_thinking_block(tool_call: &Value) -> Option<Value> {

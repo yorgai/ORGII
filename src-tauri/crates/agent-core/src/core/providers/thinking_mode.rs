@@ -185,6 +185,175 @@ pub fn parse_model_variant(model: &str) -> ParsedVariant {
     }
 }
 
+// ── Reasoning trigger words ─────────────────────────────────────────────────
+
+impl ReasoningLevel {
+    /// Ordinal for level comparison (higher = more reasoning).
+    fn rank(self) -> u8 {
+        match self {
+            Self::None => 0,
+            Self::Baseline => 1,
+            Self::Low => 2,
+            Self::Medium => 3,
+            Self::High => 4,
+            Self::ExtraHigh => 5,
+            Self::Max => 6,
+        }
+    }
+
+    /// Suffix token used when re-encoding a level into a model id.
+    fn suffix_token(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Baseline => "baseline",
+            Self::Low => "low",
+            Self::Medium => "medium",
+            Self::High => "high",
+            Self::ExtraHigh => "extra-high",
+            Self::Max => "max",
+        }
+    }
+}
+
+/// Detect a reasoning trigger word in a user message.
+///
+/// Ordered strongest-first: "ultrathink" → Max, "think harder" /
+/// "think really hard" / "think very hard" → ExtraHigh, "think hard" /
+/// "megathink" → High. Matching is case-insensitive.
+///
+/// Deliberately NO bare-"think" tier: "I think the bug is…" is ordinary
+/// prose, and forcing an explicit effort level onto adaptive-thinking
+/// models can DOWNGRADE what the API would have chosen dynamically. The
+/// reference implementation's current version keeps only explicit trigger
+/// phrases for the same reason.
+pub fn detect_reasoning_trigger(text: &str) -> Option<ReasoningLevel> {
+    let lower = text.to_lowercase();
+    if lower.contains("ultrathink") {
+        return Some(ReasoningLevel::Max);
+    }
+    if lower.contains("think harder")
+        || lower.contains("think really hard")
+        || lower.contains("think very hard")
+        || lower.contains("think intensely")
+    {
+        return Some(ReasoningLevel::ExtraHigh);
+    }
+    if lower.contains("think hard")
+        || lower.contains("megathink")
+        || lower.contains("think a lot")
+        || lower.contains("think deeply")
+    {
+        return Some(ReasoningLevel::High);
+    }
+    None
+}
+
+/// Re-encode `model` with at least `min_level` reasoning.
+///
+/// Parses the ORG2 variant suffix, takes the max of the encoded level and
+/// `min_level`, and rebuilds the id. Returns the original id unchanged when
+/// the encoded level already meets or exceeds `min_level`, so per-turn
+/// escalation never *lowers* an explicit user selection. Provider-agnostic:
+/// the returned id goes through the same `parse_model_variant` path every
+/// provider already uses.
+pub fn escalate_model_reasoning(model: &str, min_level: ReasoningLevel) -> String {
+    let parsed = parse_model_variant(model);
+    let current_rank = parsed.level.map(|l| l.rank()).unwrap_or(0);
+    if current_rank >= min_level.rank() {
+        return model.to_string();
+    }
+    let mut rebuilt = parsed.base_model;
+    if parsed.thinking {
+        rebuilt.push_str("-thinking");
+    }
+    rebuilt.push('-');
+    rebuilt.push_str(min_level.suffix_token());
+    if parsed.fast {
+        rebuilt.push_str("-fast");
+    }
+    rebuilt
+}
+
+#[cfg(test)]
+mod reasoning_trigger_tests {
+    use super::*;
+
+    #[test]
+    fn ultrathink_maps_to_max() {
+        assert_eq!(
+            detect_reasoning_trigger("please ULTRATHINK about this"),
+            Some(ReasoningLevel::Max)
+        );
+    }
+
+    #[test]
+    fn think_harder_maps_to_extra_high() {
+        assert_eq!(
+            detect_reasoning_trigger("think harder about the edge cases"),
+            Some(ReasoningLevel::ExtraHigh)
+        );
+    }
+
+    #[test]
+    fn think_hard_maps_to_high() {
+        assert_eq!(
+            detect_reasoning_trigger("Think hard before answering"),
+            Some(ReasoningLevel::High)
+        );
+    }
+
+    #[test]
+    fn bare_think_does_not_trigger() {
+        // Ordinary prose must never escalate — and never force an explicit
+        // level onto adaptive models that would have chosen dynamically.
+        assert_eq!(detect_reasoning_trigger("I think the bug is in auth.rs"), None);
+        assert_eq!(detect_reasoning_trigger("think about it"), None);
+        assert_eq!(detect_reasoning_trigger("rethinking the approach"), None);
+        assert_eq!(detect_reasoning_trigger("he thinks so"), None);
+    }
+
+    #[test]
+    fn no_trigger_returns_none() {
+        assert_eq!(detect_reasoning_trigger("fix the bug in auth.rs"), None);
+    }
+
+    #[test]
+    fn escalate_appends_suffix_to_bare_model() {
+        assert_eq!(
+            escalate_model_reasoning("claude-opus-4-6", ReasoningLevel::High),
+            "claude-opus-4-6-high"
+        );
+    }
+
+    #[test]
+    fn escalate_never_lowers_explicit_level() {
+        assert_eq!(
+            escalate_model_reasoning("claude-opus-4-6-max", ReasoningLevel::Medium),
+            "claude-opus-4-6-max"
+        );
+    }
+
+    #[test]
+    fn escalate_raises_lower_level() {
+        assert_eq!(
+            escalate_model_reasoning("claude-opus-4-6-low", ReasoningLevel::Max),
+            "claude-opus-4-6-max"
+        );
+    }
+
+    #[test]
+    fn escalate_preserves_thinking_and_fast_flags() {
+        assert_eq!(
+            escalate_model_reasoning("glm-4.7-thinking", ReasoningLevel::High),
+            "glm-4.7-thinking-high"
+        );
+        assert_eq!(
+            escalate_model_reasoning("claude-opus-4-6-fast", ReasoningLevel::High),
+            "claude-opus-4-6-high-fast"
+        );
+    }
+}
+
 // ── Claude version detection (ported from Cherry Studio) ───────────────────
 
 fn opus47_or_newer_regex() -> &'static Regex {

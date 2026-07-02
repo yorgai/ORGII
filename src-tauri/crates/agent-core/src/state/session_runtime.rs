@@ -1,6 +1,6 @@
 //! Per-session agent resources.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -126,6 +126,14 @@ pub struct AgentSession {
     pub processing_lock: Arc<tokio::sync::Mutex<()>>,
     /// Compaction state for context window management.
     pub compaction: tokio::sync::Mutex<CompactionState>,
+    /// Real context-window fill (prompt + cache_read + cache_write tokens)
+    /// reported by the provider on the most recent completed turn.
+    ///
+    /// Feeds the pre-turn compaction trigger as a correction to the local
+    /// token estimate, which systematically undercounts (images count as 0,
+    /// tokenizer mismatch, sampling). `0` = unknown; reset after compaction
+    /// mutates the message list so a stale reading can't re-trigger.
+    pub last_context_tokens: Arc<AtomicI64>,
     /// Wall-clock time of the last user interaction, used by the idle-cleanup task.
     pub last_active_at: tokio::sync::Mutex<Instant>,
 
@@ -180,6 +188,14 @@ pub struct AgentSession {
     /// immediately with an `EnqueueResult` — results arrive via
     /// `agent:complete` / `agent:error` broadcast events.
     pub scheduler: DialogScheduler,
+    /// Mid-turn steering buffer.
+    ///
+    /// User messages sent while a turn is running are diverted here by
+    /// `send_message_impl` and drained by the turn loop before the next LLM
+    /// iteration (injected as `<system-reminder>` user messages) instead of
+    /// waiting for their own turn. Cleared by Stop (same discard semantics
+    /// as the scheduler queue).
+    pub steering_queue: crate::turn_executor::SteeringQueue,
 
     // ── Background Subsystems ──────────────────────────────────────────────
     /// Wingman mode state — holds the active background observation loop.
@@ -276,6 +292,7 @@ impl AgentSession {
             definition,
             runtime: tokio::sync::RwLock::new(None),
             compaction: tokio::sync::Mutex::new(CompactionState::default()),
+            last_context_tokens: Arc::new(AtomicI64::new(0)),
             permission_manager,
             question_manager: Arc::new(QuestionManager::with_cancel_flag(Arc::clone(&cancel_flag))),
             secret_broker: Arc::new(SecretBroker::with_cancel_flag(Arc::clone(&cancel_flag))),
@@ -293,6 +310,7 @@ impl AgentSession {
             active_turn: tokio::sync::Mutex::new(None),
             active_turn_generation: Arc::new(parking_lot::RwLock::new(None)),
             scheduler: DialogScheduler::new(session_id_for_scheduler, 32),
+            steering_queue: Arc::new(tokio::sync::Mutex::new(Vec::new())),
             em_state: Arc::new(tokio::sync::Mutex::new(ExtractMemoriesState::default())),
             ad_state: Arc::new(tokio::sync::Mutex::new(AutoDreamState::default())),
             prompt_cache: Arc::new(tokio::sync::Mutex::new(SessionPromptCache::default())),
@@ -429,6 +447,11 @@ impl AgentSession {
 
         if effect.discard_queued_messages {
             self.scheduler.invalidate_pending();
+            // Steering messages are queued user intent too — same discard
+            // semantics as the scheduler queue.
+            if let Ok(mut steering) = self.steering_queue.try_lock() {
+                steering.clear();
+            }
         }
 
         if effect.cancel_background_workers {

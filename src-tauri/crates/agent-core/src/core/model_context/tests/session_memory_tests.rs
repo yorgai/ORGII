@@ -248,7 +248,7 @@ fn sm_compact_produces_summary_plus_recent() {
         .get("role")
         .and_then(|val| val.as_str())
         .unwrap();
-    assert_eq!(first_role, "system");
+    assert_eq!(first_role, "user");
 
     let first_content = message_text(&compacted[0]);
     assert!(first_content.contains("Session Memory"));
@@ -320,7 +320,7 @@ fn sm_compact_no_boundary_keeps_from_start() {
     let result = try_sm_compact(&messages, &state, &config, 200_000);
     if let Some(compacted) = result {
         assert!(
-            compacted[0].get("role").and_then(|val| val.as_str()) == Some("system"),
+            compacted[0].get("role").and_then(|val| val.as_str()) == Some("user"),
             "first message should be SM summary"
         );
     }
@@ -349,7 +349,7 @@ fn sm_compact_single_message_expands_to_all() {
             .get("role")
             .and_then(|val| val.as_str())
             .unwrap();
-        assert_eq!(first_role, "system");
+        assert_eq!(first_role, "user");
     }
 }
 
@@ -371,7 +371,7 @@ fn sm_compact_boundary_beyond_messages_still_compacts() {
             .get("role")
             .and_then(|val| val.as_str())
             .unwrap();
-        assert_eq!(first_role, "system");
+        assert_eq!(first_role, "user");
         let content = message_text(&compacted[0]);
         assert!(content.contains("Summary of old work"));
     }
@@ -429,14 +429,10 @@ fn restored_sm_state_enables_sm_compact() {
         "SM-compact should work with restored state"
     );
     let compacted = result.unwrap();
-    // compacted_summary_message emits structured content blocks
-    // ([{type:"text", text:...}]) so the prompt-cache scope marker can
-    // ride on the block — read the first block's text.
+    // compacted_summary_message emits a plain-text user message (summary +
+    // continuation instruction).
     let first_content = compacted[0]
         .get("content")
-        .and_then(|val| val.as_array())
-        .and_then(|blocks| blocks.first())
-        .and_then(|block| block.get("text"))
         .and_then(|val| val.as_str())
         .unwrap();
     assert!(first_content.contains("Working on file X"));
@@ -620,9 +616,20 @@ fn compact_boundary_ignores_regular_system_message() {
 }
 
 #[test]
-fn compact_boundary_ignores_user_message() {
+fn compact_boundary_detects_user_summary_message() {
+    // Compaction summaries now land as user messages; the prefix still
+    // marks them as boundaries.
     let msg = serde_json::json!({
         "role": "user",
+        "content": "[Session Memory — 15 earlier messages compacted]\n\nSummary here"
+    });
+    assert!(is_compact_boundary_message(&msg));
+}
+
+#[test]
+fn compact_boundary_ignores_tool_message() {
+    let msg = serde_json::json!({
+        "role": "tool",
         "content": "[Session Memory — fake]"
     });
     assert!(!is_compact_boundary_message(&msg));

@@ -171,7 +171,17 @@ impl ToolRegistry {
         let mut defs: Vec<Value> = Vec::new();
         let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
         self.collect_definitions(&mut defs, &mut seen, Some(ToolPriority::Always));
-        policy.filter_definitions(defs)
+        let mut defs = policy.filter_definitions(defs);
+        // Stable sort by each tool's declared schema_priority (default 0),
+        // so tools like `agent` can surface at the top of the provider list
+        // while everything else keeps its registration order.
+        defs.sort_by_key(|def| {
+            tool_schema_name(def)
+                .and_then(|name| self.get(&name))
+                .map(|tool| tool.schema_priority())
+                .unwrap_or(0)
+        });
+        defs
     }
 
     /// Names from the exact policy-filtered Always-priority schemas sent to the provider.

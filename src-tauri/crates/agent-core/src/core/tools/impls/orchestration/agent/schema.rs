@@ -18,7 +18,7 @@ pub(super) const DESCRIPTION: &str =
      - `delegate` (default) — invoke a different Agent by `agent_id` (builtin or custom).\n\
      - `shadow` — clone the current Agent's setup (tools, policy, model) for a parallel self-copy task.\n\n\
      Set `background: true` to run the worker in the background and get a handle back \
-     immediately. Use `await_output(handle=...)` to check on it later.\n\n\
+     immediately. You will be notified automatically when it finishes — do not poll it.\n\n\
      Kill mode: set `command: \"kill\"` with `handle` to abort a background worker.\n\n\
      Built-in Agent targets (for delegate mode):\n\
      - `builtin:explore` — Fast, read-only codebase search.\n\
@@ -169,6 +169,12 @@ pub(super) fn llm_description(allowed_subagents: Option<&Vec<String>>) -> Option
          - `delegate` (default) — invoke a named agent. Pass `agent_id` to pick the specialist; \
            when omitted, defaults to `builtin:general`.\n\
          - `shadow` — clone current agent's setup for a parallel subtask. No `agent_id` needed.\n\n\
+         Use `builtin:explore` PROACTIVELY for broad codebase exploration — anything likely to take \
+         more than ~3 search/read round-trips ('how does X work', 'where is Y handled', unfamiliar \
+         subsystems). It is read-only and returns a distilled report, keeping raw search results out \
+         of your context window. When you have several independent questions, launch multiple \
+         Explore workers CONCURRENTLY in a single message. If an agent's description says it should \
+         be used proactively, use it without waiting for the user to ask.\n\n\
          For large, parallelizable work, research first, then decompose into independent units. \
          Prefer 5-30 units when the change is genuinely broad; keep smaller tasks to fewer agents. \
          Each unit should be self-contained, mergeable without sibling results, and roughly uniform in size. \
@@ -177,8 +183,9 @@ pub(super) fn llm_description(allowed_subagents: Option<&Vec<String>>) -> Option
          Each worker prompt must be fully self-contained: include the overall goal, that unit's exact scope, \
          relevant codebase conventions, expected verification steps, and the required final summary format. \
          Ask the user for an end-to-end verification path before spawning workers if the correct path is unclear.\n\n\
-         Set `background: true` to run in background and return a handle immediately.\n\
-         Use `await_output(handle=...)` to monitor progress.\n\
+         Set `background: true` to run in background and return a handle immediately. \
+         Do NOT poll a background worker with repeated await_output calls — proceed with other work; \
+         the system notifies you automatically when it finishes.\n\
          To resume a previous background worker, pass the handle you got back as \
          `resume_session_id` — never invent one.\n\n\
          Set `isolation: \"worktree\"` to run the worker in a temporary git worktree, \
@@ -186,7 +193,18 @@ pub(super) fn llm_description(allowed_subagents: Option<&Vec<String>>) -> Option
          Kill mode: agent(command=\"kill\", handle=\"<session_id>\") to abort a background worker.\n\n\
          Available agent types (delegate mode):\n\
          {agent_list}\n\n\
-         Set fork: true to share parent conversation context (for summarization, memory extraction)."
+         Set fork: true to share parent conversation context (for summarization, memory extraction).\n\n\
+         When NOT to use this tool:\n\
+         - Reading a specific known file path — use read_file directly.\n\
+         - Looking up one specific symbol/class/function — a single code_search is faster.\n\
+         - Listing one directory — use list_dir.\n\n\
+         Example (parallel research — one message, multiple agent calls):\n\
+         user: How do sessions, permissions, and caching interact in this codebase?\n\
+         assistant: [in ONE message] agent(agent_id: 'builtin:explore', prompt: 'How does session \
+         lifecycle work in ...') + agent(agent_id: 'builtin:explore', prompt: 'How are tool \
+         permissions resolved in ...') + agent(agent_id: 'builtin:explore', prompt: 'How does \
+         prompt caching work in ...')\n\
+         Counter-example: 'What does src/main.rs contain?' → read_file, NOT a worker."
     ))
 }
 
@@ -234,7 +252,8 @@ pub(super) fn parameters() -> Value {
             "background": {
                 "type": "boolean",
                 "description": "When true, run the worker in background and return a handle immediately. \
-                Use await_output(handle=...) to monitor progress. Default: false."
+                Do NOT poll it with await_output — proceed with other work; the system \
+                notifies you automatically when it finishes. Default: false."
             },
             "isolation": {
                 "type": "string",

@@ -247,10 +247,12 @@ pub fn compact_cutoff_sequence(
 ///
 /// Returns the rows that form the current LLM view: when a boundary row
 /// (`compact_from_sequence IS NOT NULL`) exists, the view is the boundary
-/// row itself (rendered as a system summary) followed by every
-/// non-boundary row with `sequence >= compact_from_sequence`. Without a
-/// boundary, all rows pass through unchanged. Boundary rows other than
-/// the latest are always skipped.
+/// row itself (rendered as a **user** summary message — models weigh user
+/// messages far more than system background, matching the in-memory
+/// compactors) followed by every non-boundary row with
+/// `sequence >= compact_from_sequence`. Without a boundary, all rows pass
+/// through unchanged. Boundary rows other than the latest are always
+/// skipped. The DB row keeps its `system` role — only the LLM view remaps.
 fn visible_rows(messages: &[AgentMessageRow]) -> Vec<AgentMessageRow> {
     let latest_boundary = messages
         .iter()
@@ -264,8 +266,11 @@ fn visible_rows(messages: &[AgentMessageRow]) -> Vec<AgentMessageRow> {
         .compact_from_sequence
         .expect("filtered on is_some above");
 
+    let mut summary_row = boundary.clone();
+    summary_row.role = message_role::USER.to_string();
+
     let mut visible = Vec::with_capacity(messages.len());
-    visible.push(boundary.clone());
+    visible.push(summary_row);
     visible.extend(
         messages
             .iter()
@@ -931,7 +936,8 @@ mod tests {
 
         let history = load_llm_history(DB_PREFIX, sid).expect("load");
         assert_eq!(history.len(), 2);
-        assert_eq!(history[0]["role"], "system");
+        // Stored as `system`, rendered as `user` in the LLM view.
+        assert_eq!(history[0]["role"], "user");
         assert_eq!(history[0]["content"], "summary");
         assert_eq!(history[1]["content"], "recent");
     }

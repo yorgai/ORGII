@@ -76,7 +76,9 @@ fn test_multiple_matches_error() {
     let content = "foo\nbar\nfoo\n";
     let result = replace(content, "foo", "baz", false);
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("multiple matches"));
+    let err = result.unwrap_err();
+    assert!(err.contains("Found 2 matches"), "got: {err}");
+    assert!(err.contains("replace_all"), "got: {err}");
 }
 
 #[test]

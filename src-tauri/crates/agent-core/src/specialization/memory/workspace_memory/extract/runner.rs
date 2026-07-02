@@ -116,6 +116,8 @@ pub async fn run_extraction(
         screenshot_store: None,
         iteration_hook: None,
         persist_cancel_marker: false,
+        steering_queue: None,
+        auto_continue: false,
     };
 
     let session_id = params.session_id;
@@ -140,7 +142,6 @@ pub async fn run_extraction(
         &handler,
         None,
         None,
-        Some(workspace),
         None,
     )
     .await;

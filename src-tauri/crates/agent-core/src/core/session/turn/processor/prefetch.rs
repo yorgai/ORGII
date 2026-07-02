@@ -1,9 +1,11 @@
-//! Non-blocking per-turn skill and workspace-memory prefetch.
+//! Per-turn skill and workspace-memory prefetch.
 //!
-//! Side queries are started once at turn entry, the main LLM loop proceeds
-//! immediately, and each LLM iteration
-//! performs a zero-wait collect. If a prefetch has not settled yet, it is skipped
-//! for that iteration and tried again on the next tool loop iteration.
+//! Side queries are started once at turn entry and the main LLM loop
+//! proceeds. The FIRST LLM iteration waits a short, bounded time for the
+//! prefetch to settle (a relevant skill/memory changes how the model
+//! approaches the task, so a sub-second delay is a good trade); subsequent
+//! iterations perform a zero-wait collect — if a prefetch has not settled
+//! yet it is skipped and retried on the next tool-loop iteration.
 
 use std::sync::Arc;
 #[cfg(debug_assertions)]
@@ -19,6 +21,11 @@ use tracing::{debug, warn};
 use super::UnifiedMessageProcessor;
 use crate::core::turn_executor::TurnIterationHook;
 use crate::memory::workspace_memory::surface_state::WorkspaceMemorySurfaceState;
+
+/// Bounded wait applied on the FIRST LLM iteration only. Long enough for a
+/// warm side-query to land, short enough to not visibly delay first-token.
+const FIRST_ITERATION_PREFETCH_WAIT_MS: u64 = 700;
+
 struct SkillPrefetchState {
     task: Option<JoinHandle<Option<String>>>,
     injected: bool,
@@ -96,8 +103,8 @@ impl TurnPrefetchHook {
         }
     }
 
-    async fn collect_skill(&self, session_id: &str, messages: &mut [Value]) {
-        let task = {
+    async fn collect_skill(&self, session_id: &str, messages: &mut [Value], max_wait_ms: u64) {
+        let mut task = {
             let mut guard = self.skill.lock();
             let Some(state) = guard.as_mut() else {
                 return;
@@ -109,7 +116,7 @@ impl TurnPrefetchHook {
                 state.injected = true;
                 return;
             };
-            if !task.is_finished() {
+            if !task.is_finished() && max_wait_ms == 0 {
                 debug!(
                     session_id = %session_id,
                     elapsed_ms = state.started_at.elapsed().as_millis(),
@@ -120,10 +127,38 @@ impl TurnPrefetchHook {
             state.task.take()
         };
 
-        let Some(task) = task else {
+        let Some(task_handle) = task.take() else {
             return;
         };
-        match task.await {
+        // Bounded first-iteration wait: give the side query a short window
+        // to settle so the first LLM call already sees the relevant skill.
+        let mut task_handle = task_handle;
+        let result = if max_wait_ms > 0 && !task_handle.is_finished() {
+            match tokio::time::timeout(
+                std::time::Duration::from_millis(max_wait_ms),
+                &mut task_handle,
+            )
+            .await
+            {
+                Ok(join_result) => join_result,
+                Err(_elapsed) => {
+                    debug!(
+                        session_id = %session_id,
+                        max_wait_ms,
+                        "[turn-prefetch] skill prefetch missed the first-iteration window; deferring"
+                    );
+                    // Put the still-running task back for later iterations.
+                    if let Some(state) = self.skill.lock().as_mut() {
+                        state.task = Some(task_handle);
+                    }
+                    return;
+                }
+            }
+        } else {
+            task_handle.await
+        };
+
+        match result {
             Ok(Some(section)) => {
                 if prepend_to_last_user_message(messages, &section) {
                     debug!(
@@ -182,12 +217,15 @@ impl TurnPrefetchHook {
             Ok(output) => {
                 if let Some(section) = output.section {
                     let injected = insert_system_after_existing_system(messages, section.clone());
+                    // Only memory-bearing sections count against the session
+                    // budget: an index-only section (no surfaced paths) is
+                    // small, repeats every turn, and would otherwise drain
+                    // the budget without injecting any memory content.
                     if injected && !output.surfaced_paths.is_empty() {
                         if let Some(surface_state) = surface_state {
-                            surface_state
-                                .lock()
-                                .await
-                                .record_paths(output.surfaced_paths.iter().cloned());
+                            let mut surface_state = surface_state.lock().await;
+                            surface_state.record_paths(output.surfaced_paths.iter().cloned());
+                            surface_state.record_bytes(section.len());
                         }
                     }
                     debug!(
@@ -223,11 +261,18 @@ impl TurnIterationHook for TurnPrefetchHook {
     async fn before_llm_iteration(
         &self,
         session_id: &str,
-        _iteration: u32,
+        iteration: u32,
         messages: &mut Vec<Value>,
     ) {
+        // First iteration: bounded wait so the opening LLM call already
+        // sees the selected skill. Later iterations: zero-wait collect.
+        let max_wait_ms = if iteration <= 1 {
+            FIRST_ITERATION_PREFETCH_WAIT_MS
+        } else {
+            0
+        };
         self.collect_memory(session_id, messages).await;
-        self.collect_skill(session_id, messages).await;
+        self.collect_skill(session_id, messages, max_wait_ms).await;
     }
 }
 
@@ -340,12 +385,26 @@ impl UnifiedMessageProcessor {
         };
         let recent_tools =
             crate::memory::workspace_memory::prefetch::extract_recent_tools_from_history(history);
-        let already_surfaced = self
-            .session
-            .workspace_memory_surface_state
-            .lock()
-            .await
-            .snapshot();
+        let (already_surfaced, remaining_session_budget) = {
+            let surface_state = self.session.workspace_memory_surface_state.lock().await;
+            (
+                surface_state.snapshot(),
+                surface_state.remaining_budget(
+                    crate::memory::workspace_memory::surface_state::MAX_SESSION_MEMORY_BYTES,
+                ),
+            )
+        };
+        // Session budget exhausted: skip the prefetch entirely instead of
+        // burning an LLM side-query on memories we would refuse to inject.
+        if remaining_session_budget == 0 {
+            debug!(
+                session_id = %session_id,
+                "[turn-prefetch] session memory budget exhausted; skipping memory prefetch"
+            );
+            return None;
+        }
+        let byte_budget = crate::memory::workspace_memory::prefetch::MAX_MEMORY_INJECTION_BYTES
+            .min(remaining_session_budget);
         let user_message = content.to_string();
         let model = self.runtime.model.clone();
 
@@ -357,6 +416,7 @@ impl UnifiedMessageProcessor {
                 &model,
                 &recent_tools,
                 &already_surfaced,
+                byte_budget,
             )
             .await;
             let surfaced_paths = memories

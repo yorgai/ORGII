@@ -237,20 +237,44 @@ pub trait Tool: Send + Sync {
         false
     }
 
+    /// Whether this tool can run concurrently with other tool calls in the
+    /// same LLM response, even if it mutates state.
+    ///
+    /// Defaults to `is_read_only()`. Override to `true` for tools that have
+    /// side effects but are isolated from each other — e.g. `agent`: each
+    /// subagent runs in its own session, so multiple launches in one response
+    /// must not serialize behind one another.
+    fn is_concurrency_safe(&self) -> bool {
+        self.is_read_only()
+    }
+
+    /// Ordering weight for this tool's schema in the provider tool list.
+    /// Lower sorts earlier; ties keep the registry's deterministic order
+    /// (cache segment, then name — stable sort).
+    ///
+    /// Schema position is an attention signal for the model. The default 0
+    /// preserves the existing order for every tool; only tools that should
+    /// be surfaced prominently (e.g. `agent` at the top, mirroring Claude
+    /// Code's Task-tool-first layout) override this.
+    fn schema_priority(&self) -> i8 {
+        0
+    }
+
     /// Maximum characters allowed in the tool result before truncation.
     /// Override in tools that need more (file read) or less (grep) output.
     fn output_budget(&self) -> usize {
         50_000
     }
 
-    /// Character threshold above which a tool result is persisted to disk
-    /// and replaced with a preview + file path in the context.
-    ///
-    /// Return `usize::MAX` to opt out of persistence (e.g., `read_file`
-    /// results should not be written to another file for the LLM to re-read).
-    /// Default: 50,000 characters (matches `DEFAULT_PERSIST_THRESHOLD`).
-    fn persist_threshold(&self) -> usize {
-        crate::turn_executor::tool_result_storage::DEFAULT_PERSIST_THRESHOLD
+    /// Whether oversized output may be persisted to disk and replaced with a
+    /// `<persisted-output>` stub. Default true (shell/search dumps are
+    /// retrievable-by-path). Tools whose output is semantically load-bearing
+    /// — skill bodies the model must follow, subagent results the frontend
+    /// parses into cards, file reads that would be circular to re-read from
+    /// disk — MUST return false so oversized output falls back to plain tail
+    /// truncation instead of a stub.
+    fn allow_persisted_output(&self) -> bool {
+        true
     }
 
     /// Optional dynamic description for the LLM schema.

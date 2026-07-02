@@ -142,6 +142,9 @@ pub struct UnifiedMessageProcessor {
     sm_compact_config: SessionMemoryCompactConfig,
     replacement_state: tokio::sync::Mutex<ReplacementState>,
     rounds_since_todo: tokio::sync::Mutex<u32>,
+    /// Turns since the last `agent` tool call OR last subagent reminder.
+    /// Drives the periodic delegation nudge in `build_dynamic_sections`.
+    rounds_since_subagent_reminder: tokio::sync::Mutex<u32>,
     turn_prefetch_hook: tokio::sync::Mutex<Option<Arc<TurnPrefetchHook>>>,
 }
 
@@ -229,6 +232,7 @@ impl UnifiedMessageProcessor {
             sm_compact_config: SessionMemoryCompactConfig::default(),
             replacement_state: tokio::sync::Mutex::new(ReplacementState::new()),
             rounds_since_todo: tokio::sync::Mutex::new(0),
+            rounds_since_subagent_reminder: tokio::sync::Mutex::new(0),
             turn_prefetch_hook: tokio::sync::Mutex::new(None),
         }
     }
@@ -567,11 +571,14 @@ impl UnifiedMessageProcessor {
                 .await;
         }
 
-        // 3. Build system prompt (stable portion — cacheable across turns)
-        let system_prompt = self.build_system_prompt(session_id).await;
+        // 3. Build system prompt, split into the stable cacheable prefix and
+        // the volatile per-turn body (environment/IDE/presence/mode suffix).
+        let (system_prompt, volatile_prompt) = self.build_system_prompt(session_id).await;
 
-        // 3b. Build dynamic context (changes per-turn — separate system message
-        // so the stable prefix can be cached by the Anthropic prompt caching API).
+        // 3b. Build dynamic context (changes per-turn). Joined with the
+        // volatile prompt body and appended AFTER the history (step 6c) so
+        // the provider prompt-cache prefix — stable system + history — stays
+        // byte-identical across turns.
         let dynamic_sections = self
             .build_dynamic_sections(session_id, None, Some(content))
             .await;
@@ -579,17 +586,11 @@ impl UnifiedMessageProcessor {
         // 4. Build provider messages from the already-loaded history.
         let mut messages: Vec<Value> = Vec::with_capacity(history.len() + 3);
 
-        // System prompt split: stable prefix (cacheable) + dynamic context (per-turn).
+        // Stable system prefix (cacheable across turns).
         messages.push(scoped_system_message(
             system_prompt,
             RenderedSystemBlockScope::Session,
         ));
-        if !dynamic_sections.is_empty() {
-            messages.push(scoped_system_message(
-                dynamic_sections.join("\n\n"),
-                RenderedSystemBlockScope::Volatile,
-            ));
-        }
         messages.extend(history);
 
         // 4b. Interrupt/crash repair.
@@ -748,9 +749,34 @@ impl UnifiedMessageProcessor {
             );
         }
 
+        // 6c. Volatile context reminder — the per-turn system-prompt body
+        // (environment/IDE/presence/mode suffix) plus the dynamic sections,
+        // appended AFTER the history as a `<system-reminder>` user message.
+        // Anything placed before the history would change every turn and
+        // invalidate the provider prompt-cache prefix for the whole
+        // conversation; at the tail it sits after the sliding cache
+        // breakpoint instead. Never persisted — rebuilt fresh each turn.
+        {
+            let mut volatile_parts: Vec<String> = Vec::new();
+            if !volatile_prompt.is_empty() {
+                volatile_parts.push(volatile_prompt);
+            }
+            volatile_parts.extend(dynamic_sections);
+            if !volatile_parts.is_empty() {
+                messages.push(
+                    crate::session::prompt::cache::volatile_context_reminder_message(
+                        &volatile_parts.join("\n\n"),
+                    ),
+                );
+            }
+        }
+
         // 7. Execute turn (with reactive ContextTooLong recovery).
+        // Reasoning trigger words are detected on the CURRENT user input
+        // only (never history) so escalation stays per-turn.
+        let reasoning_trigger = crate::providers::thinking_mode::detect_reasoning_trigger(content);
         let turn_result = self
-            .execute_turn_with_reactive_retry(session_id, &turn_id, &mut messages)
+            .execute_turn_with_reactive_retry(session_id, &turn_id, &mut messages, reasoning_trigger)
             .await;
         if let Some(prefetch_hook) = self.turn_prefetch_hook.lock().await.take() {
             prefetch_hook.abort_pending();
@@ -768,6 +794,17 @@ impl UnifiedMessageProcessor {
         {
             let mut rounds = self.rounds_since_todo.lock().await;
             if handler.todo_was_called() {
+                *rounds = 0;
+            } else {
+                *rounds = rounds.saturating_add(1);
+            }
+        }
+
+        // Same cadence tracking for the subagent-delegation reminder: an
+        // `agent` call proves the model remembers delegation, so reset.
+        {
+            let mut rounds = self.rounds_since_subagent_reminder.lock().await;
+            if handler.agent_was_called() {
                 *rounds = 0;
             } else {
                 *rounds = rounds.saturating_add(1);

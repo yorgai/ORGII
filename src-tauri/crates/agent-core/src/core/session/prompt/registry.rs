@@ -391,6 +391,91 @@ pub fn assemble_with_cache(
     (prompt_body, traces)
 }
 
+/// Assemble the system prompt split into a **stable** body (sections whose
+/// bytes are session-stable — cacheable as a provider prompt-cache prefix)
+/// and a **volatile** body (sections whose bytes can change between turns:
+/// environment date/branch, IDE context, user presence/profile, mode
+/// suffix, flow awareness, agent-org task board). Keeping the volatile
+/// body OUT of the cached prefix is what lets the provider prompt cache
+/// survive across turns and days.
+pub fn assemble_split_with_cache(
+    ctx: &PromptCtx,
+    mut cache: Option<&mut SessionPromptCache>,
+    mut learnings_cache: Option<&mut LearningsPromptCache>,
+) -> (String, String, Vec<SectionTrace>) {
+    let registry = registry();
+    let mut traces: Vec<SectionTrace> = Vec::with_capacity(registry.len());
+    let mut stable_bodies: Vec<(i32, String)> = Vec::with_capacity(registry.len());
+    let mut volatile_bodies: Vec<(i32, String)> = Vec::new();
+
+    for section in registry.iter() {
+        let sovereign_safe = section.sovereign_safe();
+        let cache_policy = section.cache_policy();
+
+        let decision = if ctx.sovereign && !sovereign_safe {
+            AppliesDecision::Skip {
+                reason: "sovereign_filter",
+            }
+        } else {
+            section.applies(ctx)
+        };
+
+        let mut content: Option<String> = None;
+        if decision.is_apply() {
+            let section_id = section.id();
+            content = if cache_policy.is_cacheable() {
+                if let Some(cache_ref) = cache.as_deref_mut() {
+                    match cache_ref.get(section_id) {
+                        Some(cached) => cached,
+                        None => {
+                            let rendered = section.render(ctx).filter(|body| !body.is_empty());
+                            cache_ref.insert(section_id, rendered.clone());
+                            rendered
+                        }
+                    }
+                } else {
+                    section.render(ctx).filter(|body| !body.is_empty())
+                }
+            } else if matches!(cache_policy, PromptCachePolicy::RevisionKeyed) {
+                render_revision_keyed_section(*section, ctx, learnings_cache.as_deref_mut())
+            } else {
+                section.render(ctx).filter(|body| !body.is_empty())
+            };
+            if let Some(ref body) = content {
+                if matches!(cache_policy, PromptCachePolicy::Volatile) {
+                    volatile_bodies.push((section.order_hint(), body.clone()));
+                } else {
+                    stable_bodies.push((section.order_hint(), body.clone()));
+                }
+            }
+        }
+
+        traces.push(SectionTrace {
+            section_id: section.id(),
+            order_hint: section.order_hint(),
+            applies: decision.is_apply(),
+            reason: decision.reason(),
+            source: section.source(),
+            sovereign_safe,
+            cache_policy: cache_policy.as_str(),
+            content,
+        });
+    }
+
+    stable_bodies.sort_by_key(|(order, _)| *order);
+    volatile_bodies.sort_by_key(|(order, _)| *order);
+
+    let join = |bodies: Vec<(i32, String)>| {
+        bodies
+            .into_iter()
+            .map(|(_, body)| body)
+            .collect::<Vec<_>>()
+            .join("\n\n")
+    };
+
+    (join(stable_bodies), join(volatile_bodies), traces)
+}
+
 // ---------------------------------------------------------------------
 // Section ordering — single declarative source of truth
 // ---------------------------------------------------------------------

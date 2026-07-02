@@ -716,7 +716,9 @@ mod tests {
 
         let history = load_llm_history(session_id).expect("load compacted history");
         assert_eq!(history.len(), 3);
-        assert_eq!(history[0]["role"], "system");
+        // Boundary rows are stored as `system` but rendered as `user` in the
+        // LLM view (summary-as-user + continuation semantics).
+        assert_eq!(history[0]["role"], "user");
         assert_eq!(
             history[0]["content"],
             "[Conversation summary — 2 earlier messages compacted]\n\nsummary"

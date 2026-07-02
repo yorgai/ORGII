@@ -73,6 +73,7 @@ pub fn work_item_manager_agent() -> AgentDefinition {
         },
         soul_content: Some(include_str!("prompts/work_item_manager.md").to_string()),
         sovereign_prompt: false,
+        auto_continue: false,
         delegation_config: Some(DelegationConfig {
             delegatable: true,
             context_builders: vec![

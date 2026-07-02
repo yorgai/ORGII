@@ -216,6 +216,9 @@ pub struct AgentDefinitionPatch {
     )]
     pub soul_content: Option<Option<String>>,
     pub sovereign_prompt: Option<bool>,
+    /// Feature-gated turn-loop auto-continue (runtime knob, user-editable
+    /// on builtin agents too — see `gate_for_builtin`).
+    pub auto_continue: Option<bool>,
     pub sub_agents: Option<Vec<SubAgentRef>>,
     pub tools: Option<AgentToolSelectionPatch>,
     pub load_workspace_resources: Option<bool>,
@@ -352,6 +355,9 @@ impl AgentDefinitionPatch {
         }
         if let Some(v) = self.sovereign_prompt {
             target.sovereign_prompt = v;
+        }
+        if let Some(v) = self.auto_continue {
+            target.auto_continue = v;
         }
         if let Some(v) = self.sub_agents {
             target.sub_agents = Some(v);

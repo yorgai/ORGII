@@ -522,6 +522,13 @@ pub enum ProviderError {
     ModelNotFound(String),
     /// Context/prompt too long for the model's context window.
     ContextTooLong(String),
+    /// `input tokens + max_tokens` exceeds the context window while the
+    /// prompt itself still fits — recoverable by lowering `max_tokens`
+    /// instead of compacting history.
+    MaxTokensExceedContext(String),
+    /// Request rejected because embedded media (base64 images / PDFs) is
+    /// too large — recoverable by stripping historical media blocks.
+    MediaTooLarge(String),
     /// Streaming was cancelled by the user.
     Cancelled,
     /// Generic provider error.
@@ -557,6 +564,12 @@ impl std::fmt::Display for ProviderError {
             ProviderError::ModelNotFound(msg) => write!(formatter, "Model not found: {}", msg),
             ProviderError::ContextTooLong(msg) => {
                 write!(formatter, "ContextTooLong: {}", msg)
+            }
+            ProviderError::MaxTokensExceedContext(msg) => {
+                write!(formatter, "MaxTokensExceedContext: {}", msg)
+            }
+            ProviderError::MediaTooLarge(msg) => {
+                write!(formatter, "MediaTooLarge: {}", msg)
             }
             ProviderError::Cancelled => write!(formatter, "Cancelled"),
             ProviderError::Other(msg) => write!(formatter, "Provider error: {}", msg),

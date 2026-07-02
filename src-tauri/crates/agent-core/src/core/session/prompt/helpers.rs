@@ -12,19 +12,110 @@ use crate::utils::safe_truncate_utf8;
 // Conventions loader
 // ============================================
 
+/// Maximum number of parent directories to walk when looking for
+/// project-memory files above the workspace root (matches the reference
+/// agent's bounded upward recursion).
+const MEMORY_FILE_MAX_UPWARD_LEVELS: usize = 3;
+/// Cap on any single memory file body.
+const MEMORY_FILE_MAX_BYTES: usize = 40_000;
+/// Maximum `@import` expansions per memory file (guards cycles/abuse).
+const MEMORY_FILE_MAX_IMPORTS: usize = 8;
+
+/// Load project conventions for the system prompt.
+///
+/// Layered merge (later layers append, never replace):
+/// 1. `.orgii/agent-rules.md` — ORG2-native rules (highest priority, first)
+/// 2. `CLAUDE.md` / `AGENTS.md` at the workspace root and up to
+///    [`MEMORY_FILE_MAX_UPWARD_LEVELS`] parents (nearest wins per name) —
+///    ecosystem-standard project memory used by other agent CLIs; loading
+///    them makes ORG2 a drop-in for repos already carrying these files
+/// 3. `CLAUDE.local.md` at the workspace root — user-local overrides
+///
+/// `@path` import lines inside CLAUDE.md-style files are expanded inline
+/// (single level, bounded), matching the reference implementation.
 pub(super) fn load_conventions(workspace_path: &Path) -> Option<String> {
+    let mut sections: Vec<String> = Vec::new();
+
     let conventions_path = workspace_path.join(".orgii").join("agent-rules.md");
     match std::fs::read_to_string(&conventions_path) {
-        Ok(content) => Some(content),
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => None,
+        Ok(content) => sections.push(content),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
         Err(err) => {
             tracing::warn!(
                 "[prompt] Failed to read conventions at {}: {err}",
                 conventions_path.display()
             );
-            None
         }
     }
+
+    // CLAUDE.md / AGENTS.md: nearest file per name wins, searching the
+    // workspace root first and then up to N parents.
+    for name in ["CLAUDE.md", "AGENTS.md"] {
+        let mut dir = Some(workspace_path);
+        for _ in 0..=MEMORY_FILE_MAX_UPWARD_LEVELS {
+            let Some(current) = dir else { break };
+            let candidate = current.join(name);
+            if let Ok(content) = std::fs::read_to_string(&candidate) {
+                sections.push(format!(
+                    "<!-- from {} -->\n{}",
+                    candidate.display(),
+                    expand_memory_imports(&content, current)
+                ));
+                break;
+            }
+            dir = current.parent();
+        }
+    }
+
+    // CLAUDE.local.md: workspace root only (user-local, usually gitignored).
+    let local = workspace_path.join("CLAUDE.local.md");
+    if let Ok(content) = std::fs::read_to_string(&local) {
+        sections.push(format!(
+            "<!-- from {} -->\n{}",
+            local.display(),
+            expand_memory_imports(&content, workspace_path)
+        ));
+    }
+
+    if sections.is_empty() {
+        return None;
+    }
+    let merged = sections.join("\n\n");
+    Some(cap_text(&merged, MEMORY_FILE_MAX_BYTES, "project conventions"))
+}
+
+/// Expand `@path` import lines (CLAUDE.md convention): a line consisting of
+/// `@relative/or/absolute/path` is replaced by that file's contents. Single
+/// level only — imported files are NOT scanned for further imports — and
+/// bounded by [`MEMORY_FILE_MAX_IMPORTS`].
+fn expand_memory_imports(content: &str, base_dir: &Path) -> String {
+    let mut expanded_count = 0usize;
+    let mut out: Vec<String> = Vec::with_capacity(content.lines().count());
+    for line in content.lines() {
+        let trimmed = line.trim();
+        let is_import = trimmed.starts_with('@')
+            && !trimmed.contains(char::is_whitespace)
+            && trimmed.len() > 1;
+        if !is_import || expanded_count >= MEMORY_FILE_MAX_IMPORTS {
+            out.push(line.to_string());
+            continue;
+        }
+        let raw_path = &trimmed[1..];
+        let path = if Path::new(raw_path).is_absolute() {
+            std::path::PathBuf::from(raw_path)
+        } else {
+            base_dir.join(raw_path)
+        };
+        match std::fs::read_to_string(&path) {
+            Ok(imported) => {
+                expanded_count += 1;
+                out.push(format!("<!-- imported from {} -->", path.display()));
+                out.push(imported);
+            }
+            Err(_) => out.push(line.to_string()),
+        }
+    }
+    out.join("\n")
 }
 
 // ============================================

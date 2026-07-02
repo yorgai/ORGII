@@ -51,6 +51,7 @@ pub fn base_agent() -> AgentDefinition {
         temperature: None,
         soul_content: None,
         sovereign_prompt: false,
+        auto_continue: false,
         sub_agents: None,
         load_workspace_resources: None,
         load_workspace_rules: None,

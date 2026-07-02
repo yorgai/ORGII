@@ -116,8 +116,26 @@ pub(super) fn parse_error(status: u16, body: &str, retry_after_secs: Option<u64>
     let classification = classify_error(status, body, None, retry_after_secs);
     let lower = classification.message.to_lowercase();
 
-    if lower.contains("prompt is too long") || lower.contains("max_tokens` exceed context limit") {
+    // "max_tokens exceed context limit" is recoverable by LOWERING
+    // max_tokens — distinct from "prompt is too long" which needs
+    // compaction. Classified separately so the turn loop can pick the
+    // right rescue.
+    if lower.contains("max_tokens") && lower.contains("exceed") {
+        return ProviderError::MaxTokensExceedContext(classification.message);
+    }
+    if lower.contains("prompt is too long") {
         return ProviderError::ContextTooLong(classification.message);
+    }
+    // Oversized media payloads (base64 images/PDFs) surface as 413 or as
+    // 400s complaining about image/document size — recoverable by
+    // stripping historical media blocks, NOT by text compaction.
+    if status == 413
+        || ((lower.contains("image") || lower.contains("document") || lower.contains("pdf"))
+            && (lower.contains("too large")
+                || lower.contains("exceeds")
+                || lower.contains("maximum")))
+    {
+        return ProviderError::MediaTooLarge(classification.message);
     }
 
     match status {

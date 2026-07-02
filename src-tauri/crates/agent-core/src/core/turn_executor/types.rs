@@ -64,6 +64,29 @@ pub trait TurnIterationHook: Send + Sync {
 }
 
 // ============================================
+// Mid-turn steering
+// ============================================
+
+/// A user message queued for mid-turn injection ("steering").
+///
+/// Sent while a turn is already running; instead of waiting for its own
+/// turn it is drained by the turn loop before the next LLM iteration and
+/// injected as a `<system-reminder>`-wrapped user message so the model can
+/// change course immediately.
+#[derive(Debug, Clone)]
+pub struct SteeringInjection {
+    /// The user's message text.
+    pub content: String,
+    /// Canonical user-intent id (for lifecycle bookkeeping by the handler).
+    pub turn_intent_id: String,
+}
+
+/// Shared per-session steering buffer. Owned by the session, drained by
+/// the turn loop, cleared on Stop (stop = discard, matching the existing
+/// queued-message boundary semantics).
+pub type SteeringQueue = Arc<tokio::sync::Mutex<Vec<SteeringInjection>>>;
+
+// ============================================
 // Turn Configuration
 // ============================================
 
@@ -98,6 +121,20 @@ pub struct TurnConfig {
     pub iteration_hook: Option<Arc<dyn TurnIterationHook>>,
     /// Whether observing the cancel flag should persist a next-turn cancel marker.
     pub persist_cancel_marker: bool,
+    /// Optional mid-turn steering buffer. User messages sent while this turn
+    /// runs are pushed here by the dispatch layer and drained by the loop
+    /// before each LLM iteration (and once more before the turn is allowed
+    /// to end).
+    pub steering_queue: Option<SteeringQueue>,
+    /// Feature-gated auto-continue (default `false`). When enabled and the
+    /// model ends the turn with plain text while the context window is still
+    /// below 90% used, the loop injects a `<system-reminder>` continue nudge
+    /// and gives the model another iteration instead of finishing the turn.
+    /// Guarded by a per-turn continuation cap and a diminishing-returns
+    /// check — see `should_auto_continue` in the turn executor. Mirrors
+    /// Claude Code's TOKEN_BUDGET auto-continue semantics. Subagents and
+    /// background memory runs always pass `false`.
+    pub auto_continue: bool,
 }
 
 // ============================================
@@ -269,6 +306,22 @@ pub trait TurnEventHandler: Send + Sync {
         None
     }
 
+    /// Called when the model is about to end the turn with a final text
+    /// response (no tool calls). Gives user-defined `Stop` hooks a chance to
+    /// BLOCK the completion: a returned string is injected as feedback and
+    /// the turn loop continues instead of finishing. Return `None` to let
+    /// the turn end normally. Never invoked for stream-error or cancelled
+    /// endings — blocking those would spiral. Default: no hooks, never block.
+    async fn on_turn_stop_check(&self, _session_id: &str) -> Option<String> {
+        None
+    }
+
+    /// Called when a mid-turn steering message is consumed by the loop.
+    /// Handlers should persist the user message (so it appears in the
+    /// durable transcript / next-turn history) and advance the intent
+    /// lifecycle. Default: no-op for handlers without persistence.
+    fn on_steering_consumed(&self, _session_id: &str, _injection: &SteeringInjection) {}
+
     /// Called before a tool is executed. Plugins can block or modify params.
     /// Returns None to proceed normally, or Some(ToolHookIntervention).
     async fn before_tool_execute(
@@ -393,8 +446,13 @@ mod tests {
             screenshot_store: None,
             iteration_hook: None,
             persist_cancel_marker: false,
+            steering_queue: None,
+            auto_continue: false,
         };
         assert!(config.max_iterations.is_none());
+        // Feature gate: auto-continue is opt-in — every default/off
+        // construction site passes `false`.
+        assert!(!config.auto_continue);
     }
 
     #[test]
@@ -410,6 +468,8 @@ mod tests {
             screenshot_store: None,
             iteration_hook: None,
             persist_cancel_marker: false,
+            steering_queue: None,
+            auto_continue: false,
         };
         assert_eq!(config.max_iterations, Some(15));
     }

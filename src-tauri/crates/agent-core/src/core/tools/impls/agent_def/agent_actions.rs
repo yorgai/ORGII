@@ -139,6 +139,7 @@ pub(super) fn create_agent(
         temperature,
         soul_content,
         sovereign_prompt: false,
+        auto_continue: false,
         sub_agents,
         tools,
         load_workspace_resources: params

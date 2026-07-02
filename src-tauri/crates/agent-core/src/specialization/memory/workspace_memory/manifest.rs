@@ -292,19 +292,29 @@ pub fn memory_age(mtime_ms: u64) -> String {
     }
 }
 
-/// Staleness caveat for memories older than 1 day.
+/// Staleness caveat for memories older than a week, bucketed coarsely.
+///
+/// Buckets ("over a week old" / "over a month old") instead of exact day
+/// counts keep the injected prompt section byte-stable day over day, so
+/// provider prompt caches are not busted by a daily one-character diff.
 pub fn memory_freshness_text(mtime_ms: u64) -> String {
     let days = memory_age_days(mtime_ms);
-    if days <= 1 {
+    if days < 7 {
         return String::new();
     }
 
+    let age_bucket = if days > 30 {
+        "over a month old"
+    } else {
+        "over a week old"
+    };
+
     format!(
-        "This memory is {} days old. \
+        "This memory is {}. \
          Memories are point-in-time observations, not live state — \
          claims about code behavior or file:line citations may be outdated. \
          Verify against current code before asserting as fact.",
-        days
+        age_bucket
     )
 }
 
@@ -521,16 +531,28 @@ mod tests {
     }
 
     #[test]
-    fn test_memory_freshness_text() {
+    fn test_memory_freshness_text_buckets() {
         let now_ms = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
 
+        // Under a week: no caveat at all (byte-stable — no daily diff).
         assert!(memory_freshness_text(now_ms).is_empty());
         assert!(memory_freshness_text(now_ms - 86_400_000).is_empty());
-        let stale = memory_freshness_text(now_ms - 5 * 86_400_000);
-        assert!(stale.contains("5 days old"));
-        assert!(stale.contains("Verify against current code"));
+        assert!(memory_freshness_text(now_ms - 6 * 86_400_000).is_empty());
+
+        // 7–30 days: coarse "over a week old" bucket, no exact day count.
+        let week_old = memory_freshness_text(now_ms - 10 * 86_400_000);
+        assert!(week_old.contains("over a week old"));
+        assert!(!week_old.contains("10"));
+        assert!(week_old.contains("Verify against current code"));
+        assert_eq!(week_old, memory_freshness_text(now_ms - 29 * 86_400_000));
+
+        // Over 30 days: "over a month old" bucket.
+        let month_old = memory_freshness_text(now_ms - 45 * 86_400_000);
+        assert!(month_old.contains("over a month old"));
+        assert!(!month_old.contains("45"));
+        assert_eq!(month_old, memory_freshness_text(now_ms - 400 * 86_400_000));
     }
 }

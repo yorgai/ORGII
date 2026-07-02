@@ -493,7 +493,31 @@ impl Tool for AgentTool {
         crate::tools::categories::ORCHESTRATION
     }
 
-    fn persist_threshold(&self) -> usize {
+    /// Launching a subagent mutates state (new session, worker process), so
+    /// this is NOT read-only — but each worker runs in its own isolated
+    /// session, so multiple `agent` calls in one LLM response are safe to run
+    /// concurrently. Without this, N parallel launches would serialize and
+    /// each foreground delegate would block the next.
+    fn is_concurrency_safe(&self) -> bool {
+        true
+    }
+
+    /// Surface `agent` first in the provider tool list (schema position is
+    /// an attention signal — mirrors Claude Code putting its Task tool at
+    /// the top of the tool array).
+    fn schema_priority(&self) -> i8 {
+        -10
+    }
+
+    /// Subagent results are parsed by the frontend (result cards, trailer
+    /// lines) and consumed inline by the parent — a `<persisted-output>`
+    /// stub breaks both. Oversized results fall back to tail truncation.
+    fn allow_persisted_output(&self) -> bool {
+        false
+    }
+
+    /// Subagent final reports deserve more headroom than shell dumps.
+    fn output_budget(&self) -> usize {
         100_000
     }
 
@@ -679,6 +703,44 @@ impl Tool for AgentTool {
         // 3. Instance numbering — also enforces the max-instances cap.
         let instance_number = self.next_instance_number(&agent_id).await?;
 
+        // 3b. Mint the subagent session id and announce a provisional
+        // "running" job IMMEDIATELY — before the slow init below (provider
+        // preflight, registry build, worktree creation) which can take
+        // seconds. The frontend's live-subagent signal (planning footer +
+        // Stop affordance) is driven by this broadcast; announcing only at
+        // real registration left the whole creation window looking hung.
+        // Real registration re-broadcasts "running" for the same handle
+        // (idempotent on the FE job map); init failures broadcast "failed"
+        // via the guard's Drop.
+        //
+        // Prefix constants live in `agent_core::core::definitions::prefix_lookup`
+        // so the session-id parser (`looks_like_valid_subagent_session_id`)
+        // and any future routing logic share a single source of truth.
+        use crate::definitions::prefix_lookup::{
+            SHADOW_SUBAGENT_SESSION_PREFIX, SUBAGENT_SESSION_PREFIX,
+        };
+        let id_prefix = if is_shadow {
+            SHADOW_SUBAGENT_SESSION_PREFIX
+        } else {
+            SUBAGENT_SESSION_PREFIX
+        };
+        let subagent_session_id = resume_session_id.clone().unwrap_or_else(|| {
+            // `id_prefix` already ends with `-` (constant); avoid double-dash.
+            format!("{}{}-{}", id_prefix, agent_id, uuid::Uuid::new_v4())
+        });
+        let subagent_type_wire = if is_shadow {
+            helpers::subagent_type::SHADOW.to_string()
+        } else {
+            subagent_type_label(&agent_id)
+        };
+        let parent_session_id = self.parent_session_id.lock().await.clone();
+        let mut provisional_guard = helpers::ProvisionalJobGuard::announce(
+            &parent_session_id,
+            &subagent_session_id,
+            &agent.name,
+            &subagent_type_wire,
+        );
+
         // 4. Resolve model + reliability for THIS sub-agent.
         //
         // Sub-agents do not inherit the parent's model or fallback chain
@@ -697,7 +759,6 @@ impl Tool for AgentTool {
         let (model, sub_reliability_opt) =
             helpers::resolve_subagent_model(&agent, explicit_param_model, &parent_model);
 
-        let parent_session_id = self.parent_session_id.lock().await.clone();
         let parent_account_id_for_provider: Option<String> =
             self.config.session_account_id.clone().or_else(|| {
                 crate::session::persistence::get_session(&parent_session_id)
@@ -849,31 +910,14 @@ impl Tool for AgentTool {
             screenshot_store: None,
             iteration_hook: None,
             persist_cancel_marker: false,
+            steering_queue: None,
+            // Subagents never auto-continue (CC parity: the feature is
+            // main-session only — a subagent that stops is done).
+            auto_continue: false,
         };
 
-        // 9. Create subagent session ID (reuse for resume, new for fresh).
-        // Prefix constants live in `agent_core::core::definitions::prefix_lookup`
-        // (re-exported as `crate::definitions::prefix_lookup` here) so the
-        // session-id parser (`looks_like_valid_subagent_session_id`) and any
-        // future routing logic share a single source of truth.
-        use crate::definitions::prefix_lookup::{
-            SHADOW_SUBAGENT_SESSION_PREFIX, SUBAGENT_SESSION_PREFIX,
-        };
-        let id_prefix = if is_shadow {
-            SHADOW_SUBAGENT_SESSION_PREFIX
-        } else {
-            SUBAGENT_SESSION_PREFIX
-        };
-        let subagent_session_id = resume_session_id.unwrap_or_else(|| {
-            // `id_prefix` already ends with `-` (constant); avoid double-dash.
-            format!("{}{}-{}", id_prefix, agent_id, uuid::Uuid::new_v4())
-        });
-
-        let subagent_type_wire = if is_shadow {
-            helpers::subagent_type::SHADOW.to_string()
-        } else {
-            subagent_type_label(&agent_id)
-        };
+        // 9. Session id + type label were minted at step 3b (so the
+        // provisional job announcement could precede the slow init above).
 
         // The parent↔child linkage — stamping `subagentSessionId` + `action: "delegate"`
         // onto the parent's still-running `agent` tool_call event — happens inside
@@ -1010,7 +1054,7 @@ impl Tool for AgentTool {
         .await;
 
         let workspace = self.resolve_repo_path().await;
-        let (run_workspace, final_registry_arc, isolation_workspace_root) =
+        let (final_registry_arc, isolation_workspace_root) =
             match effective_isolation {
                 Some(SubAgentIsolation::Worktree) => {
                     let (isolated_workspace, worktree_info) = match self
@@ -1083,18 +1127,17 @@ impl Tool for AgentTool {
                         isolated_workspace.clone(),
                         &subagent_session_id,
                     );
-                    (
-                        isolated_workspace.working_dir().to_path_buf(),
-                        registry,
-                        Some(workspace_root),
-                    )
+                    (registry, Some(workspace_root))
                 }
-                None => (workspace, Arc::clone(&effective_registry_arc), None),
+                None => (Arc::clone(&effective_registry_arc), None),
             };
         let final_registry = final_registry_arc.as_ref();
 
         // ── Background mode: spawn and return handle immediately ─────
         if is_background {
+            // Real registration inside the spawn re-broadcasts "running"
+            // for this handle; the provisional announcement is superseded.
+            provisional_guard.disarm();
             return Ok(Self::spawn_background_subagent(
                 background::BackgroundSpawnArgs {
                     agent: &agent,
@@ -1103,7 +1146,6 @@ impl Tool for AgentTool {
                     effective_policy,
                     fresh_registry: None,
                     parent_registry: Arc::clone(&final_registry_arc),
-                    workspace: run_workspace,
                     subagent_session_id,
                     parent_session_id,
                     subagent_type_label: subagent_type_wire,
@@ -1118,6 +1160,9 @@ impl Tool for AgentTool {
         }
 
         // ── Foreground mode: block until subagent completes ──────────
+        // Registration inside `run_foreground_subagent` takes over the
+        // handle (it also emits terminal status on completion/failure).
+        provisional_guard.disarm();
         let fg_session_id = subagent_session_id.clone();
         let result = self
             .run_foreground_subagent(foreground::ForegroundRunArgs {
@@ -1126,7 +1171,6 @@ impl Tool for AgentTool {
                 turn_config,
                 effective_registry: final_registry,
                 effective_policy,
-                workspace: run_workspace.as_path(),
                 subagent_session_id,
                 parent_session_id,
                 subagent_type_label: subagent_type_wire,

@@ -265,6 +265,7 @@ fn executor_detects_registered_hooks() {
         vec![HookEntry::Command {
             command: "echo test".to_string(),
             timeout_ms: 5000,
+            matcher: None,
         }],
     );
     let config = HooksConfig { hooks };
@@ -291,6 +292,7 @@ async fn executor_run_echo_command() {
         vec![HookEntry::Command {
             command: "echo hello_from_hook".to_string(),
             timeout_ms: 5000,
+            matcher: None,
         }],
     );
     let config = HooksConfig { hooks };
@@ -311,6 +313,7 @@ async fn executor_passes_env_vars_to_command() {
         vec![HookEntry::Command {
             command: "echo $ORGII_TOOL_NAME".to_string(),
             timeout_ms: 5000,
+            matcher: None,
         }],
     );
     let config = HooksConfig { hooks };
@@ -331,6 +334,7 @@ async fn executor_injects_hook_event_env() {
         vec![HookEntry::Command {
             command: "echo $ORGII_HOOK_EVENT".to_string(),
             timeout_ms: 5000,
+            matcher: None,
         }],
     );
     let config = HooksConfig { hooks };
@@ -349,6 +353,7 @@ async fn executor_handles_failing_command() {
         vec![HookEntry::Command {
             command: "exit 1".to_string(),
             timeout_ms: 5000,
+            matcher: None,
         }],
     );
     let config = HooksConfig { hooks };
@@ -369,6 +374,7 @@ async fn executor_timeout_reports_failure() {
         vec![HookEntry::Command {
             command: "sleep 60".to_string(),
             timeout_ms: 100, // very short timeout
+            matcher: None,
         }],
     );
     let config = HooksConfig { hooks };
@@ -391,14 +397,17 @@ async fn executor_runs_multiple_hooks_sequentially() {
             HookEntry::Command {
                 command: "echo first".to_string(),
                 timeout_ms: 5000,
+                matcher: None,
             },
             HookEntry::Command {
                 command: "echo second".to_string(),
                 timeout_ms: 5000,
+                matcher: None,
             },
             HookEntry::Command {
                 command: "echo third".to_string(),
                 timeout_ms: 5000,
+                matcher: None,
             },
         ],
     );
@@ -423,10 +432,12 @@ async fn executor_failing_hook_does_not_block_subsequent() {
             HookEntry::Command {
                 command: "exit 1".to_string(),
                 timeout_ms: 5000,
+                matcher: None,
             },
             HookEntry::Command {
                 command: "echo survived".to_string(),
                 timeout_ms: 5000,
+                matcher: None,
             },
         ],
     );
@@ -455,6 +466,7 @@ async fn stop_hook_receives_turn_metadata_env_vars() {
             command: "echo turn=$ORGII_TURN_ID tools=$ORGII_TOOL_CALLS tokens=$ORGII_TOTAL_TOKENS"
                 .to_string(),
             timeout_ms: 5000,
+            matcher: None,
         }],
     );
     let config = HooksConfig { hooks };
@@ -481,6 +493,7 @@ async fn session_stop_hook_receives_status_env_var() {
         vec![HookEntry::Command {
             command: "echo status=$ORGII_SESSION_STATUS session=$ORGII_SESSION_ID".to_string(),
             timeout_ms: 5000,
+            matcher: None,
         }],
     );
     let config = HooksConfig { hooks };
@@ -563,6 +576,7 @@ fn collect_prompt_hooks_concatenates_content() {
             HookEntry::Command {
                 command: "echo ignored".to_string(),
                 timeout_ms: 5000,
+                matcher: None,
             },
             HookEntry::Prompt {
                 content: "Rule 2: Use markdown.".to_string(),
