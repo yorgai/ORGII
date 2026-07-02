@@ -6,7 +6,7 @@ import {
   GitBranch,
   Globe,
   type LucideIcon,
-  Terminal,
+  SquareTerminal,
   X,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -186,7 +186,7 @@ export function FocusedChatWorkstationRail() {
       .map((session) => ({
         key: `terminal-session:${session.id}`,
         label: getTerminalDisplayTitle(session),
-        icon: Terminal,
+        icon: SquareTerminal,
         onClick: () => openTerminalSession(session.id),
       }));
 
@@ -195,7 +195,7 @@ export function FocusedChatWorkstationRail() {
       label: tab.title,
       icon:
         tab.type === "terminal"
-          ? Terminal
+          ? SquareTerminal
           : tab.type === "browser-session"
             ? Globe
             : File,
@@ -263,7 +263,7 @@ export function FocusedChatWorkstationRail() {
       {
         key: "terminal",
         label: "Terminal",
-        icon: Terminal,
+        icon: SquareTerminal,
         onClick: () => handleBottomPanelClick("terminal"),
       },
       {

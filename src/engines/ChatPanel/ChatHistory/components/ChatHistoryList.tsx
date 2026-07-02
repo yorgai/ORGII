@@ -22,6 +22,10 @@ import {
   PlanningFooter,
   type PlanningFooterMode,
 } from "@src/engines/ChatPanel/blocks/primitives";
+import {
+  LLM_USAGE_ARGS_KEY,
+  TOOL_USAGE_ARGS_KEY,
+} from "@src/engines/SessionCore/core/types";
 
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
 import {
@@ -113,6 +117,8 @@ const ARG_RENDER_KEYS = [
   "new_string",
   "new_content",
   "subagentSessionId",
+  TOOL_USAGE_ARGS_KEY,
+  LLM_USAGE_ARGS_KEY,
 ] as const;
 
 function sameRecordKeys(

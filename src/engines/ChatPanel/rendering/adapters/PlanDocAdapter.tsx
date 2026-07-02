@@ -99,6 +99,7 @@ export const PlanDocAdapter: React.FC<UniversalEventProps> = (props) => {
         approvalStatus={surfaceState?.status ?? approvalStatus}
         ownsPendingPlan={surfaceState?.ownsActions ?? false}
         surfaceState={surfaceState}
+        toolUsage={props.toolUsage}
       />
     </div>
   );

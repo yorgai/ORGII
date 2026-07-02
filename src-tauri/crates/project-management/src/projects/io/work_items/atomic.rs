@@ -15,11 +15,11 @@
 
 use std::collections::HashMap;
 
-use rusqlite::{OptionalExtension, TransactionBehavior, params};
+use rusqlite::{params, OptionalExtension, TransactionBehavior};
 
 use super::super::helpers::{conn, from_iso8601, map_db, now_ms, to_iso8601};
 use super::extras::{ExtrasPayload, FieldRevision, REVISION_SOURCE_LOCAL};
-use super::history::{WorkItemHistorySnapshot, append_mutation_event};
+use super::history::{append_mutation_event, WorkItemHistorySnapshot};
 use crate::projects::types::{WorkItemData, WorkItemFrontmatter, WorkItemPartialUpdate};
 
 /// Sync-relevant fields whose mutations are tracked in

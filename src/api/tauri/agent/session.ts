@@ -217,6 +217,7 @@ export async function getPendingPlanApproval(sessionId: string): Promise<{
   planId?: string;
   planRevisionId?: string;
   originToolCallId?: string;
+  autoApproveAt?: number | null;
 } | null> {
   return rpc.agentSession.getPendingPlanApproval({ sessionId });
 }

@@ -19,6 +19,7 @@ use super::super::helpers::{
     check_permission, truncate_output,
 };
 use super::super::types::{PermissionProvider, TurnEventHandler};
+use super::super::usage_telemetry::{serialized_value_bytes, string_bytes, ToolExecutionUsage};
 
 use super::detect_stream_parse_error;
 use super::is_cancelled;
@@ -27,8 +28,8 @@ use super::normalize_tool_use_concurrency;
 use super::ToolBatchOutcome;
 
 pub(super) enum ParallelResult {
-    Continue(usize),
-    EarlyExit(usize, ToolBatchOutcome),
+    Continue(usize, Vec<ToolExecutionUsage>),
+    EarlyExit(usize, Vec<ToolExecutionUsage>, ToolBatchOutcome),
 }
 
 /// Execute a group of read-only tool calls concurrently.
@@ -73,7 +74,11 @@ pub(super) async fn execute_parallel_group(
         info!("[agent-core] Tool call: {}({})", call.name, args_preview);
 
         if is_cancelled(cancel_flag) {
-            return ParallelResult::EarlyExit(denied_count, ToolBatchOutcome::Cancelled);
+            return ParallelResult::EarlyExit(
+                denied_count,
+                Vec::new(),
+                ToolBatchOutcome::Cancelled,
+            );
         }
 
         let display_name = match call
@@ -156,7 +161,11 @@ pub(super) async fn execute_parallel_group(
         .await
         {
             if is_cancelled(cancel_flag) {
-                return ParallelResult::EarlyExit(denied_count, ToolBatchOutcome::Cancelled);
+                return ParallelResult::EarlyExit(
+                    denied_count,
+                    Vec::new(),
+                    ToolBatchOutcome::Cancelled,
+                );
             }
             handler.on_tool_result(session_id, &call.id, &call.name, &display_name, &denied_msg);
             add_tool_result(messages, &call.id, &call.name, &denied_msg, true);
@@ -195,7 +204,11 @@ pub(super) async fn execute_parallel_group(
         }
 
         if is_cancelled(cancel_flag) {
-            return ParallelResult::EarlyExit(denied_count, ToolBatchOutcome::Cancelled);
+            return ParallelResult::EarlyExit(
+                denied_count,
+                Vec::new(),
+                ToolBatchOutcome::Cancelled,
+            );
         }
         let call = calls[prep.index];
         handler.on_tool_execute_start(session_id, &call.id, &call.name, &prep.effective_args);
@@ -245,6 +258,7 @@ pub(super) async fn execute_parallel_group(
     }
 
     let mut executed_count = 0;
+    let mut execution_usage = Vec::new();
 
     for (idx, display_name, result) in &blocked_results {
         let call = calls[*idx];
@@ -252,6 +266,12 @@ pub(super) async fn execute_parallel_group(
         handler.on_tool_result(session_id, &call.id, &call.name, display_name, result);
         add_tool_result_with_timestamp(messages, &call.id, &call.name, result, is_err);
         executed_count += 1;
+        execution_usage.push(ToolExecutionUsage {
+            tool_call_id: call.id.clone(),
+            tool_name: call.name.clone(),
+            input_bytes: serialized_value_bytes(&call.arguments),
+            output_bytes: string_bytes(result),
+        });
 
         if is_err {
             *consecutive_errors += 1;
@@ -382,10 +402,17 @@ pub(super) async fn execute_parallel_group(
             }
         }
         executed_count += 1;
+        execution_usage.push(ToolExecutionUsage {
+            tool_call_id: call.id.clone(),
+            tool_name: call.name.clone(),
+            input_bytes: serialized_value_bytes(&exec_result.effective_args),
+            output_bytes: string_bytes(&truncated),
+        });
 
         if is_cancelled(cancel_flag) {
             return ParallelResult::EarlyExit(
                 executed_count + denied_count,
+                execution_usage,
                 ToolBatchOutcome::Cancelled,
             );
         }
@@ -399,6 +426,7 @@ pub(super) async fn execute_parallel_group(
                 }
                 return ParallelResult::EarlyExit(
                     executed_count + denied_count,
+                    execution_usage,
                     ToolBatchOutcome::ErrorLoop(format!(
                         "I encountered {} consecutive tool errors and stopped to avoid wasting resources. \
                          The last error was: {}",
@@ -412,5 +440,5 @@ pub(super) async fn execute_parallel_group(
         }
     }
 
-    ParallelResult::Continue(executed_count + denied_count)
+    ParallelResult::Continue(executed_count + denied_count, execution_usage)
 }

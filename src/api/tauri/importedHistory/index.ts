@@ -10,6 +10,7 @@ import type {
 } from "../claudeCodeHistory";
 import { codexAppChunks, codexAppListSessions } from "../codexApp";
 import type { CodexAppSessionPage, CodexAppSessionRow } from "../codexApp";
+import type { ExternalCliSourceProbe } from "../externalHistory";
 import {
   opencodeHistoryChunks,
   opencodeHistoryListSessions,
@@ -197,6 +198,23 @@ export function isImportedHistorySourceSession(
   source: ImportedHistorySource
 ): boolean {
   return sessionId.startsWith(source.prefix);
+}
+
+export function isImportedHistoryReplayableSourceId(
+  sourceId: string | null | undefined
+): sourceId is ImportedHistorySourceId {
+  if (!sourceId) return false;
+  return IMPORTED_HISTORY_SOURCES.some(
+    (source) => source.sourceId === sourceId
+  );
+}
+
+export function getDetectedExternalCliSourcesWithoutReplay(
+  probes: readonly ExternalCliSourceProbe[]
+): ExternalCliSourceProbe[] {
+  return probes.filter(
+    (probe) => !isImportedHistoryReplayableSourceId(probe.sourceId)
+  );
 }
 
 export type {

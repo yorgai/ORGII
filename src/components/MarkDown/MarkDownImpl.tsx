@@ -13,14 +13,13 @@
  * react-markdown + react-syntax-highlighter into the initial bundle.
  */
 import { useAtomValue } from "jotai";
-import { ArrowUpRight, Check, Clipboard } from "lucide-react";
+import { ArrowUpRight, Check, Copy } from "lucide-react";
 import React, { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { Prism as SyntaxHighlighterPrism } from "react-syntax-highlighter";
 import remarkGfm from "remark-gfm";
 
-import Button from "@src/components/Button";
 import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { getLanguageFromPath } from "@src/config/languageMap";
 import CanvasInlineCard from "@src/engines/ChatPanel/blocks/CanvasInlineCard";
@@ -53,7 +52,7 @@ const SyntaxHighlighter =
  * block. The agent writes ```canvas or ```preview with a JSON payload.
  *
  * Payload schema (JSON on a single line or pretty-printed):
- *   { "mode": "html"|"url"|"a2ui", "content"?: "...", "url"?: "...", "title"?: "..." }
+ *   { "mode": "html"|"url"|"a2ui"|"react", "content"?: "...", "url"?: "...", "title"?: "..." }
  */
 const CANVAS_FENCED_LANGUAGES = new Set([
   "canvas",
@@ -61,12 +60,15 @@ const CANVAS_FENCED_LANGUAGES = new Set([
   "canvas-html",
   "canvas-url",
   "canvas-a2ui",
+  "canvas-react",
 ]);
 
-type CanvasFencedMode = "html" | "url" | "a2ui";
+type CanvasFencedMode = "html" | "url" | "a2ui" | "react";
 
 function isCanvasFencedMode(value: unknown): value is CanvasFencedMode {
-  return value === "html" || value === "url" || value === "a2ui";
+  return (
+    value === "html" || value === "url" || value === "a2ui" || value === "react"
+  );
 }
 
 /**
@@ -241,36 +243,32 @@ const CodeBlock = memo<CodeBlockProps>(
 
     return (
       <div className="code-block-wrapper" style={CODE_WRAPPER_STYLE}>
-        {openFilePath && (
-          <Button
-            variant="tertiary"
-            appearance="ghost"
-            size="mini"
-            iconOnly
-            icon={<ArrowUpRight size={12} strokeWidth={1.75} />}
-            title={openLabel}
-            aria-label={openLabel}
-            className="code-block-open-button text-text-4 hover:text-text-2"
-            onClick={handleOpenFile}
-          />
-        )}
-        <Button
-          variant="tertiary"
-          appearance="ghost"
-          size="mini"
-          iconOnly
-          icon={
-            copied ? (
-              <Check size={12} strokeWidth={1.75} />
+        <div className="code-block-toolbar">
+          {openFilePath && (
+            <button
+              type="button"
+              title={openLabel}
+              aria-label={openLabel}
+              className="code-block-open-button inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border-0 bg-fill-2 p-0 text-text-3 transition-colors hover:bg-fill-3 hover:text-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-6/30"
+              onClick={handleOpenFile}
+            >
+              <ArrowUpRight size={14} strokeWidth={1.75} />
+            </button>
+          )}
+          <button
+            type="button"
+            title={copyLabel}
+            aria-label={copyLabel}
+            className="code-block-copy-button inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border-0 bg-fill-2 p-0 text-text-3 transition-colors hover:bg-fill-3 hover:text-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-6/30"
+            onClick={handleCopy}
+          >
+            {copied ? (
+              <Check size={14} strokeWidth={1.75} />
             ) : (
-              <Clipboard size={12} strokeWidth={1.75} />
-            )
-          }
-          title={copyLabel}
-          aria-label={copyLabel}
-          className="code-block-copy-button text-text-4 hover:text-text-2"
-          onClick={handleCopy}
-        />
+              <Copy size={14} strokeWidth={1.75} />
+            )}
+          </button>
+        </div>
         <SyntaxHighlighter
           customStyle={CODE_CUSTOM_STYLE}
           style={codeMirrorPrismTheme}
@@ -458,9 +456,10 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
             let cardUrl: string | undefined;
             let cardTitle: string | undefined;
 
-            // Derive mode from language alias shortcuts (canvas-url, canvas-a2ui)
+            // Derive mode from language alias shortcuts (canvas-url, canvas-a2ui, canvas-react)
             if (language === "canvas-url") mode = "url";
             else if (language === "canvas-a2ui") mode = "a2ui";
+            else if (language === "canvas-react") mode = "react";
 
             // Try to parse the body as a JSON payload
             const trimmed = codeContent.trim();

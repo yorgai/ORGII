@@ -43,6 +43,10 @@
       "publishError": "Falha ao publicar {{name}}"
     },
     "configure": "Configurar {{provider}}",
+    "providerGroups": {
+      "cloud": "Cloud",
+      "local": "Local"
+    },
     "publishToMarketplace": "Publicar {{provider}} no Marketplace",
     "status": {
       "readyToUse": "Pronto para uso",
@@ -219,27 +223,13 @@
     "localModel": {
       "title": "Cookbook de modelos locais",
       "description": "Escolha um preset de runtime local, confirme o endpoint compatível com OpenAI, adicione um ou mais IDs de modelo e salve esta conta para usar modelos locais no Chat",
-      "runtimeLabel": "Preset de runtime",
-      "runtimeDesc": "Escolha o servidor local em execução. Presets preenchem o endpoint e os modelos iniciais.",
-      "baseUrlDesc": "Endpoint local compatível com OpenAI. Inicie o runtime antes de validar ou salvar.",
-      "apiKeyDesc": "A maioria dos runtimes locais aceita qualquer valor não vazio. Mantenha o placeholder, a menos que seu servidor exija uma chave.",
+      "baseUrlDesc": "Endpoint local compatível com OpenAI. Inicie o runtime antes de validar ou salvar",
+      "apiKeyDesc": "A maioria dos runtimes locais aceita qualquer valor não vazio. Mantenha o placeholder, a menos que seu servidor exija uma chave",
       "quickModelsLabel": "Modelos Cookbook",
-      "quickModelsDesc": "Preencha a tabela com IDs comuns para este runtime. Você pode editar ou adicionar mais modelos abaixo.",
+      "quickModelsDesc": "Preencha a tabela com IDs comuns para este runtime. Você pode editar ou adicionar mais modelos abaixo",
       "quickModelsPlaceholder": "Escolha um modelo sugerido",
       "addSuggestedModel": "Adicionar sugerido",
-      "validateDesc": "Teste o endpoint se estiver em execução, ou salve após adicionar modelos manualmente.",
-      "presets": {
-        "ollama": "Ollama",
-        "ollamaDesc": "Servidor local padrão na porta 11434",
-        "lmStudio": "LM Studio",
-        "lmStudioDesc": "Servidor compatível com OpenAI na porta 1234",
-        "vllm": "vLLM",
-        "vllmDesc": "Servidor de inferência auto-hospedado na porta 8000",
-        "llamaCpp": "llama.cpp",
-        "llamaCppDesc": "Endpoint GGUF na porta 8080",
-        "custom": "Personalizado",
-        "customDesc": "Qualquer endpoint local compatível com OpenAI"
-      }
+      "validateDesc": "Teste o endpoint se estiver em execução, ou salve após adicionar modelos manualmente"
     },
     "validate": "Validar",
     "validateDesc": "Valide as chaves antes de prosseguir",

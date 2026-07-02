@@ -22,7 +22,7 @@
 //! - Fetches/pushes (refs/remotes changes)
 //! - Merges/rebases (MERGE_HEAD, REBASE_HEAD)
 //!
-//! **Via polling (5-8s delay):**
+//! **Via active-workspace polling:**
 //! - File edits in working directory
 //! - New untracked files
 //!
@@ -56,11 +56,10 @@
 //!
 //! | Condition | Interval | Rationale |
 //! |-----------|----------|-----------|
-//! | Focused + recent git activity + healthy | 2s | User is actively working |
-//! | Focused + idle + healthy | 5s | User viewing, less activity |
-//! | Window not focused | 15s | Background, save resources |
-//! | No git changes in 5+ min | 30s | Repo is idle |
-//! | Unhealthy (failures) | Exponential backoff up to 60s | Avoid hammering broken state |
+//! | Focused + healthy watched repos | 5s | User is viewing active workspace state |
+//! | Window not focused + healthy watched repos | 30s | Background, save resources |
+//! | No watched repos | Parked | No active workspace needs polling |
+//! | Unhealthy watched repos | Exponential backoff up to 60s | Avoid hammering broken state |
 //!
 //! # Critical vs Debounced Git Paths
 //!
@@ -74,7 +73,7 @@ use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
 use super::debounce::DebounceManager;
@@ -156,6 +155,8 @@ pub struct RepoWatcher {
     window_focused: Arc<RwLock<bool>>,
     /// Last poll attempt per repo (prevents stacking of slow polls)
     last_poll_attempt: Arc<RwLock<HashMap<String, Instant>>>,
+    /// Wakes the poller when the watch scope transitions from empty to active.
+    poll_wake: Arc<(Mutex<u64>, Condvar)>,
 }
 
 impl RepoWatcher {
@@ -176,6 +177,7 @@ impl RepoWatcher {
             last_git_change: Arc::new(RwLock::new(HashMap::new())),
             window_focused: Arc::new(RwLock::new(true)), // Assume focused initially
             last_poll_attempt: Arc::new(RwLock::new(HashMap::new())),
+            poll_wake: Arc::new((Mutex::new(0), Condvar::new())),
         };
 
         // Start event processing loop
@@ -190,10 +192,9 @@ impl RepoWatcher {
 
     /// Start adaptive periodic git status polling (VSCode-style approach)
     /// Adjusts polling frequency based on window focus, git activity, and health:
-    /// - Window focused + recent changes + healthy: 3s (reduced from 1.5s to prevent fd exhaustion)
-    /// - Window focused + no changes + healthy: 5s
-    /// - Window not focused + healthy: 15s
-    /// - No git changes in 5 min: 30s
+    /// - Window focused + healthy: 5s
+    /// - Window not focused + healthy: 30s
+    /// - No watched repos: parked until a repo is watched
     /// - Unhealthy (degraded): Exponential backoff up to 60s
     ///
     /// Note: Each git status operation spawns 4-6 git processes, so conservative intervals
@@ -201,34 +202,50 @@ impl RepoWatcher {
     fn start_git_status_polling(&self) {
         let state_store = self.state_store.clone();
         let debounce_manager = self.debounce_manager.clone();
-        let last_git_change = self.last_git_change.clone();
         let window_focused = self.window_focused.clone();
         let last_poll_attempt = self.last_poll_attempt.clone();
+        let poll_wake = self.poll_wake.clone();
 
         std::thread::Builder::new()
             .name("git-status-poller".to_string())
             .spawn(move || {
                 // Small initial delay to let watchers initialize
                 std::thread::sleep(Duration::from_secs(2));
+                let mut seen_wake_generation = 0;
 
                 loop {
                     // Calculate adaptive polling interval with health awareness
                     let is_focused = *window_focused.read();
                     let states = state_store.get_all_states();
 
-                    // Check if any repo is unhealthy
-                    let any_unhealthy = states.values().any(|s| s.consecutive_failures > 0);
-                    let max_failures = states.values()
-                        .map(|s| s.consecutive_failures)
+                    let watched_state_count = states.values().filter(|state| state.watch_enabled).count();
+                    if watched_state_count == 0 {
+                        let (lock, condvar) = &*poll_wake;
+                        let mut wake_generation =
+                            lock.lock().expect("RepoWatch poll wake mutex poisoned");
+                        while *wake_generation == seen_wake_generation {
+                            wake_generation = condvar
+                                .wait(wake_generation)
+                                .expect("RepoWatch poll wake mutex poisoned");
+                        }
+                        seen_wake_generation = *wake_generation;
+                        continue;
+                    }
+
+                    // Check if any watched repo is unhealthy
+                    let any_unhealthy = states
+                        .values()
+                        .filter(|state| state.watch_enabled)
+                        .any(|state| state.consecutive_failures > 0);
+                    let max_failures = states
+                        .values()
+                        .filter(|state| state.watch_enabled)
+                        .map(|state| state.consecutive_failures)
                         .max()
                         .unwrap_or(0);
 
-                    let poll_interval_ms = Self::calculate_poll_interval_with_health(
-                        is_focused,
-                        &last_git_change,
-                        any_unhealthy,
-                        max_failures,
-                    );
+                    let poll_interval_ms =
+                        Self::calculate_poll_interval_with_health(is_focused, any_unhealthy, max_failures);
 
                     std::thread::sleep(Duration::from_millis(poll_interval_ms));
 
@@ -279,16 +296,13 @@ impl RepoWatcher {
             .expect("Failed to spawn git status poller thread");
     }
 
-    /// Calculate adaptive polling interval based on window focus, git activity, and health
+    /// Calculate adaptive polling interval based on window focus and health.
     fn calculate_poll_interval_with_health(
         is_focused: bool,
-        last_git_change: &Arc<RwLock<HashMap<String, Instant>>>,
         any_unhealthy: bool,
         max_failures: u32,
     ) -> u64 {
-        // If unhealthy, use exponential backoff
         if any_unhealthy {
-            // Exponential backoff: 5s, 10s, 20s, 40s, 60s (cap at 60s)
             let backoff_seconds = std::cmp::min(5 * (1 << max_failures), 60);
             log::debug!(
                 "[RepoWatch] Health-aware polling: {} failures, {}s interval",
@@ -298,32 +312,10 @@ impl RepoWatcher {
             return (backoff_seconds * 1000) as u64;
         }
 
-        // Check if any repo had recent git changes
-        let has_recent_changes = {
-            let changes = last_git_change.read();
-            changes.values().any(|last_change| {
-                last_change.elapsed() < Duration::from_secs(60) // Changes in last 60 seconds
-            })
-        };
-
-        let oldest_change = {
-            let changes = last_git_change.read();
-            changes
-                .values()
-                .map(|last_change| last_change.elapsed())
-                .max()
-                .unwrap_or(Duration::from_secs(0))
-        };
-
-        match (
-            is_focused,
-            has_recent_changes,
-            oldest_change > Duration::from_secs(300),
-        ) {
-            (true, true, _) => 2000,      // Focused + recent changes: 2s (fast feedback)
-            (true, false, false) => 5000, // Focused + no recent changes: 5s
-            (false, _, false) => 15000,   // Not focused: 15s
-            (_, _, true) => 30000,        // No changes in 5+ min: 30s
+        if is_focused {
+            5000
+        } else {
+            30000
         }
     }
 
@@ -349,7 +341,7 @@ impl RepoWatcher {
     /// Why:
     /// - Watching entire repos causes EMFILE (too many open files) on large repos
     /// - The `.git/` directory is small (~50-100 files) and contains all git state
-    /// - Working directory changes are detected via polling (5-8s interval)
+    /// - Working directory changes are detected via active-workspace polling
     ///
     /// What we catch instantly via `.git/` watching:
     /// - Commits (refs/heads changes)
@@ -358,7 +350,7 @@ impl RepoWatcher {
     /// - Fetches/pushes (refs/remotes changes)
     /// - Merges/rebases (MERGE_HEAD, REBASE_HEAD, etc.)
     ///
-    /// What we catch via polling (5-8s delay):
+    /// What we catch via adaptive polling:
     /// - File edits in working directory
     /// - New untracked files
     ///
@@ -377,8 +369,14 @@ impl RepoWatcher {
             return Err(format!("Not a git repository: {:?}", repo_path));
         }
 
-        // Add to state store
+        // Add to state store and wake the poller if it was parked with no active repos.
         self.state_store.add_repo(repo_info.clone());
+        {
+            let (lock, condvar) = &*self.poll_wake;
+            let mut wake_generation = lock.lock().expect("RepoWatch poll wake mutex poisoned");
+            *wake_generation = wake_generation.wrapping_add(1);
+            condvar.notify_one();
+        }
 
         // Create watcher
         let repo_id = repo_info.repo_id.clone();
@@ -417,7 +415,7 @@ impl RepoWatcher {
 
         // IMPORTANT: Only watch .git/ directory, NOT the entire repo
         // This prevents EMFILE (too many open files) errors on large repositories.
-        // Working directory changes are detected via polling (see start_git_status_polling).
+        // Working directory changes are detected via active-workspace polling.
         match watcher.watch(&git_dir, RecursiveMode::Recursive) {
             Ok(()) => {
                 // Store watcher
@@ -433,7 +431,7 @@ impl RepoWatcher {
             Err(e) => {
                 // GRACEFUL DEGRADATION: If watching fails (e.g., EMFILE),
                 // the repo is still in state_store and will be polled for updates.
-                // This is acceptable because polling every 5-8s is sufficient for git status.
+                // This is acceptable because active-workspace polling still covers git status.
                 log::warn!(
                     "Failed to watch .git/ for {}, using polling-only mode: {}",
                     repo_info.repo_name,

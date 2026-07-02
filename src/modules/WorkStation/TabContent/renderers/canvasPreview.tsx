@@ -10,7 +10,7 @@ import { ExternalLink, Layout } from "lucide-react";
 import React, { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import A2UIRenderer from "@src/engines/ChatPanel/blocks/CanvasInlineCard/A2UIRenderer";
+import CanvasPreviewSurface from "@src/engines/ChatPanel/blocks/CanvasInlineCard/CanvasPreviewSurface";
 import {
   buildHtmlDocument,
   buildReactDocument,
@@ -44,11 +44,6 @@ const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
         return buildReactDocument(payload.content);
       }
       return undefined;
-    }, [payload]);
-
-    const a2uiLines = useMemo(() => {
-      if (!payload || payload.mode !== "a2ui" || !payload.content) return [];
-      return payload.content.split("\n").filter(Boolean);
     }, [payload]);
 
     const handleOpenExternal = useCallback(() => {
@@ -117,31 +112,20 @@ const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
 
         {/* content */}
         <div className="relative flex-1 overflow-auto">
-          {payload.mode === "url" && payload.url ? (
-            <iframe
-              src={payload.url}
-              className="h-full w-full border-0"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-              title={payload.title ?? t("previews.canvas")}
-            />
-          ) : payload.mode === "a2ui" && a2uiLines.length > 0 ? (
-            <A2UIRenderer lines={a2uiLines} className="h-full" />
-          ) : srcDoc ? (
-            <iframe
-              srcDoc={srcDoc}
-              className="h-full w-full border-0"
-              sandbox="allow-scripts"
-              title={payload.title ?? t("previews.canvas")}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <span className="text-xs text-text-4">
-                {payload.streaming
-                  ? t("previews.generatingCanvas")
-                  : t("previews.noContent")}
-              </span>
-            </div>
-          )}
+          <CanvasPreviewSurface
+            payload={payload}
+            variant="tab"
+            title={payload.title ?? t("previews.canvas")}
+            emptyFallback={
+              <div className="flex h-full items-center justify-center">
+                <span className="text-xs text-text-4">
+                  {payload.streaming
+                    ? t("previews.generatingCanvas")
+                    : t("previews.noContent")}
+                </span>
+              </div>
+            }
+          />
           {payload.streaming && (
             <div
               className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 animate-pulse bg-primary-6/40"

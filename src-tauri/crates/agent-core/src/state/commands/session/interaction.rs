@@ -271,6 +271,9 @@ pub async fn agent_get_pending_plan_approval(
         return Ok(None);
     };
 
+    let auto_approve_at_ms =
+        crate::interaction::plan_approval::auto_approve_deadline_for_snapshot(&snapshot);
+
     Ok(Some(serde_json::json!({
         "sessionId": &snapshot.session_id,
         "planPath": &snapshot.plan_path,
@@ -280,6 +283,7 @@ pub async fn agent_get_pending_plan_approval(
         "planId": &snapshot.plan_id,
         "planRevisionId": &snapshot.plan_revision_id,
         "originToolCallId": &snapshot.origin_tool_call_id,
+        "autoApproveAt": auto_approve_at_ms,
     })))
 }
 

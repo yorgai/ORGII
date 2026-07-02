@@ -78,10 +78,9 @@ pub fn install_subagent_completion_wake_hook(hook: Arc<dyn SubagentCompletionWak
 /// Resolve the active hook, falling back to the no-op hook if nothing has
 /// been installed yet (early boot, headless / unit-test contexts).
 pub fn current_subagent_completion_wake_hook() -> Arc<dyn SubagentCompletionWakeHook> {
-    SUBAGENT_WAKE_HOOK
-        .get()
-        .cloned()
-        .unwrap_or_else(|| Arc::new(NoopSubagentCompletionWakeHook) as Arc<dyn SubagentCompletionWakeHook>)
+    SUBAGENT_WAKE_HOOK.get().cloned().unwrap_or_else(|| {
+        Arc::new(NoopSubagentCompletionWakeHook) as Arc<dyn SubagentCompletionWakeHook>
+    })
 }
 
 /// Statuses for which waking the parent is useful. A `Running` parent will
@@ -157,10 +156,8 @@ async fn wake_parent_session(app_handle: tauri::AppHandle, parent_session_id: St
     // Resolve the parent's persisted status off the async runtime thread.
     let lookup = {
         let sid = parent_session_id.clone();
-        tokio::task::spawn_blocking(move || {
-            crate::core::session::persistence::get_session(&sid)
-        })
-        .await
+        tokio::task::spawn_blocking(move || crate::core::session::persistence::get_session(&sid))
+            .await
     };
 
     let status = match lookup {

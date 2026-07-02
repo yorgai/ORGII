@@ -329,7 +329,10 @@ fn notify_inbox_blocked(short_id: &str, title: &str, reason: &str) {
     let now = chrono::Utc::now();
     let key = blocked_notification_key(short_id, reason);
     if !should_emit_blocked_notification(&key, now.timestamp()) {
-        debug!("[scheduler] Suppressed duplicate blocked notification for {}", short_id);
+        debug!(
+            "[scheduler] Suppressed duplicate blocked notification for {}",
+            short_id
+        );
         return;
     }
 

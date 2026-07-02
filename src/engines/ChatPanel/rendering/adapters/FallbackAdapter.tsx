@@ -128,6 +128,7 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
           props.status === "running" && props.showActiveEventPainting === true
         }
         isFailed={state === "failed"}
+        toolUsage={props.toolUsage}
       />
     );
   }
@@ -142,6 +143,7 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
           props.status === "running" && props.showActiveEventPainting === true
         }
         eventId={props.eventId}
+        toolUsage={props.toolUsage}
       />
     );
   }
@@ -160,6 +162,7 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
         eventId={props.eventId}
         sessionId={props.sessionId}
         payloadRefs={props.payloadRefs}
+        toolUsage={props.toolUsage}
       />
     );
   }
@@ -178,6 +181,7 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
       iconOverride={isMcpTool ? MCP_ICON : undefined}
       callId={props.callId}
       sessionId={props.sessionId}
+      toolUsage={props.toolUsage}
       payloadRefs={props.payloadRefs}
     />
   );

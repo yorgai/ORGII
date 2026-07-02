@@ -8,7 +8,7 @@
  * - canvas:present     — Show HTML content or URL
  * - canvas:hide        — Hide the canvas
  * - canvas:navigate    — Navigate to a URL
- * - canvas:eval        — Execute JavaScript via A2UIRenderer.evalScript
+ * - canvas:eval        — Execute JavaScript via the active preview surface
  * - canvas:a2ui_push   — Push A2UI JSONL content (accumulated incrementally)
  * - canvas:a2ui_reset  — Reset A2UI state
  */
@@ -16,13 +16,10 @@ import { ExternalLink, Layout, Maximize2, Minimize2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import A2UIRenderer, {
-  type A2UIRendererHandle,
-} from "@src/engines/ChatPanel/blocks/CanvasInlineCard/A2UIRenderer";
-import {
-  buildHtmlDocument,
-  buildReactDocument,
-} from "@src/engines/ChatPanel/blocks/CanvasInlineCard/canvasBuilder";
+import CanvasPreviewSurface, {
+  type CanvasPreviewSurfaceHandle,
+} from "@src/engines/ChatPanel/blocks/CanvasInlineCard/CanvasPreviewSurface";
+import type { CanvasInlineMode } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/types";
 import type { SimulatorAppProps } from "@src/engines/Simulator/apps/core/types";
 import {
   NoTabsPlaceholder,
@@ -38,10 +35,9 @@ import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
 interface CanvasState {
   visible: boolean;
-  mode: "html" | "url" | "a2ui" | "react" | "empty";
+  mode: CanvasInlineMode | "empty";
   url: string | null;
-  html: string | null;
-  a2uiLines: string[];
+  content: string | null;
   width: number | null;
   height: number | null;
 }
@@ -50,8 +46,7 @@ const INITIAL_STATE: CanvasState = {
   visible: false,
   mode: "empty",
   url: null,
-  html: null,
-  a2uiLines: [],
+  content: null,
   width: null,
   height: null,
 };
@@ -63,8 +58,7 @@ const INITIAL_STATE: CanvasState = {
 function CanvasApp(props: SimulatorAppProps) {
   const [state, setState] = useState<CanvasState>(INITIAL_STATE);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const a2uiRendererRef = useRef<A2UIRendererHandle>(null);
+  const surfaceRef = useRef<CanvasPreviewSurfaceHandle>(null);
   const { t } = useTranslation("sessions");
   const { t: tCommon } = useTranslation("common");
   const simulatorPlaceholderActions = useSimulatorPlaceholderActions(
@@ -87,15 +81,9 @@ function CanvasApp(props: SimulatorAppProps) {
           setState((prev) => ({
             ...prev,
             visible: true,
-            mode: data.html
-              ? (data.mode as CanvasState["mode"] | undefined) === "react"
-                ? "react"
-                : "html"
-              : data.url
-                ? "url"
-                : prev.mode,
+            mode: data.html ? "html" : data.url ? "url" : prev.mode,
             url: (data.url as string) || prev.url,
-            html: (data.html as string) || prev.html,
+            content: (data.html as string) || prev.content,
             width: (data.width as number) || prev.width,
             height: (data.height as number) || prev.height,
           }));
@@ -116,30 +104,19 @@ function CanvasApp(props: SimulatorAppProps) {
 
         case "canvas:eval":
           if (data.javascript) {
-            // For a2ui mode use the renderer's sandboxed eval
-            if (a2uiRendererRef.current) {
-              a2uiRendererRef.current.evalScript(data.javascript as string);
-            } else if (iframeRef.current?.contentWindow) {
-              try {
-                iframeRef.current.contentWindow.postMessage(
-                  { type: "canvas_eval", javascript: data.javascript },
-                  "*"
-                );
-              } catch {
-                // Sandboxed iframe may reject postMessage
-              }
-            }
+            surfaceRef.current?.evalScript(data.javascript as string);
           }
           break;
 
         case "canvas:a2ui_push":
           if (data.jsonl) {
-            const lines = (data.jsonl as string).split("\n").filter(Boolean);
             setState((prev) => ({
               ...prev,
               visible: true,
               mode: "a2ui",
-              a2uiLines: [...prev.a2uiLines, ...lines],
+              content: [prev.content, data.jsonl as string]
+                .filter(Boolean)
+                .join("\n"),
             }));
           }
           break;
@@ -147,7 +124,7 @@ function CanvasApp(props: SimulatorAppProps) {
         case "canvas:a2ui_reset":
           setState((prev) => ({
             ...prev,
-            a2uiLines: [],
+            content: prev.mode === "a2ui" ? null : prev.content,
             mode: prev.mode === "a2ui" ? "empty" : prev.mode,
           }));
           break;
@@ -186,12 +163,15 @@ function CanvasApp(props: SimulatorAppProps) {
     );
   }
 
-  const htmlSrcDoc =
-    state.mode === "html" && state.html
-      ? buildHtmlDocument(state.html)
-      : state.mode === "react" && state.html
-        ? buildReactDocument(state.html)
-        : undefined;
+  const payload =
+    state.mode === "empty"
+      ? null
+      : {
+          mode: state.mode,
+          content: state.content ?? undefined,
+          url: state.url ?? undefined,
+          title: t("simulator.replay.canvas.iframeTitle"),
+        };
 
   return (
     <div
@@ -245,27 +225,21 @@ function CanvasApp(props: SimulatorAppProps) {
       </div>
 
       <div className="relative flex-1 overflow-hidden">
-        {state.mode === "url" && state.url ? (
-          <iframe
-            ref={iframeRef}
-            src={state.url}
-            className="h-full w-full border-0"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-            title={t("simulator.replay.canvas.iframeTitle")}
-          />
-        ) : htmlSrcDoc ? (
-          <iframe
-            ref={iframeRef}
-            srcDoc={htmlSrcDoc}
-            className="h-full w-full border-0"
-            sandbox="allow-scripts"
-            title={t("simulator.replay.canvas.iframeTitle")}
-          />
-        ) : state.mode === "a2ui" && state.a2uiLines.length > 0 ? (
-          <A2UIRenderer
-            ref={a2uiRendererRef}
-            lines={state.a2uiLines}
-            className="h-full"
+        {payload ? (
+          <CanvasPreviewSurface
+            ref={surfaceRef}
+            payload={payload}
+            variant="tab"
+            title={payload.title}
+            emptyFallback={
+              <Placeholder
+                variant="empty"
+                placement="detail-panel"
+                fillParentHeight
+                className={WORK_STATION_PLACEHOLDER_PAGE_BG_CLASS}
+                title={tCommon("placeholders.canvasHidden")}
+              />
+            }
           />
         ) : (
           <Placeholder

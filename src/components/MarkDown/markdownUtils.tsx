@@ -160,6 +160,10 @@ function mayContainAsciiDiagram(text: string): boolean {
   return ASCII_DIAGRAM_HINT_PATTERN.test(text);
 }
 
+export function containsMarkdownFence(text: string): boolean {
+  return /(^|\n)\s*`{3,}/.test(text);
+}
+
 export function normalizeCopyableMarkdownDocumentFence(text: string): string {
   const match = text.match(COPYABLE_MARKDOWN_DOCUMENT_PATTERN);
   if (!match) return text;

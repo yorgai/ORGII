@@ -3,9 +3,8 @@
   <p><strong>Open-source Agent IDE в стиле Cursor — но созданная для удобной проверки, трассируемости и творческой свободы, а не только для более быстрого кодинга.</strong></p>
   <p>Построена на Rust и Tauri для local-first выполнения и занимает менее 100 МБ на диске. Поддерживает livestream и replay траекторий Agents. Легко отслеживать и проверять.</p>
   <p>
-    <a href="../../LICENSE"><img alt="License" src="https://img.shields.io/github/license/yorgai/ORG2?style=flat-square" /></a>
     <a href="https://github.com/yorgai/ORG2/releases/latest"><img alt="Downloads" src="https://img.shields.io/github/downloads/yorgai/ORG2/total?style=flat-square&label=downloads" /></a>
-    <a href="https://github.com/yorgai/ORG2/commits/develop"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2?style=flat-square&label=last%20commit" /></a>
+    <a href="https://github.com/yorgai/ORG2/commits/release"><img alt="Last commit" src="https://img.shields.io/github/last-commit/yorgai/ORG2/release?style=flat-square&label=last%20commit" /></a>
     <a href="https://github.com/yorgai/ORG2/graphs/commit-activity"><img alt="Commit activity" src="https://img.shields.io/github/commit-activity/m/yorgai/ORG2?style=flat-square&label=commit%20activity" /></a>
   </p>
 </div>

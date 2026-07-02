@@ -13,7 +13,7 @@
 
 use std::collections::HashMap;
 
-use rusqlite::{OptionalExtension, params};
+use rusqlite::{params, OptionalExtension};
 
 use super::super::helpers::{conn, map_db};
 use super::super::projects::read_project_scoped;

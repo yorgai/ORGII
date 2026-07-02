@@ -13,6 +13,7 @@ import type {
   AvailableApiProvider,
   ProviderProtocol,
 } from "@src/api/tauri/rpc/schemas/validation";
+import { LOCAL_MODEL_PROVIDER } from "@src/api/types/keys";
 import { agentRegistryAtom } from "@src/store/session/agentRegistryAtom";
 
 // ============================================
@@ -33,6 +34,98 @@ import { agentRegistryAtom } from "@src/store/session/agentRegistryAtom";
  * - Groq (groq_api) — fast inference
  * - xAI Grok (xai_api) — Grok API
  */
+const LOCAL_PROVIDER_GROUP = "local" as const;
+const CLOUD_PROVIDER_GROUP = "cloud" as const;
+
+export type ProviderGroup =
+  | typeof CLOUD_PROVIDER_GROUP
+  | typeof LOCAL_PROVIDER_GROUP;
+
+export type LocalRuntimePreset =
+  | "ollama"
+  | "lm_studio"
+  | "vllm"
+  | "llamacpp"
+  | "custom";
+
+const LOCAL_PROVIDER_KEYS = {
+  OLLAMA: "local_ollama",
+  LM_STUDIO: "local_lm_studio",
+  VLLM: "local_vllm",
+  LLAMACPP: "local_llamacpp",
+  CUSTOM: "local_custom",
+} as const;
+
+const LOCAL_RUNTIME_LABELS: Record<LocalRuntimePreset, string> = {
+  ollama: "Ollama",
+  lm_studio: "LM Studio",
+  vllm: "vLLM",
+  llamacpp: "llama.cpp",
+  custom: "Custom",
+};
+
+const LOCAL_PROVIDER_DEFINITIONS: Array<{
+  key: string;
+  label: string;
+  runtime: LocalRuntimePreset;
+  iconProvider: string;
+  iconElement?: "cog";
+  description: string;
+}> = [
+  {
+    key: LOCAL_PROVIDER_KEYS.OLLAMA,
+    label: LOCAL_RUNTIME_LABELS.ollama,
+    runtime: "ollama",
+    iconProvider: "ollama",
+    description: "Default local Ollama endpoint",
+  },
+  {
+    key: LOCAL_PROVIDER_KEYS.LM_STUDIO,
+    label: LOCAL_RUNTIME_LABELS.lm_studio,
+    runtime: "lm_studio",
+    iconProvider: "lm_studio",
+    description: "Local LM Studio OpenAI-compatible server",
+  },
+  {
+    key: LOCAL_PROVIDER_KEYS.VLLM,
+    label: LOCAL_RUNTIME_LABELS.vllm,
+    runtime: "vllm",
+    iconProvider: "vllm",
+    description: "Self-hosted vLLM inference server",
+  },
+  {
+    key: LOCAL_PROVIDER_KEYS.LLAMACPP,
+    label: LOCAL_RUNTIME_LABELS.llamacpp,
+    runtime: "llamacpp",
+    iconProvider: "llamacpp",
+    description: "Local llama.cpp GGUF server endpoint",
+  },
+  {
+    key: LOCAL_PROVIDER_KEYS.CUSTOM,
+    label: LOCAL_RUNTIME_LABELS.custom,
+    runtime: "custom",
+    iconProvider: "vllm",
+    iconElement: "cog",
+    description: "Custom OpenAI-compatible local endpoint",
+  },
+];
+
+export function getLocalRuntimeForProviderKey(
+  providerKey: string
+): LocalRuntimePreset | undefined {
+  return LOCAL_PROVIDER_DEFINITIONS.find(
+    (provider) => provider.key === providerKey
+  )?.runtime;
+}
+
+export function getLocalProviderKeyForRuntime(
+  runtime: string | undefined
+): string | undefined {
+  return LOCAL_PROVIDER_DEFINITIONS.find(
+    (provider) => provider.runtime === runtime
+  )?.key;
+}
+
 const PRIMARY_PROVIDER_KEYS = new Set([
   // CLI agents
   "cursor_cli",
@@ -115,10 +208,14 @@ export interface UnifiedProviderVariant {
 export interface UnifiedProvider {
   /** Unique key for this brand (e.g., "openai", "anthropic") */
   key: string;
+  /** Provider group for sectioned picker rendering. */
+  group: ProviderGroup;
   /** Brand display name (e.g., "OpenAI", "Anthropic") */
   label: string;
   /** Icon provider key for ModelIcon lookup */
   iconProvider: string;
+  /** Optional non-ModelIcon glyph for virtual providers. */
+  iconElement?: "cog";
   /** Brand color (hex) */
   brandColor: string;
   /** Available variants (API + CLI if paired) */
@@ -198,6 +295,7 @@ function buildUnifiedProviders(
         // Use API provider's brand info (it's the canonical brand)
         providers.push({
           key: api.name.replace(/_api$/, ""),
+          group: CLOUD_PROVIDER_GROUP,
           label: api.displayName,
           iconProvider: api.iconProvider,
           brandColor: api.brandColor,
@@ -216,6 +314,7 @@ function buildUnifiedProviders(
 
     providers.push({
       key: api.name,
+      group: CLOUD_PROVIDER_GROUP,
       label: api.displayName,
       iconProvider: api.iconProvider,
       brandColor: api.brandColor,
@@ -243,6 +342,7 @@ function buildUnifiedProviders(
 
     providers.push({
       key: cli.name,
+      group: CLOUD_PROVIDER_GROUP,
       label: cli.displayName,
       iconProvider: cli.iconProvider,
       brandColor: cli.brandColor,
@@ -263,11 +363,71 @@ function buildUnifiedProviders(
     });
   }
 
-  // Sort: popular first, then alphabetically
-  return providers.sort((a, b) => {
-    if (a.popular !== b.popular) return a.popular ? -1 : 1;
-    return a.label.localeCompare(b.label);
-  });
+  return expandLocalProviders(providers).sort(sortProvidersByGroup);
+}
+
+function expandLocalProviders(providers: UnifiedProvider[]): UnifiedProvider[] {
+  const localProvider = providers.find((provider) =>
+    provider.variants.some(
+      (variant) => variant.modelType === LOCAL_MODEL_PROVIDER
+    )
+  );
+  const cloudProviders = providers.filter(
+    (provider) =>
+      !provider.variants.some(
+        (variant) => variant.modelType === LOCAL_MODEL_PROVIDER
+      )
+  );
+
+  if (!localProvider) return cloudProviders;
+
+  const localVariant = localProvider.variants.find(
+    (variant) => variant.modelType === LOCAL_MODEL_PROVIDER
+  );
+  if (!localVariant) return cloudProviders;
+
+  const virtualLocalProviders = LOCAL_PROVIDER_DEFINITIONS.map(
+    (definition) => ({
+      key: definition.key,
+      group: LOCAL_PROVIDER_GROUP,
+      label: definition.label,
+      iconProvider: definition.iconProvider,
+      iconElement: definition.iconElement,
+      brandColor: localProvider.brandColor,
+      variants: [
+        {
+          ...localVariant,
+          label: definition.label,
+        },
+      ],
+      popular: true,
+      description: definition.description,
+      docsUrl: localProvider.docsUrl,
+    })
+  );
+
+  return [...cloudProviders, ...virtualLocalProviders];
+}
+
+function sortProvidersByGroup(
+  providerA: UnifiedProvider,
+  providerB: UnifiedProvider
+): number {
+  if (providerA.group !== providerB.group) {
+    return providerA.group === CLOUD_PROVIDER_GROUP ? -1 : 1;
+  }
+  if (providerA.group === LOCAL_PROVIDER_GROUP) {
+    const indexA = LOCAL_PROVIDER_DEFINITIONS.findIndex(
+      (provider) => provider.key === providerA.key
+    );
+    const indexB = LOCAL_PROVIDER_DEFINITIONS.findIndex(
+      (provider) => provider.key === providerB.key
+    );
+    return indexA - indexB;
+  }
+  if (providerA.popular !== providerB.popular)
+    return providerA.popular ? -1 : 1;
+  return providerA.label.localeCompare(providerB.label);
 }
 
 function buildModelTypeToProviderKey(

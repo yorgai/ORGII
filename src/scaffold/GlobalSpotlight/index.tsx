@@ -190,7 +190,7 @@ const GlobalSpotlightInner: React.FC<
       // Create WITHOUT checking out, then route the checkout through
       // selectBranch so a dirty working tree surfaces the CheckoutConflictDialog
       // instead of the raw create+checkout bypassing the guard.
-      const success = await gitApi.gitCreateBranch({
+      const result = await gitApi.gitCreateBranch({
         repo_id: selectedRepoId,
         repo_path: currentRepo.path,
         name: branchName,
@@ -198,9 +198,9 @@ const GlobalSpotlightInner: React.FC<
         checkout: false,
       });
 
-      if (!success) {
+      if (!result.success) {
         showGitActionDialogSafely(
-          `Failed to create branch "${branchName}"`,
+          result.error || `Failed to create branch "${branchName}"`,
           "error"
         );
         return;
@@ -227,14 +227,15 @@ const GlobalSpotlightInner: React.FC<
         return { success: false, message };
       }
 
-      const success = await gitApi.gitDeleteBranch({
+      const result = await gitApi.gitDeleteBranch({
         repo_id: selectedRepoId,
         repo_path: currentRepo.path,
         branch_name: branchName,
       });
 
-      if (!success) {
-        const message = `Failed to delete branch "${branchName}"`;
+      if (!result.success) {
+        const message =
+          result.error || `Failed to delete branch "${branchName}"`;
         if (!options?.silent) {
           showGitActionDialogSafely(message, "error");
         }

@@ -430,7 +430,7 @@ export const terminalTabFactory = defineTabFactory<TerminalTabData>({
     getKey: (data) => data.sessionId,
   },
   getTitle: (data) => data.sessionName,
-  icon: "Terminal",
+  icon: "SquareTerminal",
   closable: false,
   pinned: true,
 });
@@ -457,7 +457,7 @@ export const terminalContentTabFactory =
       getKey: (data) => `${data.sessionId}:${data.terminalName}`,
     },
     getTitle: (data) => data.terminalName,
-    icon: "Terminal",
+    icon: "SquareTerminal",
   });
 
 export function createTerminalContentTab(

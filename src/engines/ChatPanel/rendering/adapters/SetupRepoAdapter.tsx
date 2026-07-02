@@ -60,6 +60,7 @@ export const SetupRepoAdapter: React.FC<UniversalEventProps> = (props) => {
           props.status === "running" && props.showActiveEventPainting === true
         }
         isFailed={props.status === "failed"}
+        toolUsage={props.toolUsage}
       />
     </div>
   );

@@ -34,6 +34,10 @@ import {
   selectedRepoAtom,
   selectedRepoIdAtom,
 } from "@src/store/repo";
+import {
+  isMultiRootWorkspaceAtom,
+  workspaceFoldersAtom,
+} from "@src/store/ui/workspaceFoldersAtom";
 import type {
   GitRepositoryStatus,
   GitSuggestedAction,
@@ -68,6 +72,8 @@ export const GitStatusProvider: React.FC<{ children: React.ReactNode }> = ({
   const selectedRepoId = useAtomValue(selectedRepoIdAtom);
   const currentRepo = useAtomValue(selectedRepoAtom);
   const repoMap = useAtomValue(repoMapAtom);
+  const isMultiRootWorkspace = useAtomValue(isMultiRootWorkspaceAtom);
+  const workspaceFolders = useAtomValue(workspaceFoldersAtom);
 
   // Sync to global atoms
   const setGitStatusAtom = useSetAtom(gitStatusAtom);
@@ -139,12 +145,42 @@ export const GitStatusProvider: React.FC<{ children: React.ReactNode }> = ({
   // Watcher Registration Hook
   // ============================================
 
-  const { scheduleWatcherRegistration } = useWatcherRegistration({
-    refs: {
-      registeredReposRef,
-      pendingWatcherTimeoutRef,
+  const { scheduleWatcherRegistration, unwatchRegisteredReposExcept } =
+    useWatcherRegistration({
+      refs: {
+        registeredReposRef,
+        pendingWatcherTimeoutRef,
+      },
+    });
+
+  const scheduleActiveWatcherRegistration = useCallback(
+    (repoId: string, repoPath: string, repoName?: string) => {
+      if (isMultiRootWorkspace) return;
+      scheduleWatcherRegistration(repoId, repoPath, repoName);
     },
-  });
+    [isMultiRootWorkspace, scheduleWatcherRegistration]
+  );
+
+  useEffect(() => {
+    if (isMultiRootWorkspace) {
+      unwatchRegisteredReposExcept(
+        new Set(workspaceFolders.map((folder) => folder.id))
+      );
+      return;
+    }
+
+    if (!selectedRepoId) {
+      unwatchRegisteredReposExcept(new Set());
+      return;
+    }
+
+    unwatchRegisteredReposExcept(new Set([selectedRepoId]));
+  }, [
+    isMultiRootWorkspace,
+    selectedRepoId,
+    unwatchRegisteredReposExcept,
+    workspaceFolders,
+  ]);
 
   // ============================================
   // Fetch Status Hook
@@ -160,7 +196,7 @@ export const GitStatusProvider: React.FC<{ children: React.ReactNode }> = ({
       fetchInProgressRef,
       startupStateRef,
     },
-    scheduleWatcherRegistration,
+    scheduleWatcherRegistration: scheduleActiveWatcherRegistration,
     setGitStatus,
     setGitSuggestedAction,
     setStatusRepoId,

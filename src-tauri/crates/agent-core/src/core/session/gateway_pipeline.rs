@@ -121,7 +121,10 @@ pub async fn process_gateway_message(
                     Some(m.clone())
                 } else {
                     load_image_as_data_url(m).or_else(|| {
-                        warn!("[agent-loop] media is not loadable as image data URL: {}", m);
+                        warn!(
+                            "[agent-loop] media is not loadable as image data URL: {}",
+                            m
+                        );
                         None
                     })
                 }

@@ -1,12 +1,9 @@
 //! Repository Management
 //!
 //! Tauri commands for repo CRUD (list, import, delete, clone, create).
-//! Repos are persisted in the shared `sessions.db` SQLite database and
-//! registered with the in-memory git watcher for live status polling.
+//! Repos are persisted in the shared `sessions.db` SQLite database.
+//! The in-memory git watcher is registered on demand for active workspaces only.
 //! Work folders (kind=folder) are tracked without git watcher registration.
-//!
-//! On startup, `hydrate_repos_into_watcher()` re-registers all persisted
-//! git repos so git status works immediately (folders are skipped).
 
 pub mod repo_db;
 pub mod repo_service;
@@ -32,79 +29,11 @@ fn repo_record_to_json(repo: &RepoRecord) -> serde_json::Value {
 // Watcher Helpers
 // ============================================
 
-/// Register a workspace with the git watcher (best-effort, does not fail).
-pub fn register_workspace_with_watcher(repo_id: &str, path: &str, name: &str) {
-    let manager = crate::watch::REPO_WATCH_MANAGER.read();
-    if let Some(mgr) = manager.as_ref() {
-        let repo_info = crate::watch::types::RepoInfo {
-            repo_id: repo_id.to_string(),
-            repo_path: std::path::PathBuf::from(path),
-            repo_name: name.to_string(),
-        };
-        if let Err(err) = mgr.watcher.watch_repo(repo_info) {
-            log::warn!("Failed to register repo with watcher: {}", err);
-        }
-    }
-}
-
 /// Unregister a workspace from the git watcher (best-effort).
 pub fn unregister_workspace_from_watcher(repo_id: &str) {
     let manager = crate::watch::REPO_WATCH_MANAGER.read();
     if let Some(mgr) = manager.as_ref() {
         let _ = mgr.watcher.unwatch_repo(repo_id);
-    }
-}
-
-// ============================================
-// Startup Hydration
-// ============================================
-
-/// On startup, load all persisted repos from the DB and register them with
-/// the in-memory git watcher so git status polling works immediately.
-///
-/// Call this once after the `REPO_WATCH_MANAGER` has been initialized.
-pub fn hydrate_repos_into_watcher() {
-    match repo_db::list_repos() {
-        Ok(repos) => {
-            let total = repos.len();
-            let mut hydrated = 0usize;
-            let mut folders_skipped = 0usize;
-            let mut stale_ids = Vec::new();
-            for repo in repos {
-                if !std::path::Path::new(&repo.path).exists() {
-                    log::info!(
-                        "Removing stale repo (path gone): {} → {}",
-                        repo.name,
-                        repo.path
-                    );
-                    stale_ids.push(repo.repo_id);
-                    continue;
-                }
-
-                if repo.kind == RepoKind::Folder {
-                    folders_skipped += 1;
-                    continue;
-                }
-
-                register_workspace_with_watcher(&repo.repo_id, &repo.path, &repo.name);
-                hydrated += 1;
-            }
-            for stale_id in &stale_ids {
-                if let Err(err) = repo_db::delete_repo(stale_id) {
-                    log::warn!("Failed to delete stale repo {}: {}", stale_id, err);
-                }
-            }
-            log::info!(
-                "Hydrated {}/{} repos into watcher (removed {} stale, skipped {} folders)",
-                hydrated,
-                total,
-                stale_ids.len(),
-                folders_skipped
-            );
-        }
-        Err(err) => {
-            log::error!("Failed to hydrate repos from DB: {}", err);
-        }
     }
 }
 

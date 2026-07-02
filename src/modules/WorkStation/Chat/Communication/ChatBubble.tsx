@@ -29,6 +29,7 @@ import {
 } from "@src/components/ChatBubble";
 import { ChatImageThumbnailRow } from "@src/components/ChatImageThumbnail";
 import Markdown from "@src/components/MarkDown";
+import { containsMarkdownFence } from "@src/components/MarkDown/markdownUtils";
 import { TerminalOutput } from "@src/components/TerminalDisplay";
 import { PILL_REGEX, PILL_TYPES, type PillType } from "@src/config/pillTokens";
 import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/UserMessageContent";
@@ -472,7 +473,7 @@ const UserBubbleContent: React.FC<{
     return (
       <div className="flex flex-col items-start gap-1.5 text-left">
         <div
-          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3 pr-10`}
+          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3`}
         >
           <ChatBubbleCopyButton content={content} />
           <div className="flex items-center gap-2">
@@ -503,7 +504,7 @@ const UserBubbleContent: React.FC<{
     <div className="flex flex-col items-start gap-1.5 text-left">
       {showBubble && (
         <div
-          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3 ${hasContent ? "pr-10" : ""}`}
+          className={`${CHAT_BUBBLE_WIDTH_TOKENS.userBody} group/replay-msg relative rounded-lg bg-primary-1 p-3`}
         >
           <ChatBubbleCopyButton content={strippedContent} />
           {hasImages && images && (
@@ -729,6 +730,7 @@ export const ChatBubble: React.FC<{
       typeof resolvedContent === "string"
         ? resolvedContent
         : String(resolvedContent ?? "");
+    const hasCodeBlockCopy = !isUser && containsMarkdownFence(rawContent);
     const userImages = useMemo<string[] | undefined>(() => {
       if (!isUser) return undefined;
       const result = message.event.result as { images?: unknown } | undefined;
@@ -785,11 +787,11 @@ export const ChatBubble: React.FC<{
           <UserBubbleContent content={rawContent} images={userImages} />
         ) : (
           <div
-            className={`${CHAT_BUBBLE_WIDTH_TOKENS.body} group/replay-msg relative rounded-lg p-3 pr-10 text-left text-text-1 ${
+            className={`${CHAT_BUBBLE_WIDTH_TOKENS.body} group/replay-msg relative rounded-lg p-3 text-left text-text-1 ${
               isLatest ? "bg-fill-2" : "bg-fill-1"
             }`}
           >
-            <ChatBubbleCopyButton content={rawContent} />
+            {!hasCodeBlockCopy && <ChatBubbleCopyButton content={rawContent} />}
             <div className={`min-w-0 ${SESSION_UI_TOKENS.TEXT.BODY_BASE}`}>
               <ReplayMarkdown content={rawContent} />
               <MessageReferenceCards
