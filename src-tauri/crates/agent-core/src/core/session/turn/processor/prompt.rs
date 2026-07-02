@@ -282,6 +282,66 @@ impl UnifiedMessageProcessor {
             }
         }
 
+        // Subagent-delegation reminder — periodically re-surfaces the `agent`
+        // tool and its parallel-dispatch guidance (mirrors Claude Code's
+        // agent_listing_delta system-reminder; the one-shot mention in the
+        // tool schema gets diluted in long sessions). Same cadence pattern
+        // as the todo nag above. Skipped for worker sessions: subagents
+        // cannot delegate further (see subagent_of_subagent_rejection).
+        const SUBAGENT_REMINDER_THRESHOLD: u32 = 10;
+        {
+            use crate::definitions::prefix_lookup::{
+                SHADOW_SUBAGENT_SESSION_PREFIX, SUBAGENT_SESSION_PREFIX,
+            };
+            let is_worker_session = session_id.starts_with(SUBAGENT_SESSION_PREFIX)
+                || session_id.starts_with(SHADOW_SUBAGENT_SESSION_PREFIX);
+            let rounds = *self.rounds_since_subagent_reminder.lock().await;
+            if !is_worker_session && rounds >= SUBAGENT_REMINDER_THRESHOLD {
+                let effective_policy = self.effective_tool_policy();
+                let has_agent_tool = self
+                    .runtime
+                    .tool_registry
+                    .prompt_tool_names(effective_policy.as_ref())
+                    .iter()
+                    .any(|n| n == crate::tools::names::AGENT);
+                if has_agent_tool {
+                    // Same allowlist source the `agent` tool schema uses —
+                    // agent list changes propagate to both surfaces.
+                    let allowed: Option<Vec<String>> = if self.runtime.resolved.sub_agents.is_empty()
+                    {
+                        None
+                    } else {
+                        Some(
+                            self.runtime
+                                .resolved
+                                .sub_agents
+                                .iter()
+                                .map(|s| s.agent_id.clone())
+                                .collect(),
+                        )
+                    };
+                    let ids = crate::tools::impls::orchestration::agent::llm_visible_agent_ids(
+                        allowed.as_ref(),
+                    );
+                    if !ids.is_empty() {
+                        dynamic_sections.push(format!(
+                            "<system-reminder>Delegation check: for independent research \
+                             questions or parallelizable subtasks, use the `agent` tool — \
+                             launch multiple workers CONCURRENTLY in a single message \
+                             (available: {}). Do not delegate trivial single-lookup \
+                             work.</system-reminder>",
+                            ids.join(", ")
+                        ));
+                        *self.rounds_since_subagent_reminder.lock().await = 0;
+                        info!(
+                            "[unified_processor] Subagent reminder injected ({} turns since last, session={})",
+                            rounds, session_id
+                        );
+                    }
+                }
+            }
+        }
+
         dynamic_sections
     }
 

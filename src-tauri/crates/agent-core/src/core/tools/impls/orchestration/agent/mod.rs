@@ -502,6 +502,13 @@ impl Tool for AgentTool {
         true
     }
 
+    /// Surface `agent` first in the provider tool list (schema position is
+    /// an attention signal — mirrors Claude Code putting its Task tool at
+    /// the top of the tool array).
+    fn schema_priority(&self) -> i8 {
+        -10
+    }
+
     fn persist_threshold(&self) -> usize {
         // Never disk-stub subagent results (frontend parses them into
         // cards; the parent consumes them inline) — see

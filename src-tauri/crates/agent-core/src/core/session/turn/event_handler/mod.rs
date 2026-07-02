@@ -130,6 +130,9 @@ pub struct UnifiedEventHandler {
     /// Read by the processor after `execute_turn` to decide whether to reset
     /// the nag-reminder counter.
     todo_called: AtomicBool,
+    /// Set to `true` the first time the `agent` tool is invoked during this
+    /// turn. Read by the processor to reset the subagent-reminder counter.
+    agent_called: AtomicBool,
     /// Streaming buffer for message/thinking accumulation (Rust single source of truth).
     streaming_buffer: StreamingBuffer,
     flushed_message_sessions: Mutex<HashSet<String>>,
@@ -178,6 +181,7 @@ impl UnifiedEventHandler {
             config,
             tool_call_count: AtomicU32::new(0),
             todo_called: AtomicBool::new(false),
+            agent_called: AtomicBool::new(false),
             streaming_buffer: StreamingBuffer::with_default_timeout(),
             flushed_message_sessions: Mutex::new(HashSet::new()),
             plan_draft_streams: Mutex::new(std::collections::HashMap::new()),
@@ -238,6 +242,13 @@ impl UnifiedEventHandler {
     /// turn. Used by the processor to reset the nag-reminder counter.
     pub fn todo_was_called(&self) -> bool {
         self.todo_called.load(Ordering::Relaxed)
+    }
+
+    /// Returns `true` if the `agent` tool was called at least once during
+    /// this turn. Used by the processor to reset the subagent-reminder
+    /// counter.
+    pub fn agent_was_called(&self) -> bool {
+        self.agent_called.load(Ordering::Relaxed)
     }
 
     /// Push a SessionEvent into the session's EventStore so frontend
@@ -468,6 +479,9 @@ impl TurnEventHandler for UnifiedEventHandler {
         self.tool_call_count.fetch_add(1, Ordering::Relaxed);
         if tool_name == tool_names::MANAGE_TODO {
             self.todo_called.store(true, Ordering::Relaxed);
+        }
+        if tool_name == tool_names::AGENT {
+            self.agent_called.store(true, Ordering::Relaxed);
         }
         if tool_name == tool_names::CREATE_PLAN {
             // The authoritative event replaces the streaming skeleton row.

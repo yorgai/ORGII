@@ -142,6 +142,9 @@ pub struct UnifiedMessageProcessor {
     sm_compact_config: SessionMemoryCompactConfig,
     replacement_state: tokio::sync::Mutex<ReplacementState>,
     rounds_since_todo: tokio::sync::Mutex<u32>,
+    /// Turns since the last `agent` tool call OR last subagent reminder.
+    /// Drives the periodic delegation nudge in `build_dynamic_sections`.
+    rounds_since_subagent_reminder: tokio::sync::Mutex<u32>,
     turn_prefetch_hook: tokio::sync::Mutex<Option<Arc<TurnPrefetchHook>>>,
 }
 
@@ -229,6 +232,7 @@ impl UnifiedMessageProcessor {
             sm_compact_config: SessionMemoryCompactConfig::default(),
             replacement_state: tokio::sync::Mutex::new(ReplacementState::new()),
             rounds_since_todo: tokio::sync::Mutex::new(0),
+            rounds_since_subagent_reminder: tokio::sync::Mutex::new(0),
             turn_prefetch_hook: tokio::sync::Mutex::new(None),
         }
     }
@@ -790,6 +794,17 @@ impl UnifiedMessageProcessor {
         {
             let mut rounds = self.rounds_since_todo.lock().await;
             if handler.todo_was_called() {
+                *rounds = 0;
+            } else {
+                *rounds = rounds.saturating_add(1);
+            }
+        }
+
+        // Same cadence tracking for the subagent-delegation reminder: an
+        // `agent` call proves the model remembers delegation, so reset.
+        {
+            let mut rounds = self.rounds_since_subagent_reminder.lock().await;
+            if handler.agent_was_called() {
                 *rounds = 0;
             } else {
                 *rounds = rounds.saturating_add(1);

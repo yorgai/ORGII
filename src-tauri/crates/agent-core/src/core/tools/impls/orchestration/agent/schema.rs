@@ -18,7 +18,7 @@ pub(super) const DESCRIPTION: &str =
      - `delegate` (default) — invoke a different Agent by `agent_id` (builtin or custom).\n\
      - `shadow` — clone the current Agent's setup (tools, policy, model) for a parallel self-copy task.\n\n\
      Set `background: true` to run the worker in the background and get a handle back \
-     immediately. Use `await_output(handle=...)` to check on it later.\n\n\
+     immediately. You will be notified automatically when it finishes — do not poll it.\n\n\
      Kill mode: set `command: \"kill\"` with `handle` to abort a background worker.\n\n\
      Built-in Agent targets (for delegate mode):\n\
      - `builtin:explore` — Fast, read-only codebase search.\n\
@@ -193,7 +193,18 @@ pub(super) fn llm_description(allowed_subagents: Option<&Vec<String>>) -> Option
          Kill mode: agent(command=\"kill\", handle=\"<session_id>\") to abort a background worker.\n\n\
          Available agent types (delegate mode):\n\
          {agent_list}\n\n\
-         Set fork: true to share parent conversation context (for summarization, memory extraction)."
+         Set fork: true to share parent conversation context (for summarization, memory extraction).\n\n\
+         When NOT to use this tool:\n\
+         - Reading a specific known file path — use read_file directly.\n\
+         - Looking up one specific symbol/class/function — a single code_search is faster.\n\
+         - Listing one directory — use list_dir.\n\n\
+         Example (parallel research — one message, multiple agent calls):\n\
+         user: How do sessions, permissions, and caching interact in this codebase?\n\
+         assistant: [in ONE message] agent(agent_id: 'builtin:explore', prompt: 'How does session \
+         lifecycle work in ...') + agent(agent_id: 'builtin:explore', prompt: 'How are tool \
+         permissions resolved in ...') + agent(agent_id: 'builtin:explore', prompt: 'How does \
+         prompt caching work in ...')\n\
+         Counter-example: 'What does src/main.rs contain?' → read_file, NOT a worker."
     ))
 }
 
@@ -241,7 +252,8 @@ pub(super) fn parameters() -> Value {
             "background": {
                 "type": "boolean",
                 "description": "When true, run the worker in background and return a handle immediately. \
-                Use await_output(handle=...) to monitor progress. Default: false."
+                Do NOT poll it with await_output — proceed with other work; the system \
+                notifies you automatically when it finishes. Default: false."
             },
             "isolation": {
                 "type": "string",

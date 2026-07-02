@@ -16,6 +16,7 @@ struct MockTool {
     ready: bool,
     tool_priority: ToolPriority,
     schema_cache_scope: ToolSchemaCacheScope,
+    tool_schema_priority: i8,
 }
 
 impl MockTool {
@@ -27,6 +28,14 @@ impl MockTool {
             ready: true,
             tool_priority: ToolPriority::Always,
             schema_cache_scope: ToolSchemaCacheScope::StablePrefix,
+            tool_schema_priority: 0,
+        }
+    }
+
+    fn with_schema_priority(name: &str, priority: i8) -> Self {
+        Self {
+            tool_schema_priority: priority,
+            ..Self::new(name)
         }
     }
 
@@ -38,6 +47,7 @@ impl MockTool {
             ready: true,
             tool_priority: ToolPriority::Always,
             schema_cache_scope: ToolSchemaCacheScope::LiveSuffix,
+            tool_schema_priority: 0,
         }
     }
 
@@ -49,6 +59,7 @@ impl MockTool {
             ready: false,
             tool_priority: ToolPriority::Always,
             schema_cache_scope: ToolSchemaCacheScope::StablePrefix,
+            tool_schema_priority: 0,
         }
     }
 
@@ -60,6 +71,7 @@ impl MockTool {
             ready: true,
             tool_priority: ToolPriority::OnDemand,
             schema_cache_scope: ToolSchemaCacheScope::StablePrefix,
+            tool_schema_priority: 0,
         }
     }
 }
@@ -96,6 +108,10 @@ impl Tool for MockTool {
 
     fn schema_cache_scope(&self) -> ToolSchemaCacheScope {
         self.schema_cache_scope
+    }
+
+    fn schema_priority(&self) -> i8 {
+        self.tool_schema_priority
     }
 
     fn parameters(&self) -> Value {
@@ -413,6 +429,65 @@ fn get_definitions_budgeted_excludes_on_demand() {
     assert!(!names.contains(&"db_explore"));
     assert!(!names.contains(&"db_run"));
     assert_eq!(defs.len(), 2);
+}
+
+/// Negative schema_priority (e.g. `agent` = -10) surfaces the tool at the
+/// top of the provider list; all priority-0 tools keep the registry's
+/// deterministic order (cache segment, then name — stable sort).
+#[test]
+fn get_definitions_budgeted_sorts_by_schema_priority() {
+    let mut registry = ToolRegistry::new();
+    registry.register(Box::new(MockTool::new("read_file")));
+    registry.register(Box::new(MockTool::new("exec")));
+    registry.register(Box::new(MockTool::with_schema_priority("agent", -10)));
+    registry.register(Box::new(MockTool::new("edit_file")));
+
+    let policy = ResolvedToolPolicy::permissive();
+    let defs = registry.get_definitions_budgeted(&policy);
+
+    let names: Vec<&str> = defs
+        .iter()
+        .filter_map(|d| d["function"]["name"].as_str())
+        .collect();
+
+    // "agent" jumps the lexicographic order ("agent" would sort first here
+    // anyway, so pin the more interesting property below with a name that
+    // would otherwise sort LAST).
+    assert_eq!(names[0], "agent", "negative priority must sort first");
+    // Priority-0 tools keep the deterministic lexicographic tie order.
+    assert_eq!(names[1..], ["edit_file", "exec", "read_file"]);
+
+    // Same check with a priority tool whose name sorts last lexicographically:
+    // priority must beat name order.
+    let mut registry = ToolRegistry::new();
+    registry.register(Box::new(MockTool::new("edit_file")));
+    registry.register(Box::new(MockTool::with_schema_priority("zz_agent", -10)));
+    let defs = registry.get_definitions_budgeted(&policy);
+    let names: Vec<&str> = defs
+        .iter()
+        .filter_map(|d| d["function"]["name"].as_str())
+        .collect();
+    assert_eq!(names, vec!["zz_agent", "edit_file"]);
+}
+
+/// Priority sorting also applies across fallback layers: a high-priority
+/// tool registered in the base registry still sorts to the top of the
+/// combined definition list.
+#[test]
+fn schema_priority_sorts_across_fallback_layers() {
+    let mut base = ToolRegistry::new();
+    base.register(Box::new(MockTool::with_schema_priority("agent", -10)));
+    let mut overlay = ToolRegistry::with_fallback(Arc::new(base));
+    overlay.register(Box::new(MockTool::new("read_file")));
+
+    let policy = ResolvedToolPolicy::permissive();
+    let defs = overlay.get_definitions_budgeted(&policy);
+
+    let names: Vec<&str> = defs
+        .iter()
+        .filter_map(|d| d["function"]["name"].as_str())
+        .collect();
+    assert_eq!(names, vec!["agent", "read_file"]);
 }
 
 #[test]

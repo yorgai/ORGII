@@ -248,6 +248,18 @@ pub trait Tool: Send + Sync {
         self.is_read_only()
     }
 
+    /// Ordering weight for this tool's schema in the provider tool list.
+    /// Lower sorts earlier; ties keep the registry's deterministic order
+    /// (cache segment, then name — stable sort).
+    ///
+    /// Schema position is an attention signal for the model. The default 0
+    /// preserves the existing order for every tool; only tools that should
+    /// be surfaced prominently (e.g. `agent` at the top, mirroring Claude
+    /// Code's Task-tool-first layout) override this.
+    fn schema_priority(&self) -> i8 {
+        0
+    }
+
     /// Maximum characters allowed in the tool result before truncation.
     /// Override in tools that need more (file read) or less (grep) output.
     fn output_budget(&self) -> usize {
