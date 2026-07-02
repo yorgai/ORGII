@@ -448,6 +448,7 @@ impl TurnEventHandler for UnifiedEventHandler {
                 "turnId": self.config.turn_id.as_deref(),
                 "contextTokens": usage.used_tokens,
                 "contextUsage": usage,
+                "warningLevel": usage.warning_level(),
             }),
         );
     }
@@ -717,6 +718,52 @@ impl TurnEventHandler for UnifiedEventHandler {
             args,
         )
         .await
+    }
+
+    async fn on_turn_stop_check(&self, session_id: &str) -> Option<String> {
+        hooks_dispatch::dispatch_stop_check(self.config.hook_executor.as_ref(), session_id).await
+    }
+
+    fn on_steering_consumed(
+        &self,
+        session_id: &str,
+        injection: &crate::turn_executor::SteeringInjection,
+    ) {
+        // Persist the user message so the durable transcript (and the next
+        // turn's reloaded history) contains it as a plain user row — the
+        // in-memory <system-reminder> wrapper is a per-turn presentation.
+        let message_id = match crate::session::persistence::save_user_msg(
+            session_id,
+            &injection.content,
+            None,
+        ) {
+            Ok(id) => id,
+            Err(err) => {
+                tracing::warn!(
+                    "[unified_handler] Failed to persist steering message for session {}: {}",
+                    session_id,
+                    err
+                );
+                return;
+            }
+        };
+        if let Some(handle) = self.config.app_handle.as_ref() {
+            crate::bus::event_pipeline_bridge::persist_user_message_event(
+                handle,
+                session_id,
+                &message_id,
+                &injection.content,
+                None,
+                None,
+                crate::bus::event_pipeline_bridge::PersistedUserMessageSource::User,
+                &injection.turn_intent_id,
+            );
+        }
+        crate::foundation::session_bridge::update_turn_intent_status(
+            session_id,
+            &injection.turn_intent_id,
+            crate::foundation::session_bridge::TurnIntentBridgeStatus::Completed,
+        );
     }
 
     async fn after_tool_execute(

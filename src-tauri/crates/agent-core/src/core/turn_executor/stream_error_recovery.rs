@@ -72,7 +72,18 @@ pub(super) struct RetryBudgets {
     /// hammering an overloaded provider wastes cache and aggravates the
     /// cascade.
     pub overloaded: u32,
+    /// When true, the next retry attempt uses the provider's NON-streaming
+    /// `chat()` instead of `chat_streaming()`. Set after repeated stream
+    /// failures that produced no partial output — some proxies/networks
+    /// break SSE while plain request/response still works. Live deltas are
+    /// lost for that attempt; the assembled response still flows through
+    /// the normal completion path.
+    pub non_streaming_fallback: bool,
 }
+
+/// Generic stream failures with zero partial output before switching the
+/// next attempt to the non-streaming endpoint.
+const NON_STREAMING_FALLBACK_AFTER: u32 = 2;
 
 impl RetryBudgets {
     /// Reset both budgets after a successful iteration. Logs at info level
@@ -85,6 +96,7 @@ impl RetryBudgets {
             );
             self.stream_error = 0;
             self.overloaded = 0;
+            self.non_streaming_fallback = false;
         }
     }
 }
@@ -114,6 +126,27 @@ pub(super) async fn handle_stream_error(
         budgets.stream_error += 1;
         (budgets.stream_error, MAX_STREAM_ERROR_RETRIES)
     };
+
+    // Non-streaming fallback: repeated generic stream failures that never
+    // produced any partial output point at a broken SSE path (proxy
+    // buffering, gateway resets) rather than provider capacity. Switch the
+    // next attempt to the plain request/response endpoint.
+    if !is_overloaded
+        && !budgets.non_streaming_fallback
+        && attempt >= NON_STREAMING_FALLBACK_AFTER
+        && response.tool_calls.is_empty()
+        && response
+            .content
+            .as_deref()
+            .map(str::is_empty)
+            .unwrap_or(true)
+    {
+        budgets.non_streaming_fallback = true;
+        info!(
+            "[agent-core] Switching to non-streaming fallback after {} stream failure(s) with no partial output (session={})",
+            attempt, session_id
+        );
+    }
 
     if attempt > max_attempts {
         warn!(

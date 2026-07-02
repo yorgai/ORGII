@@ -68,6 +68,7 @@ impl UnifiedMessageProcessor {
                 .session
                 .persist_next_cancel_marker
                 .load(std::sync::atomic::Ordering::SeqCst),
+            steering_queue: Some(Arc::clone(&self.session.steering_queue)),
         };
 
         let mut event_handler_config = self.event_handler_config.clone();

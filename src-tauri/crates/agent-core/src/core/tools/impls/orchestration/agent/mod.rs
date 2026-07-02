@@ -849,6 +849,7 @@ impl Tool for AgentTool {
             screenshot_store: None,
             iteration_hook: None,
             persist_cancel_marker: false,
+            steering_queue: None,
         };
 
         // 9. Create subagent session ID (reuse for resume, new for fresh).

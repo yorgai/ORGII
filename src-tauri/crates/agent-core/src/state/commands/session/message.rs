@@ -262,6 +262,70 @@ pub(crate) async fn send_message_impl(
 
     let app_handle = state.app_handle.clone();
 
+    // ── 3b. Mid-turn steering divert ─────────────────────────────────────
+    //
+    // A plain-text user message that arrives while a turn is RUNNING is
+    // injected into that turn (drained by the turn loop before the next
+    // LLM iteration) instead of waiting behind it as its own turn — the
+    // model can change course immediately. Excluded: force-sends (they
+    // interrupt via their own boundary semantics), resumes, queue-sourced
+    // continuations, image messages, and empty content. The Stop boundary
+    // clears the buffer, matching queued-message discard semantics.
+    if matches!(source, TurnIntentBridgeSource::UserSubmit)
+        && !is_resume
+        && !content.trim().is_empty()
+        && images.as_ref().map(|v| v.is_empty()).unwrap_or(true)
+        && session_handle.scheduler.is_processing()
+    {
+        crate::foundation::session_bridge::upsert_turn_intent(
+            &session_id,
+            &effective_turn_intent_id,
+            client_message_id.as_deref(),
+            source,
+            crate::foundation::session_bridge::TurnIntentBridgeStatus::Queued,
+        );
+        session_handle
+            .steering_queue
+            .lock()
+            .await
+            .push(crate::turn_executor::SteeringInjection {
+                content: content.clone(),
+                turn_intent_id: effective_turn_intent_id.clone(),
+            });
+
+        // Race closure: the turn may have ended between the is_processing
+        // check and the push. If it's idle now, reclaim the injection (when
+        // still unconsumed) and fall through to a normal enqueue.
+        let reclaimed = if !session_handle.scheduler.is_processing() {
+            let mut steering = session_handle.steering_queue.lock().await;
+            let before = steering.len();
+            steering.retain(|inj| inj.turn_intent_id != effective_turn_intent_id);
+            steering.len() != before
+        } else {
+            false
+        };
+
+        if !reclaimed {
+            tracing::info!(
+                "[agent_send_message] Steering message into active turn for session {} (intent={})",
+                session_id,
+                effective_turn_intent_id
+            );
+            return Ok(AgentResponse {
+                content: serde_json::json!({
+                    "queued": true,
+                    "steered": true,
+                    "messageId": effective_turn_intent_id,
+                    "queuePosition": 0,
+                    "duplicate": false,
+                })
+                .to_string(),
+                session_id,
+                model: effective_model,
+            });
+        }
+    }
+
     // ── 4. Persist initial status and user_input (single DB write) ───────
     //
     // Also closes the override-account persistence gap: callers that switch

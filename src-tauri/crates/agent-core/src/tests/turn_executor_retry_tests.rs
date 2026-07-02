@@ -218,6 +218,7 @@ fn test_config() -> TurnConfig {
         screenshot_store: None,
         iteration_hook: None,
         persist_cancel_marker: false,
+        steering_queue: None,
     }
 }
 

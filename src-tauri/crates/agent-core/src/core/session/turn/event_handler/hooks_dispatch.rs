@@ -50,6 +50,54 @@ pub(super) async fn dispatch_pre_tool(
     None
 }
 
+/// Run user-defined `Stop` hooks synchronously and return blocking
+/// feedback, if any.
+///
+/// A hook blocks the turn from ending by printing
+/// `{"decision":"block","message":"..."}` on stdout (same JSON contract as
+/// PreToolUse deny). The message is returned so the turn loop can inject
+/// it and continue; non-blocking hooks (any other output) let the turn
+/// end normally.
+pub(super) async fn dispatch_stop_check(
+    hook_executor: Option<&Arc<HookExecutor>>,
+    session_id: &str,
+) -> Option<String> {
+    let executor = hook_executor?;
+    if !executor.has_hooks_for(HookEvent::Stop) {
+        return None;
+    }
+    let ctx = HookContext::for_session(session_id);
+    let results = executor.run(HookEvent::Stop, &ctx).await;
+    for hook_result in &results {
+        if !hook_result.success && !hook_result.stderr.is_empty() {
+            info!(
+                "[unified_handler] Stop hook stderr: {}",
+                &hook_result.stderr[..hook_result.stderr.len().min(200)]
+            );
+        }
+        if let Some(message) = parse_stop_block(&hook_result.stdout) {
+            return Some(message);
+        }
+    }
+    None
+}
+
+/// Parse a Stop hook's stdout for a blocking decision.
+fn parse_stop_block(stdout: &str) -> Option<String> {
+    let parsed: Value = serde_json::from_str(stdout.trim()).ok()?;
+    let decision = parsed.get("decision").and_then(Value::as_str)?;
+    if decision != "block" {
+        return None;
+    }
+    Some(
+        parsed
+            .get("message")
+            .and_then(Value::as_str)
+            .unwrap_or("A Stop hook blocked this completion. Continue working on the task.")
+            .to_string(),
+    )
+}
+
 /// Fire user-defined PostToolUse hooks in the background.
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn dispatch_post_tool(

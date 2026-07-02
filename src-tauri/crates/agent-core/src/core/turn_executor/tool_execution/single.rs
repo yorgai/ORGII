@@ -187,11 +187,15 @@ pub(super) async fn execute_single_tool(
 
         let file_time_error = if is_file_write_tool(&tool_call.name) {
             let paths = extract_file_paths(&tool_call.name, &effective_args);
-            let mut err: Option<String> = None;
-            for path in &paths {
-                if let Err(msg) = file_tracker.assert_fresh(path) {
-                    err = Some(msg);
-                    break;
+            let mut err = file_tracker
+                .assert_read_before_edit(&tool_call.name, &effective_args)
+                .err();
+            if err.is_none() {
+                for path in &paths {
+                    if let Err(msg) = file_tracker.assert_fresh(path) {
+                        err = Some(msg);
+                        break;
+                    }
                 }
             }
             err

@@ -31,8 +31,8 @@ pub use helpers::{
     truncate_output,
 };
 pub use types::{
-    PermissionProvider, PermissionVerdict, ToolHookIntervention, TurnConfig, TurnEventHandler,
-    TurnIterationHook, TurnResult,
+    PermissionProvider, PermissionVerdict, SteeringInjection, SteeringQueue, ToolHookIntervention,
+    TurnConfig, TurnEventHandler, TurnIterationHook, TurnResult,
 };
 pub use usage_telemetry::{AttributionMethod, LlmUsageSpan, ToolUsageAttribution, UsageTelemetry};
 
@@ -131,8 +131,22 @@ pub async fn execute_turn(
     // In-turn ContextTooLong rescue attempts already burned (see the
     // `ContextTooLong` arm below).
     let mut context_rescue_attempts = 0u32;
+    // Stop-hook blocking continuations already burned. Hard cap so a hook
+    // that always blocks cannot spin the loop forever (death-spiral guard).
+    let mut stop_hook_blocks = 0u32;
+    const MAX_STOP_HOOK_BLOCKS: u32 = 3;
+    // One-shot model-side context-budget nudge for this turn. Set when a
+    // snapshot crosses the error tier; consumed (injected) at the top of the
+    // next iteration so it never lands between an assistant tool_use and its
+    // tool_result rows.
+    let mut budget_nudge_sent = false;
+    let mut pending_budget_nudge: Option<String> = None;
 
     let mut file_tracker = file_tracker::FileTimeTracker::new();
+    // Read-before-edit is session-scoped: seed the fresh per-turn tracker
+    // with every file the transcript already read/wrote so cross-turn edits
+    // aren't false-rejected.
+    file_tracker.seed_from_history(messages);
     let mc_config = microcompact::MicrocompactConfig::default();
     let iteration_hook = config.iteration_hook.as_deref();
 
@@ -164,6 +178,20 @@ pub async fn execute_turn(
             hook.before_llm_iteration(session_id, iteration, messages)
                 .await;
         }
+
+        // Mid-turn steering: drain user messages that arrived while this
+        // turn was running and inject them into the current loop so the
+        // model can change course immediately instead of after the turn.
+        drain_steering_queue(&config.steering_queue, session_id, messages, handler).await;
+
+        // Deferred context-budget nudge from the previous iteration.
+        if let Some(nudge) = pending_budget_nudge.take() {
+            messages.push(serde_json::json!({
+                "role": "user",
+                "content": nudge,
+            }));
+        }
+
         let limit_display = config
             .max_iterations
             .map_or("∞".to_string(), |m| m.to_string());
@@ -224,8 +252,27 @@ pub async fn execute_turn(
 
         let cancel_for_stream = cancel_flag.cloned();
         let cancel_ref = cancel_flag.as_ref().map(|f| f.as_ref());
-        let stream_result = provider
-            .chat_streaming(
+        let stream_result = if retry_budgets.non_streaming_fallback {
+            // Non-streaming fallback: the SSE path failed repeatedly with no
+            // partial output — request the whole response in one shot. No
+            // live deltas for this attempt; the assembled response flows
+            // through the normal completion path.
+            info!(
+                "[agent-core] Using non-streaming request for this attempt (session={})",
+                session_id
+            );
+            provider
+                .chat(
+                    &llm_messages,
+                    Some(&tool_defs),
+                    &config.model,
+                    effective_max_tokens,
+                    config.temperature,
+                )
+                .await
+        } else {
+            provider
+                .chat_streaming(
                 &llm_messages,
                 Some(&tool_defs),
                 &config.model,
@@ -280,7 +327,8 @@ pub async fn execute_turn(
                 },
                 cancel_ref,
             )
-            .await;
+            .await
+        };
 
         let response = match stream_result {
             Ok(resp) => resp,
@@ -381,6 +429,25 @@ pub async fn execute_turn(
                 &response.tool_calls,
                 Some(&snapshot),
             );
+
+            // Model-side budget nudge (once per turn): past the error tier
+            // the model should wrap up instead of starting broad new work —
+            // pre-turn compaction will fire next turn, but mid-turn the
+            // model is otherwise blind to how close the window is. Queued
+            // here, injected at the top of the next iteration.
+            if !budget_nudge_sent {
+                if let Some(level @ ("error" | "blocking")) = snapshot.warning_level() {
+                    budget_nudge_sent = true;
+                    let percent = snapshot.percent_used.unwrap_or(0.0);
+                    pending_budget_nudge = Some(format!(
+                        "<system-reminder>\nContext window is {percent:.0}% full ({level}). Prioritize finishing the current task with the remaining budget: prefer targeted reads over broad exploration, avoid re-reading large files, and summarize instead of quoting long output. The system will compact older history automatically on the next turn.\n</system-reminder>"
+                    ));
+                    info!(
+                        "[agent-core] Queued context-budget nudge ({level}, {percent:.1}% used, session={session_id})"
+                    );
+                }
+            }
+
             context_usage_snapshot = Some(snapshot);
         }
 
@@ -606,6 +673,89 @@ pub async fn execute_turn(
             }
         } else {
             // Terminal non-tool, non-length, non-stream-error iteration.
+            //
+            // Final steering drain: a user message that arrived during the
+            // last LLM call must not be silently deferred to a turn that may
+            // never come — inject it and give the model another iteration.
+            if !cancel_flag
+                .map(|flag| flag.load(Ordering::SeqCst))
+                .unwrap_or(false)
+                && drain_steering_queue(&config.steering_queue, session_id, messages, handler)
+                    .await
+            {
+                if let Some(ref text) = response.content {
+                    if !text.trim().is_empty() {
+                        handler.on_assistant_iteration_complete(
+                            session_id,
+                            Some(text.as_str()),
+                            false,
+                            &config.model,
+                        );
+                        // Keep the in-memory list consistent with what was
+                        // persisted: the steering user message must FOLLOW
+                        // the assistant text the model just produced.
+                        let steering_msg = messages.pop();
+                        messages.push(serde_json::json!({
+                            "role": "assistant",
+                            "content": text,
+                        }));
+                        if let Some(steering_msg) = steering_msg {
+                            messages.push(steering_msg);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // Stop-hook gate first: user-defined `Stop` hooks may BLOCK this
+            // completion (stdout `{"decision":"block","message":...}`), in
+            // which case the feedback is persisted as the assistant text,
+            // the block message is injected as a user message, and the loop
+            // continues. Skipped for cancelled turns and capped at
+            // MAX_STOP_HOOK_BLOCKS to prevent a death spiral. Stream-error
+            // endings never reach this arm (they break earlier), so API
+            // failures cannot be blocked into a retry loop.
+            if stop_hook_blocks < MAX_STOP_HOOK_BLOCKS
+                && !cancel_flag
+                    .map(|flag| flag.load(Ordering::SeqCst))
+                    .unwrap_or(false)
+            {
+                if let Some(feedback) = handler.on_turn_stop_check(session_id).await {
+                    stop_hook_blocks += 1;
+                    warn!(
+                        "[agent-core] Stop hook blocked turn completion ({}/{}) for session {}: {}",
+                        stop_hook_blocks,
+                        MAX_STOP_HOOK_BLOCKS,
+                        session_id,
+                        &feedback[..feedback.len().min(200)]
+                    );
+                    // Persist what the model said this iteration so the
+                    // transcript stays coherent before the injected feedback.
+                    if let Some(ref text) = response.content {
+                        if !text.trim().is_empty() {
+                            handler.on_assistant_iteration_complete(
+                                session_id,
+                                Some(text.as_str()),
+                                false,
+                                &config.model,
+                            );
+                            messages.push(serde_json::json!({
+                                "role": "assistant",
+                                "content": text,
+                            }));
+                        }
+                    }
+                    messages.push(serde_json::json!({
+                        "role": "user",
+                        "content": format!(
+                            "<system-reminder>\nA Stop hook blocked this completion:\n{}\nAddress the feedback and continue; do not stop until it is resolved.\n</system-reminder>",
+                            feedback
+                        ),
+                    }));
+                    continue;
+                }
+            }
+
             // Normally `response.content` carries the model's final text.
             // But some stop reasons end the turn with an EMPTY body — most
             // notably Anthropic `stop_reason=refusal` (mapped to
@@ -701,4 +851,48 @@ pub async fn execute_turn(
         cache_write_tokens: usage.cache_write,
         usage_telemetry: usage_telemetry.finish(),
     })
+}
+
+/// Drain the mid-turn steering buffer into `messages`.
+///
+/// All pending steering messages are merged into ONE
+/// `<system-reminder>`-wrapped user message (keeping the injection a single
+/// list entry so terminal-arm reordering stays trivial). Each consumed
+/// injection is reported to the handler for persistence + intent lifecycle.
+/// Returns `true` when anything was injected.
+async fn drain_steering_queue(
+    steering_queue: &Option<crate::turn_executor::SteeringQueue>,
+    session_id: &str,
+    messages: &mut Vec<Value>,
+    handler: &dyn TurnEventHandler,
+) -> bool {
+    let Some(queue) = steering_queue else {
+        return false;
+    };
+    let drained: Vec<crate::turn_executor::SteeringInjection> = {
+        let mut guard = queue.lock().await;
+        std::mem::take(&mut *guard)
+    };
+    if drained.is_empty() {
+        return false;
+    }
+
+    info!(
+        "[agent-core] Injecting {} steering message(s) mid-turn (session={})",
+        drained.len(),
+        session_id
+    );
+    let mut bodies = Vec::with_capacity(drained.len());
+    for injection in &drained {
+        handler.on_steering_consumed(session_id, injection);
+        bodies.push(injection.content.clone());
+    }
+    messages.push(serde_json::json!({
+        "role": "user",
+        "content": format!(
+            "<system-reminder>\nThe user sent the following message(s) while you were working. Adjust course accordingly — this may change or refine the current task:\n\n{}\n</system-reminder>",
+            bodies.join("\n\n---\n\n")
+        ),
+    }));
+    true
 }

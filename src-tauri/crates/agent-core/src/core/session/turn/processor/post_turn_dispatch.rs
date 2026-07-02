@@ -66,22 +66,11 @@ impl UnifiedMessageProcessor {
             context_usage_snapshot: result.context_usage_snapshot.as_ref(),
         });
 
-        // 9a. Fire HookEvent::Stop — agent turn concluded.
-        if let Some(ref executor) = self.event_handler_config.hook_executor {
-            if executor.has_hooks_for(crate::specialization::hooks::HookEvent::Stop) {
-                let ctx =
-                    crate::specialization::hooks::events::HookContext::for_session(session_id)
-                        .with_var("ORGII_TURN_ID", turn_id)
-                        .with_var("ORGII_TOOL_CALLS", tool_calls_count.to_string())
-                        .with_var("ORGII_TOTAL_TOKENS", result.total_tokens.to_string());
-                let stop_executor = executor.clone();
-                tokio::spawn(async move {
-                    stop_executor
-                        .run(crate::specialization::hooks::HookEvent::Stop, &ctx)
-                        .await;
-                });
-            }
-        }
+        // 9a. `HookEvent::Stop` now runs INSIDE the turn loop
+        // (`turn_executor::execute_turn` terminal arm via
+        // `on_turn_stop_check`), where blocking feedback can still pull the
+        // model back. No post-turn re-fire — that would double-invoke the
+        // user's Stop hooks.
 
         // 9a½. Release Computer Use lock if held (zero-syscall check for non-CU turns).
         if integrations::computer_use_lock::is_held_locally() {

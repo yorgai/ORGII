@@ -194,6 +194,7 @@ pub async fn run_consolidation(params: super::super::MemoryAgentParams<'_>) -> R
         screenshot_store: None,
         iteration_hook: None,
         persist_cancel_marker: false,
+        steering_queue: None,
     };
 
     let session_id = params.session_id;

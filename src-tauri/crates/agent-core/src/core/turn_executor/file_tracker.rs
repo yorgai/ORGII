@@ -95,6 +95,47 @@ impl FileTimeTracker {
         }
     }
 
+    /// Seed the read/write cache from prior conversation history.
+    ///
+    /// The tracker is constructed fresh at every `execute_turn`, but
+    /// read-before-edit is a **session-level** invariant: a file read in an
+    /// earlier turn is legitimately editable now. Replay every read/write
+    /// tool call already in the transcript so the gate doesn't false-reject
+    /// cross-turn edits. Hashes are taken from current disk content — the
+    /// stale-edit check (`assert_fresh`) therefore treats "read long ago,
+    /// unchanged since turn start" as fresh, which is the correct baseline
+    /// for a new turn.
+    pub fn seed_from_history(&mut self, messages: &[Value]) {
+        for msg in messages {
+            let Some(tool_calls) = msg.get("tool_calls").and_then(Value::as_array) else {
+                continue;
+            };
+            for tc in tool_calls {
+                let Some(function) = tc.get("function") else {
+                    continue;
+                };
+                let Some(name) = function.get("name").and_then(Value::as_str) else {
+                    continue;
+                };
+                if !FILE_READ_TOOLS.contains(&name) && !is_file_write_tool(name) {
+                    continue;
+                }
+                let Some(args) = function
+                    .get("arguments")
+                    .and_then(Value::as_str)
+                    .and_then(|raw| serde_json::from_str::<Value>(raw).ok())
+                else {
+                    continue;
+                };
+                // record_* fail open on unreadable paths, so errored calls
+                // in history (file absent) simply record nothing.
+                for path in extract_file_paths(name, &args) {
+                    self.record_read(&path);
+                }
+            }
+        }
+    }
+
     /// Record the current content hash of a file after a successful read.
     pub fn record_read(&mut self, file_path: &str) {
         if let Some(hash) = hash_file_content(file_path) {
@@ -108,7 +149,7 @@ impl FileTimeTracker {
     /// trustworthy "changed" signal and must not block a legitimate edit).
     pub fn assert_fresh(&self, file_path: &str) -> Result<(), String> {
         let Some(recorded_hash) = self.read_hashes.get(file_path) else {
-            return Ok(()); // Never read — let the tool handle it
+            return Ok(()); // Never read — read-before-edit gate handles this case
         };
 
         let Some(current_hash) = hash_file_content(file_path) else {
@@ -122,6 +163,49 @@ impl FileTimeTracker {
             ));
         }
 
+        Ok(())
+    }
+
+    /// Hard read-before-edit gate for `edit_file`.
+    ///
+    /// - **Edit mode** (`old_string` present): the file must have been read
+    ///   this session (present in the read cache) — otherwise reject.
+    /// - **Create/Overwrite mode** (`content`, no `old_string`): creating a
+    ///   NEW file is allowed; overwriting an EXISTING file that was never
+    ///   read is rejected.
+    ///
+    /// Only `edit_file` is gated: `delete_file` has its own confirmation
+    /// semantics and `apply_patch` embeds Add/Update intent in the patch
+    /// body. The stale-content check (`assert_fresh`) still applies to all
+    /// write tools.
+    pub fn assert_read_before_edit(&self, tool_name: &str, args: &Value) -> Result<(), String> {
+        if tool_name != tool_names::EDIT_FILE {
+            return Ok(());
+        }
+        let Some(path) = args
+            .get("file_path")
+            .or_else(|| args.get("path"))
+            .and_then(|v| v.as_str())
+        else {
+            return Ok(());
+        };
+        if self.read_hashes.contains_key(path) {
+            return Ok(());
+        }
+
+        let is_edit_mode = args.get("old_string").and_then(|v| v.as_str()).is_some();
+        if is_edit_mode {
+            return Err(format!(
+                "File has not been read yet: {path}. Use read_file on it first, then retry the edit with the exact text you saw.",
+            ));
+        }
+
+        // Create/overwrite mode: allow creating files that don't exist yet.
+        if std::path::Path::new(path).exists() {
+            return Err(format!(
+                "Refusing to overwrite an existing file that has not been read: {path}. Use read_file on it first (to confirm what you are replacing), then retry.",
+            ));
+        }
         Ok(())
     }
 
@@ -319,6 +403,95 @@ mod content_hash_tests {
         tracker.record_read(p);
         std::fs::write(&path, "tampered externally\n").unwrap();
         assert!(tracker.assert_fresh(p).is_err());
+        std::fs::remove_file(&path).ok();
+    }
+
+    // -- read-before-edit gate --
+
+    #[test]
+    fn edit_mode_on_unread_file_is_rejected() {
+        let path = temp_file("content\n");
+        let p = path.to_str().unwrap();
+        let tracker = FileTimeTracker::new();
+        let args = serde_json::json!({ "file_path": p, "old_string": "a", "new_string": "b" });
+        let err = tracker
+            .assert_read_before_edit(tool_names::EDIT_FILE, &args)
+            .unwrap_err();
+        assert!(err.contains("has not been read"), "got: {err}");
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn edit_mode_on_read_file_passes_gate() {
+        let path = temp_file("content\n");
+        let p = path.to_str().unwrap();
+        let mut tracker = FileTimeTracker::new();
+        tracker.record_read(p);
+        let args = serde_json::json!({ "file_path": p, "old_string": "a", "new_string": "b" });
+        assert!(tracker
+            .assert_read_before_edit(tool_names::EDIT_FILE, &args)
+            .is_ok());
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn create_mode_new_file_passes_gate() {
+        let tracker = FileTimeTracker::new();
+        let args =
+            serde_json::json!({ "file_path": "/nonexistent/brand/new.txt", "content": "x" });
+        assert!(tracker
+            .assert_read_before_edit(tool_names::EDIT_FILE, &args)
+            .is_ok());
+    }
+
+    #[test]
+    fn overwrite_mode_unread_existing_file_is_rejected() {
+        let path = temp_file("existing content\n");
+        let p = path.to_str().unwrap();
+        let tracker = FileTimeTracker::new();
+        let args = serde_json::json!({ "file_path": p, "content": "replacement" });
+        let err = tracker
+            .assert_read_before_edit(tool_names::EDIT_FILE, &args)
+            .unwrap_err();
+        assert!(err.contains("Refusing to overwrite"), "got: {err}");
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn non_edit_tools_bypass_gate() {
+        let path = temp_file("content\n");
+        let p = path.to_str().unwrap();
+        let tracker = FileTimeTracker::new();
+        let args = serde_json::json!({ "path": p });
+        assert!(tracker
+            .assert_read_before_edit(tool_names::DELETE_FILE, &args)
+            .is_ok());
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn seed_from_history_unlocks_cross_turn_edit() {
+        let path = temp_file("turn one content\n");
+        let p = path.to_str().unwrap();
+        let history = vec![serde_json::json!({
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [{
+                "id": "rf:0",
+                "type": "function",
+                "function": {
+                    "name": tool_names::READ_FILE,
+                    "arguments": format!("{{\"path\":\"{}\"}}", p),
+                }
+            }]
+        })];
+        let mut tracker = FileTimeTracker::new();
+        tracker.seed_from_history(&history);
+        let args = serde_json::json!({ "file_path": p, "old_string": "a", "new_string": "b" });
+        assert!(tracker
+            .assert_read_before_edit(tool_names::EDIT_FILE, &args)
+            .is_ok());
+        assert!(tracker.assert_fresh(p).is_ok());
         std::fs::remove_file(&path).ok();
     }
 
