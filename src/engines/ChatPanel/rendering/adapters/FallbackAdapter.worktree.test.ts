@@ -119,6 +119,30 @@ describe("FallbackAdapter worktree block routing", () => {
     expect(markup).not.toContain("OUTPUT");
   });
 
+  it("routes flat tool_call events by uiCanonical", () => {
+    const props: RecipeRendererProps = {
+      event_id: "event-worktree-ui-canonical",
+      functionName: "tool_call",
+      uiCanonical: "worktree",
+      action_type: "tool_call",
+      args: { action: "add", base_ref: "develop", branch: "fix/issue-137" },
+      result: {
+        error:
+          "Error executing worktree: Execution failed: git worktree add failed: fatal: 'fix/issue-137' is already used by worktree",
+      },
+      status: "failed",
+    };
+
+    const markup = renderToStaticMarkup(createElement(RecipeRenderer, props));
+
+    expect(markup).toContain('data-tool-call-name="worktree"');
+    expect(markup).toContain("fix/issue-137");
+    expect(markup).toContain("develop");
+    expect(markup).toContain("already used by worktree");
+    expect(markup).not.toContain("INPUT");
+    expect(markup).not.toContain("OUTPUT");
+  });
+
   it("renders failed worktree mutations as a structured block", () => {
     const markup = renderWorktreeEvent(
       { action: "add", base_ref: "develop", branch: "fix/issue-148" },

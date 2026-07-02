@@ -2,24 +2,25 @@
  * useTodoSync Hook
  *
  * Syncs manage_todo events from session updates into the per-session
- * todo slot. Two data paths:
+ * todo slot. Three data paths:
  *
  * 1. **Cold-start / session switch**: `getTodos(sessionId)` fetches
  *    persisted todos from the Rust SQLite backend.
- * 2. **Simulator events (replay)**: scans `simulatorEventsAtom` for
- *    the latest `manage_todo` tool-call event up to the current
- *    replay cursor.
+ * 2. **Event store (live + replay)**: scans session events for the
+ *    latest `manage_todo` tool event up to the current replay cursor.
+ * 3. **IPC push (live)**: `agent:todos_updated` via
+ *    `handleTodosUpdated` (eventHandlers/agentSpecific.ts).
  *
- * Real-time push from `agent:todos_updated` is handled upstream in
- * `handleTodosUpdated` (eventHandlers/agentSpecific.ts), which writes
- * directly to `updateTodosForSessionAtom` via the Jotai store — no
- * browser CustomEvent relay needed.
+ * Mounted from `ChatView` so the sticky pin bar stays aligned with chat
+ * blocks even when the IPC push is missed.
  */
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { useEffect, useRef } from "react";
 
 import { getTodos } from "@src/api/tauri/agent";
 import { currentEventAtom } from "@src/engines/SessionCore/core/atoms";
+import { eventsAtom } from "@src/engines/SessionCore/core/atoms/events";
+import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { simulatorEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
 import { extractTodoData } from "@src/engines/SessionCore/rendering/props";
@@ -69,6 +70,34 @@ export type { RawPersistedTodoItem };
 export const normalizePersistedTodo = normalizePersistedTodoCore;
 export const normalizePersistedTodoList = normalizePersistedTodoListCore;
 
+export function findLatestManageTodoEvent(
+  events: readonly SessionEvent[],
+  sessionId: string,
+  maxIndex = events.length - 1
+): SessionEvent | null {
+  const limit = Math.min(maxIndex, events.length - 1);
+  for (let index = limit; index >= 0; index--) {
+    const event = events[index];
+    if (!isManageTodoEvent(event)) continue;
+    const eventSid = event.sessionId;
+    if (eventSid && eventSid !== sessionId) continue;
+    return event;
+  }
+  return null;
+}
+
+export function serializeTodoSnapshot(todos: TodoItem[]): string {
+  return JSON.stringify(
+    todos.map((todo) => ({
+      id: todo.id,
+      content: todo.content,
+      activeForm: todo.activeForm,
+      status: todo.status,
+      blockedBy: todo.blockedBy,
+    }))
+  );
+}
+
 function extractTodosFromEvent(event: SessionEvent): TodoItem[] {
   const normalized = normalizeActivity(
     event as unknown as Record<string, unknown>
@@ -109,6 +138,8 @@ function extractTodosFromEvent(event: SessionEvent): TodoItem[] {
 
 export function useTodoSync(sessionId?: string): void {
   const simulatorEvents = useAtomValue(simulatorEventsAtom);
+  const liveEvents = useAtomValue(eventsAtom);
+  const pipelineSessionId = useAtomValue(sessionIdAtom);
   const currentEvent = useAtomValue(currentEventAtom);
   const updateTodosForSession = useSetAtom(updateTodosForSessionAtom);
   const clearTodosForSession = useSetAtom(clearTodosForSessionAtom);
@@ -116,7 +147,7 @@ export function useTodoSync(sessionId?: string): void {
 
   const lastSessionIdRef = useRef<string | undefined>(sessionId);
   const processedCountRef = useRef<number>(0);
-  const lastProcessedTodoIdRef = useRef<string | null>(null);
+  const lastProcessedTodoSnapshotRef = useRef<string | null>(null);
   const lastCurrentEventIdRef = useRef<string | null>(null);
 
   // Clear todos on session change, then load persisted todos from backend
@@ -125,7 +156,7 @@ export function useTodoSync(sessionId?: string): void {
       const prev = lastSessionIdRef.current;
       lastSessionIdRef.current = sessionId;
       processedCountRef.current = 0;
-      lastProcessedTodoIdRef.current = null;
+      lastProcessedTodoSnapshotRef.current = null;
       // Only clear when actually switching to a *different* session.
       // A transient undefined (panel remount / layout shuffle) must not
       // wipe the live slot — that caused the todo pill to flash 0 and
@@ -179,23 +210,31 @@ export function useTodoSync(sessionId?: string): void {
     };
   }, [sessionId, clearTodosForSession, updateTodosForSession, store]);
 
-  // Process todo events — find the LATEST manage_todo event up to current replay position
+  // Process todo events — find the latest manage_todo up to the replay cursor.
+  // Prefer the full event store when it matches this surface's session so
+  // merged tool_result payloads refresh the pin bar on the same tool_call id.
   useEffect(() => {
     if (!sessionId) return;
-    if (!simulatorEvents || simulatorEvents.length === 0) return;
+    if (pipelineSessionId && pipelineSessionId !== sessionId) return;
+
+    const replayEvents =
+      pipelineSessionId === sessionId && liveEvents.length > 0
+        ? liveEvents
+        : simulatorEvents;
+    if (!replayEvents || replayEvents.length === 0) return;
 
     const currentEventId = currentEvent?.id ?? null;
 
     if (
-      simulatorEvents.length === processedCountRef.current &&
+      replayEvents.length === processedCountRef.current &&
       currentEventId === lastCurrentEventIdRef.current
     ) {
       return;
     }
 
-    let maxIndex = simulatorEvents.length - 1;
+    let maxIndex = replayEvents.length - 1;
     if (currentEventId) {
-      const currentIndex = simulatorEvents.findIndex(
+      const currentIndex = replayEvents.findIndex(
         (event) => event.id === currentEventId
       );
       if (currentIndex !== -1) {
@@ -203,38 +242,39 @@ export function useTodoSync(sessionId?: string): void {
       }
     }
 
-    let latestTodoEvent: SessionEvent | null = null;
-    for (let index = maxIndex; index >= 0; index--) {
-      const event = simulatorEvents[index];
-      if (isManageTodoEvent(event)) {
-        // Skip events that belong to a different session (e.g. a subagent
-        // whose manage_todo leaked into the parent's event stream).
-        const eventSid = event.sessionId;
-        if (eventSid && eventSid !== sessionId) continue;
-        latestTodoEvent = event;
-        break;
-      }
-    }
+    const latestTodoEvent = findLatestManageTodoEvent(
+      replayEvents,
+      sessionId,
+      maxIndex
+    );
 
-    processedCountRef.current = simulatorEvents.length;
+    processedCountRef.current = replayEvents.length;
     lastCurrentEventIdRef.current = currentEventId;
 
     if (!latestTodoEvent) return;
-    if (latestTodoEvent.id === lastProcessedTodoIdRef.current) return;
 
     const todos = extractTodosFromEvent(latestTodoEvent);
+    if (todos.length === 0) return;
 
-    if (todos.length > 0) {
-      updateTodosForSession({
-        sessionId,
-        todos,
-        merge: false,
-        timestamp: latestTodoEvent.createdAt,
-      });
-    }
+    const snapshot = serializeTodoSnapshot(todos);
+    if (snapshot === lastProcessedTodoSnapshotRef.current) return;
 
-    lastProcessedTodoIdRef.current = latestTodoEvent.id;
-  }, [sessionId, simulatorEvents, currentEvent, updateTodosForSession]);
+    updateTodosForSession({
+      sessionId,
+      todos,
+      merge: false,
+      timestamp: latestTodoEvent.createdAt,
+    });
+
+    lastProcessedTodoSnapshotRef.current = snapshot;
+  }, [
+    sessionId,
+    pipelineSessionId,
+    liveEvents,
+    simulatorEvents,
+    currentEvent,
+    updateTodosForSession,
+  ]);
 }
 
 export default useTodoSync;

@@ -16,7 +16,7 @@
  *   chatHistory,
  * } = useChatPanelState();
  */
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom } from "jotai";
 import { useCallback, useState } from "react";
 
 import {
@@ -26,8 +26,6 @@ import {
 import { useDataContext } from "@src/contexts/workspace/DataContext";
 import { useTaskStatus } from "@src/engines/SessionCore";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
-import { useTodoSync } from "@src/engines/SessionCore/hooks/session/useTodoSync";
-import { activeSessionIdAtom } from "@src/store/session";
 import { chatDropDownShowAtom } from "@src/store/ui/chatPanelAtom";
 
 // ============================================
@@ -93,15 +91,7 @@ export function useChatPanelState(): UseChatPanelReturn {
   // Global State
   // ============================================
 
-  const sessionId = useAtomValue(activeSessionIdAtom);
   const [chatDropDownShow, setChatDropDownShow] = useAtom(chatDropDownShowAtom);
-
-  // ============================================
-  // Todo Sync (for StickyTaskList)
-  // ============================================
-
-  // Sync manage_todo events to the sticky task list atom
-  useTodoSync(sessionId || undefined);
 
   // ============================================
   // Local State

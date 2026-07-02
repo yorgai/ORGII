@@ -75,10 +75,15 @@ function extractAction(normalizedProps: UniversalEventProps): string {
 export const RecipeRenderer: React.FC<RecipeRendererProps> = (props) => {
   const toolName = extractActualToolName(props);
   const eventUiCanonical = props.event?.uiCanonical;
+  const directUiCanonical = (props as Record<string, unknown>).uiCanonical as
+    | string
+    | undefined;
   const uiCanonical =
     eventUiCanonical && eventUiCanonical !== "tool_call"
       ? eventUiCanonical
-      : getCliUiCanonical(toolName);
+      : directUiCanonical && directUiCanonical !== "tool_call"
+        ? directUiCanonical
+        : getCliUiCanonical(toolName);
   const normalizedProps = useNormalizedEventProps(props, uiCanonical);
 
   if (!normalizedProps) return null;
