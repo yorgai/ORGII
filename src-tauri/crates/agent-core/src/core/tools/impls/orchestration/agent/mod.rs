@@ -691,6 +691,44 @@ impl Tool for AgentTool {
         // 3. Instance numbering — also enforces the max-instances cap.
         let instance_number = self.next_instance_number(&agent_id).await?;
 
+        // 3b. Mint the subagent session id and announce a provisional
+        // "running" job IMMEDIATELY — before the slow init below (provider
+        // preflight, registry build, worktree creation) which can take
+        // seconds. The frontend's live-subagent signal (planning footer +
+        // Stop affordance) is driven by this broadcast; announcing only at
+        // real registration left the whole creation window looking hung.
+        // Real registration re-broadcasts "running" for the same handle
+        // (idempotent on the FE job map); init failures broadcast "failed"
+        // via the guard's Drop.
+        //
+        // Prefix constants live in `agent_core::core::definitions::prefix_lookup`
+        // so the session-id parser (`looks_like_valid_subagent_session_id`)
+        // and any future routing logic share a single source of truth.
+        use crate::definitions::prefix_lookup::{
+            SHADOW_SUBAGENT_SESSION_PREFIX, SUBAGENT_SESSION_PREFIX,
+        };
+        let id_prefix = if is_shadow {
+            SHADOW_SUBAGENT_SESSION_PREFIX
+        } else {
+            SUBAGENT_SESSION_PREFIX
+        };
+        let subagent_session_id = resume_session_id.clone().unwrap_or_else(|| {
+            // `id_prefix` already ends with `-` (constant); avoid double-dash.
+            format!("{}{}-{}", id_prefix, agent_id, uuid::Uuid::new_v4())
+        });
+        let subagent_type_wire = if is_shadow {
+            helpers::subagent_type::SHADOW.to_string()
+        } else {
+            subagent_type_label(&agent_id)
+        };
+        let parent_session_id = self.parent_session_id.lock().await.clone();
+        let mut provisional_guard = helpers::ProvisionalJobGuard::announce(
+            &parent_session_id,
+            &subagent_session_id,
+            &agent.name,
+            &subagent_type_wire,
+        );
+
         // 4. Resolve model + reliability for THIS sub-agent.
         //
         // Sub-agents do not inherit the parent's model or fallback chain
@@ -709,7 +747,6 @@ impl Tool for AgentTool {
         let (model, sub_reliability_opt) =
             helpers::resolve_subagent_model(&agent, explicit_param_model, &parent_model);
 
-        let parent_session_id = self.parent_session_id.lock().await.clone();
         let parent_account_id_for_provider: Option<String> =
             self.config.session_account_id.clone().or_else(|| {
                 crate::session::persistence::get_session(&parent_session_id)
@@ -864,29 +901,8 @@ impl Tool for AgentTool {
             steering_queue: None,
         };
 
-        // 9. Create subagent session ID (reuse for resume, new for fresh).
-        // Prefix constants live in `agent_core::core::definitions::prefix_lookup`
-        // (re-exported as `crate::definitions::prefix_lookup` here) so the
-        // session-id parser (`looks_like_valid_subagent_session_id`) and any
-        // future routing logic share a single source of truth.
-        use crate::definitions::prefix_lookup::{
-            SHADOW_SUBAGENT_SESSION_PREFIX, SUBAGENT_SESSION_PREFIX,
-        };
-        let id_prefix = if is_shadow {
-            SHADOW_SUBAGENT_SESSION_PREFIX
-        } else {
-            SUBAGENT_SESSION_PREFIX
-        };
-        let subagent_session_id = resume_session_id.unwrap_or_else(|| {
-            // `id_prefix` already ends with `-` (constant); avoid double-dash.
-            format!("{}{}-{}", id_prefix, agent_id, uuid::Uuid::new_v4())
-        });
-
-        let subagent_type_wire = if is_shadow {
-            helpers::subagent_type::SHADOW.to_string()
-        } else {
-            subagent_type_label(&agent_id)
-        };
+        // 9. Session id + type label were minted at step 3b (so the
+        // provisional job announcement could precede the slow init above).
 
         // The parent↔child linkage — stamping `subagentSessionId` + `action: "delegate"`
         // onto the parent's still-running `agent` tool_call event — happens inside
@@ -1108,6 +1124,9 @@ impl Tool for AgentTool {
 
         // ── Background mode: spawn and return handle immediately ─────
         if is_background {
+            // Real registration inside the spawn re-broadcasts "running"
+            // for this handle; the provisional announcement is superseded.
+            provisional_guard.disarm();
             return Ok(Self::spawn_background_subagent(
                 background::BackgroundSpawnArgs {
                     agent: &agent,
@@ -1131,6 +1150,9 @@ impl Tool for AgentTool {
         }
 
         // ── Foreground mode: block until subagent completes ──────────
+        // Registration inside `run_foreground_subagent` takes over the
+        // handle (it also emits terminal status on completion/failure).
+        provisional_guard.disarm();
         let fg_session_id = subagent_session_id.clone();
         let result = self
             .run_foreground_subagent(foreground::ForegroundRunArgs {
