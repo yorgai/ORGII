@@ -16,6 +16,8 @@ import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreP
 
 import { SPAWNING_TOOLS_ARRAY } from "../../shared/subagentTracking";
 import type { AgentWSEvent } from "../../shared/types";
+import { handleTodosUpdated } from "./agentSpecific";
+import { getEventSessionId } from "./streamHelpers";
 import type { EventHandlerContext } from "./types";
 
 // ============================================================================
@@ -25,9 +27,14 @@ import type { EventHandlerContext } from "./types";
 export function handleCodingSessionEvent(
   event: AgentWSEvent,
   _parentEventId: string,
-  _ctx: EventHandlerContext
+  ctx: EventHandlerContext
 ): void {
   switch (event.type) {
+    case "agent:todos_updated": {
+      handleTodosUpdated(event, getEventSessionId(event), ctx);
+      break;
+    }
+
     case "agent:tool_call":
     case "agent:tool_result":
     case "agent:message_delta":

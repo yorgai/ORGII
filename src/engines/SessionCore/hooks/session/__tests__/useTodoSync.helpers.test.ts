@@ -16,17 +16,20 @@
  */
 import { describe, expect, it } from "vitest";
 
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import type { TodoItem } from "@src/store/ui/todoAtom";
+
 import {
   isExpectedTodoLoadRejection,
-  normalizePersistedTodo,
-  normalizePersistedTodoList,
   sanitizeTodoDisplayText,
 } from "../todoNormalization";
-
-// SessionEvent fixtures are not needed here — the `isManageTodoEvent`
-// helper depends on the full hook module (which transitively
-// imports atoms via jotai → localStorage). Coverage for that helper
-// is provided by the broader `useTodoSync` integration tests.
+import {
+  findLatestManageTodoEvent,
+  isManageTodoEvent,
+  normalizePersistedTodo,
+  normalizePersistedTodoList,
+  serializeTodoSnapshot,
+} from "../useTodoSync";
 
 describe("normalizePersistedTodo", () => {
   it("uses the provided id when present", () => {
@@ -237,5 +240,130 @@ describe("isExpectedTodoLoadRejection", () => {
     expect(isExpectedTodoLoadRejection(new Error("Not A Coding Agent"))).toBe(
       false
     );
+  });
+});
+
+function makeManageTodoEvent(
+  overrides: Partial<SessionEvent> & Pick<SessionEvent, "id">
+): SessionEvent {
+  return {
+    chunk_id: overrides.id,
+    sessionId: "sdeagent-test",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    functionName: "manage_todo",
+    uiCanonical: "manage_todo",
+    actionType: "tool_call",
+    args: {},
+    result: {},
+    source: "assistant",
+    displayText: "",
+    displayStatus: "completed",
+    displayVariant: "tool_call",
+    activityStatus: "processed",
+    ...overrides,
+  };
+}
+
+describe("isManageTodoEvent", () => {
+  it("matches manage_todo functionName", () => {
+    expect(
+      isManageTodoEvent(
+        makeManageTodoEvent({ id: "todo-1", functionName: "manage_todo" })
+      )
+    ).toBe(true);
+  });
+
+  it("returns false for unrelated events", () => {
+    expect(
+      isManageTodoEvent(
+        makeManageTodoEvent({ id: "read-1", functionName: "read_file" })
+      )
+    ).toBe(false);
+  });
+});
+
+describe("findLatestManageTodoEvent", () => {
+  it("returns the latest manage_todo for the requested session", () => {
+    const events = [
+      makeManageTodoEvent({ id: "todo-old" }),
+      makeManageTodoEvent({ id: "other-session", sessionId: "other" }),
+      makeManageTodoEvent({ id: "todo-new" }),
+    ];
+
+    expect(findLatestManageTodoEvent(events, "sdeagent-test")?.id).toBe(
+      "todo-new"
+    );
+  });
+
+  it("respects replay maxIndex", () => {
+    const events = [
+      makeManageTodoEvent({ id: "todo-old" }),
+      makeManageTodoEvent({ id: "todo-new" }),
+    ];
+
+    expect(findLatestManageTodoEvent(events, "sdeagent-test", 0)?.id).toBe(
+      "todo-old"
+    );
+  });
+});
+
+describe("serializeTodoSnapshot dedup", () => {
+  /**
+   * Mirrors the useTodoSync effect guard chain:
+   *   1. skip when extracted todos are empty (pre-merge tool_call)
+   *   2. skip when snapshot matches lastProcessedTodoSnapshotRef
+   *
+   * Regression for #247: event-id dedup blocked refresh when the same
+   * manage_todo tool_call id was merged with populated todos.
+   */
+  function simulateTodoSyncDedup(
+    lastSnapshot: string | null,
+    todos: TodoItem[]
+  ): { lastSnapshot: string | null; applied: boolean } {
+    if (todos.length === 0) {
+      return { lastSnapshot, applied: false };
+    }
+    const snapshot = serializeTodoSnapshot(todos);
+    if (snapshot === lastSnapshot) {
+      return { lastSnapshot, applied: false };
+    }
+    return { lastSnapshot: snapshot, applied: true };
+  }
+
+  it("allows update when same event id transitions from empty to populated todos", () => {
+    let lastSnapshot: string | null = null;
+
+    // Phase 1: tool_call arrives before tool_result merge — no todos yet.
+    const preMerge = simulateTodoSyncDedup(lastSnapshot, []);
+    expect(preMerge.applied).toBe(false);
+    expect(preMerge.lastSnapshot).toBeNull();
+    lastSnapshot = preMerge.lastSnapshot;
+
+    // Phase 2: same event id, now merged with populated todos.
+    const populatedTodos: TodoItem[] = [
+      { id: "t1", content: "Implement feature", status: "pending" },
+      { id: "t2", content: "Write tests", status: "in_progress" },
+    ];
+    const postMerge = simulateTodoSyncDedup(lastSnapshot, populatedTodos);
+    expect(postMerge.applied).toBe(true);
+    expect(postMerge.lastSnapshot).not.toBeNull();
+    expect(postMerge.lastSnapshot).not.toBe(lastSnapshot);
+    lastSnapshot = postMerge.lastSnapshot;
+
+    // Phase 3: identical re-process of merged event dedups on snapshot.
+    const replay = simulateTodoSyncDedup(lastSnapshot, populatedTodos);
+    expect(replay.applied).toBe(false);
+    expect(replay.lastSnapshot).toBe(lastSnapshot);
+  });
+
+  it("detects snapshot changes when todo status updates on same event", () => {
+    const base: TodoItem[] = [{ id: "t1", content: "Task", status: "pending" }];
+    const updated: TodoItem[] = [
+      { id: "t1", content: "Task", status: "completed" },
+    ];
+
+    const before = serializeTodoSnapshot(base);
+    const after = serializeTodoSnapshot(updated);
+    expect(before).not.toBe(after);
   });
 });

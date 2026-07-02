@@ -47,6 +47,7 @@ import { replayModeAtom } from "@src/engines/SessionCore";
 import { derivedSnapshotAtom } from "@src/engines/SessionCore/core/atoms/events";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/planDisplayEvents";
+import { useTodoSync } from "@src/engines/SessionCore/hooks/session/useTodoSync";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { useFileReviewSync } from "@src/hooks/fileReview";
 import { createLogger } from "@src/hooks/logger";
@@ -258,6 +259,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
       };
     }, [sessionId, setActiveSessionId, readOnly, secondary, store]);
 
+    useTodoSync(readOnly ? undefined : sessionId);
     useFileReviewSync(sessionId, !readOnly && !secondary);
 
     const isCursorIde = isCursorIdeSession(sessionId);

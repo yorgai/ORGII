@@ -251,8 +251,7 @@ export async function dispatchAgentEvent(
       handleAdeAction(event);
       break;
     case "agent:todos_updated":
-      if (ctx.features.hasFileChangeEvents)
-        handleTodosUpdated(event, eventSessionId, ctx);
+      handleTodosUpdated(event, eventSessionId, ctx);
       break;
     case "permission:request":
       if (ctx.features.hasPermissionRequest)
