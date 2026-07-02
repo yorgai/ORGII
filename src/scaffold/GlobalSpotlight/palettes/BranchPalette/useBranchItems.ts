@@ -83,8 +83,8 @@ export function useBranchItems(
           rightLabel: lastCommit,
         },
         action: async () => {
-          await onSelect(branch.name, branch);
-          onClose();
+          const shouldClose = await onSelect(branch.name, branch);
+          if (shouldClose !== false) onClose();
         },
       };
     };

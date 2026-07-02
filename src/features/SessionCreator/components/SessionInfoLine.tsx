@@ -25,6 +25,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { gitApi, removeGitWorktree } from "@src/api/http/git";
+import { CheckoutBlockedDialog } from "@src/components/GitDialogs/CheckoutBlockedDialog";
 import { CheckoutConflictDialog } from "@src/components/GitDialogs/CheckoutConflictDialog";
 import PillGroup, { type PillGroupVariant } from "@src/components/PillGroup";
 import RunningLocationDropdownPanel from "@src/components/RunningLocationDropdownPanel";
@@ -257,6 +258,12 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
         repoPath,
         ref: branch,
         onConflict: (name) => CheckoutConflictDialog.open({ branchName: name }),
+        onBlocked: ({ branch: name, errorType, message }) =>
+          CheckoutBlockedDialog.open({
+            branchName: name,
+            errorType,
+            message,
+          }),
       });
 
       if (result.success) {
@@ -268,7 +275,7 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
         return;
       }
 
-      if (result.outcome !== "cancelled") {
+      if (result.outcome !== "cancelled" && !result.blocked) {
         showGitActionDialogSafely(
           result.message || `Failed to checkout branch "${branch}"`,
           "error"
@@ -288,7 +295,13 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
         start_point: startPoint ?? null,
         checkout: false,
       });
-      if (!success) return;
+      if (!success) {
+        showGitActionDialogSafely(
+          `Failed to create branch "${branch}"`,
+          "error"
+        );
+        return;
+      }
       await handleBranchSelect(branch);
     },
     [handleBranchSelect, repoId, repoPath]

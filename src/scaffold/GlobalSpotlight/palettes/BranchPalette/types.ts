@@ -39,8 +39,14 @@ export type RemoveWorktreeHandler = (
 ) => RemoveWorktreeResult | void | Promise<RemoveWorktreeResult | void>;
 
 export interface BranchPaletteProps extends BasePaletteProps {
-  /** Callback when a branch is selected (checkout) */
-  onSelect: (branchName: string, branch: BranchItem) => void | Promise<void>;
+  /**
+   * Callback when a branch is selected (checkout).
+   * Return `false` to keep the palette open (e.g. when a blocking dialog is shown).
+   */
+  onSelect: (
+    branchName: string,
+    branch: BranchItem
+  ) => void | false | Promise<void | false>;
   /** Repository ID to fetch branches for */
   repoId: string;
   /** Repository path (optional - will be looked up from atoms if not provided) */
@@ -87,7 +93,10 @@ export interface UseBranchPaletteOptions {
   repoId: string;
   repoPathProp?: string;
   currentBranchName?: string;
-  onSelect: (branchName: string, branch: BranchItem) => void | Promise<void>;
+  onSelect: (
+    branchName: string,
+    branch: BranchItem
+  ) => void | false | Promise<void | false>;
   onCreateBranch?: (
     branchName: string,
     startPoint?: string
@@ -123,7 +132,10 @@ export interface UseBranchItemsOptions {
   searchQuery: string;
   currentBranchName?: string;
   effectiveShowRemoveMode: boolean;
-  onSelect: (branchName: string, branch: BranchItem) => void | Promise<void>;
+  onSelect: (
+    branchName: string,
+    branch: BranchItem
+  ) => void | false | Promise<void | false>;
   onCreateBranch?: (
     branchName: string,
     startPoint?: string

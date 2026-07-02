@@ -75,8 +75,8 @@ export type CheckoutErrorType =
   | "branch_not_found" // Branch doesn't exist
   | "merge_in_progress" // Need to complete/abort merge first
   | "rebase_in_progress" // Need to complete/abort rebase first
-  | "worktree_branch_in_use" // Branch is checked out in another worktree
   | "cherry_pick_in_progress" // Need to complete/abort cherry-pick first
+  | "worktree_branch_in_use" // Branch is already checked out in another worktree
   | "other"; // Generic error
 
 /**
@@ -161,7 +161,7 @@ function parseCheckoutError(errorMessage: string): {
   }
 
   // Cherry-pick in progress
-  if (msg.includes("cherry-pick")) {
+  if (msg.includes("cherry-pick") || msg.includes("cherry_pick")) {
     return {
       message:
         "A cherry-pick is in progress. Please complete or abort it first.",

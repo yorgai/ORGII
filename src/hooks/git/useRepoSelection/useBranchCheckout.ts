@@ -5,6 +5,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 
+import { CheckoutBlockedDialog } from "@src/components/GitDialogs/CheckoutBlockedDialog";
 import { CheckoutConflictDialog } from "@src/components/GitDialogs/CheckoutConflictDialog";
 import { createLogger } from "@src/hooks/logger";
 import { runGuardedCheckout } from "@src/services/git/operations/guardedCheckout";
@@ -86,6 +87,12 @@ export function useBranchCheckout(): UseBranchCheckoutReturn {
           ref: branch,
           onConflict: (name) =>
             CheckoutConflictDialog.open({ branchName: name }),
+          onBlocked: ({ branch: name, errorType, message }) =>
+            CheckoutBlockedDialog.open({
+              branchName: name,
+              errorType,
+              message,
+            }),
         });
 
         if (result.success) {
@@ -97,7 +104,7 @@ export function useBranchCheckout(): UseBranchCheckoutReturn {
         } else {
           // Rollback: nothing was checked out (error or user cancellation).
           setCurrentBranch(previousBranch);
-          if (result.outcome !== "cancelled") {
+          if (result.outcome !== "cancelled" && !result.blocked) {
             log.error(
               `[useBranchCheckout] Failed to checkout branch "${branch}":`,
               result.message,

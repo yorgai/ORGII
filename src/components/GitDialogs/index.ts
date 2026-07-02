@@ -76,3 +76,8 @@ export {
   type CheckoutConflictOptions,
   type CheckoutConflictResult,
 } from "./CheckoutConflictDialog";
+
+export {
+  CheckoutBlockedDialog,
+  type CheckoutBlockedOptions,
+} from "./CheckoutBlockedDialog";

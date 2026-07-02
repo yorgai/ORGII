@@ -70,23 +70,64 @@ describe("runGuardedCheckout — clean tree", () => {
 });
 
 describe("runGuardedCheckout — non-conflict failure", () => {
-  it("returns an error and never shows the conflict dialog", async () => {
+  it("returns an error, shows the blocked dialog, and never shows the dirty-tree conflict dialog", async () => {
     gitCheckout.mockResolvedValueOnce({
       success: false,
       errorType: "branch_not_found",
       error: "Branch not found.",
     });
     const onConflict = conflict("stash");
+    const onBlocked = vi.fn().mockResolvedValue(undefined);
 
-    const result = await runGuardedCheckout({ ...BASE, onConflict });
+    const result = await runGuardedCheckout({
+      ...BASE,
+      onConflict,
+      onBlocked,
+    });
 
     expect(result).toEqual({
       success: false,
       outcome: "error",
       errorType: "branch_not_found",
       message: "Branch not found.",
+      blocked: true,
     });
     expect(onConflict).not.toHaveBeenCalled();
+    expect(onBlocked).toHaveBeenCalledWith({
+      branch: "feature",
+      errorType: "branch_not_found",
+      message: "Branch not found.",
+    });
+  });
+
+  it("surfaces a worktree branch-in-use blocker through onBlocked", async () => {
+    gitCheckout.mockResolvedValueOnce({
+      success: false,
+      errorType: "worktree_branch_in_use",
+      error: "fatal: 'feature' is already checked out at '/tmp/wt'",
+    });
+    const onConflict = conflict("stash");
+    const onBlocked = vi.fn().mockResolvedValue(undefined);
+
+    const result = await runGuardedCheckout({
+      ...BASE,
+      onConflict,
+      onBlocked,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      outcome: "error",
+      errorType: "worktree_branch_in_use",
+      message: "fatal: 'feature' is already checked out at '/tmp/wt'",
+      blocked: true,
+    });
+    expect(onConflict).not.toHaveBeenCalled();
+    expect(onBlocked).toHaveBeenCalledWith({
+      branch: "feature",
+      errorType: "worktree_branch_in_use",
+      message: "fatal: 'feature' is already checked out at '/tmp/wt'",
+    });
   });
 
   it("falls back to a default message when none is supplied", async () => {
@@ -101,17 +142,25 @@ describe("runGuardedCheckout — non-conflict failure", () => {
     expect(result.message).toBe('Failed to checkout branch "feature"');
   });
 
-  it("returns an error when the checkout call throws", async () => {
+  it("returns an error and shows the blocked dialog when the checkout call throws", async () => {
     gitCheckout.mockRejectedValueOnce(new Error("network down"));
+    const onBlocked = vi.fn().mockResolvedValue(undefined);
 
     const result = await runGuardedCheckout({
       ...BASE,
       onConflict: conflict("stash"),
+      onBlocked,
     });
 
     expect(result).toEqual({
       success: false,
       outcome: "error",
+      errorType: "other",
+      message: "network down",
+      blocked: true,
+    });
+    expect(onBlocked).toHaveBeenCalledWith({
+      branch: "feature",
       errorType: "other",
       message: "network down",
     });
@@ -179,15 +228,23 @@ describe("runGuardedCheckout — uncommitted_changes → stash", () => {
         error: "still dirty",
       });
     gitStashPush.mockResolvedValueOnce({ success: true });
+    const onBlocked = vi.fn().mockResolvedValue(undefined);
 
     const result = await runGuardedCheckout({
       ...BASE,
       onConflict: conflict("stash"),
+      onBlocked,
     });
 
     expect(result).toEqual({
       success: false,
       outcome: "error",
+      errorType: "other",
+      message: "still dirty",
+      blocked: true,
+    });
+    expect(onBlocked).toHaveBeenCalledWith({
+      branch: "feature",
       errorType: "other",
       message: "still dirty",
     });
@@ -255,14 +312,23 @@ describe("runGuardedCheckout — uncommitted_changes → force", () => {
         error: "cannot force",
       });
 
+    const onBlocked = vi.fn().mockResolvedValue(undefined);
+
     const result = await runGuardedCheckout({
       ...BASE,
       onConflict: conflict("force"),
+      onBlocked,
     });
 
     expect(result).toEqual({
       success: false,
       outcome: "error",
+      errorType: "other",
+      message: "cannot force",
+      blocked: true,
+    });
+    expect(onBlocked).toHaveBeenCalledWith({
+      branch: "feature",
       errorType: "other",
       message: "cannot force",
     });
