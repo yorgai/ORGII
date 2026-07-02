@@ -497,6 +497,18 @@ impl Tool for AgentTool {
         100_000
     }
 
+    /// Subagent results are parsed by the frontend (result cards, trailer
+    /// lines) and consumed inline by the parent — a `<persisted-output>`
+    /// stub breaks both. Oversized results fall back to tail truncation.
+    fn allow_persisted_output(&self) -> bool {
+        false
+    }
+
+    /// Subagent final reports deserve more headroom than shell dumps.
+    fn output_budget(&self) -> usize {
+        100_000
+    }
+
     fn parameters(&self) -> Value {
         schema::parameters()
     }

@@ -72,6 +72,16 @@ impl Tool for SkillTool {
         true
     }
 
+    /// SKILL.md bodies can be large and the FULL text is the point of the
+    /// call — never stub it to disk, and give it generous headroom.
+    fn output_budget(&self) -> usize {
+        200_000
+    }
+
+    fn allow_persisted_output(&self) -> bool {
+        false
+    }
+
     fn parameters(&self) -> Value {
         serde_json::json!({
             "type": "object",

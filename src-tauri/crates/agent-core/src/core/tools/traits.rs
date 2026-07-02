@@ -243,6 +243,16 @@ pub trait Tool: Send + Sync {
         50_000
     }
 
+    /// Whether oversized output may be persisted to disk and replaced with a
+    /// `<persisted-output>` stub. Default true (shell/search dumps are
+    /// retrievable-by-path). Tools whose output is semantically load-bearing
+    /// — skill bodies the model must follow, subagent results the frontend
+    /// parses into cards — MUST return false so oversized output falls back
+    /// to plain tail truncation instead of a stub.
+    fn allow_persisted_output(&self) -> bool {
+        true
+    }
+
     /// Character threshold above which a tool result is persisted to disk
     /// and replaced with a preview + file path in the context.
     ///

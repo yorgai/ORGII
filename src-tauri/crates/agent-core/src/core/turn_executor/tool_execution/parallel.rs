@@ -16,7 +16,7 @@ use crate::tools::registry::ToolRegistry;
 use super::super::file_tracker::{extract_file_paths, FileTimeTracker, FILE_READ_TOOLS};
 use super::super::helpers::{
     add_tool_result, add_tool_result_rich_with_timestamp, add_tool_result_with_timestamp,
-    check_permission, truncate_or_persist_output,
+    check_permission, truncate_or_persist_output, truncate_output,
 };
 use super::super::types::{PermissionProvider, TurnEventHandler};
 use super::super::usage_telemetry::{serialized_value_bytes, string_bytes, ToolExecutionUsage};
@@ -300,9 +300,14 @@ pub(super) async fn execute_parallel_group(
         // sequential path in `single.rs` (no drift).
         file_tracker.record_tool_file_effects(&call.name, &exec_result.effective_args, is_error);
 
-        let budget = tools.get(&call.name).map(|t| t.output_budget());
-        let mut truncated =
-            truncate_or_persist_output(&raw_text, budget, session_id, &call.name);
+        let tool_ref = tools.get(&call.name);
+        let budget = tool_ref.map(|t| t.output_budget());
+        let allow_persist = tool_ref.map(|t| t.allow_persisted_output()).unwrap_or(true);
+        let mut truncated = if allow_persist {
+            truncate_or_persist_output(&raw_text, budget, session_id, &call.name)
+        } else {
+            truncate_output(&raw_text, budget)
+        };
 
         if truncated.trim().is_empty() {
             truncated = "[No output]".to_string();
