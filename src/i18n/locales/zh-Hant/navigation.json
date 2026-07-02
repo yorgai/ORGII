@@ -608,6 +608,7 @@
       "incomingOwner": "Owner",
       "incomingImport": "Import read-only",
       "incomingImported": "Imported as a read-only session.",
+      "incomingRetryHint": "Import didn't finish. The shared session may still be uploading — try again.",
       "incomingJoinCta": "Join this org",
       "incomingDismiss": "Close",
       "incomingError": "This share link is invalid, expired, or has been revoked."

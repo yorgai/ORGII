@@ -97,6 +97,12 @@ const CollabShareImportDialog: React.FC = () => {
   const resolveFailed = Boolean(missingCoordinates || resolved?.failed);
   const isImported = currentImport?.status === "imported";
   const isImporting = currentImport?.status === "importing";
+  // Import (not resolve) failure: the token resolved but the read-only import
+  // could not finish — a transient error or a share whose owner hasn't pushed
+  // segments yet. Retryable, so we surface a hint but keep the button live.
+  // Gated on `!resolveFailed` so a genuinely invalid token shows only the hard
+  // error above, never this "try again" copy.
+  const importFailed = currentImport?.status === "failed" && !resolveFailed;
   // A prior failure must NOT latch the button off — the guest can retry.
   const canImport =
     Boolean(resolved?.session) && !resolveFailed && !isImporting && !isImported;
@@ -201,6 +207,12 @@ const CollabShareImportDialog: React.FC = () => {
         {isImported ? (
           <div className="rounded-lg bg-fill-1 px-3 py-2 text-[12px] text-text-3">
             {t("collaboration.share.incomingImported")}
+          </div>
+        ) : null}
+
+        {importFailed ? (
+          <div className="rounded-lg bg-fill-1 px-3 py-2 text-[12px] text-text-3">
+            {t("collaboration.share.incomingRetryHint")}
           </div>
         ) : null}
 

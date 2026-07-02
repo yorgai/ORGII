@@ -341,6 +341,37 @@ async function main() {
     `got ${JSON.stringify({ e: summarySession?.eventsEpoch, f: summarySession?.eventsFrozenSeq, c: summarySession?.eventsCount })}`
   );
 
+  // ---- incremental after_seq filtering (design §7.4 delta pull) ----
+  // The consumer that already holds frozen seq 1 pulls with after_seq: 1 and
+  // must receive ONLY the newer frozen segment (seq 2) plus the mutable tail —
+  // never the frozen seq-1 payload it already has. This proves the server, not
+  // the client, does the incremental filtering. The session currently holds
+  // frozen seqs 1 and 2 (epoch 1, count 3) from the M3 section above.
+  const delta = await rpc("orgii_get_session_event_segments", {
+    p_org_id: orgId, ...memberAuthA, session_row_id: sessionRowId, after_seq: 1,
+  });
+  const deltaFrozen = (delta.json?.segments ?? []).filter((s) => !s.isTail);
+  const deltaTail = (delta.json?.segments ?? []).filter((s) => s.isTail);
+  assertOk(
+    "after_seq: 1 returns only the seq-2 frozen segment + tail",
+    delta,
+    (j) =>
+      j?.epoch === 1 && j?.frozenSeq === 2 && j?.count === 3 &&
+      deltaFrozen.length === 1 && deltaFrozen[0]?.seq === 2 &&
+      deltaTail.length === 1,
+    `got frozen=${JSON.stringify(deltaFrozen.map((s) => s.seq))} tail=${deltaTail.length}`
+  );
+  record(
+    "after_seq: 1 excludes the already-held seq-1 frozen segment",
+    !deltaFrozen.some((s) => s.seq === 1)
+  );
+  const deltaSeg2 = deltaFrozen.find((s) => s.seq === 2);
+  record(
+    "delta seq-2 payload gunzips back to the second frozen batch",
+    Boolean(deltaSeg2) &&
+      gunzipSync(Buffer.from(deltaSeg2.payloadGz, "base64")).toString() === JSON.stringify(frozen2)
+  );
+
   // ---- sharing plane (M4): visibility filter, directed + link shares ----
   // Third member C = the non-grantee perspective.
   const cInviteCode = randomHex();

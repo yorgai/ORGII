@@ -1147,10 +1147,12 @@ export class CollabSyncEngine {
         profile,
       } of this.getActiveConnections()) {
         let pushedAnything = false;
+        const currentKeys = new Set<string>();
         try {
           for (const session of store.get(sessionsAtom)) {
             if (this.generation !== generation) return;
             const cacheKey = `${org.id}:${session.session_id}`;
+            currentKeys.add(cacheKey);
             if (isSessionPushAllowed(session, org, settings)) {
               // Back in scope → future tombstones must fire again.
               this.knownRemovedSessionKeys.delete(cacheKey);
@@ -1187,6 +1189,30 @@ export class CollabSyncEngine {
               this.deletePushCursor(org.id, session.session_id);
               pushedAnything = true;
             }
+          }
+
+          // Sessions we previously published that are GONE from sessionsAtom
+          // (the owner deleted them locally) must be tombstoned too — the loop
+          // above only sees sessions that still exist, so without this a
+          // deleted session's remote metadata + segments would stay visible
+          // and importable to teammates forever.
+          const orgPrefix = `${org.id}:`;
+          for (const cacheKey of [...this.lastPushedMetadataHashes.keys()]) {
+            if (this.generation !== generation) return;
+            if (!cacheKey.startsWith(orgPrefix)) continue;
+            if (currentKeys.has(cacheKey)) continue;
+            if (this.knownRemovedSessionKeys.has(cacheKey)) continue;
+            const sessionId = cacheKey.slice(orgPrefix.length);
+            await supabaseSyncClient.removeSessionMetadata({
+              ...profile,
+              orgId: org.id,
+              ownerMemberId: member.id,
+              sourceSessionId: sessionId,
+            });
+            this.knownRemovedSessionKeys.add(cacheKey);
+            this.lastPushedMetadataHashes.delete(cacheKey);
+            this.deletePushCursor(org.id, sessionId);
+            pushedAnything = true;
           }
         } catch (error) {
           if (this.generation !== generation) return;

@@ -552,6 +552,12 @@ export function memberFromChatMessage(
  * touches — replayLevel derives from it. The published visibility is hashed
  * too: flipping org ↔ restricted in the share dialog must re-push even when
  * nothing else changed (M4b).
+ *
+ * `repoPath` is DELIBERATELY excluded: it is not carried on the wire record by
+ * `toRemoteMetadata` as a mutable, re-pushable field (the org repo scope, not
+ * the local path, governs visibility), so a local path move must not trigger a
+ * metadata re-push. The hashed fields mirror `toRemoteMetadata`'s sourcing
+ * exactly — nothing more, nothing less.
  */
 export function computeSessionMetadataHash(
   session: Session,
@@ -569,5 +575,6 @@ export function computeSessionMetadataHash(
     activityBucket,
     getEffectiveAccessMode(session, settings),
     getSessionVisibility(session, settings),
+    // NOTE: repoPath is intentionally NOT hashed — see the docblock above.
   ]);
 }

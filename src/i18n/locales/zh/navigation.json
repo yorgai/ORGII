@@ -630,6 +630,7 @@
       "incomingOwner": "所有者",
       "incomingImport": "导入只读副本",
       "incomingImported": "已导入为只读 session。",
+      "incomingRetryHint": "导入未完成,对方的 session 可能还在上传,请重试。",
       "incomingJoinCta": "加入该 org",
       "incomingDismiss": "关闭",
       "incomingError": "分享链接无效、已过期或已被撤销。"

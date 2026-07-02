@@ -393,6 +393,68 @@ describe("CollabSyncEngine", () => {
     expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(2);
   });
 
+  it("re-pushes metadata when status, branch, or lastActivityAt change, but not on a repoPath-only move", async () => {
+    // Both repo paths are in this org's scope, so the repoPath-only move below
+    // keeps the session push-allowed (it does not leave scope and tombstone) —
+    // isolating repoPath as the only differing field.
+    store.set(collabOrgsAtom, [
+      { ...ORG, repoScopes: [REPO_PATH, "/repo/moved"] },
+    ]);
+    store.set(collabMembersAtom, [LOCAL_MEMBER]);
+    store.set(collabSessionAccessSettingsAtom, [
+      accessSettings(COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY),
+    ]);
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+
+    engine.start(store);
+    await settle();
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(1);
+
+    // status is a hashed field → a status change re-pushes.
+    store.set(sessionsAtom, [{ ...LOCAL_SESSION, status: "running" }]);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle();
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(2);
+
+    // branch is hashed → a branch change re-pushes (keep the new status so
+    // only branch differs from the previous push).
+    store.set(sessionsAtom, [
+      { ...LOCAL_SESSION, status: "running", branch: "feat/x" },
+    ]);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle();
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(3);
+
+    // lastActivityAt (updated_at) is hashed but bucketed to the minute — a
+    // move of a full minute crosses the bucket boundary and re-pushes.
+    store.set(sessionsAtom, [
+      {
+        ...LOCAL_SESSION,
+        status: "running",
+        branch: "feat/x",
+        updated_at: "2026-07-01T00:01:00.000Z",
+      },
+    ]);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle();
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(4);
+
+    // repoPath is INTENTIONALLY excluded from the metadata hash (a local path
+    // move is not a wire-record change) → no re-push, everything else equal.
+    store.set(sessionsAtom, [
+      {
+        ...LOCAL_SESSION,
+        status: "running",
+        branch: "feat/x",
+        updated_at: "2026-07-01T00:01:00.000Z",
+        repoPath: "/repo/moved",
+      },
+    ]);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle();
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(4);
+  });
+
   it("tombstones an OFF session exactly once across sweeps", async () => {
     seedConnection(COLLAB_SESSION_ACCESS_MODE.OFF);
     store.set(sessionsAtom, [LOCAL_SESSION]);
@@ -406,6 +468,66 @@ describe("CollabSyncEngine", () => {
     await settle();
     expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
     expect(syncMock.upsertSessionMetadata).not.toHaveBeenCalled();
+  });
+
+  it("re-arms the OFF tombstone after the session comes back into scope and off again", async () => {
+    seedConnection(COLLAB_SESSION_ACCESS_MODE.OFF);
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+
+    engine.start(store);
+    await settle();
+    // OFF at start → exactly one tombstone, no publish.
+    expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
+    expect(syncMock.upsertSessionMetadata).not.toHaveBeenCalled();
+
+    // Flip the member default to FULL_REPLAY: the session becomes push-allowed,
+    // so the sweep publishes it AND clears its known-removed entry (the tombstone
+    // is no longer permanent).
+    store.set(collabSessionAccessSettingsAtom, [
+      accessSettings(COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY),
+    ]);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle();
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(1);
+    // No new tombstone from this transition.
+    expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
+
+    // Flip back to OFF: because the known-removed entry was cleared, the
+    // tombstone must fire AGAIN — it is re-armed, not permanently suppressed.
+    store.set(collabSessionAccessSettingsAtom, [
+      accessSettings(COLLAB_SESSION_ACCESS_MODE.OFF),
+    ]);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle();
+    expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(2);
+  });
+
+  it("tombstones a published session that the owner later deletes locally", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+
+    engine.start(store);
+    await settle();
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(1);
+    expect(syncMock.removeSessionMetadata).not.toHaveBeenCalled();
+
+    // Owner deletes the session — it disappears from sessionsAtom entirely.
+    store.set(sessionsAtom, []);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle();
+
+    // A tombstone must fire so teammates stop seeing the deleted session,
+    // and exactly once across further sweeps.
+    expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
+    expect(syncMock.removeSessionMetadata.mock.calls[0][0]).toMatchObject({
+      orgId: "org-1",
+      sourceSessionId: "session-1",
+    });
+
+    store.set(sessionsAtom, []);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle();
+    expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
   });
 
   it("never pushes event segments for a METADATA_ONLY session (transcript stays private)", async () => {

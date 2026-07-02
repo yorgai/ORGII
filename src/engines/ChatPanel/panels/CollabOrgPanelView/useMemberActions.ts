@@ -2,6 +2,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { projectApi } from "@src/api/http/project";
 import { getSyncProfile } from "@src/features/TeamCollaboration/collabSyncUtils";
 import { computeLeaveOrgCleanup } from "@src/features/TeamCollaboration/leaveOrgCleanup";
 import { supabaseSyncClient } from "@src/features/TeamCollaboration/sync/supabaseSyncClient";
@@ -296,6 +297,23 @@ export function useMemberActions({
         if (cleanup.removedSessionIds.length > 0) {
           store.set(sessionsAtom, cleanup.sessions);
           persistSessions(cleanup.sessions);
+        }
+        // When the member opts to scrub imported copies, also purge the
+        // teammate project/work-item native rows synced under this org's
+        // aliased project org (deleting a project cascades its work items).
+        // Best-effort: a failure here must not undo the leave.
+        if (removeImportedCopies) {
+          const projectOrgId = org.projectOrgId ?? org.id;
+          try {
+            const projects = await projectApi.readProjects({
+              orgId: projectOrgId,
+            });
+            for (const project of projects) {
+              await projectApi.deleteProject(project.slug);
+            }
+          } catch {
+            // Leave already succeeded; leftover project rows are cosmetic.
+          }
         }
         // The org no longer exists locally — drop the panel selection.
         setSelectedCollabOrg(null);
