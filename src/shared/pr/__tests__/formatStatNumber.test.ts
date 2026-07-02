@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { formatStatNumber } from "../formatStatNumber";
+import {
+  formatCompactStatNumber,
+  formatDiffStatsLabel,
+  formatStatNumber,
+} from "../formatStatNumber";
 
 describe("formatStatNumber", () => {
   it("returns 0 for zero", () => {
@@ -33,5 +37,38 @@ describe("formatStatNumber", () => {
     expect(formatStatNumber(Number.NaN)).toBe("0");
     expect(formatStatNumber(Number.POSITIVE_INFINITY)).toBe("0");
     expect(formatStatNumber(Number.NEGATIVE_INFINITY)).toBe("0");
+  });
+});
+
+describe("formatCompactStatNumber", () => {
+  it("keeps sub-thousand values as plain integers", () => {
+    expect(formatCompactStatNumber(999)).toBe("999");
+    expect(formatCompactStatNumber(623)).toBe("623");
+  });
+
+  it("abbreviates thousands with one decimal when needed", () => {
+    expect(formatCompactStatNumber(1411)).toBe("1.4K");
+    expect(formatCompactStatNumber(6241)).toBe("6.2K");
+    expect(formatCompactStatNumber(21718)).toBe("22K");
+  });
+
+  it("drops trailing .0 for whole thousands", () => {
+    expect(formatCompactStatNumber(1000)).toBe("1K");
+    expect(formatCompactStatNumber(10000)).toBe("10K");
+  });
+
+  it("abbreviates millions compactly", () => {
+    expect(formatCompactStatNumber(1453702)).toBe("1.5M");
+  });
+
+  it("collapses non-finite inputs to 0", () => {
+    expect(formatCompactStatNumber(Number.NaN)).toBe("0");
+  });
+});
+
+describe("formatDiffStatsLabel", () => {
+  it("joins additions and deletions with full formatting", () => {
+    expect(formatDiffStatsLabel(6241, 21718)).toBe("+6,241 -21,718");
+    expect(formatDiffStatsLabel(0, 1453702)).toBe("-1,453,702");
   });
 });
