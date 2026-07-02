@@ -29,6 +29,7 @@ import type { SelectOption } from "@src/components/Select";
 import TabPill from "@src/components/TabPill";
 import type { TabPillItem } from "@src/components/TabPill";
 import { ROUTES } from "@src/config/routes";
+import { canDeleteProjectUnderOrg } from "@src/features/TeamCollaboration/collabShortId";
 import { createLogger } from "@src/hooks/logger";
 import { useProjectDataChanged } from "@src/hooks/project";
 import type { LinearProjectSelection } from "@src/modules/ProjectManager/Panels/ProjectManagerSidebar/content/WorkspaceTreeContent";
@@ -241,13 +242,29 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({
 
   const groupedProjects = useProjectsGrouping({ filteredProjects, groupMode });
 
+  // A project is deletable when it is a local row (Linear rows never offer
+  // delete) AND the collab admin gate passes (design §16.9): under a
+  // collab-synced org the server rejects non-admin project delete
+  // tombstones, so gated rows lose the delete affordance instead of
+  // offering a doomed action. Gated projects are excluded from the bulk
+  // selection set the same way Linear rows already are (checkbox no-ops,
+  // select-all skips them, footer count excludes them) — least surprising:
+  // bulk delete then only ever deletes what was selectable. Should a delete
+  // slip past this render-time gate anyway (e.g. role demoted after
+  // selection), the ORGII_UNAUTHORIZED push ack is handled by the engine
+  // ack path (src/features/TeamCollaboration/engine/ProjectSyncChannel.ts);
+  // this client gate is the primary UX fix.
+  const isProjectDeletable = useCallback(
+    (project: WorkspaceProject) =>
+      project.workspaceSource?.source !== WORKSPACE_SOURCE.LINEAR &&
+      canDeleteProjectUnderOrg(project.orgId),
+    []
+  );
+
   const showCheckboxesOnAllRows = selectedProjectIds.size > 0;
   const selectableFilteredProjectCount = useMemo(
-    () =>
-      filteredProjects.filter(
-        (project) => project.workspaceSource?.source !== WORKSPACE_SOURCE.LINEAR
-      ).length,
-    [filteredProjects]
+    () => filteredProjects.filter(isProjectDeletable).length,
+    [filteredProjects, isProjectDeletable]
   );
 
   const loading = fileProjectsLoading;
@@ -303,7 +320,7 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({
   const handleProjectCheckedChange = useCallback(
     (projectId: string, checked: boolean) => {
       const project = fileProjects.find((item) => item.id === projectId);
-      if (project?.workspaceSource?.source === WORKSPACE_SOURCE.LINEAR) return;
+      if (project && !isProjectDeletable(project)) return;
       setSelectedProjectIds((previous) => {
         const next = new Set(previous);
         if (checked) {
@@ -314,21 +331,16 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({
         return next;
       });
     },
-    [fileProjects]
+    [fileProjects, isProjectDeletable]
   );
 
   const handleSelectAllProjects = useCallback(() => {
     setSelectedProjectIds(
       new Set(
-        filteredProjects
-          .filter(
-            (project) =>
-              project.workspaceSource?.source !== WORKSPACE_SOURCE.LINEAR
-          )
-          .map((project) => project.id)
+        filteredProjects.filter(isProjectDeletable).map((project) => project.id)
       )
     );
-  }, [filteredProjects]);
+  }, [filteredProjects, isProjectDeletable]);
 
   const handleUnselectAllProjects = useCallback(() => {
     setSelectedProjectIds(new Set());
@@ -346,6 +358,9 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({
       for (const projectId of projectIds) {
         const project = projectById.get(projectId);
         if (!project) continue;
+        // Defensive re-check: the collab role may have changed between
+        // selection and delete (see isProjectDeletable above).
+        if (!isProjectDeletable(project)) continue;
         const slug =
           project.slug ||
           project.name
@@ -360,7 +375,7 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({
     } finally {
       setBulkDeleting(false);
     }
-  }, [selectedProjectIds, fileProjects, loadFileProjects]);
+  }, [selectedProjectIds, fileProjects, isProjectDeletable, loadFileProjects]);
 
   const handleDeleteProject = useCallback(
     async (project: Project) => {
@@ -563,10 +578,9 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({
                         onSelect={handleProjectClick}
                         onCheckedChange={handleProjectCheckedChange}
                         onDelete={
-                          project.workspaceSource?.source ===
-                          WORKSPACE_SOURCE.LINEAR
-                            ? undefined
-                            : handleDeleteProject
+                          isProjectDeletable(project)
+                            ? handleDeleteProject
+                            : undefined
                         }
                       />
                     ))}

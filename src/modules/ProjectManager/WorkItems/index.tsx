@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import TabPill from "@src/components/TabPill";
 import type { TabPillItem } from "@src/components/TabPill";
+import { canDeleteProjectUnderOrg } from "@src/features/TeamCollaboration/collabShortId";
 import { useCurrentUserMemberIds } from "@src/hooks/project/useCurrentUserMemberId";
 import type { WorkstationTabHeaderHost } from "@src/hooks/workStation";
 import type { LinkedRepoOption } from "@src/modules/ProjectManager/shared";
@@ -498,7 +499,19 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
         workItemPrefix={displayProject.workItemPrefix ?? "PRJ"}
         workItemPrefixCustom={displayProject.workItemPrefixCustom ?? false}
         onUpdateWorkItemPrefix={handleWorkItemPrefixUpdate}
-        onDeleteProject={handleDeleteProject}
+        // Collab delete gate (design §16.9): under a collab-synced org only
+        // admins may delete a project — the server rejects non-admin delete
+        // tombstones — so passing `undefined` disables the danger-zone button
+        // (GeneralSection renders it disabled when `onDeleteProject` is
+        // absent). Should a delete slip past this render-time gate anyway,
+        // the ORGII_UNAUTHORIZED push ack is handled by the engine ack path
+        // (src/features/TeamCollaboration/engine/ProjectSyncChannel.ts);
+        // this client gate is the primary UX fix.
+        onDeleteProject={
+          canDeleteProjectUnderOrg(projectData.project?.orgId)
+            ? handleDeleteProject
+            : undefined
+        }
         projectMembers={displayProject.members ?? []}
         onUpdateProjectMembers={handleUpdateProjectMembers}
         onOpenRepoSettings={onOpenRepoSettings}

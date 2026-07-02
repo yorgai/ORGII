@@ -64,6 +64,12 @@ export interface Project {
   description?: string;
   /** Public project slug used by URLs and backend project-store lookups. */
   slug?: string;
+  /**
+   * Owning project-store org id (`ProjectMeta.org_id`). Threaded through so
+   * delete affordances can apply the collab admin gate
+   * (`canDeleteProjectUnderOrg`). Absent for external (e.g. Linear) rows.
+   */
+  orgId?: string;
   /** 3-char alphanumeric prefix used in work item IDs (e.g. "AUT") */
   workItemPrefix?: string;
   /** True when prefix is manually configured in project settings */
