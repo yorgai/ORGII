@@ -731,9 +731,12 @@ static CLI_ALIAS_MAP: LazyLock<HashMap<&'static str, AliasEntry>> = LazyLock::ne
     // Subagent / Task (CHANNELS app) → Subagent UI
     // ═══════════════════════════════════════════════════════════════════════════
 
-    // Claude Code Skill invocation → Subagent UI (encapsulates a prompt-based workflow)
+    // Claude Code CLI `Skill` (capital-S) forks a prompt-workflow subagent →
+    // Subagent UI. The lowercase `skill` is ORG2's rust-native first-class
+    // skill tool (atomic SKILL.md expansion, NO subagent involved) — it must
+    // render as a plain tool call, not an empty subagent card.
     m.insert("Skill", AliasEntry::subagent("skill"));
-    m.insert("skill", AliasEntry::subagent("skill"));
+    m.insert("skill", AliasEntry::tool_call_other("skill"));
     // Agent team multi-agent coordination → Subagent UI
     m.insert("TeamCreate", AliasEntry::subagent("team_create"));
     m.insert("team_create", AliasEntry::subagent("team_create"));
