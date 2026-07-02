@@ -32,6 +32,7 @@ import type {
 } from "@src/store/session/sessionAtom/types";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
+import { getEffectiveAccessMode } from "../collabSyncUtils";
 import type {
   CollabSyncBackendClient,
   CollabSyncProfile,
@@ -548,7 +549,10 @@ export function memberFromChatMessage(
 /**
  * Stable fingerprint of the metadata fields the wire record carries.
  * Mirrors `toRemoteMetadata` field sourcing; lastActivityAt is bucketed to
- * the minute so the hash gate is not defeated by timestamp churn.
+ * the minute so the hash gate is not defeated by timestamp churn. The
+ * EFFECTIVE access mode is hashed (not the member default) so a per-session
+ * override or shareSince change re-publishes exactly the sessions it
+ * touches — visibility/replayLevel both derive from it.
  */
 export function computeSessionMetadataHash(
   session: Session,
@@ -564,6 +568,6 @@ export function computeSessionMetadataHash(
     String(session.status),
     session.branch || session.worktreeBranch || "",
     activityBucket,
-    settings.accessMode,
+    getEffectiveAccessMode(session, settings),
   ]);
 }

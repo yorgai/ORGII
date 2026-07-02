@@ -62,6 +62,7 @@ import type { getInstrumentedStore } from "@src/util/core/state/instrumentedStor
 import type { SupabaseSyncProfile } from "../collabSyncUtils";
 import {
   createDefaultAccessSettings,
+  getEffectiveAccessMode,
   getSyncProfile,
   isRemoteSessionEventsPublishAllowed,
   isRemoteSessionInOrgScope,
@@ -793,7 +794,12 @@ export class CollabSyncEngine {
       for (const connection of this.getActiveConnections()) {
         const { org, settings } = connection;
         if (!isSessionPushAllowed(session, org, settings)) continue;
-        if (settings.accessMode !== COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY) {
+        // Segments travel only at effective FULL_REPLAY (design §6.3):
+        // override > shareSince gate > member default.
+        if (
+          getEffectiveAccessMode(session, settings) !==
+          COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY
+        ) {
           continue;
         }
         try {

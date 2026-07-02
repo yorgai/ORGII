@@ -3,17 +3,21 @@ import { describe, expect, it } from "vitest";
 import {
   COLLAB_MESSAGE_TYPE,
   COLLAB_PROTOCOL_VERSION,
+  CollabSessionAccessSettingsSchema,
   buildCollabInviteLink,
+  buildCollabSessionShareLink,
   createCollabAvatarIdentity,
   normalizeSupabaseProjectUrl,
   parseCollabInviteInput,
   parseCollabMessageEnvelope,
+  parseCollabSessionShareLink,
 } from "./protocol";
 import {
   COLLAB_IDENTITY_KIND,
   COLLAB_SESSION_ACCESS_MODE,
   COLLAB_WORKSPACE_SCOPE,
 } from "./types";
+import type { CollabSessionAccessSettings } from "./types";
 
 describe("collaboration protocol helpers", () => {
   it("normalizes Supabase project URLs", () => {
@@ -41,6 +45,68 @@ describe("collaboration protocol helpers", () => {
     expect(parseCollabInviteInput(" invite-2 ")).toEqual({
       inviteCode: "invite-2",
     });
+  });
+
+  it("builds and parses session share links", () => {
+    const link = buildCollabSessionShareLink({
+      supabaseUrl: "https://team.supabase.co/",
+      anonKey: "anon-key",
+      orgId: "org-1",
+      shareToken: "share-token-1",
+    });
+
+    expect(link.startsWith("orgii://collaboration/session?")).toBe(true);
+    expect(parseCollabSessionShareLink(link)).toEqual({
+      syncBackend: "supabase",
+      supabaseUrl: "https://team.supabase.co",
+      anonKey: "anon-key",
+      orgId: "org-1",
+      shareToken: "share-token-1",
+    });
+  });
+
+  it("rejects share links without a share token", () => {
+    expect(() =>
+      parseCollabSessionShareLink("orgii://collaboration/session?org=org-1")
+    ).toThrow("missing share token");
+    expect(() => parseCollabSessionShareLink("share-token-1")).toThrow(
+      "orgii://"
+    );
+  });
+
+  it("keeps sessionOverrides and shareSince through the settings schema (zod hydrate regression)", () => {
+    const settings: CollabSessionAccessSettings = {
+      orgId: "org-1",
+      memberId: "member-1",
+      accessMode: COLLAB_SESSION_ACCESS_MODE.OFF,
+      sessionOverrides: {
+        "session-1": COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY,
+        "session-2": COLLAB_SESSION_ACCESS_MODE.METADATA_ONLY,
+      },
+      shareSince: "2026-07-01T00:00:00.000Z",
+      workspaceScope: COLLAB_WORKSPACE_SCOPE.SELECTED_WORKSPACES,
+      workspacePaths: [],
+      updatedAt: "2026-07-01T00:00:00.000Z",
+    };
+
+    // Same shape the persisted-atom storage feeds back through the schema:
+    // zod strips undeclared keys, so the round-trip must be lossless.
+    const rehydrated = CollabSessionAccessSettingsSchema.parse(
+      JSON.parse(JSON.stringify(settings))
+    );
+    expect(rehydrated).toEqual(settings);
+
+    // Records saved before M4 (no overrides / shareSince) still parse.
+    const legacy = CollabSessionAccessSettingsSchema.parse({
+      orgId: "org-1",
+      memberId: "member-1",
+      accessMode: COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY,
+      workspaceScope: COLLAB_WORKSPACE_SCOPE.SELECTED_WORKSPACES,
+      workspacePaths: [],
+      updatedAt: "2026-07-01T00:00:00.000Z",
+    });
+    expect(legacy.sessionOverrides).toBeUndefined();
+    expect(legacy.shareSince).toBeUndefined();
   });
 
   it("creates deterministic lightweight avatar identities", () => {

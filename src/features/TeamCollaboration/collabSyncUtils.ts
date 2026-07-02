@@ -1,8 +1,11 @@
 import {
   COLLAB_SESSION_ACCESS_MODE,
+  COLLAB_SESSION_REPLAY_LEVEL,
+  COLLAB_SESSION_VISIBILITY,
   COLLAB_SYNC_BACKEND,
   COLLAB_WORKSPACE_SCOPE,
 } from "@src/store/collaboration/types";
+import type { CollabSessionAccessMode } from "@src/store/collaboration/types";
 import type {
   CollabMemberRecord,
   CollabOrgRecord,
@@ -47,6 +50,36 @@ export function isRemoteSessionInOrgScope(
   return isRepoPathInScope(session.repoPath, org.repoScopes);
 }
 
+/**
+ * Effective access mode for ONE session under ONE org's settings (design
+ * §6.3). Resolution order:
+ * 1. an explicit `sessionOverrides` entry wins outright — it is the escape
+ *    hatch that can re-share a pre-shareSince session (or silence a new one);
+ * 2. otherwise the `shareSince` gate: with shareSince set, sessions CREATED
+ *    before it resolve to OFF (creation time, not last activity — reopening
+ *    an old session must not drag its full history to the org). Unparseable
+ *    timestamps on either side also gate to OFF: when we cannot prove the
+ *    session is new, privacy wins;
+ * 3. otherwise the member-level default `accessMode`.
+ */
+export function getEffectiveAccessMode(
+  session: Pick<Session, "session_id" | "created_at">,
+  settings: CollabSessionAccessSettings
+): CollabSessionAccessMode {
+  const override = settings.sessionOverrides?.[session.session_id];
+  if (override) return override;
+  if (settings.shareSince) {
+    const createdAtMs = Date.parse(session.created_at);
+    const shareSinceMs = Date.parse(settings.shareSince);
+    const createdAfterShareSince =
+      Number.isFinite(createdAtMs) &&
+      Number.isFinite(shareSinceMs) &&
+      createdAtMs >= shareSinceMs;
+    if (!createdAfterShareSince) return COLLAB_SESSION_ACCESS_MODE.OFF;
+  }
+  return settings.accessMode;
+}
+
 export function isSessionPushAllowed(
   session: Session,
   org: CollabOrgRecord,
@@ -56,7 +89,11 @@ export function isSessionPushAllowed(
   // consumer re-uploads them under its own member id (org-wide echo loop).
   if (session.category === "external_history") return false;
   if (session.importedFrom) return false;
-  if (settings.accessMode === COLLAB_SESSION_ACCESS_MODE.OFF) return false;
+  if (
+    getEffectiveAccessMode(session, settings) === COLLAB_SESSION_ACCESS_MODE.OFF
+  ) {
+    return false;
+  }
   return isLocalSessionInOrgScope(session, org);
 }
 
@@ -65,7 +102,11 @@ export function isRemoteSessionEventsPublishAllowed(
   org: CollabOrgRecord,
   settings: CollabSessionAccessSettings
 ): boolean {
-  if (settings.accessMode !== COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY) {
+  // The metadata's accessMode carries the per-session EFFECTIVE mode when it
+  // was built by toRemoteMetadata; fall back to the member default for
+  // records that predate the override model.
+  const mode = session.accessMode ?? settings.accessMode;
+  if (mode !== COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY) {
     return false;
   }
   return isRemoteSessionInOrgScope(session, org);
@@ -105,6 +146,7 @@ export function toRemoteMetadata(
   member: CollabMemberRecord,
   settings: CollabSessionAccessSettings
 ): RemoteTeammateSessionMetadata {
+  const effectiveMode = getEffectiveAccessMode(session, settings);
   return {
     id: `${org.id}:${member.id}:${session.session_id}`,
     orgId: org.id,
@@ -118,7 +160,15 @@ export function toRemoteMetadata(
     repoPath: session.repoPath,
     branch: session.branch || session.worktreeBranch,
     lastActivityAt: session.updated_at || session.updated_time,
-    accessMode: settings.accessMode,
+    accessMode: effectiveMode,
+    // Sharing plane (design §6.2): 'restricted' arrives with the M4b UI —
+    // M4a always publishes org-visible; the field is wired through so the
+    // server column populates. replayLevel derives from the effective mode.
+    visibility: COLLAB_SESSION_VISIBILITY.ORG,
+    replayLevel:
+      effectiveMode === COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY
+        ? COLLAB_SESSION_REPLAY_LEVEL.REPLAY
+        : COLLAB_SESSION_REPLAY_LEVEL.METADATA,
     // Segments summary is server-owned (append/rewrite RPCs maintain it);
     // metadata pushes never carry it.
     eventsEpoch: undefined,

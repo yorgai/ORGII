@@ -4,6 +4,7 @@ import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { COLLAB_IDENTITY_KIND } from "@src/store/collaboration/types";
 import type { RemoteTeammateSessionMetadata } from "@src/store/collaboration/types";
 
+import { sha256Hex } from "../collabSyncUtils";
 import {
   computeSegmentHash,
   gunzipBase64ToJson,
@@ -152,6 +153,32 @@ describe("Supabase sync setup SQL", () => {
   it("applies since_timestamp filtering in list_org_state", () => {
     expect(ORGII_SUPABASE_SETUP_SQL).toContain("v_since");
     expect(ORGII_SUPABASE_SETUP_SQL).toContain(">= v_since");
+  });
+
+  it("declares the sharing plane (M4): shares table, RPCs, visibility filter", () => {
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_session_shares");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_create_session_share");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_revoke_session_share");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_list_session_shares");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("orgii_resolve_session_share");
+    // Sessions columns + the SQL-side visibility boundary (design §6.5).
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "add column if not exists visibility text"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "add column if not exists replay_level text"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "coalesce(s.visibility, 'org') = 'org'"
+    );
+    // Token auth reaches the segments read; the M3 signature is dropped.
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain("p_share_token");
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "drop function if exists public.orgii_get_session_event_segments(text, text, integer, text, text, text);"
+    );
+    expect(ORGII_SUPABASE_SETUP_SQL).toContain(
+      "grant execute on function public.orgii_get_session_event_segments(text, text, integer, text, text, text, text) to anon;"
+    );
   });
 });
 
@@ -785,5 +812,189 @@ describe("supabaseSyncClient", () => {
     const body = getRpcBody(fetchMock, "orgii_gc_session_event_segments");
     expect(body.p_org_id).toBe("org-1");
     expect(body.retention_days).toBe(90);
+  });
+
+  it("createSessionShare (link) generates a token locally and sends only its hash", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(mockJsonResponse("share-1"));
+
+    const result = await supabaseSyncClient.createSessionShare({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      sessionRowId: "org-1:member-1:session-1",
+      level: "replay",
+    });
+
+    expect(result.shareId).toBe("share-1");
+    // 32-byte token, plaintext only in the local result.
+    expect(result.shareToken).toMatch(/^[a-f0-9]{64}$/);
+
+    const body = getRpcBody(fetchMock, "orgii_create_session_share");
+    expect(body.p_org_id).toBe("org-1");
+    expect(body.p_member_id).toBe("member-1");
+    expect(body.p_member_token).toBe("member-token-1");
+    expect(body.session_row_id).toBe("org-1:member-1:session-1");
+    expect(body.grantee_member_id).toBeNull();
+    expect(body.level).toBe("replay");
+    expect(body.expires_at).toBeNull();
+    expect(body.share_token_hash).toBe(await sha256Hex(result.shareToken!));
+    // The plaintext token never appears anywhere in the request body.
+    expect(JSON.stringify(body)).not.toContain(result.shareToken);
+  });
+
+  it("createSessionShare (directed) sends the grantee and no token at all", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(mockJsonResponse("share-2"));
+
+    const result = await supabaseSyncClient.createSessionShare({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      sessionRowId: "org-1:member-1:session-1",
+      granteeMemberId: "member-2",
+      level: "metadata",
+      expiresAt: "2026-08-01T00:00:00.000Z",
+    });
+
+    expect(result).toEqual({ shareId: "share-2", shareToken: undefined });
+
+    const body = getRpcBody(fetchMock, "orgii_create_session_share");
+    expect(body.grantee_member_id).toBe("member-2");
+    expect(body.share_token_hash).toBeNull();
+    expect(body.level).toBe("metadata");
+    expect(body.expires_at).toBe("2026-08-01T00:00:00.000Z");
+  });
+
+  it("revokeSessionShare calls the RPC with the share id", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(mockJsonResponse(null));
+
+    await supabaseSyncClient.revokeSessionShare({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      shareId: "share-1",
+    });
+
+    const body = getRpcBody(fetchMock, "orgii_revoke_session_share");
+    expect(body.p_org_id).toBe("org-1");
+    expect(body.p_member_id).toBe("member-1");
+    expect(body.share_id).toBe("share-1");
+  });
+
+  it("listSessionShares parses the owner listing (token hashes never present)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      mockJsonResponse([
+        {
+          id: "share-1",
+          granteeMemberId: "member-2",
+          level: "replay",
+          expiresAt: null,
+          createdAt: "2026-07-01T00:00:00.000Z",
+          revokedAt: null,
+          hasToken: false,
+        },
+        {
+          id: "share-2",
+          granteeMemberId: null,
+          level: "metadata",
+          expiresAt: "2026-08-01T00:00:00.000Z",
+          createdAt: "2026-07-01T00:00:00.000Z",
+          revokedAt: "2026-07-02T00:00:00.000Z",
+          hasToken: true,
+        },
+      ])
+    );
+
+    const shares = await supabaseSyncClient.listSessionShares({
+      ...MEMBER_PROFILE,
+      orgId: "org-1",
+      sessionRowId: "org-1:member-1:session-1",
+    });
+
+    const body = getRpcBody(fetchMock, "orgii_list_session_shares");
+    expect(body.session_row_id).toBe("org-1:member-1:session-1");
+    expect(body.p_member_id).toBe("member-1");
+
+    expect(shares).toEqual([
+      {
+        id: "share-1",
+        granteeMemberId: "member-2",
+        level: "replay",
+        expiresAt: undefined,
+        createdAt: "2026-07-01T00:00:00.000Z",
+        revokedAt: undefined,
+        hasToken: false,
+      },
+      {
+        id: "share-2",
+        granteeMemberId: undefined,
+        level: "metadata",
+        expiresAt: "2026-08-01T00:00:00.000Z",
+        createdAt: "2026-07-01T00:00:00.000Z",
+        revokedAt: "2026-07-02T00:00:00.000Z",
+        hasToken: true,
+      },
+    ]);
+  });
+
+  it("resolveSessionShare works with only supabaseUrl + anonKey + token", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      mockJsonResponse({
+        ...REMOTE_SESSION,
+        visibility: "restricted",
+        replayLevel: "replay",
+        eventsEpoch: 1,
+        eventsFrozenSeq: 2,
+        eventsCount: 3,
+        eventsTailHash: "tail-hash",
+      })
+    );
+
+    const session = await supabaseSyncClient.resolveSessionShare({
+      supabaseUrl: SUPABASE_URL,
+      anonKey: ANON_KEY,
+      shareToken: "plain-share-token",
+    });
+
+    // Ticket tier: the token is the whole request body — no member identity,
+    // no org secret, and the token itself travels only to this single RPC.
+    const body = getRpcBody(fetchMock, "orgii_resolve_session_share");
+    expect(body).toEqual({ share_token: "plain-share-token" });
+
+    expect(session.id).toBe("org-1:member-1:session-1");
+    expect(session.visibility).toBe("restricted");
+    expect(session.replayLevel).toBe("replay");
+    expect(session.eventsEpoch).toBe(1);
+  });
+
+  it("getSessionEventSegments with a share token sends no member/root credentials", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      mockJsonResponse({
+        epoch: 1,
+        frozenSeq: 1,
+        tailHash: null,
+        count: 1,
+        segments: [],
+      })
+    );
+
+    await supabaseSyncClient.getSessionEventSegments({
+      // Even with a full credentialed profile, the token path must not put
+      // member or root credentials on the wire.
+      ...FULL_PROFILE,
+      orgId: "org-1",
+      sessionRowId: "org-1:member-1:session-1",
+      shareToken: "plain-share-token",
+      afterSeq: 2,
+    });
+
+    const body = getRpcBody(fetchMock, "orgii_get_session_event_segments");
+    expect(body.p_share_token).toBe("plain-share-token");
+    expect(body.after_seq).toBe(2);
+    expect(body).not.toHaveProperty("p_member_id");
+    expect(body).not.toHaveProperty("p_member_token");
+    expect(body).not.toHaveProperty("p_org_secret");
   });
 });

@@ -5,6 +5,7 @@ import {
   CollabChatMessageRecordSchema,
   CollabMemberRecordSchema,
   CollabOrgRecordSchema,
+  CollabSessionReplayLevelSchema,
   RemoteTeammateSessionMetadataSchema,
   buildCollabInviteLink,
   createCollabAvatarIdentity,
@@ -23,29 +24,36 @@ import type {
   CollabMemberRecord,
   CollabOrgRecord,
   CollabRole,
+  RemoteTeammateSessionMetadata,
 } from "@src/store/collaboration/types";
 
 import type {
   AcceptInviteInput,
   AppendSessionEventsInput,
   CollabOrgState,
+  CollabSessionShareRecord,
   CollabSyncBackendClient,
   CollabSyncProfile,
   CreateInviteInput,
   CreateOrgInput,
+  CreateSessionShareInput,
+  CreateSessionShareResult,
   DenySessionSnapshotInput,
   GcSessionEventSegmentsInput,
   GetSessionEventSegmentsInput,
   ListChatMessagesInput,
   ListOrgStateInput,
+  ListSessionSharesInput,
   PostChatMessageInput,
   PublishSessionSnapshotInput,
   RemoveMemberInput,
   RemoveSessionMetadataInput,
   RequestRepoJoinInput,
   RequestSessionSnapshotInput,
+  ResolveSessionShareInput,
   ReviewRepoJoinInput,
   RevokeInviteInput,
+  RevokeSessionShareInput,
   RewriteSessionEventsInput,
   SessionEventSegmentsSnapshot,
   SessionEventsSegmentInput,
@@ -111,6 +119,28 @@ const SegmentsSnapshotWireSchema = z.object({
   tailHash: z.string().nullish().default(null),
   count: z.number().nullish().default(null),
   segments: z.array(SegmentWireSchema).default([]),
+});
+
+// Owner-facing share listing row. The server builds it field-by-field
+// (never from the raw table row), so a token hash showing up here would be
+// a server bug — the schema simply has no key for it.
+const SessionShareWireSchema = z.object({
+  id: z.string(),
+  granteeMemberId: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
+  level: CollabSessionReplayLevelSchema,
+  expiresAt: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
+  createdAt: z.string(),
+  revokedAt: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
+  hasToken: z.boolean(),
 });
 
 // Tombstoned session rows carry a stripped payload ({id, orgId,
@@ -670,12 +700,17 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
   async getSessionEventSegments(
     input: GetSessionEventSegmentsInput
   ): Promise<SessionEventSegmentsSnapshot> {
+    // Ticket path (design §6.4): the share token IS the credential — member
+    // and root credentials stay off the wire entirely.
+    const authParams = input.shareToken
+      ? { p_share_token: input.shareToken }
+      : flexAuthParams(input);
     const raw = await callRpc(
       input,
       "orgii_get_session_event_segments",
       {
         p_org_id: input.orgId,
-        ...flexAuthParams(input),
+        ...authParams,
         session_row_id: input.sessionRowId,
         after_seq: input.afterSeq ?? 0,
       },
@@ -722,6 +757,68 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
         .number()
         .nullable()
         .transform((value) => value ?? 0)
+    );
+  },
+
+  async createSessionShare(
+    input: CreateSessionShareInput
+  ): Promise<CreateSessionShareResult> {
+    // Link shares get a fresh 32-byte token; only its sha256 goes on the
+    // wire — the plaintext exists solely in the returned result (and the
+    // share link the caller builds from it). Directed shares carry no token.
+    const shareToken = input.granteeMemberId ? undefined : createOrgSecret();
+    const shareId = await callRpc(
+      input,
+      "orgii_create_session_share",
+      {
+        p_org_id: input.orgId,
+        ...memberAuthParams(input),
+        session_row_id: input.sessionRowId,
+        grantee_member_id: input.granteeMemberId ?? null,
+        share_token_hash: shareToken ? await sha256Hex(shareToken) : null,
+        level: input.level,
+        expires_at: input.expiresAt ?? null,
+      },
+      z.string()
+    );
+    return { shareId, shareToken };
+  },
+
+  async revokeSessionShare(input: RevokeSessionShareInput): Promise<void> {
+    await callRpcVoid(input, "orgii_revoke_session_share", {
+      p_org_id: input.orgId,
+      ...flexAuthParams(input),
+      share_id: input.shareId,
+    });
+  },
+
+  async listSessionShares(
+    input: ListSessionSharesInput
+  ): Promise<CollabSessionShareRecord[]> {
+    // Owner-only member RPC; the function has no p_org_secret parameter.
+    return callRpc(
+      input,
+      "orgii_list_session_shares",
+      {
+        p_org_id: input.orgId,
+        ...memberAuthParams(input),
+        session_row_id: input.sessionRowId,
+      },
+      z.array(SessionShareWireSchema)
+    );
+  },
+
+  async resolveSessionShare(
+    input: ResolveSessionShareInput
+  ): Promise<RemoteTeammateSessionMetadata> {
+    // Ticket tier: supabaseUrl + anonKey + token is the whole credential —
+    // no member identity, no org secret (the caller is typically not a
+    // member at all).
+    return callRpc(
+      { supabaseUrl: input.supabaseUrl, anonKey: input.anonKey },
+      "orgii_resolve_session_share",
+      { share_token: input.shareToken },
+      RemoteTeammateSessionMetadataSchema
     );
   },
 

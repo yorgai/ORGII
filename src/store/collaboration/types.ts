@@ -43,6 +43,31 @@ export const COLLAB_SESSION_ACCESS_MODE = {
 export type CollabSessionAccessMode =
   (typeof COLLAB_SESSION_ACCESS_MODE)[keyof typeof COLLAB_SESSION_ACCESS_MODE];
 
+/**
+ * Server-side session visibility (design §6.2). Derived from the owner's
+ * effective access mode at push time; a null column on pre-M4 rows is read
+ * as 'org' by every server filter.
+ */
+export const COLLAB_SESSION_VISIBILITY = {
+  ORG: "org",
+  RESTRICTED: "restricted",
+} as const;
+
+export type CollabSessionVisibility =
+  (typeof COLLAB_SESSION_VISIBILITY)[keyof typeof COLLAB_SESSION_VISIBILITY];
+
+/**
+ * Replay depth of a shared session / share grant (design §6.2):
+ * 'metadata' — listing only; 'replay' — event segments included.
+ */
+export const COLLAB_SESSION_REPLAY_LEVEL = {
+  METADATA: "metadata",
+  REPLAY: "replay",
+} as const;
+
+export type CollabSessionReplayLevel =
+  (typeof COLLAB_SESSION_REPLAY_LEVEL)[keyof typeof COLLAB_SESSION_REPLAY_LEVEL];
+
 export const COLLAB_WORKSPACE_SCOPE = {
   SELECTED_WORKSPACES: "selected_workspaces",
 } as const;
@@ -143,6 +168,20 @@ export interface CollabSessionAccessSettings {
   orgId: string;
   memberId: string;
   accessMode: CollabSessionAccessMode;
+  /**
+   * Per-session escape hatch (design §6.3): overrides accessMode AND the
+   * shareSince gate for the keyed sourceSessionId. Any change here must be
+   * mirrored in CollabSessionAccessSettingsSchema — zod strips unknown keys
+   * on hydrate.
+   */
+  sessionOverrides?: Record<string, CollabSessionAccessMode>;
+  /**
+   * "Only share sessions created from here on" (design §6.3): sessions with
+   * created_at before this ISO timestamp are treated as OFF unless they
+   * carry an explicit sessionOverrides entry. Gate is by CREATION time, not
+   * last activity — reopening an old session must not leak its history.
+   */
+  shareSince?: string;
   workspaceScope: CollabWorkspaceScope;
   workspacePaths: string[];
   updatedAt: string;
@@ -185,6 +224,10 @@ export interface RemoteTeammateSessionMetadata {
   branch?: string;
   lastActivityAt?: string;
   accessMode?: CollabSessionAccessMode;
+  // Sharing plane (design §6.2): server columns fed from these payload
+  // fields at push time. Absent on pre-M4 rows (server reads null as 'org').
+  visibility?: CollabSessionVisibility;
+  replayLevel?: CollabSessionReplayLevel;
   // Segments summary (design §7.3): mirrors the orgii_sessions summary
   // columns. All undefined ⇒ the owner has not published event segments.
   eventsEpoch: number | undefined;

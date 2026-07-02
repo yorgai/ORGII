@@ -7,6 +7,8 @@ import {
   COLLAB_REPO_JOIN_STATUS,
   COLLAB_ROLE,
   COLLAB_SESSION_ACCESS_MODE,
+  COLLAB_SESSION_REPLAY_LEVEL,
+  COLLAB_SESSION_VISIBILITY,
   COLLAB_SYNC_BACKEND,
   COLLAB_WORKSPACE_SCOPE,
   type CollabAvatarIdentity,
@@ -19,6 +21,8 @@ import {
   type CollabRole,
   type CollabSessionAccessMode,
   type CollabSessionAccessSettings,
+  type CollabSessionReplayLevel,
+  type CollabSessionVisibility,
   type CollabSyncBackend,
   type CollabWorkspaceScope,
   type RemoteTeammateSessionMetadata,
@@ -61,6 +65,16 @@ export const CollabSessionAccessModeSchema = z.enum([
   CollabSessionAccessMode,
 ]);
 
+export const CollabSessionVisibilitySchema = z.enum([
+  COLLAB_SESSION_VISIBILITY.ORG,
+  COLLAB_SESSION_VISIBILITY.RESTRICTED,
+] satisfies [CollabSessionVisibility, CollabSessionVisibility]);
+
+export const CollabSessionReplayLevelSchema = z.enum([
+  COLLAB_SESSION_REPLAY_LEVEL.METADATA,
+  COLLAB_SESSION_REPLAY_LEVEL.REPLAY,
+] satisfies [CollabSessionReplayLevel, CollabSessionReplayLevel]);
+
 export const CollabWorkspaceScopeSchema = z.enum([
   COLLAB_WORKSPACE_SCOPE.SELECTED_WORKSPACES,
 ] satisfies [CollabWorkspaceScope]);
@@ -69,6 +83,13 @@ export const CollabSessionAccessSettingsSchema = z.object({
   orgId: z.string(),
   memberId: z.string(),
   accessMode: CollabSessionAccessModeSchema,
+  // Persisted through a zod storage that strips unknown keys — every new
+  // CollabSessionAccessSettings field MUST be declared here or hydration
+  // silently drops it (design §6.3).
+  sessionOverrides: z
+    .record(z.string(), CollabSessionAccessModeSchema)
+    .optional(),
+  shareSince: z.string().optional(),
   workspaceScope: CollabWorkspaceScopeSchema,
   workspacePaths: z.array(z.string()),
   updatedAt: z.string(),
@@ -152,6 +173,8 @@ export const RemoteTeammateSessionMetadataSchema = z.object({
   branch: z.string().optional(),
   lastActivityAt: z.string().optional(),
   accessMode: CollabSessionAccessModeSchema.optional(),
+  visibility: CollabSessionVisibilitySchema.optional(),
+  replayLevel: CollabSessionReplayLevelSchema.optional(),
   eventsEpoch: z
     .number()
     .nullish()
@@ -321,6 +344,60 @@ export function parseCollabInviteInput(input: string): {
   }
 
   return { inviteCode: trimmed };
+}
+
+/**
+ * Deep link for a session link share (design §6.4): the receiver resolves
+ * the token via orgii_resolve_session_share and pulls segments with the same
+ * token — no org membership, no list access. Mirrors buildCollabInviteLink.
+ */
+export function buildCollabSessionShareLink({
+  supabaseUrl,
+  anonKey,
+  orgId,
+  shareToken,
+}: {
+  supabaseUrl: string;
+  anonKey?: string;
+  orgId: string;
+  shareToken: string;
+}): string {
+  const params = new URLSearchParams({
+    sync: COLLAB_SYNC_BACKEND.SUPABASE,
+    supabase: normalizeSupabaseProjectUrl(supabaseUrl),
+    org: orgId,
+    share: shareToken,
+  });
+  if (anonKey) params.set("anon", anonKey);
+  return `orgii://collaboration/session?${params.toString()}`;
+}
+
+export function parseCollabSessionShareLink(input: string): {
+  syncBackend?: CollabSyncBackend;
+  supabaseUrl?: string;
+  anonKey?: string;
+  orgId?: string;
+  shareToken: string;
+} {
+  const trimmed = input.trim();
+  if (!trimmed) throw new Error("Share link is required");
+  if (!trimmed.startsWith("orgii://")) {
+    throw new Error("Share link must be an orgii:// link");
+  }
+  const parsed = new URL(trimmed);
+  const shareToken = parsed.searchParams.get("share")?.trim();
+  if (!shareToken) throw new Error("Share link is missing share token");
+  const syncParam = parsed.searchParams.get("sync")?.trim();
+  return {
+    syncBackend:
+      syncParam === COLLAB_SYNC_BACKEND.SUPABASE
+        ? COLLAB_SYNC_BACKEND.SUPABASE
+        : undefined,
+    supabaseUrl: parsed.searchParams.get("supabase")?.trim() || undefined,
+    anonKey: parsed.searchParams.get("anon")?.trim() || undefined,
+    orgId: parsed.searchParams.get("org")?.trim() || undefined,
+    shareToken,
+  };
 }
 
 export function createCollabAvatarIdentity(

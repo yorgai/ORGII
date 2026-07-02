@@ -134,6 +134,14 @@ alter table public.orgii_sessions
   add column if not exists events_count integer,
   add column if not exists events_tail_hash text;
 
+-- Sharing plane (design §6.2): visibility 'org' | 'restricted' (null on
+-- pre-M4 rows reads as 'org' in every filter — those rows were org-visible
+-- all along), replay_level 'metadata' | 'replay'. Both are derived from the
+-- owner's effective access mode at push time; the server never backfills.
+alter table public.orgii_sessions
+  add column if not exists visibility text,
+  add column if not exists replay_level text;
+
 -- Legacy Storage-blob pointers, replaced by the segments plane.
 alter table public.orgii_sessions
   drop column if exists events_blob_path,
@@ -155,6 +163,27 @@ create table if not exists public.orgii_session_event_segments (
   segment_hash text not null,
   created_at timestamptz not null default now(),
   primary key (org_id, session_row_id, epoch, seq)
+);
+
+-- Session shares (design §6.2): per-session grants that ADD visibility on
+-- top of the org default — share is additive-only. Exactly one of
+-- grantee_member_id (directed share) and share_token_hash (link capability,
+-- sha256 of a token that exists only on the owner's client) is set per row.
+-- Revocation keeps the row (owner audit trail); every filter treats revoked
+-- or expired rows as absent. session_row_id references the globally unique
+-- sessions.id ('org:member:session'), never the bare source_session_id (two
+-- members may hold the same source id).
+create table if not exists public.orgii_session_shares (
+  id text primary key,
+  org_id text not null references public.orgii_orgs(id) on delete cascade,
+  session_row_id text not null references public.orgii_sessions(id) on delete cascade,
+  owner_member_id text not null,
+  grantee_member_id text,
+  share_token_hash text unique,
+  level text not null,
+  expires_at timestamptz,
+  created_at timestamptz not null default now(),
+  revoked_at timestamptz
 );
 
 create table if not exists public.orgii_chat_messages (
@@ -217,6 +246,7 @@ alter table public.orgii_projects enable row level security;
 alter table public.orgii_work_items enable row level security;
 alter table public.orgii_sessions enable row level security;
 alter table public.orgii_session_event_segments enable row level security;
+alter table public.orgii_session_shares enable row level security;
 alter table public.orgii_chat_messages enable row level security;
 alter table public.orgii_session_snapshot_requests enable row level security;
 alter table public.orgii_session_snapshots enable row level security;
@@ -292,6 +322,10 @@ drop function if exists public.orgii_list_org_state(text, text, text, text, time
 -- and the snapshot publish RPC changes signature (payload_gz replaces
 -- blob_path + content_hash).
 drop function if exists public.orgii_create_session_snapshot(text, text, text, jsonb, text, text, text, text);
+
+-- M4 (sharing plane): orgii_get_session_event_segments gains p_share_token;
+-- drop the M3 signature so the old overload cannot linger next to it.
+drop function if exists public.orgii_get_session_event_segments(text, text, integer, text, text, text);
 
 -- ============================================================ auth
 
@@ -662,6 +696,10 @@ declare
   v_ctx record;
   v_payload jsonb;
   v_access_mode text := payload->>'accessMode';
+  -- Sharing columns (design §6.2): pre-M4 clients omit both; visibility
+  -- defaults to 'org' (those pushes were org-visible all along).
+  v_visibility text := coalesce(payload->>'visibility', 'org');
+  v_replay_level text := payload->>'replayLevel';
   v_rows integer;
 begin
   -- member credential only: session writes always carry a member identity,
@@ -669,12 +707,19 @@ begin
   select * into v_ctx
   from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, null);
 
+  if v_visibility not in ('org', 'restricted')
+     or (v_replay_level is not null and v_replay_level not in ('metadata', 'replay')) then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+
   v_payload := jsonb_set(payload, '{ownerMemberId}', to_jsonb(v_ctx.member_id), true);
 
-  insert into public.orgii_sessions (id, org_id, owner_member_id, source_session_id, access_mode, payload)
-  values (v_payload->>'id', p_org_id, v_ctx.member_id, v_payload->>'sourceSessionId', v_access_mode, v_payload)
+  insert into public.orgii_sessions (id, org_id, owner_member_id, source_session_id, access_mode, visibility, replay_level, payload)
+  values (v_payload->>'id', p_org_id, v_ctx.member_id, v_payload->>'sourceSessionId', v_access_mode, v_visibility, v_replay_level, v_payload)
   on conflict (id) do update set
     access_mode = excluded.access_mode,
+    visibility = excluded.visibility,
+    replay_level = excluded.replay_level,
     payload = excluded.payload,
     updated_at = now(),
     deleted_at = null,
@@ -979,17 +1024,24 @@ begin
 end;
 $$;
 
--- Any authenticated member (or root) may read; per-session visibility
--- filtering arrives with shares (M4). The whole result is built by ONE
--- SELECT, so summary + segments are a consistent statement-level snapshot —
--- a concurrent rewrite can never tear the response.
+-- Read auth (design §6.5): root and owners always; visibility null/'org'
+-- rows for any authenticated member; restricted rows only through an
+-- active, unexpired replay-level directed grant. Alternatively a share
+-- token (link share) reads WITHOUT member credentials — but only the one
+-- session the token is bound to, at level 'replay'. Every failure mode
+-- (bad token, wrong session, revoked, expired, restricted, tombstoned,
+-- missing) raises the same opaque error (§5.5 — no existence oracle).
+-- The whole result is built by ONE SELECT, so summary + segments are a
+-- consistent statement-level snapshot — a concurrent rewrite can never
+-- tear the response.
 create or replace function public.orgii_get_session_event_segments(
   p_org_id text,
   session_row_id text,
   after_seq integer default 0,
   p_member_id text default null,
   p_member_token text default null,
-  p_org_secret text default null
+  p_org_secret text default null,
+  p_share_token text default null
 )
 returns jsonb
 language plpgsql
@@ -997,9 +1049,47 @@ security definer
 set search_path = public, extensions
 as $$
 declare
+  v_ctx record;
+  v_authorized boolean := false;
   v_result jsonb;
 begin
-  perform public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
+  if p_share_token is not null then
+    v_authorized := exists (
+      select 1 from public.orgii_session_shares sh
+      where sh.share_token_hash = encode(digest(p_share_token, 'sha256'), 'hex')
+        and sh.org_id = p_org_id
+        and sh.session_row_id = orgii_get_session_event_segments.session_row_id
+        and sh.level = 'replay'
+        and sh.revoked_at is null
+        and (sh.expires_at is null or sh.expires_at > now())
+    );
+  else
+    select * into v_ctx
+    from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
+    v_authorized := exists (
+      select 1 from public.orgii_sessions s
+      where s.id = orgii_get_session_event_segments.session_row_id
+        and s.org_id = p_org_id
+        and (
+          v_ctx.is_root
+          or s.owner_member_id = v_ctx.member_id
+          or coalesce(s.visibility, 'org') = 'org'
+          or exists (
+            select 1 from public.orgii_session_shares sh
+            where sh.org_id = p_org_id
+              and sh.session_row_id = s.id
+              and sh.grantee_member_id = v_ctx.member_id
+              and sh.level = 'replay'
+              and sh.revoked_at is null
+              and (sh.expires_at is null or sh.expires_at > now())
+          )
+        )
+    );
+  end if;
+
+  if not v_authorized then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
 
   select jsonb_build_object(
     'epoch', s.events_epoch,
@@ -1074,6 +1164,224 @@ begin
      and coalesce(s.events_updated_at, s.updated_at) < v_cutoff;
 
   return v_deleted;
+end;
+$$;
+
+-- ============================================================ session shares (design §6)
+
+-- Owner-only: create a directed share (grantee_member_id) or a link share
+-- (share_token_hash — sha256 of a token that never reaches the server in
+-- plaintext) for one of the caller's own sessions. Exactly one of the two
+-- grant shapes must be set. The session row's updated_at is bumped so the
+-- new grantee receives the row in the next delta pull (§6.5 review
+-- finding). Returns the share id.
+create or replace function public.orgii_create_session_share(
+  p_org_id text,
+  session_row_id text,
+  grantee_member_id text,
+  share_token_hash text,
+  level text,
+  expires_at timestamptz,
+  p_member_id text default null,
+  p_member_token text default null
+)
+returns text
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_ctx record;
+  v_session record;
+  v_share_id text := gen_random_uuid()::text;
+begin
+  -- Member credential only: a share is always created by its owner.
+  select * into v_ctx
+  from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, null);
+
+  if orgii_create_session_share.level not in ('metadata', 'replay') then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+
+  -- Exactly one grant shape: directed (grantee) XOR link (token hash).
+  if (orgii_create_session_share.grantee_member_id is null)
+     = (orgii_create_session_share.share_token_hash is null) then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+
+  select s.* into v_session
+  from public.orgii_sessions s
+  where s.id = orgii_create_session_share.session_row_id
+    and s.org_id = p_org_id;
+
+  if v_session.id is null
+     or v_session.owner_member_id is distinct from v_ctx.member_id
+     or v_session.deleted_at is not null then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+
+  -- Directed shares must target a live member (a typo would otherwise
+  -- create a silent dead grant; the roster is member-visible, no oracle).
+  if orgii_create_session_share.grantee_member_id is not null and not exists (
+    select 1 from public.orgii_members m
+    where m.org_id = p_org_id
+      and m.id = orgii_create_session_share.grantee_member_id
+      and m.removed_at is null
+  ) then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+
+  insert into public.orgii_session_shares
+    (id, org_id, session_row_id, owner_member_id, grantee_member_id, share_token_hash, level, expires_at)
+  values (
+    v_share_id,
+    p_org_id,
+    orgii_create_session_share.session_row_id,
+    v_ctx.member_id,
+    orgii_create_session_share.grantee_member_id,
+    orgii_create_session_share.share_token_hash,
+    orgii_create_session_share.level,
+    orgii_create_session_share.expires_at
+  );
+
+  update public.orgii_sessions s
+     set updated_at = now()
+   where s.id = orgii_create_session_share.session_row_id;
+
+  return v_share_id;
+end;
+$$;
+
+-- Owner (or admin/root): revoke a share. Idempotent on the share row; the
+-- session row is bumped either way so consumers whose visibility just
+-- vanished get the row in their next delta and drop it through the SQL
+-- visibility filter (§6.5).
+create or replace function public.orgii_revoke_session_share(
+  p_org_id text,
+  share_id text,
+  p_member_id text default null,
+  p_member_token text default null,
+  p_org_secret text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_ctx record;
+  v_share record;
+begin
+  select * into v_ctx
+  from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
+
+  select sh.* into v_share
+  from public.orgii_session_shares sh
+  where sh.id = orgii_revoke_session_share.share_id
+    and sh.org_id = p_org_id;
+
+  if v_share.id is null
+     or not (v_ctx.is_root
+             or v_ctx.member_role = 'admin'
+             or v_share.owner_member_id = v_ctx.member_id) then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+
+  update public.orgii_session_shares sh
+     set revoked_at = now()
+   where sh.id = orgii_revoke_session_share.share_id
+     and sh.revoked_at is null;
+
+  update public.orgii_sessions s
+     set updated_at = now()
+   where s.id = v_share.session_row_id;
+end;
+$$;
+
+-- Owner-only management listing: active + revoked shares for one of the
+-- caller's sessions. Token hashes NEVER leave the server — hasToken marks
+-- link shares.
+create or replace function public.orgii_list_session_shares(
+  p_org_id text,
+  session_row_id text,
+  p_member_id text default null,
+  p_member_token text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_ctx record;
+  v_session record;
+begin
+  select * into v_ctx
+  from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, null);
+
+  select s.* into v_session
+  from public.orgii_sessions s
+  where s.id = orgii_list_session_shares.session_row_id
+    and s.org_id = p_org_id;
+
+  if v_session.id is null
+     or v_session.owner_member_id is distinct from v_ctx.member_id then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', sh.id,
+      'granteeMemberId', sh.grantee_member_id,
+      'level', sh.level,
+      'expiresAt', sh.expires_at,
+      'createdAt', sh.created_at,
+      'revokedAt', sh.revoked_at,
+      'hasToken', sh.share_token_hash is not null
+    ) order by sh.created_at desc)
+    from public.orgii_session_shares sh
+    where sh.org_id = p_org_id
+      and sh.session_row_id = orgii_list_session_shares.session_row_id
+  ), '[]'::jsonb);
+end;
+$$;
+
+-- TICKET tier (anon + share token only, design §6.4): resolve a link share
+-- to the bound session's metadata projection (payload plus the segments
+-- summary fields, same shape as a list_org_state sessions row). Missing,
+-- revoked, expired, wrong-level and tombstoned all raise the same opaque
+-- error (§5.5 — no existence oracle). Only replay-level link shares
+-- resolve; the guest then pulls segments with the same token.
+create or replace function public.orgii_resolve_session_share(
+  share_token text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_result jsonb;
+begin
+  select s.payload || jsonb_build_object(
+    'eventsEpoch', s.events_epoch,
+    'eventsFrozenSeq', s.events_frozen_seq,
+    'eventsCount', s.events_count,
+    'eventsTailHash', s.events_tail_hash
+  ) into v_result
+  from public.orgii_session_shares sh
+  join public.orgii_sessions s
+    on s.id = sh.session_row_id and s.org_id = sh.org_id
+  where sh.share_token_hash = encode(digest(share_token, 'sha256'), 'hex')
+    and sh.revoked_at is null
+    and (sh.expires_at is null or sh.expires_at > now())
+    and sh.level = 'replay'
+    and s.deleted_at is null;
+
+  if v_result is null then
+    raise exception 'ORGII_UNAUTHORIZED';
+  end if;
+  return v_result;
 end;
 $$;
 
@@ -1579,6 +1887,13 @@ begin
       from public.orgii_work_items w
       where w.org_id = p_org_id and w.updated_at >= v_since
     ), '[]'::jsonb),
+    -- Visibility filter (design §6.5 — a security boundary, so it lives in
+    -- SQL; repoScopes filtering stays client-side as a participation
+    -- preference): root and owners see everything; visibility null/'org'
+    -- rows reach the whole org; restricted rows need an active, unexpired
+    -- grant. Tombstones pass under the SAME conditions — an org-visible
+    -- tombstone propagates org-wide, a restricted one reaches only owner +
+    -- grantees (§6.6: no visibility widening through death).
     'sessions', coalesce((
       select jsonb_agg(
         s.payload || jsonb_build_object(
@@ -1591,6 +1906,19 @@ begin
       )
       from public.orgii_sessions s
       where s.org_id = p_org_id and s.updated_at >= v_since
+        and (
+          v_ctx.is_root
+          or s.owner_member_id = v_ctx.member_id
+          or coalesce(s.visibility, 'org') = 'org'
+          or exists (
+            select 1 from public.orgii_session_shares sh
+            where sh.org_id = p_org_id
+              and sh.session_row_id = s.id
+              and sh.grantee_member_id = v_ctx.member_id
+              and sh.revoked_at is null
+              and (sh.expires_at is null or sh.expires_at > now())
+          )
+        )
     ), '[]'::jsonb),
     'chatMessages', coalesce((select jsonb_agg(c.payload) from public.orgii_chat_messages c where c.org_id = p_org_id and c.created_at >= v_since), '[]'::jsonb),
     'snapshotRequests', coalesce((
@@ -1628,7 +1956,8 @@ $$;
 -- ============================================================ grants
 -- Every function stays granted to anon (PostgREST requirement); authorization
 -- happens inside. Tiers: public (sync_version, create_org), ticket
--- (accept_invite), credential (everything else).
+-- (accept_invite, resolve_session_share, share-token segment reads),
+-- credential (everything else).
 
 grant execute on function public.orgii_sync_version() to anon;
 grant execute on function public.orgii_authenticate(text, text, text, text) to anon;
@@ -1643,8 +1972,12 @@ grant execute on function public.orgii_upsert_session_metadata(text, jsonb, text
 grant execute on function public.orgii_remove_session_metadata(text, text, text, text, text, text) to anon;
 grant execute on function public.orgii_append_session_events(text, text, integer, integer, jsonb, jsonb, integer, text, text) to anon;
 grant execute on function public.orgii_rewrite_session_events(text, text, integer, jsonb, jsonb, integer, text, text) to anon;
-grant execute on function public.orgii_get_session_event_segments(text, text, integer, text, text, text) to anon;
+grant execute on function public.orgii_get_session_event_segments(text, text, integer, text, text, text, text) to anon;
 grant execute on function public.orgii_gc_session_event_segments(text, integer, text, text, text) to anon;
+grant execute on function public.orgii_create_session_share(text, text, text, text, text, timestamptz, text, text) to anon;
+grant execute on function public.orgii_revoke_session_share(text, text, text, text, text) to anon;
+grant execute on function public.orgii_list_session_shares(text, text, text, text) to anon;
+grant execute on function public.orgii_resolve_session_share(text) to anon;
 grant execute on function public.orgii_post_chat_message(text, jsonb, text, text) to anon;
 grant execute on function public.orgii_upsert_project(text, jsonb, integer, text, text, text) to anon;
 grant execute on function public.orgii_delete_project(text, text, text, text, text) to anon;

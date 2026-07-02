@@ -8,6 +8,7 @@ import type {
   CollabProjectMetadataRecord,
   CollabRepoJoinRequestRecord,
   CollabRole,
+  CollabSessionReplayLevel,
   CollabWorkItemMetadataRecord,
   RemoteTeammateSessionMetadata,
 } from "@src/store/collaboration/types";
@@ -165,6 +166,12 @@ export interface GetSessionEventSegmentsInput extends CollabSyncProfile {
   sessionRowId: string;
   /** Return frozen segments with seq strictly greater; tail always included. */
   afterSeq?: number;
+  /**
+   * Link-share capability (design §6.4): when set, the call authenticates
+   * with the token alone (member/root credentials are not sent) and can only
+   * read the one session the token is bound to.
+   */
+  shareToken?: string;
 }
 
 export interface SessionEventSegmentRecord {
@@ -189,6 +196,63 @@ export interface GcSessionEventSegmentsInput extends CollabSyncProfile {
   orgId: string;
   /** Defaults to the server-side 90-day retention (design §7.5). */
   retentionDays?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Session shares (design §6): per-session grants on top of the org default.
+// The client layer owns link-token generation + hashing; the plaintext token
+// exists only on the creating client and inside the share link.
+// ---------------------------------------------------------------------------
+
+export interface CreateSessionShareInput extends CollabSyncProfile {
+  orgId: string;
+  /** orgii_sessions.id (`${orgId}:${memberId}:${sourceSessionId}`). */
+  sessionRowId: string;
+  /** Directed-share target; omit to create a link share (token generated). */
+  granteeMemberId?: string;
+  level: CollabSessionReplayLevel;
+  expiresAt?: string;
+}
+
+export interface CreateSessionShareResult {
+  shareId: string;
+  /**
+   * Link shares only: the plaintext capability token. Returned exclusively
+   * to the creating client — only its sha256 ever goes on the wire.
+   */
+  shareToken?: string;
+}
+
+export interface RevokeSessionShareInput extends CollabSyncProfile {
+  orgId: string;
+  shareId: string;
+}
+
+export interface ListSessionSharesInput extends CollabSyncProfile {
+  orgId: string;
+  sessionRowId: string;
+}
+
+/** Owner-facing share row; token hashes never come back from the server. */
+export interface CollabSessionShareRecord {
+  id: string;
+  /** Undefined ⇒ link share (see hasToken). */
+  granteeMemberId?: string;
+  level: CollabSessionReplayLevel;
+  expiresAt?: string;
+  createdAt: string;
+  revokedAt?: string;
+  hasToken: boolean;
+}
+
+/**
+ * Ticket call (design §6.4): a share token plus the project coordinates is
+ * the whole credential — no org membership, no member token, no org secret.
+ */
+export interface ResolveSessionShareInput {
+  supabaseUrl: string;
+  anonKey: string;
+  shareToken: string;
 }
 
 export interface UpdateOrgRepoScopesInput extends CollabSyncProfile {
@@ -271,6 +335,17 @@ export interface CollabSyncBackendClient {
   ): Promise<SessionEventSegmentsSnapshot>;
   /** Returns the number of segment rows removed by the retention sweep. */
   gcSessionEventSegments(input: GcSessionEventSegmentsInput): Promise<number>;
+  createSessionShare(
+    input: CreateSessionShareInput
+  ): Promise<CreateSessionShareResult>;
+  revokeSessionShare(input: RevokeSessionShareInput): Promise<void>;
+  listSessionShares(
+    input: ListSessionSharesInput
+  ): Promise<CollabSessionShareRecord[]>;
+  /** Resolves a link-share token to the bound session's metadata (ticket tier). */
+  resolveSessionShare(
+    input: ResolveSessionShareInput
+  ): Promise<RemoteTeammateSessionMetadata>;
   updateOrgRepoScopes(input: UpdateOrgRepoScopesInput): Promise<void>;
   requestRepoJoin(input: RequestRepoJoinInput): Promise<void>;
   reviewRepoJoin(input: ReviewRepoJoinInput): Promise<void>;

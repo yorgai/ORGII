@@ -341,6 +341,282 @@ async function main() {
     `got ${JSON.stringify({ e: summarySession?.eventsEpoch, f: summarySession?.eventsFrozenSeq, c: summarySession?.eventsCount })}`
   );
 
+  // ---- sharing plane (M4): visibility filter, directed + link shares ----
+  // Third member C = the non-grantee perspective.
+  const cInviteCode = randomHex();
+  await rpc("orgii_create_invite", {
+    p_org_id: orgId, ...memberAuthA, invite_code_hash: sha256(cInviteCode),
+    usage_limit: 1, expires_at: null, invite_role: "member",
+    payload: { id: `invite-c-${run}`, orgId, codeSuffix: cInviteCode.slice(-4), usageLimit: 1, usageCount: 0, role: "member", createdAt: nowIso() },
+  });
+  const cId = `member-c-${run}`;
+  const cToken = randomHex();
+  assertOk(
+    "member C accepts invite",
+    await rpc("orgii_accept_invite", {
+      invite_code: cInviteCode, display_name: "Member C", identity_kind: "human",
+      member_credential_hash: sha256(cToken), member_payload: memberPayload(cId, orgId, "Member C", "member"),
+    }),
+    (j) => j?.member?.id === cId
+  );
+  const memberAuthC = { p_member_id: cId, p_member_token: cToken };
+
+  // B pushes a RESTRICTED session with replay segments.
+  const restrictedSourceId = `sess-restricted-${run}`;
+  const restrictedRowId = `${orgId}:${bId}:${restrictedSourceId}`;
+  assertError(
+    "invalid visibility value rejected",
+    await rpc("orgii_upsert_session_metadata", {
+      p_org_id: orgId, ...memberAuthB,
+      payload: {
+        id: restrictedRowId, orgId, ownerMemberId: bId, ownerUserId: bId,
+        ownerDisplayName: "Member B", ownerIdentityKind: "human",
+        sourceSessionId: restrictedSourceId, title: "B secret", accessMode: "full_replay",
+        visibility: "everyone", replayLevel: "replay",
+      },
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+  assertOk(
+    "B upserts a restricted session",
+    await rpc("orgii_upsert_session_metadata", {
+      p_org_id: orgId, ...memberAuthB,
+      payload: {
+        id: restrictedRowId, orgId, ownerMemberId: bId, ownerUserId: bId,
+        ownerDisplayName: "Member B", ownerIdentityKind: "human",
+        sourceSessionId: restrictedSourceId, title: "B secret", accessMode: "full_replay",
+        visibility: "restricted", replayLevel: "replay",
+      },
+    }),
+    () => true
+  );
+  const restrictedFrozen = [{ id: `re1-${run}`, sessionId: restrictedSourceId, displayStatus: "completed" }];
+  const restrictedTail = [{ id: `re2-${run}`, sessionId: restrictedSourceId, displayStatus: "running" }];
+  assertOk(
+    "B pushes segments for the restricted session",
+    await rpc("orgii_rewrite_session_events", {
+      p_org_id: orgId, ...memberAuthB, session_row_id: restrictedRowId,
+      new_epoch: 1, frozen_segments: [segmentWire(1, restrictedFrozen)], tail: tailWire(restrictedTail), total_count: 2,
+    }),
+    () => true
+  );
+
+  // Visibility filter (design §6.5): the restricted row reaches owner and
+  // root only — not other members, not even member-credentialed admins.
+  const cListPre = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthC });
+  const preShareTime = cListPre.json?.serverTime;
+  record(
+    "restricted session invisible to non-grantee member",
+    !(cListPre.json?.sessions ?? []).some((s) => s.id === restrictedRowId)
+  );
+  record(
+    "org-visible session still reaches the new member",
+    (cListPre.json?.sessions ?? []).some((s) => s.id === sessionRowId)
+  );
+  const aListShare = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthA });
+  record(
+    "restricted session invisible to member-credentialed admin (not root)",
+    !(aListShare.json?.sessions ?? []).some((s) => s.id === restrictedRowId)
+  );
+  const rootListShare = await rpc("orgii_list_org_state", { p_org_id: orgId, ...rootAuth });
+  record(
+    "restricted session visible to root",
+    (rootListShare.json?.sessions ?? []).some((s) => s.id === restrictedRowId)
+  );
+  assertError(
+    "non-grantee member cannot read restricted segments",
+    await rpc("orgii_get_session_event_segments", {
+      p_org_id: orgId, ...memberAuthC, session_row_id: restrictedRowId, after_seq: 0,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+
+  // Directed share: B → C. Creation bumps updated_at (delta pickup, §6.5).
+  assertError(
+    "non-owner cannot create a share on B's session",
+    await rpc("orgii_create_session_share", {
+      p_org_id: orgId, ...memberAuthA, session_row_id: restrictedRowId,
+      grantee_member_id: cId, share_token_hash: null, level: "replay", expires_at: null,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+  assertError(
+    "share must be directed XOR link (both set rejected)",
+    await rpc("orgii_create_session_share", {
+      p_org_id: orgId, ...memberAuthB, session_row_id: restrictedRowId,
+      grantee_member_id: cId, share_token_hash: sha256(randomHex()), level: "replay", expires_at: null,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+  const directedShare = await rpc("orgii_create_session_share", {
+    p_org_id: orgId, ...memberAuthB, session_row_id: restrictedRowId,
+    grantee_member_id: cId, share_token_hash: null, level: "replay", expires_at: null,
+  });
+  assertOk("B creates a directed share for C", directedShare, (j) => typeof j === "string" && j.length > 0);
+  const cDelta = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthC, since_timestamp: preShareTime });
+  record(
+    "directed share bumps updated_at (restricted row arrives in C's delta)",
+    (cDelta.json?.sessions ?? []).some((s) => s.id === restrictedRowId)
+  );
+  assertOk(
+    "grantee C reads restricted segments",
+    await rpc("orgii_get_session_event_segments", {
+      p_org_id: orgId, ...memberAuthC, session_row_id: restrictedRowId, after_seq: 0,
+    }),
+    (j) => j?.epoch === 1 && (j?.segments ?? []).length === 2
+  );
+
+  // Revoke: bumps updated_at again; C loses list visibility and segment access.
+  const preRevoke = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthC });
+  const preRevokeTime = preRevoke.json?.serverTime;
+  assertOk(
+    "B revokes the directed share",
+    await rpc("orgii_revoke_session_share", { p_org_id: orgId, ...memberAuthB, share_id: directedShare.json }),
+    () => true
+  );
+  const cAfterRevoke = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthC });
+  record(
+    "revoked share hides the restricted session from C again",
+    !(cAfterRevoke.json?.sessions ?? []).some((s) => s.id === restrictedRowId)
+  );
+  const bRevokeDelta = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthB, since_timestamp: preRevokeTime });
+  record(
+    "revoke bumps updated_at (owner's delta re-carries the row)",
+    (bRevokeDelta.json?.sessions ?? []).some((s) => s.id === restrictedRowId)
+  );
+  assertError(
+    "revoked grantee cannot read restricted segments",
+    await rpc("orgii_get_session_event_segments", {
+      p_org_id: orgId, ...memberAuthC, session_row_id: restrictedRowId, after_seq: 0,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+
+  // Link share: token resolves the session and fetches segments — anon only.
+  const linkToken = randomHex();
+  const linkShare = await rpc("orgii_create_session_share", {
+    p_org_id: orgId, ...memberAuthB, session_row_id: restrictedRowId,
+    grantee_member_id: null, share_token_hash: sha256(linkToken), level: "replay", expires_at: null,
+  });
+  assertOk("B creates a link share", linkShare, (j) => typeof j === "string" && j.length > 0);
+  const resolved = await rpc("orgii_resolve_session_share", { share_token: linkToken });
+  assertOk(
+    "share token resolves the bound session (no member credential)",
+    resolved,
+    (j) => j?.id === restrictedRowId && j?.eventsEpoch === 1 && j?.eventsCount === 2
+  );
+  assertOk(
+    "share token fetches the bound session's segments",
+    await rpc("orgii_get_session_event_segments", {
+      p_org_id: orgId, session_row_id: restrictedRowId, after_seq: 0, p_share_token: linkToken,
+    }),
+    (j) => j?.epoch === 1 && (j?.segments ?? []).length === 2
+  );
+  assertError(
+    "token bound to session A cannot fetch session B's segments",
+    await rpc("orgii_get_session_event_segments", {
+      p_org_id: orgId, session_row_id: sessionRowId, after_seq: 0, p_share_token: linkToken,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+  assertError(
+    "garbage token → uniform error",
+    await rpc("orgii_resolve_session_share", { share_token: randomHex() }),
+    "ORGII_UNAUTHORIZED"
+  );
+  const expiredToken = randomHex();
+  await rpc("orgii_create_session_share", {
+    p_org_id: orgId, ...memberAuthB, session_row_id: restrictedRowId,
+    grantee_member_id: null, share_token_hash: sha256(expiredToken), level: "replay",
+    expires_at: new Date(Date.now() - 60_000).toISOString(),
+  });
+  assertError(
+    "expired token → uniform error",
+    await rpc("orgii_resolve_session_share", { share_token: expiredToken }),
+    "ORGII_UNAUTHORIZED"
+  );
+  const metadataToken = randomHex();
+  await rpc("orgii_create_session_share", {
+    p_org_id: orgId, ...memberAuthB, session_row_id: restrictedRowId,
+    grantee_member_id: null, share_token_hash: sha256(metadataToken), level: "metadata", expires_at: null,
+  });
+  assertError(
+    "metadata-level token cannot resolve replay (level gate)",
+    await rpc("orgii_resolve_session_share", { share_token: metadataToken }),
+    "ORGII_UNAUTHORIZED"
+  );
+  assertOk(
+    "B revokes the link share",
+    await rpc("orgii_revoke_session_share", { p_org_id: orgId, ...memberAuthB, share_id: linkShare.json }),
+    () => true
+  );
+  assertError(
+    "revoked token → uniform error",
+    await rpc("orgii_resolve_session_share", { share_token: linkToken }),
+    "ORGII_UNAUTHORIZED"
+  );
+  assertError(
+    "revoked token cannot fetch segments either",
+    await rpc("orgii_get_session_event_segments", {
+      p_org_id: orgId, session_row_id: restrictedRowId, after_seq: 0, p_share_token: linkToken,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+
+  // Owner management listing: shares visible, token hashes never returned.
+  const shareList = await rpc("orgii_list_session_shares", {
+    p_org_id: orgId, ...memberAuthB, session_row_id: restrictedRowId,
+  });
+  assertOk(
+    "owner lists active + revoked shares",
+    shareList,
+    (j) => Array.isArray(j) && j.length === 4 &&
+      j.some((s) => s.granteeMemberId === cId && s.revokedAt) &&
+      j.some((s) => s.hasToken === true)
+  );
+  record(
+    "share listing carries no token hashes",
+    !JSON.stringify(shareList.json ?? []).includes(sha256(linkToken)) &&
+      !JSON.stringify(shareList.json ?? []).includes("share_token_hash") &&
+      !JSON.stringify(shareList.json ?? []).includes("shareTokenHash")
+  );
+  assertError(
+    "non-owner cannot list shares",
+    await rpc("orgii_list_session_shares", {
+      p_org_id: orgId, ...memberAuthC, session_row_id: restrictedRowId,
+    }),
+    "ORGII_UNAUTHORIZED"
+  );
+
+  // Tombstoned session: resolve dies with the same uniform error.
+  const doomedToken = randomHex();
+  await rpc("orgii_create_session_share", {
+    p_org_id: orgId, ...memberAuthB, session_row_id: restrictedRowId,
+    grantee_member_id: null, share_token_hash: sha256(doomedToken), level: "replay", expires_at: null,
+  });
+  assertOk(
+    "B tombstones the restricted session",
+    await rpc("orgii_remove_session_metadata", {
+      p_org_id: orgId, ...memberAuthB, owner_member_id: bId, source_session_id: restrictedSourceId,
+    }),
+    () => true
+  );
+  assertError(
+    "token on a tombstoned session → uniform error",
+    await rpc("orgii_resolve_session_share", { share_token: doomedToken }),
+    "ORGII_UNAUTHORIZED"
+  );
+  const cAfterTombstone = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthC });
+  record(
+    "restricted tombstone stays invisible to non-grantees (no widening through death)",
+    !(cAfterTombstone.json?.sessions ?? []).some((s) => s.id === restrictedRowId)
+  );
+  const rootAfterTombstone = await rpc("orgii_list_org_state", { p_org_id: orgId, ...rootAuth });
+  record(
+    "restricted tombstone still reaches root",
+    (rootAfterTombstone.json?.sessions ?? []).some((s) => s.id === restrictedRowId && s.deletedAt)
+  );
+
   assertOk(
     "admin tombstones B's session",
     await rpc("orgii_remove_session_metadata", {
