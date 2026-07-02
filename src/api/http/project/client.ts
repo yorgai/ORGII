@@ -114,6 +114,27 @@ export async function configureOrgCollabSync(input: {
   return result;
 }
 
+/**
+ * Leave-org cleanup for a collab-aliased project org: purge every
+ * orgii_collab outbox row for the org (worker rows are untouched) and
+ * reverse the marking `configureOrgCollabSync` applied, in one Rust
+ * transaction. Without it, the scrub's project deletions leave DELETE
+ * tombstones that would drain on a later rejoin and destroy the org's
+ * shared projects for everyone. Leaves the org row and its projects
+ * alone — the leave flow owns the project purge.
+ */
+export async function collabLeaveCleanup(orgId: string): Promise<{
+  deletedOutboxRows: number;
+  orgUnmarked: boolean;
+}> {
+  const result = await invoke<{
+    deletedOutboxRows: number;
+    orgUnmarked: boolean;
+  }>("project_collab_leave_cleanup", { orgId });
+  invalidateCache("__project_orgs__");
+  return result;
+}
+
 /** Claim + hydrate pending collab pushes for one local project org. */
 export async function drainCollabOutbox(input: {
   orgId: string;

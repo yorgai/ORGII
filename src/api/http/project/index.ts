@@ -51,6 +51,7 @@ export const projectApi = {
   resolveOrgGitFolderConflict: client.resolveOrgGitFolderConflict,
   // Collab sync bridge (design §16.8)
   configureOrgCollabSync: client.configureOrgCollabSync,
+  collabLeaveCleanup: client.collabLeaveCleanup,
   drainCollabOutbox: client.drainCollabOutbox,
   ackCollabOutbox: client.ackCollabOutbox,
   applyCollabRemote: client.applyCollabRemote,

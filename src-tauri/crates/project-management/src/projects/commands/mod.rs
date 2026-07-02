@@ -18,6 +18,7 @@
 //! and the frontend always parses a single shape.
 
 mod assets;
+mod collab_leave;
 mod collab_sync;
 mod config;
 mod init;
@@ -32,6 +33,7 @@ mod work_items;
 // the public functions; `handler_list.inc` references the function
 // path and the macro internals must resolve at the same path.
 pub use assets::*;
+pub use collab_leave::*;
 pub use collab_sync::*;
 pub use config::*;
 pub use init::*;

@@ -302,18 +302,6 @@ export function useMemberActions({
         // teammate project/work-item native rows synced under this org's
         // aliased project org (deleting a project cascades its work items).
         // Best-effort: a failure here must not undo the leave.
-        //
-        // KNOWN GAP (Rust-side follow-up): the aliased project org is still
-        // marked collab-synced (source='collab' / sync_provider='orgii_collab')
-        // when these deletes run, so each one enqueues an orgii_collab DELETE
-        // tombstone into the outbox of an org we just left. The member
-        // credential is gone, the engine drops the org from its reconcile
-        // loop, and those rows can never be drained or acked — they sit in
-        // the outbox forever, and the project_org keeps its collab marking.
-        // The project api has no unmark today
-        // (`project_configure_org_collab_sync` only MARKS an org); clearing
-        // the marking before the purge plus purging the org's outbox rows
-        // needs a Rust-side command (org unmark + outbox purge on leave).
         if (removeImportedCopies) {
           const projectOrgId = org.projectOrgId ?? org.id;
           try {
@@ -326,6 +314,20 @@ export function useMemberActions({
           } catch {
             // Leave already succeeded; leftover project rows are cosmetic.
           }
+        }
+        // The aliased project org was still marked collab-synced while the
+        // purge above ran, so each delete enqueued an orgii_collab DELETE
+        // tombstone into the outbox of an org we just left — rows that
+        // would drain on a later rejoin and push those deletions to the
+        // server, destroying the org's shared projects for everyone. Purge
+        // the org's outbox rows and clear the stale collab marking in one
+        // Rust transaction. Best-effort: the leave itself already
+        // succeeded, and a rejoin re-marks the org anyway.
+        try {
+          await projectApi.collabLeaveCleanup(org.projectOrgId ?? org.id);
+        } catch {
+          // Best-effort by design: a cleanup failure must not block the
+          // leave (which already succeeded server-side).
         }
         // The org no longer exists locally — drop the panel selection.
         setSelectedCollabOrg(null);
