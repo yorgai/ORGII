@@ -134,6 +134,7 @@ pub fn ade_manager() -> AgentDefinition {
 
         soul_content: Some(include_str!("prompts/ade_manager.md").to_string()),
         sovereign_prompt: false,
+        auto_continue: false,
 
         delegation_config: Some(DelegationConfig {
             delegatable: true,

@@ -47,6 +47,7 @@ pub fn memory_consolidator() -> AgentDefinition {
         // No soul_content — consolidation prompt injected as user message.
         soul_content: None,
         sovereign_prompt: false,
+        auto_continue: false,
 
         temperature: Some(0.0),
         max_tokens: Some(8192),

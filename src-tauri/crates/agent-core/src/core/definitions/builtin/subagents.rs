@@ -82,6 +82,7 @@ pub fn explore_agent() -> AgentDefinition {
 
         soul_content: Some(EXPLORE_SYSTEM_PROMPT.to_string()),
         sovereign_prompt: false,
+        auto_continue: false,
 
         temperature: Some(0.0),
         max_tokens: None,
@@ -144,6 +145,7 @@ pub fn general_agent() -> AgentDefinition {
 
         soul_content: Some(GENERAL_SYSTEM_PROMPT.to_string()),
         sovereign_prompt: false,
+        auto_continue: false,
 
         temperature: Some(0.0),
         max_tokens: None,

@@ -219,6 +219,7 @@ fn test_config() -> TurnConfig {
         iteration_hook: None,
         persist_cancel_marker: false,
         steering_queue: None,
+        auto_continue: false,
     }
 }
 
@@ -248,7 +249,6 @@ async fn recovery_after_connection_errors() {
         &config,
         "test-session",
         &handler,
-        None,
         None,
         None,
         None,
@@ -297,7 +297,6 @@ async fn overloaded_budget_exhaustion() {
         &config,
         "test-session",
         &handler,
-        None,
         None,
         None,
         None,
@@ -370,7 +369,6 @@ async fn retry_after_floor_is_honored() {
         &config,
         "test-session",
         &handler,
-        None,
         None,
         None,
         None,

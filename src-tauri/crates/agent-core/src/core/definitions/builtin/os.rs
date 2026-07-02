@@ -87,6 +87,7 @@ pub fn os_agent() -> AgentDefinition {
 
         soul_content: Some(include_str!("prompts/os.md").to_string()),
         sovereign_prompt: false,
+        auto_continue: false,
 
         // Default delegation config
         delegation_config: Some(DelegationConfig {

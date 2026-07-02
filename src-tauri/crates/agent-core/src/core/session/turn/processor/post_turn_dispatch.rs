@@ -4,11 +4,13 @@
 //!
 //! 1. **`agent:complete` broadcast** — first, so the user sees "done"
 //!    before any background work fires.
-//! 2. **`HookEvent::Stop`** — `.orgii/hooks.json` `Stop` hook.
-//! 3. **Computer Use lock release** — best-effort, no-op if not held.
-//! 4. **Session memory extraction** — fire-and-forget, 60s timeout.
-//! 5. **Extract memories** — forked extractor agent, fire-and-forget.
-//! 6. **Auto-dream** — periodic memory consolidation, fire-and-forget.
+//! 2. **Computer Use lock release** — best-effort, no-op if not held.
+//! 3. **Session memory extraction** — fire-and-forget, 60s timeout.
+//! 4. **Extract memories** — forked extractor agent, fire-and-forget.
+//! 5. **Auto-dream** — periodic memory consolidation, fire-and-forget.
+//!
+//! (`HookEvent::Stop` no longer fires here — it runs *inside* the turn
+//! loop as a blocking gate; see `on_turn_stop_check`.)
 //!
 //! Post-turn background work uses [`should_run_post_turn_work`] to skip the
 //! work for cancelled turns (the user explicitly stopped).

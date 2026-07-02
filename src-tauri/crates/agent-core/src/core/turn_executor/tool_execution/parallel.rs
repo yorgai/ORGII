@@ -48,7 +48,6 @@ pub(super) async fn execute_parallel_group(
     cancel_flag: Option<&Arc<AtomicBool>>,
     file_tracker: &mut FileTimeTracker,
     consecutive_errors: &mut u32,
-    workspace_path: Option<&std::path::Path>,
     policy_context_activator: Option<&SessionScopedContextActivator>,
     max_tool_use_concurrency: usize,
 ) -> ParallelResult {
@@ -326,25 +325,6 @@ pub(super) async fn execute_parallel_group(
                 .and_then(|activator| activator.augment_for_read_paths(&paths))
             {
                 truncated.push_str(&extra);
-            }
-        }
-
-        if let Some(ws) = workspace_path {
-            let persist_threshold = tools
-                .get(&call.name)
-                .map(|t| t.persist_threshold())
-                .unwrap_or(usize::MAX);
-            if truncated.len() > persist_threshold && !is_error {
-                use super::super::tool_result_storage;
-                match tool_result_storage::persist_tool_result(ws, session_id, &call.id, &truncated)
-                {
-                    Ok(persisted) => {
-                        truncated = tool_result_storage::build_large_result_message(&persisted);
-                    }
-                    Err(err) => {
-                        tracing::warn!("[agent-core] Failed to persist tool result: {}", err);
-                    }
-                }
             }
         }
 

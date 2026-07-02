@@ -92,6 +92,7 @@ impl UnifiedMessageProcessor {
                 .persist_next_cancel_marker
                 .load(std::sync::atomic::Ordering::SeqCst),
             steering_queue: Some(Arc::clone(&self.session.steering_queue)),
+            auto_continue: self.runtime.resolved.auto_continue,
         };
 
         let mut event_handler_config = self.event_handler_config.clone();
@@ -146,7 +147,6 @@ impl UnifiedMessageProcessor {
             .runtime
             .tool_registry
             .get_definitions_budgeted(effective_policy.as_ref());
-        let workspace_root = self.workspace_root();
         let result: TurnResult = match turn_executor::execute_turn(
             messages,
             self.runtime.provider.as_ref(),
@@ -157,7 +157,6 @@ impl UnifiedMessageProcessor {
             &handler,
             perm_provider,
             Some(&self.session.cancel_flag),
-            workspace_root.as_deref(),
             self.runtime.policy_context_activator.as_deref(),
         )
         .await
@@ -174,7 +173,6 @@ impl UnifiedMessageProcessor {
                     effective_policy.as_ref(),
                     &handler,
                     perm_provider,
-                    workspace_root.as_deref(),
                 )
                 .await?
             }
@@ -189,6 +187,15 @@ impl UnifiedMessageProcessor {
             result.cache_read_tokens,
             result.cache_write_tokens,
         );
+
+        // Record the provider-reported context fill so the next pre-turn
+        // compaction check can correct the local token estimate (which
+        // systematically undercounts — images, tokenizer mismatch).
+        if result.context_tokens > 0 {
+            self.session
+                .last_context_tokens
+                .store(result.context_tokens, std::sync::atomic::Ordering::SeqCst);
+        }
 
         Ok((result, handler))
     }
@@ -207,7 +214,6 @@ impl UnifiedMessageProcessor {
         effective_policy: &crate::tools::policy::ResolvedToolPolicy,
         handler: &UnifiedEventHandler,
         perm_provider: Option<&dyn PermissionProvider>,
-        workspace_root: Option<&std::path::Path>,
     ) -> Result<TurnResult, String> {
         const MAX_REACTIVE_RETRIES: usize = 2;
         let mut last_err = first_err;
@@ -219,8 +225,12 @@ impl UnifiedMessageProcessor {
                 session_id, attempt, MAX_REACTIVE_RETRIES,
             );
             // Full rebuild pipeline (prefix protection + SM-compact first +
-            // file re-injection), mirroring the pre-turn path.
-            let reactive_outcome = self.run_reactive_compaction(session_id, messages).await;
+            // file re-injection), mirroring the pre-turn path. The error
+            // string carries the provider-reported actual token count, used
+            // to calibrate the estimate-denominated budget.
+            let reactive_outcome = self
+                .run_reactive_compaction(session_id, messages, Some(&last_err))
+                .await;
             self.session
                 .invalidate_prompt_cache(
                     crate::session::prompt::cache::PromptCacheInvalidationReason::Compaction,
@@ -233,6 +243,23 @@ impl UnifiedMessageProcessor {
                     &format!(
                         "Reactive compaction fell back to truncation ({} messages dropped without summary, attempt {})",
                         messages_dropped, attempt
+                    ),
+                    "compaction",
+                );
+            } else if reactive_outcome == CompactionOutcome::Skipped {
+                // The provider just rejected the prompt as too long, yet the
+                // compactor's estimate judged the history within budget — the
+                // retry is doomed to fail identically. Surface it instead of
+                // spinning silently.
+                warn!(
+                    "[unified_processor] Reactive compaction SKIPPED for session {} despite ContextTooLong (attempt {}) — estimator undercount",
+                    session_id, attempt
+                );
+                broadcast_agent_warning(
+                    session_id,
+                    &format!(
+                        "Reactive compaction skipped (estimate under budget despite provider rejection, attempt {})",
+                        attempt
                     ),
                     "compaction",
                 );
@@ -255,7 +282,6 @@ impl UnifiedMessageProcessor {
                 handler,
                 perm_provider,
                 Some(&self.session.cancel_flag),
-                workspace_root,
                 self.runtime.policy_context_activator.as_deref(),
             )
             .await

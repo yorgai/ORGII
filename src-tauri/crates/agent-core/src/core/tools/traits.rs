@@ -270,20 +270,11 @@ pub trait Tool: Send + Sync {
     /// `<persisted-output>` stub. Default true (shell/search dumps are
     /// retrievable-by-path). Tools whose output is semantically load-bearing
     /// — skill bodies the model must follow, subagent results the frontend
-    /// parses into cards — MUST return false so oversized output falls back
-    /// to plain tail truncation instead of a stub.
+    /// parses into cards, file reads that would be circular to re-read from
+    /// disk — MUST return false so oversized output falls back to plain tail
+    /// truncation instead of a stub.
     fn allow_persisted_output(&self) -> bool {
         true
-    }
-
-    /// Character threshold above which a tool result is persisted to disk
-    /// and replaced with a preview + file path in the context.
-    ///
-    /// Return `usize::MAX` to opt out of persistence (e.g., `read_file`
-    /// results should not be written to another file for the LLM to re-read).
-    /// Default: 50,000 characters (matches `DEFAULT_PERSIST_THRESHOLD`).
-    fn persist_threshold(&self) -> usize {
-        crate::turn_executor::tool_result_storage::DEFAULT_PERSIST_THRESHOLD
     }
 
     /// Optional dynamic description for the LLM schema.

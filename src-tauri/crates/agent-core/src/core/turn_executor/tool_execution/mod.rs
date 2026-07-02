@@ -176,7 +176,6 @@ pub(crate) async fn execute_tool_calls(
     cancel_flag: Option<&Arc<AtomicBool>>,
     file_tracker: &mut FileTimeTracker,
     consecutive_errors: &mut u32,
-    workspace_path: Option<&std::path::Path>,
     policy_context_activator: Option<&SessionScopedContextActivator>,
     max_tool_use_concurrency: usize,
 ) -> (usize, Vec<ToolExecutionUsage>, ToolBatchOutcome) {
@@ -198,7 +197,6 @@ pub(crate) async fn execute_tool_calls(
                     cancel_flag,
                     file_tracker,
                     consecutive_errors,
-                    workspace_path,
                     policy_context_activator,
                     max_tool_use_concurrency,
                 )
@@ -227,7 +225,6 @@ pub(crate) async fn execute_tool_calls(
                         cancel_flag,
                         file_tracker,
                         consecutive_errors,
-                        workspace_path,
                         policy_context_activator,
                     )
                     .await;
@@ -254,7 +251,6 @@ pub(crate) async fn execute_tool_calls(
                     cancel_flag,
                     file_tracker,
                     consecutive_errors,
-                    workspace_path,
                     policy_context_activator,
                 )
                 .await;

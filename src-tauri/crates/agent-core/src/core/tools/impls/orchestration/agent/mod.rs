@@ -509,13 +509,6 @@ impl Tool for AgentTool {
         -10
     }
 
-    fn persist_threshold(&self) -> usize {
-        // Never disk-stub subagent results (frontend parses them into
-        // cards; the parent consumes them inline) — see
-        // allow_persisted_output below for the new-path exemption.
-        usize::MAX
-    }
-
     /// Subagent results are parsed by the frontend (result cards, trailer
     /// lines) and consumed inline by the parent — a `<persisted-output>`
     /// stub breaks both. Oversized results fall back to tail truncation.
@@ -918,6 +911,9 @@ impl Tool for AgentTool {
             iteration_hook: None,
             persist_cancel_marker: false,
             steering_queue: None,
+            // Subagents never auto-continue (CC parity: the feature is
+            // main-session only — a subagent that stops is done).
+            auto_continue: false,
         };
 
         // 9. Session id + type label were minted at step 3b (so the
@@ -1058,7 +1054,7 @@ impl Tool for AgentTool {
         .await;
 
         let workspace = self.resolve_repo_path().await;
-        let (run_workspace, final_registry_arc, isolation_workspace_root) =
+        let (final_registry_arc, isolation_workspace_root) =
             match effective_isolation {
                 Some(SubAgentIsolation::Worktree) => {
                     let (isolated_workspace, worktree_info) = match self
@@ -1131,13 +1127,9 @@ impl Tool for AgentTool {
                         isolated_workspace.clone(),
                         &subagent_session_id,
                     );
-                    (
-                        isolated_workspace.working_dir().to_path_buf(),
-                        registry,
-                        Some(workspace_root),
-                    )
+                    (registry, Some(workspace_root))
                 }
-                None => (workspace, Arc::clone(&effective_registry_arc), None),
+                None => (Arc::clone(&effective_registry_arc), None),
             };
         let final_registry = final_registry_arc.as_ref();
 
@@ -1154,7 +1146,6 @@ impl Tool for AgentTool {
                     effective_policy,
                     fresh_registry: None,
                     parent_registry: Arc::clone(&final_registry_arc),
-                    workspace: run_workspace,
                     subagent_session_id,
                     parent_session_id,
                     subagent_type_label: subagent_type_wire,
@@ -1180,7 +1171,6 @@ impl Tool for AgentTool {
                 turn_config,
                 effective_registry: final_registry,
                 effective_policy,
-                workspace: run_workspace.as_path(),
                 subagent_session_id,
                 parent_session_id,
                 subagent_type_label: subagent_type_wire,

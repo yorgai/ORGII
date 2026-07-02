@@ -143,6 +143,9 @@ pub struct UnifiedEventHandler {
     /// authoritative `on_tool_call` event later overwrites the same
     /// `tool-call-{id}` row, so nothing here survives the final state.
     plan_draft_streams: Mutex<std::collections::HashMap<usize, PlanDraftStream>>,
+    /// Latest context-usage token count observed via `on_context_usage`.
+    /// Feeds the Stop hook's `ORGII_TOTAL_TOKENS` env var.
+    last_context_tokens: std::sync::atomic::AtomicI64,
 }
 
 /// Accumulated state for one streaming `create_plan` call.
@@ -185,6 +188,7 @@ impl UnifiedEventHandler {
             streaming_buffer: StreamingBuffer::with_default_timeout(),
             flushed_message_sessions: Mutex::new(HashSet::new()),
             plan_draft_streams: Mutex::new(std::collections::HashMap::new()),
+            last_context_tokens: std::sync::atomic::AtomicI64::new(0),
         }
     }
 
@@ -448,6 +452,8 @@ impl TurnEventHandler for UnifiedEventHandler {
     }
 
     fn on_context_usage(&self, session_id: &str, usage: &ContextUsageSnapshot) {
+        self.last_context_tokens
+            .store(usage.used_tokens, Ordering::Relaxed);
         if self.is_cancelled() {
             return;
         }
@@ -735,7 +741,14 @@ impl TurnEventHandler for UnifiedEventHandler {
     }
 
     async fn on_turn_stop_check(&self, session_id: &str) -> Option<String> {
-        hooks_dispatch::dispatch_stop_check(self.config.hook_executor.as_ref(), session_id).await
+        hooks_dispatch::dispatch_stop_check(
+            self.config.hook_executor.as_ref(),
+            session_id,
+            self.config.turn_id.as_deref(),
+            self.tool_call_count.load(Ordering::Relaxed),
+            self.last_context_tokens.load(Ordering::Relaxed),
+        )
+        .await
     }
 
     fn on_steering_consumed(

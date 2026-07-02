@@ -157,8 +157,11 @@ impl Tool for ReadFileTool {
         100_000
     }
 
-    fn persist_threshold(&self) -> usize {
-        usize::MAX
+    /// Never stub a file read to disk — telling the model "the content is in
+    /// a file on disk" in response to it reading a file is circular. Oversized
+    /// reads fall back to plain tail truncation.
+    fn allow_persisted_output(&self) -> bool {
+        false
     }
 
     fn description(&self) -> &str {

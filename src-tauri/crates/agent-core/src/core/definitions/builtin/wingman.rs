@@ -90,6 +90,7 @@ pub fn wingman_agent() -> AgentDefinition {
 
         soul_content: Some(include_str!("prompts/wingman.md").to_string()),
         sovereign_prompt: false,
+        auto_continue: false,
 
         delegation_config: None,
         context_window: None,

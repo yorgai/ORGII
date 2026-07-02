@@ -217,12 +217,15 @@ impl TurnPrefetchHook {
             Ok(output) => {
                 if let Some(section) = output.section {
                     let injected = insert_system_after_existing_system(messages, section.clone());
+                    // Only memory-bearing sections count against the session
+                    // budget: an index-only section (no surfaced paths) is
+                    // small, repeats every turn, and would otherwise drain
+                    // the budget without injecting any memory content.
                     if injected && !output.surfaced_paths.is_empty() {
                         if let Some(surface_state) = surface_state {
-                            surface_state
-                                .lock()
-                                .await
-                                .record_paths(output.surfaced_paths.iter().cloned());
+                            let mut surface_state = surface_state.lock().await;
+                            surface_state.record_paths(output.surfaced_paths.iter().cloned());
+                            surface_state.record_bytes(section.len());
                         }
                     }
                     debug!(
@@ -382,12 +385,26 @@ impl UnifiedMessageProcessor {
         };
         let recent_tools =
             crate::memory::workspace_memory::prefetch::extract_recent_tools_from_history(history);
-        let already_surfaced = self
-            .session
-            .workspace_memory_surface_state
-            .lock()
-            .await
-            .snapshot();
+        let (already_surfaced, remaining_session_budget) = {
+            let surface_state = self.session.workspace_memory_surface_state.lock().await;
+            (
+                surface_state.snapshot(),
+                surface_state.remaining_budget(
+                    crate::memory::workspace_memory::surface_state::MAX_SESSION_MEMORY_BYTES,
+                ),
+            )
+        };
+        // Session budget exhausted: skip the prefetch entirely instead of
+        // burning an LLM side-query on memories we would refuse to inject.
+        if remaining_session_budget == 0 {
+            debug!(
+                session_id = %session_id,
+                "[turn-prefetch] session memory budget exhausted; skipping memory prefetch"
+            );
+            return None;
+        }
+        let byte_budget = crate::memory::workspace_memory::prefetch::MAX_MEMORY_INJECTION_BYTES
+            .min(remaining_session_budget);
         let user_message = content.to_string();
         let model = self.runtime.model.clone();
 
@@ -399,6 +416,7 @@ impl UnifiedMessageProcessor {
                 &model,
                 &recent_tools,
                 &already_surfaced,
+                byte_budget,
             )
             .await;
             let surfaced_paths = memories

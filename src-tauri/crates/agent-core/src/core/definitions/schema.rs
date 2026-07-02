@@ -415,6 +415,19 @@ pub struct AgentDefinition {
     #[serde(default, skip_serializing_if = "is_false")]
     pub sovereign_prompt: bool,
 
+    /// Feature-gated auto-continue (default `false`, i.e. off).
+    ///
+    /// When `true`, the turn loop injects a continue nudge instead of
+    /// letting the turn end when the model stops with plain text while the
+    /// real context-window fill is still below 90%. Counters the
+    /// "self-rationing" failure mode where a long-horizon model narrates
+    /// that context is nearly exhausted and hands off prematurely. Mirrors
+    /// Claude Code's TOKEN_BUDGET auto-continue semantics: capped at 3
+    /// continuations per turn with a diminishing-returns guard, and never
+    /// applied to subagents. JSON key: `autoContinue`.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub auto_continue: bool,
+
     /// Sub-agents that can be spawned by this agent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sub_agents: Option<Vec<SubAgentRef>>,

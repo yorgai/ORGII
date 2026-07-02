@@ -126,6 +126,15 @@ pub struct TurnConfig {
     /// before each LLM iteration (and once more before the turn is allowed
     /// to end).
     pub steering_queue: Option<SteeringQueue>,
+    /// Feature-gated auto-continue (default `false`). When enabled and the
+    /// model ends the turn with plain text while the context window is still
+    /// below 90% used, the loop injects a `<system-reminder>` continue nudge
+    /// and gives the model another iteration instead of finishing the turn.
+    /// Guarded by a per-turn continuation cap and a diminishing-returns
+    /// check — see `should_auto_continue` in the turn executor. Mirrors
+    /// Claude Code's TOKEN_BUDGET auto-continue semantics. Subagents and
+    /// background memory runs always pass `false`.
+    pub auto_continue: bool,
 }
 
 // ============================================
@@ -438,8 +447,12 @@ mod tests {
             iteration_hook: None,
             persist_cancel_marker: false,
             steering_queue: None,
+            auto_continue: false,
         };
         assert!(config.max_iterations.is_none());
+        // Feature gate: auto-continue is opt-in — every default/off
+        // construction site passes `false`.
+        assert!(!config.auto_continue);
     }
 
     #[test]
@@ -456,6 +469,7 @@ mod tests {
             iteration_hook: None,
             persist_cancel_marker: false,
             steering_queue: None,
+            auto_continue: false,
         };
         assert_eq!(config.max_iterations, Some(15));
     }

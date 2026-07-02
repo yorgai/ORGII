@@ -258,13 +258,51 @@ impl ContextCompactor {
         context_window: usize,
         config: &CompactionConfig,
     ) -> bool {
+        Self::needs_compaction_with_budget(history, config.effective_budget(context_window), config)
+    }
+
+    /// Like [`Self::needs_compaction`] but against an explicit (possibly
+    /// calibrated) token budget instead of deriving one from the raw
+    /// context window.
+    pub fn needs_compaction_with_budget(
+        history: &[Value],
+        budget_tokens: usize,
+        config: &CompactionConfig,
+    ) -> bool {
+        if !config.enabled || history.len() < config.min_messages {
+            return false;
+        }
+
+        let trigger_threshold = (budget_tokens as f32 * config.trigger_ratio) as usize;
+        let history_tokens = Self::estimate_messages_tokens(history);
+        history_tokens > trigger_threshold
+    }
+
+    /// Like [`Self::needs_compaction`] but also considers the
+    /// provider-reported real context fill from the previous turn.
+    ///
+    /// Triggers when EITHER the local estimate or the observed real fill
+    /// exceeds the threshold — the estimator systematically undercounts
+    /// (images count as 0 tokens, cl100k vs the provider's tokenizer,
+    /// long-text sampling), so an under-threshold estimate alone must not
+    /// veto compaction when the provider has already measured the prompt
+    /// above the threshold. `observed_tokens` covers the full prompt
+    /// (system prefix + tool definitions) while the threshold is
+    /// tail-scoped; the resulting slightly-early trigger errs on the safe
+    /// side. Pass `0` when no real reading is available.
+    pub fn needs_compaction_observed(
+        history: &[Value],
+        context_window: usize,
+        config: &CompactionConfig,
+        observed_tokens: usize,
+    ) -> bool {
         if !config.enabled || history.len() < config.min_messages {
             return false;
         }
 
         let budget = config.effective_budget(context_window);
         let trigger_threshold = (budget as f32 * config.trigger_ratio) as usize;
-        let history_tokens = Self::estimate_messages_tokens(history);
+        let history_tokens = Self::estimate_messages_tokens(history).max(observed_tokens);
         history_tokens > trigger_threshold
     }
 
@@ -297,7 +335,12 @@ impl ContextCompactor {
 
         let history_tokens = Self::estimate_messages_tokens(history);
 
-        if history_tokens <= budget_tokens {
+        // Skip at the same trigger threshold as `needs_compaction`, not at
+        // the full budget — otherwise a caller whose trigger fired (>80% of
+        // budget) gets a silent no-op here (estimate still ≤ 100% of budget)
+        // and the history keeps growing until the provider rejects it.
+        let trigger_threshold = (budget_tokens as f32 * config.trigger_ratio) as usize;
+        if history_tokens <= trigger_threshold {
             return (history.to_vec(), CompactionOutcome::Skipped);
         }
 
@@ -509,6 +552,61 @@ impl ContextCompactor {
             || lower.contains("token limit")
             || lower.contains("context window")
             || lower.contains("prompt too long")
+    }
+
+    /// Extract the provider-reported ACTUAL prompt token count from a
+    /// "prompt too long" error message.
+    ///
+    /// Returns the largest number immediately followed by the word
+    /// "tokens": Anthropic reports `prompt is too long: 1037806 tokens >
+    /// 1000000 maximum` (actual precedes "tokens", limit precedes
+    /// "maximum"); OpenAI reports `maximum context length is 128000
+    /// tokens. However, your messages resulted in 130000 tokens` (both
+    /// precede "tokens", the actual is the larger).
+    pub fn parse_actual_tokens_from_error(err: &str) -> Option<usize> {
+        let mut best: Option<usize> = None;
+        let mut current = 0usize;
+        let mut in_number = false;
+        let bytes = err.as_bytes();
+        for (idx, byte) in bytes.iter().enumerate() {
+            if byte.is_ascii_digit() {
+                current = current.saturating_mul(10) + (byte - b'0') as usize;
+                in_number = true;
+            } else {
+                if in_number {
+                    let rest = err[idx..].trim_start_matches([' ', ':']);
+                    if rest.starts_with("tokens") && best.is_none_or(|b| current > b) {
+                        best = Some(current);
+                    }
+                }
+                current = 0;
+                in_number = false;
+            }
+        }
+        // Number at end of string can't be followed by "tokens" — ignore.
+        best
+    }
+
+    /// Scale `budget_tokens` (denominated in ESTIMATED tokens) down by the
+    /// observed estimator undercount, so that truncating/compacting to the
+    /// calibrated budget lands the ACTUAL prompt within the real limit.
+    ///
+    /// `estimated_tokens` is the local estimate of the same history the
+    /// provider measured as `actual_tokens`. When the provider reports more
+    /// than we estimated (the systematic case: images count as 0 locally,
+    /// tokenizer mismatch, sampling), the returned budget is
+    /// `budget × estimated / actual`. When the estimate is already at or
+    /// above the actual, the budget is returned unchanged.
+    pub fn calibrate_budget(
+        budget_tokens: usize,
+        estimated_tokens: usize,
+        actual_tokens: usize,
+    ) -> usize {
+        if actual_tokens > estimated_tokens && estimated_tokens > 0 {
+            ((budget_tokens as u128 * estimated_tokens as u128) / actual_tokens as u128) as usize
+        } else {
+            budget_tokens
+        }
     }
 
     /// Fallback: simple truncation when LLM-based compaction fails or is not feasible.

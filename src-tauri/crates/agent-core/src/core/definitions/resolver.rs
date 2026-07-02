@@ -178,6 +178,7 @@ fn merge_definitions(parent: &AgentDefinition, child: &AgentDefinition) -> Agent
             .clone()
             .or_else(|| parent.soul_content.clone()),
         sovereign_prompt: child.sovereign_prompt || parent.sovereign_prompt,
+        auto_continue: child.auto_continue || parent.auto_continue,
         sub_agents: child
             .sub_agents
             .clone()

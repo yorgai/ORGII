@@ -97,6 +97,7 @@ impl UnifiedMessageProcessor {
         &self,
         session_id: &str,
         messages: &mut Vec<Value>,
+        provider_error: Option<&str>,
     ) -> CompactionOutcome {
         let context_window = crate::providers::model_capabilities::resolve_effective_context_window(
             &self.runtime.model,
@@ -106,6 +107,30 @@ impl UnifiedMessageProcessor {
                 .context_window_configured
                 .then_some(self.runtime.resolved.context_window),
         );
+        // Budget in ESTIMATED tokens: start from the effective budget (NOT
+        // the raw window — passing the raw window made `compact` skip as a
+        // silent no-op whenever the estimate was under 100% of the window,
+        // even though the provider had just rejected the actual prompt),
+        // then calibrate by the provider-reported actual token count from
+        // the error, correcting the estimator's systematic undercount.
+        let mut budget_tokens = self
+            .runtime
+            .resolved
+            .compaction
+            .effective_budget(context_window);
+        if let Some(actual) = provider_error
+            .and_then(ContextCompactor::parse_actual_tokens_from_error)
+        {
+            let estimated = ContextCompactor::estimate_messages_tokens(messages);
+            let calibrated = ContextCompactor::calibrate_budget(budget_tokens, estimated, actual);
+            if calibrated != budget_tokens {
+                info!(
+                    "[unified_processor] Reactive compaction budget calibrated {} -> {} (estimated={}, provider-actual={}, session={})",
+                    budget_tokens, calibrated, estimated, actual, session_id
+                );
+                budget_tokens = calibrated;
+            }
+        }
         let prefix_len = leading_runtime_system_prefix_len(messages);
         let prefix = messages[..prefix_len].to_vec();
         let compactable_tail = messages[prefix_len..].to_vec();
@@ -137,9 +162,9 @@ impl UnifiedMessageProcessor {
         let outcome;
         if let Some(compacted) = sm_compacted {
             let cleaned_tail = crate::model_context::cleanup::post_compact_cleanup(compacted);
-            if crate::model_context::compaction::ContextCompactor::needs_compaction(
+            if crate::model_context::compaction::ContextCompactor::needs_compaction_with_budget(
                 &cleaned_tail,
-                context_window,
+                budget_tokens,
                 &self.runtime.resolved.compaction,
             ) {
                 // SM-compact not enough — fall through to LLM compaction on
@@ -147,7 +172,7 @@ impl UnifiedMessageProcessor {
                 let mut state = self.compaction_state.lock().await;
                 let (compacted, llm_outcome) = ContextCompactor::compact(
                     &cleaned_tail,
-                    context_window,
+                    budget_tokens,
                     &self.runtime.resolved.compaction,
                     &mut state,
                     self.runtime.provider.as_ref(),
@@ -174,7 +199,7 @@ impl UnifiedMessageProcessor {
             let mut state = self.compaction_state.lock().await;
             let (compacted, llm_outcome) = ContextCompactor::compact(
                 &compactable_tail,
-                context_window,
+                budget_tokens,
                 &self.runtime.resolved.compaction,
                 &mut state,
                 self.runtime.provider.as_ref(),
@@ -196,6 +221,12 @@ impl UnifiedMessageProcessor {
             &pre_compact_messages,
             messages,
         );
+
+        // The provider-reported fill referred to the pre-compaction history;
+        // clear it so the next pre-turn trigger doesn't act on a stale value.
+        self.session
+            .last_context_tokens
+            .store(0, std::sync::atomic::Ordering::SeqCst);
 
         outcome
     }
@@ -251,15 +282,41 @@ impl UnifiedMessageProcessor {
         let prefix = messages[..prefix_len].to_vec();
         let mut compactable_tail = messages[prefix_len..].to_vec();
 
+        // Provider-reported real context fill from the previous turn — the
+        // trigger must not rely on the local estimate alone (it undercounts:
+        // images = 0 tokens, tokenizer mismatch, sampling), or the session
+        // sails past the window until the provider rejects it.
+        let observed_tokens = self
+            .session
+            .last_context_tokens
+            .load(std::sync::atomic::Ordering::SeqCst)
+            .max(0) as usize;
+
         if !(self.runtime.resolved.compaction.enabled
-            && ContextCompactor::needs_compaction(
+            && ContextCompactor::needs_compaction_observed(
                 &compactable_tail,
                 context_window,
                 &self.runtime.resolved.compaction,
+                observed_tokens,
             ))
         {
             return CompactionPhaseOutcome::Continue;
         }
+
+        // Budget in ESTIMATED tokens for the compactors below: effective
+        // budget (NOT the raw window, which made `compact` skip as a silent
+        // no-op in the estimated 80%-100% band), calibrated down by the
+        // observed undercount so that hitting the calibrated budget lands
+        // the REAL prompt within the real one.
+        let budget_tokens = {
+            let base = self
+                .runtime
+                .resolved
+                .compaction
+                .effective_budget(context_window);
+            let estimated = ContextCompactor::estimate_messages_tokens(&compactable_tail);
+            ContextCompactor::calibrate_budget(base, estimated, observed_tokens)
+        };
 
         info!(
             "[unified_processor] Compacting context for session {} (prefix={}, tail={}, window={})",
@@ -293,9 +350,9 @@ impl UnifiedMessageProcessor {
             let cleaned_tail = crate::model_context::cleanup::post_compact_cleanup(compacted);
             let rebuilt = append_compacted_tail(&prefix, cleaned_tail.clone());
 
-            if ContextCompactor::needs_compaction(
+            if ContextCompactor::needs_compaction_with_budget(
                 &cleaned_tail,
-                context_window,
+                budget_tokens,
                 &self.runtime.resolved.compaction,
             ) {
                 warn!(
@@ -326,7 +383,7 @@ impl UnifiedMessageProcessor {
             let mut state = self.compaction_state.lock().await;
             let (compacted, outcome) = ContextCompactor::compact(
                 &compactable_tail,
-                context_window,
+                budget_tokens,
                 &self.runtime.resolved.compaction,
                 &mut state,
                 self.runtime.provider.as_ref(),
@@ -362,6 +419,12 @@ impl UnifiedMessageProcessor {
             &pre_compact_messages,
             messages,
         );
+
+        // The provider-reported fill referred to the pre-compaction history;
+        // clear it so the next trigger doesn't act on a stale value.
+        self.session
+            .last_context_tokens
+            .store(0, std::sync::atomic::Ordering::SeqCst);
 
         let durable_compacted_messages = messages[prefix_len.min(messages.len())..].to_vec();
 

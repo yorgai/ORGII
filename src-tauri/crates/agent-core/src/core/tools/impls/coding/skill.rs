@@ -82,13 +82,6 @@ impl Tool for SkillTool {
         false
     }
 
-    /// Opt out of the pre-existing persist_threshold path too (same reason:
-    /// the full SKILL.md body is the point of the call — a disk stub means
-    /// the model never reads the instructions it claims to follow).
-    fn persist_threshold(&self) -> usize {
-        usize::MAX
-    }
-
     fn parameters(&self) -> Value {
         serde_json::json!({
             "type": "object",

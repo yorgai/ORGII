@@ -195,6 +195,7 @@ pub async fn run_consolidation(params: super::super::MemoryAgentParams<'_>) -> R
         iteration_hook: None,
         persist_cancel_marker: false,
         steering_queue: None,
+        auto_continue: false,
     };
 
     let session_id = params.session_id;
@@ -212,7 +213,6 @@ pub async fn run_consolidation(params: super::super::MemoryAgentParams<'_>) -> R
         &handler,
         None,
         None,
-        Some(workspace),
         None,
     )
     .await;

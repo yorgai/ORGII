@@ -456,11 +456,8 @@ impl SkillsLoader {
                     skill.description.clone()
                 };
                 format!(
-                    "- **{}** ({}): {} — read `{}` before applying this skill.",
-                    skill.name,
-                    skill.source,
-                    description,
-                    skill.path.display(),
+                    "- **{}** ({}): {} — load it with the `skill` tool before applying.",
+                    skill.name, skill.source, description,
                 )
             })
             .collect();
@@ -468,7 +465,7 @@ impl SkillsLoader {
         vec![format!(
             "# Active Skills\n\n\
              The skills below are always available for this session. Their full SKILL.md bodies are not inlined here to keep the prompt cache stable.\n\
-             Before applying one, read its SKILL.md with `read_file` and follow it exactly.\n\n\
+             Before applying one, load it with the `skill` tool (skill: \"<name>\") and follow it exactly.\n\n\
              {}",
             lines.join("\n")
         )]
@@ -1196,7 +1193,7 @@ mod include_filter_tests {
         assert!(manifest.contains("cache-audit"));
         assert!(manifest.contains("Audit prompt cache"));
         assert!(manifest.contains("SKILL.md"));
-        assert!(manifest.contains("read_file"));
+        assert!(manifest.contains("`skill` tool"));
         assert!(
             !manifest.contains("SECRET BODY DETAIL"),
             "always skill body must be loaded on demand, not inlined: {manifest}",

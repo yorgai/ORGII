@@ -18,6 +18,10 @@ use crate::turn_executor::ToolHookIntervention;
 
 use super::helpers::parse_hook_decision;
 
+/// Model-facing fallback when a Stop hook blocks without a message.
+const STOP_BLOCK_FALLBACK: &str =
+    "A Stop hook blocked this completion. Continue working on the task.";
+
 /// Run user-defined PreToolUse hooks.
 ///
 /// Returns the first intervention found. Hook stdout is parsed via
@@ -73,15 +77,24 @@ pub(super) async fn dispatch_pre_tool(
 /// PreToolUse deny). The message is returned so the turn loop can inject
 /// it and continue; non-blocking hooks (any other output) let the turn
 /// end normally.
+///
+/// Hooks receive turn metadata via `ORGII_TURN_ID` / `ORGII_TOOL_CALLS` /
+/// `ORGII_TOTAL_TOKENS` env vars.
 pub(super) async fn dispatch_stop_check(
     hook_executor: Option<&Arc<HookExecutor>>,
     session_id: &str,
+    turn_id: Option<&str>,
+    tool_calls: u32,
+    total_tokens: i64,
 ) -> Option<String> {
     let executor = hook_executor?;
     if !executor.has_hooks_for(HookEvent::Stop) {
         return None;
     }
-    let ctx = HookContext::for_session(session_id);
+    let ctx = HookContext::for_session(session_id)
+        .with_var("ORGII_TURN_ID", turn_id.unwrap_or(""))
+        .with_var("ORGII_TOOL_CALLS", tool_calls.to_string())
+        .with_var("ORGII_TOTAL_TOKENS", total_tokens.to_string());
     let results = executor.run(HookEvent::Stop, &ctx).await;
     for hook_result in &results {
         if !hook_result.success && !hook_result.stderr.is_empty() {
@@ -93,7 +106,7 @@ pub(super) async fn dispatch_stop_check(
         // Exit-code-2 blocking contract: stderr is the continuation feedback.
         if hook_result.is_blocking_exit() {
             let message = if hook_result.stderr.trim().is_empty() {
-                "A Stop hook blocked this completion. Continue working on the task.".to_string()
+                STOP_BLOCK_FALLBACK.to_string()
             } else {
                 hook_result.stderr.trim().to_string()
             };
@@ -117,7 +130,7 @@ fn parse_stop_block(stdout: &str) -> Option<String> {
         parsed
             .get("message")
             .and_then(Value::as_str)
-            .unwrap_or("A Stop hook blocked this completion. Continue working on the task.")
+            .unwrap_or(STOP_BLOCK_FALLBACK)
             .to_string(),
     )
 }

@@ -2,7 +2,6 @@
 //! persist the transcript, update LinkedSession, and surface the result back
 //! to the parent's `agent` tool call.
 
-use std::path::Path;
 use std::sync::Arc;
 
 use serde_json::Value;
@@ -27,7 +26,6 @@ pub(super) struct ForegroundRunArgs<'a> {
     pub turn_config: TurnConfig,
     pub effective_registry: &'a ToolRegistry,
     pub effective_policy: ResolvedToolPolicy,
-    pub workspace: &'a Path,
     pub subagent_session_id: String,
     pub parent_session_id: String,
     pub subagent_type_label: String,
@@ -55,7 +53,6 @@ impl AgentTool {
             turn_config,
             effective_registry,
             effective_policy,
-            workspace,
             subagent_session_id,
             parent_session_id,
             subagent_type_label,
@@ -101,7 +98,6 @@ impl AgentTool {
             &handler,
             None,
             Some(&fg_cancel_flag),
-            Some(workspace),
             None,
         )
         .await;

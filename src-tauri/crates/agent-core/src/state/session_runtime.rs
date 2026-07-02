@@ -1,6 +1,6 @@
 //! Per-session agent resources.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -126,6 +126,14 @@ pub struct AgentSession {
     pub processing_lock: Arc<tokio::sync::Mutex<()>>,
     /// Compaction state for context window management.
     pub compaction: tokio::sync::Mutex<CompactionState>,
+    /// Real context-window fill (prompt + cache_read + cache_write tokens)
+    /// reported by the provider on the most recent completed turn.
+    ///
+    /// Feeds the pre-turn compaction trigger as a correction to the local
+    /// token estimate, which systematically undercounts (images count as 0,
+    /// tokenizer mismatch, sampling). `0` = unknown; reset after compaction
+    /// mutates the message list so a stale reading can't re-trigger.
+    pub last_context_tokens: Arc<AtomicI64>,
     /// Wall-clock time of the last user interaction, used by the idle-cleanup task.
     pub last_active_at: tokio::sync::Mutex<Instant>,
 
@@ -284,6 +292,7 @@ impl AgentSession {
             definition,
             runtime: tokio::sync::RwLock::new(None),
             compaction: tokio::sync::Mutex::new(CompactionState::default()),
+            last_context_tokens: Arc::new(AtomicI64::new(0)),
             permission_manager,
             question_manager: Arc::new(QuestionManager::with_cancel_flag(Arc::clone(&cancel_flag))),
             secret_broker: Arc::new(SecretBroker::with_cancel_flag(Arc::clone(&cancel_flag))),

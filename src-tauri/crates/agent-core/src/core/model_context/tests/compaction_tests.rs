@@ -645,3 +645,162 @@ fn ptl_ignores_unrelated_errors() {
         "authentication failed"
     ));
 }
+
+// -- parse_actual_tokens_from_error --
+
+#[test]
+fn parse_actual_tokens_anthropic_format() {
+    assert_eq!(
+        ContextCompactor::parse_actual_tokens_from_error(
+            "ContextTooLong: prompt is too long: 1037806 tokens > 1000000 maximum"
+        ),
+        Some(1_037_806)
+    );
+}
+
+#[test]
+fn parse_actual_tokens_openai_format() {
+    assert_eq!(
+        ContextCompactor::parse_actual_tokens_from_error(
+            "This model's maximum context length is 128000 tokens. However, your messages resulted in 130524 tokens."
+        ),
+        Some(130_524)
+    );
+}
+
+#[test]
+fn parse_actual_tokens_none_when_absent() {
+    assert_eq!(
+        ContextCompactor::parse_actual_tokens_from_error("context_length_exceeded"),
+        None
+    );
+    // Numbers not followed by "tokens" don't count.
+    assert_eq!(
+        ContextCompactor::parse_actual_tokens_from_error("HTTP 400 after 30s"),
+        None
+    );
+}
+
+// -- calibrate_budget --
+
+#[test]
+fn calibrate_budget_scales_down_on_undercount() {
+    // Provider saw 1M actual where we estimated 800K → budget shrinks by 20%.
+    assert_eq!(
+        ContextCompactor::calibrate_budget(750_000, 800_000, 1_000_000),
+        600_000
+    );
+}
+
+#[test]
+fn calibrate_budget_unchanged_when_estimate_covers_actual() {
+    assert_eq!(
+        ContextCompactor::calibrate_budget(750_000, 1_000_000, 900_000),
+        750_000
+    );
+    assert_eq!(ContextCompactor::calibrate_budget(750_000, 0, 900_000), 750_000);
+    assert_eq!(ContextCompactor::calibrate_budget(750_000, 800_000, 0), 750_000);
+}
+
+// -- needs_compaction_observed --
+
+#[test]
+fn needs_compaction_observed_triggers_on_real_usage_despite_low_estimate() {
+    let config = default_config();
+    // Tiny estimated history (well under any threshold)…
+    let history: Vec<Value> = (0..10).map(|i| user_msg(&format!("m{}", i))).collect();
+    assert!(!ContextCompactor::needs_compaction(
+        &history, 1_000_000, &config
+    ));
+    // …but the provider measured the real prompt above the trigger.
+    assert!(ContextCompactor::needs_compaction_observed(
+        &history, 1_000_000, &config, 950_000
+    ));
+}
+
+#[test]
+fn needs_compaction_observed_zero_falls_back_to_estimate() {
+    let config = default_config();
+    let history: Vec<Value> = (0..10).map(|i| user_msg(&format!("m{}", i))).collect();
+    assert!(!ContextCompactor::needs_compaction_observed(
+        &history, 1_000_000, &config, 0
+    ));
+}
+
+#[test]
+fn needs_compaction_observed_respects_min_messages() {
+    let config = default_config();
+    let history = vec![user_msg("a"), assistant_msg("b")];
+    assert!(!ContextCompactor::needs_compaction_observed(
+        &history, 1_000_000, &config, 950_000
+    ));
+}
+
+// -- compact skip threshold matches the trigger threshold --
+
+#[tokio::test]
+async fn compact_does_not_skip_between_trigger_and_full_budget() {
+    use crate::model_context::compaction::CompactionOutcome;
+    use crate::providers::traits::{LLMProvider, LLMResponse, ProviderError};
+
+    struct SummaryProvider;
+
+    #[async_trait::async_trait]
+    impl LLMProvider for SummaryProvider {
+        async fn chat(
+            &self,
+            _messages: &[Value],
+            _tools: Option<&[Value]>,
+            _model: &str,
+            _max_tokens: u32,
+            _temperature: f32,
+        ) -> Result<LLMResponse, ProviderError> {
+            Ok(LLMResponse {
+                content: Some("summary of the older messages".to_string()),
+                tool_calls: vec![],
+                finish_reason: crate::providers::finish_reason::STOP.to_string(),
+                usage: std::collections::HashMap::new(),
+                reasoning_content: None,
+                blocks: Vec::new(),
+                stream_error_kind: None,
+                retry_after_ms: None,
+            })
+        }
+
+        fn default_model(&self) -> &str {
+            "test-model"
+        }
+
+        fn provider_name(&self) -> &str {
+            "mock"
+        }
+    }
+
+    // History estimated between 80% and 100% of the budget: the old skip
+    // check (estimate <= budget) silently no-opped here even though
+    // needs_compaction had fired — the exact silent-spin observed live.
+    let big = "x".repeat(400);
+    let mut history: Vec<Value> = vec![user_msg("task statement")];
+    for _ in 0..40 {
+        history.push(assistant_msg(&big));
+    }
+    let budget = {
+        let estimate = ContextCompactor::estimate_messages_tokens(&history);
+        // estimate ≈ 90% of budget → above 80% trigger, below full budget.
+        estimate * 10 / 9
+    };
+    let config = default_config();
+    let mut state = CompactionState::default();
+    let provider = SummaryProvider;
+
+    let (_, outcome) = ContextCompactor::compact(
+        &history, budget, &config, &mut state, &provider, "test-model",
+    )
+    .await;
+
+    assert_ne!(
+        outcome,
+        CompactionOutcome::Skipped,
+        "compact must act once the trigger threshold is crossed"
+    );
+}

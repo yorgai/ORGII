@@ -14,7 +14,6 @@ mod screenshot;
 mod stream_error_recovery;
 pub(crate) mod stream_normalizer;
 pub(crate) mod tool_execution;
-pub(crate) mod tool_result_storage;
 mod types;
 mod usage_accumulator;
 mod usage_telemetry;
@@ -76,6 +75,62 @@ mod tests;
 #[path = "../../tests/turn_executor_retry_tests.rs"]
 mod retry_tests;
 
+// ============================================
+// Auto-continue (feature-gated, default off)
+// ============================================
+
+/// Hard cap on auto-continue nudges per turn. Mirrors Claude Code's
+/// TOKEN_BUDGET auto-continue semantics (also feature-gated, default off).
+const MAX_AUTO_CONTINUATIONS: u32 = 3;
+/// Minimum output tokens a continuation must have produced for the next
+/// nudge to be worth sending — below this the model is spinning without
+/// real progress (diminishing returns), so we let the turn end.
+const AUTO_CONTINUE_MIN_PROGRESS_TOKENS: i64 = 500;
+/// Context-window fill (percent) at or above which auto-continue defers to
+/// the model's own wrap-up. Matches the `error` tier in
+/// `context_accounting::ContextUsageSnapshot::warning_level` — at ≥90% the
+/// model closing out the turn is the *correct* behavior.
+const AUTO_CONTINUE_MAX_CONTEXT_PERCENT: f64 = 90.0;
+
+/// Decide whether the turn loop should inject an auto-continue nudge instead
+/// of letting the model end the turn with plain text.
+///
+/// Pure predicate so the policy is unit-testable without driving the loop:
+/// - `enabled`: the per-turn feature gate (`TurnConfig::auto_continue`).
+/// - `continuations`: nudges already burned this turn (cap: 3).
+/// - `last_progress_tokens`: output tokens produced since the previous
+///   nudge (`None` when no nudge fired yet). Below 500 → diminishing
+///   returns, give up.
+/// - `context_percent`: real context-window fill from the last provider
+///   response (`None` when unknown → fail closed, let the turn end).
+fn should_auto_continue(
+    enabled: bool,
+    continuations: u32,
+    last_progress_tokens: Option<i64>,
+    context_percent: Option<f64>,
+) -> bool {
+    if !enabled {
+        return false;
+    }
+    if continuations >= MAX_AUTO_CONTINUATIONS {
+        return false;
+    }
+    // Unknown fill level → we cannot prove the model is stopping early.
+    // Fail closed (simple mechanism, no LLM judge): let the turn end.
+    let Some(percent) = context_percent else {
+        return false;
+    };
+    if percent >= AUTO_CONTINUE_MAX_CONTEXT_PERCENT {
+        return false;
+    }
+    if let Some(progress) = last_progress_tokens {
+        if progress < AUTO_CONTINUE_MIN_PROGRESS_TOKENS {
+            return false;
+        }
+    }
+    true
+}
+
 /// Execute one agent turn: messages → (LLM + tools)* → final response.
 ///
 /// This is the generic agentic loop shared by all agent sessions.
@@ -100,7 +155,6 @@ pub async fn execute_turn(
     handler: &dyn TurnEventHandler,
     permission_provider: Option<&dyn PermissionProvider>,
     cancel_flag: Option<&Arc<AtomicBool>>,
-    workspace_path: Option<&std::path::Path>,
     policy_context_activator: Option<&SessionScopedContextActivator>,
 ) -> Result<TurnResult, String> {
     let mut iteration = 0u32;
@@ -140,6 +194,11 @@ pub async fn execute_turn(
     // that always blocks cannot spin the loop forever (death-spiral guard).
     let mut stop_hook_blocks = 0u32;
     const MAX_STOP_HOOK_BLOCKS: u32 = 3;
+    // Auto-continue nudges already burned this turn, plus the cumulative
+    // completion-token count observed at the last nudge (the
+    // diminishing-returns baseline for `should_auto_continue`).
+    let mut auto_continuations = 0u32;
+    let mut auto_continue_completion_baseline: Option<i64> = None;
     // One-shot model-side context-budget nudge for this turn. Set when a
     // snapshot crosses the error tier; consumed (injected) at the top of the
     // next iteration so it never lands between an assistant tool_use and its
@@ -395,15 +454,45 @@ pub async fn execute_turn(
                             config.account_id.as_deref(),
                             config.context_window_override,
                         );
-                    let budget = window.saturating_mul(3) / 4;
-                    let truncated =
+                    let mut budget = window.saturating_mul(3) / 4;
+                    // The budget is denominated in ESTIMATED tokens but the
+                    // provider just rejected the ACTUAL prompt — calibrate by
+                    // the observed undercount (the error carries the real
+                    // count) or truncation can decide "already within budget"
+                    // and delete nothing, spinning through every rescue
+                    // attempt without progress.
+                    let estimated =
+                        crate::model_context::compaction::ContextCompactor::estimate_messages_tokens(
+                            messages,
+                        );
+                    if let Some(actual) =
+                        crate::model_context::compaction::ContextCompactor::parse_actual_tokens_from_error(
+                            &err.to_string(),
+                        )
+                    {
+                        budget = crate::model_context::compaction::ContextCompactor::calibrate_budget(
+                            budget, estimated, actual,
+                        );
+                    }
+                    let mut truncated =
                         crate::model_context::compaction::ContextCompactor::simple_truncate(
                             messages, budget,
                         );
+                    // Progress guarantee: keep halving the budget until the
+                    // truncation actually drops something (or the budget is
+                    // too small to matter).
+                    while truncated.len() == messages.len() && budget > 10_000 {
+                        budget /= 2;
+                        truncated =
+                            crate::model_context::compaction::ContextCompactor::simple_truncate(
+                                messages, budget,
+                            );
+                    }
                     warn!(
-                        "[agent-core] Context rescue truncation: {} -> {} messages (session={})",
+                        "[agent-core] Context rescue truncation: {} -> {} messages, budget ~{} est-tokens (session={})",
                         messages.len(),
                         truncated.len(),
+                        budget,
                         session_id
                     );
                     *messages = truncated;
@@ -660,7 +749,6 @@ pub async fn execute_turn(
                 cancel_flag,
                 &mut file_tracker,
                 &mut consecutive_errors,
-                workspace_path,
                 policy_context_activator,
                 config.max_tool_use_concurrency,
             )
@@ -815,6 +903,67 @@ pub async fn execute_turn(
                         "content": format!(
                             "<system-reminder>\nA Stop hook blocked this completion:\n{}\nAddress the feedback and continue; do not stop until it is resolved.\n</system-reminder>",
                             feedback
+                        ),
+                    }));
+                    continue;
+                }
+            }
+
+            // Auto-continue gate (feature-gated, default off): the model
+            // ended the turn with plain text while the context window still
+            // has real room. Long-horizon models sometimes "self-ration" —
+            // narrating that context is nearly exhausted and wrapping up /
+            // handing off when the window is actually < 90% used. When the
+            // agent opts in, inject a continue nudge and give the model
+            // another iteration. Guardrails live in `should_auto_continue`
+            // (per-turn cap + diminishing-returns check); cancelled turns
+            // never continue, and stream-error / length endings never reach
+            // this arm (they break earlier).
+            if !cancel_flag
+                .map(|flag| flag.load(Ordering::SeqCst))
+                .unwrap_or(false)
+            {
+                let context_percent = context_usage_snapshot
+                    .as_ref()
+                    .and_then(|snapshot| snapshot.percent_used);
+                let last_progress_tokens = auto_continue_completion_baseline
+                    .map(|baseline| usage.completion - baseline);
+                if should_auto_continue(
+                    config.auto_continue,
+                    auto_continuations,
+                    last_progress_tokens,
+                    context_percent,
+                ) {
+                    auto_continuations += 1;
+                    auto_continue_completion_baseline = Some(usage.completion);
+                    let pct = context_percent.unwrap_or(0.0).round() as i64;
+                    info!(
+                        "[agent-core] Auto-continue {}/{} injected (context {}% used, session={})",
+                        auto_continuations, MAX_AUTO_CONTINUATIONS, pct, session_id
+                    );
+                    // Persist what the model said this iteration so the
+                    // transcript stays coherent before the injected nudge
+                    // (same pattern as the stop-hook block above — the
+                    // user message must never land between an assistant
+                    // tool_use and its tool_result).
+                    if let Some(ref text) = response.content {
+                        if !text.trim().is_empty() {
+                            handler.on_assistant_iteration_complete(
+                                session_id,
+                                Some(text.as_str()),
+                                false,
+                                &config.model,
+                            );
+                            messages.push(serde_json::json!({
+                                "role": "assistant",
+                                "content": text,
+                            }));
+                        }
+                    }
+                    messages.push(serde_json::json!({
+                        "role": "user",
+                        "content": format!(
+                            "<system-reminder>\nContext window is only {pct}% used. Do not wrap up, summarize, or hand off — continue working on the task directly.\n</system-reminder>"
                         ),
                     }));
                     continue;
@@ -1024,5 +1173,62 @@ mod media_strip_tests {
     fn no_media_returns_zero() {
         let mut messages = vec![json!({"role": "user", "content": "plain text"})];
         assert_eq!(strip_historical_media_blocks(&mut messages), 0);
+    }
+}
+
+#[cfg(test)]
+mod auto_continue_tests {
+    use super::{should_auto_continue, MAX_AUTO_CONTINUATIONS};
+
+    #[test]
+    fn disabled_never_continues() {
+        // Feature gate off → never continue, even under ideal conditions.
+        assert!(!should_auto_continue(false, 0, None, Some(10.0)));
+    }
+
+    #[test]
+    fn enabled_below_threshold_continues() {
+        // First nudge, plenty of context room, no prior progress data.
+        assert!(should_auto_continue(true, 0, None, Some(42.0)));
+        // Just below the 90% boundary still continues.
+        assert!(should_auto_continue(true, 0, None, Some(89.9)));
+    }
+
+    #[test]
+    fn context_at_or_above_90_percent_stops() {
+        // At ≥90% the model wrapping up is the correct behavior.
+        assert!(!should_auto_continue(true, 0, None, Some(90.0)));
+        assert!(!should_auto_continue(true, 0, None, Some(97.5)));
+    }
+
+    #[test]
+    fn unknown_context_fill_fails_closed() {
+        // No snapshot / unknown window → cannot prove early stop → end turn.
+        assert!(!should_auto_continue(true, 0, None, None));
+    }
+
+    #[test]
+    fn continuation_cap_stops() {
+        assert!(should_auto_continue(
+            true,
+            MAX_AUTO_CONTINUATIONS - 1,
+            Some(5_000),
+            Some(30.0)
+        ));
+        assert!(!should_auto_continue(
+            true,
+            MAX_AUTO_CONTINUATIONS,
+            Some(5_000),
+            Some(30.0)
+        ));
+    }
+
+    #[test]
+    fn diminishing_returns_stops() {
+        // Previous nudge produced < 500 output tokens → give up.
+        assert!(!should_auto_continue(true, 1, Some(499), Some(30.0)));
+        assert!(!should_auto_continue(true, 1, Some(0), Some(30.0)));
+        // Real progress since the last nudge → keep going.
+        assert!(should_auto_continue(true, 1, Some(500), Some(30.0)));
     }
 }

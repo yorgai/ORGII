@@ -50,6 +50,7 @@ pub fn memory_extractor() -> AgentDefinition {
         // user message by extract_memories.rs.
         soul_content: None,
         sovereign_prompt: false,
+        auto_continue: false,
 
         temperature: Some(0.0),
         max_tokens: Some(4096),

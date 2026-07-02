@@ -58,6 +58,7 @@ pub fn ai_research_agent() -> AgentDefinition {
         },
         soul_content: Some(include_str!("prompts/ai_research.md").to_string()),
         sovereign_prompt: false,
+        auto_continue: false,
         delegation_config: Some(DelegationConfig {
             delegatable: true,
             context_builders: vec![

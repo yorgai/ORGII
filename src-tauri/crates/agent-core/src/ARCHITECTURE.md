@@ -124,7 +124,6 @@ Source: `core/turn_executor/`, broken down as:
 | `mod.rs`                   | `execute_turn` entry point + the loop body                     |
 | `stream_normalizer.rs`     | Normalizes provider stream events for live UI updates          |
 | `tool_execution/`          | Tool-call dispatch + parallel batch handling                   |
-| `tool_result_storage.rs`   | Persists tool results into the session DB                      |
 | `screenshot.rs`            | Vision-block injection (parent screenshots, OS Agent context)  |
 | `usage_accumulator.rs`     | Token / cost accounting across the turn                        |
 | `file_tracker.rs`          | Records files touched during the turn                          |

@@ -23,7 +23,7 @@
 use crate::session::types::{SystemPromptConfig, ToolSummary};
 
 use super::cache::{LearningsPromptCache, SessionPromptCache};
-use super::registry::{assemble, assemble_split_with_cache, assemble_with_cache, PromptCtx};
+use super::registry::{assemble, assemble_split_with_cache, PromptCtx};
 
 /// Build the system prompt for a session.
 ///
@@ -36,28 +36,8 @@ pub fn build_unified_system_prompt(
     tool_summaries: &[ToolSummary],
     config: &SystemPromptConfig,
 ) -> String {
-    build_unified_system_prompt_with_cache(session_id, tool_summaries, config, None, None)
-}
-
-/// Build the system prompt for a session using the provided section cache.
-pub fn build_unified_system_prompt_with_cache(
-    session_id: &str,
-    tool_summaries: &[ToolSummary],
-    config: &SystemPromptConfig,
-    cache: Option<&mut SessionPromptCache>,
-    learnings_cache: Option<&mut LearningsPromptCache>,
-) -> String {
     let ctx = PromptCtx::new(session_id, config, tool_summaries);
-    let (prompt, _traces) = match (cache, learnings_cache) {
-        (Some(cache_ref), Some(learnings_cache_ref)) => {
-            assemble_with_cache(&ctx, Some(cache_ref), Some(learnings_cache_ref))
-        }
-        (Some(cache_ref), None) => assemble_with_cache(&ctx, Some(cache_ref), None),
-        (None, Some(learnings_cache_ref)) => {
-            assemble_with_cache(&ctx, None, Some(learnings_cache_ref))
-        }
-        (None, None) => assemble(&ctx),
-    };
+    let (prompt, _traces) = assemble(&ctx);
 
     if config.sovereign_prompt {
         tracing::info!(
