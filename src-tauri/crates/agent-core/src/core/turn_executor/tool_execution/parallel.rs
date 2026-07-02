@@ -53,7 +53,7 @@ pub(super) async fn execute_parallel_group(
     max_tool_use_concurrency: usize,
 ) -> ParallelResult {
     info!(
-        "[agent-core] Executing {} read-only tools concurrently",
+        "[agent-core] Executing {} concurrency-safe tools concurrently",
         calls.len()
     );
 

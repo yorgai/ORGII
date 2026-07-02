@@ -117,15 +117,15 @@ pub(crate) enum ToolBatchOutcome {
 
 /// A group of tool calls that can be executed together.
 enum ToolGroup<'a> {
-    /// Consecutive read-only tools that can run concurrently.
+    /// Consecutive concurrency-safe tools that can run concurrently.
     Parallel(Vec<&'a ToolCallRequest>),
-    /// A single write tool that must run alone.
+    /// A single non-concurrency-safe (write) tool that must run alone.
     Sequential(&'a ToolCallRequest),
 }
 
-/// Partition tool calls into parallel (read-only) and sequential
-/// (write) groups: consecutive read-only calls are grouped together;
-/// any write call gets its own sequential group.
+/// Partition tool calls into parallel (concurrency-safe) and sequential
+/// (write) groups: consecutive concurrency-safe calls are grouped together;
+/// any other call gets its own sequential group.
 fn partition_tool_calls<'a>(
     calls: &'a [ToolCallRequest],
     tools: &ToolRegistry,
@@ -134,12 +134,12 @@ fn partition_tool_calls<'a>(
     let mut current_parallel: Vec<&'a ToolCallRequest> = Vec::new();
 
     for call in calls {
-        let read_only = tools
+        let concurrency_safe = tools
             .get(&call.name)
-            .map(|t| t.is_read_only())
+            .map(|t| t.is_concurrency_safe())
             .unwrap_or(false);
 
-        if read_only {
+        if concurrency_safe {
             current_parallel.push(call);
         } else {
             if !current_parallel.is_empty() {
@@ -349,6 +349,32 @@ mod tests {
         }
     }
 
+    /// Mimics `agent`: mutates state (not read-only) but each invocation is
+    /// isolated, so it opts into concurrent execution.
+    struct FakeAgentTool;
+    #[async_trait]
+    impl Tool for FakeAgentTool {
+        fn name(&self) -> &str {
+            "agent"
+        }
+        fn description(&self) -> &str {
+            "agent"
+        }
+        fn parameters(&self) -> Value {
+            serde_json::json!({"type":"object","properties":{}})
+        }
+        fn is_concurrency_safe(&self) -> bool {
+            true
+        }
+        async fn execute_text(
+            &self,
+            _params: Value,
+            _ctx: &crate::tools::traits::CallContext,
+        ) -> Result<String, ToolError> {
+            Ok("ok".into())
+        }
+    }
+
     fn tc(name: &str, id: &str) -> ToolCallRequest {
         ToolCallRequest {
             id: id.to_string(),
@@ -363,6 +389,7 @@ mod tests {
         reg.register(Box::new(FakeReadTool));
         reg.register(Box::new(FakeWriteTool));
         reg.register(Box::new(FakeSearchTool));
+        reg.register(Box::new(FakeAgentTool));
         reg
     }
 
@@ -417,6 +444,39 @@ mod tests {
         let calls: Vec<ToolCallRequest> = vec![];
         let groups = partition_tool_calls(&calls, &reg);
         assert!(groups.is_empty());
+    }
+
+    /// Regression: N `agent` launches in one LLM response must form ONE
+    /// parallel group, not N sequential groups (each foreground delegate
+    /// would otherwise block the next — "4 workers" degrades to serial).
+    #[test]
+    fn partition_multiple_agent_calls_one_parallel_group() {
+        let reg = make_registry();
+        let calls = vec![
+            tc("agent", "1"),
+            tc("agent", "2"),
+            tc("agent", "3"),
+            tc("agent", "4"),
+        ];
+        let groups = partition_tool_calls(&calls, &reg);
+        assert_eq!(groups.len(), 1);
+        assert!(matches!(&groups[0], ToolGroup::Parallel(v) if v.len() == 4));
+    }
+
+    #[test]
+    fn partition_agent_groups_with_readonly_but_not_write() {
+        let reg = make_registry();
+        let calls = vec![
+            tc("read_file", "1"),
+            tc("agent", "2"),
+            tc("edit_file", "3"),
+            tc("agent", "4"),
+        ];
+        let groups = partition_tool_calls(&calls, &reg);
+        assert_eq!(groups.len(), 3);
+        assert!(matches!(&groups[0], ToolGroup::Parallel(v) if v.len() == 2));
+        assert!(matches!(&groups[1], ToolGroup::Sequential(_)));
+        assert!(matches!(&groups[2], ToolGroup::Parallel(v) if v.len() == 1));
     }
 
     // ---- max_tool_use_concurrency ----

@@ -493,6 +493,15 @@ impl Tool for AgentTool {
         crate::tools::categories::ORCHESTRATION
     }
 
+    /// Launching a subagent mutates state (new session, worker process), so
+    /// this is NOT read-only — but each worker runs in its own isolated
+    /// session, so multiple `agent` calls in one LLM response are safe to run
+    /// concurrently. Without this, N parallel launches would serialize and
+    /// each foreground delegate would block the next.
+    fn is_concurrency_safe(&self) -> bool {
+        true
+    }
+
     fn persist_threshold(&self) -> usize {
         // Never disk-stub subagent results (frontend parses them into
         // cards; the parent consumes them inline) — see

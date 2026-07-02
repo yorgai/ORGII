@@ -237,6 +237,17 @@ pub trait Tool: Send + Sync {
         false
     }
 
+    /// Whether this tool can run concurrently with other tool calls in the
+    /// same LLM response, even if it mutates state.
+    ///
+    /// Defaults to `is_read_only()`. Override to `true` for tools that have
+    /// side effects but are isolated from each other — e.g. `agent`: each
+    /// subagent runs in its own session, so multiple launches in one response
+    /// must not serialize behind one another.
+    fn is_concurrency_safe(&self) -> bool {
+        self.is_read_only()
+    }
+
     /// Maximum characters allowed in the tool result before truncation.
     /// Override in tools that need more (file read) or less (grep) output.
     fn output_budget(&self) -> usize {
