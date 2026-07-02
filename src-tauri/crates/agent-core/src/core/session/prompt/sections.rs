@@ -247,7 +247,7 @@ impl PromptSection for BehavioralRulesSection {
         if ctx.is_channel_session {
             Some(build_channel_behavioral_rules(ctx.config))
         } else if ctx.config.workspace.is_some() {
-            Some(SDE_BEHAVIORAL_RULES.to_string())
+            Some(sde_behavioral_rules())
         } else {
             None
         }

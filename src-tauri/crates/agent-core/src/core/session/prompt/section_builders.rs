@@ -15,6 +15,7 @@ use super::helpers::{
 use crate::coordination::agent_org_runs::COORDINATOR_MEMBER_ID;
 use crate::coordination::agent_org_tasks::{AgentOrgTaskStore, Task, TaskStatus};
 use crate::session::types::{SystemPromptConfig, ToolSummary};
+use crate::tools::names as tool_names;
 
 // ============================================
 // System meta
@@ -32,7 +33,7 @@ pub(super) fn build_system_meta_section() -> String {
 // SDE behavioral rules
 // ============================================
 
-pub(super) const SDE_BEHAVIORAL_RULES: &str = "\
+pub(super) const SDE_BEHAVIORAL_RULES_PREFIX: &str = "\
 # Doing tasks
 
 The user will primarily request you to perform software engineering tasks. These may include solving bugs, \
@@ -53,19 +54,9 @@ instruction, consider it in the context of software engineering tasks and the cu
 - Default to writing no comments. Only add one when the WHY is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug. Do not explain WHAT the code does — well-named identifiers already do that.
 - Avoid backwards-compatibility hacks like renaming unused _vars, re-exporting types, or adding comments for removed code. If something is unused, delete it completely.
 - Before reporting a task complete, verify it actually works: run the test, execute the script, check the output. If you cannot verify, say so explicitly rather than claiming success.
+";
 
-## Tool usage
-
-- Do NOT use `exec` to run commands when a relevant dedicated tool is provided. Using dedicated tools is CRITICAL:
-  - Use `read_file` to read files instead of cat, head, tail, or sed.
-  - Use `edit` for modifying existing files instead of sed or awk.
-  - Use `write_file` for creating new files instead of cat with heredoc or echo redirection.
-  - Use `search` and `list_dir` to find files instead of find or ls.
-  - Reserve `exec` exclusively for system commands and terminal operations that require shell execution.
-- Use `edit` for modifying existing files. It supports fuzzy matching for whitespace and indentation differences. Provide `file_path`, `old_string`, and `new_string`.
-- You can call multiple tools in a single response. If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel. However, if some tool calls depend on previous calls, call them sequentially instead.
-- Keep tool calls focused — do not read entire large files when you only need a section.
-
+pub(super) const SDE_BEHAVIORAL_RULES_SUFFIX: &str = "\
 ## Progress narration (HIGH PRIORITY)
 
 You MUST interleave short spoken text with your tool calls whenever the task takes more than ONE tool call. This rule OVERRIDES the conciseness rule below when they conflict.
@@ -161,6 +152,33 @@ When NOT to call `suggest_next_steps`:
 - You already asked the user a direct yes/no question in this turn — use plain text, let them answer.
 - The next step is a single obvious continuation — just do it, don't offer a menu.
 - You only have one candidate step — don't pad with filler options.";
+
+/// SDE behavioral rules with the Tool usage block rendered from the
+/// canonical tool-name constants, so the prompt can never drift from the
+/// real registered names again.
+pub(super) fn sde_behavioral_rules() -> String {
+    format!(
+        "{prefix}\n\
+         ## Tool usage\n\n\
+         - Do NOT use `{run_shell}` to run commands when a relevant dedicated tool is provided. Using dedicated tools is CRITICAL:\n\
+           - Use `{read_file}` to read files instead of cat, head, tail, or sed.\n\
+           - Use `{edit_file}` for modifying existing files instead of sed or awk.\n\
+           - Use `{edit_file}` (create/overwrite mode: `file_path` + `content`) for creating new files instead of cat with heredoc or echo redirection.\n\
+           - Use `{code_search}` and `{list_dir}` to find files instead of find, ls, or shell grep.\n\
+           - Reserve `{run_shell}` exclusively for system commands and terminal operations that require shell execution.\n\
+         - Use `{edit_file}` for modifying existing files. It supports fuzzy matching for whitespace and indentation differences. Provide `file_path`, `old_string`, and `new_string`.\n\
+         - You can call multiple tools in a single response. If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel. However, if some tool calls depend on previous calls, call them sequentially instead.\n\
+         - Keep tool calls focused — do not read entire large files when you only need a section.\n\n\
+         {suffix}",
+        prefix = SDE_BEHAVIORAL_RULES_PREFIX,
+        suffix = SDE_BEHAVIORAL_RULES_SUFFIX,
+        run_shell = tool_names::RUN_SHELL,
+        read_file = tool_names::READ_FILE,
+        edit_file = tool_names::EDIT_FILE,
+        code_search = tool_names::CODE_SEARCH,
+        list_dir = tool_names::LIST_DIR,
+    )
+}
 
 // ============================================
 // Channel environment + behavioral rules
@@ -715,17 +733,25 @@ pub fn build_agent_org_context_section(
 }
 
 pub(super) fn build_sub_agent_delegation_section() -> String {
-    "## Delegates and Shadows\n\n\
-     Use the `agent` tool in `delegate` mode when the task should be handed to another explicit Agent whose \
-     description matches the work. Use `shadow` mode when the current Agent should fork a self-copy / sidechain \
-     for parallel work. Delegate/Shadow workers are valuable for parallelizing independent queries or for protecting \
-     the main context window from excessive results, but they should not be used excessively when not needed. \
-     Importantly, avoid duplicating work that workers are already doing — if you delegate research to another Agent \
-     or branch a Shadow for it, do not also perform the same searches yourself.\n\n\
-     For simple, directed codebase searches (e.g. for a specific file/class/function) use \
-     `search` or `list_dir` directly. For broader codebase exploration and deep research, use the \
-     `agent` tool with `mode: \"delegate\"` and `agent_id: \"builtin:explore\"`.\n"
-        .to_string()
+    format!(
+        "## Delegates and Shadows\n\n\
+         Use the `{agent}` tool in `delegate` mode when the task should be handed to another explicit Agent whose \
+         description matches the work. Use `shadow` mode when the current Agent should fork a self-copy / sidechain \
+         for parallel work. Delegate/Shadow workers parallelize independent queries and protect \
+         the main context window from excessive results. If an agent's description says it should be used \
+         proactively, use it proactively without waiting for the user to ask. When multiple independent units of \
+         work exist, launch multiple workers concurrently in a single message. \
+         Importantly, avoid duplicating work that workers are already doing — if you delegate research to another Agent \
+         or branch a Shadow for it, do not also perform the same searches yourself.\n\n\
+         When NOT to delegate: reading one specific file, a single `{code_search}` query for a known \
+         symbol/class/function, or a single `{list_dir}` listing — do those directly. For broader codebase \
+         exploration, open-ended research, or anything likely to take more than ~3 search/read round-trips, use the \
+         `{agent}` tool with `mode: \"delegate\"` and `agent_id: \"builtin:explore\"` — and launch several in \
+         parallel when the questions are independent.\n",
+        agent = tool_names::AGENT,
+        code_search = tool_names::CODE_SEARCH,
+        list_dir = tool_names::LIST_DIR,
+    )
 }
 
 pub(super) fn build_command_approval_section() -> String {
@@ -744,7 +770,19 @@ pub(super) fn build_command_approval_section() -> String {
      it go away. Try to identify root causes and fix underlying issues rather than bypassing safety \
      checks (e.g. --no-verify). If you discover unexpected state like unfamiliar files, branches, \
      or configuration, inspect it before deleting or overwriting, as it may represent the user's \
-     in-progress work. In short: only take risky actions carefully, and when in doubt, ask before acting.\n"
+     in-progress work. In short: only take risky actions carefully, and when in doubt, ask before acting.\n\n\
+     ## Safeguards\n\n\
+     - **Security work boundaries:** Assist with defensive security, analysis, and detection. For \
+     offensive security work (exploits, penetration testing, red-teaming), first confirm the user is \
+     authorized to test the specific target system; decline requests that facilitate unauthorized \
+     access or attacks against systems the user does not own or lack permission to test.\n\
+     - **Never guess URLs:** Do not fabricate or guess URLs, package names, or API endpoints. Only \
+     use URLs the user provided, that appear in local files/tool results, or that you verified via \
+     web search/fetch.\n\
+     - **Respect permission denials:** If the user denies a tool call or a permission prompt, do NOT \
+     retry the same action unchanged or attempt the same effect through a different tool (e.g. shell \
+     redirection after an edit was denied). Ask what they would like to do instead, or adjust the \
+     approach based on their feedback.\n"
         .to_string()
 }
 

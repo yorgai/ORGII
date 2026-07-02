@@ -185,13 +185,16 @@ impl Tool for SearchTool {
 
         Some(format!(
             "Search code, files, and symbols in {repo}, or across multiple roots with repo_paths.\n\
+             ALWAYS use this tool for searching — NEVER invoke `grep`, `rg`, `find`, or `ls` through the shell tool; \
+             this tool's grep action is ripgrep-backed and strictly preferred.\n\
              Actions:\n\
              - grep: regex search in file contents (ripgrep)\n\
              - find_files: find files by name pattern (fuzzy)\n\
              - glob: find files by glob pattern (e.g. src/**/*.ts, *.{{rs,toml}})\n\
              - symbols: find functions/classes/types by name (tree-sitter)\n\
              - check_status: check search status\n\
-             Use repo_path for one root or repo_paths for multiple roots. Always set max_results. For 'find_files', use specific name patterns. For 'glob', use standard glob syntax."
+             Use repo_path for one root or repo_paths for multiple roots. Always set max_results. For 'find_files', use specific name patterns. For 'glob', use standard glob syntax. \
+             When you expect an open-ended exploration needing many rounds of searching, delegate to an Explore agent instead of searching inline."
         ))
     }
 
