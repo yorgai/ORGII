@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { Loader2, Play } from "lucide-react";
+import { GitFork, Loader2, Play } from "lucide-react";
 import React from "react";
 
 import type { EnrichedWorkItem, ProjectData } from "@src/api/http/project";
@@ -55,13 +55,17 @@ interface LinkedSessionsProps {
   remoteSessions: RemoteTeammateSessionMetadata[];
   orgMembers: CollabMemberRecord[];
   replayingSessionId: string | null;
+  forkingSessionId: string | null;
   onReplay: (remoteSession: RemoteTeammateSessionMetadata) => void;
+  onFork: (remoteSession: RemoteTeammateSessionMetadata) => void;
 }
 
 /**
  * The §16.7 payoff: each linked session resolves to a shared record and
- * renders either a ▶ replay (segments published) or a muted metadata /
- * unshared state. Clicking replay goes through the shared importer.
+ * renders either a ▶ replay + ⑂ fork (segments published) or a muted
+ * metadata / unshared state. Replay goes through the shared importer
+ * (read-only copy); fork goes through `forkSession` (design §16.11 — a NEW
+ * writable session inheriting the teammate's history).
  */
 function LinkedSessions({
   t,
@@ -70,7 +74,9 @@ function LinkedSessions({
   remoteSessions,
   orgMembers,
   replayingSessionId,
+  forkingSessionId,
   onReplay,
+  onFork,
 }: LinkedSessionsProps) {
   const resolved = resolveWorkItemLinkedSessions(
     workItem,
@@ -100,6 +106,9 @@ function LinkedSessions({
         const isReplaying =
           replayingSessionId === entry.linked.session_id &&
           Boolean(entry.remoteSession);
+        const isForking =
+          forkingSessionId === entry.linked.session_id &&
+          Boolean(entry.remoteSession);
 
         return (
           <div
@@ -114,20 +123,37 @@ function LinkedSessions({
               </div>
             </div>
             {isReplayable && entry.remoteSession ? (
-              <button
-                type="button"
-                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-1 px-2 py-0.5 text-[11px] font-medium text-primary-6 disabled:opacity-60"
-                disabled={isReplaying}
-                onClick={() => onReplay(entry.remoteSession!)}
-                data-testid={`collab-linked-session-replay-${entry.linked.session_id}`}
-              >
-                {isReplaying ? (
-                  <Loader2 size={11} className="animate-spin" />
-                ) : (
-                  <Play size={11} />
-                )}
-                {t("collaboration.workitem.replay")}
-              </button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <button
+                  type="button"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-1 px-2 py-0.5 text-[11px] font-medium text-primary-6 disabled:opacity-60"
+                  disabled={isReplaying || isForking}
+                  onClick={() => onReplay(entry.remoteSession!)}
+                  data-testid={`collab-linked-session-replay-${entry.linked.session_id}`}
+                >
+                  {isReplaying ? (
+                    <Loader2 size={11} className="animate-spin" />
+                  ) : (
+                    <Play size={11} />
+                  )}
+                  {t("collaboration.workitem.replay")}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-1 px-2 py-0.5 text-[11px] font-medium text-primary-6 disabled:opacity-60"
+                  disabled={isReplaying || isForking}
+                  title={t("collaboration.session.forkTooltip")}
+                  onClick={() => onFork(entry.remoteSession!)}
+                  data-testid={`collab-linked-session-fork-${entry.linked.session_id}`}
+                >
+                  {isForking ? (
+                    <Loader2 size={11} className="animate-spin" />
+                  ) : (
+                    <GitFork size={11} />
+                  )}
+                  {t("collaboration.session.fork")}
+                </button>
+              </div>
             ) : (
               <span
                 className="shrink-0 rounded-full bg-fill-2 px-2 py-0.5 text-[11px] text-text-4"
@@ -154,8 +180,10 @@ interface WorkItemsSectionProps {
   orgMembers: CollabMemberRecord[];
   currentMemberId: string | undefined;
   replayingSessionId: string | null;
+  forkingSessionId: string | null;
   onOpenWorkItem: (workItem: EnrichedWorkItem) => void;
   onReplayLinkedSession: (remoteSession: RemoteTeammateSessionMetadata) => void;
+  onForkLinkedSession: (remoteSession: RemoteTeammateSessionMetadata) => void;
 }
 
 // Typed native rows (design §16.2): shared work items live in the local
@@ -171,8 +199,10 @@ export function WorkItemsSection({
   orgMembers,
   currentMemberId,
   replayingSessionId,
+  forkingSessionId,
   onOpenWorkItem,
   onReplayLinkedSession,
+  onForkLinkedSession,
 }: WorkItemsSectionProps) {
   return (
     <SectionContainer color="chatPanelInfo" padding="default">
@@ -247,7 +277,9 @@ export function WorkItemsSection({
                     remoteSessions={remoteSessions}
                     orgMembers={orgMembers}
                     replayingSessionId={replayingSessionId}
+                    forkingSessionId={forkingSessionId}
                     onReplay={onReplayLinkedSession}
+                    onFork={onForkLinkedSession}
                   />
                 </div>
               );

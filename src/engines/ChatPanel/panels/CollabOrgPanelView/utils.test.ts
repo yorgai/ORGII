@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { COLLAB_SESSION_ACCESS_MODE } from "@src/store/collaboration/types";
-import type { CollabInviteRecord } from "@src/store/collaboration/types";
+import {
+  COLLAB_IDENTITY_KIND,
+  COLLAB_SESSION_ACCESS_MODE,
+} from "@src/store/collaboration/types";
+import type {
+  CollabInviteRecord,
+  RemoteTeammateSessionMetadata,
+} from "@src/store/collaboration/types";
 
 import {
   getActiveOrgInvites,
+  getForkableSessionIds,
   getSessionsTabBanners,
   isCollabLastAdminError,
   isInviteActive,
@@ -180,5 +187,49 @@ describe("isCollabLastAdminError", () => {
     expect(isCollabLastAdminError(new Error("ORGII_LAST_ADMIN"))).toBe(true);
     expect(isCollabLastAdminError(new Error("ORGII_UNAUTHORIZED"))).toBe(false);
     expect(isCollabLastAdminError("ORGII_LAST_ADMIN")).toBe(false);
+  });
+});
+
+function createRemoteSession(
+  overrides: Partial<RemoteTeammateSessionMetadata>
+): RemoteTeammateSessionMetadata {
+  return {
+    id: "org-1:m2:remote-1",
+    orgId: "org-1",
+    ownerMemberId: "m2",
+    ownerUserId: "m2",
+    ownerDisplayName: "Bob",
+    ownerIdentityKind: COLLAB_IDENTITY_KIND.HUMAN,
+    sourceSessionId: "remote-1",
+    title: "Remote session",
+    eventsEpoch: undefined,
+    eventsFrozenSeq: undefined,
+    eventsCount: undefined,
+    eventsTailHash: undefined,
+    ...overrides,
+  };
+}
+
+describe("getForkableSessionIds (design §16.11 gating)", () => {
+  it("keeps only replay-capable, non-tombstoned records", () => {
+    const sessions = [
+      // Replay-capable: the owner published segments.
+      createRemoteSession({ id: "replayable", eventsEpoch: 1, eventsCount: 3 }),
+      // Metadata-only card: nothing to inherit — no fork affordance.
+      createRemoteSession({ id: "metadata-only" }),
+      // Tombstoned records never surface an action.
+      createRemoteSession({
+        id: "deleted",
+        eventsEpoch: 1,
+        eventsCount: 3,
+        deletedAt: "2026-07-01T00:00:00.000Z",
+      }),
+    ];
+    const forkable = getForkableSessionIds(sessions);
+    expect([...forkable]).toEqual(["replayable"]);
+  });
+
+  it("returns an empty set for no sessions", () => {
+    expect(getForkableSessionIds([]).size).toBe(0);
   });
 });

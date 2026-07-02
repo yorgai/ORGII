@@ -78,8 +78,10 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
             orgMembers={model.orgMembers}
             currentMemberId={model.currentMember?.id}
             replayingSessionId={model.replayingSessionId}
+            forkingSessionId={model.forkingLinkedSessionId}
             onOpenWorkItem={model.handleOpenWorkItem}
             onReplayLinkedSession={model.handleReplayLinkedSession}
+            onForkLinkedSession={model.handleForkLinkedSession}
           />
         ) : null}
 
@@ -97,12 +99,15 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
             sessionItems={model.sessionItems}
             latestSnapshotRequest={model.latestSnapshotRequest}
             importingSessionId={model.importingSessionId ?? null}
+            forkableSessionIds={model.forkableSessionIds}
+            forkingSessionId={model.forkingSessionId ?? null}
             showAccessOffBanner={model.sessionsTabBanners.showAccessOffBanner}
             showRepoScopesEmptyBanner={
               model.sessionsTabBanners.showRepoScopesEmptyBanner
             }
             onOpenSettingsTab={model.handleOpenSettingsTab}
             onSelectSession={model.handleSelectSession}
+            onForkSession={model.handleForkSession}
           />
         ) : null}
 

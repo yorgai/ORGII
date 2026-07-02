@@ -111,6 +111,25 @@ export function toSessionTableItem(
   };
 }
 
+/**
+ * Sessions eligible for "fork & continue" (design §16.11): only replay-capable
+ * records — the owner must have PUBLISHED event segments (`eventsEpoch`
+ * defined). A metadata-only card has no history to inherit, so no fork
+ * affordance renders for it. Keyed by the remote record id (== the
+ * SessionTable row id in the sessions tab).
+ */
+export function getForkableSessionIds(
+  sessions: RemoteTeammateSessionMetadata[]
+): ReadonlySet<string> {
+  return new Set(
+    sessions
+      .filter(
+        (session) => session.eventsEpoch !== undefined && !session.deletedAt
+      )
+      .map((session) => session.id)
+  );
+}
+
 export function upsertChatMessage(
   messages: CollabChatMessageRecord[],
   incoming: CollabChatMessageRecord

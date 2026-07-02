@@ -8,6 +8,10 @@
  * - `handleReplayLinkedSession`: replays a teammate's agent session linked to a
  *   work item through the SAME `importRemoteSession` path SessionsSection /
  *   the engine use (design §16.7 — the payoff: work item → "what happened").
+ * - `handleForkLinkedSession`: "fork & continue" (design §16.11) for the same
+ *   linked session — lands the full history as MY writable session via
+ *   `forkTeammateSession` so an agent can pick the work item up from that
+ *   context.
  */
 import type { TFunction } from "i18next";
 import { useSetAtom } from "jotai";
@@ -21,6 +25,7 @@ import {
   getSyncProfile,
 } from "@src/features/TeamCollaboration/collabSyncUtils";
 import { importRemoteSession } from "@src/features/TeamCollaboration/engine/collabSyncEngineHelpers";
+import { forkTeammateSession } from "@src/features/TeamCollaboration/forkSession";
 import { supabaseSyncClient } from "@src/features/TeamCollaboration/sync/supabaseSyncClient";
 import { createLogger } from "@src/hooks/logger";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
@@ -49,6 +54,9 @@ export function useWorkItemActions({
   const [replayingSessionId, setReplayingSessionId] = useState<string | null>(
     null
   );
+  const [forkingLinkedSessionId, setForkingLinkedSessionId] = useState<
+    string | null
+  >(null);
 
   // Open a shared work item in the main ProjectManager detail surface. The
   // orgId is the aliased project org (§16.2) so ProjectManager scopes reads
@@ -127,10 +135,52 @@ export function useWorkItemActions({
     [openSession, org, t]
   );
 
+  // "Fork & continue" for a work item's linked teammate session (design
+  // §16.11): same resolution + gating as replay (a shared record with
+  // published segments), but the history lands as MY writable session via
+  // forkTeammateSession (engine fork + backend row + first-send context
+  // handoff) so the work item can be picked up from that exact context.
+  const handleForkLinkedSession = useCallback(
+    async (remoteSession: RemoteTeammateSessionMetadata) => {
+      if (!org || remoteSession.eventsEpoch === undefined) return;
+      const profile = getSyncProfile(org) as SupabaseSyncProfile | null;
+      if (!profile) return;
+      setForkingLinkedSessionId(remoteSession.sourceSessionId);
+      try {
+        const result = await forkTeammateSession({
+          client: supabaseSyncClient,
+          profile,
+          orgId: org.id,
+          remoteSession,
+        });
+        if (!result) {
+          Message.error(t("collaboration.session.forkFailed"));
+          return;
+        }
+        Message.success(
+          t("collaboration.session.forkedFromLabel", {
+            name: remoteSession.ownerDisplayName,
+          })
+        );
+        openSession(result.localSessionId, result.name, remoteSession.repoPath);
+      } catch (error) {
+        // Same failure surface as replay: the record can outlive the share,
+        // and the durable event-cache write can fail — toast, don't swallow.
+        logger.error("failed to fork linked session", error);
+        Message.error(t("collaboration.session.forkFailed"));
+      } finally {
+        setForkingLinkedSessionId(null);
+      }
+    },
+    [openSession, org, t]
+  );
+
   return {
     handleOpenWorkItem,
     handleReplayLinkedSession,
+    handleForkLinkedSession,
     replayingSessionId,
+    forkingLinkedSessionId,
     replayUnavailableLabel: t("collaboration.workitem.linkedSessionUnshared"),
   };
 }

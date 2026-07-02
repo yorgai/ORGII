@@ -685,6 +685,12 @@
     },
     "lock": {
       "heldBy": "{{name}} 正在处理"
+    },
+    "session": {
+      "fork": "接力继续",
+      "forkTooltip": "把这个队友 session 的完整历史落为你自己的可写 session,在本机接着跑",
+      "forkFailed": "接力失败,该 session 可能已不再共享",
+      "forkedFromLabel": "⑂ 接力自 {{name}}"
     }
   }
 }

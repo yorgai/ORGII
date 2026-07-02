@@ -22,7 +22,12 @@ import { useMemberActions } from "./useMemberActions";
 import { useOrgLocalEntities } from "./useOrgLocalEntities";
 import { useSessionActions } from "./useSessionActions";
 import { useWorkItemActions } from "./useWorkItemActions";
-import { getSessionsTabBanners, isToday, toSessionTableItem } from "./utils";
+import {
+  getForkableSessionIds,
+  getSessionsTabBanners,
+  isToday,
+  toSessionTableItem,
+} from "./utils";
 
 export function useCollabOrgPanelModel(
   selectedCollabOrg: ChatPanelSelectedCollabOrg
@@ -89,10 +94,16 @@ export function useCollabOrgPanelModel(
   const { orgProjects, orgWorkItems, localMetadataError } =
     useOrgLocalEntities(org);
 
-  // Work-item actions (design §16.7 / §16.9): open in ProjectManager + replay
-  // teammate linked sessions through the shared importer.
-  const { handleOpenWorkItem, handleReplayLinkedSession, replayingSessionId } =
-    useWorkItemActions({ org, orgProjects, t });
+  // Work-item actions (design §16.7 / §16.9 / §16.11): open in
+  // ProjectManager + replay teammate linked sessions through the shared
+  // importer + fork-and-continue them as writable sessions.
+  const {
+    handleOpenWorkItem,
+    handleReplayLinkedSession,
+    handleForkLinkedSession,
+    replayingSessionId,
+    forkingLinkedSessionId,
+  } = useWorkItemActions({ org, orgProjects, t });
 
   const orgSessions = useMemo(
     () =>
@@ -124,13 +135,26 @@ export function useCollabOrgPanelModel(
     [visibleSessions, t]
   );
 
-  const { handleSelectSession, importingSessionId } = useSessionActions({
+  const {
+    handleSelectSession,
+    handleForkSession,
+    importingSessionId,
+    forkingSessionId,
+  } = useSessionActions({
     org,
     orgSessions,
     sessions,
     currentMember,
     t,
   });
+
+  // Fork gating (design §16.11): only replay-capable rows (published
+  // segments) carry the ⑂ action — metadata-only cards have nothing to
+  // inherit.
+  const forkableSessionIds = useMemo(
+    () => getForkableSessionIds(visibleSessions),
+    [visibleSessions]
+  );
 
   const activeMemberIds = useMemo(
     () =>
@@ -242,6 +266,9 @@ export function useCollabOrgPanelModel(
     latestSnapshotRequest,
     importingSessionId,
     replayingSessionId,
+    forkableSessionIds,
+    forkingSessionId,
+    forkingLinkedSessionId,
     tabs,
     handleSendMessage: chatModel.handleSendMessage,
     handleSelectAccessMode: accessSettingsModel.handleSelectAccessMode,
@@ -252,8 +279,10 @@ export function useCollabOrgPanelModel(
     handleToggleWorkspace: accessSettingsModel.handleToggleWorkspace,
     handleSelectMember,
     handleSelectSession,
+    handleForkSession,
     handleOpenWorkItem,
     handleReplayLinkedSession,
+    handleForkLinkedSession,
     handleBackToOrg,
     handleOpenSettingsTab,
     handleCreateInvite: memberActions.handleCreateInvite,

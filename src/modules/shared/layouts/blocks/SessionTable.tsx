@@ -30,6 +30,12 @@ export interface SessionTableItem {
   disabled?: boolean;
   testId?: string;
   dataAttributes?: Record<string, string | number | boolean | undefined>;
+  /**
+   * Optional trailing per-row action (e.g. the collab panel's fork button).
+   * The actions column only renders when at least one item provides this;
+   * clicks inside it do not trigger the row's `onSelect`.
+   */
+  rowAction?: React.ReactNode;
 }
 
 interface SessionTableProps {
@@ -107,6 +113,7 @@ export const SessionTable: React.FC<SessionTableProps> = ({
   const { t } = useTranslation(["sessions", "common"]);
   const [searchQuery, setSearchQuery] = useState("");
   const shouldShowSearch = showSearch ?? true;
+  const hasRowActions = items.some((item) => item.rowAction != null);
 
   const columns = useMemo<SettingsTableColumn<SessionTableItem>[]>(
     () => [
@@ -249,8 +256,28 @@ export const SessionTable: React.FC<SessionTableProps> = ({
           </div>
         ),
       },
+      ...(hasRowActions
+        ? [
+            {
+              key: "actions",
+              label: "",
+              width: "60px",
+              renderCell: (item: SessionTableItem) =>
+                item.rowAction != null ? (
+                  // Stop propagation so the action does not double as a row
+                  // click (row click = select/replay, action = its own verb).
+                  <div
+                    className="flex items-center justify-end"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {item.rowAction}
+                  </div>
+                ) : null,
+            },
+          ]
+        : []),
     ],
-    [t]
+    [t, hasRowActions]
   );
 
   const filteredItems = useMemo(() => {

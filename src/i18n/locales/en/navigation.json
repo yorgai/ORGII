@@ -435,6 +435,12 @@
     },
     "lock": {
       "heldBy": "{{name}} is running"
+    },
+    "session": {
+      "fork": "Fork & continue",
+      "forkTooltip": "Continue this teammate's session as your own writable session",
+      "forkFailed": "Failed to fork the session",
+      "forkedFromLabel": "⑂ from {{name}}"
     }
   },
   "myRole": {

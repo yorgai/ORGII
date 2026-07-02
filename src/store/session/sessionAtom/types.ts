@@ -57,6 +57,28 @@ export interface SessionImportedFrom {
   importedAt?: string;
 }
 
+/**
+ * Fork provenance (design §16.11, "fork & continue"). DISTINCT from
+ * `SessionImportedFrom`: an imported session is a READ-ONLY replay copy with a
+ * consumer-side sync cursor, while a forked session is a normal WRITABLE
+ * single-writer session that merely records where its inherited history came
+ * from. It carries no cursor — after the fork the source and the fork diverge
+ * by design (relay = a chain of single-writer sessions, not multi-writer).
+ *
+ * Deliberately NOT consulted by `isSessionPushAllowed`: a fork has neither
+ * `category === "external_history"` nor `importedFrom`, so the member's
+ * continuation syncs back to the org under their OWN member id.
+ */
+export interface SessionForkedFrom {
+  orgId: string;
+  sourceSessionId: string;
+  ownerMemberId: string;
+  ownerDisplayName: string;
+  /** Event count inherited from the source at fork time. */
+  atCount: number;
+  forkedAt: string;
+}
+
 export interface Session {
   session_id: string;
   status: SessionStatus | string;
@@ -162,6 +184,14 @@ export interface Session {
    * Sessions carrying this field are never eligible for collab push.
    */
   importedFrom?: SessionImportedFrom;
+  /**
+   * Set on sessions created via "fork & continue" from a teammate's shared
+   * session (design §16.11). Pure provenance — the session stays writable,
+   * runnable, and collab-push-eligible (unlike `importedFrom`). Round-trips
+   * through the persisted session list (plain JSON, no schema strip — see
+   * `persistence.ts`, which only removes the volatile draft fields).
+   */
+  forkedFrom?: SessionForkedFrom;
   created_time?: string;
   updated_time?: string;
   /** Source-cache impact stat for external and Rust-native sessions. */

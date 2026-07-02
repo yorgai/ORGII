@@ -4,11 +4,13 @@
  * Ported verbatim from the retired useCollaborationMetadataSync hook where
  * noted; engine-only additions (add-only member inference, metadata hashing,
  * segments push planning) live here too. `collabSyncUtils.ts` keeps the
- * cross-feature pure helpers. One deliberate exception to "engine-internal":
+ * cross-feature pure helpers. Two deliberate exceptions to "engine-internal":
  * `importRemoteSession` is THE consolidated teammate-session import (design
  * §7.4 + M5 dedup) and is also consumed by the panel's direct-replay action
- * (useSessionActions).
+ * (useSessionActions); `forkSession` (design §16.11) is its WRITABLE sibling,
+ * consumed by the panel's fork-and-continue actions.
  */
+import { DISPATCH_CATEGORY } from "@src/api/tauri/session/dispatchTypes";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { createCollabAvatarIdentity } from "@src/store/collaboration/protocol";
@@ -28,6 +30,7 @@ import { upsertSession } from "@src/store/session/sessionAtom/mutations";
 import { persistSessions } from "@src/store/session/sessionAtom/persistence";
 import type {
   Session,
+  SessionForkedFrom,
   SessionImportedFrom,
 } from "@src/store/session/sessionAtom/types";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
@@ -309,7 +312,13 @@ export function isCollabConflictError(error: unknown): boolean {
 // Consolidated remote-session import (design §7.4, dedups the old M5 copies)
 // ============================================================================
 
-export interface ImportRemoteSessionOptions {
+/**
+ * The segments-fetch capability shared by `importRemoteSession` (read-only
+ * replay copy) and `forkSession` (writable relay copy). Both fetch the SAME
+ * remote history through `fetchAndAssembleSegments`; they differ only in what
+ * kind of local session the assembled events land in.
+ */
+export interface RemoteSessionFetchOptions {
   client: Pick<CollabSyncBackendClient, "getSessionEventSegments">;
   profile: CollabSyncProfile;
   orgId: string;
@@ -322,6 +331,9 @@ export interface ImportRemoteSessionOptions {
    * includes the segments summary this importer diffs against.
    */
   shareToken?: string;
+}
+
+export interface ImportRemoteSessionOptions extends RemoteSessionFetchOptions {
   /**
    * Invoked with the local session id BEFORE any event-store write, so the
    * engine can arm its self-import guard (the eventStore write re-enters the
@@ -345,7 +357,7 @@ interface AssembledSegments {
 }
 
 async function fetchAndAssembleSegments(
-  options: ImportRemoteSessionOptions,
+  options: RemoteSessionFetchOptions,
   afterSeq: number,
   baseFrozenEvents: SessionEvent[],
   expectedEpoch: number | null
@@ -567,6 +579,132 @@ async function importRemoteSessionInner(
   });
   persistSessions(store.get(sessionsAtom) as Session[]);
   return { localSessionId, updated: true };
+}
+
+// ============================================================================
+// Fork & continue (design §16.11 — session relay)
+// ============================================================================
+
+/**
+ * Fresh id for a forked session. The `agentsession-` prefix maps to the
+ * `rust_agent` category in `SESSION_PREFIX_REGISTRY` — the SAME runnable
+ * category a normal local agent session uses — and is deliberately NOT the
+ * `imported-session-` prefix (read-only external history).
+ */
+export function createForkedSessionId(): string {
+  return `agentsession-${crypto.randomUUID()}`;
+}
+
+/** Locale-neutral fork marker for the forked session's display name. */
+export function buildForkedSessionName(sourceTitle: string): string {
+  return `⑂ ${sourceTitle}`;
+}
+
+export interface ForkSessionResult {
+  localSessionId: string;
+  /** Display name persisted on the forked record (source title + ⑂ marker). */
+  name: string;
+  /** Events inherited from the source (== forkedFrom.atCount). */
+  eventCount: number;
+}
+
+/**
+ * "Fork & continue" (design §16.11): land a replay-capable teammate session's
+ * FULL event history as a new WRITABLE local session, so an agent can run on
+ * this machine, with this member's key, continuing from the teammate's
+ * context. NOT multi-writer — the fork is an ordinary single-writer session
+ * that merely records its origin in `forkedFrom`.
+ *
+ * Shares the exact fetch/assembly path with `importRemoteSession`
+ * (`fetchAndAssembleSegments`, always a full refetch from seq 0 — a fork has
+ * no incremental cursor to splice onto) and mirrors its durable-write
+ * ordering: events are cached BEFORE the session record is persisted, so a
+ * failed cache write can never leave a forked record with no events (fix P7's
+ * ordering, same rationale as the importer).
+ *
+ * Unlike an import, the created session:
+ * - gets a fresh NORMAL id (`agentsession-*`, category `rust_agent`) so it is
+ *   runnable and dispatchable;
+ * - sets `forkedFrom` (provenance only) and NOT `importedFrom` — verified
+ *   against `isSessionPushAllowed` (collabSyncUtils.ts), which excludes only
+ *   `category === "external_history"` and `importedFrom`-bearing sessions:
+ *   a fork has neither, so the member's continuation correctly syncs back to
+ *   the org under their OWN member id, per their accessMode;
+ * - carries `created_at = now`, so the `shareSince` "only new sessions" gate
+ *   treats the fork as new work (it is — the inherited history was already
+ *   shared by its owner).
+ *
+ * Permission is the source session's replay visibility (design §16.11): the
+ * segments fetch succeeds only under FULL_REPLAY or a replay-level share —
+ * enforced server-side, nothing new here. Returns null when the owner has
+ * published no segments (metadata-only sessions have nothing to inherit);
+ * THROWS on a failed durable write so callers surface it as retryable.
+ */
+export async function forkSession(
+  options: RemoteSessionFetchOptions
+): Promise<ForkSessionResult | null> {
+  const { orgId, remoteSession } = options;
+  if (
+    remoteSession.eventsEpoch === undefined ||
+    remoteSession.eventsCount === undefined
+  ) {
+    // No published segments — nothing to inherit (metadata-only session).
+    return null;
+  }
+
+  // Full fetch from seq 0, same assembly + validation as the importer.
+  const assembled = await fetchAndAssembleSegments(options, 0, [], null);
+  if (!assembled) return null;
+
+  const localSessionId = createForkedSessionId();
+  const localEvents = rewriteEventsForImportedSnapshot(
+    assembled.events,
+    localSessionId
+  );
+  const now = new Date().toISOString();
+
+  // Durable events first, session record second (mirror importRemoteSession):
+  // if the cache write fails, no record must claim the fork exists.
+  await eventStoreProxy.set(localEvents, localSessionId);
+  const savedCount = await eventStoreProxy.saveToCache(localSessionId);
+  if (localEvents.length > 0 && savedCount <= 0) {
+    // Drop the just-set events again — no session record points at them, and
+    // a fork id is random, so (unlike the importer's deterministic id) a
+    // retry would not overwrite this orphan.
+    await eventStoreProxy.clear(localSessionId);
+    throw new Error(
+      `Failed to durably persist forked session ${remoteSession.sourceSessionId} (saveToCache returned ${savedCount})`
+    );
+  }
+
+  const forkedFrom: SessionForkedFrom = {
+    orgId,
+    sourceSessionId: remoteSession.sourceSessionId,
+    ownerMemberId: remoteSession.ownerMemberId,
+    ownerDisplayName: remoteSession.ownerDisplayName,
+    atCount: localEvents.length,
+    forkedAt: now,
+  };
+  const name = buildForkedSessionName(remoteSession.title);
+  const store = getInstrumentedStore();
+  upsertSession({
+    session_id: localSessionId,
+    status: "completed",
+    created_at: now,
+    updated_at: now,
+    name,
+    repoPath: remoteSession.repoPath,
+    branch: remoteSession.branch,
+    // Runnable category (NOT "external_history"): the fork must be
+    // dispatchable and eligible for collab push as this member's own session.
+    category: DISPATCH_CATEGORY.RUST_AGENT,
+    pinned: false,
+    forkedFrom,
+    // Deliberately NO importedFrom: that field marks read-only replay copies
+    // and excludes them from push (isSessionPushAllowed).
+  });
+  persistSessions(store.get(sessionsAtom) as Session[]);
+  return { localSessionId, name, eventCount: localEvents.length };
 }
 
 export function memberFromRemoteSession(
