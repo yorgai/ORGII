@@ -671,6 +671,16 @@
       "confirm": "退出 ORG",
       "cancel": "取消",
       "lastAdminError": "你是最后一位管理员，请先转移管理员或删除该 ORG 再退出。"
+    },
+    "workitem": {
+      "linkedSessionsTitle": "关联会话",
+      "replay": "回放",
+      "linkedSessionMetadataOnly": "仅元数据",
+      "linkedSessionUnshared": "未共享",
+      "unknownOwner": "未知"
+    },
+    "lock": {
+      "heldBy": "{{name}} 正在处理"
     }
   }
 }

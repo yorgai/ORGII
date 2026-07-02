@@ -560,6 +560,16 @@
       "confirm": "Leave ORG",
       "cancel": "Cancel",
       "lastAdminError": "You are the last admin. Transfer the admin role or delete the ORG before leaving."
+    },
+    "workitem": {
+      "linkedSessionsTitle": "Linked sessions",
+      "replay": "Replay",
+      "linkedSessionMetadataOnly": "Metadata only",
+      "linkedSessionUnshared": "Not shared",
+      "unknownOwner": "Unknown"
+    },
+    "lock": {
+      "heldBy": "{{name}} is running"
     }
   }
 }

@@ -538,7 +538,10 @@
       "tokens": "Token",
       "subAgentDefault": "Sub-Agent",
       "toolResult": "kết quả {{tool}}",
-      "reviewRequestedChanges": "Review yêu cầu thay đổi"
+      "reviewRequestedChanges": "Review yêu cầu thay đổi",
+      "collabLockRunning": "{{name}} is running",
+      "collabLockHeld": "{{name}}'s agent is already working on this item",
+      "collabLockConflict": "Another member just started an agent on this item"
     },
     "changedFiles": {
       "title": "Tệp Thay Đổi",

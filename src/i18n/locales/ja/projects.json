@@ -538,7 +538,10 @@
       "tokens": "Token",
       "subAgentDefault": "Sub-Agent",
       "toolResult": "{{tool}} 結果",
-      "reviewRequestedChanges": "Review 変更リクエスト"
+      "reviewRequestedChanges": "Review 変更リクエスト",
+      "collabLockRunning": "{{name}} is running",
+      "collabLockHeld": "{{name}}'s agent is already working on this item",
+      "collabLockConflict": "Another member just started an agent on this item"
     },
     "changedFiles": {
       "title": "変更ファイル",

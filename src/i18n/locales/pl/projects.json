@@ -538,7 +538,10 @@
       "tokens": "Token",
       "subAgentDefault": "Pod-Agent",
       "toolResult": "Wynik {{tool}}",
-      "reviewRequestedChanges": "Recenzja wymagała zmian"
+      "reviewRequestedChanges": "Recenzja wymagała zmian",
+      "collabLockRunning": "{{name}} is running",
+      "collabLockHeld": "{{name}}'s agent is already working on this item",
+      "collabLockConflict": "Another member just started an agent on this item"
     },
     "changedFiles": {
       "title": "Zmienione pliki",

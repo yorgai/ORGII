@@ -73,6 +73,13 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
             t={t}
             workItems={model.orgWorkItems}
             localMetadataError={model.localMetadataError}
+            orgId={org.id}
+            remoteSessions={model.orgSessions}
+            orgMembers={model.orgMembers}
+            currentMemberId={model.currentMember?.id}
+            replayingSessionId={model.replayingSessionId}
+            onOpenWorkItem={model.handleOpenWorkItem}
+            onReplayLinkedSession={model.handleReplayLinkedSession}
           />
         ) : null}
 

@@ -21,6 +21,7 @@ import { useCollabOrgChat } from "./useCollabOrgChat";
 import { useMemberActions } from "./useMemberActions";
 import { useOrgLocalEntities } from "./useOrgLocalEntities";
 import { useSessionActions } from "./useSessionActions";
+import { useWorkItemActions } from "./useWorkItemActions";
 import { getSessionsTabBanners, isToday, toSessionTableItem } from "./utils";
 
 export function useCollabOrgPanelModel(
@@ -87,6 +88,11 @@ export function useCollabOrgPanelModel(
   // existing local org by name).
   const { orgProjects, orgWorkItems, localMetadataError } =
     useOrgLocalEntities(org);
+
+  // Work-item actions (design §16.7 / §16.9): open in ProjectManager + replay
+  // teammate linked sessions through the shared importer.
+  const { handleOpenWorkItem, handleReplayLinkedSession, replayingSessionId } =
+    useWorkItemActions({ org, orgProjects, t });
 
   const orgSessions = useMemo(
     () =>
@@ -232,8 +238,10 @@ export function useCollabOrgPanelModel(
     orgChatMessages,
     orgProjects,
     orgWorkItems,
+    orgSessions,
     latestSnapshotRequest,
     importingSessionId,
+    replayingSessionId,
     tabs,
     handleSendMessage: chatModel.handleSendMessage,
     handleSelectAccessMode: accessSettingsModel.handleSelectAccessMode,
@@ -244,6 +252,8 @@ export function useCollabOrgPanelModel(
     handleToggleWorkspace: accessSettingsModel.handleToggleWorkspace,
     handleSelectMember,
     handleSelectSession,
+    handleOpenWorkItem,
+    handleReplayLinkedSession,
     handleBackToOrg,
     handleOpenSettingsTab,
     handleCreateInvite: memberActions.handleCreateInvite,
