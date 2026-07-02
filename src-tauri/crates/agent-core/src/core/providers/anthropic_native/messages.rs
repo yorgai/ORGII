@@ -238,12 +238,16 @@ pub(super) fn extract_system(messages: &[Value]) -> (Option<Value>, Vec<Value>) 
     let system = render_system_blocks(&system_parts);
 
     // Sliding history breakpoint (BP3): stamp `cache_control: ephemeral`
-    // on the last content block of the last message. Combined with
+    // on the last non-volatile content block. Combined with
     // BP1 (system end) and BP2 (tools end) elsewhere this gives us the
     // 3-breakpoint Anthropic agentic-loop pattern. Without BP3 the entire
     // message history is re-tokenised on every turn, so cache_read covers
     // only system + tools and cache_creation grows linearly with turn count.
+    // Volatile blocks (the per-turn context reminder appended after the
+    // history) are skipped: stamping them would move the breakpoint onto
+    // content that changes every turn and defeat the cache.
     stamp_trailing_cache_control(&mut converted);
+    strip_cache_scope_markers(&mut converted);
 
     (system, converted)
 }
@@ -283,29 +287,53 @@ fn render_system_blocks(system_parts: &[RenderedSystemBlock]) -> Option<Value> {
     }
     Some(Value::Array(blocks))
 }
-/// Put `cache_control: ephemeral` on the last content block of the
-/// last converted message. Skips cleanly when the message list is
-/// empty or the last message's content isn't a block array.
+/// Put `cache_control: ephemeral` on the last non-volatile content block
+/// across all converted messages. Skips cleanly when the message list is
+/// empty or no block qualifies.
 ///
 /// Cache-control on a block tells Anthropic "cache everything up to
-/// and including this block." Placing it on the trailing block every
+/// and including this block." Placing it on the trailing stable block every
 /// turn creates a sliding breakpoint that captures all historical
-/// turns as the conversation grows.
+/// turns as the conversation grows. Blocks marked with a `volatile` cache
+/// scope (the per-turn context reminder) are skipped so the breakpoint
+/// never lands on content that changes each turn.
 fn stamp_trailing_cache_control(messages: &mut [Value]) {
-    let Some(last_msg) = messages.last_mut() else {
-        return;
-    };
-    let Some(blocks) = last_msg.get_mut("content").and_then(Value::as_array_mut) else {
-        return;
-    };
-    let Some(last_block) = blocks.last_mut() else {
-        return;
-    };
-    if let Some(obj) = last_block.as_object_mut() {
-        obj.insert(
-            "cache_control".to_string(),
-            serde_json::json!({ "type": "ephemeral" }),
-        );
+    for msg in messages.iter_mut().rev() {
+        let Some(blocks) = msg.get_mut("content").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for block in blocks.iter_mut().rev() {
+            let is_volatile = block
+                .get(ORGII_SYSTEM_CACHE_SCOPE_KEY)
+                .and_then(Value::as_str)
+                == Some("volatile");
+            if is_volatile {
+                continue;
+            }
+            if let Some(obj) = block.as_object_mut() {
+                obj.insert(
+                    "cache_control".to_string(),
+                    serde_json::json!({ "type": "ephemeral" }),
+                );
+            }
+            return;
+        }
+    }
+}
+
+/// Remove internal `_orgii_cache_scope` markers from every content block
+/// before the request goes on the wire — Anthropic rejects unknown fields
+/// on content blocks.
+fn strip_cache_scope_markers(messages: &mut [Value]) {
+    for msg in messages.iter_mut() {
+        let Some(blocks) = msg.get_mut("content").and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for block in blocks.iter_mut() {
+            if let Some(obj) = block.as_object_mut() {
+                obj.remove(ORGII_SYSTEM_CACHE_SCOPE_KEY);
+            }
+        }
     }
 }
 

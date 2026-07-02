@@ -85,6 +85,117 @@ pub(super) enum CompactionPhaseOutcome {
 }
 
 impl UnifiedMessageProcessor {
+    /// Reactive (mid-turn) compaction used by the ContextTooLong retry
+    /// path. Mirrors the pre-turn pipeline — runtime system prefix is
+    /// protected, SM-compact is tried first (zero API calls), the LLM
+    /// compactor is the fallback, and file re-injection runs afterwards —
+    /// instead of the old bare `ContextCompactor::compact` over the whole
+    /// message list. No durable boundary is persisted here: mid-turn
+    /// history can hold half-open tool exchanges, so the durable transcript
+    /// is only compacted on the pre-turn path.
+    pub(super) async fn run_reactive_compaction(
+        &self,
+        session_id: &str,
+        messages: &mut Vec<Value>,
+    ) -> CompactionOutcome {
+        let context_window = crate::providers::model_capabilities::resolve_effective_context_window(
+            &self.runtime.model,
+            self.runtime.account_id.as_deref(),
+            self.runtime
+                .resolved
+                .context_window_configured
+                .then_some(self.runtime.resolved.context_window),
+        );
+        let prefix_len = leading_runtime_system_prefix_len(messages);
+        let prefix = messages[..prefix_len].to_vec();
+        let compactable_tail = messages[prefix_len..].to_vec();
+        let pre_compact_messages = messages.clone();
+
+        // SM-compact first (zero API calls).
+        let sm_compacted = {
+            let sm_state = self.sm_state.lock().await;
+            if self.sm_config.enabled {
+                let adjusted_sm_state = adjust_sm_state_for_compactable_tail(&sm_state, prefix_len);
+                session_memory::try_sm_compact(
+                    &compactable_tail,
+                    &adjusted_sm_state,
+                    &self.sm_compact_config,
+                    context_window,
+                )
+            } else {
+                None
+            }
+        };
+        info!(
+            "[unified_processor] Reactive compaction for session {} (prefix={}, tail={}, sm_hit={})",
+            session_id,
+            prefix_len,
+            compactable_tail.len(),
+            sm_compacted.is_some(),
+        );
+
+        let outcome;
+        if let Some(compacted) = sm_compacted {
+            let cleaned_tail = crate::model_context::cleanup::post_compact_cleanup(compacted);
+            if crate::model_context::compaction::ContextCompactor::needs_compaction(
+                &cleaned_tail,
+                context_window,
+                &self.runtime.resolved.compaction,
+            ) {
+                // SM-compact not enough — fall through to LLM compaction on
+                // the SM-compacted tail.
+                let mut state = self.compaction_state.lock().await;
+                let (compacted, llm_outcome) = ContextCompactor::compact(
+                    &cleaned_tail,
+                    context_window,
+                    &self.runtime.resolved.compaction,
+                    &mut state,
+                    self.runtime.provider.as_ref(),
+                    &self.runtime.model,
+                )
+                .await;
+                let cleaned = crate::model_context::cleanup::post_compact_cleanup(compacted);
+                *messages = append_compacted_tail(&prefix, cleaned);
+                outcome = llm_outcome;
+            } else {
+                let kept = cleaned_tail.len();
+                *messages = append_compacted_tail(&prefix, cleaned_tail);
+                outcome = CompactionOutcome::Compacted {
+                    messages_dropped: pre_compact_messages
+                        .len()
+                        .saturating_sub(prefix_len)
+                        .saturating_sub(kept),
+                    messages_kept: kept,
+                };
+            }
+            let mut sm_state = self.sm_state.lock().await;
+            sm_state.last_summarized_msg_idx = None;
+        } else {
+            let mut state = self.compaction_state.lock().await;
+            let (compacted, llm_outcome) = ContextCompactor::compact(
+                &compactable_tail,
+                context_window,
+                &self.runtime.resolved.compaction,
+                &mut state,
+                self.runtime.provider.as_ref(),
+                &self.runtime.model,
+            )
+            .await;
+            let cleaned = crate::model_context::cleanup::post_compact_cleanup(compacted);
+            *messages = append_compacted_tail(&prefix, cleaned);
+            outcome = llm_outcome;
+            let mut sm_state = self.sm_state.lock().await;
+            sm_state.last_summarized_msg_idx = None;
+        }
+
+        crate::model_context::file_reinjection::reinject_files_after_compaction(
+            &pre_compact_messages,
+            messages,
+        );
+
+        outcome
+    }
+
     /// Runs all three pre-turn compaction layers (microcompact →
     /// aggregate budget → context compaction). Mutates `messages` in
     /// place.
@@ -322,18 +433,24 @@ impl UnifiedMessageProcessor {
         .await;
         match persist_result {
             Ok(Ok(())) => {
-                if let Err(err) = unified_persistence::clear_session_memory_state(session_id) {
+                // Keep SM content (memory quality survives compaction; the next
+                // SM-compact can still use it) but reset the message-index
+                // pointer — indices refer to the pre-compact message list and
+                // would be dangling against the rebuilt one.
+                let mut sm_state = self.sm_state.lock().await;
+                sm_state.last_summarized_msg_idx = None;
+                let persist_outcome = match sm_state.content.as_deref() {
+                    Some(content) if !content.trim().is_empty() => {
+                        unified_persistence::save_session_memory_state(session_id, content, None)
+                    }
+                    _ => unified_persistence::clear_session_memory_state(session_id),
+                };
+                if let Err(err) = persist_outcome {
                     warn!(
-                        "[unified_processor] Failed to clear persisted SM state after compact for session {}: {}",
+                        "[unified_processor] Failed to persist SM state after compact for session {}: {}",
                         session_id, err
                     );
                 }
-                let mut sm_state = self.sm_state.lock().await;
-                sm_state.content = None;
-                sm_state.last_summarized_msg_idx = None;
-                sm_state.initialized = false;
-                sm_state.tokens_at_last_extraction = 0;
-                sm_state.tool_calls_since_extraction = 0;
                 info!(
                     "[unified_processor] Appended compact boundary for session {} ({} durable messages visible)",
                     session_id,
@@ -356,12 +473,16 @@ impl UnifiedMessageProcessor {
 
 /// Split the compacted in-memory view into the boundary summary text and
 /// the number of preserved tail messages. The compactors emit
-/// `[system summary] + tail`; if the leading summary is missing (e.g.
-/// truncation fallback dropped messages without summarizing), a generic
-/// marker is used and every message counts as tail.
+/// `[user summary] + tail` (legacy summaries were `system`); if the leading
+/// summary is missing (e.g. truncation fallback dropped messages without
+/// summarizing), a generic marker is used and every message counts as tail.
 fn split_summary_and_tail(durable_compacted_messages: &[Value]) -> (String, usize) {
+    let is_summary_head = durable_compacted_messages.first().is_some_and(|first| {
+        message_role(first) == Some("system")
+            || crate::model_context::session_memory::compact::is_compact_boundary_message(first)
+    });
     match durable_compacted_messages.first() {
-        Some(first) if message_role(first) == Some("system") => {
+        Some(first) if is_summary_head => {
             let text = match first.get("content") {
                 Some(Value::String(text)) => text.clone(),
                 Some(Value::Array(parts)) => parts

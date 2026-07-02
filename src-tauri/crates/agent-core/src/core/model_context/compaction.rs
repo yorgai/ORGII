@@ -20,7 +20,6 @@ use tracing::{info, warn};
 
 use super::summarization;
 use super::tokenizer;
-use crate::core::session::prompt::cache::{RenderedSystemBlockScope, ORGII_SYSTEM_CACHE_SCOPE_KEY};
 use crate::providers::traits::LLMProvider;
 
 // ============================================
@@ -192,14 +191,16 @@ pub(crate) const MIN_KEEP_RATIO: f32 = 0.15;
 /// Context compactor: summarizes older messages to fit the context window.
 pub struct ContextCompactor;
 
+/// Continuation instruction appended to every compaction summary. The
+/// summary lands as a **user** message (models weigh user messages far more
+/// than system background), and this suffix tells the model to resume
+/// silently instead of treating the summary as reference material.
+pub(crate) const COMPACT_CONTINUATION_SUFFIX: &str = "This session is being continued from an earlier conversation that exceeded the context window; the older messages were compacted into the summary above. Resume the work directly from this state — do not acknowledge this summary, do not re-describe it to the user, and do not ask questions it already answers. Continue with the last task you were working on, following the user's most recent instructions.";
+
 pub(crate) fn compacted_summary_message(text: impl Into<String>) -> Value {
     serde_json::json!({
-        "role": "system",
-        "content": [{
-            "type": "text",
-            "text": text.into(),
-            (ORGII_SYSTEM_CACHE_SCOPE_KEY): RenderedSystemBlockScope::Session.as_str(),
-        }],
+        "role": "user",
+        "content": format!("{}\n\n{}", text.into(), COMPACT_CONTINUATION_SUFFIX),
     })
 }
 

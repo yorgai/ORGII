@@ -140,7 +140,7 @@ pub async fn debug_prompt_cache_benchmark(
 
     let cache_break_probe_stats = {
         let system_blocks = vec![crate::session::prompt::cache::RenderedSystemBlock::new(
-            second_system_prompt.clone(),
+            second_system_prompt.0.clone(),
             crate::session::prompt::cache::RenderedSystemBlockScope::Session,
         )];
         let mut tracker = session.prompt_cache_break_tracker.lock().await;
@@ -183,7 +183,8 @@ pub async fn debug_prompt_cache_benchmark(
         "systemPromptsEqual": first_system_prompt == second_system_prompt,
         "dynamicSectionsEqual": first_dynamic_sections == second_dynamic_sections,
         "secondDynamicSectionsSuppressedSkillListing": second_dynamic_sections.len() < first_dynamic_sections.len(),
-        "systemPromptBytes": second_system_prompt.len(),
+        "systemPromptBytes": second_system_prompt.0.len(),
+        "volatilePromptBytes": second_system_prompt.1.len(),
         "dynamicSectionCount": second_dynamic_sections.len(),
         "dynamicSectionBytes": second_dynamic_sections.iter().map(|section| section.len()).sum::<usize>(),
     })

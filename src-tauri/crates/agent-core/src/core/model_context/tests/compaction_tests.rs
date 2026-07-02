@@ -335,24 +335,18 @@ fn snap_to_round_no_user_in_window_returns_original() {
     );
 }
 
-// -- compacted summary cache rebase --
+// -- compacted summary message shape --
 
 #[test]
-fn compacted_summary_message_marks_session_cache_scope() {
+fn compacted_summary_message_is_user_with_continuation_instruction() {
     let msg =
         compacted_summary_message("[Conversation summary — 4 earlier messages compacted]\n\nDone");
-    assert_eq!(msg["role"].as_str().unwrap(), "system");
-    let blocks = msg["content"].as_array().expect("structured content");
-    assert_eq!(blocks.len(), 1);
-    assert_eq!(
-        blocks[0]["text"].as_str().unwrap(),
-        "[Conversation summary — 4 earlier messages compacted]\n\nDone"
-    );
-    assert_eq!(
-        blocks[0][crate::session::prompt::cache::ORGII_SYSTEM_CACHE_SCOPE_KEY]
-            .as_str()
-            .unwrap(),
-        "session"
+    assert_eq!(msg["role"].as_str().unwrap(), "user");
+    let text = msg["content"].as_str().expect("plain text content");
+    assert!(text.starts_with("[Conversation summary — 4 earlier messages compacted]\n\nDone"));
+    assert!(
+        text.contains("Resume the work directly"),
+        "summary must carry the continuation instruction, got: {text}"
     );
 }
 

@@ -20,11 +20,16 @@ use crate::core::session::prompt::sections::build_agent_org_context_section;
 use crate::core::session::types::{SystemPromptConfig, ToolSummary};
 
 impl UnifiedMessageProcessor {
-    /// Builds the stable, cacheable system prompt.
+    /// Builds the system prompt split into `(stable, volatile)` bodies.
+    ///
+    /// `stable` is the cacheable prefix; `volatile` holds the per-turn
+    /// sections (environment, IDE context, presence, mode suffix, …) and is
+    /// appended after the history by `process()` so it never breaks the
+    /// provider prompt-cache prefix.
     pub(in crate::core::session::turn) async fn build_system_prompt(
         &self,
         session_id: &str,
-    ) -> String {
+    ) -> (String, String) {
         let tool_summaries = self.build_tool_summaries();
 
         let live_workspace = Some(self.runtime.workspace_state.read().clone());
@@ -64,7 +69,7 @@ impl UnifiedMessageProcessor {
 
         let mut prompt_cache = self.session.prompt_cache.lock().await;
         let mut learnings_prompt_cache = self.session.learnings_prompt_cache.lock().await;
-        super::super::super::prompt::builder::build_unified_system_prompt_with_cache(
+        super::super::super::prompt::builder::build_unified_system_prompt_split_with_cache(
             session_id,
             &tool_summaries,
             &prompt_config,

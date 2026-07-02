@@ -20,7 +20,7 @@ use serde_json::Value;
 use tracing::{info, warn};
 
 use super::UnifiedMessageProcessor;
-use crate::model_context::compaction::{CompactionOutcome, ContextCompactor};
+use crate::model_context::compaction::CompactionOutcome;
 use crate::turn_executor::{self, PermissionProvider, TurnConfig, TurnIterationHook, TurnResult};
 
 use super::super::event_handler::UnifiedEventHandler;
@@ -194,27 +194,9 @@ impl UnifiedMessageProcessor {
                 "[unified_processor] ContextTooLong hit for session {} — reactive compact attempt {}/{}",
                 session_id, attempt, MAX_REACTIVE_RETRIES,
             );
-            let context_window =
-                crate::providers::model_capabilities::resolve_effective_context_window(
-                    &self.runtime.model,
-                    self.runtime.account_id.as_deref(),
-                    self.runtime
-                        .resolved
-                        .context_window_configured
-                        .then_some(self.runtime.resolved.context_window),
-                );
-            let mut state = self.compaction_state.lock().await;
-            let (compacted, reactive_outcome) = ContextCompactor::compact(
-                messages,
-                context_window,
-                &self.runtime.resolved.compaction,
-                &mut state,
-                self.runtime.provider.as_ref(),
-                &self.runtime.model,
-            )
-            .await;
-            *messages = crate::model_context::cleanup::post_compact_cleanup(compacted);
-            drop(state);
+            // Full rebuild pipeline (prefix protection + SM-compact first +
+            // file re-injection), mirroring the pre-turn path.
+            let reactive_outcome = self.run_reactive_compaction(session_id, messages).await;
             self.session
                 .invalidate_prompt_cache(
                     crate::session::prompt::cache::PromptCacheInvalidationReason::Compaction,
