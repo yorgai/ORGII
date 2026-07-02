@@ -60,7 +60,122 @@ pub fn insert_chunk(chunk: &ActivityChunk, sequence: i64) -> SqliteResult<()> {
         project_management::lineage::event_hook::process_chunk(&sid, &func, &args_for_lineage);
     });
 
+    if is_subagent_chunk(chunk) {
+        if let Err(err) = persist_subagent_child_session(chunk) {
+            tracing::warn!(
+                "[chunk_ops] failed to persist subagent child session for {}: {err}",
+                chunk.session_id
+            );
+        }
+    }
+
     Ok(())
+}
+
+/// True when this chunk is an OpenCode/CLI subagent delegation that should
+/// spawn a child code_session row. The frontend uses that child row to attach
+/// imported subagent history to the right parent and to keep the child out of
+/// the primary left sidebar.
+fn is_subagent_chunk(chunk: &ActivityChunk) -> bool {
+    chunk.action_type == "tool_call" && chunk.function == "subagent"
+}
+
+/// Extract the subagent session id from a delegation chunk. Falls back to a
+/// derived id from the parent so the child always has a stable session_id.
+pub fn subagent_session_id(chunk: &ActivityChunk) -> Option<String> {
+    if !is_subagent_chunk(chunk) {
+        return None;
+    }
+    if let Some(id) = chunk
+        .args
+        .get("subagentSessionId")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+    {
+        return Some(id.to_string());
+    }
+    if let Some(id) = chunk
+        .result
+        .get("subagentSessionId")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+    {
+        return Some(id.to_string());
+    }
+    let prompt_preview = chunk
+        .args
+        .get("prompt")
+        .and_then(|v| v.as_str())
+        .unwrap_or("subagent");
+    let prefix = prompt_preview
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+        .take(24)
+        .collect::<String>();
+    let prefix = if prefix.is_empty() {
+        "subagent".to_string()
+    } else {
+        prefix
+    };
+    Some(format!("opencodeapp-{}-{}", chunk.chunk_id, prefix))
+}
+
+/// Persist a `code_sessions` row representing the child subagent session.
+/// Idempotent on (session_id) — repeated chunk events for the same delegation
+/// do not create duplicate rows or bump `updated_at`.
+pub fn persist_subagent_child_session(chunk: &ActivityChunk) -> SqliteResult<bool> {
+    let child_id = match subagent_session_id(chunk) {
+        Some(id) => id,
+        None => return Ok(false),
+    };
+    let parent_id = chunk.session_id.clone();
+    let prompt = chunk
+        .args
+        .get("prompt")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    let task_label = if prompt.is_empty() {
+        truncate_label(&child_id)
+    } else {
+        truncate_label(&prompt)
+    };
+    let name = format!("OpenCode ({task_label})");
+    let ts = now_iso();
+    let conn = get_connection()?;
+    // Use INSERT OR IGNORE so a re-emitted chunk (e.g. agent_replay) does not
+    // mutate an existing child row. `user_input` carries the prompt for
+    // sidebar previews; parent_session_id is what the visibility helper keys on.
+    let affected = conn.execute(
+        "INSERT OR IGNORE INTO code_sessions
+            (session_id, name, status, flow, runner, cli_agent_type,
+             user_input, parent_session_id, org_id, key_source, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)",
+        params![
+            child_id,
+            name,
+            "completed",
+            "opencode_subagent",
+            "Local",
+            "opencode",
+            prompt,
+            parent_id,
+            "personal-org",
+            "own_key",
+            ts,
+        ],
+    )?;
+    Ok(affected > 0)
+}
+
+fn truncate_label(s: &str) -> String {
+    if s.chars().count() <= 32 {
+        s.to_string()
+    } else {
+        let truncated: String = s.chars().take(29).collect();
+        format!("{}...", truncated)
+    }
 }
 
 /// Load all chunks for a session, ordered by sequence.

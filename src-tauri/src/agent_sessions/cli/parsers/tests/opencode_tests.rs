@@ -252,7 +252,11 @@ fn map_tool_kind_unrecognised_name_falls_through_to_kind() {
 // ============================================
 
 fn make_parser() -> AcpNotificationParser<OpenCodeAdapter> {
-    AcpNotificationParser::new(OpenCodeAdapter, "test-session")
+    make_parser_with_task("")
+}
+
+fn make_parser_with_task(task: &str) -> AcpNotificationParser<OpenCodeAdapter> {
+    AcpNotificationParser::new_with_task(OpenCodeAdapter, "test-session", task)
 }
 
 // Helper: build a session/update notification body
@@ -477,7 +481,7 @@ fn parse_update_unhandled_session_update_produces_no_chunk() {
 }
 
 #[test]
-fn parse_update_completed_think_task_result_maps_to_assistant_message() {
+fn parse_update_completed_think_task_result_maps_to_subagent_tool_call() {
     let mut parser = make_parser();
 
     let start = session_update(
@@ -503,10 +507,289 @@ fn parse_update_completed_think_task_result_maps_to_assistant_message() {
     let chunks = parser.parse_update(&update);
 
     assert_eq!(chunks.len(), 1);
-    assert_eq!(chunks[0].action_type, "assistant");
-    assert_eq!(chunks[0].function, "message");
+    assert_eq!(chunks[0].action_type, "tool_call");
+    assert_eq!(chunks[0].function, "subagent");
+    assert_eq!(chunks[0].args["action"], "delegate");
+    assert_eq!(chunks[0].args["subagent_type"], "opencode");
+    assert_eq!(chunks[0].args["subagentSessionId"], "opencodeapp-ses_123");
+    assert_eq!(chunks[0].result["success"], true);
+    assert_eq!(chunks[0].result["status"], "completed");
     assert_eq!(chunks[0].result["content"], "Final answer from subagent.");
-    assert_eq!(chunks[0].result["role"], "assistant");
+}
+
+#[test]
+fn parse_update_completed_think_task_detailed_content_preserves_prompt() {
+    let mut parser = make_parser();
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-detailed",
+            "kind": "think",
+            "title": "",
+            "rawInput": {}
+        }),
+    ));
+
+    let update = session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-detailed",
+            "status": "completed",
+            "content": "<task_result>Short answer.</task_result>",
+            "rawOutput": {
+                "content": "<task_result>Short answer.</task_result>",
+                "detailedContent": "<task id=\"ses_detailed\" prompt=\"What is the weather in Paris?\" state=\"completed\"><task_result>Short answer.</task_result></task>"
+            }
+        }),
+    );
+    let chunks = parser.parse_update(&update);
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert_eq!(
+        chunks[0].args["subagentSessionId"],
+        "opencodeapp-ses_detailed"
+    );
+    assert_eq!(chunks[0].args["prompt"], "What is the weather in Paris?");
+    assert_eq!(
+        chunks[0].result["subagentSessionId"],
+        "opencodeapp-ses_detailed"
+    );
+}
+
+#[test]
+fn parse_update_completed_think_task_raw_input_preserves_prompt() {
+    let mut parser = make_parser();
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-raw-input",
+            "kind": "think",
+            "title": "Fallback title should not win",
+            "rawInput": {
+                "description": "Analyze the React source tree"
+            }
+        }),
+    ));
+
+    let chunks = parser.parse_update(&session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-raw-input",
+            "status": "completed",
+            "content": "<task id=\"ses_raw_input\" state=\"completed\"><task_result>Done.</task_result></task>"
+        }),
+    ));
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert_eq!(chunks[0].args["prompt"], "Analyze the React source tree");
+    assert_eq!(
+        chunks[0].args["description"],
+        "Analyze the React source tree"
+    );
+}
+
+#[test]
+fn parse_update_completed_think_task_ignores_result_like_raw_text() {
+    let mut parser = make_parser();
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-result-like-raw",
+            "kind": "think",
+            "title": "Analyze .rs files in project (@explore subagent)",
+            "rawInput": {
+                "text": "Now I have all the data. Here is the comprehensive report."
+            }
+        }),
+    ));
+
+    let chunks = parser.parse_update(&session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-result-like-raw",
+            "status": "completed",
+            "content": "<task id=\"ses_result_like_raw\" state=\"completed\"><task_result>Now I have all the data. Here is the comprehensive report.</task_result></task>"
+        }),
+    ));
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert_eq!(
+        chunks[0].args["prompt"],
+        "Analyze .rs files in project (@explore subagent)"
+    );
+    assert_eq!(
+        chunks[0].result["content"],
+        "Now I have all the data. Here is the comprehensive report."
+    );
+}
+
+#[test]
+fn parse_update_completed_think_task_ignores_paste_placeholder_raw_text() {
+    let mut parser = make_parser();
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-paste-placeholder",
+            "kind": "think",
+            "title": "Analyze .rs files in project (@explore subagent)",
+            "rawInput": {
+                "text": "pasted.txt [paste:paste://1782778711175-d8dsv8]"
+            }
+        }),
+    ));
+
+    let chunks = parser.parse_update(&session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-paste-placeholder",
+            "status": "completed",
+            "content": "<task id=\"ses_paste_placeholder\" state=\"completed\"><task_result>Done.</task_result></task>"
+        }),
+    ));
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert_eq!(
+        chunks[0].args["prompt"],
+        "Analyze .rs files in project (@explore subagent)"
+    );
+}
+
+#[test]
+fn parse_update_completed_think_task_result_body_never_becomes_prompt() {
+    let mut parser = make_parser();
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-result-body",
+            "kind": "think",
+            "title": "Task",
+            "rawInput": {}
+        }),
+    ));
+
+    let chunks = parser.parse_update(&session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-result-body",
+            "status": "completed",
+            "content": "<task id=\"ses_result_body\" state=\"completed\"><task_result>Now I have all the data. Here is the comprehensive report.</task_result></task>"
+        }),
+    ));
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert!(chunks[0].args["prompt"].is_null());
+    assert_eq!(chunks[0].args["description"], "Assigned task to subagent");
+    assert_eq!(
+        chunks[0].result["content"],
+        "Now I have all the data. Here is the comprehensive report."
+    );
+}
+
+#[test]
+fn parse_update_completed_think_task_title_preserves_prompt() {
+    let mut parser = make_parser();
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-title",
+            "kind": "think",
+            "title": "Analyze .tsx files",
+            "rawInput": {}
+        }),
+    ));
+
+    let chunks = parser.parse_update(&session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-title",
+            "status": "completed",
+            "content": "<task id=\"ses_title\" state=\"completed\"><task_result>Done.</task_result></task>"
+        }),
+    ));
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert_eq!(chunks[0].args["prompt"], "Analyze .tsx files");
+    assert_eq!(chunks[0].args["description"], "Analyze .tsx files");
+}
+
+#[test]
+fn parse_update_completed_think_task_generic_title_does_not_use_parent_prompt() {
+    let mut parser = make_parser_with_task(
+        "启动一个子任务（subagent），让它帮我分析当前项目里有多少个 .tsx 文件，并生成一份报告",
+    );
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-generic-title",
+            "kind": "think",
+            "title": "task",
+            "rawInput": {}
+        }),
+    ));
+
+    let chunks = parser.parse_update(&session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-generic-title",
+            "status": "completed",
+            "content": "<task id=\"ses_generic_title\" state=\"completed\"><task_result>Done.</task_result></task>"
+        }),
+    ));
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert!(chunks[0].args["prompt"].is_null());
+    assert_eq!(chunks[0].args["description"], "Assigned task to subagent");
+}
+
+#[test]
+fn parse_update_completed_think_task_strips_opencode_prompt_prelude() {
+    let mut parser = make_parser();
+
+    parser.parse_update(&session_update(
+        "tool_call",
+        json!({
+            "toolCallId": "tc-think-prelude",
+            "kind": "think",
+            "title": "task",
+            "rawInput": {}
+        }),
+    ));
+
+    let wrapped_prompt = "<skills>\n## Skills (mandatory)\n</skills>\n\n<orgii_cli_exec_mode_bridge>\nYou are running inside ORGII BUILD mode.\n</orgii_cli_exec_mode_bridge>\n\n启动一个子任务，分析 .tsx 文件";
+    let chunks = parser.parse_update(&session_update(
+        "tool_call_update",
+        json!({
+            "toolCallId": "tc-think-prelude",
+            "status": "completed",
+            "content": "<task_result>Done.</task_result>",
+            "rawOutput": {
+                "content": "<task_result>Done.</task_result>",
+                "detailedContent": format!("<task id=\"ses_prelude\" state=\"completed\">{}<task_result>Done.</task_result></task>", wrapped_prompt)
+            }
+        }),
+    ));
+
+    assert_eq!(chunks.len(), 1);
+    assert_eq!(chunks[0].function, "subagent");
+    assert_eq!(chunks[0].args["prompt"], "启动一个子任务，分析 .tsx 文件");
+    assert_eq!(
+        chunks[0].args["description"],
+        "启动一个子任务，分析 .tsx 文件"
+    );
 }
 
 #[test]

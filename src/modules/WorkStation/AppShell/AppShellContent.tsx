@@ -124,10 +124,12 @@ export function AppShellContent({
 
   return (
     <>
-      {(isAgentStation || hasVisitedAgentStation) && !chatPanelFocused && (
+      {(isAgentStation || hasVisitedAgentStation) && (
         <div
           className="h-full w-full"
-          style={{ display: isAgentStation ? "block" : "none" }}
+          style={{
+            display: isAgentStation && !chatPanelFocused ? "block" : "none",
+          }}
         >
           <Suspense fallback={<AppShellLoadingPlaceholder />}>
             <ActivitySimulator />

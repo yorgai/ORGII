@@ -38,4 +38,33 @@ describe("isPrimarySessionListSession", () => {
       })
     ).toBe(true);
   });
+
+  it("hides imported child sessions with parent id in generic visibility filtering", () => {
+    expect(
+      isPrimarySessionListSession({
+        session_id: "claudecodeapp-child",
+        parentSessionId: "claudecodeapp-parent",
+        readOnly: true,
+      })
+    ).toBe(false);
+  });
+
+  it("accepts snake_case parent_session_id for child detection", () => {
+    expect(
+      isPrimarySessionListSession({
+        session_id: "opencodeapp-ses_child",
+        parent_session_id: "opencodeapp-ses_1",
+      })
+    ).toBe(false);
+  });
+
+  it("does not let readOnly smuggle child sessions back into the sidebar", () => {
+    expect(
+      isPrimarySessionListSession({
+        session_id: "opencodeapp-ses_child",
+        parentSessionId: "opencodeapp-ses_1",
+        readOnly: false,
+      })
+    ).toBe(false);
+  });
 });

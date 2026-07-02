@@ -229,8 +229,10 @@ export function useSubagentSessions(
   const lastQueryRef = useRef<string | null>(null);
 
   // Discard stale sessions from a previous parent without an extra render.
-  const sessions =
-    rawSessions.parentId === parentSessionId ? rawSessions.list : [];
+  const sessions = useMemo(
+    () => (rawSessions.parentId === parentSessionId ? rawSessions.list : []),
+    [rawSessions, parentSessionId]
+  );
 
   const setSessions = useCallback(
     (list: SubagentSession[]) =>

@@ -2,7 +2,7 @@
 
 use super::super::persistence;
 use super::super::types::SessionStatus;
-use super::helpers::RUNNING_SESSIONS;
+use super::helpers::{flush_cli_streams_for_session, RUNNING_SESSIONS};
 use agent_core::state::control_flow::CancelReason;
 
 #[cfg(unix)]
@@ -58,6 +58,7 @@ pub async fn kill_running_agent(session_id: &str) -> bool {
     let had_running_task = {
         let mut sessions = RUNNING_SESSIONS.lock().await;
         if let Some(handle) = sessions.remove(session_id) {
+            flush_cli_streams_for_session(session_id);
             handle.abort();
             true
         } else {

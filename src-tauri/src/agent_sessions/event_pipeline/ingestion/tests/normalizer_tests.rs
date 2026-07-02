@@ -1,7 +1,9 @@
 use crate::agent_sessions::event_pipeline::ingestion::normalizer::{
     normalize_chunk, normalize_chunks,
 };
-use crate::agent_sessions::event_pipeline::ingestion::types::RawActivityChunk;
+use crate::agent_sessions::event_pipeline::ingestion::{
+    ingest_raw_chunks_with_prompt_resolver, types::RawActivityChunk,
+};
 use crate::agent_sessions::event_pipeline::types::{
     EventDisplayStatus, EventDisplayVariant, EventSource,
 };
@@ -425,4 +427,38 @@ fn test_ui_canonical_precomputed() {
     let chunk_thinking = make_chunk("llm_thinking", "thinking");
     let event_thinking = normalize_chunk(&chunk_thinking, "sess-1");
     assert_eq!(event_thinking.ui_canonical, "thinking");
+}
+
+#[test]
+fn ingest_backfills_opencode_subagent_prompt_from_child_session() {
+    let chunk = RawActivityChunk {
+        chunk_id: Some("subagent-chunk".to_string()),
+        session_id: Some("parent-session".to_string()),
+        action_type: Some("tool_call".to_string()),
+        function: Some("subagent".to_string()),
+        args: Some(serde_json::json!({
+            "description": "Assigned task to subagent",
+            "prompt": null,
+            "subagentSessionId": "opencodeapp-child-session",
+        })),
+        result: Some(serde_json::json!({"content": "final report"})),
+        created_at: Some("2025-01-15T10:30:12.000Z".to_string()),
+        ..Default::default()
+    };
+
+    let result = ingest_raw_chunks_with_prompt_resolver(&[chunk], "parent-session", |child_id| {
+        (child_id == "opencodeapp-child-session")
+            .then_some("Count all Rust files and return a report".to_string())
+    });
+
+    assert_eq!(result.events.len(), 1);
+    let args = result.events[0].args.as_object().unwrap();
+    assert_eq!(
+        args.get("prompt").and_then(|value| value.as_str()),
+        Some("Count all Rust files and return a report")
+    );
+    assert_eq!(
+        args.get("description").and_then(|value| value.as_str()),
+        Some("Count all Rust files and return a report")
+    );
 }

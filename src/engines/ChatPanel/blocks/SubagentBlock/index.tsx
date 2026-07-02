@@ -9,11 +9,11 @@
  *
  * Visual states:
  *   1. **Running** — infinity icon, shimmer title, Stop button visible.
- *   2. **Success** — infinity icon, prompt preview or summary body.
+ *   2. **Success** — infinity icon, assignment prompt preview when available.
  *   3. **Failed / cancelled** — infinity icon, error body.
  */
 import { Infinity, Square } from "lucide-react";
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ToolUsageMetadata } from "@src/engines/SessionCore/core/types";
@@ -27,11 +27,7 @@ import {
   SESSION_UI_TOKENS,
   getEventBlockContainerClasses,
 } from "../primitives";
-import {
-  SubagentPromptPreview,
-  extractSummary,
-  formatElapsedTime,
-} from "./SubagentHelpers";
+import { SubagentPromptPreview, formatElapsedTime } from "./SubagentHelpers";
 
 const log = createLogger("SubagentBlock");
 
@@ -66,8 +62,6 @@ export interface SubagentBlockProps {
 const SubagentBlock: React.FC<SubagentBlockProps> = memo(
   ({
     description,
-    resultContent,
-    resultSummary,
     isLoading = false,
     elapsedMs,
     subagentSessionId,
@@ -97,11 +91,6 @@ const SubagentBlock: React.FC<SubagentBlockProps> = memo(
       status === "failed" ||
       status === "cancelled" ||
       (success === false && hasErrorMessage);
-
-    const summary = useMemo(
-      () => resultSummary || extractSummary(resultContent || ""),
-      [resultSummary, resultContent]
-    );
 
     const timingLabel = elapsedMs ? formatElapsedTime(elapsedMs) : undefined;
 
@@ -167,10 +156,7 @@ const SubagentBlock: React.FC<SubagentBlockProps> = memo(
 
     const displayTitle = t("tools.assignedTaskToSubagent");
     const hasBody =
-      hasPrompt ||
-      (isFailure && hasErrorMessage) ||
-      (!isFailure && !isLoading && Boolean(summary)) ||
-      (isLoading && !hasPrompt);
+      hasPrompt || (isFailure && hasErrorMessage) || (isLoading && !hasPrompt);
 
     return (
       <div className={getEventBlockContainerClasses(true)}>
@@ -215,14 +201,6 @@ const SubagentBlock: React.FC<SubagentBlockProps> = memo(
             className={`${hasPrompt ? "border-t border-fill-3" : ""} px-3.5 py-2.5 ${SESSION_UI_TOKENS.FONT_SIZE_SM} leading-relaxed text-danger-5`}
           >
             {errorMessage}
-          </div>
-        )}
-
-        {!hasPrompt && !isFailure && !isLoading && summary && (
-          <div
-            className={`px-3.5 py-2.5 ${SESSION_UI_TOKENS.FONT_SIZE_SM} leading-relaxed ${SESSION_UI_TOKENS.TEXT.SECONDARY}`}
-          >
-            {summary}
           </div>
         )}
 

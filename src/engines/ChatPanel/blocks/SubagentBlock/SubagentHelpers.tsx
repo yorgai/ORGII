@@ -4,7 +4,7 @@
 import React, { memo, useCallback, useMemo, useState } from "react";
 
 import ExpandOverlay from "@src/components/ExpandOverlay";
-import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/UserMessageContent";
+import Markdown from "@src/components/MarkDown";
 
 import { EVENT_BLOCK_FADE_FROM } from "../primitives";
 
@@ -91,7 +91,16 @@ export const SubagentPromptPreview: React.FC<{
       role={!isExpanded && needsExpand ? "button" : undefined}
       tabIndex={!isExpanded && needsExpand ? 0 : undefined}
     >
-      <UserMessageContent text={prompt} />
+      <div className="chat-text flex flex-col items-start gap-1 self-stretch text-text-1">
+        <div className="resultBgc allow-select w-full min-w-0 overflow-visible break-words font-normal">
+          <Markdown
+            textContent={prompt}
+            useChatCodeBlock={true}
+            enableFileNavigation={true}
+            skipPreprocess={false}
+          />
+        </div>
+      </div>
 
       {needsExpand && (
         <ExpandOverlay
@@ -103,4 +112,20 @@ export const SubagentPromptPreview: React.FC<{
     </div>
   );
 });
+export const SubagentResultPreview: React.FC<{
+  content: string;
+}> = memo(({ content }) => (
+  <div className="chat-text flex flex-col items-start gap-1 self-stretch text-text-1">
+    <div className="resultBgc allow-select w-full min-w-0 overflow-visible break-words font-normal">
+      <Markdown
+        textContent={content}
+        useChatCodeBlock={true}
+        enableFileNavigation={true}
+        skipPreprocess={false}
+      />
+    </div>
+  </div>
+));
+SubagentResultPreview.displayName = "SubagentResultPreview";
+
 SubagentPromptPreview.displayName = "SubagentPromptPreview";

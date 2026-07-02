@@ -30,6 +30,25 @@ fn imported_recent_paths() -> Result<Vec<imported_history::ImportedHistoryRecent
     Ok(imported_history::recent_paths_from_paths(&paths))
 }
 
+fn has_live_opencode_child_session(
+    conn: &rusqlite::Connection,
+    session_id: &str,
+) -> Result<bool, String> {
+    conn.query_row(
+        "SELECT EXISTS(
+            SELECT 1 FROM code_sessions
+            WHERE session_id = ?1
+              AND cli_agent_type = 'opencode'
+              AND parent_session_id IS NOT NULL
+              AND parent_session_id != ''
+        )",
+        [session_id],
+        |row| row.get::<_, i64>(0),
+    )
+    .map(|count| count != 0)
+    .map_err(|err| format!("Failed to check live OpenCode child session: {err}"))
+}
+
 #[tauri::command]
 pub async fn orgtrack_get_cursor_sessions(
     start_date: String,
@@ -267,7 +286,12 @@ pub async fn opencode_history_list_sessions(
     let offset = offset.unwrap_or(0);
     tokio::task::spawn_blocking(move || {
         let mut conn = open_cache_conn()?;
-        opencode_history::list_opencode_history_sessions_paginated(&mut conn, limit, offset)
+        let mut page =
+            opencode_history::list_opencode_history_sessions_paginated(&mut conn, limit, offset)?;
+        page.sessions.retain(|session| {
+            !has_live_opencode_child_session(&conn, &session.session_id).unwrap_or(false)
+        });
+        Ok(page)
     })
     .await
     .map_err(|err| format!("Task join error: {err}"))?

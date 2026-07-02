@@ -101,18 +101,17 @@ const SubagentPipCard: React.FC<SubagentPipCardProps> = ({
   );
   const subagentEventsMap = useMultiSessionSimulatorEvents(visibleSessions);
 
-  // "Monitoring N" counts only clips still running at the cursor — open
-  // clips (endedAtMs === null) or clips whose end the cursor hasn't reached.
-  // Finished in-window clips keep their cell but don't count as monitored.
-  const runningCount = useMemo(
-    () =>
-      activeSessions.filter(
-        (sub) =>
-          sub.endedAtMs === null ||
-          (mainCursorMs != null && mainCursorMs < sub.endedAtMs)
-      ).length,
-    [activeSessions, mainCursorMs]
-  );
+  // "Monitoring N" prefers clips still running at the cursor, but completed
+  // imported/live child clips still count when they are the visible monitor
+  // rows; otherwise the header would say "Monitoring 0" while showing a cell.
+  const runningCount = useMemo(() => {
+    const running = activeSessions.filter(
+      (sub) =>
+        sub.endedAtMs === null ||
+        (mainCursorMs != null && mainCursorMs < sub.endedAtMs)
+    ).length;
+    return running > 0 ? running : activeSessions.length;
+  }, [activeSessions, mainCursorMs]);
 
   // ── Banner collapsed state ────────────────────────────────────────────────
   const [isBannerCollapsed, setIsBannerCollapsed] = useState(false);

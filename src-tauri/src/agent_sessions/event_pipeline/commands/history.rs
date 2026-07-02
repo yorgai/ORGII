@@ -6,9 +6,11 @@
 use crate::agent_sessions::event_pipeline::history::{
     self, HistoryQuery, HistoryResult, SessionGroup, SessionRecord,
 };
+use crate::agent_sessions::event_pipeline::session_providers;
 use crate::agent_sessions::event_pipeline::statistics::{self, SessionStatistics};
-use agent_core::session::persistence::UnifiedSessionRecord;
+use agent_core::session::persistence::{session_type, UnifiedSessionRecord};
 use agent_core::session::SessionStatus;
+use database::db::get_connection;
 use serde::Serialize;
 
 /// Query session history with filtering, sorting, and pagination.
@@ -94,8 +96,18 @@ fn clip_fields(
 pub async fn es_get_child_sessions(
     parent_session_id: String,
 ) -> Result<Vec<ChildSessionView>, String> {
-    let records = agent_core::session::persistence::get_child_sessions(&parent_session_id)
+    let mut records = agent_core::session::persistence::get_child_sessions(&parent_session_id)
         .map_err(|e| format!("Failed to get child sessions: {}", e))?;
+    records.extend(cli_child_session_records(&parent_session_id)?);
+    records.extend(imported_child_session_records(&parent_session_id)?);
+    for imported_parent_session_id in
+        session_providers::imported_parent_session_ids(&parent_session_id)?
+    {
+        records.extend(imported_child_session_records(&imported_parent_session_id)?);
+    }
+
+    let mut seen = std::collections::HashSet::new();
+    records.retain(|record| seen.insert(record.session_id.clone()));
 
     Ok(records
         .into_iter()
@@ -113,6 +125,106 @@ pub async fn es_get_child_sessions(
             }
         })
         .collect())
+}
+
+fn cli_child_session_records(parent_session_id: &str) -> Result<Vec<UnifiedSessionRecord>, String> {
+    let conn = get_connection().map_err(|err| format!("Failed to open CLI session DB: {err}"))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT session_id, name, status, model, user_input, created_at, updated_at, repo_path, branch, total_tokens \
+             FROM code_sessions \
+             WHERE parent_session_id = ?1 \
+             ORDER BY updated_at DESC, created_at DESC, session_id ASC",
+        )
+        .map_err(|err| format!("Failed to prepare CLI child session query: {err}"))?;
+    let rows = stmt
+        .query_map([parent_session_id], |row| {
+            let session_id: String = row.get(0)?;
+            let name: String = row.get(1)?;
+            let status: String = row.get(2)?;
+            let model: Option<String> = row.get(3)?;
+            let user_input: Option<String> = row.get(4)?;
+            let created_at: String = row.get(5)?;
+            let updated_at: String = row.get(6)?;
+            let repo_path: Option<String> = row.get(7)?;
+            let branch: Option<String> = row.get(8)?;
+            let total_tokens: i64 = row.get::<_, Option<i64>>(9)?.unwrap_or_default();
+            Ok(UnifiedSessionRecord {
+                session_id,
+                name,
+                status,
+                model,
+                user_input,
+                total_tokens,
+                created_at,
+                updated_at,
+                session_type: session_type::SUBAGENT.to_string(),
+                workspace_path: repo_path,
+                worktree_branch: branch,
+                parent_session_id: Some(parent_session_id.to_string()),
+                ..Default::default()
+            })
+        })
+        .map_err(|err| format!("Failed to query CLI child sessions: {err}"))?;
+
+    let mut records = Vec::new();
+    for row in rows {
+        records.push(row.map_err(|err| format!("Failed to read CLI child session row: {err}"))?);
+    }
+    Ok(records)
+}
+
+fn imported_child_session_records(
+    parent_session_id: &str,
+) -> Result<Vec<UnifiedSessionRecord>, String> {
+    let conn =
+        get_connection().map_err(|err| format!("Failed to open imported history DB: {err}"))?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT session_id, name, created_at_ms, updated_at_ms, model, input_tokens, output_tokens, repo_path \
+             FROM imported_history_session_cache \
+             WHERE parent_session_id = ?1 \
+             ORDER BY updated_at_ms DESC, created_at_ms DESC, source_session_id ASC",
+        )
+        .map_err(|err| format!("Failed to prepare imported child session query: {err}"))?;
+    let rows = stmt
+        .query_map([parent_session_id], |row| {
+            let session_id: String = row.get(0)?;
+            let name: String = row.get(1)?;
+            let created_at_ms: i64 = row.get(2)?;
+            let updated_at_ms: i64 = row.get(3)?;
+            let model: String = row.get(4)?;
+            let input_tokens: i64 = row.get(5)?;
+            let output_tokens: i64 = row.get(6)?;
+            let repo_path: String = row.get(7)?;
+            Ok(UnifiedSessionRecord {
+                session_id,
+                name,
+                status: SessionStatus::Completed.as_str().to_string(),
+                model: (!model.trim().is_empty()).then_some(model),
+                total_tokens: input_tokens + output_tokens,
+                created_at: imported_epoch_ms_to_iso(created_at_ms),
+                updated_at: imported_epoch_ms_to_iso(updated_at_ms),
+                session_type: session_type::SUBAGENT.to_string(),
+                workspace_path: (!repo_path.trim().is_empty()).then_some(repo_path),
+                parent_session_id: Some(parent_session_id.to_string()),
+                ..Default::default()
+            })
+        })
+        .map_err(|err| format!("Failed to query imported child sessions: {err}"))?;
+
+    let mut records = Vec::new();
+    for row in rows {
+        records
+            .push(row.map_err(|err| format!("Failed to read imported child session row: {err}"))?);
+    }
+    Ok(records)
+}
+
+fn imported_epoch_ms_to_iso(ms: i64) -> String {
+    chrono::DateTime::from_timestamp_millis(ms)
+        .unwrap_or_else(chrono::Utc::now)
+        .to_rfc3339()
 }
 
 /// Get the parent session for a given child session.

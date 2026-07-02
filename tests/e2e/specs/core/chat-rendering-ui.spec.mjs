@@ -7,8 +7,7 @@
  * tool sentinel appears in ChatHistory. Tools are checked in small batches so
  * virtualization does not hide off-screen rows from the assertion.
  */
-
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -18,7 +17,8 @@ const MOUNT_TIMEOUT_MS = 60_000;
 const RENDER_TIMEOUT_MS = 12_000;
 const RUN_ID = Date.now();
 const BATCH_SIZE = 6;
-const E2E_REPO_PATH = process.env.E2E_REPO_PATH ?? "/tmp/orgii-e2e-workspace-repo";
+const E2E_REPO_PATH =
+  process.env.E2E_REPO_PATH ?? "/tmp/orgii-e2e-workspace-repo";
 const SCENARIO_FILTER = (process.env.E2E_CHAT_RENDERING_SCENARIOS ?? "")
   .split(",")
   .map((value) => value.trim())
@@ -78,7 +78,9 @@ async function postJson(pathname, body) {
   try {
     payload = text ? JSON.parse(text) : {};
   } catch {
-    throw new Error(`POST ${pathname} returned non-JSON ${response.status}: ${text}`);
+    throw new Error(
+      `POST ${pathname} returned non-JSON ${response.status}: ${text}`
+    );
   }
   if (!response.ok) {
     throw new Error(`POST ${pathname} failed ${response.status}: ${text}`);
@@ -407,6 +409,16 @@ const ORDER_TEXTS = {
   answerB: "ORDER_ANSWER_B_after_second_thinking",
 };
 
+const OPENCODE_RELOAD_SESSION_ID = `opencodeapp-e2e-reload-${Date.now()}`;
+const OPENCODE_RELOAD_USER_PROMPT =
+  "启动一个（subagent），让它帮我分析当前项目里有多少个 .rs 文件，并生成一份报告。必须要用subagent，然后要让我看到过程";
+const OPENCODE_RELOAD_ASSIGNMENT_PROMPT =
+  "在当前工作目录下分析 Rust 源文件数量：统计所有 **/*.rs 文件，排除 target/ 目录；生成一份报告，包含总文件数、按目录分布、最大文件 Top 5，并在过程中持续汇报进展。";
+const OPENCODE_RELOAD_FINAL_REPORT =
+  "Now I have all the data. Here is the comprehensive report.";
+const OPENCODE_RELOAD_ASSISTANT_ANSWER =
+  "Subagent 已完成分析：当前项目共有 260 个 .rs 文件，并已生成报告。";
+
 function withCreatedAt(event, timestampMs) {
   return {
     ...event,
@@ -475,6 +487,81 @@ function makeOrderUserEvent(id, content) {
     displayStatus: "completed",
     displayVariant: "message",
     activityStatus: "processed",
+    isDelta: false,
+  };
+}
+
+function makeOpenCodeReloadUserEvent(id, content) {
+  return {
+    id,
+    chunk_id: id,
+    sessionId: OPENCODE_RELOAD_SESSION_ID,
+    createdAt: new Date().toISOString(),
+    functionName: "user_message",
+    uiCanonical: "user_message",
+    actionType: "user",
+    args: {},
+    result: { content, observation: content, is_delta: false },
+    source: "user",
+    displayText: content,
+    displayStatus: "completed",
+    displayVariant: "message",
+    activityStatus: "processed",
+    isDelta: false,
+  };
+}
+
+function makeOpenCodeReloadSubagentEvent() {
+  return {
+    id: "opencode-reload-subagent",
+    chunk_id: "opencode-reload-subagent",
+    sessionId: OPENCODE_RELOAD_SESSION_ID,
+    createdAt: new Date().toISOString(),
+    functionName: "subagent",
+    uiCanonical: "subagent",
+    actionType: "tool_call",
+    args: {
+      action: "delegate",
+      description: OPENCODE_RELOAD_ASSIGNMENT_PROMPT,
+      prompt: OPENCODE_RELOAD_ASSIGNMENT_PROMPT,
+      subagentSessionId: `${OPENCODE_RELOAD_SESSION_ID}-child`,
+    },
+    result: {
+      content: OPENCODE_RELOAD_FINAL_REPORT,
+      summary: "Subagent 已完成分析，结果如下",
+      success: true,
+      is_delta: false,
+    },
+    source: "assistant",
+    displayText: "Assigned task to subagent",
+    displayStatus: "completed",
+    displayVariant: "tool_call",
+    activityStatus: "agent",
+    isDelta: false,
+  };
+}
+
+function makeOpenCodeReloadAssistantEvent() {
+  return {
+    id: "opencode-reload-assistant-answer",
+    chunk_id: "opencode-reload-assistant-answer",
+    sessionId: OPENCODE_RELOAD_SESSION_ID,
+    createdAt: new Date().toISOString(),
+    functionName: "assistant_message",
+    uiCanonical: "agent_message",
+    actionType: "assistant",
+    args: {},
+    result: {
+      content: OPENCODE_RELOAD_ASSISTANT_ANSWER,
+      observation: OPENCODE_RELOAD_ASSISTANT_ANSWER,
+      is_delta: false,
+      role: "assistant",
+    },
+    source: "assistant",
+    displayText: OPENCODE_RELOAD_ASSISTANT_ANSWER,
+    displayStatus: "completed",
+    displayVariant: "message",
+    activityStatus: "agent",
     isDelta: false,
   };
 }
@@ -609,7 +696,9 @@ async function assertDedupRenderedOnce() {
 }
 
 async function assertMultiRepoGrepTargetsExplicitRepoPath() {
-  const root = await mkdtemp(path.join(tmpdir(), `orgii-e2e-multirepo-grep-${RUN_ID}-`));
+  const root = await mkdtemp(
+    path.join(tmpdir(), `orgii-e2e-multirepo-grep-${RUN_ID}-`)
+  );
   const primaryRepo = path.join(root, "primary");
   const siblingRepo = path.join(root, "sibling");
   const primarySentinel = `ORGII_MULTI_REPO_GREP_PRIMARY_${RUN_ID}`;
@@ -638,7 +727,9 @@ async function assertMultiRepoGrepTargetsExplicitRepoPath() {
     });
 
     if (!result?.ok) {
-      throw new Error(`multi-repo grep endpoint failed: ${result?.error ?? "unknown"}`);
+      throw new Error(
+        `multi-repo grep endpoint failed: ${result?.error ?? "unknown"}`
+      );
     }
 
     const output = String(result.output ?? "");
@@ -646,10 +737,14 @@ async function assertMultiRepoGrepTargetsExplicitRepoPath() {
       throw new Error(`multi-repo grep missed sibling sentinel: ${output}`);
     }
     if (output.includes(primarySentinel)) {
-      throw new Error(`multi-repo grep leaked primary sentinel while targeting sibling: ${output}`);
+      throw new Error(
+        `multi-repo grep leaked primary sentinel while targeting sibling: ${output}`
+      );
     }
     if (!output.includes(siblingRepo)) {
-      throw new Error(`multi-repo grep output did not identify sibling repo/path: ${output}`);
+      throw new Error(
+        `multi-repo grep output did not identify sibling repo/path: ${output}`
+      );
     }
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -664,7 +759,10 @@ async function assertMultiRepoSearchTargetRendered() {
   const expectedRepoB = `in orgii-e2e-search-target-b-${RUN_ID}/app`;
   const events = [
     {
-      ...withCreatedAt(makeOrderUserEvent("multi-search-target-user", "Search sibling repo"), baseTime),
+      ...withCreatedAt(
+        makeOrderUserEvent("multi-search-target-user", "Search sibling repo"),
+        baseTime
+      ),
       sessionId,
     },
     {
@@ -675,8 +773,17 @@ async function assertMultiRepoSearchTargetRendered() {
       functionName: "code_search",
       uiCanonical: "code_search",
       actionType: "tool_call",
-      args: { action: "grep", pattern: "sharedSymbol", repo_path: repoB, path: `${repoA}/src/index.ts` },
-      result: { content: `${repoB}/src/index.ts:1:sharedSymbol`, observation: "matched", is_delta: false },
+      args: {
+        action: "grep",
+        pattern: "sharedSymbol",
+        repo_path: repoB,
+        path: `${repoA}/src/index.ts`,
+      },
+      result: {
+        content: `${repoB}/src/index.ts:1:sharedSymbol`,
+        observation: "matched",
+        is_delta: false,
+      },
       repoPath: repoA,
       source: "assistant",
       displayText: "Search sharedSymbol",
@@ -687,7 +794,11 @@ async function assertMultiRepoSearchTargetRendered() {
     },
     {
       ...withCreatedAt(
-        makeOrderAssistantEvent("multi-search-target-assistant", "message", "Search complete"),
+        makeOrderAssistantEvent(
+          "multi-search-target-assistant",
+          "message",
+          "Search complete"
+        ),
         baseTime + 2_000
       ),
       sessionId,
@@ -696,7 +807,9 @@ async function assertMultiRepoSearchTargetRendered() {
 
   const seed = await invokeE2E("seedChatEvents", sessionId, events);
   if (!seed || seed.ok !== true) {
-    throw new Error(`seedChatEvents failed for multi-repo search target: ${seed?.error ?? "unknown"}`);
+    throw new Error(
+      `seedChatEvents failed for multi-repo search target: ${seed?.error ?? "unknown"}`
+    );
   }
 
   await browser.waitUntil(
@@ -712,12 +825,19 @@ async function assertMultiRepoSearchTargetRendered() {
           leakedAbsoluteRepo: body.includes(${JSON.stringify(repoB)}),
         };
       `);
-      return state.hasPattern && state.hasTarget && !state.hasWrongTarget && !state.leakedAbsoluteRepo;
+      return (
+        state.hasPattern &&
+        state.hasTarget &&
+        !state.hasWrongTarget &&
+        !state.leakedAbsoluteRepo
+      );
     },
     {
       timeout: RENDER_TIMEOUT_MS,
       timeoutMsg: `multi-repo search target did not render explicit repo_path compactly: ${JSON.stringify(
-        await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
+        await execJS(
+          `return { body: (document.body.innerText || "").slice(0, 5000) };`
+        )
       )}`,
     }
   );
@@ -734,7 +854,10 @@ async function assertMultiRepoRenderedPathContext() {
   const expectedB = `orgii-e2e-collision-b-${RUN_ID}/app/src/index.ts`;
   const events = [
     {
-      ...withCreatedAt(makeOrderUserEvent("multi-context-user", "Use both app repos"), baseTime),
+      ...withCreatedAt(
+        makeOrderUserEvent("multi-context-user", "Use both app repos"),
+        baseTime
+      ),
       sessionId,
     },
     {
@@ -764,7 +887,11 @@ async function assertMultiRepoRenderedPathContext() {
       uiCanonical: "edit_file",
       actionType: "tool_call",
       args: { path: fileB, old_string: "old", new_string: "new" },
-      result: { content: "@@ -1 +1\n-old\n+new", observation: "edited", is_delta: false },
+      result: {
+        content: "@@ -1 +1\n-old\n+new",
+        observation: "edited",
+        is_delta: false,
+      },
       repoPath: repoB,
       source: "assistant",
       displayText: `Edit ${fileB}`,
@@ -782,7 +909,11 @@ async function assertMultiRepoRenderedPathContext() {
       uiCanonical: "code_search",
       actionType: "tool_call",
       args: { action: "grep", pattern: "sharedSymbol", repo_path: repoB },
-      result: { content: `${fileB}:1:sharedSymbol`, observation: "matched", is_delta: false },
+      result: {
+        content: `${fileB}:1:sharedSymbol`,
+        observation: "matched",
+        is_delta: false,
+      },
       repoPath: repoB,
       source: "assistant",
       displayText: "Search sharedSymbol",
@@ -800,7 +931,12 @@ async function assertMultiRepoRenderedPathContext() {
       uiCanonical: "run_shell",
       actionType: "tool_call",
       args: { command: "npm test", cwd: repoA },
-      result: { output: "ok", content: "ok", observation: "ok", is_delta: false },
+      result: {
+        output: "ok",
+        content: "ok",
+        observation: "ok",
+        is_delta: false,
+      },
       repoPath: repoA,
       source: "assistant",
       displayText: "Run npm test",
@@ -820,7 +956,9 @@ async function assertMultiRepoRenderedPathContext() {
 
   const seed = await invokeE2E("seedChatEvents", sessionId, events);
   if (!seed || seed.ok !== true) {
-    throw new Error(`seedChatEvents failed for multi-repo context: ${seed?.error ?? "unknown"}`);
+    throw new Error(
+      `seedChatEvents failed for multi-repo context: ${seed?.error ?? "unknown"}`
+    );
   }
 
   await browser.waitUntil(
@@ -839,7 +977,9 @@ async function assertMultiRepoRenderedPathContext() {
     {
       timeout: RENDER_TIMEOUT_MS,
       timeoutMsg: `multi-repo rendered path context missing: ${JSON.stringify(
-        await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
+        await execJS(
+          `return { body: (document.body.innerText || "").slice(0, 5000) };`
+        )
       )}`,
     }
   );
@@ -878,7 +1018,9 @@ async function assertBackgroundProcessPinnedToChatSession() {
     stationMode: "my-station",
   });
   if (!seed || seed.ok !== true) {
-    throw new Error(`seedChatEvents failed for bg process pin: ${seed?.error ?? "unknown"}`);
+    throw new Error(
+      `seedChatEvents failed for bg process pin: ${seed?.error ?? "unknown"}`
+    );
   }
 
   const processSeed = await invokeE2E("seedShellProcess", {
@@ -888,7 +1030,9 @@ async function assertBackgroundProcessPinnedToChatSession() {
     status: "background",
   });
   if (!processSeed || processSeed.ok !== true) {
-    throw new Error(`seedShellProcess failed: ${processSeed?.error ?? "unknown"}`);
+    throw new Error(
+      `seedShellProcess failed: ${processSeed?.error ?? "unknown"}`
+    );
   }
 
   await browser.waitUntil(
@@ -923,7 +1067,9 @@ async function assertBackgroundProcessPinnedToChatSession() {
     return button ? button.getAttribute("data-state") : null;
   `);
   if (sendState !== "submit") {
-    throw new Error(`background process must not keep composer in stop state: ${sendState}`);
+    throw new Error(
+      `background process must not keep composer in stop state: ${sendState}`
+    );
   }
 
   const clickResult = await execJS(`
@@ -946,7 +1092,9 @@ async function assertBackgroundProcessPinnedToChatSession() {
     {
       timeout: RENDER_TIMEOUT_MS,
       timeoutMsg: `expanded background process command missing: ${JSON.stringify(
-        await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
+        await execJS(
+          `return { body: (document.body.innerText || "").slice(0, 5000) };`
+        )
       )}`,
     }
   );
@@ -986,7 +1134,9 @@ async function assertBackgroundSubagentPinnedToChatSession() {
     stationMode: "my-station",
   });
   if (!seed || seed.ok !== true) {
-    throw new Error(`seedChatEvents failed for bg subagent pin: ${seed?.error ?? "unknown"}`);
+    throw new Error(
+      `seedChatEvents failed for bg subagent pin: ${seed?.error ?? "unknown"}`
+    );
   }
 
   const jobSeed = await invokeE2E("seedSubagentJob", {
@@ -1045,7 +1195,9 @@ async function assertBackgroundSubagentPinnedToChatSession() {
     {
       timeout: RENDER_TIMEOUT_MS,
       timeoutMsg: `expanded subagent row missing name/type: ${JSON.stringify(
-        await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
+        await execJS(
+          `return { body: (document.body.innerText || "").slice(0, 5000) };`
+        )
       )}`,
     }
   );
@@ -1060,7 +1212,9 @@ async function assertBackgroundSubagentPinnedToChatSession() {
     status: "completed",
   });
   if (!completeSeed || completeSeed.ok !== true) {
-    throw new Error(`seedSubagentJob(completed) failed: ${completeSeed?.error ?? "unknown"}`);
+    throw new Error(
+      `seedSubagentJob(completed) failed: ${completeSeed?.error ?? "unknown"}`
+    );
   }
 
   await browser.waitUntil(
@@ -1075,7 +1229,9 @@ async function assertBackgroundSubagentPinnedToChatSession() {
     {
       timeout: RENDER_TIMEOUT_MS,
       timeoutMsg: `completed subagent row did not disappear: ${JSON.stringify(
-        await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
+        await execJS(
+          `return { body: (document.body.innerText || "").slice(0, 5000) };`
+        )
       )}`,
     }
   );
@@ -1125,7 +1281,13 @@ function makeSubagentEvent({
   };
 }
 
-function makeRunningSubagentEvent({ sessionId, eventId, subagentSessionId, agentName, prompt }) {
+function makeRunningSubagentEvent({
+  sessionId,
+  eventId,
+  subagentSessionId,
+  agentName,
+  prompt,
+}) {
   return makeSubagentEvent({
     sessionId,
     eventId,
@@ -1201,12 +1363,16 @@ async function assertCompletedSubagentCardIsTerminal() {
           cardText: card?.textContent || "",
         };
       `);
-      return state.hasPrompt && state.hasStopButton && state.stopDisabled === false;
+      return (
+        state.hasPrompt && state.hasStopButton && state.stopDisabled === false
+      );
     },
     {
       timeout: RENDER_TIMEOUT_MS,
       timeoutMsg: `running subagent card did not expose Stop: ${JSON.stringify(
-        await execJS(`return { body: (document.body.innerText || "").slice(0, 3000) };`)
+        await execJS(
+          `return { body: (document.body.innerText || "").slice(0, 3000) };`
+        )
       )}`,
     }
   );
@@ -1328,7 +1494,9 @@ async function assertSubagentCardStopUsesJobRegistryFallback() {
     }
   );
   if (!seed || seed.ok !== true) {
-    throw new Error(`seedChatEvents failed for subagent card stop: ${seed?.error ?? "unknown"}`);
+    throw new Error(
+      `seedChatEvents failed for subagent card stop: ${seed?.error ?? "unknown"}`
+    );
   }
 
   await browser.pause(500);
@@ -1339,7 +1507,9 @@ async function assertSubagentCardStopUsesJobRegistryFallback() {
     subagentType: "delegate",
   });
   if (!wireSeed || wireSeed.ok !== true) {
-    throw new Error(`debugSeedSubagentJobWire failed: ${wireSeed?.error ?? "unknown"}`);
+    throw new Error(
+      `debugSeedSubagentJobWire failed: ${wireSeed?.error ?? "unknown"}`
+    );
   }
 
   await browser.waitUntil(
@@ -1446,7 +1616,9 @@ async function assertBackgroundSubagentWirePath() {
     stationMode: "my-station",
   });
   if (!seed || seed.ok !== true) {
-    throw new Error(`seedChatEvents failed for wire path: ${seed?.error ?? "unknown"}`);
+    throw new Error(
+      `seedChatEvents failed for wire path: ${seed?.error ?? "unknown"}`
+    );
   }
 
   // The session surface must be mounted so useSessionChannel has
@@ -1462,7 +1634,9 @@ async function assertBackgroundSubagentWirePath() {
     subagentType: "delegate",
   });
   if (!wireSeed || wireSeed.ok !== true) {
-    throw new Error(`debugSeedSubagentJobWire failed: ${wireSeed?.error ?? "unknown"}`);
+    throw new Error(
+      `debugSeedSubagentJobWire failed: ${wireSeed?.error ?? "unknown"}`
+    );
   }
 
   // The row must arrive via the real broadcast — no frontend store write
@@ -1513,7 +1687,9 @@ async function assertBackgroundSubagentWirePath() {
   // broadcast must travel the wire and remove the row.
   const killResult = await invokeE2E("killSubagentJobWire", handle);
   if (!killResult || killResult.ok !== true) {
-    throw new Error(`killSubagentJobWire failed: ${killResult?.error ?? "unknown"}`);
+    throw new Error(
+      `killSubagentJobWire failed: ${killResult?.error ?? "unknown"}`
+    );
   }
 
   await browser.waitUntil(
@@ -1528,7 +1704,9 @@ async function assertBackgroundSubagentWirePath() {
     {
       timeout: RENDER_TIMEOUT_MS,
       timeoutMsg: `killed wire-path subagent row did not disappear: ${JSON.stringify(
-        await execJS(`return { body: (document.body.innerText || "").slice(0, 3000) };`)
+        await execJS(
+          `return { body: (document.body.innerText || "").slice(0, 3000) };`
+        )
       )}`,
     }
   );
@@ -1588,7 +1766,9 @@ async function assertWorkingFooterShownForHiddenRunningEvent() {
     stationMode: "my-station",
   });
   if (!seed || seed.ok !== true) {
-    throw new Error(`seedChatEvents failed for working footer: ${seed?.error ?? "unknown"}`);
+    throw new Error(
+      `seedChatEvents failed for working footer: ${seed?.error ?? "unknown"}`
+    );
   }
 
   await browser.waitUntil(
@@ -1602,7 +1782,9 @@ async function assertWorkingFooterShownForHiddenRunningEvent() {
     {
       timeout: RENDER_TIMEOUT_MS,
       timeoutMsg: `working footer did not render for hidden running event: ${JSON.stringify(
-        await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
+        await execJS(
+          `return { body: (document.body.innerText || "").slice(0, 5000) };`
+        )
       )}; state=${JSON.stringify(await invokeE2E("inspectChatState"))}`,
     }
   );
@@ -1611,12 +1793,19 @@ async function assertWorkingFooterShownForHiddenRunningEvent() {
 async function assertStaleHiddenRunningEventDoesNotHoldStopButton() {
   const sessionId = `e2e-render-stale-hidden-running-${Date.now()}`;
   const baseTime = Date.now();
-  const seed = await invokeE2E("seedChatEvents", sessionId, makeHiddenRunningEvents(sessionId, baseTime), {
-    chatPanelMaximized: true,
-    stationMode: "my-station",
-  });
+  const seed = await invokeE2E(
+    "seedChatEvents",
+    sessionId,
+    makeHiddenRunningEvents(sessionId, baseTime),
+    {
+      chatPanelMaximized: true,
+      stationMode: "my-station",
+    }
+  );
   if (!seed || seed.ok !== true) {
-    throw new Error(`seedChatEvents failed for stale hidden running event: ${seed?.error ?? "unknown"}`);
+    throw new Error(
+      `seedChatEvents failed for stale hidden running event: ${seed?.error ?? "unknown"}`
+    );
   }
 
   await browser.waitUntil(
@@ -1762,7 +1951,8 @@ async function assertEarlyCancelStopNavigatesToPreviousTurnPage() {
     },
     {
       timeout: RENDER_TIMEOUT_MS,
-      timeoutMsg: "send button did not enter stop state for early-cancel turn page test",
+      timeoutMsg:
+        "send button did not enter stop state for early-cancel turn page test",
     }
   );
 
@@ -1815,7 +2005,10 @@ async function assertMultiRepoReadPathRendered() {
   const secondaryPath = `/tmp/orgii-e2e-multirepo-secondary-${RUN_ID}/src/index.tsx`;
   const tertiaryPath = `/tmp/orgii-e2e-multirepo-tertiary-${RUN_ID}/README.md`;
   const userEvent = {
-    ...withCreatedAt(makeOrderUserEvent("multi-read-user", "Read two files"), baseTime),
+    ...withCreatedAt(
+      makeOrderUserEvent("multi-read-user", "Read two files"),
+      baseTime
+    ),
     sessionId,
   };
   const readPayloads = [
@@ -1835,31 +2028,37 @@ async function assertMultiRepoReadPathRendered() {
       result: { success: { filePath: tertiaryPath } },
     },
   ];
-  const readEvents = readPayloads.map(({ path: targetPath, args, result }, index) => ({
-    id: `multi-read-${index}`,
-    chunk_id: `multi-read-${index}`,
-    sessionId,
-    createdAt: new Date(baseTime + 1_000 + index).toISOString(),
-    functionName: "read_file",
-    uiCanonical: "read_file",
-    actionType: "tool_call",
-    args,
-    result: {
-      ...result,
-      content: `content for ${targetPath}`,
-      observation: `content for ${targetPath}`,
-      is_delta: false,
-    },
-    source: "assistant",
-    displayText: `Read ${targetPath}`,
-    displayStatus: "completed",
-    displayVariant: "tool_call",
-    activityStatus: "agent",
-    isDelta: false,
-  }));
+  const readEvents = readPayloads.map(
+    ({ path: targetPath, args, result }, index) => ({
+      id: `multi-read-${index}`,
+      chunk_id: `multi-read-${index}`,
+      sessionId,
+      createdAt: new Date(baseTime + 1_000 + index).toISOString(),
+      functionName: "read_file",
+      uiCanonical: "read_file",
+      actionType: "tool_call",
+      args,
+      result: {
+        ...result,
+        content: `content for ${targetPath}`,
+        observation: `content for ${targetPath}`,
+        is_delta: false,
+      },
+      source: "assistant",
+      displayText: `Read ${targetPath}`,
+      displayStatus: "completed",
+      displayVariant: "tool_call",
+      activityStatus: "agent",
+      isDelta: false,
+    })
+  );
   const assistantEvent = {
     ...withCreatedAt(
-      makeOrderAssistantEvent("multi-read-assistant", "message", "Read complete"),
+      makeOrderAssistantEvent(
+        "multi-read-assistant",
+        "message",
+        "Read complete"
+      ),
       baseTime + 3_000
     ),
     sessionId,
@@ -1890,9 +2089,12 @@ async function assertMultiRepoReadPathRendered() {
         };
       `);
       return (
-        state.expectedPaths.every((expectedPath) =>
-          state.body.includes(expectedPath) ||
-          state.paths.some((renderedPath) => renderedPath.includes(expectedPath))
+        state.expectedPaths.every(
+          (expectedPath) =>
+            state.body.includes(expectedPath) ||
+            state.paths.some((renderedPath) =>
+              renderedPath.includes(expectedPath)
+            )
         ) && !state.hasGenericOnly
       );
     },
@@ -1925,7 +2127,10 @@ async function assertThinkingChronologicalOrder() {
   ];
   const baseTime = Date.now();
   const seed = await invokeE2E("seedChatEvents", ORDER_SESSION_ID, [
-    withCreatedAt(makeOrderUserEvent("order-user-a", ORDER_TEXTS.userA), baseTime),
+    withCreatedAt(
+      makeOrderUserEvent("order-user-a", ORDER_TEXTS.userA),
+      baseTime
+    ),
     withCreatedAt(
       makeOrderAssistantEvent("order-think-a", "thinking", ORDER_TEXTS.thinkA),
       baseTime + 1_000
@@ -1934,7 +2139,10 @@ async function assertThinkingChronologicalOrder() {
       makeOrderAssistantEvent("order-answer-a", "message", ORDER_TEXTS.answerA),
       baseTime + 2_000
     ),
-    withCreatedAt(makeOrderUserEvent("order-user-b", ORDER_TEXTS.userB), baseTime + 3_000),
+    withCreatedAt(
+      makeOrderUserEvent("order-user-b", ORDER_TEXTS.userB),
+      baseTime + 3_000
+    ),
     withCreatedAt(
       makeOrderAssistantEvent("order-think-b", "thinking", ORDER_TEXTS.thinkB),
       baseTime + 4_000
@@ -1992,6 +2200,90 @@ async function assertThinkingChronologicalOrder() {
         const texts = ${JSON.stringify(visibleLatestRoundTexts)};
         return { indices: texts.map((text) => body.indexOf(text)), body: body.slice(0, 3000) };
       `)
+      )}`,
+    }
+  );
+}
+
+async function assertOpenCodeSubagentReloadKeepsAnswerAndAssignment() {
+  const baseTime = Date.now();
+  const events = [
+    withCreatedAt(
+      makeOpenCodeReloadUserEvent(
+        "opencode-reload-user",
+        OPENCODE_RELOAD_USER_PROMPT
+      ),
+      baseTime
+    ),
+    withCreatedAt(makeOpenCodeReloadSubagentEvent(), baseTime + 1_000),
+    withCreatedAt(makeOpenCodeReloadAssistantEvent(), baseTime + 2_000),
+  ];
+  const seed = await invokeE2E("seedPersistedCachedSession", {
+    sessionId: OPENCODE_RELOAD_SESSION_ID,
+    name: OPENCODE_RELOAD_USER_PROMPT,
+    userInput: OPENCODE_RELOAD_USER_PROMPT,
+    category: "cli_agent",
+    events,
+  });
+  if (!seed || seed.ok !== true) {
+    throw new Error(
+      `seedPersistedCachedSession failed: ${seed?.error ?? "unknown"}`
+    );
+  }
+
+  const firstOpen = await invokeE2E("openSession", OPENCODE_RELOAD_SESSION_ID);
+  if (!firstOpen || firstOpen.ok !== true) {
+    throw new Error(`openSession failed: ${firstOpen?.error ?? "unknown"}`);
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const body = await execJS(`return document.body.innerText || "";`);
+      return (
+        body.includes(OPENCODE_RELOAD_ASSIGNMENT_PROMPT) &&
+        body.includes(OPENCODE_RELOAD_ASSISTANT_ANSWER) &&
+        !body.includes(OPENCODE_RELOAD_FINAL_REPORT)
+      );
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `OpenCode fixture did not render assignment+answer before reload: ${JSON.stringify(
+        await execJS(`return (document.body.innerText || "").slice(0, 4000);`)
+      )}`,
+    }
+  );
+
+  await browser.refresh();
+  await waitForApp();
+  const reopened = await invokeE2E("openSession", OPENCODE_RELOAD_SESSION_ID);
+  if (!reopened || reopened.ok !== true) {
+    throw new Error(
+      `openSession after reload failed: ${reopened?.error ?? "unknown"}`
+    );
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const state = await invokeE2E("inspectChatState");
+      const body = await execJS(`return document.body.innerText || "";`);
+      return (
+        state.activeSessionId === OPENCODE_RELOAD_SESSION_ID &&
+        state.chatEventCount >= 3 &&
+        body.includes(OPENCODE_RELOAD_ASSIGNMENT_PROMPT) &&
+        body.includes(OPENCODE_RELOAD_ASSISTANT_ANSWER) &&
+        !body.includes(OPENCODE_RELOAD_FINAL_REPORT)
+      );
+    },
+    {
+      timeout: 30_000,
+      interval: 1_000,
+      timeoutMsg: `OpenCode fixture did not preserve rendered answer/assignment after reload: ${JSON.stringify(
+        {
+          state: await invokeE2E("inspectChatState"),
+          body: await execJS(
+            `return (document.body.innerText || "").slice(0, 4000);`
+          ),
+        }
       )}`,
     }
   );
@@ -2170,6 +2462,15 @@ describe("Core chat rendering UI", () => {
     }
 
     await assertDedupRenderedOnce();
+  });
+
+  it("preserves OpenCode subagent assignment and assistant answer after reload", async function () {
+    if (!shouldRunScenario("opencode-subagent-reload")) {
+      this.skip();
+      return;
+    }
+
+    await assertOpenCodeSubagentReloadKeepsAnswerAndAssignment();
   });
 
   it("renders thinking in chronological turn position without duplicates", async function () {

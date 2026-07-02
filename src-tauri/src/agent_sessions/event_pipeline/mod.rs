@@ -31,6 +31,7 @@ pub mod pagination;
 pub mod payload_compaction;
 pub mod search;
 pub mod session_manager;
+pub(crate) mod session_providers;
 pub mod statistics;
 pub mod store;
 pub mod streaming;

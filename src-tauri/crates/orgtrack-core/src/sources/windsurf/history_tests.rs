@@ -127,6 +127,7 @@ fn maps_windsurf_composer_metadata_to_cache_input() {
         impact: inputs[0].impact.clone(),
         listable: inputs[0].listable,
         source_metadata_json: inputs[0].source_metadata_json.clone(),
+        parent_session_id: inputs[0].parent_session_id.clone(),
     }
     .to_row();
     assert_eq!(row.session_id, "windsurfapp-composer-1");

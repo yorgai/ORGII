@@ -369,6 +369,7 @@ fn composer_to_cache_input(
         },
         listable: raw.subagent_info.is_none(),
         source_metadata_json: Some(source_metadata_json),
+        parent_session_id: None,
     })
 }
 

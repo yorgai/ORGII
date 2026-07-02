@@ -237,8 +237,12 @@ const ChatView: React.FC<ChatViewProps> = memo(
       []
     );
 
+    const isCursorIde = isCursorIdeSession(sessionId);
+    const isExternalHistory = isExternalHistorySession(sessionId);
+    const isReadOnlySurface = readOnly || isExternalHistory;
+
     useEffect(() => {
-      if (readOnly) return;
+      if (isReadOnlySurface) return;
       setActiveSessionId(sessionId);
 
       // Secondary surfaces (e.g. kanban detail panel) must release the
@@ -256,13 +260,9 @@ const ChatView: React.FC<ChatViewProps> = memo(
           setActiveSessionId(null);
         }
       };
-    }, [sessionId, setActiveSessionId, readOnly, secondary, store]);
+    }, [sessionId, setActiveSessionId, isReadOnlySurface, secondary, store]);
 
-    useFileReviewSync(sessionId, !readOnly && !secondary);
-
-    const isCursorIde = isCursorIdeSession(sessionId);
-    const isExternalHistory = isExternalHistorySession(sessionId);
-    const isReadOnlySurface = readOnly || isExternalHistory;
+    useFileReviewSync(sessionId, !isReadOnlySurface && !secondary);
     const currentSession = useAtomValue(sessionByIdAtom(sessionId));
     const [orgtrackSummary, setOrgtrackSummary] =
       useState<CoreSessionSummary | null>(null);

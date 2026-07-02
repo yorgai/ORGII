@@ -83,6 +83,7 @@ const ActivitySimulator: React.FC = memo(() => {
     previewById,
     specs,
     filteredEvents,
+    allEvents,
     currentEvent,
     currentEventIndex,
     eventStoreVersion,
@@ -126,6 +127,7 @@ const ActivitySimulator: React.FC = memo(() => {
     sessionId,
     eventStoreVersion,
     currentEvent,
+    allEvents,
   });
 
   // When subagents are active the layout automatically becomes a split view

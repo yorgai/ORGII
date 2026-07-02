@@ -17,42 +17,22 @@ import { useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback, useMemo } from "react";
 
 import { navigateToEventAtom } from "@src/engines/SessionCore/core/atoms/actions";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
+import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
 import {
   focusedSubagentCellAtom,
+  stationModeAtom,
   subagentPanelRevealRequestAtom,
 } from "@src/store/ui/simulatorAtom";
 
 import SubagentBlock from "../../blocks/SubagentBlock";
+import {
+  extractSubagentPromptFromChildEvents,
+  firstSubagentAssignmentPrompt,
+} from "./subagentPrompt";
 
 const EMPTY_SUBAGENT_SESSION_ID = "__no-subagent-session__";
-
-function nonEmptyString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim().length > 0
-    ? value
-    : undefined;
-}
-
-function firstNonEmptyString(...values: unknown[]): string | undefined {
-  for (const value of values) {
-    const text = nonEmptyString(value);
-    if (text) return text;
-  }
-  return undefined;
-}
-
-function extractPromptFromChildEvents(
-  events: readonly SessionEvent[]
-): string | undefined {
-  for (const event of events) {
-    if (event.source !== "user") continue;
-    const text = nonEmptyString(event.displayText);
-    if (text) return text;
-  }
-  return undefined;
-}
 
 function extractSubagentData(props: UniversalEventProps) {
   const { args, result } = props;
@@ -77,12 +57,11 @@ function extractSubagentData(props: UniversalEventProps) {
       elapsedMs: sub.elapsedMs,
       success: sub.success,
       errorMessage: sub.errorMessage ?? fallbackErrorMessage,
-      prompt: firstNonEmptyString(
+      prompt: firstSubagentAssignmentPrompt(
         sub.prompt,
         args.prompt,
         args.instructions,
-        args.task,
-        result.prompt
+        args.task
       ),
     };
   }
@@ -105,11 +84,10 @@ function extractSubagentData(props: UniversalEventProps) {
       ? args.subagentSessionId
       : undefined;
 
-  const prompt = firstNonEmptyString(
+  const prompt = firstSubagentAssignmentPrompt(
     args.prompt,
     args.instructions,
-    args.task,
-    result.prompt
+    args.task
   );
 
   const success =
@@ -136,13 +114,18 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
     )
   );
   const childPrompt = useMemo(
-    () => extractPromptFromChildEvents(childEvents),
+    () => extractSubagentPromptFromChildEvents(childEvents),
     [childEvents]
   );
   const prompt = data.prompt ?? childPrompt;
+  const hasPrompt = Boolean(prompt && prompt.trim().length > 0);
+  const isAwaitingPrompt =
+    Boolean(data.subagentSessionId) && !hasPrompt && childEvents.length === 0;
 
   const setFocusedCell = useSetAtom(focusedSubagentCellAtom);
   const setPanelReveal = useSetAtom(subagentPanelRevealRequestAtom);
+  const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
+  const setStationMode = useSetAtom(stationModeAtom);
   const navigateToEvent = useSetAtom(navigateToEventAtom);
   const handleNavigate = useCallback(() => {
     if (!data.subagentSessionId) return;
@@ -154,14 +137,18 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
     // also flips replayMode to "replay" (free-browse), pausing tail-follow at
     // that moment. The cell then re-materialises and focus/reveal take effect.
     navigateToEvent(props.eventId);
+    setStationMode("agent-station");
+    setChatPanelMaximized(false);
     setFocusedCell(data.subagentSessionId);
     setPanelReveal((prev) => prev + 1);
   }, [
     data.subagentSessionId,
     props.eventId,
     navigateToEvent,
+    setChatPanelMaximized,
     setFocusedCell,
     setPanelReveal,
+    setStationMode,
   ]);
 
   return (
@@ -172,7 +159,8 @@ export const SubagentAdapter: React.FC<UniversalEventProps> = (props) => {
         resultContent={data.resultContent}
         resultSummary={data.resultSummary}
         isLoading={
-          props.status === "running" && props.showActiveEventPainting === true
+          isAwaitingPrompt ||
+          (props.status === "running" && props.showActiveEventPainting === true)
         }
         defaultCollapsed={true}
         elapsedMs={data.elapsedMs}

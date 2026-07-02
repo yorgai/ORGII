@@ -40,6 +40,7 @@ fn input(
         impact: ImportedHistoryImpactStats::default(),
         listable: true,
         source_metadata_json: None,
+        parent_session_id: None,
     }
 }
 

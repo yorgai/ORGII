@@ -254,6 +254,7 @@ pub async fn cli_agent_run(
         .await
         {
             tracing::error!("[CodeSession] Session {} failed: {}", sid, e);
+            session_runner::flush_cli_streams_for_session(&sid);
             // Best-effort: if marking the row as Failed itself fails, log
             // it explicitly rather than silently dropping the persistence
             // error — the session row may be left in `Running` until the
