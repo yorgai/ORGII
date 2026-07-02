@@ -136,6 +136,29 @@ impl FileTimeTracker {
         }
     }
 
+    /// Detect files whose on-disk content changed since we last read/wrote
+    /// them (external edits by the user or another process). Refreshes the
+    /// recorded hash for each reported path so the same change is reported
+    /// exactly once. Returns the changed paths.
+    ///
+    /// Used by the turn loop's changed-files injector — the model deserves
+    /// to KNOW a file it read is now different, not just have its next edit
+    /// rejected by `assert_fresh`.
+    pub fn drain_externally_changed(&mut self) -> Vec<String> {
+        let mut changed = Vec::new();
+        let paths: Vec<String> = self.read_hashes.keys().cloned().collect();
+        for path in paths {
+            let Some(current_hash) = hash_file_content(&path) else {
+                continue; // unreadable/deleted — fail open, assert_fresh also passes
+            };
+            if self.read_hashes.get(&path) != Some(&current_hash) {
+                self.upsert_hash(&path, current_hash);
+                changed.push(path);
+            }
+        }
+        changed
+    }
+
     /// Record the current content hash of a file after a successful read.
     pub fn record_read(&mut self, file_path: &str) {
         if let Some(hash) = hash_file_content(file_path) {

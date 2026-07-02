@@ -59,11 +59,17 @@ pub enum HttpMethod {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum HookEntry {
-    /// Execute a shell command with event context as env vars.
+    /// Execute a shell command with event context as env vars + stdin JSON.
     Command {
         command: String,
         #[serde(default = "default_timeout")]
         timeout_ms: u64,
+        /// Optional tool-name matcher (regex, anchored). Only applies to
+        /// tool events (PreToolUse/PostToolUse/PostToolUseFailure): the
+        /// hook runs only when the tool name matches. Absent = run for
+        /// every tool. Ignored for non-tool events.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        matcher: Option<String>,
     },
     /// Inject text into the system prompt (only fires on prompt-building events).
     Prompt { content: String },

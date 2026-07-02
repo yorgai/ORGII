@@ -524,13 +524,13 @@ impl SkillsLoader {
         Some(format!(
             "Skills relevant to your task:\n\
              BLOCKING REQUIREMENT: scan the skill descriptions below BEFORE generating any other response. \
-             If a skill matches the task, you MUST read its SKILL.md using `read_file` and follow it before answering — \
+             If a skill matches the task, you MUST load it with the `skill` tool (skill: \"<name>\") and follow it before answering — \
              skills encode workspace-specific conventions that override your defaults. \
-             NEVER mention or apply a skill without reading its SKILL.md first.\n\
-             - If exactly one skill matches: read it, then follow it.\n\
-             - If multiple could apply: choose the most specific one, then read/follow it.\n\
-             - Only skip reading when no skill plausibly relates to the task.\n\
-             Constraints: never read more than one skill up front; only read after selecting.\n\n\
+             NEVER mention or apply a skill without loading it first.\n\
+             - If exactly one skill matches: load it, then follow it.\n\
+             - If multiple could apply: choose the most specific one, then load/follow it.\n\
+             - Only skip loading when no skill plausibly relates to the task.\n\
+             Constraints: never load more than one skill up front; only load after selecting.\n\n\
              {}",
             lines.join("\n")
         ))

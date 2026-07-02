@@ -35,5 +35,6 @@ pub mod manage_workspace;
 pub mod query_lsp;
 pub mod render_inline_canvas;
 pub mod setup_repo;
+pub mod skill;
 pub mod terminal_log;
 pub mod worktree;

@@ -235,22 +235,41 @@ impl UnifiedMessageProcessor {
         }
 
         // Todo nag reminder — nudges the model back to `manage_todo` after
-        // NAG_THRESHOLD consecutive turns without a todo call. Injected as a
-        // dynamic (non-persisted) section so the user-visible transcript is clean.
-        const NAG_THRESHOLD: u32 = 3;
+        // NAG_THRESHOLD consecutive turns without a todo call, and includes
+        // the current list snapshot so the model can act without an extra
+        // read call. Injected as a dynamic (non-persisted) section so the
+        // user-visible transcript is clean.
+        const NAG_THRESHOLD: u32 = 10;
         {
             let rounds = *self.rounds_since_todo.lock().await;
             if rounds >= NAG_THRESHOLD {
-                dynamic_sections.push(
+                let todo_snapshot = tokio::task::block_in_place(|| {
+                    crate::persistence::db_helpers::todos::get_todos(session_id).unwrap_or_default()
+                });
+                let mut reminder = String::from(
                     "<system-reminder>If you are working on a multi-step task, \
                      remember to use the manage_todo tool to keep the task list \
                      up to date. Mark the current task in_progress and completed \
-                     as you proceed.</system-reminder>"
-                        .to_string(),
+                     as you proceed.",
                 );
+                if todo_snapshot.is_empty() {
+                    reminder.push_str(" The todo list is currently empty.");
+                } else {
+                    reminder.push_str("\nCurrent todo list:\n");
+                    for (idx, todo) in todo_snapshot.iter().enumerate() {
+                        reminder.push_str(&format!(
+                            "{}. [{}] {}\n",
+                            idx, todo.status, todo.content
+                        ));
+                    }
+                }
+                reminder.push_str("</system-reminder>");
+                dynamic_sections.push(reminder);
                 info!(
-                    "[unified_processor] Nag reminder injected ({} turns since last todo call, session={})",
-                    rounds, session_id
+                    "[unified_processor] Nag reminder injected ({} turns since last todo call, {} todos attached, session={})",
+                    rounds,
+                    todo_snapshot.len(),
+                    session_id
                 );
             }
         }

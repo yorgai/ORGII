@@ -192,6 +192,29 @@ pub async fn execute_turn(
             }));
         }
 
+        // Changed-files injector: tell the model when files it read this
+        // turn were modified externally (user edit, linter, another agent)
+        // instead of letting the next edit fail the stale-content guard.
+        let externally_changed = file_tracker.drain_externally_changed();
+        if !externally_changed.is_empty() {
+            info!(
+                "[agent-core] {} externally changed file(s) detected mid-turn (session={})",
+                externally_changed.len(),
+                session_id
+            );
+            messages.push(serde_json::json!({
+                "role": "user",
+                "content": format!(
+                    "<system-reminder>\nThe following file(s) were modified externally (by the user or another process) since you read them:\n{}\nRe-read any of these files before editing them — your remembered content is stale.\n</system-reminder>",
+                    externally_changed
+                        .iter()
+                        .map(|path| format!("- {path}"))
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                ),
+            }));
+        }
+
         let limit_display = config
             .max_iterations
             .map_or("∞".to_string(), |m| m.to_string());

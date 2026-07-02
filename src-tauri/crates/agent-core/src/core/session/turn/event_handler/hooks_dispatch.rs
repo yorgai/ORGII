@@ -40,6 +40,21 @@ pub(super) async fn dispatch_pre_tool(
                         &hook_result.stderr[..hook_result.stderr.len().min(200)]
                     );
                 }
+                // Exit-code-2 blocking contract: stderr is the model-facing
+                // deny message. Checked before stdout JSON so a hook that
+                // emits both blocks deterministically.
+                if hook_result.is_blocking_exit() {
+                    let message = if hook_result.stderr.trim().is_empty() {
+                        format!("Tool call blocked by a PreToolUse hook: {tool_name}")
+                    } else {
+                        hook_result.stderr.trim().to_string()
+                    };
+                    return Some(ToolHookIntervention {
+                        block: true,
+                        block_reason: Some(message),
+                        modified_params: None,
+                    });
+                }
                 if let Some(intervention) = parse_hook_decision(&hook_result.stdout) {
                     return Some(intervention);
                 }
@@ -74,6 +89,15 @@ pub(super) async fn dispatch_stop_check(
                 "[unified_handler] Stop hook stderr: {}",
                 &hook_result.stderr[..hook_result.stderr.len().min(200)]
             );
+        }
+        // Exit-code-2 blocking contract: stderr is the continuation feedback.
+        if hook_result.is_blocking_exit() {
+            let message = if hook_result.stderr.trim().is_empty() {
+                "A Stop hook blocked this completion. Continue working on the task.".to_string()
+            } else {
+                hook_result.stderr.trim().to_string()
+            };
+            return Some(message);
         }
         if let Some(message) = parse_stop_block(&hook_result.stdout) {
             return Some(message);

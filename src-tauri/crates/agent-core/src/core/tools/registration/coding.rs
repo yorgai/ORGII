@@ -20,6 +20,7 @@ use crate::tools::impls::coding::{
     query_lsp::LspTool,
     render_inline_canvas::RenderInlineCanvasTool,
     setup_repo::RepoSetupTool,
+    skill::SkillTool,
     terminal_log::resolve_logs_root,
     worktree::WorktreeTool,
 };
@@ -233,6 +234,13 @@ pub fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &HashSet
     // ── Todo ──
     let todo_ctx = Arc::new(TodoSessionContext::new());
     register_if_enabled(registry, Box::new(TodoTool::new(todo_ctx)), disabled);
+
+    // ── Skill (first-class SKILL.md expansion) ──
+    register_if_enabled(
+        registry,
+        Box::new(SkillTool::new(Arc::clone(&deps.workspace), true, None)),
+        disabled,
+    );
 
     // ── Repo setup ──
     register_if_enabled(registry, Box::new(RepoSetupTool::new()), disabled);
