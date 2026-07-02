@@ -797,9 +797,13 @@ async function main() {
   );
 
   // ---- M6: work item OCC retry realism (design §16.4) ----
-  const workItemId = "AUT-0001";
+  // Row ids are a GLOBAL primary key across every org in the test DB, so the
+  // id must be run-namespaced: a fixed "AUT-0001" collides with the row a
+  // PREVIOUS harness run created under its own org, and the server (by
+  // design) rejects the cross-org row-id hit with ORGII_CONFLICT.
+  const workItemId = `wi-occ-${run}`;
   const workItemBase = {
-    id: workItemId, projectId, shortId: workItemId, title: "Item v1",
+    id: workItemId, projectId, shortId: "AUT-0031", title: "Item v1",
     body: "b", status: "backlog", priority: "none",
   };
   assertOk(
