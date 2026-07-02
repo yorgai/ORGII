@@ -13,6 +13,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Share2,
 } from "lucide-react";
 import React from "react";
 import { createPortal } from "react-dom";
@@ -78,6 +79,7 @@ interface ChatPanelHeaderProps {
   handleExploreAgentSearchToggle: (enabled: boolean) => void;
   handleOpenExportSessionJson: () => void;
   handleOpenLinkWorkItem: () => void;
+  handleOpenShareSettings: () => void;
   handleOpenSearch: () => void;
   handleNewSession: () => void;
   handleOpenStartPage: () => void;
@@ -115,6 +117,8 @@ interface ChatPanelHeaderProps {
   showProjectAgentCreator: boolean;
   showProjectAgentSwitchInHeader: boolean;
   showSessionContent: boolean;
+  /** Owner-side share entry gate (design §6.3): own session + org in scope. */
+  showShareSettings: boolean;
   showStartPage: boolean;
   showWorkItemAgentCreator: boolean;
   showWorkItemAgentSwitchInHeader: boolean;
@@ -141,6 +145,7 @@ export function ChatPanelHeader({
   handleExploreAgentSearchToggle,
   handleOpenExportSessionJson,
   handleOpenLinkWorkItem,
+  handleOpenShareSettings,
   handleOpenSearch,
   handleNewSession,
   handleOpenStartPage,
@@ -178,6 +183,7 @@ export function ChatPanelHeader({
   showProjectAgentCreator,
   showProjectAgentSwitchInHeader,
   showSessionContent,
+  showShareSettings,
   showStartPage,
   showWorkItemAgentCreator,
   showWorkItemAgentSwitchInHeader,
@@ -412,6 +418,19 @@ export function ChatPanelHeader({
               <Link2 size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
               <span className="flex-1 truncate">Link to Work Item…</span>
             </button>
+            {showShareSettings && (
+              <button
+                type="button"
+                className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+                onClick={handleOpenShareSettings}
+                data-testid="session-share-settings-button"
+              >
+                <Share2 size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
+                <span className="flex-1 truncate">
+                  {t("navigation:collaboration.share.menuItem")}
+                </span>
+              </button>
+            )}
             <button
               type="button"
               className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left disabled:cursor-not-allowed disabled:opacity-50`}

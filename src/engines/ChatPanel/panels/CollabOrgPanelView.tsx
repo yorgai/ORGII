@@ -90,6 +90,11 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
             sessionItems={model.sessionItems}
             latestSnapshotRequest={model.latestSnapshotRequest}
             importingSessionId={model.importingSessionId ?? null}
+            showAccessOffBanner={model.sessionsTabBanners.showAccessOffBanner}
+            showRepoScopesEmptyBanner={
+              model.sessionsTabBanners.showRepoScopesEmptyBanner
+            }
+            onOpenSettingsTab={model.handleOpenSettingsTab}
             onSelectSession={model.handleSelectSession}
           />
         ) : null}
@@ -142,7 +147,10 @@ export const CollabOrgPanelView: React.FC<CollabOrgPanelViewProps> = ({
               t={t}
               currentAccessSettings={model.currentAccessSettings}
               workspaceOptions={model.workspaceOptions}
+              pendingShareMode={model.pendingShareMode}
               onSelectAccessMode={model.handleSelectAccessMode}
+              onConfirmShareOnboarding={model.handleConfirmShareOnboarding}
+              onCancelShareOnboarding={model.handleCancelShareOnboarding}
               onToggleWorkspace={model.handleToggleWorkspace}
             />
           </>

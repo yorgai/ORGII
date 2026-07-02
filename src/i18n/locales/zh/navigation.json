@@ -601,6 +601,48 @@
     },
     "members": {
       "remove": "移除"
+    },
+    "share": {
+      "menuItem": "共享设置…",
+      "dialogTitle": "Session 共享设置",
+      "effectiveMode": "当前生效档位",
+      "overrideLabel": "本 session 单独设置",
+      "overrideInherit": "继承默认",
+      "visibilityLabel": "谁可以看到此 session",
+      "visibilityOrg": "org 内所有成员",
+      "visibilityRestricted": "仅我 + 指定的人",
+      "restrictWarning": "已被他人导入的副本无法收回。",
+      "directedTitle": "分享给成员",
+      "directedEmpty": "暂无可分享的其他成员。",
+      "createDirected": "分享",
+      "linkTitle": "分享链接",
+      "createLink": "创建分享链接",
+      "linkCopied": "链接已复制——仅此一次显示。",
+      "linkShownOnce": "请立即复制此链接——仅此一次显示。",
+      "activeShares": "已有分享",
+      "noShares": "暂无分享。",
+      "linkShareLabel": "分享链接",
+      "revoke": "撤销",
+      "sharesError": "分享操作失败",
+      "noOrgs": "此 session 不在任何 org 的共享 repo 范围内。",
+      "incomingTitle": "导入分享的 session",
+      "incomingResolving": "正在解析分享链接…",
+      "incomingOwner": "所有者",
+      "incomingImport": "导入只读副本",
+      "incomingImported": "已导入为只读 session。",
+      "incomingJoinCta": "加入该 org",
+      "incomingDismiss": "关闭",
+      "incomingError": "分享链接无效、已过期或已被撤销。"
+    },
+    "onboarding": {
+      "title": "开启 session 共享",
+      "description": "选择该 org 可以看到你的哪些 session,之后可随时修改。",
+      "shareNewTitle": "仅共享此后新建的 session(默认)",
+      "shareNewDescription": "已有 session 保持私密;旧 session 可按需单独放行。",
+      "shareAllTitle": "共享全部历史",
+      "shareAllDescription": "org repo 范围内的 session(含历史)将全部可见。",
+      "accessOffBanner": "你的 session 未共享给该 org。",
+      "accessOffBannerAction": "前往设置"
     }
   }
 }

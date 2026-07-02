@@ -378,10 +378,13 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const {
       handleOpenExportSessionJson,
       handleOpenLinkWorkItem,
+      handleOpenShareSettings,
+      showShareSettings,
       sessionModals,
     } = useChatPanelSessionModals({
       activeSession,
       closeHeaderActionsMenu,
+      currentSession: currentSession ?? null,
       currentSessionId: currentSessionId ?? null,
       t,
     });
@@ -698,6 +701,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           handleExploreAgentSearchToggle={handleExploreAgentSearchToggle}
           handleOpenExportSessionJson={handleOpenExportSessionJson}
           handleOpenLinkWorkItem={handleOpenLinkWorkItem}
+          handleOpenShareSettings={handleOpenShareSettings}
           handleOpenSearch={handleOpenSearch}
           handleNewSession={handleNewSession}
           handleOpenStartPage={handleOpenStartPage}
@@ -743,6 +747,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             contentState.showProjectAgentSwitchInHeader
           }
           showSessionContent={contentState.showSessionContent}
+          showShareSettings={showShareSettings}
           showStartPage={startPageOpen}
           showWorkItemAgentCreator={showWorkItemAgentCreator}
           showWorkItemAgentSwitchInHeader={

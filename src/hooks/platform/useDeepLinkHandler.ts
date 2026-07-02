@@ -19,9 +19,12 @@ import { useNavigate } from "react-router-dom";
 import { ROUTES } from "@src/config/routes";
 import { log, logDebug, logError, logWarn } from "@src/hooks/logger";
 import { collabPendingInviteAtom } from "@src/store/collaboration/collabPendingInviteAtom";
+import { collabPendingShareAtom } from "@src/store/collaboration/collabPendingShareAtom";
 import {
   type CollabJoinDeepLink,
+  type CollabShareDeepLink,
   parseCollabJoinDeepLink,
+  parseCollabShareDeepLink,
 } from "@src/store/collaboration/deepLink";
 import {
   CHAT_PANEL_SURFACE_KIND,
@@ -51,8 +54,9 @@ function parseDeepLink(
     //     can return to the app.
     //   - In-app route prefix `/orgii` — the React Router base path.
     //
-    // NOTE: `orgii://collaboration/join` is intercepted earlier (see
-    // `parseCollabJoinDeepLink`) and never reaches this generic conversion.
+    // NOTE: `orgii://collaboration/join` and `orgii://collaboration/session`
+    // are intercepted earlier (see `parseCollabJoinDeepLink` /
+    // `parseCollabShareDeepLink`) and never reach this generic conversion.
 
     const withoutProtocol = deepLinkUrl.replace(/^(?:yorgai|orgii):\/\//, "");
 
@@ -83,6 +87,7 @@ function parseDeepLink(
 export function useDeepLinkHandler(): void {
   const navigate = useNavigate();
   const setPendingInvite = useSetAtom(collabPendingInviteAtom);
+  const setPendingShare = useSetAtom(collabPendingShareAtom);
   const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
   const setStationMode = useSetAtom(stationModeAtom);
   const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
@@ -115,6 +120,23 @@ export function useDeepLinkHandler(): void {
     ]
   );
 
+  // Route an incoming session share link (design §6.4): park the parsed
+  // three-piece in the one-shot pending atom and make sure the Workstation
+  // surface that hosts the confirmation dialog is visible. The dialog itself
+  // resolves the token, imports read-only and (for combined links) surfaces
+  // the "join this org" CTA — share resolves FIRST, invite is deferred.
+  const routeToCollabShare = useCallback(
+    (share: CollabShareDeepLink) => {
+      setPendingShare(share);
+      setStationMode("my-station");
+      setStationChatVisible("my-station", true);
+      if (window.location.pathname !== ROUTES.workStation.code.path) {
+        navigate(ROUTES.workStation.code.path);
+      }
+    },
+    [navigate, setPendingShare, setStationChatVisible, setStationMode]
+  );
+
   useEffect(() => {
     // Only run in Tauri environment
     if (!isTauriReady()) {
@@ -138,6 +160,20 @@ export function useDeepLinkHandler(): void {
           for (const url of urls) {
             if (processedDeepLinks.current.has(url)) {
               continue;
+            }
+
+            // Share links take precedence (design §6.4): a combined
+            // share+invite link is consumed share-first; the invite rides
+            // along inside the pending share for the post-import CTA.
+            const collabShare = parseCollabShareDeepLink(url);
+            if (collabShare) {
+              processedDeepLinks.current.add(url);
+              log(
+                "DeepLinkHandler",
+                "Routing collaboration session share into import flow"
+              );
+              routeToCollabShare(collabShare);
+              break;
             }
 
             const collabInvite = parseCollabJoinDeepLink(url);
@@ -190,7 +226,7 @@ export function useDeepLinkHandler(): void {
         hasSetupListener.current = false;
       }
     };
-  }, [navigate, routeToCollabJoin]);
+  }, [navigate, routeToCollabJoin, routeToCollabShare]);
 
   // Also check for deep link on initial load (app opened via deep link)
   // This effect should only run ONCE on mount, not on every location change
@@ -215,6 +251,17 @@ export function useDeepLinkHandler(): void {
           for (const url of initialUrls) {
             if (processedDeepLinks.current.has(url)) {
               continue;
+            }
+
+            const collabShare = parseCollabShareDeepLink(url);
+            if (collabShare) {
+              processedDeepLinks.current.add(url);
+              log(
+                "DeepLinkHandler",
+                "Routing initial collaboration session share into import flow"
+              );
+              routeToCollabShare(collabShare);
+              break;
             }
 
             const collabInvite = parseCollabJoinDeepLink(url);

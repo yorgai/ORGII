@@ -1,8 +1,7 @@
 import { useAtom } from "jotai";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { collabSessionAccessSettingsAtom } from "@src/store/collaboration/collabOrgsAtom";
-import { COLLAB_WORKSPACE_SCOPE } from "@src/store/collaboration/types";
 import type {
   CollabMemberRecord,
   CollabSessionAccessMode,
@@ -10,7 +9,11 @@ import type {
 } from "@src/store/collaboration/types";
 import type { Session } from "@src/store/session";
 
-import { createDefaultAccessSettings, normalizeWorkspacePath } from "./utils";
+import {
+  createDefaultAccessSettings,
+  normalizeWorkspacePath,
+  shouldPromptShareOnboarding,
+} from "./utils";
 
 interface UseAccessSettingsModelParams {
   orgId: string;
@@ -26,6 +29,10 @@ export function useAccessSettingsModel({
   const [accessSettingsList, setAccessSettingsList] = useAtom(
     collabSessionAccessSettingsAtom
   );
+  // OFF → shared transition parked here until the user answers the one-time
+  // "share all history / only new sessions" choice (design §6.2/§6.3).
+  const [pendingShareMode, setPendingShareMode] =
+    useState<CollabSessionAccessMode | null>(null);
 
   const currentAccessSettings = useMemo(() => {
     if (!currentMember) return null;
@@ -33,12 +40,7 @@ export function useAccessSettingsModel({
       accessSettingsList.find(
         (settings) =>
           settings.orgId === orgId && settings.memberId === currentMember.id
-      ) ??
-      createDefaultAccessSettings(
-        orgId,
-        currentMember.id,
-        COLLAB_WORKSPACE_SCOPE.SELECTED_WORKSPACES
-      )
+      ) ?? createDefaultAccessSettings(orgId, currentMember.id)
     );
   }, [accessSettingsList, currentMember, orgId]);
 
@@ -54,14 +56,16 @@ export function useAccessSettingsModel({
   const updateAccessSettings = useCallback(
     (
       updates: Partial<
-        Pick<CollabSessionAccessSettings, "accessMode" | "workspacePaths">
+        Pick<
+          CollabSessionAccessSettings,
+          "accessMode" | "workspacePaths" | "shareSince"
+        >
       >
     ) => {
       if (!currentMember || !currentAccessSettings) return;
       const nextSettings: CollabSessionAccessSettings = {
         ...currentAccessSettings,
         ...updates,
-        workspaceScope: COLLAB_WORKSPACE_SCOPE.SELECTED_WORKSPACES,
         updatedAt: new Date().toISOString(),
       };
       setAccessSettingsList((current) => {
@@ -81,10 +85,40 @@ export function useAccessSettingsModel({
 
   const handleSelectAccessMode = useCallback(
     (accessMode: CollabSessionAccessMode) => {
+      if (
+        shouldPromptShareOnboarding(
+          currentAccessSettings?.accessMode,
+          accessMode
+        )
+      ) {
+        setPendingShareMode(accessMode);
+        return;
+      }
       updateAccessSettings({ accessMode });
     },
-    [updateAccessSettings]
+    [currentAccessSettings?.accessMode, updateAccessSettings]
   );
+
+  /**
+   * Answer to the one-time enable prompt: `shareAllHistory` clears the
+   * shareSince gate; the default choice stamps it with "now" so only
+   * sessions CREATED from here on are shared (design §6.3).
+   */
+  const handleConfirmShareOnboarding = useCallback(
+    (shareAllHistory: boolean) => {
+      if (!pendingShareMode) return;
+      updateAccessSettings({
+        accessMode: pendingShareMode,
+        shareSince: shareAllHistory ? undefined : new Date().toISOString(),
+      });
+      setPendingShareMode(null);
+    },
+    [pendingShareMode, updateAccessSettings]
+  );
+
+  const handleCancelShareOnboarding = useCallback(() => {
+    setPendingShareMode(null);
+  }, []);
 
   const handleToggleWorkspace = useCallback(
     (workspacePath: string) => {
@@ -104,7 +138,10 @@ export function useAccessSettingsModel({
   return {
     currentAccessSettings,
     workspaceOptions,
+    pendingShareMode,
     handleSelectAccessMode,
+    handleConfirmShareOnboarding,
+    handleCancelShareOnboarding,
     handleToggleWorkspace,
   };
 }

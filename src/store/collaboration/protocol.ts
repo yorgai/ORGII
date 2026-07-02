@@ -90,6 +90,9 @@ export const CollabSessionAccessSettingsSchema = z.object({
     .record(z.string(), CollabSessionAccessModeSchema)
     .optional(),
   shareSince: z.string().optional(),
+  sessionVisibility: z
+    .record(z.string(), CollabSessionVisibilitySchema)
+    .optional(),
   workspaceScope: CollabWorkspaceScopeSchema,
   workspacePaths: z.array(z.string()),
   updatedAt: z.string(),

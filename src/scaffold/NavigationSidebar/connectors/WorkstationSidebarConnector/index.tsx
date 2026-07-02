@@ -8,6 +8,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { type ProjectOrg, projectApi } from "@src/api/http/project";
 import type { WorkspaceRecord } from "@src/api/tauri/workspace";
 import { ROUTES } from "@src/config/routes";
+import CollabShareImportDialog from "@src/features/TeamCollaboration/components/CollabShareImportDialog";
+import SessionShareDialog from "@src/features/TeamCollaboration/components/SessionShareDialog";
+import { useSessionShareDialog } from "@src/features/TeamCollaboration/components/SessionShareDialog/useSessionShareDialog";
 import { useCollabSyncEngine } from "@src/features/TeamCollaboration/engine/useCollabSyncEngine";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { useKeyVault } from "@src/hooks/keyVault";
@@ -579,6 +582,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     setGroupVisibleCounts,
     tCommon,
   });
+  const sessionShare = useSessionShareDialog();
   const handleMenuItemContextMenu = useWorkstationSidebarContextMenu({
     sessionMap,
     rename,
@@ -586,6 +590,9 @@ export const WorkstationSidebarConnector: React.FC = () => {
     handleDeleteDraft: deleteSessionCreatorDraft,
     handleExportMarkdown,
     handleTogglePin,
+    isShareEligible: sessionShare.isShareEligible,
+    handleOpenShareSettings: sessionShare.openShareSettings,
+    shareSettingsLabel: t("collaboration.share.menuItem"),
     tCommon,
   });
 
@@ -812,6 +819,14 @@ export const WorkstationSidebarConnector: React.FC = () => {
         onCancel={rename.onCancel}
         onConfirm={(newName) => rename.onConfirm(newName, sessionMap)}
       />
+      <SessionShareDialog
+        session={sessionShare.shareDialogSession}
+        orgs={sessionShare.shareDialogOrgs}
+        onClose={sessionShare.closeShareSettings}
+      />
+      {/* Consumes orgii://collaboration/session deep links (design §6.4);
+          mounted once next to the sync engine hook. */}
+      <CollabShareImportDialog />
     </>
   );
 };

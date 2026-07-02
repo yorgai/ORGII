@@ -7,7 +7,7 @@ import type {
   CollabChatMessageRecord,
   CollabInviteRecord,
   CollabMemberRecord,
-  CollabSessionAccessSettings,
+  CollabSessionAccessMode,
   RemoteTeammateSessionMetadata,
 } from "@src/store/collaboration/types";
 import { formatSmartDateTime } from "@src/util/data/formatters/date";
@@ -153,17 +153,47 @@ export function getMetadataId(record: Record<string, unknown>): string | null {
   return typeof id === "string" && id.trim() ? id : null;
 }
 
-export function createDefaultAccessSettings(
-  orgId: string,
-  memberId: string,
-  workspaceScope: CollabSessionAccessSettings["workspaceScope"]
-): CollabSessionAccessSettings {
+// Single source of the default-OFF access settings (design §6.3, fix S8):
+// the panel and the sync engine must agree, so the implementation lives in
+// collabSyncUtils and is re-exported here for the panel hooks.
+export { createDefaultAccessSettings } from "@src/features/TeamCollaboration/collabSyncUtils";
+
+/**
+ * One-time shareSince prompt gate (design §6.2/§6.3): only the OFF → shared
+ * transition asks "all history vs only new sessions"; moving between
+ * metadata_only and full_replay keeps the previous choice silently.
+ */
+export function shouldPromptShareOnboarding(
+  currentMode: CollabSessionAccessMode | undefined,
+  nextMode: CollabSessionAccessMode
+): boolean {
+  return (
+    currentMode === COLLAB_SESSION_ACCESS_MODE.OFF &&
+    nextMode !== COLLAB_SESSION_ACCESS_MODE.OFF
+  );
+}
+
+export interface SessionsTabBanners {
+  /** Member's own default accessMode is OFF → nothing of theirs is shared. */
+  showAccessOffBanner: boolean;
+  /** Org repoScopes is empty → nobody's sessions sync (separate silent gate). */
+  showRepoScopesEmptyBanner: boolean;
+}
+
+/**
+ * Sessions-tab onboarding banners (design §6.3): the two silent gates are
+ * reported separately — "your default is OFF" and "the org has no repos in
+ * scope" have different fixes (member settings vs admin action).
+ */
+export function getSessionsTabBanners({
+  accessMode,
+  repoScopes,
+}: {
+  accessMode: CollabSessionAccessMode | undefined;
+  repoScopes: string[] | undefined;
+}): SessionsTabBanners {
   return {
-    orgId,
-    memberId,
-    accessMode: COLLAB_SESSION_ACCESS_MODE.OFF,
-    workspaceScope,
-    workspacePaths: [],
-    updatedAt: new Date().toISOString(),
+    showAccessOffBanner: accessMode === COLLAB_SESSION_ACCESS_MODE.OFF,
+    showRepoScopesEmptyBanner: !repoScopes || repoScopes.length === 0,
   };
 }

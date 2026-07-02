@@ -182,6 +182,15 @@ export interface CollabSessionAccessSettings {
    * last activity — reopening an old session must not leak its history.
    */
   shareSince?: string;
+  /**
+   * Per-session visibility choice (design §6.2/§6.3, M4b): 'restricted' when
+   * the owner explicitly picks "only me + people I pick" in the share dialog
+   * — the server then hides the row from org-wide listing and only directed
+   * share grantees see it. Absent / 'org' keeps the M4a org-visible default.
+   * Keyed by sourceSessionId; must be mirrored in
+   * CollabSessionAccessSettingsSchema (zod strips unknown keys on hydrate).
+   */
+  sessionVisibility?: Record<string, CollabSessionVisibility>;
   workspaceScope: CollabWorkspaceScope;
   workspacePaths: string[];
   updatedAt: string;

@@ -32,7 +32,10 @@ import type {
 } from "@src/store/session/sessionAtom/types";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
-import { getEffectiveAccessMode } from "../collabSyncUtils";
+import {
+  getEffectiveAccessMode,
+  getSessionVisibility,
+} from "../collabSyncUtils";
 import type {
   CollabSyncBackendClient,
   CollabSyncProfile,
@@ -322,6 +325,14 @@ export interface ImportRemoteSessionOptions {
   orgId: string;
   remoteSession: RemoteTeammateSessionMetadata;
   /**
+   * Link-share capability (design §6.4): when set, every segments fetch
+   * authenticates with the token alone — the caller is typically NOT an org
+   * member (guest deep link) and `profile` carries only supabaseUrl+anonKey.
+   * `remoteSession` then comes from `resolveSessionShare`, whose projection
+   * includes the segments summary this importer diffs against.
+   */
+  shareToken?: string;
+  /**
    * Invoked with the local session id BEFORE any event-store write, so the
    * engine can arm its self-import guard (the eventStore write re-enters the
    * push subscription).
@@ -349,12 +360,13 @@ async function fetchAndAssembleSegments(
   baseFrozenEvents: SessionEvent[],
   expectedEpoch: number | null
 ): Promise<AssembledSegments | null> {
-  const { client, profile, orgId, remoteSession } = options;
+  const { client, profile, orgId, remoteSession, shareToken } = options;
   const snapshot = await client.getSessionEventSegments({
     ...profile,
     orgId,
     sessionRowId: remoteSession.id,
     afterSeq,
+    shareToken,
   });
   if (snapshot.epoch === null || snapshot.count === null) return null;
   // The snapshot is authoritative over the (possibly stale) list summary; a
@@ -552,7 +564,9 @@ export function memberFromChatMessage(
  * the minute so the hash gate is not defeated by timestamp churn. The
  * EFFECTIVE access mode is hashed (not the member default) so a per-session
  * override or shareSince change re-publishes exactly the sessions it
- * touches — visibility/replayLevel both derive from it.
+ * touches — replayLevel derives from it. The published visibility is hashed
+ * too: flipping org ↔ restricted in the share dialog must re-push even when
+ * nothing else changed (M4b).
  */
 export function computeSessionMetadataHash(
   session: Session,
@@ -569,5 +583,6 @@ export function computeSessionMetadataHash(
     session.branch || session.worktreeBranch || "",
     activityBucket,
     getEffectiveAccessMode(session, settings),
+    getSessionVisibility(session, settings),
   ]);
 }

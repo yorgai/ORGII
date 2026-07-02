@@ -28,6 +28,10 @@ interface UseWorkstationSidebarContextMenuParams {
   handleDeleteDraft: (draftId: string) => void;
   handleExportMarkdown: (sessionId: string) => Promise<void>;
   handleTogglePin: (sessionId: string) => Promise<void>;
+  /** Owner-side share dialog gate + opener (design §6.3, M4b). */
+  isShareEligible: (session: Session) => boolean;
+  handleOpenShareSettings: (session: Session) => void;
+  shareSettingsLabel: string;
   tCommon: (key: string, defaultValue?: string) => string;
 }
 
@@ -38,6 +42,9 @@ export function useWorkstationSidebarContextMenu({
   handleDeleteDraft,
   handleExportMarkdown,
   handleTogglePin,
+  isShareEligible,
+  handleOpenShareSettings,
+  shareSettingsLabel,
   tCommon,
 }: UseWorkstationSidebarContextMenuParams): (
   event: MouseEvent,
@@ -92,6 +99,17 @@ export function useWorkstationSidebarContextMenu({
           item: "Separator",
         });
         const primaryItems = [renameItem, exportItem];
+        // Owner-side per-session sharing entry (design §6.3): only for the
+        // user's OWN sessions whose repo sits in ≥1 connected supabase org's
+        // repoScopes — teammate imports and out-of-scope repos get no item.
+        if (session && isShareEligible(session)) {
+          primaryItems.push(
+            await MenuItem.new({
+              text: shareSettingsLabel,
+              action: () => handleOpenShareSettings(session),
+            })
+          );
+        }
         const menuItems = isCliSessionItem
           ? [...primaryItems, menuSeparator, deleteItem]
           : [...primaryItems, pinItem, menuSeparator, deleteItem];
@@ -109,6 +127,9 @@ export function useWorkstationSidebarContextMenu({
       handleDeleteDraft,
       handleExportMarkdown,
       handleTogglePin,
+      handleOpenShareSettings,
+      isShareEligible,
+      shareSettingsLabel,
     ]
   );
 }

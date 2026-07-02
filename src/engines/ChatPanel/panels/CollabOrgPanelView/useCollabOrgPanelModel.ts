@@ -23,7 +23,7 @@ import { useCollabOrgChat } from "./useCollabOrgChat";
 import { useLocalOrgMetadata } from "./useLocalOrgMetadata";
 import { useMemberActions } from "./useMemberActions";
 import { useSessionActions } from "./useSessionActions";
-import { isToday, toSessionTableItem } from "./utils";
+import { getSessionsTabBanners, isToday, toSessionTableItem } from "./utils";
 
 export function useCollabOrgPanelModel(
   selectedCollabOrg: ChatPanelSelectedCollabOrg
@@ -181,6 +181,19 @@ export function useCollabOrgPanelModel(
     setActiveTab(COLLAB_ORG_TAB.SESSIONS);
   }, [selectedCollabOrg.orgId, setSelectedCollabOrg]);
 
+  const handleOpenSettingsTab = useCallback(() => {
+    setActiveTab(COLLAB_ORG_TAB.SETTINGS);
+  }, []);
+
+  const sessionsTabBanners = useMemo(
+    () =>
+      getSessionsTabBanners({
+        accessMode: accessSettingsModel.currentAccessSettings?.accessMode,
+        repoScopes: org?.repoScopes,
+      }),
+    [accessSettingsModel.currentAccessSettings?.accessMode, org?.repoScopes]
+  );
+
   const tabs = useMemo(() => {
     const baseTabs = [
       {
@@ -219,9 +232,11 @@ export function useCollabOrgPanelModel(
     currentMember,
     currentAccessSettings: accessSettingsModel.currentAccessSettings,
     workspaceOptions: accessSettingsModel.workspaceOptions,
+    pendingShareMode: accessSettingsModel.pendingShareMode,
     latestInvite: memberActions.latestInvite,
     canCreateInvite: memberActions.canCreateInvite,
     sessionItems,
+    sessionsTabBanners,
     activeMemberIds,
     orgChatMessages,
     orgProjects,
@@ -231,10 +246,15 @@ export function useCollabOrgPanelModel(
     tabs,
     handleSendMessage: chatModel.handleSendMessage,
     handleSelectAccessMode: accessSettingsModel.handleSelectAccessMode,
+    handleConfirmShareOnboarding:
+      accessSettingsModel.handleConfirmShareOnboarding,
+    handleCancelShareOnboarding:
+      accessSettingsModel.handleCancelShareOnboarding,
     handleToggleWorkspace: accessSettingsModel.handleToggleWorkspace,
     handleSelectMember,
     handleSelectSession,
     handleBackToOrg,
+    handleOpenSettingsTab,
     handleCreateInvite: memberActions.handleCreateInvite,
     handleCopyInvite: memberActions.handleCopyInvite,
     handleRemoveMember: memberActions.handleRemoveMember,

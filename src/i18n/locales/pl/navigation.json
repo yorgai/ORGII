@@ -488,6 +488,48 @@
     },
     "members": {
       "remove": "Usuń"
+    },
+    "share": {
+      "menuItem": "Share settings…",
+      "dialogTitle": "Session sharing",
+      "effectiveMode": "Effective mode",
+      "overrideLabel": "Per-session override",
+      "overrideInherit": "Inherit default",
+      "visibilityLabel": "Who can see this session",
+      "visibilityOrg": "Everyone in the org",
+      "visibilityRestricted": "Only me + people I pick",
+      "restrictWarning": "Copies teammates already imported cannot be retracted.",
+      "directedTitle": "Share with members",
+      "directedEmpty": "No other members to share with.",
+      "createDirected": "Share",
+      "linkTitle": "Share link",
+      "createLink": "Create share link",
+      "linkCopied": "Link copied — it is shown only this once.",
+      "linkShownOnce": "Copy this link now — it is shown only this once.",
+      "activeShares": "Active shares",
+      "noShares": "No active shares.",
+      "linkShareLabel": "Share link",
+      "revoke": "Revoke",
+      "sharesError": "Share operation failed",
+      "noOrgs": "This session is not in any org's shared repo scope.",
+      "incomingTitle": "Import shared session",
+      "incomingResolving": "Resolving share link…",
+      "incomingOwner": "Owner",
+      "incomingImport": "Import read-only",
+      "incomingImported": "Imported as a read-only session.",
+      "incomingJoinCta": "Join this org",
+      "incomingDismiss": "Close",
+      "incomingError": "This share link is invalid, expired, or has been revoked."
+    },
+    "onboarding": {
+      "title": "Enable session sharing",
+      "description": "Choose which of your sessions this org can see. You can change this anytime.",
+      "shareNewTitle": "Only share sessions created from now on (default)",
+      "shareNewDescription": "Existing sessions stay private; re-share old ones per session.",
+      "shareAllTitle": "Share all history",
+      "shareAllDescription": "Sessions in the org's repo scope become visible, including past ones.",
+      "accessOffBanner": "Your sessions are not shared with this org.",
+      "accessOffBannerAction": "Open settings"
     }
   }
 }

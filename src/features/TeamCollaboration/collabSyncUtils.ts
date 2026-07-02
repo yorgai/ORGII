@@ -5,7 +5,10 @@ import {
   COLLAB_SYNC_BACKEND,
   COLLAB_WORKSPACE_SCOPE,
 } from "@src/store/collaboration/types";
-import type { CollabSessionAccessMode } from "@src/store/collaboration/types";
+import type {
+  CollabSessionAccessMode,
+  CollabSessionVisibility,
+} from "@src/store/collaboration/types";
 import type {
   CollabMemberRecord,
   CollabOrgRecord,
@@ -41,6 +44,26 @@ export function isLocalSessionInOrgScope(
   org: CollabOrgRecord
 ): boolean {
   return isRepoPathInScope(session.repoPath, org.repoScopes);
+}
+
+/**
+ * Orgs whose per-session share dialog applies to this LOCAL session (design
+ * §6.3): a usable supabase sync credential exists AND the session's repo is
+ * inside the org's repoScopes. Imported teammate copies are never shareable
+ * — sharing them again would republish someone else's session under our
+ * member id (same guard as isSessionPushAllowed).
+ */
+export function getShareCapableOrgsForSession(
+  session: Pick<Session, "repoPath" | "category" | "importedFrom">,
+  orgs: CollabOrgRecord[]
+): CollabOrgRecord[] {
+  if (session.category === "external_history") return [];
+  if (session.importedFrom) return [];
+  return orgs.filter(
+    (org) =>
+      getSyncProfile(org) !== null &&
+      isRepoPathInScope(session.repoPath, org.repoScopes)
+  );
 }
 
 export function isRemoteSessionInOrgScope(
@@ -112,6 +135,13 @@ export function isRemoteSessionEventsPublishAllowed(
   return isRemoteSessionInOrgScope(session, org);
 }
 
+/**
+ * THE default access settings (design §6.3, fix S8): sharing is OFF until the
+ * member explicitly opts in. Single export — the engine fallback and the
+ * panel's settings model must not disagree on the default (the old engine
+ * copy defaulted to FULL_REPLAY, silently publishing everything for members
+ * who never opened the settings tab).
+ */
 export function createDefaultAccessSettings(
   orgId: string,
   memberId: string
@@ -119,7 +149,7 @@ export function createDefaultAccessSettings(
   return {
     orgId,
     memberId,
-    accessMode: COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY,
+    accessMode: COLLAB_SESSION_ACCESS_MODE.OFF,
     workspaceScope: COLLAB_WORKSPACE_SCOPE.SELECTED_WORKSPACES,
     workspacePaths: [],
     updatedAt: new Date().toISOString(),
@@ -138,6 +168,23 @@ export function getSyncProfile(org: CollabOrgRecord): CollabSyncProfile | null {
     memberId: org.localMemberId,
     memberToken: org.memberToken,
   };
+}
+
+/**
+ * Server-side visibility to publish for ONE session (design §6.2, M4b):
+ * 'restricted' only when the owner explicitly picked "only me + people I
+ * pick" in the share dialog (persisted in settings.sessionVisibility);
+ * everything else stays org-visible. There is no 'restricted' access MODE —
+ * visibility is orthogonal to the off/metadata/replay ladder.
+ */
+export function getSessionVisibility(
+  session: Pick<Session, "session_id">,
+  settings: CollabSessionAccessSettings
+): CollabSessionVisibility {
+  return settings.sessionVisibility?.[session.session_id] ===
+    COLLAB_SESSION_VISIBILITY.RESTRICTED
+    ? COLLAB_SESSION_VISIBILITY.RESTRICTED
+    : COLLAB_SESSION_VISIBILITY.ORG;
 }
 
 export function toRemoteMetadata(
@@ -161,10 +208,10 @@ export function toRemoteMetadata(
     branch: session.branch || session.worktreeBranch,
     lastActivityAt: session.updated_at || session.updated_time,
     accessMode: effectiveMode,
-    // Sharing plane (design §6.2): 'restricted' arrives with the M4b UI —
-    // M4a always publishes org-visible; the field is wired through so the
-    // server column populates. replayLevel derives from the effective mode.
-    visibility: COLLAB_SESSION_VISIBILITY.ORG,
+    // Sharing plane (design §6.2): visibility follows the owner's explicit
+    // per-session choice from the M4b share dialog; replayLevel derives from
+    // the effective mode.
+    visibility: getSessionVisibility(session, settings),
     replayLevel:
       effectiveMode === COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY
         ? COLLAB_SESSION_REPLAY_LEVEL.REPLAY

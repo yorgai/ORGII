@@ -3,7 +3,10 @@ import type { TFunction } from "i18next";
 import { type ComponentProps, useCallback, useState } from "react";
 
 import Message from "@src/components/Message";
+import SessionShareDialog from "@src/features/TeamCollaboration/components/SessionShareDialog";
+import { useSessionShareDialog } from "@src/features/TeamCollaboration/components/SessionShareDialog/useSessionShareDialog";
 import { SessionImportExportModal } from "@src/scaffold/NavigationSidebar/connectors/SessionImportExportModal";
+import type { Session } from "@src/store/session/sessionAtom/types";
 
 import LinkSessionToWorkItemModal from "../panels/LinkSessionToWorkItemModal";
 
@@ -14,6 +17,8 @@ type ExportActiveSession = ComponentProps<
 interface UseChatPanelSessionModalsOptions {
   activeSession: ExportActiveSession;
   closeHeaderActionsMenu: () => void;
+  /** Full session row for the share dialog (design §6.3 header mount). */
+  currentSession: Session | null;
   currentSessionId: string | null;
   t: TFunction<["sessions", "common", "projects", "navigation"]>;
 }
@@ -21,11 +26,13 @@ interface UseChatPanelSessionModalsOptions {
 export function useChatPanelSessionModals({
   activeSession,
   closeHeaderActionsMenu,
+  currentSession,
   currentSessionId,
   t,
 }: UseChatPanelSessionModalsOptions) {
   const [isExportModalOpen, setExportModalOpen] = useState(false);
   const [isLinkWorkItemModalOpen, setLinkWorkItemModalOpen] = useState(false);
+  const sessionShare = useSessionShareDialog();
 
   const handleOpenExportSessionJson = useCallback(() => {
     setExportModalOpen(true);
@@ -53,6 +60,19 @@ export function useChatPanelSessionModals({
     void emit("orgii-data-changed", new Date().toISOString());
   }, []);
 
+  // Session header mount of the owner-side share dialog (design §6.3): the
+  // menu entry only shows for the owner's own session when its repo is in a
+  // connected supabase org's repoScopes.
+  const showShareSettings = Boolean(
+    currentSession && sessionShare.isShareEligible(currentSession)
+  );
+
+  const handleOpenShareSettings = useCallback(() => {
+    if (!currentSession) return;
+    sessionShare.openShareSettings(currentSession);
+    closeHeaderActionsMenu();
+  }, [closeHeaderActionsMenu, currentSession, sessionShare]);
+
   const sessionModals = (
     <>
       <LinkSessionToWorkItemModal
@@ -69,12 +89,19 @@ export function useChatPanelSessionModals({
         onClose={handleCloseExportSessionJson}
         onImported={() => undefined}
       />
+      <SessionShareDialog
+        session={sessionShare.shareDialogSession}
+        orgs={sessionShare.shareDialogOrgs}
+        onClose={sessionShare.closeShareSettings}
+      />
     </>
   );
 
   return {
     handleOpenExportSessionJson,
     handleOpenLinkWorkItem,
+    handleOpenShareSettings,
+    showShareSettings,
     sessionModals,
   };
 }

@@ -1,3 +1,4 @@
+import Modal from "@/src/scaffold/ModalSystem";
 import type { TFunction } from "i18next";
 import React from "react";
 
@@ -18,7 +19,11 @@ interface SettingsSectionProps {
   t: TFunction<"navigation">;
   currentAccessSettings: CollabSessionAccessSettings | null;
   workspaceOptions: string[];
+  /** Non-null while the one-time OFF → shared choice is pending (§6.2). */
+  pendingShareMode: CollabSessionAccessMode | null;
   onSelectAccessMode: (accessMode: CollabSessionAccessMode) => void;
+  onConfirmShareOnboarding: (shareAllHistory: boolean) => void;
+  onCancelShareOnboarding: () => void;
   onToggleWorkspace: (workspacePath: string) => void;
 }
 
@@ -26,7 +31,10 @@ export function SettingsSection({
   t,
   currentAccessSettings,
   workspaceOptions,
+  pendingShareMode,
   onSelectAccessMode,
+  onConfirmShareOnboarding,
+  onCancelShareOnboarding,
   onToggleWorkspace,
 }: SettingsSectionProps) {
   return (
@@ -102,6 +110,45 @@ export function SettingsSection({
           {t("collaboration.access.fullReplayWarning")}
         </div>
       </div>
+      <Modal
+        visible={pendingShareMode !== null}
+        title={t("collaboration.onboarding.title")}
+        onCancel={onCancelShareOnboarding}
+        footer={null}
+        width={440}
+      >
+        <div className="flex flex-col gap-3">
+          <div className="text-[12px] text-text-3">
+            {t("collaboration.onboarding.description")}
+          </div>
+          <button
+            type="button"
+            className="border-accent-6 bg-accent-2 rounded-xl border px-3 py-3 text-left text-text-1 transition-colors hover:bg-surface-hover"
+            onClick={() => onConfirmShareOnboarding(false)}
+            data-testid="share-onboarding-new-only"
+          >
+            <div className="text-[12px] font-semibold">
+              {t("collaboration.onboarding.shareNewTitle")}
+            </div>
+            <div className="mt-1 text-[11px] text-text-3">
+              {t("collaboration.onboarding.shareNewDescription")}
+            </div>
+          </button>
+          <button
+            type="button"
+            className="rounded-xl border border-border-2 bg-bg-2 px-3 py-3 text-left text-text-2 transition-colors hover:bg-surface-hover"
+            onClick={() => onConfirmShareOnboarding(true)}
+            data-testid="share-onboarding-all-history"
+          >
+            <div className="text-[12px] font-semibold">
+              {t("collaboration.onboarding.shareAllTitle")}
+            </div>
+            <div className="mt-1 text-[11px] text-text-3">
+              {t("collaboration.onboarding.shareAllDescription")}
+            </div>
+          </button>
+        </div>
+      </Modal>
     </SectionContainer>
   );
 }

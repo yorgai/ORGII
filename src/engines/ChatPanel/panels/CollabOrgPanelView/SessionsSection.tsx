@@ -12,6 +12,10 @@ interface SessionsSectionProps {
   sessionItems: SessionTableItem[];
   latestSnapshotRequest: CollabSessionSnapshotRequestRecord | undefined;
   importingSessionId: string | null;
+  /** Onboarding banners (design §6.3): the two silent gates, reported apart. */
+  showAccessOffBanner: boolean;
+  showRepoScopesEmptyBanner: boolean;
+  onOpenSettingsTab: () => void;
   onSelectSession: (item: SessionTableItem) => void;
 }
 
@@ -20,6 +24,9 @@ export function SessionsSection({
   sessionItems,
   latestSnapshotRequest,
   importingSessionId,
+  showAccessOffBanner,
+  showRepoScopesEmptyBanner,
+  onOpenSettingsTab,
   onSelectSession,
 }: SessionsSectionProps) {
   const showPendingMessage =
@@ -28,6 +35,29 @@ export function SessionsSection({
 
   return (
     <>
+      {showAccessOffBanner ? (
+        <div
+          className="text-warning-7 flex items-center justify-between gap-3 rounded-lg bg-warning-1 px-3 py-2 text-[12px]"
+          data-testid="collab-sessions-access-off-banner"
+        >
+          <span>{t("collaboration.onboarding.accessOffBanner")}</span>
+          <button
+            type="button"
+            className="shrink-0 font-medium underline underline-offset-2"
+            onClick={onOpenSettingsTab}
+          >
+            {t("collaboration.onboarding.accessOffBannerAction")}
+          </button>
+        </div>
+      ) : null}
+      {showRepoScopesEmptyBanner ? (
+        <div
+          className="text-warning-7 rounded-lg bg-warning-1 px-3 py-2 text-[12px]"
+          data-testid="collab-sessions-repo-scopes-empty-banner"
+        >
+          {t("collaboration.orgRepoScopesEmpty")}
+        </div>
+      ) : null}
       <SessionTable
         items={sessionItems}
         onSelect={onSelectSession}

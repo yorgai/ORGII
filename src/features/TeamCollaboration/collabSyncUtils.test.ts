@@ -11,7 +11,10 @@ import type {
 import type { Session } from "@src/store/session/sessionAtom/types";
 
 import {
+  createDefaultAccessSettings,
   getEffectiveAccessMode,
+  getSessionVisibility,
+  getShareCapableOrgsForSession,
   isRepoPathInScope,
   isSessionPushAllowed,
   toRemoteMetadata,
@@ -267,6 +270,115 @@ describe("toRemoteMetadata sharing fields", () => {
       COLLAB_SESSION_ACCESS_MODE.METADATA_ONLY
     );
     expect(overridden.replayLevel).toBe("metadata");
+  });
+
+  it("publishes 'restricted' when the owner explicitly picked it (M4b rule)", () => {
+    const restricted = toRemoteMetadata(
+      createSession({}),
+      ORG,
+      MEMBER,
+      createSettings(COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY, {
+        sessionVisibility: { "session-1": "restricted" },
+      })
+    );
+    expect(restricted.visibility).toBe("restricted");
+  });
+
+  it("keeps 'org' visibility when the restricted entry targets another session", () => {
+    const other = toRemoteMetadata(
+      createSession({}),
+      ORG,
+      MEMBER,
+      createSettings(COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY, {
+        sessionVisibility: { "session-2": "restricted" },
+      })
+    );
+    expect(other.visibility).toBe("org");
+  });
+});
+
+describe("getSessionVisibility", () => {
+  it("defaults to org and honors only an explicit 'restricted' entry", () => {
+    const settings = createSettings(COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY);
+    expect(getSessionVisibility(createSession({}), settings)).toBe("org");
+    expect(
+      getSessionVisibility(
+        createSession({}),
+        createSettings(COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY, {
+          sessionVisibility: { "session-1": "restricted" },
+        })
+      )
+    ).toBe("restricted");
+    expect(
+      getSessionVisibility(
+        createSession({}),
+        createSettings(COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY, {
+          sessionVisibility: { "session-1": "org" },
+        })
+      )
+    ).toBe("org");
+  });
+});
+
+describe("createDefaultAccessSettings", () => {
+  it("defaults to OFF (design §6.3, fix S8 — sharing is opt-in)", () => {
+    expect(createDefaultAccessSettings("org-1", "member-1").accessMode).toBe(
+      COLLAB_SESSION_ACCESS_MODE.OFF
+    );
+  });
+});
+
+describe("getShareCapableOrgsForSession", () => {
+  const CONNECTED_ORG: CollabOrgRecord = {
+    ...ORG,
+    syncBackend: "supabase",
+    supabaseUrl: "https://team.supabase.co",
+    supabaseAnonKey: "anon-key",
+    memberToken: "member-token",
+    localMemberId: "member-1",
+  };
+
+  it("returns orgs with a usable credential whose scope contains the repo", () => {
+    expect(
+      getShareCapableOrgsForSession(createSession({}), [CONNECTED_ORG])
+    ).toEqual([CONNECTED_ORG]);
+  });
+
+  it("excludes orgs without sync credentials (plain local org)", () => {
+    expect(getShareCapableOrgsForSession(createSession({}), [ORG])).toEqual([]);
+  });
+
+  it("excludes orgs whose repoScopes miss the session repo", () => {
+    expect(
+      getShareCapableOrgsForSession(
+        createSession({ repoPath: "/repo/private" }),
+        [CONNECTED_ORG]
+      )
+    ).toEqual([]);
+  });
+
+  it("never offers sharing for imported teammate sessions", () => {
+    expect(
+      getShareCapableOrgsForSession(
+        createSession({ category: "external_history" }),
+        [CONNECTED_ORG]
+      )
+    ).toEqual([]);
+    expect(
+      getShareCapableOrgsForSession(
+        createSession({
+          importedFrom: {
+            orgId: "org-1",
+            sourceSessionId: "src-1",
+            ownerMemberId: "m2",
+            epoch: 1,
+            seq: 0,
+            count: 0,
+          },
+        }),
+        [CONNECTED_ORG]
+      )
+    ).toEqual([]);
   });
 });
 
