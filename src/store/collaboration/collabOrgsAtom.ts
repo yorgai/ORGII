@@ -305,6 +305,28 @@ export const collabSessionPushCursorsAtom = atomWithStorage<
 collabSessionPushCursorsAtom.debugLabel = "collabSessionPushCursorsAtom";
 
 /**
+ * Owner-side record of every session key (`${orgId}:${sessionId}`) whose
+ * metadata was successfully published to that org, mapped to the ISO
+ * timestamp of the first publish. Persisted so the engine's deleted-session
+ * tombstone sweep survives a restart: the in-memory metadata-hash map dies
+ * with the process, and without this set a session deleted while the app was
+ * closed (or before the next sweep of a fresh run) would keep its remote
+ * metadata + segments visible to teammates forever. Written on successful
+ * `upsertSessionMetadata`, pruned when the tombstone is sent.
+ */
+const CollabPublishedSessionKeysSchema = z.record(z.string(), z.string());
+
+export const collabPublishedSessionKeysAtom = atomWithStorage<
+  Record<string, string>
+>(
+  collabStorageKey("collabPublishedSessionKeys"),
+  {},
+  createZodJsonStorage(CollabPublishedSessionKeysSchema),
+  { getOnInit: true }
+);
+collabPublishedSessionKeysAtom.debugLabel = "collabPublishedSessionKeysAtom";
+
+/**
  * One-shot bridge from CollabSyncEngine (plain TS, cannot call React hooks)
  * to the UI: when the engine finishes importing a snapshot that should be
  * opened, it parks the target here; `useCollabSyncEngine` consumes it

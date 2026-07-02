@@ -405,6 +405,7 @@
     "openSupabaseSqlEditor": "Supabase SQL Editor'ı aç",
     "supabaseSetupVerified": "Supabase kurulumu doğrulandı",
     "supabaseSetupMissing": "Supabase kurulumu eksik. Kurulum SQL'ini kopyalayın, Supabase SQL Editor'da çalıştırın ve tekrar doğrulayın.",
+    "supabaseSetupServerNewer": "This ORG's Supabase schema is newer than this app version. Update ORGII, then try again.",
     "orgDemoTitle": "ORG",
     "orgNotFound": "ORG bulunamadı",
     "tabs": {
@@ -459,6 +460,7 @@
     "access": {
       "title": "Session erişimi",
       "description": "Bu ORG içinde ekip arkadaşlarının yerel sessions içinden ne görebileceğini seçin.",
+      "onboardingHint": "You can change this anytime in the ORG's Sessions settings.",
       "modes": {
         "off": {
           "title": "Kapalı",
@@ -565,6 +567,7 @@
       "replay": "Replay",
       "linkedSessionMetadataOnly": "Metadata only",
       "linkedSessionUnshared": "Not shared",
+      "replayUnavailable": "This session is no longer shared",
       "unknownOwner": "Unknown"
     },
     "lock": {

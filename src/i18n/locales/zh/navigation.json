@@ -496,6 +496,7 @@
     "openSupabaseSqlEditor": "打开 Supabase SQL Editor",
     "supabaseSetupVerified": "Supabase 设置已验证",
     "supabaseSetupMissing": "缺少 Supabase 设置。复制设置 SQL，在 Supabase SQL Editor 中运行，然后再次验证。",
+    "supabaseSetupServerNewer": "该 ORG 的 Supabase schema 比当前应用版本更新。请升级 ORGII 后重试。",
     "repoScopes": "共享的 repo 路径",
     "repoScopesPlaceholder": "/path/to/repo-a\n/path/to/repo-b",
     "repoScopesHelp": "每行一个绝对 repo 路径。只有这些 repo 下的 session 会被共享给本 org。之后可以再编辑。",
@@ -572,6 +573,7 @@
     "access": {
       "title": "Session 访问",
       "description": "选择队友可以在这个 ORG 中看到你的哪些本地 session。",
+      "onboardingHint": "之后可随时在该 ORG 的 Sessions 设置中修改。",
       "modes": {
         "off": {
           "title": "关闭",
@@ -678,6 +680,7 @@
       "replay": "回放",
       "linkedSessionMetadataOnly": "仅元数据",
       "linkedSessionUnshared": "未共享",
+      "replayUnavailable": "该 session 已不再共享",
       "unknownOwner": "未知"
     },
     "lock": {

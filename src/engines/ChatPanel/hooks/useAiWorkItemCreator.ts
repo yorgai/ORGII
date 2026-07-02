@@ -10,6 +10,7 @@ import {
 } from "@src/api/http/project";
 import Message from "@src/components/Message";
 import type { SessionLaunchSuccessInfo } from "@src/engines/SessionCore/hooks/session/useSessionCreator/useSessionLaunch/types";
+import { allocateCollabAwareWorkItemId } from "@src/features/TeamCollaboration/collabShortId";
 import i18n from "@src/i18n";
 import type { AgentDefinition } from "@src/modules/MainApp/AgentOrgs/types";
 import { SESSION_TARGET_KIND } from "@src/store/session";
@@ -179,8 +180,11 @@ export function useAiWorkItemCreator({
     const selectedProjectId = selectedProject?.meta.id ?? draft.projectId ?? "";
     const selectedProjectName = selectedProject?.meta.name ?? "";
     const now = new Date().toISOString();
+    // Project-scoped ids go through the collab-aware allocator (design
+    // §16.5): server counter under a collab-synced org, local counter
+    // otherwise. Standalone work items have no project → no collab org.
     const shortId = selectedProjectSlug
-      ? await projectApi.allocateWorkItemId(selectedProjectSlug)
+      ? await allocateCollabAwareWorkItemId(selectedProjectSlug)
       : await projectApi.allocateStandaloneWorkItemId();
     const title = draft.name.trim() || AI_WORK_ITEM_DEFAULT_TITLE;
     const description = draft.description.trim();

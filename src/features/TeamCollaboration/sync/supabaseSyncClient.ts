@@ -436,10 +436,16 @@ export const supabaseSyncClient: CollabSyncBackendClient = {
         {},
         z.number().nullable()
       );
-      // The server may run a newer schema than this client understands.
-      const ok =
+      // Version skew (design §10): a server schema NEWER than this build is
+      // its own state — the fix is upgrading the app, not re-running the
+      // setup SQL, so it must not collapse into the "missing" error.
+      if (
         typeof schemaVersion === "number" &&
-        schemaVersion >= SUPABASE_SYNC_SCHEMA_VERSION;
+        schemaVersion > SUPABASE_SYNC_SCHEMA_VERSION
+      ) {
+        return { ok: false, serverNewer: true, schemaVersion, missing: [] };
+      }
+      const ok = schemaVersion === SUPABASE_SYNC_SCHEMA_VERSION;
       return {
         ok,
         schemaVersion: schemaVersion ?? undefined,

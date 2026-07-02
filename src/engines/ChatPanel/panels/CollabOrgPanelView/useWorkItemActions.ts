@@ -15,6 +15,7 @@ import { useCallback, useState } from "react";
 
 import type { EnrichedWorkItem, ProjectData } from "@src/api/http/project";
 import { enrichedWorkItemToUI, projectDataToUI } from "@src/api/http/project";
+import Message from "@src/components/Message";
 import {
   type SupabaseSyncProfile,
   getSyncProfile,
@@ -114,12 +115,16 @@ export function useWorkItemActions({
           );
         }
       } catch (error) {
+        // A persisted linked-session record can outlive the share (owner
+        // revoked it / dialed accessMode down): the Replay button still
+        // renders, so the failure must be user-visible, not logger-only.
         logger.error("failed to replay linked session", error);
+        Message.error(t("collaboration.workitem.replayUnavailable"));
       } finally {
         setReplayingSessionId(null);
       }
     },
-    [openSession, org]
+    [openSession, org, t]
   );
 
   return {

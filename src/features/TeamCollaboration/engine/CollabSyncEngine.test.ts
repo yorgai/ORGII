@@ -13,6 +13,7 @@ import {
   collabMembersAtom,
   collabOrgsAtom,
   collabPendingOpenSessionAtom,
+  collabPublishedSessionKeysAtom,
   collabRepoJoinRequestsAtom,
   collabSessionAccessSettingsAtom,
   collabSessionPushCursorsAtom,
@@ -20,6 +21,7 @@ import {
   remoteTeammateSessionsAtom,
 } from "@src/store/collaboration/collabOrgsAtom";
 import {
+  COLLAB_CONNECTION_STATUS,
   COLLAB_IDENTITY_KIND,
   COLLAB_ROLE,
   COLLAB_SESSION_ACCESS_MODE,
@@ -65,6 +67,7 @@ vi.mock("@src/engines/SessionCore/core/store/EventStoreProxy", () => ({
     getPersistedEvents: vi.fn(),
     set: vi.fn(),
     saveToCache: vi.fn(),
+    clear: vi.fn(),
   },
 }));
 
@@ -218,6 +221,7 @@ describe("CollabSyncEngine", () => {
     store.set(remoteTeammateSessionsAtom, []);
     store.set(collabLastSyncTimestampsAtom, {});
     store.set(collabSessionPushCursorsAtom, {});
+    store.set(collabPublishedSessionKeysAtom, {});
     store.set(collabPendingOpenSessionAtom, null);
     store.set(sessionsAtom, []);
   }
@@ -262,6 +266,7 @@ describe("CollabSyncEngine", () => {
     eventStoreMock.getEvents.mockResolvedValue([]);
     eventStoreMock.getPersistedEvents.mockResolvedValue([]);
     eventStoreMock.set.mockResolvedValue(undefined);
+    eventStoreMock.clear.mockResolvedValue(undefined);
     // es_save_to_cache returns the number of events durably persisted (0 on a
     // failed/empty write). Mirror that: report the count of the most recent
     // set() so a successful import reports > 0 and the failure path can be
@@ -455,13 +460,22 @@ describe("CollabSyncEngine", () => {
     expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(4);
   });
 
-  it("tombstones an OFF session exactly once across sweeps", async () => {
+  it("tombstones a previously published OFF session exactly once across sweeps", async () => {
     seedConnection(COLLAB_SESSION_ACCESS_MODE.OFF);
     store.set(sessionsAtom, [LOCAL_SESSION]);
+    // Publish evidence from an earlier run (persisted): the tombstone is
+    // warranted — the server still holds this session's metadata.
+    store.set(collabPublishedSessionKeysAtom, {
+      "org-1:session-1": "2026-06-30T00:00:00.000Z",
+    });
 
     engine.start(store);
     await settle();
     expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
+    // The tombstone prunes the persisted publish evidence.
+    expect(
+      store.get(collabPublishedSessionKeysAtom)["org-1:session-1"]
+    ).toBeUndefined();
 
     store.set(sessionsAtom, [{ ...LOCAL_SESSION }]);
     await vi.advanceTimersByTimeAsync(3_000);
@@ -470,9 +484,31 @@ describe("CollabSyncEngine", () => {
     expect(syncMock.upsertSessionMetadata).not.toHaveBeenCalled();
   });
 
+  it("emits no tombstone for a never-published OFF session", async () => {
+    seedConnection(COLLAB_SESSION_ACCESS_MODE.OFF);
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+
+    engine.start(store);
+    await settle();
+    // No publish evidence (no metadata hash, no push cursor, no persisted
+    // published key) → there is nothing on the server to remove; an OFF
+    // session must not emit a tombstone RPC on every engine start.
+    expect(syncMock.removeSessionMetadata).not.toHaveBeenCalled();
+    expect(syncMock.upsertSessionMetadata).not.toHaveBeenCalled();
+
+    store.set(sessionsAtom, [{ ...LOCAL_SESSION }]);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle();
+    expect(syncMock.removeSessionMetadata).not.toHaveBeenCalled();
+  });
+
   it("re-arms the OFF tombstone after the session comes back into scope and off again", async () => {
     seedConnection(COLLAB_SESSION_ACCESS_MODE.OFF);
     store.set(sessionsAtom, [LOCAL_SESSION]);
+    // Published in an earlier run → the initial tombstone has evidence.
+    store.set(collabPublishedSessionKeysAtom, {
+      "org-1:session-1": "2026-06-30T00:00:00.000Z",
+    });
 
     engine.start(store);
     await settle();
@@ -945,7 +981,7 @@ describe("CollabSyncEngine", () => {
     expect(syncMock.rewriteSessionEvents).not.toHaveBeenCalled();
   });
 
-  it("does not persist an import cursor when the durable cache write fails", async () => {
+  it("retries a failed teammate import with the same deterministic id, holds the cursor, and drops the orphan", async () => {
     seedConnection();
     const remote = remoteSession({
       eventsEpoch: 1,
@@ -953,12 +989,12 @@ describe("CollabSyncEngine", () => {
       eventsCount: 2,
       eventsTailHash: "tail-hash",
     });
-    syncMock.listOrgState
-      .mockImplementationOnce(async () => ({
-        ...emptyOrgState(),
-        sessions: [remote],
-      }))
-      .mockImplementation(async () => emptyOrgState());
+    // The same delta window must re-deliver the session on retry — the
+    // engine holds the cursor after a failed import.
+    syncMock.listOrgState.mockImplementation(async () => ({
+      ...emptyOrgState(),
+      sessions: [remote],
+    }));
     syncMock.getSessionEventSegments.mockResolvedValue({
       epoch: 1,
       frozenSeq: 1,
@@ -981,8 +1017,8 @@ describe("CollabSyncEngine", () => {
         },
       ],
     });
-    // The durable cache write fails (transient SQLite lock → swallowed → 0).
-    eventStoreMock.saveToCache.mockResolvedValue(0);
+    // The durable cache write fails ONCE (transient SQLite lock → 0).
+    eventStoreMock.saveToCache.mockResolvedValueOnce(0);
 
     engine.start(store);
     await vi.advanceTimersByTimeAsync(0);
@@ -990,13 +1026,39 @@ describe("CollabSyncEngine", () => {
 
     // Events were attempted, but no "complete" session record/cursor was
     // persisted — otherwise the next pull would see a matching cursor and
-    // never re-fetch, stranding a permanently empty transcript.
+    // never re-fetch, stranding a permanently empty transcript. The
+    // orphaned event-store entry is dropped, the failure keeps the org in
+    // ERROR, and the delta cursor did not advance.
     expect(eventStoreMock.set).toHaveBeenCalledTimes(1);
     const localSessionId = eventStoreMock.set.mock.calls[0][1] as string;
+    expect(eventStoreMock.clear).toHaveBeenCalledWith(localSessionId);
+    expect(
+      store
+        .get(sessionsAtom)
+        .find((session) => session.session_id === localSessionId)
+    ).toBeUndefined();
+    expect(
+      store.get(collabConnectionStatesAtom).find((s) => s.orgId === "org-1")
+        ?.status
+    ).toBe(COLLAB_CONNECTION_STATUS.ERROR);
+    expect(store.get(collabLastSyncTimestampsAtom)["org-1"]).toBeUndefined();
+
+    // Retry on the next cycle reuses the SAME deterministic local id (no
+    // orphan accumulation) and completes the import.
+    // Cycle 1 finished while idle (no focus, no activity) - the next pull
+    // lands on the 60s idle cadence.
+    await vi.advanceTimersByTimeAsync(60_000);
+    await settle(20);
+    expect(eventStoreMock.set).toHaveBeenCalledTimes(2);
+    expect(eventStoreMock.set.mock.calls[1][1]).toBe(localSessionId);
     const imported = store
       .get(sessionsAtom)
       .find((session) => session.session_id === localSessionId);
-    expect(imported).toBeUndefined();
+    expect(imported?.importedFrom).toMatchObject({
+      orgId: "org-1",
+      sourceSessionId: "remote-1",
+    });
+    expect(store.get(collabLastSyncTimestampsAtom)["org-1"]).toBeDefined();
   });
 
   it("applies incremental segment pulls onto the existing imported session", async () => {
@@ -1090,6 +1152,445 @@ describe("CollabSyncEngine", () => {
       count: 3,
       frozenCount: 2,
       tailHash: "tail-2",
+    });
+  });
+
+  it("aborts the OCC re-anchor when the session was unshared mid-flight", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1", "running"),
+    ]);
+
+    engine.start(store);
+    await settle();
+
+    // Anchor push: epoch-1 rewrite creates the cursor.
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
+    expect(
+      store.get(collabSessionPushCursorsAtom)["org-1:session-1"]
+    ).toBeDefined();
+
+    // The next append bounces off OCC; the owner unshares DURING the
+    // re-anchor probe (a server round trip) — the rewrite would otherwise
+    // republish the just-unshared session with the stale settings, and the
+    // sweep's known-removed gate would block any self-healing tombstone.
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1", "running", { streamOutput: "more" }),
+    ]);
+    syncMock.appendSessionEvents.mockRejectedValueOnce(
+      new Error("ORGII_CONFLICT")
+    );
+    syncMock.getSessionEventSegments.mockImplementation(async () => {
+      store.set(collabSessionAccessSettingsAtom, [
+        accessSettings(COLLAB_SESSION_ACCESS_MODE.OFF),
+      ]);
+      return { epoch: 5, frozenSeq: 0, tailHash: "t", count: 1, segments: [] };
+    });
+    const upsertsBeforeConflict =
+      syncMock.upsertSessionMetadata.mock.calls.length;
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+
+    // No re-anchor rewrite, and no metadata republished from stale settings
+    // (the single new upsert happened before the append, while still shared).
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
+    expect(syncMock.upsertSessionMetadata.mock.calls.length).toBe(
+      upsertsBeforeConflict + 1
+    );
+
+    // The sweep (settings change) tombstones the session and purges the
+    // cursor; the aborted push must not have resurrected either.
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
+    expect(
+      store.get(collabSessionPushCursorsAtom)["org-1:session-1"]
+    ).toBeUndefined();
+  });
+
+  it("cancels an in-flight push when the sweep tombstones the session", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1", "running"),
+    ]);
+    let resolveRewrite!: () => void;
+    syncMock.rewriteSessionEvents.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRewrite = resolve;
+        })
+    );
+
+    engine.start(store);
+    await settle();
+
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1); // in flight
+
+    // Sharing turns OFF while the rewrite is on the wire; the sweep
+    // tombstones the session (evidence: the initial metadata publish).
+    store.set(collabSessionAccessSettingsAtom, [
+      accessSettings(COLLAB_SESSION_ACCESS_MODE.OFF),
+    ]);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
+
+    // The push completes AFTER the tombstone — its completion must not
+    // write the cursor back and re-anchor the unshared session.
+    resolveRewrite();
+    await settle(30);
+    expect(store.get(collabSessionPushCursorsAtom)["org-1:session-1"]).toBe(
+      undefined
+    );
+  });
+
+  it("drops in-flight pull writes and purges org-scoped push gates when the org leaves", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    let resolvePull!: (state: CollabOrgState) => void;
+    syncMock.listOrgState.mockImplementationOnce(
+      () =>
+        new Promise<CollabOrgState>((resolve) => {
+          resolvePull = resolve;
+        })
+    );
+
+    engine.start(store);
+    await settle();
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(0); // pull cycle hangs on listOrgState
+    await settle();
+    expect(syncMock.verifySetup).toHaveBeenCalledTimes(1);
+
+    // The org leaves while the pull is in flight.
+    store.set(collabOrgsAtom, []);
+    await settle();
+
+    // The delayed response must not resurrect purged org state or advance
+    // the org's delta cursor.
+    resolvePull({ ...emptyOrgState(), sessions: [remoteSession()] });
+    await settle(20);
+    expect(store.get(remoteTeammateSessionsAtom)).toHaveLength(0);
+    expect(store.get(collabLastSyncTimestampsAtom)["org-1"]).toBeUndefined();
+
+    // Rejoin: org-prefixed in-memory gates (metadata hashes, verify cache)
+    // were purged, so the publish and setup verification run fresh instead
+    // of being suppressed by stale entries.
+    store.set(collabOrgsAtom, [ORG]);
+    await vi.advanceTimersByTimeAsync(0);
+    await settle(20);
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(2);
+    expect(syncMock.verifySetup).toHaveBeenCalledTimes(2);
+  });
+
+  it("publishes legacy snapshots from the persisted history and denies when it reads empty", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    syncMock.listOrgState.mockImplementation(async () => ({
+      ...emptyOrgState(),
+      snapshotRequests: [
+        {
+          requestId: "req-1",
+          orgId: "org-1",
+          requesterMemberId: "m2",
+          ownerMemberId: "m1",
+          sourceSessionId: "session-1",
+          status: "pending" as const,
+          createdAt: "2026-07-01T11:00:00.000Z",
+        },
+      ],
+    }));
+    // Cold session: the persisted read returns nothing although the session
+    // metadata shows history (status completed) — publishing would ship an
+    // empty transcript the requester permanently marks completed.
+    eventStoreMock.getPersistedEvents.mockResolvedValue([]);
+
+    engine.start(store);
+    await vi.advanceTimersByTimeAsync(0);
+    await settle(20);
+
+    expect(syncMock.denySessionSnapshot).toHaveBeenCalledTimes(1);
+    expect(syncMock.denySessionSnapshot.mock.calls[0][0]).toMatchObject({
+      requestId: "req-1",
+      reason: expect.stringContaining("history is unavailable"),
+    });
+    expect(syncMock.publishSessionSnapshot).not.toHaveBeenCalled();
+    // The windowed in-memory view is never consulted for the publish.
+    expect(eventStoreMock.getEvents).not.toHaveBeenCalled();
+
+    // Once the persisted read works, the FULL history is published.
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1"),
+      makeEvent("e2"),
+    ]);
+    // Cycle 1 finished while idle (no focus, no activity) - the next pull
+    // lands on the 60s idle cadence.
+    await vi.advanceTimersByTimeAsync(60_000);
+    await settle(20);
+    expect(syncMock.publishSessionSnapshot).toHaveBeenCalledTimes(1);
+    const published = syncMock.publishSessionSnapshot.mock.calls[0][0];
+    expect(published.events.map((event) => event.id)).toEqual(["e1", "e2"]);
+  });
+
+  it("imports a legacy snapshot only after the durable write succeeds, retrying on failure", async () => {
+    seedConnection();
+    store.set(collabSessionSnapshotRequestsAtom, [
+      {
+        requestId: "req-2",
+        orgId: "org-1",
+        requesterMemberId: "m1",
+        ownerMemberId: "m2",
+        sourceSessionId: "remote-9",
+        createdAt: "2026-07-01T11:00:00.000Z",
+        status: "sent",
+      },
+    ]);
+    const payloadSession = remoteSession({
+      id: "org-1:m2:remote-9",
+      sourceSessionId: "remote-9",
+    });
+    syncMock.listOrgState.mockImplementation(async () => ({
+      ...emptyOrgState(),
+      snapshotRequests: [
+        {
+          requestId: "req-2",
+          orgId: "org-1",
+          requesterMemberId: "m1",
+          ownerMemberId: "m2",
+          sourceSessionId: "remote-9",
+          status: "completed" as const,
+          createdAt: "2026-07-01T11:00:00.000Z",
+          session: payloadSession,
+          events: [makeEvent("e1")],
+        },
+      ],
+    }));
+    // Cycle 1: the durable cache write fails.
+    eventStoreMock.saveToCache.mockResolvedValueOnce(0);
+
+    engine.start(store);
+    await vi.advanceTimersByTimeAsync(0);
+    await settle(20);
+
+    // No session record was persisted (the old order persisted it BEFORE
+    // the event write, marking the request done over an empty transcript),
+    // the orphaned events were dropped, the request status is untouched for
+    // retry, and the delta cursor held.
+    expect(eventStoreMock.set).toHaveBeenCalledTimes(1);
+    const failedId = eventStoreMock.set.mock.calls[0][1] as string;
+    expect(eventStoreMock.clear).toHaveBeenCalledWith(failedId);
+    expect(store.get(sessionsAtom)).toHaveLength(0);
+    expect(store.get(collabSessionSnapshotRequestsAtom)[0]?.status).toBe(
+      "sent"
+    );
+    expect(store.get(collabPendingOpenSessionAtom)).toBeNull();
+    expect(store.get(collabLastSyncTimestampsAtom)["org-1"]).toBeUndefined();
+
+    // Cycle 2: the write succeeds → the import completes exactly once.
+    // Cycle 1 finished while idle (no focus, no activity) - the next pull
+    // lands on the 60s idle cadence.
+    await vi.advanceTimersByTimeAsync(60_000);
+    await settle(20);
+    const imported = store
+      .get(sessionsAtom)
+      .find((session) => session.importedFrom?.sourceSessionId === "remote-9");
+    expect(imported?.importedFrom).toMatchObject({
+      orgId: "org-1",
+      epoch: 0,
+      count: 1,
+    });
+    expect(store.get(collabSessionSnapshotRequestsAtom)[0]?.status).toBe(
+      "completed"
+    );
+    expect(store.get(collabPendingOpenSessionAtom)?.sessionId).toBe(
+      imported?.session_id
+    );
+    expect(store.get(collabLastSyncTimestampsAtom)["org-1"]).toBeDefined();
+  });
+
+  it("persists published-session keys and tombstones a session deleted while the app was closed", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+
+    engine.start(store);
+    await settle();
+    expect(syncMock.upsertSessionMetadata).toHaveBeenCalledTimes(1);
+    // Publish evidence is persisted next to the push cursors.
+    expect(
+      store.get(collabPublishedSessionKeysAtom)["org-1:session-1"]
+    ).toBeDefined();
+
+    // Simulated restart: a NEW engine instance (all in-memory maps gone);
+    // the session was deleted while the app was closed.
+    engine.stop();
+    store.set(sessionsAtom, []);
+    syncMock.removeSessionMetadata.mockClear();
+    engine = new CollabSyncEngine();
+    engine.start(store);
+    await settle(20);
+
+    // The first sweep diffs the PERSISTED published keys against
+    // sessionsAtom and tombstones the gone session.
+    expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
+    expect(syncMock.removeSessionMetadata.mock.calls[0][0]).toMatchObject({
+      orgId: "org-1",
+      sourceSessionId: "session-1",
+    });
+    expect(
+      store.get(collabPublishedSessionKeysAtom)["org-1:session-1"]
+    ).toBeUndefined();
+
+    // Exactly once — later sweeps stay silent.
+    store.set(sessionsAtom, []);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle();
+    expect(syncMock.removeSessionMetadata).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps ERROR status and holds the delta cursor when a teammate import fails", async () => {
+    seedConnection();
+    const remote = remoteSession({
+      eventsEpoch: 1,
+      eventsFrozenSeq: 1,
+      eventsCount: 1,
+    });
+    syncMock.listOrgState.mockImplementation(async () => ({
+      ...emptyOrgState(),
+      sessions: [remote],
+    }));
+    syncMock.getSessionEventSegments
+      .mockRejectedValueOnce(new Error("segments fetch failed"))
+      .mockResolvedValue({
+        epoch: 1,
+        frozenSeq: 1,
+        tailHash: null,
+        count: 1,
+        segments: [
+          {
+            seq: 1,
+            isTail: false,
+            events: [makeEvent("e1")],
+            eventCount: 1,
+            segmentHash: "h1",
+          },
+        ],
+      });
+
+    engine.start(store);
+    await vi.advanceTimersByTimeAsync(0);
+    await settle(20);
+
+    // Cycle 1: the import failed → ERROR is not overwritten by CONNECTED in
+    // the same cycle, and the cursor did NOT advance (the session must stay
+    // in the next delta window — advancing would drop it forever).
+    const afterFailure = store
+      .get(collabConnectionStatesAtom)
+      .find((s) => s.orgId === "org-1");
+    expect(afterFailure?.status).toBe(COLLAB_CONNECTION_STATUS.ERROR);
+    expect(afterFailure?.error).toContain("remote-1");
+    expect(store.get(collabLastSyncTimestampsAtom)["org-1"]).toBeUndefined();
+
+    // Cycle 2: the delta re-delivers the session; the import succeeds.
+    // Cycle 1 finished while idle (no focus, no activity) - the next pull
+    // lands on the 60s idle cadence.
+    await vi.advanceTimersByTimeAsync(60_000);
+    await settle(20);
+    expect(
+      store.get(collabConnectionStatesAtom).find((s) => s.orgId === "org-1")
+        ?.status
+    ).toBe(COLLAB_CONNECTION_STATUS.CONNECTED);
+    expect(store.get(collabLastSyncTimestampsAtom)["org-1"]).toBeDefined();
+    expect(
+      store
+        .get(sessionsAtom)
+        .some((session) => session.importedFrom?.sourceSessionId === "remote-1")
+    ).toBe(true);
+  });
+
+  it("re-arms a failed segments push with bounded backoff", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1", "running"),
+    ]);
+    syncMock.rewriteSessionEvents
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockResolvedValue(undefined);
+
+    engine.start(store);
+    await settle();
+
+    fireEventStoreChange("session-1");
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
+
+    // First retry fires after the 5s backoff step (the old engine waited
+    // for the NEXT local event — a finished session never retried)...
+    await vi.advanceTimersByTimeAsync(4_999);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(2);
+
+    // ...the second after 15s; it succeeds and writes the cursor.
+    await vi.advanceTimersByTimeAsync(15_000);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(3);
+    expect(
+      store.get(collabSessionPushCursorsAtom)["org-1:session-1"]
+    ).toMatchObject({ epoch: 1, pushedCount: 1 });
+
+    // Success clears the retry loop.
+    await vi.advanceTimersByTimeAsync(60_000);
+    await settle(30);
+    expect(syncMock.rewriteSessionEvents).toHaveBeenCalledTimes(3);
+  });
+
+  it("resumes an interrupted segments push on start when the cursor lags the persisted history", async () => {
+    seedConnection();
+    store.set(sessionsAtom, [LOCAL_SESSION]);
+    store.set(collabSessionPushCursorsAtom, {
+      "org-1:session-1": {
+        orgId: "org-1",
+        sessionId: "session-1",
+        epoch: 1,
+        frozenSeq: 0,
+        pushedCount: 1,
+        frozenEventCount: 0,
+        frozenChainHash: "",
+        tailHash: "stale-tail",
+      },
+    });
+    // Two persisted events vs a cursor covering one: the app stopped between
+    // the event write and the push.
+    eventStoreMock.getPersistedEvents.mockResolvedValue([
+      makeEvent("e1", "running"),
+      makeEvent("e2", "running"),
+    ]);
+
+    engine.start(store);
+    await settle(20);
+    // No local event fires — the reconcile-time sweep re-arms the push.
+    await vi.advanceTimersByTimeAsync(3_000);
+    await settle(30);
+
+    expect(syncMock.appendSessionEvents).toHaveBeenCalledTimes(1);
+    expect(syncMock.appendSessionEvents.mock.calls[0][0]).toMatchObject({
+      expectedEpoch: 1,
+      expectedFrozenSeq: 0,
+      totalCount: 2,
     });
   });
 });

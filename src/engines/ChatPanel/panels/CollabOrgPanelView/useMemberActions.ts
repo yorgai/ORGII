@@ -302,6 +302,18 @@ export function useMemberActions({
         // teammate project/work-item native rows synced under this org's
         // aliased project org (deleting a project cascades its work items).
         // Best-effort: a failure here must not undo the leave.
+        //
+        // KNOWN GAP (Rust-side follow-up): the aliased project org is still
+        // marked collab-synced (source='collab' / sync_provider='orgii_collab')
+        // when these deletes run, so each one enqueues an orgii_collab DELETE
+        // tombstone into the outbox of an org we just left. The member
+        // credential is gone, the engine drops the org from its reconcile
+        // loop, and those rows can never be drained or acked — they sit in
+        // the outbox forever, and the project_org keeps its collab marking.
+        // The project api has no unmark today
+        // (`project_configure_org_collab_sync` only MARKS an org); clearing
+        // the marking before the purge plus purging the org's outbox rows
+        // needs a Rust-side command (org unmark + outbox purge on leave).
         if (removeImportedCopies) {
           const projectOrgId = org.projectOrgId ?? org.id;
           try {

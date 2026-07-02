@@ -405,6 +405,7 @@
     "openSupabaseSqlEditor": "Открыть Supabase SQL Editor",
     "supabaseSetupVerified": "Настройка Supabase проверена",
     "supabaseSetupMissing": "Настройка Supabase отсутствует. Скопируйте SQL, выполните его в Supabase SQL Editor и проверьте снова.",
+    "supabaseSetupServerNewer": "This ORG's Supabase schema is newer than this app version. Update ORGII, then try again.",
     "orgDemoTitle": "ORG",
     "orgNotFound": "ORG не найдена",
     "tabs": {
@@ -459,6 +460,7 @@
     "access": {
       "title": "Доступ к сессиям",
       "description": "Выберите, что teammates могут видеть из ваших локальных sessions в этом ORG.",
+      "onboardingHint": "You can change this anytime in the ORG's Sessions settings.",
       "modes": {
         "off": {
           "title": "Выкл.",
@@ -565,6 +567,7 @@
       "replay": "Replay",
       "linkedSessionMetadataOnly": "Metadata only",
       "linkedSessionUnshared": "Not shared",
+      "replayUnavailable": "This session is no longer shared",
       "unknownOwner": "Unknown"
     },
     "lock": {

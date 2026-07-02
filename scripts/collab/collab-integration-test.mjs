@@ -700,15 +700,35 @@ async function main() {
     (j) => j?.version === 2
   );
 
-  // ---- M6: short-id allocator (design §16.5) ----
-  assertOk(
-    "project gains a work item prefix (v3)",
+  // ---- M6: work item prefix is admin-gated (design §16.9) ----
+  // The prefix names every short id the allocator mints, so changing it on
+  // an existing project is an admin operation (mirrors orgii_delete_project).
+  assertError(
+    "non-admin cannot change the work item prefix",
     await rpc("orgii_upsert_project", {
       p_org_id: orgId, ...memberAuthB, base_version: 2,
       project: { id: projectId, orgId, name: "P v2", slug: `p-${run}`, status: "in_progress", workItemPrefix: "AUT" },
     }),
+    "ORGII_UNAUTHORIZED"
+  );
+  assertOk(
+    "admin sets the work item prefix (v3)",
+    await rpc("orgii_upsert_project", {
+      p_org_id: orgId, ...memberAuthA, base_version: 2,
+      project: { id: projectId, orgId, name: "P v2", slug: `p-${run}`, status: "in_progress", workItemPrefix: "AUT" },
+    }),
     (j) => j?.version === 3
   );
+  assertOk(
+    "non-admin edit with the prefix unchanged still passes (v4)",
+    await rpc("orgii_upsert_project", {
+      p_org_id: orgId, ...memberAuthB, base_version: 3,
+      project: { id: projectId, orgId, name: "P v4 member edit", slug: `p-${run}`, status: "in_progress", workItemPrefix: "AUT" },
+    }),
+    (j) => j?.version === 4
+  );
+
+  // ---- M6: short-id allocator (design §16.5) ----
   const alloc1 = await rpc("orgii_allocate_work_item_short_id", {
     p_org_id: orgId, ...memberAuthA, project_id: projectId,
   });
@@ -739,8 +759,41 @@ async function main() {
   const allocatedRow = (allocatedProject.json?.projects ?? []).find((p) => p.id === projectId);
   record(
     "allocation does not bump the project row version (server-owned counter)",
-    allocatedRow?.version === 3,
+    allocatedRow?.version === 4,
     `got version ${allocatedRow?.version}`
+  );
+
+  // ---- M6: counter advances past synced short ids (collision fix) ----
+  // A work item that arrives through upsert with a higher numeric suffix
+  // (offline-provisional id, import, pre-share row) must push the allocator
+  // counter past it — otherwise the allocator would re-mint AUT-0007 for the
+  // next caller and two rows would collide on the same display id.
+  assertOk(
+    "synced work item with an out-of-band short id lands",
+    await rpc("orgii_upsert_work_item", {
+      p_org_id: orgId, ...memberAuthB, base_version: null,
+      work_item: {
+        id: `wi-import-${run}`, projectId, shortId: "AUT-0007",
+        title: "Imported item", body: "b", status: "backlog", priority: "none",
+      },
+    }),
+    (j) => j?.version === 1
+  );
+  const alloc3 = await rpc("orgii_allocate_work_item_short_id", {
+    p_org_id: orgId, ...memberAuthA, project_id: projectId,
+  });
+  assertOk(
+    "allocator skips past the synced short id (counter advanced)",
+    alloc3,
+    (j) => j?.shortId === "AUT-0008" && j?.n === 8,
+    `got ${JSON.stringify(alloc3.json)}`
+  );
+  const advancedProject = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthA });
+  const advancedRow = (advancedProject.json?.projects ?? []).find((p) => p.id === projectId);
+  record(
+    "counter advance does not bump the project row version",
+    advancedRow?.version === 4,
+    `got version ${advancedRow?.version}`
   );
 
   // ---- M6: work item OCC retry realism (design §16.4) ----
@@ -799,12 +852,47 @@ async function main() {
     lockedRow?.executionLock?.lockedByMemberId === aId,
     `got ${JSON.stringify(lockedRow?.executionLock)}`
   );
+  record(
+    "acquire stamps a server lockedAt (TTL anchor)",
+    typeof lockedRow?.executionLock?.lockedAt === "string" && lockedRow.executionLock.lockedAt.length > 0,
+    `got ${JSON.stringify(lockedRow?.executionLock?.lockedAt)}`
+  );
   assertError(
     "second acquire while held conflicts",
     await rpc("orgii_acquire_work_item_lock", {
       p_org_id: orgId, ...memberAuthB, work_item_id: workItemId, lock_payload: { activeSessionId: "other" },
     }),
     "ORGII_CONFLICT"
+  );
+  assertOk(
+    "holder re-acquire is idempotent (heartbeat, version 5)",
+    await rpc("orgii_acquire_work_item_lock", {
+      p_org_id: orgId, ...memberAuthA, work_item_id: workItemId,
+      lock_payload: { activeSessionId: `session-${run}-2` },
+    }),
+    (j) => Number(j) === 5
+  );
+  // executionLock is SERVER-OWNED: a whole-row upsert (here with a spoofed
+  // lock aimed at hijacking the holder) must not touch the stored lock —
+  // only acquire/release mutate it.
+  assertOk(
+    "whole-row upsert while locked succeeds (version 6)",
+    await rpc("orgii_upsert_work_item", {
+      p_org_id: orgId, ...memberAuthB, base_version: 5,
+      work_item: {
+        ...workItemBase, title: "Pushed during lock",
+        executionLock: { lockedByMemberId: bId, activeSessionId: "hijack" },
+      },
+    }),
+    (j) => j?.version === 6
+  );
+  const afterPushState = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthA });
+  const afterPushRow = (afterPushState.json?.workItems ?? []).find((w) => w.id === workItemId);
+  record(
+    "client-sent executionLock cannot clobber the stored lock (server-owned)",
+    afterPushRow?.executionLock?.lockedByMemberId === aId &&
+      afterPushRow?.executionLock?.activeSessionId === `session-${run}-2`,
+    `got ${JSON.stringify(afterPushRow?.executionLock)}`
   );
   assertError(
     "non-holder member cannot release",
@@ -818,28 +906,74 @@ async function main() {
     await rpc("orgii_release_work_item_lock", {
       p_org_id: orgId, ...memberAuthA, work_item_id: workItemId,
     }),
-    (j) => Number(j) === 5
+    (j) => Number(j) === 7
   );
   assertOk(
     "release when unlocked is idempotent (version unchanged)",
     await rpc("orgii_release_work_item_lock", {
       p_org_id: orgId, ...memberAuthA, work_item_id: workItemId,
     }),
-    (j) => Number(j) === 5
+    (j) => Number(j) === 7
   );
   assertOk(
     "member B acquires after release",
     await rpc("orgii_acquire_work_item_lock", {
       p_org_id: orgId, ...memberAuthB, work_item_id: workItemId, lock_payload: { activeSessionId: "b-session" },
     }),
-    (j) => Number(j) === 6
+    (j) => Number(j) === 8
   );
   assertOk(
     "admin force-releases another member's lock",
     await rpc("orgii_release_work_item_lock", {
       p_org_id: orgId, ...memberAuthA, work_item_id: workItemId,
     }),
-    (j) => Number(j) === 7
+    (j) => Number(j) === 9
+  );
+
+  // ---- M6: stale-lock takeover (30-minute TTL) ----
+  // lockedAt is server-stamped but a PAST client value is honored (clamped
+  // to now() at most — pre-dating only weakens your own lease), which is
+  // exactly what lets this test age a lock without waiting 30 minutes.
+  assertOk(
+    "B acquires with a pre-dated lease (version 10)",
+    await rpc("orgii_acquire_work_item_lock", {
+      p_org_id: orgId, ...memberAuthB, work_item_id: workItemId,
+      lock_payload: {
+        activeSessionId: "b-stale",
+        lockedAt: new Date(Date.now() - 31 * 60_000).toISOString(),
+      },
+    }),
+    (j) => Number(j) === 10
+  );
+  assertOk(
+    "another member takes over the stale lease (version 11)",
+    await rpc("orgii_acquire_work_item_lock", {
+      p_org_id: orgId, ...memberAuthC, work_item_id: workItemId,
+      lock_payload: { activeSessionId: "c-takeover" },
+    }),
+    (j) => Number(j) === 11
+  );
+  const takeoverState = await rpc("orgii_list_org_state", { p_org_id: orgId, ...memberAuthA });
+  const takeoverRow = (takeoverState.json?.workItems ?? []).find((w) => w.id === workItemId);
+  record(
+    "takeover re-stamps holder and lease",
+    takeoverRow?.executionLock?.lockedByMemberId === cId &&
+      takeoverRow?.executionLock?.activeSessionId === "c-takeover",
+    `got ${JSON.stringify(takeoverRow?.executionLock)}`
+  );
+  assertError(
+    "fresh lease still conflicts for non-holders",
+    await rpc("orgii_acquire_work_item_lock", {
+      p_org_id: orgId, ...memberAuthB, work_item_id: workItemId, lock_payload: { activeSessionId: "b-again" },
+    }),
+    "ORGII_CONFLICT"
+  );
+  assertOk(
+    "admin force-releases the takeover lock (cleanup)",
+    await rpc("orgii_release_work_item_lock", {
+      p_org_id: orgId, ...memberAuthA, work_item_id: workItemId,
+    }),
+    (j) => Number(j) === 12
   );
 
   // ---- roles: promote, last-admin guard, removal kills token ----

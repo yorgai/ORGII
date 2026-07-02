@@ -1,15 +1,28 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import {
+  COLLAB_IDENTITY_KIND,
   COLLAB_SESSION_ACCESS_MODE,
   COLLAB_WORKSPACE_SCOPE,
 } from "@src/store/collaboration/types";
-import type { CollabSessionAccessSettings } from "@src/store/collaboration/types";
+import type {
+  CollabSessionAccessSettings,
+  RemoteTeammateSessionMetadata,
+} from "@src/store/collaboration/types";
+import { sessionsAtom } from "@src/store/session/sessionAtom/atoms";
 import type { Session } from "@src/store/session/sessionAtom/types";
+import { createInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
+import type {
+  CollabSyncBackendClient,
+  SessionEventSegmentsSnapshot,
+} from "../sync/CollabSyncBackend";
 import {
   computeSessionMetadataHash,
+  deriveImportedSessionId,
+  importRemoteSession,
   splitFrozenIntoSegments,
 } from "./collabSyncEngineHelpers";
 
@@ -20,8 +33,11 @@ vi.mock("@src/engines/SessionCore/core/store/EventStoreProxy", () => ({
     getPersistedEvents: vi.fn(),
     set: vi.fn(),
     saveToCache: vi.fn(),
+    clear: vi.fn(),
   },
 }));
+
+const eventStoreMock = vi.mocked(eventStoreProxy);
 
 const SESSION: Session = {
   session_id: "session-1",
@@ -162,5 +178,182 @@ describe("splitFrozenIntoSegments 256KB packing", () => {
     expect(segments[0].seq).toBe(5);
     expect(segments[0].events).toHaveLength(1);
     expect(segments[0].events[0].id).toBe("huge");
+  });
+});
+
+describe("deriveImportedSessionId", () => {
+  it("is deterministic per (orgId, sourceSessionId) and keeps the imported-session prefix", async () => {
+    const first = await deriveImportedSessionId("org-1", "remote-1");
+    const second = await deriveImportedSessionId("org-1", "remote-1");
+    const otherSession = await deriveImportedSessionId("org-1", "remote-2");
+    const otherOrg = await deriveImportedSessionId("org-2", "remote-1");
+    expect(first).toBe(second);
+    expect(first).toMatch(/^imported-session-[0-9a-f]{32}$/);
+    expect(otherSession).not.toBe(first);
+    expect(otherOrg).not.toBe(first);
+  });
+});
+
+describe("importRemoteSession", () => {
+  const store = createInstrumentedStore();
+  const profile = { supabaseUrl: "https://team.supabase.co", anonKey: "k" };
+
+  function makeRemote(
+    overrides: Partial<RemoteTeammateSessionMetadata> = {}
+  ): RemoteTeammateSessionMetadata {
+    return {
+      id: "org-1:m2:remote-1",
+      orgId: "org-1",
+      ownerMemberId: "m2",
+      ownerUserId: "m2",
+      ownerDisplayName: "Bob",
+      ownerIdentityKind: COLLAB_IDENTITY_KIND.HUMAN,
+      sourceSessionId: "remote-1",
+      title: "Remote session",
+      repoPath: "/repo/shared",
+      lastActivityAt: "2026-07-01T00:00:00.000Z",
+      eventsEpoch: 1,
+      eventsFrozenSeq: 1,
+      eventsCount: 1,
+      eventsTailHash: undefined,
+      ...overrides,
+    };
+  }
+
+  function makeSnapshot(): SessionEventSegmentsSnapshot {
+    return {
+      epoch: 1,
+      frozenSeq: 1,
+      tailHash: null,
+      count: 1,
+      segments: [
+        {
+          seq: 1,
+          isTail: false,
+          events: [
+            {
+              id: "e1",
+              sessionId: "remote-1",
+              displayStatus: "completed",
+            } as unknown as SessionEvent,
+          ],
+          eventCount: 1,
+          segmentHash: "h1",
+        },
+      ],
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    store.set(sessionsAtom, []);
+    eventStoreMock.set.mockResolvedValue(undefined);
+    eventStoreMock.clear.mockResolvedValue(undefined);
+    eventStoreMock.getPersistedEvents.mockResolvedValue([]);
+    eventStoreMock.saveToCache.mockResolvedValue(1);
+  });
+
+  it("rejects on a failed durable write, clears the orphan, and reuses the deterministic id on retry", async () => {
+    const client = {
+      getSessionEventSegments: vi.fn(async () => makeSnapshot()),
+    } satisfies Pick<CollabSyncBackendClient, "getSessionEventSegments">;
+    // The durable cache write fails (transient SQLite lock → swallowed → 0).
+    eventStoreMock.saveToCache.mockResolvedValueOnce(0);
+
+    await expect(
+      importRemoteSession({
+        client,
+        profile,
+        orgId: "org-1",
+        remoteSession: makeRemote(),
+      })
+    ).rejects.toThrow(/durably persist/);
+
+    const expectedId = await deriveImportedSessionId("org-1", "remote-1");
+    // The events landed on the deterministic id and the orphaned store
+    // entry was removed again (no session record points at it).
+    expect(eventStoreMock.set).toHaveBeenCalledTimes(1);
+    expect(eventStoreMock.set.mock.calls[0][1]).toBe(expectedId);
+    expect(eventStoreMock.clear).toHaveBeenCalledWith(expectedId);
+    expect(store.get(sessionsAtom)).toHaveLength(0);
+
+    // The retry lands on the SAME id — one orphan slot, not one per cycle.
+    const result = await importRemoteSession({
+      client,
+      profile,
+      orgId: "org-1",
+      remoteSession: makeRemote(),
+    });
+    expect(result?.localSessionId).toBe(expectedId);
+    expect(result?.updated).toBe(true);
+    expect(eventStoreMock.set).toHaveBeenCalledTimes(2);
+    expect(eventStoreMock.set.mock.calls[1][1]).toBe(expectedId);
+  });
+
+  it("dedups concurrent imports of the same remote session in flight", async () => {
+    let resolveFirstFetch!: (snapshot: SessionEventSegmentsSnapshot) => void;
+    const client = {
+      getSessionEventSegments: vi
+        .fn<() => Promise<SessionEventSegmentsSnapshot>>()
+        .mockImplementationOnce(
+          () =>
+            new Promise<SessionEventSegmentsSnapshot>((resolve) => {
+              resolveFirstFetch = resolve;
+            })
+        )
+        .mockResolvedValue({
+          ...makeSnapshot(),
+          frozenSeq: 2,
+          count: 2,
+          segments: [
+            ...makeSnapshot().segments,
+            {
+              seq: 2,
+              isTail: false,
+              events: [
+                {
+                  id: "e2",
+                  sessionId: "remote-1",
+                  displayStatus: "completed",
+                } as unknown as SessionEvent,
+              ],
+              eventCount: 1,
+              segmentHash: "h2",
+            },
+          ],
+        }),
+    } satisfies Pick<CollabSyncBackendClient, "getSessionEventSegments">;
+
+    // Engine PullLoop and a panel replay click race on the same session:
+    // the second call must share the first call's in-flight promise.
+    const first = importRemoteSession({
+      client,
+      profile,
+      orgId: "org-1",
+      remoteSession: makeRemote(),
+    });
+    const second = importRemoteSession({
+      client,
+      profile,
+      orgId: "org-1",
+      remoteSession: makeRemote(),
+    });
+    expect(client.getSessionEventSegments).toHaveBeenCalledTimes(1);
+
+    resolveFirstFetch(makeSnapshot());
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+    expect(firstResult?.localSessionId).toBe(secondResult?.localSessionId);
+    expect(eventStoreMock.set).toHaveBeenCalledTimes(1);
+
+    // The in-flight entry is cleared afterwards: a later call with a newer
+    // remote summary fetches again instead of returning the stale promise.
+    const third = await importRemoteSession({
+      client,
+      profile,
+      orgId: "org-1",
+      remoteSession: makeRemote({ eventsFrozenSeq: 2, eventsCount: 2 }),
+    });
+    expect(client.getSessionEventSegments).toHaveBeenCalledTimes(2);
+    expect(third?.updated).toBe(true);
   });
 });

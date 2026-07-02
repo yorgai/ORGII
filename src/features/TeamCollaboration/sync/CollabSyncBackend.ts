@@ -347,6 +347,13 @@ export interface VerifySetupResult {
   ok: boolean;
   schemaVersion?: number;
   missing?: string[];
+  /**
+   * The server runs a NEWER schema than this client understands (design
+   * §10 version skew). Distinct from "setup missing": the remedy is
+   * upgrading the app, not re-running the setup SQL — the UI must say so
+   * instead of showing the generic setup-missing error.
+   */
+  serverNewer?: boolean;
 }
 
 export interface CollabSyncBackendClient {

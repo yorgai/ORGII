@@ -8,7 +8,7 @@
 use rusqlite::{params, OptionalExtension};
 
 use super::super::helpers::{conn, from_iso8601, map_db, now_ms, to_iso8601};
-use super::extras::ExtrasPayload;
+use super::extras::{ExtrasPayload, FieldRevision, REVISION_SOURCE_LOCAL};
 use super::history::{append_deleted_event, append_restored_event, ensure_created_event};
 use super::mapping::{
     assemble_work_item, read_extras_for, read_labels_for, row_to_core, ConnectionLike,
@@ -153,7 +153,7 @@ pub fn write_work_item(
     ))?;
     drop(connection);
 
-    write_work_item_with_scope(Some(project_id), &org_id, short_id, frontmatter, body)?;
+    write_work_item_with_scope(Some(project_id), &org_id, short_id, frontmatter, body, true)?;
     // orgii_collab bridge (design §16.8): full writes — create, delete,
     // restore, whole-row update — enqueue one bridge row when the org is
     // collab-synced. Remote-applied writes go through
@@ -173,7 +173,7 @@ pub fn write_standalone_work_item(
     body: &str,
 ) -> Result<(), String> {
     let org_id = org_id.unwrap_or("personal-org");
-    write_work_item_with_scope(None, org_id, short_id, frontmatter, body)?;
+    write_work_item_with_scope(None, org_id, short_id, frontmatter, body, true)?;
     crate::sync::collab_bridge::record_work_item_write(
         org_id,
         None,
@@ -184,7 +184,9 @@ pub fn write_standalone_work_item(
 
 /// Silent variant used exclusively by the collab bridge's remote-apply
 /// path: identical write semantics, but never emits an outbox row —
-/// applying a pulled change must not echo it back to the server.
+/// applying a pulled change must not echo it back to the server — and
+/// never stamps `("local", now)` field revisions (the bridge stamps
+/// remote-sourced watermarks itself via `apply_remote_merge`).
 pub(crate) fn write_work_item_remote(
     project_id: Option<String>,
     org_id: &str,
@@ -192,7 +194,7 @@ pub(crate) fn write_work_item_remote(
     frontmatter: &WorkItemFrontmatter,
     body: &str,
 ) -> Result<(), String> {
-    write_work_item_with_scope(project_id, org_id, short_id, frontmatter, body)
+    write_work_item_with_scope(project_id, org_id, short_id, frontmatter, body, false)
 }
 
 /// Read one work item by its `workitems.id` primary key, scoped to an
@@ -229,6 +231,7 @@ fn write_work_item_with_scope(
     short_id: &str,
     frontmatter: &WorkItemFrontmatter,
     body: &str,
+    stamp_local_revisions: bool,
 ) -> Result<(), String> {
     let mut connection = conn()?;
     let now = now_ms();
@@ -246,19 +249,102 @@ fn write_work_item_with_scope(
     };
     let deleted_at = next_frontmatter.deleted_at.as_deref().map(from_iso8601);
     let tx = map_db(connection.transaction())?;
-    let existing_item: Option<String> = map_db(
+    let existing_item: Option<PriorSyncSnapshot> = map_db(
         tx.query_row(
-            "SELECT id FROM workitems WHERE id = ?1",
+            "SELECT id, title, body, status, priority, assignee, milestone,
+                    start_date, target_date
+             FROM workitems WHERE id = ?1",
             params![&next_frontmatter.id],
-            |row| row.get(0),
+            |row| {
+                Ok(PriorSyncSnapshot {
+                    title: row.get(1)?,
+                    body: row.get::<_, Option<String>>(2)?.unwrap_or_default(),
+                    status: row.get(3)?,
+                    priority: row.get(4)?,
+                    assignee: row.get(5)?,
+                    milestone: row.get(6)?,
+                    start_date: row.get(7)?,
+                    target_date: row.get(8)?,
+                    labels: Vec::new(),
+                })
+            },
         )
         .optional(),
     )?;
+    let existing_item = match existing_item {
+        Some(mut prior) => {
+            let mut stmt = map_db(tx.prepare(
+                "SELECT label_id FROM workitem_labels WHERE work_item_id = ?1",
+            ))?;
+            let rows =
+                map_db(stmt.query_map(params![&next_frontmatter.id], |row| {
+                    row.get::<_, String>(0)
+                }))?;
+            for entry in rows {
+                prior.labels.push(map_db(entry)?);
+            }
+            Some(prior)
+        }
+        None => None,
+    };
     if existing_item.is_none() {
         ensure_created_event(&mut next_frontmatter, &to_iso8601(created_at));
     }
 
-    let extras = ExtrasPayload::from_frontmatter(&next_frontmatter);
+    // Whole-row writes rebuild extras from the frontmatter, which does
+    // not carry the sync-side metadata (`field_revisions` /
+    // `external_refs`). Layer the pre-write watermarks back on top —
+    // mirroring the atomic RMW path — so delete / restore / batch /
+    // git-folder-sync rewrites can't silently wipe them. Local-driven
+    // writes additionally stamp every sync-tracked field that actually
+    // changed at `("local", now)` so whole-row edits propagate through
+    // the per-field resolver on peers.
+    let prior_extras: Option<ExtrasPayload> = if existing_item.is_some() {
+        let raw: Option<String> = map_db(
+            tx.query_row(
+                "SELECT extras_json FROM workitem_extras WHERE work_item_id = ?1",
+                params![&next_frontmatter.id],
+                |row| row.get(0),
+            )
+            .optional(),
+        )?;
+        match raw.as_deref() {
+            Some(json) => match serde_json::from_str::<ExtrasPayload>(json) {
+                Ok(v) => Some(v),
+                Err(err) => {
+                    tracing::warn!(
+                        work_item_id = %next_frontmatter.id,
+                        error = %err,
+                        raw_len = json.len(),
+                        "work_items::crud: extras_json parse failed; whole-row write will OVERWRITE the corrupt row"
+                    );
+                    None
+                }
+            },
+            None => None,
+        }
+    } else {
+        None
+    };
+
+    let mut extras = ExtrasPayload::from_frontmatter(&next_frontmatter);
+    if let Some(prior) = prior_extras {
+        extras.field_revisions = prior.field_revisions;
+        extras.external_refs = prior.external_refs;
+    }
+    if stamp_local_revisions {
+        if let Some(prior) = existing_item.as_ref() {
+            for field in prior.changed_sync_fields(&next_frontmatter, body) {
+                extras.field_revisions.insert(
+                    field.to_string(),
+                    FieldRevision {
+                        mtime: now,
+                        source: REVISION_SOURCE_LOCAL.to_string(),
+                    },
+                );
+            }
+        }
+    }
     let extras_json =
         serde_json::to_string(&extras).map_err(|err| format!("serialize extras: {}", err))?;
 
@@ -508,6 +594,67 @@ pub fn move_work_item(short_id: &str, from_project: &str, to_project: &str) -> R
 // ---------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------
+
+/// Pre-write values of every sync-tracked field (the same set as
+/// `atomic::SYNC_TRACKED_FIELDS`), captured inside the write
+/// transaction so whole-row writes can stamp `("local", now)` revisions
+/// for the fields they actually changed.
+struct PriorSyncSnapshot {
+    title: String,
+    body: String,
+    status: String,
+    priority: String,
+    assignee: Option<String>,
+    milestone: Option<String>,
+    start_date: Option<String>,
+    target_date: Option<String>,
+    labels: Vec<String>,
+}
+
+impl PriorSyncSnapshot {
+    /// Canonical names of sync-tracked fields whose incoming value
+    /// differs from the stored row. Field names match
+    /// [`crate::sync::adapter::EntityField::as_local_name`].
+    fn changed_sync_fields(
+        &self,
+        next: &WorkItemFrontmatter,
+        next_body: &str,
+    ) -> Vec<&'static str> {
+        let mut changed = Vec::new();
+        if self.title != next.title {
+            changed.push("title");
+        }
+        if self.body != next_body {
+            changed.push("body");
+        }
+        if self.status != next.status {
+            changed.push("status");
+        }
+        if self.priority != next.priority {
+            changed.push("priority");
+        }
+        if self.assignee != next.assignee {
+            changed.push("assignee");
+        }
+        if self.milestone != next.milestone {
+            changed.push("milestone");
+        }
+        if self.start_date != next.start_date {
+            changed.push("start_date");
+        }
+        if self.target_date != next.target_date {
+            changed.push("target_date");
+        }
+        let mut prior_labels = self.labels.clone();
+        let mut next_labels = next.labels.clone();
+        prior_labels.sort();
+        next_labels.sort();
+        if prior_labels != next_labels {
+            changed.push("labels");
+        }
+        changed
+    }
+}
 
 /// Resolve `slug → project_id` against the `projects` table.
 ///

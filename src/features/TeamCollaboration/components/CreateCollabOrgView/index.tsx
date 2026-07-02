@@ -21,6 +21,7 @@ import {
   collabInvitesAtom,
   collabMembersAtom,
   collabOrgsAtom,
+  collabSessionAccessSettingsAtom,
 } from "@src/store/collaboration/collabOrgsAtom";
 import { collabPendingInviteAtom } from "@src/store/collaboration/collabPendingInviteAtom";
 import {
@@ -28,15 +29,21 @@ import {
   createInviteDefaults,
 } from "@src/store/collaboration/inviteDefaults";
 import { parseCollabInviteInput } from "@src/store/collaboration/protocol";
-import { COLLAB_IDENTITY_KIND } from "@src/store/collaboration/types";
+import {
+  COLLAB_IDENTITY_KIND,
+  COLLAB_SESSION_ACCESS_MODE,
+} from "@src/store/collaboration/types";
 import type {
   CollabIdentityKind,
   CollabInviteRecord,
   CollabMemberRecord,
   CollabOrgRecord,
+  CollabSessionAccessMode,
+  CollabSessionAccessSettings,
 } from "@src/store/collaboration/types";
 import { copyText } from "@src/util/data/clipboard";
 
+import { createDefaultAccessSettings } from "../../collabSyncUtils";
 import { resolveRepoScopeKeys } from "../../repoScopeResolver";
 import { ORGII_SUPABASE_SETUP_SQL } from "../../sync/supabaseSetupSql";
 import { supabaseSyncClient } from "../../sync/supabaseSyncClient";
@@ -65,6 +72,13 @@ const COLLAB_FORM_CONTROL_STYLE = {
   width: "100%",
   maxWidth: "100%",
 } as const;
+
+// Onboarding accessMode step (design §6.3): explicit choice, preselected OFF.
+const ACCESS_MODE_OPTIONS = [
+  COLLAB_SESSION_ACCESS_MODE.OFF,
+  COLLAB_SESSION_ACCESS_MODE.METADATA_ONLY,
+  COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY,
+] as const;
 
 type CreateOrgSource = typeof LOCAL_SOURCE | typeof SUPABASE_SOURCE;
 type CreateCollabOrgMode = typeof CREATE_MODE | typeof JOIN_MODE;
@@ -151,6 +165,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
   const setCollabOrgs = useSetAtom(collabOrgsAtom);
   const setCollabMembers = useSetAtom(collabMembersAtom);
   const setCollabInvites = useSetAtom(collabInvitesAtom);
+  const setAccessSettingsList = useSetAtom(collabSessionAccessSettingsAtom);
   const [pendingInvite, setPendingInvite] = useAtom(collabPendingInviteAtom);
 
   const [source, setSource] = useState<CreateOrgSource | null>(null);
@@ -162,6 +177,11 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
   const [inviteInput, setInviteInput] = useState("");
   const [identityKind, setIdentityKind] = useState<CollabIdentityKind>(
     COLLAB_IDENTITY_KIND.HUMAN
+  );
+  // AccessMode onboarding step (design §6.3): explicit selection in the
+  // create/join form, preselected OFF — new members must opt IN to sharing.
+  const [accessMode, setAccessMode] = useState<CollabSessionAccessMode>(
+    COLLAB_SESSION_ACCESS_MODE.OFF
   );
   const [latestInviteLink, setLatestInviteLink] = useState("");
   const [repoScopesText, setRepoScopesText] = useState("");
@@ -245,6 +265,49 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
     [t]
   );
 
+  const accessModeOptions = useMemo<
+    SelectionGridOption<CollabSessionAccessMode>[]
+  >(
+    () =>
+      ACCESS_MODE_OPTIONS.map((mode) => ({
+        key: mode,
+        label: t(`navigation:collaboration.access.modes.${mode}.title`),
+        description: t(
+          `navigation:collaboration.access.modes.${mode}.description`
+        ),
+      })),
+    [t]
+  );
+
+  // Persist the onboarding accessMode choice for the new membership
+  // (design §6.3). A non-OFF choice stamps shareSince with "now" — the
+  // onboarding equivalent of the Sessions-tab prompt's default answer
+  // ("only share sessions created from here on"), so enabling sharing at
+  // join time never floods the org with pre-existing history. Sharing old
+  // sessions stays available per session via the settings tab.
+  const persistAccessModeSelection = useCallback(
+    (orgId: string, memberId: string) => {
+      const now = new Date().toISOString();
+      const settings: CollabSessionAccessSettings = {
+        ...createDefaultAccessSettings(orgId, memberId),
+        accessMode,
+        shareSince:
+          accessMode === COLLAB_SESSION_ACCESS_MODE.OFF ? undefined : now,
+        updatedAt: now,
+      };
+      setAccessSettingsList((current) => {
+        const existingIndex = current.findIndex(
+          (item) => item.orgId === orgId && item.memberId === memberId
+        );
+        if (existingIndex < 0) return [settings, ...current];
+        const next = [...current];
+        next[existingIndex] = settings;
+        return next;
+      });
+    },
+    [accessMode, setAccessSettingsList]
+  );
+
   const effectiveSupabaseUrl = parsedInvite?.supabaseUrl ?? supabaseUrl;
   const effectiveAnonKey = parsedInvite?.anonKey ?? anonKey;
 
@@ -276,7 +339,11 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
         anonKey,
       });
       setVerificationStatus(result.ok ? "ok" : "missing");
-      if (!result.ok) {
+      if (result.serverNewer) {
+        // Version skew (design §10): the org schema is NEWER than this app —
+        // upgrading the app is the fix, not re-running the setup SQL.
+        setError(t("navigation:collaboration.supabaseSetupServerNewer"));
+      } else if (!result.ok) {
         setError(t("navigation:collaboration.supabaseSetupMissing"));
       }
     } catch (err) {
@@ -299,6 +366,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
       const canonicalOrg = { ...org, projectOrgId: projectOrg.id };
       setCollabOrgs((current) => upsertOrg(current, canonicalOrg));
       setCollabMembers((current) => upsertMember(current, member));
+      persistAccessModeSelection(canonicalOrg.id, member.id);
       onCreated?.({ source: SUPABASE_SOURCE, org: canonicalOrg, member });
       // Bootstrap invite (design §8.1): multi-use (10) / 7 days — canonical
       // flow is pasting it into a team channel, so a single-use ticket
@@ -318,6 +386,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
     [
       anonKey,
       onCreated,
+      persistAccessModeSelection,
       setCollabInvites,
       setCollabMembers,
       setCollabOrgs,
@@ -395,6 +464,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
       const canonicalOrg = { ...result.org, projectOrgId: projectOrg.id };
       setCollabOrgs((current) => upsertOrg(current, canonicalOrg));
       setCollabMembers((current) => upsertMember(current, result.member));
+      persistAccessModeSelection(canonicalOrg.id, result.member.id);
       onCreated?.({
         source: SUPABASE_SOURCE,
         org: canonicalOrg,
@@ -417,6 +487,7 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
     mode,
     onCreated,
     orgName,
+    persistAccessModeSelection,
     repoScopesText,
     setCollabMembers,
     setCollabOrgs,
@@ -651,6 +722,28 @@ const CreateCollabOrgView: React.FC<CreateCollabOrgViewProps> = ({
                   compactCards
                   onSelect={setIdentityKind}
                 />
+              </SectionRow>
+            </SectionContainer>
+          )}
+
+          {source === SUPABASE_SOURCE && (
+            <SectionContainer bare>
+              <SectionRow
+                label={t("navigation:collaboration.access.title")}
+                layout="vertical"
+                required
+              >
+                <SelectionGrid
+                  options={accessModeOptions}
+                  selected={accessMode}
+                  columns={3}
+                  cardVariant="subtle"
+                  compactCards
+                  onSelect={setAccessMode}
+                />
+                <p className="text-[12px] text-text-2">
+                  {t("navigation:collaboration.access.onboardingHint")}
+                </p>
               </SectionRow>
             </SectionContainer>
           )}

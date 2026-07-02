@@ -52,7 +52,8 @@ use crate::projects::io::{
 };
 use crate::projects::types::work_items::{default_priority, default_status};
 use crate::projects::types::{
-    CreateProjectOrgRequest, ProjectMeta, WorkItemFrontmatter, WorkItemPartialUpdate,
+    CommentEntry, CreateProjectOrgRequest, LinkedSession, ProjectMeta, TodoEntry,
+    WorkItemFrontmatter, WorkItemPartialUpdate, WorkItemWorkProduct,
 };
 
 /// `project_orgs.sync_provider` value marking a collab-aliased org.
@@ -799,6 +800,12 @@ pub struct CollabRemoteEntity {
 /// freshly shared project exists by the time its items arrive. Returns
 /// the number of entities that changed local state. NO apply path emits
 /// outbox rows (no echo).
+///
+/// Each entity applies in isolation: one bad row (e.g. a `short_id`
+/// unique-index collision with an unrelated local item, or a malformed
+/// payload) must not abort the rest of the batch — it is logged and
+/// skipped, and re-attempted on the next pull because its
+/// `collab_remote_version` was never stored.
 pub fn apply_remote(
     org_id: &str,
     org_name: Option<&str>,
@@ -807,16 +814,34 @@ pub fn apply_remote(
     ensure_collab_project_org(org_id, org_name)?;
     let mut applied = 0;
     for entity in entities.iter().filter(|entity| entity.kind == KIND_PROJECT) {
-        if apply_project(org_id, entity)? {
-            applied += 1;
+        match apply_project(org_id, entity) {
+            Ok(true) => applied += 1,
+            Ok(false) => {}
+            Err(err) => {
+                tracing::warn!(
+                    org_id,
+                    entity_id = string_field(&entity.payload, "id").as_deref().unwrap_or("?"),
+                    error = %err,
+                    "[collab_bridge] skipping project that failed to apply"
+                );
+            }
         }
     }
     for entity in entities
         .iter()
         .filter(|entity| entity.kind == KIND_WORK_ITEM)
     {
-        if apply_work_item(org_id, entity)? {
-            applied += 1;
+        match apply_work_item(org_id, entity) {
+            Ok(true) => applied += 1,
+            Ok(false) => {}
+            Err(err) => {
+                tracing::warn!(
+                    org_id,
+                    entity_id = string_field(&entity.payload, "id").as_deref().unwrap_or("?"),
+                    error = %err,
+                    "[collab_bridge] skipping work item that failed to apply"
+                );
+            }
         }
     }
     Ok(applied)
@@ -861,13 +886,15 @@ fn entity_deleted_at(entity: &CollabRemoteEntity) -> Option<&str> {
 
 /// Pending local field paths newer than `remote_ms` for one entity —
 /// those fields keep their local value when the remote row lands.
+/// (Cross-clock; used only for projects, which have no per-field
+/// revision store — see the residual note in [`apply_project`].)
 fn newer_pending_fields(
     conn: &Connection,
     org_id: &str,
     entity_type: EntityType,
     entity_id: &str,
     remote_ms: i64,
-) -> Result<(Vec<String>, bool), String> {
+) -> Result<Vec<String>, String> {
     let mut stmt = conn
         .prepare(
             "SELECT field_path, created_at FROM outbox_entries
@@ -888,14 +915,12 @@ fn newer_pending_fields(
         )
         .map_err(|err| format!("DB error (query pending probe): {}", err))?;
     let mut fields = Vec::new();
-    let mut any_newer = false;
     for entry in rows {
         let (field_path, created_at) =
             entry.map_err(|err| format!("DB error (collect pending probe): {}", err))?;
         if created_at <= remote_ms {
             continue;
         }
-        any_newer = true;
         if let Some(paths) = field_path {
             for path in paths.split(',').filter(|path| !path.is_empty()) {
                 if !fields.iter().any(|existing| existing == path) {
@@ -904,7 +929,39 @@ fn newer_pending_fields(
             }
         }
     }
-    Ok((fields, any_newer))
+    Ok(fields)
+}
+
+/// True when ANY pending or in-flight outbox row exists for the entity.
+/// Deliberately timestamp-free: comparing the local row's wall-clock
+/// `created_at` against the remote row's `updatedAt` (a different
+/// machine's clock) can mis-classify a local un-pushed edit as "older"
+/// and let a whole-row remote snapshot clobber it. Presence of a
+/// pending push is the only clock-safe signal that local state has
+/// diverged.
+fn has_pending_outbox_rows(
+    conn: &Connection,
+    org_id: &str,
+    entity_type: EntityType,
+    entity_id: &str,
+) -> Result<bool, String> {
+    conn.query_row(
+        "SELECT 1 FROM outbox_entries
+          WHERE org_id = ?1 AND entity_type = ?2 AND entity_id = ?3
+            AND status IN (?4, ?5)
+          LIMIT 1",
+        params![
+            org_id,
+            entity_type.as_db_str(),
+            entity_id,
+            OutboxStatus::Pending.as_db_str(),
+            OutboxStatus::InFlight.as_db_str(),
+        ],
+        |_| Ok(true),
+    )
+    .optional()
+    .map(|found| found.unwrap_or(false))
+    .map_err(|err| format!("DB error (pending presence probe): {}", err))
 }
 
 fn apply_project(org_id: &str, entity: &CollabRemoteEntity) -> Result<bool, String> {
@@ -945,7 +1002,7 @@ fn apply_project(org_id: &str, entity: &CollabRemoteEntity) -> Result<bool, Stri
 
     let remote_ms =
         iso_to_ms(entity.payload.get("updatedAt").and_then(Value::as_str)).unwrap_or_else(now_ms);
-    let (protected_fields, _) =
+    let protected_fields =
         newer_pending_fields(&conn, org_id, EntityType::Project, &project_id, remote_ms)?;
     drop(conn);
 
@@ -1071,11 +1128,16 @@ fn unique_project_slug(desired: &str, project_id: &str) -> Result<String, String
     }
 }
 
-/// Normalize the camelCase wire keys into the local field-name JSON the
-/// resolver walks. Keys are always present (nulls clear the field).
 /// Parse the `_fieldRevisions` map (local field name → mtime ms) a peer sends
 /// alongside a whole-row snapshot. `None` when absent — the resolver then falls
 /// back to the whole-row clock (legacy/pre-fix peers; not reachable post-M6a).
+///
+/// An EMPTY map is also treated as `None`: the wire contract says "field
+/// absent from the map = the remote author didn't touch it, keep local",
+/// so taking an empty map literally would mean "keep local for EVERY
+/// field" and a pusher whose watermarks were wiped (or never stamped)
+/// could never propagate anything. Degrading to the whole-row clock
+/// restores pre-fix semantics for such peers.
 fn parse_wire_field_mtimes(payload: &Value) -> Option<std::collections::HashMap<String, i64>> {
     let obj = payload.get("_fieldRevisions")?.as_object()?;
     let mut map = std::collections::HashMap::with_capacity(obj.len());
@@ -1084,9 +1146,14 @@ fn parse_wire_field_mtimes(payload: &Value) -> Option<std::collections::HashMap<
             map.insert(name.clone(), mtime);
         }
     }
+    if map.is_empty() {
+        return None;
+    }
     Some(map)
 }
 
+/// Normalize the camelCase wire keys into the local field-name JSON the
+/// resolver walks. Keys are always present (nulls clear the field).
 fn work_item_fields_from_wire(payload: &Value) -> Value {
     json!({
         "title": payload.get("title").cloned().unwrap_or(Value::Null),
@@ -1208,13 +1275,7 @@ fn apply_work_item(org_id: &str, entity: &CollabRemoteEntity) -> Result<bool, St
 
     let remote_ms =
         iso_to_ms(entity.payload.get("updatedAt").and_then(Value::as_str)).unwrap_or_else(now_ms);
-    let (_, has_newer_pending) = newer_pending_fields(
-        &conn,
-        org_id,
-        EntityType::WorkItem,
-        &work_item_id,
-        remote_ms,
-    )?;
+    let has_pending = has_pending_outbox_rows(&conn, org_id, EntityType::WorkItem, &work_item_id)?;
 
     let wire_project_id = string_field(&entity.payload, "projectId");
     let project_slug: Option<String> = match wire_project_id.as_deref() {
@@ -1296,10 +1357,28 @@ fn apply_work_item(org_id: &str, entity: &CollabRemoteEntity) -> Result<bool, St
                 let adopted: serde_json::Map<String, Value> =
                     decision.adopted_fields.clone().into_iter().collect();
                 let mut update = super::worker::partial_update_from_map(&adopted);
-                if !has_newer_pending {
+                if !has_pending {
                     apply_wire_tail(&mut update, &entity.payload);
                     if wire_project_id != local_project_id {
                         update.project = Some(wire_project_id.clone());
+                    }
+                } else {
+                    // NOTE (collab tail residual): payload-tail fields have
+                    // no per-field revision store, so a whole-row remote
+                    // snapshot can't tell which tail field the remote
+                    // author actually touched. While ANY local push is
+                    // pending for this entity we therefore do NOT
+                    // whole-row-apply the tail (scalars keep local;
+                    // remote tail scalar changes — including an
+                    // executionLock release — land on the next pull
+                    // after our push resolves). List-shaped tail fields
+                    // are union-merged by stable entry id instead, so a
+                    // teammate's new comment/todo still arrives without
+                    // clobbering the local un-pushed one; remote edits
+                    // to / deletions of an entry both sides carry are
+                    // deferred the same way scalars are.
+                    if let Some(local) = read_work_item_by_row_id(org_id, &work_item_id)? {
+                        apply_wire_tail_union(&mut update, &entity.payload, &local.frontmatter);
                     }
                 }
                 drop(conn);
@@ -1313,10 +1392,11 @@ fn apply_work_item(org_id: &str, entity: &CollabRemoteEntity) -> Result<bool, St
                 store_remote_version(&conn, KIND_WORK_ITEM, &work_item_id, entity.version)?;
             } else {
                 // Standalone (or project mismatch): whole-row semantics.
-                // With a newer local pending change we keep local — the
+                // With ANY local pending push we keep local (clock-safe
+                // presence gate, same rationale as the tail above) — the
                 // next push OCC-conflicts and merges against the then-
                 // fresh remote row instead.
-                if has_newer_pending {
+                if has_pending {
                     return Ok(false);
                 }
                 drop(conn);
@@ -1431,14 +1511,79 @@ fn apply_wire_tail(update: &mut WorkItemPartialUpdate, payload: &Value) {
     }
 }
 
+/// Union-merge applied to the list-shaped tail fields while a local
+/// push is pending (see the residual note in [`apply_work_item`]):
+/// every local entry survives (a pending local addition/edit must not
+/// be clobbered), and remote entries whose stable id is unknown locally
+/// are appended. Remote edits to entries both sides carry — and remote
+/// deletions — do not apply here; they land via the whole-row tail on
+/// the next pull once the local push has resolved.
+fn apply_wire_tail_union(
+    update: &mut WorkItemPartialUpdate,
+    payload: &Value,
+    local: &WorkItemFrontmatter,
+) {
+    fn tail<T: serde::de::DeserializeOwned>(payload: &Value, key: &str) -> Option<T> {
+        payload
+            .get(key)
+            .cloned()
+            .and_then(|value| serde_json::from_value(value).ok())
+    }
+    if let Some(todos) = tail::<Vec<TodoEntry>>(payload, "todos") {
+        if let Some(merged) = union_by_key(&local.todos, todos, |entry| entry.id.clone()) {
+            update.todos = Some(merged);
+        }
+    }
+    if let Some(comments) = tail::<Vec<CommentEntry>>(payload, "comments") {
+        if let Some(merged) = union_by_key(&local.comments, comments, |entry| entry.id.clone()) {
+            update.comments = Some(merged);
+        }
+    }
+    if let Some(sessions) = tail::<Vec<LinkedSession>>(payload, "linkedSessions") {
+        if let Some(merged) =
+            union_by_key(&local.linked_sessions, sessions, |entry| {
+                entry.session_id.clone()
+            })
+        {
+            update.linked_sessions = Some(merged);
+        }
+    }
+    if let Some(products) = tail::<Vec<WorkItemWorkProduct>>(payload, "workProducts") {
+        if let Some(merged) = union_by_key(&local.work_products, products, |entry| entry.id.clone())
+        {
+            update.work_products = Some(merged);
+        }
+    }
+}
+
+/// Start from the local list, append remote entries with an unseen key.
+/// Returns `None` when nothing was appended (no write needed).
+fn union_by_key<T: Clone, K: PartialEq, F: Fn(&T) -> K>(
+    local: &[T],
+    remote: Vec<T>,
+    key: F,
+) -> Option<Vec<T>> {
+    let mut merged: Vec<T> = local.to_vec();
+    for entry in remote {
+        if !local.iter().any(|existing| key(existing) == key(&entry)) {
+            merged.push(entry);
+        }
+    }
+    if merged.len() == local.len() {
+        None
+    } else {
+        Some(merged)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::projects::io::{
-        configure_project_org_collab_sync, read_project, read_work_item, update_work_item_partial,
-        write_project, write_work_item,
+        acquire_execution_lock, configure_project_org_collab_sync, read_project, read_work_item,
+        release_execution_lock, update_work_item_partial, write_project, write_work_item,
     };
-    use crate::projects::types::ProjectData;
+    use crate::projects::types::{ProjectData, WorkItemExecutionLockReason};
     use test_helpers::test_env;
 
     const ORG: &str = "org-collab-test";
@@ -1905,6 +2050,375 @@ mod tests {
         assert_eq!(
             item.frontmatter.title, "Teammate new title",
             "the field the remote genuinely changed is adopted"
+        );
+    }
+
+    /// Seed a remote-owned project + one work item (both version 1,
+    /// mtime 2026-07-01T00:00:00Z) via `apply_remote`, so no local
+    /// outbox rows exist afterwards.
+    fn seed_remote_project_and_item(item_payload_extra: Value) {
+        let mut item_payload = json!({
+            "id": "REM-0001",
+            "projectId": "proj-remote",
+            "shortId": "REM-0001",
+            "title": "Original title",
+            "body": "original",
+            "status": "backlog",
+            "updatedAt": "2026-07-01T00:00:00Z",
+        });
+        if let (Some(base), Some(extra)) =
+            (item_payload.as_object_mut(), item_payload_extra.as_object())
+        {
+            for (key, value) in extra {
+                base.insert(key.clone(), value.clone());
+            }
+        }
+        apply_remote(
+            ORG,
+            None,
+            vec![
+                CollabRemoteEntity {
+                    kind: KIND_PROJECT.to_string(),
+                    payload: json!({
+                        "id": "proj-remote",
+                        "slug": "remote-project",
+                        "name": "Remote Project",
+                        "workItemPrefix": "REM",
+                        "updatedAt": "2026-07-01T00:00:00Z",
+                    }),
+                    version: 1,
+                    updated_by: None,
+                    deleted_at: None,
+                },
+                CollabRemoteEntity {
+                    kind: KIND_WORK_ITEM.to_string(),
+                    payload: item_payload,
+                    version: 1,
+                    updated_by: None,
+                    deleted_at: None,
+                },
+            ],
+        )
+        .expect("seed remote");
+        assert_eq!(pending_org_rows(), 0, "seeding must not echo");
+    }
+
+    /// Finding: a pending local push must gate the whole-row tail apply
+    /// by PRESENCE, not by comparing the local row's wall clock against
+    /// the remote machine's `updatedAt`. Here the remote clock is far in
+    /// the future — the old cross-clock gate would have judged the local
+    /// pending comment "older" and clobbered it.
+    #[test]
+    fn pending_local_push_blocks_remote_tail_clobber_and_unions_lists() {
+        let _sandbox = test_env::sandbox();
+        seed_collab_org();
+        seed_remote_project_and_item(json!({}));
+
+        // Local un-pushed comment → pending outbox row.
+        let mut update = WorkItemPartialUpdate::default();
+        update.comments = Some(vec![CommentEntry {
+            id: "local-c1".to_string(),
+            author: "me".to_string(),
+            content: "local pending comment".to_string(),
+            created_at: "2026-07-01T00:01:00Z".to_string(),
+        }]);
+        update_work_item_partial("remote-project", "REM-0001", &update).expect("local comment");
+        assert!(pending_org_rows() >= 1, "local comment should be pending");
+
+        let applied = apply_remote(
+            ORG,
+            None,
+            vec![CollabRemoteEntity {
+                kind: KIND_WORK_ITEM.to_string(),
+                payload: json!({
+                    "id": "REM-0001",
+                    "projectId": "proj-remote",
+                    "shortId": "REM-0001",
+                    "title": "Original title",
+                    "status": "backlog",
+                    "updatedAt": "2099-01-01T00:00:00Z",
+                    "starred": true,
+                    "comments": [{
+                        "id": "remote-c1",
+                        "author": "member-b",
+                        "content": "remote comment",
+                        "created_at": "2099-01-01T00:00:00Z",
+                    }],
+                }),
+                version: 2,
+                updated_by: Some("member-b".to_string()),
+                deleted_at: None,
+            }],
+        )
+        .expect("apply");
+        assert_eq!(applied, 1);
+
+        let item = read_work_item("remote-project", "REM-0001").expect("item");
+        let comment_ids: Vec<&str> = item
+            .frontmatter
+            .comments
+            .iter()
+            .map(|comment| comment.id.as_str())
+            .collect();
+        assert!(
+            comment_ids.contains(&"local-c1"),
+            "pending local comment must survive the remote whole-row tail"
+        );
+        assert!(
+            comment_ids.contains(&"remote-c1"),
+            "remote list addition still lands via the id union"
+        );
+        assert!(
+            !item.frontmatter.starred,
+            "scalar tail fields are not whole-row-applied while a push is pending"
+        );
+        assert!(
+            pending_org_rows() >= 1,
+            "the pending local push must not be consumed by the apply"
+        );
+    }
+
+    /// Finding: one bad entity (here a `(project_id, short_id)` unique
+    /// violation against an unrelated local row) must not abort the
+    /// whole pulled batch.
+    #[test]
+    fn apply_remote_skips_bad_entity_and_applies_the_rest() {
+        let _sandbox = test_env::sandbox();
+        seed_collab_org();
+        apply_remote(
+            ORG,
+            None,
+            vec![CollabRemoteEntity {
+                kind: KIND_PROJECT.to_string(),
+                payload: json!({
+                    "id": "proj-remote",
+                    "slug": "remote-project",
+                    "name": "Remote Project",
+                    "workItemPrefix": "REM",
+                    "updatedAt": "2026-07-01T00:00:00Z",
+                }),
+                version: 1,
+                updated_by: None,
+                deleted_at: None,
+            }],
+        )
+        .expect("seed project");
+
+        // Unrelated local row already owns short id REM-0001.
+        let mut local = work_item_frontmatter("REM-0001", "Local item");
+        local.id = "local-wi".to_string();
+        write_work_item("remote-project", "REM-0001", &local, "").expect("local item");
+
+        let bad_then_good = vec![
+            CollabRemoteEntity {
+                kind: KIND_WORK_ITEM.to_string(),
+                payload: json!({
+                    "id": "wi-remote-dupe",
+                    "projectId": "proj-remote",
+                    "shortId": "REM-0001", // collides with the local row
+                    "title": "Bad",
+                    "updatedAt": "2026-07-01T00:00:10Z",
+                }),
+                version: 1,
+                updated_by: None,
+                deleted_at: None,
+            },
+            CollabRemoteEntity {
+                kind: KIND_WORK_ITEM.to_string(),
+                payload: json!({
+                    "id": "wi-remote-ok",
+                    "projectId": "proj-remote",
+                    "shortId": "REM-0002",
+                    "title": "Good",
+                    "updatedAt": "2026-07-01T00:00:10Z",
+                }),
+                version: 1,
+                updated_by: None,
+                deleted_at: None,
+            },
+        ];
+        let applied =
+            apply_remote(ORG, None, bad_then_good).expect("batch must not abort on one bad row");
+        assert_eq!(applied, 1, "only the good entity counts as applied");
+
+        let good = read_work_item("remote-project", "REM-0002").expect("good entity applied");
+        assert_eq!(good.frontmatter.title, "Good");
+        let untouched = read_work_item("remote-project", "REM-0001").expect("local row");
+        assert_eq!(untouched.frontmatter.title, "Local item");
+        assert_eq!(untouched.frontmatter.id, "local-wi");
+    }
+
+    /// Finding: a local lock acquire/release runs through the
+    /// closure-form `update_work_item_atomic` and touches only
+    /// payload-tail fields — it must still enqueue a push, and the wire
+    /// snapshot must carry `executionLock` as an explicit null (never a
+    /// missing key) after release.
+    #[test]
+    fn lock_acquire_and_release_propagate_through_the_outbox() {
+        let _sandbox = test_env::sandbox();
+        seed_collab_org();
+        seed_project("alpha");
+        write_work_item(
+            "alpha",
+            "AAA-0001",
+            &work_item_frontmatter("AAA-0001", "T"),
+            "",
+        )
+        .expect("write item");
+
+        let ack_all_ok = |items: &[CollabPushItem], version: i64| {
+            ack_outbox(
+                items
+                    .iter()
+                    .map(|item| CollabAckResult {
+                        entry_ids: item.entry_ids.clone(),
+                        kind: item.kind.clone(),
+                        entity_id: item.entity_id.clone(),
+                        ok: true,
+                        remote_version: Some(version),
+                        error: None,
+                    })
+                    .collect(),
+            )
+            .expect("ack");
+        };
+
+        // Flush the create traffic so the asserts below isolate the lock.
+        let items = drain_outbox(ORG, 50).expect("drain create");
+        ack_all_ok(&items, 1);
+        assert_eq!(pending_org_rows(), 0);
+
+        acquire_execution_lock(
+            "alpha",
+            "AAA-0001",
+            "sess-1",
+            Some("coding"),
+            WorkItemExecutionLockReason::ManualStart,
+        )
+        .expect("acquire");
+        assert!(pending_org_rows() >= 1, "acquire must enqueue a push");
+        let items = drain_outbox(ORG, 50).expect("drain acquire");
+        let item = items
+            .iter()
+            .find(|item| item.kind == KIND_WORK_ITEM)
+            .expect("work item push");
+        let payload = item.payload.as_ref().expect("payload");
+        assert_eq!(payload["executionLock"]["activeSessionId"], "sess-1");
+        ack_all_ok(&items, 2);
+        assert_eq!(pending_org_rows(), 0);
+
+        release_execution_lock("alpha", "AAA-0001", "sess-1").expect("release");
+        assert!(pending_org_rows() >= 1, "release must enqueue a push");
+        let items = drain_outbox(ORG, 50).expect("drain release");
+        let item = items
+            .iter()
+            .find(|item| item.kind == KIND_WORK_ITEM)
+            .expect("work item push");
+        let payload = item.payload.as_ref().expect("payload");
+        assert_eq!(
+            payload.get("executionLock"),
+            Some(&Value::Null),
+            "released lock rides the wire as an explicit null, never a missing key"
+        );
+    }
+
+    /// Finding: the pull side must APPLY an explicitly-null
+    /// `executionLock` (teammate released) rather than ignore it.
+    #[test]
+    fn apply_remote_explicit_null_execution_lock_clears_local_lock() {
+        let _sandbox = test_env::sandbox();
+        seed_collab_org();
+        seed_remote_project_and_item(json!({
+            "executionLock": {
+                "activeSessionId": "sess-remote",
+                "lockedByMemberId": "member-b",
+            },
+        }));
+
+        let item = read_work_item("remote-project", "REM-0001").expect("item");
+        assert_eq!(
+            item.frontmatter
+                .execution_lock
+                .as_ref()
+                .and_then(|lock| lock.active_session_id.as_deref()),
+            Some("sess-remote"),
+            "remote lock landed locally"
+        );
+
+        let applied = apply_remote(
+            ORG,
+            None,
+            vec![CollabRemoteEntity {
+                kind: KIND_WORK_ITEM.to_string(),
+                payload: json!({
+                    "id": "REM-0001",
+                    "projectId": "proj-remote",
+                    "shortId": "REM-0001",
+                    "title": "Original title",
+                    "status": "backlog",
+                    "updatedAt": "2026-07-01T00:05:00Z",
+                    "executionLock": null,
+                }),
+                version: 2,
+                updated_by: Some("member-b".to_string()),
+                deleted_at: None,
+            }],
+        )
+        .expect("apply release");
+        assert_eq!(applied, 1);
+
+        let item = read_work_item("remote-project", "REM-0001").expect("item");
+        assert!(
+            item.frontmatter.execution_lock.is_none(),
+            "an explicitly-null executionLock must clear the local lock"
+        );
+    }
+
+    /// Finding: an EMPTY `_fieldRevisions` object (wiped / never-stamped
+    /// pusher) must degrade to the whole-row clock, not to "remote
+    /// touched nothing" — otherwise such a peer could never propagate a
+    /// change at all.
+    #[test]
+    fn empty_field_revisions_map_falls_back_to_whole_row_clock() {
+        let _sandbox = test_env::sandbox();
+        seed_collab_org();
+        seed_remote_project_and_item(json!({}));
+
+        // Local edit stamps a "local" watermark at real now.
+        let mut update = WorkItemPartialUpdate::default();
+        update.status = Some("in_review".to_string());
+        update_work_item_partial("remote-project", "REM-0001", &update).expect("local edit");
+
+        let applied = apply_remote(
+            ORG,
+            None,
+            vec![CollabRemoteEntity {
+                kind: KIND_WORK_ITEM.to_string(),
+                payload: json!({
+                    "id": "REM-0001",
+                    "projectId": "proj-remote",
+                    "shortId": "REM-0001",
+                    "title": "Teammate new title",
+                    "status": "backlog",
+                    "updatedAt": "2099-01-01T00:00:00Z",
+                    "_fieldRevisions": {},
+                }),
+                version: 2,
+                updated_by: Some("member-b".to_string()),
+                deleted_at: None,
+            }],
+        )
+        .expect("apply");
+        assert_eq!(applied, 1);
+
+        let item = read_work_item("remote-project", "REM-0001").expect("item");
+        assert_eq!(
+            item.frontmatter.title, "Teammate new title",
+            "with the whole-row fallback the newer remote row must win"
+        );
+        assert_eq!(
+            item.frontmatter.status, "backlog",
+            "pre-fix whole-row semantics: every field follows the row clock"
         );
     }
 

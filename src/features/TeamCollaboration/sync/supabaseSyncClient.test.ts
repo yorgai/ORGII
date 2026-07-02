@@ -235,15 +235,22 @@ describe("supabaseSyncClient", () => {
     );
   });
 
-  it("verifySetup accepts a server schema newer than the client", async () => {
+  it("verifySetup flags a server schema newer than the client as serverNewer", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(mockJsonResponse(3));
 
+    // Design §10: server newer than client is a distinct state ("upgrade
+    // the app"), not the generic setup-missing error.
     await expect(
       supabaseSyncClient.verifySetup({
         supabaseUrl: SUPABASE_URL,
         anonKey: ANON_KEY,
       })
-    ).resolves.toEqual({ ok: true, schemaVersion: 3, missing: [] });
+    ).resolves.toEqual({
+      ok: false,
+      serverNewer: true,
+      schemaVersion: 3,
+      missing: [],
+    });
   });
 
   it("verifySetup rejects a server schema older than the client", async () => {

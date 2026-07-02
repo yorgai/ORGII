@@ -405,6 +405,7 @@
     "openSupabaseSqlEditor": "Supabase SQL Editor を開く",
     "supabaseSetupVerified": "Supabase 設定を検証しました",
     "supabaseSetupMissing": "Supabase 設定がありません。セットアップ SQL をコピーして Supabase SQL Editor で実行し、もう一度検証してください。",
+    "supabaseSetupServerNewer": "This ORG's Supabase schema is newer than this app version. Update ORGII, then try again.",
     "orgDemoTitle": "ORG",
     "orgNotFound": "ORG が見つかりません",
     "tabs": {
@@ -459,6 +460,7 @@
     "access": {
       "title": "Session アクセス",
       "description": "この ORG でチームメイトがあなたのローカル sessions から見られる内容を選びます。",
+      "onboardingHint": "You can change this anytime in the ORG's Sessions settings.",
       "modes": {
         "off": {
           "title": "オフ",
@@ -565,6 +567,7 @@
       "replay": "Replay",
       "linkedSessionMetadataOnly": "Metadata only",
       "linkedSessionUnshared": "Not shared",
+      "replayUnavailable": "This session is no longer shared",
       "unknownOwner": "Unknown"
     },
     "lock": {

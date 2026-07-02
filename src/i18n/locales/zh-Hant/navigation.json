@@ -496,6 +496,7 @@
     "openSupabaseSqlEditor": "開啟 Supabase SQL Editor",
     "supabaseSetupVerified": "Supabase 設定已驗證",
     "supabaseSetupMissing": "缺少 Supabase 設定。複製設定 SQL，在 Supabase SQL Editor 中執行，然後再次驗證。",
+    "supabaseSetupServerNewer": "This ORG's Supabase schema is newer than this app version. Update ORGII, then try again.",
     "orgDemoTitle": "ORG",
     "orgNotFound": "找不到 ORG",
     "tabs": {
@@ -550,6 +551,7 @@
     "access": {
       "title": "Session 存取",
       "description": "選擇隊友可以在這個 ORG 中看到你的哪些本地 session。",
+      "onboardingHint": "You can change this anytime in the ORG's Sessions settings.",
       "modes": {
         "off": {
           "title": "關閉",
@@ -656,6 +658,7 @@
       "replay": "Replay",
       "linkedSessionMetadataOnly": "Metadata only",
       "linkedSessionUnshared": "Not shared",
+      "replayUnavailable": "This session is no longer shared",
       "unknownOwner": "Unknown"
     },
     "lock": {

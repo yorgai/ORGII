@@ -246,6 +246,7 @@
     "openSupabaseSqlEditor": "Open Supabase SQL Editor",
     "supabaseSetupVerified": "Supabase setup verified",
     "supabaseSetupMissing": "Supabase setup is missing. Copy the setup SQL, run it in Supabase SQL Editor, then verify again.",
+    "supabaseSetupServerNewer": "This ORG's Supabase schema is newer than this app version. Update ORGII, then try again.",
     "repoScopes": "Shared repo paths",
     "repoScopesPlaceholder": "/path/to/repo-a\n/path/to/repo-b",
     "repoScopesHelp": "One absolute repo path per line. Only sessions under these repos will be shared with this org. You can edit this list later.",
@@ -322,6 +323,7 @@
     "access": {
       "title": "Session access",
       "description": "Choose what teammates can see from your local sessions in this ORG.",
+      "onboardingHint": "You can change this anytime in the ORG's Sessions settings.",
       "modes": {
         "off": {
           "title": "Off",
@@ -428,6 +430,7 @@
       "replay": "Replay",
       "linkedSessionMetadataOnly": "Metadata only",
       "linkedSessionUnshared": "Not shared",
+      "replayUnavailable": "This session is no longer shared",
       "unknownOwner": "Unknown"
     },
     "lock": {

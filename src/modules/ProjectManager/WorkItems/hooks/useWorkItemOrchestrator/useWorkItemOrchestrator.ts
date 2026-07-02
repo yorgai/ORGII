@@ -22,7 +22,10 @@ import {
 import type { AgentRole, OrchestratorPhase } from "../../constants";
 import { useAutoReview } from "./useAutoReview";
 import { useStaleSessionDetection } from "./useStaleSessionDetection";
-import { useWorkItemCollabLock } from "./useWorkItemCollabLock";
+import {
+  isCollabMembershipUnresolvedError,
+  useWorkItemCollabLock,
+} from "./useWorkItemCollabLock";
 
 const logger = createLogger("useWorkItemOrchestrator");
 const RUNNING_LINKED_SESSION_STATUS = "running" as const;
@@ -160,19 +163,27 @@ export function useWorkItemOrchestrator(
 
       // Acquire the server-arbitrated lock first (design §16.6). A no-op for
       // non-collab work items; ORGII_CONFLICT means a teammate won the race.
+      let collabLockAcquired = false;
       try {
-        await collabLock.acquireLock();
+        collabLockAcquired = await collabLock.acquireLock();
       } catch (lockError) {
         if (isCollabConflictError(lockError)) {
           Message.warning(t("workItems.agentWorkflow.collabLockConflict"));
           onRefreshWorkItem?.();
           return;
         }
+        if (isCollabMembershipUnresolvedError(lockError)) {
+          // We cannot prove this work item is NOT collab-synced, so starting
+          // would skip server arbitration entirely — block instead.
+          Message.warning(t("workItems.agentWorkflow.collabLockUnresolved"));
+          return;
+        }
         logger.warn(
           `Failed to acquire collab lock for ${shortId}: ${formatOrchestratorError(lockError)}`
         );
-        // Non-conflict lock failures (offline etc.) fall through: the local
-        // execution lock still guards single-machine safety.
+        // Non-conflict acquire failures on a KNOWN-collab work item (offline
+        // etc.) fall through: the local execution lock still guards
+        // single-machine safety.
       }
 
       setIsStartingAgent(true);
@@ -210,6 +221,13 @@ export function useWorkItemOrchestrator(
       } catch (error) {
         setActiveAgentSessionId(null);
         setActiveAgentRole(null);
+        // The start failed AFTER the server lock was acquired: release it,
+        // or the holder-less run deadlocks this work item for every member
+        // (including us — the row would show OUR id as a live holder until
+        // the stale-TTL takeover). Best-effort: releaseLock swallows errors.
+        if (collabLockAcquired) {
+          void collabLock.releaseLock();
+        }
         try {
           await invokeTauri(ORCHESTRATOR_COMMAND.Cancel, {
             projectSlug,

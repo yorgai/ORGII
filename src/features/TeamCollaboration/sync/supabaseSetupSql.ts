@@ -86,6 +86,10 @@ alter table public.orgii_projects
   add column if not exists updated_by_member_id text,
   add column if not exists deleted_at timestamptz;
 
+-- Delta pull (orgii_list_org_state) scans by (org_id, updated_at >= cursor).
+create index if not exists orgii_projects_org_updated_idx
+  on public.orgii_projects (org_id, updated_at);
+
 create table if not exists public.orgii_work_items (
   id text primary key,
   org_id text not null references public.orgii_orgs(id) on delete cascade,
@@ -109,6 +113,10 @@ alter table public.orgii_work_items
   add column if not exists version integer not null default 0,
   add column if not exists updated_by_member_id text,
   add column if not exists deleted_at timestamptz;
+
+-- Delta pull (orgii_list_org_state) scans by (org_id, updated_at >= cursor).
+create index if not exists orgii_work_items_org_updated_idx
+  on public.orgii_work_items (org_id, updated_at);
 
 create table if not exists public.orgii_sessions (
   id text primary key,
@@ -147,6 +155,11 @@ alter table public.orgii_sessions
   drop column if exists events_blob_path,
   drop column if exists events_content_hash;
 
+-- Delta pull (orgii_list_org_state) scans by (org_id, updated_at >= cursor);
+-- the GC sweep filters on org_id with a cutoff on the same column.
+create index if not exists orgii_sessions_org_updated_idx
+  on public.orgii_sessions (org_id, updated_at);
+
 -- Event segments (design §7.3): immutable frozen prefix as numbered
 -- append-only segments plus a single mutable tail row (seq = 1e9, replaced
 -- in place). payload_gz is client-gzipped JSON of the segment's event array;
@@ -162,6 +175,10 @@ create table if not exists public.orgii_session_event_segments (
   event_count integer not null,
   segment_hash text not null,
   created_at timestamptz not null default now(),
+  -- The PK btree is also the read path's index: the segments SELECT in
+  -- orgii_get_session_event_segments filters on the (org_id,
+  -- session_row_id, epoch) equality prefix with a range on seq (after_seq),
+  -- which this composite serves directly — no extra index needed here.
   primary key (org_id, session_row_id, epoch, seq)
 );
 
@@ -186,6 +203,13 @@ create table if not exists public.orgii_session_shares (
   revoked_at timestamptz
 );
 
+-- Every visibility filter probes shares by the session row (list/segment
+-- reads) or by the grantee (delta pull EXISTS per session row).
+create index if not exists orgii_session_shares_session_row_idx
+  on public.orgii_session_shares (session_row_id);
+create index if not exists orgii_session_shares_grantee_idx
+  on public.orgii_session_shares (grantee_member_id);
+
 create table if not exists public.orgii_chat_messages (
   id text primary key,
   org_id text not null references public.orgii_orgs(id) on delete cascade,
@@ -193,6 +217,10 @@ create table if not exists public.orgii_chat_messages (
   payload jsonb not null,
   created_at timestamptz not null default now()
 );
+
+-- Delta pull (orgii_list_org_state) scans by (org_id, created_at >= cursor).
+create index if not exists orgii_chat_messages_org_created_idx
+  on public.orgii_chat_messages (org_id, created_at);
 
 create table if not exists public.orgii_session_snapshot_requests (
   request_id text primary key,
@@ -206,6 +234,10 @@ create table if not exists public.orgii_session_snapshot_requests (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Delta pull (orgii_list_org_state) scans by (org_id, updated_at >= cursor).
+create index if not exists orgii_session_snapshot_requests_org_updated_idx
+  on public.orgii_session_snapshot_requests (org_id, updated_at);
 
 create table if not exists public.orgii_session_snapshots (
   request_id text primary key references public.orgii_session_snapshot_requests(request_id) on delete cascade,
@@ -237,6 +269,10 @@ create table if not exists public.orgii_repo_join_requests (
   created_at timestamptz not null default now(),
   reviewed_at timestamptz
 );
+
+-- Delta pull (orgii_list_org_state) scans by (org_id, created_at >= cursor).
+create index if not exists orgii_repo_join_requests_org_created_idx
+  on public.orgii_repo_join_requests (org_id, created_at);
 
 alter table public.orgii_sync_meta enable row level security;
 alter table public.orgii_orgs enable row level security;
@@ -848,10 +884,16 @@ begin
   select * into v_ctx
   from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, null);
 
+  -- FOR UPDATE: the summary row is the segment plane's mutex. Holding it for
+  -- the whole transaction serializes this append against the GC sweep (which
+  -- locks stale summary rows before deleting segments) and against the same
+  -- owner's other devices — the OCC anchors checked below cannot be
+  -- invalidated between check and write.
   select s.* into v_session
   from public.orgii_sessions s
   where s.id = orgii_append_session_events.session_row_id
-    and s.org_id = p_org_id;
+    and s.org_id = p_org_id
+  for update;
 
   if v_session.id is null
      or v_session.owner_member_id is distinct from v_ctx.member_id
@@ -965,10 +1007,14 @@ begin
   select * into v_ctx
   from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, null);
 
+  -- FOR UPDATE: same summary-row mutex as orgii_append_session_events — the
+  -- rewrite's delete + reinsert must not interleave with the GC sweep or a
+  -- concurrent append from another device of the same owner.
   select s.* into v_session
   from public.orgii_sessions s
   where s.id = orgii_rewrite_session_events.session_row_id
-    and s.org_id = p_org_id;
+    and s.org_id = p_org_id
+  for update;
 
   if v_session.id is null
      or v_session.owner_member_id is distinct from v_ctx.member_id
@@ -1152,15 +1198,29 @@ declare
 begin
   perform public.orgii_authenticate_admin(p_org_id, p_member_id, p_member_token, p_org_secret);
 
+  -- Lock the candidate summary rows BEFORE touching their segments: an
+  -- owner append/rewrite takes FOR UPDATE on the same orgii_sessions row up
+  -- front, so it serializes against this sweep instead of landing fresh
+  -- segments between the delete below and the summary clear — which would
+  -- leave a summary advertising segments the sweep just destroyed (or
+  -- orphaned segment payloads under a cleared summary).
+  with stale as (
+    select s.id
+    from public.orgii_sessions s
+    where s.org_id = p_org_id
+      and coalesce(s.events_updated_at, s.updated_at) < v_cutoff
+    for update
+  )
   delete from public.orgii_session_event_segments g
-  using public.orgii_sessions s
-  where s.id = g.session_row_id
-    and g.org_id = p_org_id
-    and s.org_id = p_org_id
-    and coalesce(s.events_updated_at, s.updated_at) < v_cutoff;
+  using stale
+  where g.org_id = p_org_id
+    and g.session_row_id = stale.id;
 
   get diagnostics v_deleted = row_count;
 
+  -- Same predicate = the same row set locked above: within one transaction
+  -- staleness can only move toward fresh (now() is fixed, appends bump the
+  -- timestamps), never toward stale, so no new rows can slip in here.
   update public.orgii_sessions s
      set events_epoch = null,
          events_frozen_seq = null,
@@ -1452,6 +1512,18 @@ begin
     if v_existing.org_id <> p_org_id or v_existing.version <> coalesce(base_version, -1) then
       raise exception 'ORGII_CONFLICT';
     end if;
+    -- work_item_prefix changes are admin-only (design §16.9), mirroring the
+    -- orgii_delete_project gate: the prefix names every short id the
+    -- allocator mints from here on, so letting any member flip (or drop) it
+    -- would reshuffle the whole org's work-item numbering. Initial creation
+    -- is exempt (insert branch below — naming a brand-new project is part
+    -- of creating it). The gate runs AFTER the OCC check, so a stale client
+    -- that never saw the prefix gets ORGII_CONFLICT (merge + retry with the
+    -- prefix included), not a spurious authorization error.
+    if v_existing.work_item_prefix is distinct from project->>'workItemPrefix'
+       and not (v_ctx.is_root or v_ctx.member_role = 'admin') then
+      raise exception 'ORGII_UNAUTHORIZED';
+    end if;
     update public.orgii_projects
        set payload = project,
            slug = project->>'slug',
@@ -1531,10 +1603,17 @@ declare
   v_ctx record;
   v_id text := coalesce(work_item->>'id', gen_random_uuid()::text);
   v_existing record;
+  v_short_n integer;
 begin
   select * into v_ctx
   from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
 
+  -- Row identity vs short id: id (the PK, chosen by the creating client,
+  -- globally unique) is the ONLY upsert key — an incoming row updates an
+  -- existing one solely on a true row-id match. short_id (PREFIX-n) is a
+  -- display name and NEVER a conflict target: two clients that provisionally
+  -- minted the same PREFIX-n offline must land as two rows and get renamed
+  -- through the allocator, not silently merge into (and overwrite) one.
   select w.* into v_existing from public.orgii_work_items w where w.id = v_id;
 
   if v_existing.id is not null then
@@ -1542,7 +1621,13 @@ begin
       raise exception 'ORGII_CONFLICT';
     end if;
     update public.orgii_work_items
-       set payload = work_item,
+       -- executionLock is SERVER-OWNED (design §16.6): the stored value wins
+       -- verbatim over whatever the client sent — only
+       -- orgii_acquire_work_item_lock / orgii_release_work_item_lock ever
+       -- mutate it. Without this, a whole-row upsert racing an acquire would
+       -- silently clear (or resurrect) a teammate's lock.
+       set payload = jsonb_set(work_item, '{executionLock}',
+             coalesce(v_existing.payload->'executionLock', 'null'::jsonb), true),
            project_id = work_item->>'projectId',
            short_id = work_item->>'shortId',
            title = work_item->>'title',
@@ -1561,16 +1646,37 @@ begin
            updated_at = now()
      where id = v_id;
   else
+    -- executionLock stripped on insert too: a brand-new row cannot arrive
+    -- already locked — a server lock only ever comes from
+    -- orgii_acquire_work_item_lock (otherwise a client could seed a spoofed
+    -- holder and block the whole org from starting agents on the item).
     insert into public.orgii_work_items (
       id, org_id, payload, project_id, short_id, title, body, status, priority,
       assignee_member_id, assignee_type, milestone, parent_id, start_date, target_date,
       version, updated_by_member_id
     ) values (
-      v_id, p_org_id, work_item, work_item->>'projectId', work_item->>'shortId',
+      v_id, p_org_id, work_item - 'executionLock', work_item->>'projectId', work_item->>'shortId',
       work_item->>'title', work_item->>'body', work_item->>'status', work_item->>'priority',
       work_item->>'assigneeMemberId', work_item->>'assigneeType', work_item->>'milestone',
       work_item->>'parentId', work_item->>'startDate', work_item->>'targetDate', 1, v_ctx.member_id
     );
+  end if;
+
+  -- Server-side half of the short-id collision fix (design §16.5): every
+  -- upsert advances the owning project's allocator counter past the item's
+  -- numeric suffix, so a short id that reached the server through this path
+  -- (offline-provisional ids, imports, rows minted before the project was
+  -- shared) can never be handed out again by
+  -- orgii_allocate_work_item_short_id. greatest() keeps the counter
+  -- monotonic under concurrency; like the allocator itself this does NOT
+  -- bump the project's version/updated_at (nothing row-visible changes for
+  -- other members). {1,9} caps the cast at 9 digits so a garbage suffix
+  -- cannot overflow integer (real allocator ids are 4-padded).
+  v_short_n := (substring(work_item->>'shortId' from '([0-9]{1,9})$'))::integer;
+  if v_short_n is not null and work_item->>'projectId' is not null then
+    update public.orgii_projects p
+       set next_work_item_id = greatest(p.next_work_item_id, v_short_n + 1)
+     where p.id = work_item->>'projectId' and p.org_id = p_org_id;
   end if;
 
   return jsonb_build_object('id', v_id, 'version', (select w.version from public.orgii_work_items w where w.id = v_id));
@@ -1604,9 +1710,11 @@ $$;
 -- server so two members can never mint the same PREFIX-n. Atomic
 -- update-returning; the counter is server-owned — orgii_upsert_project never
 -- writes next_work_item_id, and allocation does NOT bump version/updated_at
--- (nothing row-visible changes for other members). Missing/tombstoned
--- project raises the uniform ORGII_CONFLICT so callers fall back to a local
--- provisional id without learning why.
+-- (nothing row-visible changes for other members). The only other writer is
+-- orgii_upsert_work_item, which monotonically advances the counter past any
+-- synced item's numeric suffix (collision fix — see the comment there).
+-- Missing/tombstoned project raises the uniform ORGII_CONFLICT so callers
+-- fall back to a local provisional id without learning why.
 create or replace function public.orgii_allocate_work_item_short_id(
   p_org_id text,
   project_id text,
@@ -1641,10 +1749,18 @@ $$;
 
 -- Execution lock arbitration (design §16.6): the lock is stored inside the
 -- work item payload jsonb so it propagates to every member through the
--- normal delta. Acquire is OCC — it succeeds only while no lock is present;
--- a held lock raises the uniform ORGII_CONFLICT (holder identity travels in
--- the synced row, never in the error). lockedByMemberId is forced to the
--- authenticated member so a client cannot acquire on someone else's behalf.
+-- normal delta, but it is SERVER-OWNED — only this acquire and the release
+-- below ever mutate payload.executionLock (orgii_upsert_work_item preserves
+-- the stored value verbatim). Acquire succeeds while the lock is free, held
+-- by the CALLER (idempotent re-acquire doubles as a heartbeat — the lease
+-- timestamp refreshes), or STALE (lockedAt older than the 30-minute TTL, so
+-- a crashed holder can never wedge the item forever); any other held lock
+-- raises the uniform ORGII_CONFLICT (holder identity travels in the synced
+-- row, never in the error). lockedByMemberId is forced to the authenticated
+-- member so a client cannot acquire on someone else's behalf. lockedAt is
+-- server-stamped: a client-sent value is honored only when it lies in the
+-- past (pre-dating merely weakens the caller's own lease) and is clamped to
+-- now() otherwise — post-dating would mint an unexpirable lock.
 create or replace function public.orgii_acquire_work_item_lock(
   p_org_id text,
   work_item_id text,
@@ -1660,16 +1776,57 @@ set search_path = public, extensions
 as $$
 declare
   v_ctx record;
+  v_row record;
   v_lock jsonb;
+  v_prev_locked_at timestamptz;
+  v_new_locked_at timestamptz;
   v_version integer;
 begin
   select * into v_ctx
   from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
 
+  -- Row lock first: the free/held/stale decision and the write below form
+  -- one critical section, so two concurrent acquirers serialize here and
+  -- the loser evaluates the winner's freshly committed lock.
+  select w.version, w.payload->'executionLock' as lock into v_row
+  from public.orgii_work_items w
+  where w.id = work_item_id and w.org_id = p_org_id and w.deleted_at is null
+  for update;
+
+  if v_row.version is null then
+    raise exception 'ORGII_CONFLICT';
+  end if;
+
+  if v_row.lock is not null and v_row.lock <> 'null'::jsonb then
+    -- Held: allow the holder itself (idempotent re-acquire) or takeover of
+    -- a stale lease. An absent or unparseable lockedAt reads as expired —
+    -- rows locked before the TTL existed never stamped it, and they must
+    -- stay takeable rather than wedge the item forever.
+    begin
+      v_prev_locked_at := (v_row.lock->>'lockedAt')::timestamptz;
+    exception when others then
+      v_prev_locked_at := null;
+    end;
+    if not (
+      (v_ctx.member_id is not null and v_row.lock->>'lockedByMemberId' = v_ctx.member_id)
+      or coalesce(v_prev_locked_at, '-infinity'::timestamptz) < now() - interval '30 minutes'
+    ) then
+      raise exception 'ORGII_CONFLICT';
+    end if;
+  end if;
+
   v_lock := coalesce(lock_payload, '{}'::jsonb);
   if v_ctx.member_id is not null then
     v_lock := jsonb_set(v_lock, '{lockedByMemberId}', to_jsonb(v_ctx.member_id), true);
   end if;
+  -- least() ignores a NULL (absent lockedAt => now()); garbage falls back
+  -- to now() through the cast guard.
+  begin
+    v_new_locked_at := least((v_lock->>'lockedAt')::timestamptz, now());
+  exception when others then
+    v_new_locked_at := now();
+  end;
+  v_lock := jsonb_set(v_lock, '{lockedAt}', to_jsonb(v_new_locked_at::text), true);
 
   update public.orgii_work_items
      set payload = jsonb_set(payload, '{executionLock}', v_lock, true),
@@ -1677,7 +1834,6 @@ begin
          updated_by_member_id = v_ctx.member_id,
          updated_at = now()
    where id = work_item_id and org_id = p_org_id and deleted_at is null
-     and (payload->'executionLock' is null or payload->'executionLock' = 'null'::jsonb)
   returning version into v_version;
 
   if v_version is null then
@@ -1710,9 +1866,14 @@ begin
   select * into v_ctx
   from public.orgii_authenticate(p_org_id, p_member_id, p_member_token, p_org_secret);
 
+  -- FOR UPDATE: the holder check and the clear below are one critical
+  -- section — without it a TTL takeover in orgii_acquire_work_item_lock
+  -- could land between them and this release would clear the NEW holder's
+  -- lock.
   select w.version, w.payload->'executionLock' as lock into v_row
   from public.orgii_work_items w
-  where w.id = work_item_id and w.org_id = p_org_id and w.deleted_at is null;
+  where w.id = work_item_id and w.org_id = p_org_id and w.deleted_at is null
+  for update;
 
   if v_row.version is null then
     raise exception 'ORGII_CONFLICT';

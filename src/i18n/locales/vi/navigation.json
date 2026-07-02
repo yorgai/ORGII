@@ -405,6 +405,7 @@
     "openSupabaseSqlEditor": "Mở Supabase SQL Editor",
     "supabaseSetupVerified": "Đã xác minh thiết lập Supabase",
     "supabaseSetupMissing": "Thiếu thiết lập Supabase. Sao chép SQL thiết lập, chạy trong Supabase SQL Editor, rồi xác minh lại.",
+    "supabaseSetupServerNewer": "This ORG's Supabase schema is newer than this app version. Update ORGII, then try again.",
     "orgDemoTitle": "ORG",
     "orgNotFound": "Không tìm thấy ORG",
     "tabs": {
@@ -459,6 +460,7 @@
     "access": {
       "title": "Quyền truy cập session",
       "description": "Chọn những gì đồng đội có thể xem từ các sessions cục bộ của bạn trong ORG này.",
+      "onboardingHint": "You can change this anytime in the ORG's Sessions settings.",
       "modes": {
         "off": {
           "title": "Tắt",
@@ -565,6 +567,7 @@
       "replay": "Replay",
       "linkedSessionMetadataOnly": "Metadata only",
       "linkedSessionUnshared": "Not shared",
+      "replayUnavailable": "This session is no longer shared",
       "unknownOwner": "Unknown"
     },
     "lock": {

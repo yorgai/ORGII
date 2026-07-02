@@ -30,6 +30,7 @@ import {
   collabMembersAtom,
   collabOrgsAtom,
   collabPendingOpenSessionAtom,
+  collabPublishedSessionKeysAtom,
   collabRepoJoinRequestsAtom,
   collabSessionAccessSettingsAtom,
   collabSessionPushCursorsAtom,
@@ -111,6 +112,8 @@ const REANCHOR_PROBE_AFTER_SEQ = 2_147_483_647;
 
 const SETUP_MISSING_MESSAGE =
   "Supabase setup is missing or outdated. Copy the setup SQL, run it in the Supabase SQL Editor, then retry.";
+const SERVER_NEWER_MESSAGE =
+  "This org's Supabase schema is newer than this app. Update ORGII to the latest version to keep syncing.";
 
 interface ActiveCollabConnection {
   org: CollabOrgRecord;
@@ -125,6 +128,20 @@ interface OrgPullState {
   errorCount: number;
   /** requestPullNow arrived while a cycle was running → re-pull right after. */
   pullAgainImmediately: boolean;
+}
+
+/**
+ * Identity of one pull cycle. `state` doubles as the per-org invalidation
+ * token: reconcile() deletes (and on rejoin re-creates) the OrgPullState, so
+ * a mid-flight cycle whose captured state no longer matches the map is for
+ * an org that left — every write block checks this before touching atoms,
+ * otherwise a slow pull would resurrect purged org data and advance a stale
+ * delta cursor.
+ */
+interface OrgPullCycle {
+  orgId: string;
+  generation: number;
+  state: OrgPullState;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -163,8 +180,23 @@ export class CollabSyncEngine {
   private readonly lastPushedMetadataHashes = new Map<string, string>();
   /** `${orgId}:${sessionId}` keys already tombstoned — exactly one remove. */
   private readonly knownRemovedSessionKeys = new Set<string>();
+  /**
+   * `${orgId}:${sessionId}` keys whose push was cancelled by a tombstone. An
+   * in-flight segments push that completes after the sweep removed the
+   * session must not write its cursor back (that would re-anchor a session
+   * the owner just unshared/deleted). Cleared when the session becomes
+   * push-eligible again under CURRENT settings.
+   */
+  private readonly cancelledPushSessionKeys = new Set<string>();
   /** Local ids the engine itself imported; never eligible for push. */
   private readonly importedLocalSessionIds = new Set<string>();
+  /** Per-session consecutive push failures → bounded retry backoff. */
+  private readonly pushRetryCounts = new Map<string, number>();
+  /**
+   * Orgs whose PERSISTED published-session keys were already diffed against
+   * sessionsAtom this run (deleted-while-closed tombstones fire once).
+   */
+  private readonly publishedKeysDiffedThisRun = new Set<string>();
   private metadataSweepTimer: ReturnType<typeof setTimeout> | null = null;
   private metadataSweepRunning = false;
   private metadataSweepDirty = false;
@@ -214,7 +246,10 @@ export class CollabSyncEngine {
     this.dirtyPushSessionIds.clear();
     this.lastPushedMetadataHashes.clear();
     this.knownRemovedSessionKeys.clear();
+    this.cancelledPushSessionKeys.clear();
     this.importedLocalSessionIds.clear();
+    this.pushRetryCounts.clear();
+    this.publishedKeysDiffedThisRun.clear();
     this.metadataSweepRunning = false;
     this.metadataSweepDirty = false;
     this.lastActivityAt = 0;
@@ -282,7 +317,12 @@ export class CollabSyncEngine {
     for (const [orgId, state] of this.pullStates) {
       if (activeOrgIds.has(orgId)) continue;
       if (state.timer !== null) clearTimeout(state.timer);
+      // Deleting the state invalidates any in-flight cycle for this org
+      // (every write block compares its captured state against the map) —
+      // a mid-flight pull for a left org must not resurrect purged atoms
+      // or advance its stale delta cursor.
       this.pullStates.delete(orgId);
+      this.purgeOrgPushState(orgId);
     }
 
     let staggerIndex = 0;
@@ -319,8 +359,12 @@ export class CollabSyncEngine {
         this.scheduleMetadataSweep()
       );
       // First attach: publish current metadata immediately (this replaces
-      // the old per-cycle metadata push from the pull loop).
+      // the old per-cycle metadata push from the pull loop), and re-arm the
+      // segments push for any session whose persisted history moved on
+      // while the engine was not running (a crash between event write and
+      // push previously stalled until the next local event).
       void this.runMetadataSweep();
+      void this.resumePendingSegmentPushes();
     } else {
       // Settings / scope changes can flip eligibility → tombstone or
       // (re-)publish exactly once via the hash / known-removed gates.
@@ -344,6 +388,29 @@ export class CollabSyncEngine {
       this.metadataSweepTimer = null;
     }
     this.metadataSweepDirty = false;
+  }
+
+  /**
+   * Drop every in-memory push gate scoped to an org that left. Stale
+   * entries would otherwise suppress the fresh publish / tombstone pass a
+   * rejoin needs (the persisted atoms — cursors, published keys — are the
+   * leave-org flow's cleanup, not reconcile's). verify/gc markers reset too
+   * so a rejoin against a different Supabase project re-verifies setup.
+   */
+  private purgeOrgPushState(orgId: string): void {
+    const orgPrefix = `${orgId}:`;
+    for (const key of [...this.lastPushedMetadataHashes.keys()]) {
+      if (key.startsWith(orgPrefix)) this.lastPushedMetadataHashes.delete(key);
+    }
+    for (const key of [...this.knownRemovedSessionKeys]) {
+      if (key.startsWith(orgPrefix)) this.knownRemovedSessionKeys.delete(key);
+    }
+    for (const key of [...this.cancelledPushSessionKeys]) {
+      if (key.startsWith(orgPrefix)) this.cancelledPushSessionKeys.delete(key);
+    }
+    this.publishedKeysDiffedThisRun.delete(orgId);
+    this.verifiedOrgIds.delete(orgId);
+    this.gcTriggeredOrgIds.delete(orgId);
   }
 
   // ===========================================================================
@@ -379,10 +446,23 @@ export class CollabSyncEngine {
     }, delayMs);
   }
 
+  /**
+   * True once this cycle's writes must stop: the engine stopped (generation
+   * bump) or reconcile() dropped/re-created the org's pull state (org left —
+   * per-org invalidation, so one org leaving never stalls the others).
+   */
+  private isCycleStale(cycle: OrgPullCycle): boolean {
+    return (
+      !this.started ||
+      this.generation !== cycle.generation ||
+      this.pullStates.get(cycle.orgId) !== cycle.state
+    );
+  }
+
   private async runPullCycle(orgId: string): Promise<void> {
-    const generation = this.generation;
     const state = this.pullStates.get(orgId);
     if (!state || state.running || !this.store) return;
+    const cycle: OrgPullCycle = { orgId, generation: this.generation, state };
     const connection = this.getActiveConnections().find(
       ({ org }) => org.id === orgId
     );
@@ -393,11 +473,11 @@ export class CollabSyncEngine {
     }
     state.running = true;
     try {
-      await this.syncConnection(connection, generation);
-      if (this.generation !== generation) return;
+      await this.syncConnection(connection, cycle);
+      if (this.isCycleStale(cycle)) return;
       state.errorCount = 0;
     } catch (error) {
-      if (this.generation !== generation) return;
+      if (this.isCycleStale(cycle)) return;
       state.errorCount += 1;
       this.setConnectionStatus(
         orgId,
@@ -407,7 +487,7 @@ export class CollabSyncEngine {
     } finally {
       state.running = false;
     }
-    if (this.generation !== generation || !this.pullStates.has(orgId)) return;
+    if (this.isCycleStale(cycle)) return;
     if (state.pullAgainImmediately) {
       state.pullAgainImmediately = false;
       this.schedulePull(orgId, 0);
@@ -422,7 +502,7 @@ export class CollabSyncEngine {
    */
   private async syncConnection(
     connection: ActiveCollabConnection,
-    generation: number
+    cycle: OrgPullCycle
   ): Promise<void> {
     const { org, profile } = connection;
     const store = this.store;
@@ -435,9 +515,14 @@ export class CollabSyncEngine {
     // per 5s cycle.
     if (!this.verifiedOrgIds.has(org.id)) {
       const result = await supabaseSyncClient.verifySetup(profile);
-      if (this.generation !== generation) return;
+      if (this.isCycleStale(cycle)) return;
       if (!result.ok) {
-        throw new Error(SETUP_MISSING_MESSAGE);
+        // A server schema NEWER than this client isn't a missing-setup
+        // problem — re-running the (older) setup SQL would be wrong. Tell the
+        // user to upgrade the app instead.
+        throw new Error(
+          result.serverNewer ? SERVER_NEWER_MESSAGE : SETUP_MISSING_MESSAGE
+        );
       }
       this.verifiedOrgIds.add(org.id);
     }
@@ -462,7 +547,7 @@ export class CollabSyncEngine {
       orgId: org.id,
       sinceTimestamp,
     });
-    if (this.generation !== generation) return;
+    if (this.isCycleStale(cycle)) return;
 
     store.set(collabMembersAtom, (current) =>
       state.members.reduce(upsertCollabMember, current)
@@ -481,7 +566,7 @@ export class CollabSyncEngine {
       profile,
       state,
     });
-    if (this.generation !== generation) return;
+    if (this.isCycleStale(cycle)) return;
 
     // Tombstoned sessions bypass the scope filter: removals must propagate
     // even when the org repo scopes no longer cover the session.
@@ -502,21 +587,32 @@ export class CollabSyncEngine {
     store.set(collabChatMessagesAtom, (current) =>
       state.chatMessages.reduce(upsertChatMessage, current)
     );
+    const localMemberId = connection.member.id;
     store.set(collabSessionSnapshotRequestsAtom, (current) =>
-      state.snapshotRequests.reduce(
-        (next, request) =>
-          upsertSnapshotRequest(next, {
-            requestId: request.requestId,
-            orgId: request.orgId,
-            requesterMemberId: request.requesterMemberId,
-            ownerMemberId: request.ownerMemberId,
-            sourceSessionId: request.sourceSessionId,
-            createdAt: request.createdAt,
-            status: request.status,
-            error: request.error,
-          }),
-        current
-      )
+      state.snapshotRequests.reduce((next, request) => {
+        // For OUR OWN requests the local "completed" status is the IMPORTED
+        // marker, written by processSnapshotWork only after the payload's
+        // durable event write. The server's "completed" merely means the
+        // payload is available — copying it here would pre-mark the request
+        // and permanently skip the import (and a failed import must keep
+        // its previous status so it retries next cycle).
+        const status =
+          request.requesterMemberId === localMemberId &&
+          request.status === "completed"
+            ? (next.find((item) => item.requestId === request.requestId)
+                ?.status ?? "sent")
+            : request.status;
+        return upsertSnapshotRequest(next, {
+          requestId: request.requestId,
+          orgId: request.orgId,
+          requesterMemberId: request.requesterMemberId,
+          ownerMemberId: request.ownerMemberId,
+          sourceSessionId: request.sourceSessionId,
+          createdAt: request.createdAt,
+          status,
+          error: request.error,
+        });
+      }, current)
     );
     store.set(collabRepoJoinRequestsAtom, (current) =>
       state.repoJoinRequests.reduce(upsertRepoJoinRequest, current)
@@ -534,15 +630,27 @@ export class CollabSyncEngine {
       );
     }
 
-    await this.importRemoteSessionEvents(
+    const importsOk = await this.importRemoteSessionEvents(
       connection,
       inScopeSessions,
-      generation
+      cycle
     );
-    if (this.generation !== generation) return;
+    if (this.isCycleStale(cycle)) return;
 
-    await this.processSnapshotWork(connection, state, generation);
-    if (this.generation !== generation) return;
+    const snapshotsOk = await this.processSnapshotWork(
+      connection,
+      state,
+      cycle
+    );
+    if (this.isCycleStale(cycle)) return;
+
+    if (!importsOk || !snapshotsOk) {
+      // A failed import already reported ERROR for this org. Do NOT flip it
+      // back to CONNECTED in the same cycle, and do NOT advance the delta
+      // cursor: advancing would push the failed session/request out of the
+      // delta window forever, so the import would never retry.
+      return;
+    }
 
     this.setConnectionStatus(org.id, COLLAB_CONNECTION_STATUS.CONNECTED);
     // Anchor the delta cursor on the server clock (minus a safety window) so
@@ -565,13 +673,19 @@ export class CollabSyncEngine {
    * refetch, persistence) lives in the shared `importRemoteSession` — the
    * same function backs the panel's direct-replay action.
    */
+  /**
+   * Returns false when any import failed: the caller must then hold the
+   * delta cursor (so the failed session stays in the next delta window and
+   * retries) and must not overwrite the ERROR status with CONNECTED.
+   */
   private async importRemoteSessionEvents(
     connection: ActiveCollabConnection,
     inScopeSessions: RemoteTeammateSessionMetadata[],
-    generation: number
-  ): Promise<void> {
+    cycle: OrgPullCycle
+  ): Promise<boolean> {
     const { org, member, profile } = connection;
-    if (!this.store) return;
+    if (!this.store) return true;
+    let allImportsSucceeded = true;
     for (const remoteSession of inScopeSessions) {
       if (remoteSession.ownerMemberId === member.id) continue;
       if (remoteSession.eventsEpoch === undefined) continue;
@@ -587,9 +701,10 @@ export class CollabSyncEngine {
           onBeforeWrite: (localSessionId) =>
             this.importedLocalSessionIds.add(localSessionId),
         });
-        if (this.generation !== generation) return;
+        if (this.isCycleStale(cycle)) return false;
       } catch (error) {
-        if (this.generation !== generation) return;
+        if (this.isCycleStale(cycle)) return false;
+        allImportsSucceeded = false;
         this.setConnectionStatus(
           org.id,
           COLLAB_CONNECTION_STATUS.ERROR,
@@ -597,6 +712,7 @@ export class CollabSyncEngine {
         );
       }
     }
+    return allImportsSucceeded;
   }
 
   /**
@@ -608,11 +724,12 @@ export class CollabSyncEngine {
   private async processSnapshotWork(
     connection: ActiveCollabConnection,
     serverState: CollabOrgState,
-    generation: number
-  ): Promise<void> {
+    cycle: OrgPullCycle
+  ): Promise<boolean> {
     const { org, member, settings, profile } = connection;
     const store = this.store;
-    if (!store) return;
+    if (!store) return true;
+    let allSnapshotsSucceeded = true;
 
     // REQUESTER side: send locally created pending snapshot requests.
     for (const request of store.get(collabSessionSnapshotRequestsAtom)) {
@@ -631,7 +748,7 @@ export class CollabSyncEngine {
         ownerMemberId: request.ownerMemberId,
         sourceSessionId: request.sourceSessionId,
       });
-      if (this.generation !== generation) return;
+      if (this.isCycleStale(cycle)) return false;
       store.set(collabSessionSnapshotRequestsAtom, (current) =>
         current.map((item) =>
           item.requestId === request.requestId
@@ -655,7 +772,7 @@ export class CollabSyncEngine {
             requestId: request.requestId,
             reason: "Session is unavailable on the owner device",
           });
-          if (this.generation !== generation) return;
+          if (this.isCycleStale(cycle)) return false;
           continue;
         }
         const metadata = toRemoteMetadata(sourceSession, org, member, settings);
@@ -666,13 +783,34 @@ export class CollabSyncEngine {
             requestId: request.requestId,
             reason: "Session replay is not allowed by owner settings",
           });
-          if (this.generation !== generation) return;
+          if (this.isCycleStale(cycle)) return false;
           continue;
         }
-        const events = await eventStoreProxy.getEvents(
+        // Full PERSISTED history — never the windowed in-memory view: for a
+        // cold (non-resident) session `getEvents` returns [], which would
+        // publish an empty transcript the requester permanently marks
+        // completed.
+        const events = await eventStoreProxy.getPersistedEvents(
           sourceSession.session_id
         );
-        if (this.generation !== generation) return;
+        if (this.isCycleStale(cycle)) return false;
+        // A session whose metadata shows any activity must have events; an
+        // empty read is a failed/unavailable local cache, not an empty
+        // session. Deny (the requester can re-request) instead of shipping
+        // an empty transcript.
+        const historyExpected =
+          Boolean(sourceSession.user_input) ||
+          sourceSession.status !== "pending";
+        if (events.length === 0 && historyExpected) {
+          await supabaseSyncClient.denySessionSnapshot({
+            ...profile,
+            orgId: org.id,
+            requestId: request.requestId,
+            reason: "Session history is unavailable on the owner device",
+          });
+          if (this.isCycleStale(cycle)) return false;
+          continue;
+        }
         await supabaseSyncClient.publishSessionSnapshot({
           ...profile,
           requestId: request.requestId,
@@ -681,10 +819,12 @@ export class CollabSyncEngine {
           session: metadata,
           events,
         });
-        if (this.generation !== generation) return;
+        if (this.isCycleStale(cycle)) return false;
       }
 
-      // REQUESTER side: import completed snapshot payloads exactly once.
+      // REQUESTER side: import completed snapshot payloads exactly once
+      // (the pull application keeps our local status at "sent" until this
+      // import succeeds — see syncConnection).
       if (
         request.requesterMemberId === member.id &&
         request.status === "completed" &&
@@ -701,6 +841,26 @@ export class CollabSyncEngine {
           request.events,
           localSessionId
         );
+        // Durable event write FIRST (mirrors importRemoteSession): if the
+        // session record + "completed" marker were persisted before the
+        // cache write and that write failed, the request would be marked
+        // done forever over a permanently empty transcript.
+        await eventStoreProxy.set(localEvents, localSessionId);
+        const savedCount = await eventStoreProxy.saveToCache(localSessionId);
+        if (this.isCycleStale(cycle)) return false;
+        if (localEvents.length > 0 && savedCount <= 0) {
+          // Drop the orphaned in-memory events and leave the request status
+          // untouched — the held delta cursor re-delivers it next cycle.
+          await eventStoreProxy.clear(localSessionId);
+          if (this.isCycleStale(cycle)) return false;
+          allSnapshotsSucceeded = false;
+          this.setConnectionStatus(
+            org.id,
+            COLLAB_CONNECTION_STATUS.ERROR,
+            `Failed to persist snapshot for session ${request.sourceSessionId}`
+          );
+          continue;
+        }
         const now = new Date().toISOString();
         upsertSession({
           session_id: localSessionId,
@@ -731,9 +891,6 @@ export class CollabSyncEngine {
           },
         });
         persistSessions(store.get(sessionsAtom));
-        await eventStoreProxy.set(localEvents, localSessionId);
-        await eventStoreProxy.saveToCache(localSessionId);
-        if (this.generation !== generation) return;
         store.set(collabSessionSnapshotRequestsAtom, (current) =>
           current.map((item) =>
             item.requestId === request.requestId
@@ -750,19 +907,23 @@ export class CollabSyncEngine {
         });
       }
     }
+    return allSnapshotsSucceeded;
   }
 
   // ===========================================================================
   // PushQueue — events blobs (eventStoreProxy-driven)
   // ===========================================================================
 
-  private schedulePush(sessionId: string): void {
+  private schedulePush(
+    sessionId: string,
+    delayMs: number = PUSH_DEBOUNCE_MS
+  ): void {
     const existing = this.pushDebounceTimers.get(sessionId);
     if (existing !== undefined) clearTimeout(existing);
     const timer = setTimeout(() => {
       this.pushDebounceTimers.delete(sessionId);
       void this.flushSessionPush(sessionId);
-    }, PUSH_DEBOUNCE_MS);
+    }, delayMs);
     this.pushDebounceTimers.set(sessionId, timer);
   }
 
@@ -782,6 +943,7 @@ export class CollabSyncEngine {
     if (!store || !this.started) return;
     const generation = this.generation;
     this.inFlightPushSessionIds.add(sessionId);
+    let pushFailed = false;
     try {
       if (this.importedLocalSessionIds.has(sessionId)) return;
       const session = store
@@ -801,6 +963,10 @@ export class CollabSyncEngine {
         ) {
           continue;
         }
+        // Eligible again under CURRENT settings — any cancellation left by
+        // an earlier tombstone is obsolete (pushes for one session are
+        // serialized, so this cannot race an in-flight cancelled push).
+        this.cancelledPushSessionKeys.delete(`${org.id}:${sessionId}`);
         try {
           const pushed = await this.pushSessionEventSegments(
             connection,
@@ -811,6 +977,7 @@ export class CollabSyncEngine {
           if (pushed) pushedOrgIds.push(org.id);
         } catch (error) {
           if (this.generation !== generation) return;
+          pushFailed = true;
           this.setConnectionStatus(
             org.id,
             COLLAB_CONNECTION_STATUS.ERROR,
@@ -822,12 +989,24 @@ export class CollabSyncEngine {
       for (const orgId of pushedOrgIds) this.requestPullNow(orgId);
     } finally {
       this.inFlightPushSessionIds.delete(sessionId);
-      if (
-        this.dirtyPushSessionIds.delete(sessionId) &&
-        this.started &&
-        this.generation === generation
-      ) {
-        void this.pushSessionEvents(sessionId);
+      if (this.started && this.generation === generation) {
+        if (this.dirtyPushSessionIds.delete(sessionId)) {
+          void this.pushSessionEvents(sessionId);
+        } else if (pushFailed) {
+          // A failed segments push used to wait for the NEXT local event to
+          // retry — a completed session that failed its last push never
+          // reached the server. Re-arm with bounded backoff instead.
+          const retries = this.pushRetryCounts.get(sessionId) ?? 0;
+          this.pushRetryCounts.set(sessionId, retries + 1);
+          this.schedulePush(
+            sessionId,
+            ERROR_BACKOFF_STEPS_MS[
+              Math.min(retries, ERROR_BACKOFF_STEPS_MS.length - 1)
+            ]
+          );
+        } else {
+          this.pushRetryCounts.delete(sessionId);
+        }
       }
     }
   }
@@ -938,7 +1117,13 @@ export class CollabSyncEngine {
         ) {
           return false; // Nothing changed since the last push.
         }
-        await this.upsertSessionMetadataFor(connection, session);
+        // Re-resolve against CURRENT atoms: the persisted read + hashing
+        // above are awaits, and the session may have been unshared (or the
+        // org left) in the meantime — never publish metadata built from a
+        // stale connection snapshot.
+        const target = this.resolveEligiblePushTarget(org.id, sessionId);
+        if (!target) return false;
+        await this.upsertSessionMetadataFor(target.connection, target.session);
         if (this.generation !== generation) return false;
         const frozenSegments = splitFrozenIntoSegments(
           newFrozenEvents,
@@ -956,6 +1141,10 @@ export class CollabSyncEngine {
             totalCount: events.length,
           });
           if (this.generation !== generation) return false;
+          // A tombstone that landed while the append was in flight already
+          // purged the cursor — writing it back would re-anchor a session
+          // the owner just removed.
+          if (this.isPushCancelled(org.id, sessionId)) return false;
           this.setPushCursor({
             orgId: org.id,
             sessionId,
@@ -1015,6 +1204,15 @@ export class CollabSyncEngine {
    * a concrete epoch) re-anchors on the server summary — epoch = server + 1
    * — exactly once; a second conflict surfaces as an error and retries on
    * the next flush.
+   *
+   * SECURITY: this path runs after server round trips (the OCC re-anchor of
+   * a rejected append lands here), so the settings captured by the caller
+   * can be stale — an owner who just unshared the session (accessMode OFF /
+   * override off / session deleted) must not have it silently republished
+   * with the pre-unshare settings, and the sweep's known-removed gate would
+   * block the self-healing tombstone afterwards. Eligibility is therefore
+   * re-resolved against the CURRENT atoms before every write, and the
+   * metadata upsert is built from the fresh settings.
    */
   private async rewriteSessionSegments(
     connection: ActiveCollabConnection,
@@ -1033,14 +1231,20 @@ export class CollabSyncEngine {
     const sessionId = session.session_id;
     const sessionRowId = this.sessionRowId(connection, sessionId);
 
+    let target = this.resolveEligiblePushTarget(org.id, sessionId);
+    if (!target) return false;
+
     let epoch = plan.newEpoch;
     let reanchored = epoch === null;
     if (epoch === null) {
       epoch = (await this.readServerEpoch(connection, sessionRowId)) + 1;
       if (this.generation !== plan.generation) return false;
+      // The probe was a round trip — re-check before writing anything.
+      target = this.resolveEligiblePushTarget(org.id, sessionId);
+      if (!target) return false;
     }
 
-    await this.upsertSessionMetadataFor(connection, session);
+    await this.upsertSessionMetadataFor(target.connection, target.session);
     if (this.generation !== plan.generation) return false;
 
     const frozenSegments = splitFrozenIntoSegments(
@@ -1060,6 +1264,7 @@ export class CollabSyncEngine {
           totalCount: plan.events.length,
         });
         if (this.generation !== plan.generation) return false;
+        if (this.isPushCancelled(org.id, sessionId)) return false;
         this.setPushCursor({
           orgId: org.id,
           sessionId,
@@ -1077,6 +1282,8 @@ export class CollabSyncEngine {
         reanchored = true;
         epoch = (await this.readServerEpoch(connection, sessionRowId)) + 1;
         if (this.generation !== plan.generation) return false;
+        target = this.resolveEligiblePushTarget(org.id, sessionId);
+        if (!target) return false;
       }
     }
   }
@@ -1101,6 +1308,105 @@ export class CollabSyncEngine {
     return `${connection.org.id}:${connection.member.id}:${sessionId}`;
   }
 
+  /**
+   * Re-resolve one (org, session) push target against the CURRENT atoms:
+   * returns the fresh connection (fresh settings!) and the fresh session
+   * record, or null when the push must abort — org gone, session deleted,
+   * no longer push-allowed, no longer effective FULL_REPLAY, or cancelled
+   * by a tombstone. Used wherever a push resumes after an await.
+   */
+  private resolveEligiblePushTarget(
+    orgId: string,
+    sessionId: string
+  ): { connection: ActiveCollabConnection; session: Session } | null {
+    const store = this.store;
+    if (!store || !this.started) return null;
+    if (this.isPushCancelled(orgId, sessionId)) return null;
+    const connection = this.getActiveConnections().find(
+      ({ org }) => org.id === orgId
+    );
+    if (!connection) return null;
+    const session = store
+      .get(sessionsAtom)
+      .find((candidate) => candidate.session_id === sessionId);
+    if (!session) return null;
+    if (!isSessionPushAllowed(session, connection.org, connection.settings)) {
+      return null;
+    }
+    if (
+      getEffectiveAccessMode(session, connection.settings) !==
+      COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY
+    ) {
+      return null;
+    }
+    return { connection, session };
+  }
+
+  private isPushCancelled(orgId: string, sessionId: string): boolean {
+    return (
+      this.cancelledPushSessionKeys.has(`${orgId}:${sessionId}`) ||
+      !this.pullStates.has(orgId)
+    );
+  }
+
+  /**
+   * Tombstone-side cancellation (sweep → push): mark any in-flight push for
+   * this (org, session) as cancelled so its completion cannot write a cursor
+   * back, and kill the pending debounce timer unless another org still
+   * legitimately pushes this session.
+   */
+  private cancelSessionPush(orgId: string, sessionId: string): void {
+    this.cancelledPushSessionKeys.add(`${orgId}:${sessionId}`);
+    const session = this.store
+      ?.get(sessionsAtom)
+      .find((candidate) => candidate.session_id === sessionId);
+    const eligibleElsewhere =
+      session !== undefined &&
+      this.getActiveConnections().some(
+        ({ org, settings }) =>
+          org.id !== orgId &&
+          isSessionPushAllowed(session, org, settings) &&
+          getEffectiveAccessMode(session, settings) ===
+            COLLAB_SESSION_ACCESS_MODE.FULL_REPLAY
+      );
+    if (eligibleElsewhere) return;
+    const timer = this.pushDebounceTimers.get(sessionId);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.pushDebounceTimers.delete(sessionId);
+    }
+    this.pushRetryCounts.delete(sessionId);
+  }
+
+  /**
+   * First attach after start: any session whose persisted event count no
+   * longer matches its persisted push cursor has server-invisible history
+   * (the app stopped between the event write and the push) — re-arm it.
+   */
+  private async resumePendingSegmentPushes(): Promise<void> {
+    const store = this.store;
+    if (!store) return;
+    const generation = this.generation;
+    const cursors = store.get(collabSessionPushCursorsAtom);
+    const persistedCounts = new Map<string, number>();
+    for (const cursor of Object.values(cursors)) {
+      if (this.importedLocalSessionIds.has(cursor.sessionId)) continue;
+      const session = store
+        .get(sessionsAtom)
+        .find((candidate) => candidate.session_id === cursor.sessionId);
+      // Gone sessions are the metadata sweep's tombstone job, not a push.
+      if (!session) continue;
+      let count = persistedCounts.get(cursor.sessionId);
+      if (count === undefined) {
+        count = (await eventStoreProxy.getPersistedEvents(cursor.sessionId))
+          .length;
+        if (this.generation !== generation || !this.started) return;
+        persistedCounts.set(cursor.sessionId, count);
+      }
+      if (count !== cursor.pushedCount) this.schedulePush(cursor.sessionId);
+    }
+  }
+
   private async upsertSessionMetadataFor(
     connection: ActiveCollabConnection,
     session: Session
@@ -1116,6 +1422,46 @@ export class CollabSyncEngine {
         connection.settings
       ),
     });
+    this.recordPublishedSessionKey(
+      `${connection.org.id}:${session.session_id}`
+    );
+  }
+
+  /**
+   * Persisted publish evidence (survives restart): written on successful
+   * upsertSessionMetadata, pruned when the tombstone is sent. First-publish
+   * timestamp only — repeat publishes do not churn the storage write.
+   */
+  private recordPublishedSessionKey(cacheKey: string): void {
+    this.store?.set(collabPublishedSessionKeysAtom, (current) =>
+      cacheKey in current
+        ? current
+        : { ...current, [cacheKey]: new Date().toISOString() }
+    );
+  }
+
+  private prunePublishedSessionKey(cacheKey: string): void {
+    this.store?.set(collabPublishedSessionKeysAtom, (current) => {
+      if (!(cacheKey in current)) return current;
+      const { [cacheKey]: _removed, ...rest } = current;
+      return rest;
+    });
+  }
+
+  /**
+   * Evidence that (org, session) metadata ever reached the server: the
+   * in-memory hash gate, a persisted segments push cursor, or the persisted
+   * published-keys set. A tombstone without evidence is a no-op RPC a
+   * never-published OFF session would otherwise emit on every start.
+   */
+  private hasPublishEvidence(orgId: string, sessionId: string): boolean {
+    const cacheKey = `${orgId}:${sessionId}`;
+    if (this.lastPushedMetadataHashes.has(cacheKey)) return true;
+    if (this.getPushCursor(orgId, sessionId) !== undefined) return true;
+    const store = this.store;
+    return (
+      store !== null && cacheKey in store.get(collabPublishedSessionKeysAtom)
+    );
   }
 
   // ===========================================================================
@@ -1151,11 +1497,16 @@ export class CollabSyncEngine {
         try {
           for (const session of store.get(sessionsAtom)) {
             if (this.generation !== generation) return;
+            // Org dropped mid-sweep (reconcile ran during an await) — stop
+            // writing on its behalf.
+            if (!this.pullStates.has(org.id)) break;
             const cacheKey = `${org.id}:${session.session_id}`;
             currentKeys.add(cacheKey);
             if (isSessionPushAllowed(session, org, settings)) {
-              // Back in scope → future tombstones must fire again.
+              // Back in scope → future tombstones must fire again, and any
+              // tombstone-cancelled push is obsolete.
               this.knownRemovedSessionKeys.delete(cacheKey);
+              this.cancelledPushSessionKeys.delete(cacheKey);
               const metadataHash = computeSessionMetadataHash(
                 session,
                 settings
@@ -1170,12 +1521,23 @@ export class CollabSyncEngine {
                 session: toRemoteMetadata(session, org, member, settings),
               });
               this.lastPushedMetadataHashes.set(cacheKey, metadataHash);
+              this.recordPublishedSessionKey(cacheKey);
               pushedAnything = true;
             } else {
               // Exactly ONE tombstone per session leaving scope / turning
               // OFF — the known-removed set is what kills the old 5s
               // remove storm (a hash gate can't cover the remove side).
               if (this.knownRemovedSessionKeys.has(cacheKey)) continue;
+              // Evidence gate: a session that never reached the server has
+              // nothing to remove — a never-published OFF session must not
+              // emit a tombstone RPC on every engine start.
+              if (!this.hasPublishEvidence(org.id, session.session_id)) {
+                this.knownRemovedSessionKeys.add(cacheKey);
+                continue;
+              }
+              // Cancel BEFORE the remove RPC: an in-flight segments push
+              // completing during/after it must not re-anchor the session.
+              this.cancelSessionPush(org.id, session.session_id);
               await supabaseSyncClient.removeSessionMetadata({
                 ...profile,
                 orgId: org.id,
@@ -1187,6 +1549,7 @@ export class CollabSyncEngine {
               // The tombstone purged the server segments; a stale cursor
               // would only bounce off OCC when the session re-enters scope.
               this.deletePushCursor(org.id, session.session_id);
+              this.prunePublishedSessionKey(cacheKey);
               pushedAnything = true;
             }
           }
@@ -1195,14 +1558,35 @@ export class CollabSyncEngine {
           // (the owner deleted them locally) must be tombstoned too — the loop
           // above only sees sessions that still exist, so without this a
           // deleted session's remote metadata + segments would stay visible
-          // and importable to teammates forever.
+          // and importable to teammates forever. The candidate set is the
+          // in-memory hash gate UNION (once per org per run) the PERSISTED
+          // published keys, so sessions deleted while the app was closed are
+          // caught on the first sweep after a restart.
           const orgPrefix = `${org.id}:`;
-          for (const cacheKey of [...this.lastPushedMetadataHashes.keys()]) {
+          const publishedKeyCandidates = new Set(
+            [...this.lastPushedMetadataHashes.keys()].filter((cacheKey) =>
+              cacheKey.startsWith(orgPrefix)
+            )
+          );
+          const diffPersistedKeys = !this.publishedKeysDiffedThisRun.has(
+            org.id
+          );
+          if (diffPersistedKeys) {
+            for (const cacheKey of Object.keys(
+              store.get(collabPublishedSessionKeysAtom)
+            )) {
+              if (cacheKey.startsWith(orgPrefix)) {
+                publishedKeyCandidates.add(cacheKey);
+              }
+            }
+          }
+          for (const cacheKey of publishedKeyCandidates) {
             if (this.generation !== generation) return;
-            if (!cacheKey.startsWith(orgPrefix)) continue;
+            if (!this.pullStates.has(org.id)) break;
             if (currentKeys.has(cacheKey)) continue;
             if (this.knownRemovedSessionKeys.has(cacheKey)) continue;
             const sessionId = cacheKey.slice(orgPrefix.length);
+            this.cancelSessionPush(org.id, sessionId);
             await supabaseSyncClient.removeSessionMetadata({
               ...profile,
               orgId: org.id,
@@ -1212,8 +1596,12 @@ export class CollabSyncEngine {
             this.knownRemovedSessionKeys.add(cacheKey);
             this.lastPushedMetadataHashes.delete(cacheKey);
             this.deletePushCursor(org.id, sessionId);
+            this.prunePublishedSessionKey(cacheKey);
             pushedAnything = true;
           }
+          // Only mark the persisted diff done when it completed without
+          // throwing — a failed tombstone RPC must retry on the next sweep.
+          if (diffPersistedKeys) this.publishedKeysDiffedThisRun.add(org.id);
         } catch (error) {
           if (this.generation !== generation) return;
           this.setConnectionStatus(

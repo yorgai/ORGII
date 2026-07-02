@@ -35,6 +35,44 @@ import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { isTauriReady } from "@src/util/platform/tauri/init";
 
 /**
+ * Track a share deep-link URL as re-armable (design §6.4). A share link is
+ * one-shot plaintext the owner can't regenerate, so unlike a join link it
+ * must stay re-clickable after its import dialog is dismissed. When a NEW
+ * share link supersedes one whose dialog was never dismissed, the old URL is
+ * re-armed (removed from the dedup set) IMMEDIATELY — otherwise it would be
+ * dedup-blocked forever, because the dismiss-time sweep only sees the
+ * currently tracked set.
+ *
+ * Exported for tests; pure with respect to its arguments.
+ */
+export function trackReArmableShareUrl(
+  processedUrls: Set<string>,
+  reArmableShareUrls: Set<string>,
+  url: string
+): void {
+  for (const pendingUrl of reArmableShareUrls) {
+    if (pendingUrl !== url) processedUrls.delete(pendingUrl);
+  }
+  reArmableShareUrls.clear();
+  reArmableShareUrls.add(url);
+}
+
+/**
+ * Re-arm every tracked share URL once the pending share clears (dialog
+ * dismissed or import finished): drop them from the dedup set so re-clicking
+ * the same one-shot link re-opens the dialog. Exported for tests.
+ */
+export function reArmTrackedShareUrls(
+  processedUrls: Set<string>,
+  reArmableShareUrls: Set<string>
+): void {
+  for (const url of reArmableShareUrls) {
+    processedUrls.delete(url);
+  }
+  reArmableShareUrls.clear();
+}
+
+/**
  * Parse a deep link URL and extract the path and query string
  * @param deepLinkUrl - The deep link URL (e.g., yorgai://marketplace/callback?code=xxx)
  * @returns Object with path and search, or null if invalid
@@ -95,11 +133,10 @@ export function useDeepLinkHandler(): void {
   const hasSetupListener = useRef(false);
   const hasProcessedInitialDeepLink = useRef(false);
   const processedDeepLinks = useRef<Set<string>>(new Set());
-  // A share link is one-shot plaintext the owner can't regenerate, so unlike a
-  // join link it must be re-clickable after the import dialog is dismissed
-  // without importing. We drop its URL from the dedup set once the pending
-  // share clears, re-arming that exact link.
-  const lastShareUrlRef = useRef<string | null>(null);
+  // Share URLs waiting to be re-armed (see trackReArmableShareUrl): dropped
+  // from the dedup set once the pending share clears, so the one-shot link
+  // stays re-clickable after the dialog is dismissed without importing.
+  const reArmableShareUrls = useRef<Set<string>>(new Set());
   const unlistenRef = useRef<(() => void) | null>(null);
 
   // Route an incoming collaboration invite into the JOIN flow: stash the
@@ -133,10 +170,12 @@ export function useDeepLinkHandler(): void {
   // the "join this org" CTA — share resolves FIRST, invite is deferred.
   useEffect(() => {
     // Pending share cleared (dialog dismissed or import done) → re-arm the
-    // link so re-clicking the same one-shot URL re-opens the dialog.
-    if (pendingShare === null && lastShareUrlRef.current !== null) {
-      processedDeepLinks.current.delete(lastShareUrlRef.current);
-      lastShareUrlRef.current = null;
+    // tracked links so re-clicking the same one-shot URL re-opens the dialog.
+    if (pendingShare === null && reArmableShareUrls.current.size > 0) {
+      reArmTrackedShareUrls(
+        processedDeepLinks.current,
+        reArmableShareUrls.current
+      );
     }
   }, [pendingShare]);
 
@@ -183,7 +222,11 @@ export function useDeepLinkHandler(): void {
             const collabShare = parseCollabShareDeepLink(url);
             if (collabShare) {
               processedDeepLinks.current.add(url);
-              lastShareUrlRef.current = url;
+              trackReArmableShareUrl(
+                processedDeepLinks.current,
+                reArmableShareUrls.current,
+                url
+              );
               log(
                 "DeepLinkHandler",
                 "Routing collaboration session share into import flow"
@@ -272,7 +315,11 @@ export function useDeepLinkHandler(): void {
             const collabShare = parseCollabShareDeepLink(url);
             if (collabShare) {
               processedDeepLinks.current.add(url);
-              lastShareUrlRef.current = url;
+              trackReArmableShareUrl(
+                processedDeepLinks.current,
+                reArmableShareUrls.current,
+                url
+              );
               log(
                 "DeepLinkHandler",
                 "Routing initial collaboration session share into import flow"

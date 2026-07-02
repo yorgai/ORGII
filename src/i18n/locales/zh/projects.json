@@ -541,7 +541,8 @@
       "reviewRequestedChanges": "Review 请求修改",
       "collabLockRunning": "{{name}} 正在处理",
       "collabLockHeld": "{{name}} 的 agent 正在处理该工作项",
-      "collabLockConflict": "另一位成员刚刚在该工作项上启动了 agent"
+      "collabLockConflict": "另一位成员刚刚在该工作项上启动了 agent",
+      "collabLockUnresolved": "无法确认该工作项的协作同步状态，请检查网络后重试"
     },
     "changedFiles": {
       "title": "变更文件",

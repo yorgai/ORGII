@@ -35,6 +35,7 @@ import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 import {
   getEffectiveAccessMode,
   getSessionVisibility,
+  sha256Hex,
 } from "../collabSyncUtils";
 import type {
   CollabSyncBackendClient,
@@ -55,6 +56,21 @@ export function createImportedSnapshotSessionId(): string {
   return `imported-session-${Array.from(bytes, (byte) =>
     byte.toString(16).padStart(2, "0")
   ).join("")}`;
+}
+
+/**
+ * Deterministic local session id for a teammate-session import, derived from
+ * (orgId, sourceSessionId). A FAILED import (durable cache write returned 0)
+ * used to mint a fresh random id per retry, leaking one orphaned event-store
+ * entry per pull cycle; a deterministic id makes every retry land on the
+ * same local id, so an aborted attempt is simply overwritten.
+ */
+export async function deriveImportedSessionId(
+  orgId: string,
+  sourceSessionId: string
+): Promise<string> {
+  const digest = await sha256Hex(`${orgId}:${sourceSessionId}`);
+  return `imported-session-${digest.slice(0, 32)}`;
 }
 
 export function rewriteEventsForImportedSnapshot(
@@ -378,6 +394,17 @@ async function fetchAndAssembleSegments(
 }
 
 /**
+ * In-flight dedup for `importRemoteSession`, keyed `${orgId}:${sourceSessionId}`.
+ * The engine PullLoop and a panel replay click can race on the same remote
+ * session; without dedup both run the fetch + event-store write concurrently
+ * (double egress, and interleaved set/saveToCache on the same local id).
+ */
+const inFlightRemoteSessionImports = new Map<
+  string,
+  Promise<ImportRemoteSessionResult | null>
+>();
+
+/**
  * THE import path for teammate sessions — used by both the engine PullLoop
  * (auto-import) and the panel's direct-replay action. Handles:
  * - cursor comparison against the remote summary (no-op when unchanged),
@@ -386,10 +413,26 @@ async function fetchAndAssembleSegments(
  *   validation, falling back to a full refetch on any mismatch,
  * - persistence (`saveToCache`, fix P7) and the `importedFrom` cursor.
  *
- * Returns null when the owner has published no segments and nothing was
- * previously imported (callers may fall back to the snapshot-request flow).
+ * Concurrent calls for the same (orgId, sourceSessionId) share one in-flight
+ * promise. Returns null when the owner has published no segments and nothing
+ * was previously imported (callers may fall back to the snapshot-request
+ * flow); THROWS when the durable cache write fails so callers treat the
+ * import as retryable rather than silently absent.
  */
 export async function importRemoteSession(
+  options: ImportRemoteSessionOptions
+): Promise<ImportRemoteSessionResult | null> {
+  const key = `${options.orgId}:${options.remoteSession.sourceSessionId}`;
+  const pending = inFlightRemoteSessionImports.get(key);
+  if (pending) return pending;
+  const task = importRemoteSessionInner(options).finally(() => {
+    inFlightRemoteSessionImports.delete(key);
+  });
+  inFlightRemoteSessionImports.set(key, task);
+  return task;
+}
+
+async function importRemoteSessionInner(
   options: ImportRemoteSessionOptions
 ): Promise<ImportRemoteSessionResult | null> {
   const { orgId, remoteSession, onBeforeWrite } = options;
@@ -458,8 +501,11 @@ export async function importRemoteSession(
       : null;
   }
 
+  // Deterministic id (not random): a retry after a failed durable write must
+  // reuse the same local id instead of leaking a new orphan per attempt.
   const localSessionId =
-    existing?.session_id ?? createImportedSnapshotSessionId();
+    existing?.session_id ??
+    (await deriveImportedSessionId(orgId, remoteSession.sourceSessionId));
   onBeforeWrite?.(localSessionId);
   const localEvents = rewriteEventsForImportedSnapshot(
     assembled.events,
@@ -489,8 +535,17 @@ export async function importRemoteSession(
   const savedCount = await eventStoreProxy.saveToCache(localSessionId);
   if (localEvents.length > 0 && savedCount <= 0) {
     // Cache write failed for a non-empty import — do not persist a "complete"
-    // cursor. Report failure so the caller retries on the next cycle.
-    return null;
+    // cursor. For a NEW import also drop the just-set events again: with no
+    // session record pointing at them they would sit as an orphaned event
+    // store entry until the retry overwrites them.
+    if (!existing) {
+      await eventStoreProxy.clear(localSessionId);
+    }
+    // Throw (not null): null means "nothing published", which callers treat
+    // as final. This failure is transient and must surface as retryable.
+    throw new Error(
+      `Failed to durably persist imported session ${remoteSession.sourceSessionId} (saveToCache returned ${savedCount})`
+    );
   }
   upsertSession({
     session_id: localSessionId,

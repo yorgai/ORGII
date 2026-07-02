@@ -407,6 +407,7 @@
     "openSupabaseSqlEditor": "Abrir Supabase SQL Editor",
     "supabaseSetupVerified": "Configuración de Supabase verificada",
     "supabaseSetupMissing": "Falta la configuración de Supabase. Copia el SQL, ejecútalo en Supabase SQL Editor y verifica de nuevo.",
+    "supabaseSetupServerNewer": "This ORG's Supabase schema is newer than this app version. Update ORGII, then try again.",
     "orgDemoTitle": "ORG",
     "orgNotFound": "ORG no encontrada",
     "tabs": {
@@ -461,6 +462,7 @@
     "access": {
       "title": "Acceso a sesiones",
       "description": "Elige qué pueden ver tus compañeros de tus sesiones locales en este ORG.",
+      "onboardingHint": "You can change this anytime in the ORG's Sessions settings.",
       "modes": {
         "off": {
           "title": "Desactivado",
@@ -567,6 +569,7 @@
       "replay": "Replay",
       "linkedSessionMetadataOnly": "Metadata only",
       "linkedSessionUnshared": "Not shared",
+      "replayUnavailable": "This session is no longer shared",
       "unknownOwner": "Unknown"
     },
     "lock": {
